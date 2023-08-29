@@ -1,32 +1,49 @@
 # Prerequisites
 *.d
 
+# Common temporary files
+*.swp
+*.orig
+*.bak
+
+# Audio files
+*.wav
+
 # Compiled Object files
 *.slo
 *.lo
 *.o
-*.obj
-
-# Precompiled Headers
-*.gch
-*.pch
 
 # Compiled Dynamic libraries
 *.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
+*.chug
 
 # Compiled Static libraries
 *.lai
 *.la
 *.a
-*.lib
 
-# Executables
-*.exe
-*.out
-*.app
+.DS_Store
+
+*.tgz
+/chugins.opt
+/chugins.ncb
+/chugins-windows-*
+/chugins-mac-*
+
+# Visual Studio artifacts
+*.VC.opendb
+*.sdf
+.vs/
+
+/Release/
+/Debug/
+*/Release/
+*/Debug/
+*/x64/
+*/*.vcxproj.user
+ipch
+
+*/*.xcodeproj/xcuserdata
+
+.vscode/*
