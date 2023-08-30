@@ -7,7 +7,7 @@ C_MODULES=
 CXX_MODULES=ChuGL.cpp
 
 # where the chuck headers are
-CK_SRC_PATH?=chuck/include
+CK_SRC_PATH?=../chuck/include
 
 
 # ---------------------------------------------------------------------------- #
