@@ -9,6 +9,8 @@
 // this should align with the correct versions of these ChucK files
 #include "chuck_dl.h"
 #include "chuck_def.h"
+#include "ulib_cgl.h"
+#include "window.h"
 
 // general includes
 #include <stdio.h>
@@ -21,11 +23,11 @@ static Chuck_DL_MainThreadHook* hook;
 
 t_CKBOOL chugl_main_loop_hook(void* bindle)
 {
-    // Chuck_UI_Manager* ui_manager = (Chuck_UI_Manager*)bindle;
-    // ui_manager->run();
-
+    Window window;
     std::cerr << "INSIDE chugl main loop hook!" << std::endl;
-        
+
+    window.DisplayLoop();
+    /*
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
@@ -55,11 +57,10 @@ t_CKBOOL chugl_main_loop_hook(void* bindle)
 
         glfwPollEvents();
     }
-
+    */
 
     hook->deactivate(hook);
-    glfwTerminate();
-
+    // glfwTerminate();
 
     return TRUE;
 }
@@ -70,7 +71,8 @@ t_CKBOOL chugl_main_loop_quit(void* bindle)
     // ui_manager->shutdown();
 
     std::cerr << "LEAVING chugl main loop hook" << std::endl;
-    return TRUE;
+    // window.Terminate();
+    return true;
 }
 
 
@@ -79,17 +81,15 @@ CK_DLL_QUERY(ChuGL)
     // hmm, don't change this...
     QUERY->setname(QUERY, "ChuGL");
 
-    // Chuck_UI_Manager* ui_manager = Chuck_UI_Manager::instance();
-    // ui_manager->init();
+    // TODO init window singleton
 
     hook = QUERY->create_main_thread_hook(QUERY, chugl_main_loop_hook, chugl_main_loop_quit, NULL);
-
     hook->activate(hook);
 
-    // ui_manager->set_hook(hook);
+    init_chugl(QUERY);
 
-    // init_maui(QUERY);
 
     // wasn't that a breeze?
     return TRUE;
 }
+
