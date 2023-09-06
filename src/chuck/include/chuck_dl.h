@@ -341,6 +341,7 @@ public:
     Chuck_VM * vm() const { return m_carrier->vm; }
     Chuck_Env * env() const { return m_carrier->env; }
     Chuck_Carrier * carrier() const { return m_carrier; }
+    CK_DL_API api() const { return m_api; }
 
 public:
     // function pointers - to be called from client module
@@ -384,6 +385,9 @@ public:
 
     // re-added 1.4.0.1
     f_create_main_thread_hook create_main_thread_hook;
+
+    // DL API reference | 1.5.2.0
+    CK_DL_API m_api;
 
     // NOTE: everything below std::anything cannot be reliably accessed
     // by offset between dynamic modules, since std::anything could be variable
@@ -694,7 +698,14 @@ public:
     struct VMApi
     {
         VMApi();
+        // get sample rate (legacy as of 1.5.2.0)
         t_CKUINT (* const get_srate)( CK_DL_API, Chuck_VM_Shred * );
+        // get sample rate | 1.5.2.0
+        t_CKUINT (* const srate)( Chuck_VM * vm );
+        // create a new lock-free one-producer, one-consumer buffer | 1.5.2.0
+        CBufferSimple * (* const create_event_buffer)( Chuck_VM * vm );
+        // queue an event; num_msg must be 1; buffer should be created using create_event_buffer() above | 1.5.2.0
+        t_CKBOOL (* const queue_event)( Chuck_VM * vm, Chuck_Event * event, t_CKINT num_msg, CBufferSimple * buffer );
     } * const vm;
 
     struct ObjectApi
@@ -725,6 +736,7 @@ public:
         t_CKBOOL (* const array4_push_back)( CK_DL_API, Array4 array, t_CKUINT value );
         t_CKBOOL (* const array4_get_idx)( CK_DL_API, Array4 array, t_CKINT idx, t_CKUINT & value );
         t_CKBOOL (* const array4_get_key)( CK_DL_API, Array4 array, const std::string & key, t_CKUINT & value );
+
     } * const object;
 
     Api() :
@@ -774,8 +786,9 @@ private:
           void * dlsym( void * handle, const char * symbol );
           const char * dlerror( void );
           int dlclose( void * handle );
-          // 1.4.2.0 (ge) | added DLERROR_BUFFER_LENGTH
-          #define DLERROR_BUFFER_LENGTH 128
+          // 1.4.2.0 (ge) added DLERROR_BUFFER_LENGTH
+          // 1.5.1.4 (ge) increased DLERROR_BUFFER_LENGTH from 128 to 512
+          #define DLERROR_BUFFER_LENGTH 512
           static char dlerror_buffer[DLERROR_BUFFER_LENGTH];
 
           #ifdef __cplusplus

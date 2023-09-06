@@ -141,8 +141,6 @@ t_CKBOOL init_chugl(Chuck_DL_Query * QUERY)
 	// EM_pushlog();
 	// EM_log(CK_LOG_INFO, "loading ChuGL API");
 
-#ifdef __HACKTHIS__
-#endif
 	init_chugl_events(QUERY);
 	init_chugl_static_fns(QUERY);
 	init_chugl_geo(QUERY);
@@ -161,6 +159,10 @@ t_CKBOOL init_chugl(Chuck_DL_Query * QUERY)
 //-----------------------------------------------------------------------------
 t_CKBOOL init_chugl_events(Chuck_DL_Query* QUERY)
 {
+
+	CglEvent::s_SharedEventQueue = QUERY->api()->vm->create_event_buffer(
+		QUERY->vm()
+	);
 
 	// Frame event =================================
 	QUERY->begin_class(QUERY, "CglFrame", "Event");
@@ -187,7 +189,7 @@ CK_DLL_CTOR(cgl_frame_ctor)
 {
 	// store reference to our new class
 	OBJ_MEMBER_INT(SELF, cglframe_data_offset) = (t_CKINT) new CglEvent(
-		(Chuck_Event*)SELF, SHRED->vm_ref, CglEventType::CGL_FRAME
+		(Chuck_Event*)SELF, SHRED->vm_ref, API, CglEventType::CGL_FRAME
 	);
 }
 CK_DLL_DTOR(cgl_frame_dtor)
@@ -200,7 +202,7 @@ CK_DLL_CTOR(cgl_update_ctor)
 {
 	// store reference to our new class
 	OBJ_MEMBER_INT(SELF, cglupdate_data_offset) = (t_CKINT) new CglEvent(
-		(Chuck_Event*)SELF, SHRED->vm_ref, CglEventType::CGL_UPDATE
+		(Chuck_Event*)SELF, SHRED->vm_ref, API, CglEventType::CGL_UPDATE
 	);
 }
 CK_DLL_DTOR(cgl_update_dtor)
@@ -870,6 +872,7 @@ CK_DLL_DTOR(cgl_group_dtor)
 std::vector<CglEvent*> CglEvent::m_FrameEvents;
 std::vector<CglEvent*> CglEvent::m_UpdateEvents;
 std::vector<CglEvent*> CglEvent::m_WindowResizeEvents;
+CBufferSimple* CglEvent::s_SharedEventQueue;
 
 std::vector<CglEvent*>& CglEvent::GetEventQueue(CglEventType type)
 {
@@ -882,13 +885,17 @@ std::vector<CglEvent*>& CglEvent::GetEventQueue(CglEventType type)
 	
 }
 
+/*
 void CglEvent::wait(Chuck_VM_Shred* shred)
 {
 	m_Event->wait(shred, m_VM);
 }
+*/
 
-CglEvent::CglEvent(Chuck_Event* event, Chuck_VM* vm, CglEventType event_type)
-	: m_Event(event), m_VM(vm), m_EventType(event_type)
+CglEvent::CglEvent(
+	Chuck_Event* event, Chuck_VM* vm, CK_DL_API api, CglEventType event_type
+)
+	: m_Event(event), m_VM(vm), m_API(api), m_EventType(event_type)
 {
 	GetEventQueue(event_type).push_back(this);
 }
@@ -905,9 +912,14 @@ CglEvent::~CglEvent()
 }
 
 void CglEvent::Broadcast()
-{
+{	
+	// (should be) threadsafe
+	m_API->vm->queue_event(m_VM, m_Event, 1, s_SharedEventQueue);
+	
+
 	// using non-thread-safe event buffer for now
-	m_VM->queue_event(m_Event, 1, NULL);
+	// m_VM->queue_event(m_Event, 1, NULL);
+	// m_Event->queue_broadcast();
 }
 
 // broadcasts all events of type event_type

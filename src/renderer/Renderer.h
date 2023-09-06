@@ -85,16 +85,16 @@ public:
 		switch(mat->GetMaterialType()) {
 			case MaterialType::Normal:
 				// TODO: really should abstract this to a shader resource locator class
-				vertPath = "../CGL/res/shaders/BasicLightingVert.glsl";
-				fragPath = "../CGL/res/shaders/NormalFrag.glsl";
+				vertPath = "renderer/shaders/BasicLightingVert.glsl";
+				fragPath = "renderer/shaders/NormalFrag.glsl";
 				break;
 			case MaterialType::Phong:
  				vertPath = "./res/shaders/BasicLightingVert.glsl";
 				fragPath = "./res/shaders/BasicLightingFrag.glsl";
 				assert(false && "phong unimplemented");
 			default:  // default material (normal mat for now)
-				vertPath = "../CGL/res/shaders/BasicLightingVert.glsl";
-				fragPath = "../CGL/res/shaders/NormalFrag.glsl";
+				vertPath = "renderer/shaders/BasicLightingVert.glsl";
+				fragPath = "renderer/shaders/NormalFrag.glsl";
 		}
 
 		m_Shader = new Shader(vertPath, fragPath);

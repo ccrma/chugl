@@ -32,15 +32,19 @@ enum class CglEventType {
 class CglEvent  
 {
 public:
-	CglEvent(Chuck_Event* event, Chuck_VM* vm, CglEventType event_type);
+	CglEvent(Chuck_Event* event, Chuck_VM* vm, CK_DL_API api, CglEventType event_type);
 	~CglEvent();
-	void wait(Chuck_VM_Shred* shred);
+	// void wait(Chuck_VM_Shred* shred);
 	void Broadcast();
 	static void Broadcast(CglEventType event_type);
 	static std::vector<CglEvent*>& GetEventQueue(CglEventType event_type);
+
+	static CBufferSimple* s_SharedEventQueue;
+
 private:
 	Chuck_VM* m_VM;
 	Chuck_Event* m_Event;
+	CK_DL_API m_API;
 	CglEventType m_EventType;
 
 	// event queues, shared by all events
