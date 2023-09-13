@@ -39,10 +39,10 @@ moonSystem.AddChild(moon);
 
 
 InputManager IM;
-spork ~ IM.start(0);
+spork ~ IM.start(2);
 
 MouseManager MM;
-spork ~ MM.start(0);
+spork ~ MM.start(2);
 
 CglUpdate UpdateEvent;
 CglFrame FrameEvent;
@@ -88,8 +88,8 @@ fun void cameraUpdate(time t, dur dt)
 	if (IM.isKeyDown(IM.KEY_E))
 		mainCamera.TranslateBy(-cameraSpeed * UP);
 
-	// <<< "pos", mainCamera.GetPosition() >>>;
-	// <<< "rot", mainCamera.GetRotation() >>>;
+	<<< "pos", mainCamera.GetPosition() >>>;
+	<<< "rot", mainCamera.GetRotation() >>>;
 
 	// mouse lookaround
 

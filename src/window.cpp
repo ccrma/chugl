@@ -96,7 +96,11 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
     }
 
     // OpenGL Viewport and Callbacks =========================
-    glViewport(0, 0, m_ViewWidth, m_ViewHeight);
+    // for high-DPI displays, framebuffer size is actually a multiple of window size
+    int frameBufferWidth, frameBufferHeight;
+    glfwGetFramebufferSize(m_Window, &frameBufferWidth, &frameBufferHeight);
+    glViewport(0, 0, frameBufferWidth, frameBufferHeight);
+
     glfwSetFramebufferSizeCallback(m_Window, framebuffer_size_callback);
     glfwSetKeyCallback(m_Window, keyCallback);
 

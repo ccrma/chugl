@@ -6,6 +6,16 @@ now => time lastTime;
 CglUpdate UpdateEvent;
 CglFrame FrameEvent;
 
+NormMat normMat;
+BoxGeo boxGeo;
+
+CglScene scene;
+CglMesh mesh;
+
+mesh.set( boxGeo, normMat );
+scene.AddChild( mesh );
+
+
 while (true) {
     CGL.Render();
     UpdateEvent => now;
