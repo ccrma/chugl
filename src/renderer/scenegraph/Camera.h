@@ -33,7 +33,7 @@ public:
 	) : m_Aspect(aspect), m_Fov(fov), 
 		m_Near(near), m_Far(far) 
 		{};
-	virtual Camera* Clone() {
+	virtual Camera* Clone() override {
 		return new PerspectiveCamera(m_Aspect, m_Fov, m_Near, m_Far);
 	}
 	virtual glm::mat4 GetProjectionMatrix() override {
@@ -59,7 +59,7 @@ public:
 		m_Near(near), m_Far(far) 
 		{};
 
-	virtual Camera* Clone() {
+	virtual Camera* Clone() override {
 		return new OrthoCamera(m_Left, m_Right, m_Bottom, m_Top, m_Near, m_Far);
 	}
 

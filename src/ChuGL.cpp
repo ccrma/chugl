@@ -59,6 +59,7 @@ t_CKBOOL chugl_main_loop_hook(void* bindle)
     }
     */
 
+    std::cerr << "==exiting chugl window==" << std::endl;
     hook->deactivate(hook);
     // glfwTerminate();
 

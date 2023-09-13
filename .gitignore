@@ -47,3 +47,12 @@ ipch
 */*.xcodeproj/xcuserdata
 
 .vscode/*
+
+# CMake build
+src/build
+
+# vim
+*~
+
+# symlinked chuck build
+src/chuck-1.5.1.4

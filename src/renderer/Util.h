@@ -16,7 +16,7 @@
 #define GLCall(x) GLClearError(#x, __FILE__, __LINE__); x; ASSERT(GLLogErrors(#x, __FILE__, __LINE__));
 	//#define GLCall(x) ASSERT(GLLogErrors(#x, __FILE__, __LINE__)); x;
 #else
-#define ASSERT(x) x
+#define ASSERT(x) ;
 #define ASSERTM(exp, msg) ((void)0)
 #define GLCall(x) x
 #endif
