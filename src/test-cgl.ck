@@ -8,9 +8,7 @@ CglFrame FrameEvent;
 
 while (true) {
     CGL.Render();
-    // UpdateEvent => now;
-    // FrameEvent => now;
-    (1.0/60.0)::second => now;
+    UpdateEvent => now;
 
     // compute timing
     frameCounter++;

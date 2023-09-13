@@ -182,7 +182,7 @@ void Window::DisplayLoop()
         // camera.SetPosition(CGL::mainCamera.GetPosition());
         // camera.SetRotation(CGL::mainCamera.GetRotation());
 
-        if (true) {
+        if (false) {
             glClearColor(std::sin(.1f * frameCount), 0.3f, 0.3f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         } else { 

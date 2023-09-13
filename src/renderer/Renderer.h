@@ -166,7 +166,6 @@ public:
 		}
 		else
 		{
-			std::cerr << "draw call" << std::endl;
 			GLCall(glDrawElements(
 				GL_TRIANGLES,
 				va.GetIndexBufferCount(),

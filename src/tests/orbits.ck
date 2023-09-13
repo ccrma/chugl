@@ -42,7 +42,7 @@ InputManager IM;
 spork ~ IM.start(0);
 
 MouseManager MM;
-spork ~ MM.start(1);
+spork ~ MM.start(0);
 
 CglUpdate UpdateEvent;
 CglFrame FrameEvent;
@@ -64,8 +64,8 @@ fun void Update(time t, dur dt)
 	earth.SetRotation(@(0.0, .4 * ftime, 0.0));
 	moon.SetRotation(@(0.0, .9 * ftime, 0.0));
 
-	<<< "sun pos", sun.GetRotation() >>>;
-	<<< "moon pos", moon.GetWorldPosition() >>>;
+	// <<< "sun pos", sun.GetRotation() >>>;
+	// <<< "moon pos", moon.GetWorldPosition() >>>;
 }
 
 // flycamera controls
@@ -88,8 +88,8 @@ fun void cameraUpdate(time t, dur dt)
 	if (IM.isKeyDown(IM.KEY_E))
 		mainCamera.TranslateBy(-cameraSpeed * UP);
 
-	<<< "pos", mainCamera.GetPosition() >>>;
-	<<< "rot", mainCamera.GetRotation() >>>;
+	// <<< "pos", mainCamera.GetPosition() >>>;
+	// <<< "rot", mainCamera.GetRotation() >>>;
 
 	// mouse lookaround
 

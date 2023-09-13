@@ -35,8 +35,15 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 # target_link_libraries(${PROJECT_NAME} PRIVATE raylib)
 
 # library dependencies
+
+# glfw
+# -- exclude glfw docs, tests, and examples
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory(./vendor/glfw)  # TODO prob create a top-level CMakeLists.txt too manage all vendor deps
-add_subdirectory(./vendor/glad)  # TODO prob create a top-level CMakeLists.txt too manage all vendor deps
+
+add_subdirectory(./vendor/glad)
 add_subdirectory(./vendor/glm)
 add_subdirectory(./renderer)
 target_link_libraries(${PROJECT_NAME} 

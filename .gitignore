@@ -56,3 +56,4 @@ src/build
 
 # symlinked chuck build
 src/chuck-1.5.1.4
+src/chuck.exe
