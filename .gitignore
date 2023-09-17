@@ -47,6 +47,7 @@ ipch
 */*.xcodeproj/xcuserdata
 
 .vscode/*
+.vscode
 
 # CMake build
 src/build

@@ -1,24 +1,7 @@
 #version 330 core
 
 // INCLUDES ////////////////////////////////////////////////////////////////////
-// MVP
-uniform mat4 u_Model;
-uniform mat4 u_View;
-uniform mat4 u_Projection;
-
-// normals
-uniform mat4 u_Normal;
-
-// camera
-uniform vec3 u_ViewPos;
-
-// time
-uniform float u_Time;
-
-// mouse TODO
-
-// TODO: add what shadertoy passes
-// #include includes/Globals.glsl
+#include include/Globals.glsl
 // END INCLUDES ////////////////////////////////////////////////////////////////
 // attributes
 layout (location = 0) in vec3 a_Pos;
