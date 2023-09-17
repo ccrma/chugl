@@ -2,8 +2,8 @@
 
 #include "SceneGraphNode.h"
 #include "SceneGraphObject.h"
-#include "renderer/Texture.h"
-#include "renderer/Shader.h"
+#include "../Texture.h"
+#include "../Shader.h"
 #include <string>
 // #include <cmath>
 
@@ -36,6 +36,7 @@ public:
 	// via an update command
 	// TODO: is there a better way to do this in cpp that doesn't involve void * ?
 	virtual void * GenUpdate() = 0;
+	virtual void FreeUpdate(void* data) = 0;
 	virtual void ApplyUpdate(void* data) = 0;
 
 	inline void SetWireFrame(bool wf) { m_WireFrame = wf; }
@@ -76,6 +77,12 @@ public:
 	virtual void * GenUpdate() override {
 		return new bool{ m_UseLocalNormals };
 	}
+
+	virtual void FreeUpdate(void* data) override {
+		delete (bool*)data;
+	}
+
+
 	virtual void ApplyUpdate(void* data) override {
 		assert(data && "normal material update data is null!");
 		m_UseLocalNormals = *(bool*)data;

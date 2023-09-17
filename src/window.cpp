@@ -68,16 +68,16 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
 {
     // init and select openGL version ==========================
     glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-#ifdef __APPLE__
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#endif
+    #ifdef __APPLE__
+    /* We need to explicitly ask for a 3.2 context on OS X */
+    glfwWindowHint (GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint (GLFW_CONTEXT_VERSION_MINOR, 2);
+    glfwWindowHint (GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    glfwWindowHint (GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    #endif
     
     // create window ============================================
     m_Window = glfwCreateWindow(m_ViewWidth, m_ViewHeight, "CGL", NULL, NULL);
-    ASSERT(m_Window);
     if (m_Window == NULL)
     {
         glfwTerminate();
@@ -87,6 +87,7 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
 
     // VSYNC =================================================
     glfwSwapInterval(1);  
+    std::cerr << "VSYNC: " << glfwGetWindowAttrib(m_Window, GLFW_DOUBLEBUFFER) << std::endl;
 
     // Initialize GLAD =======================================
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
@@ -95,7 +96,11 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
     }
 
     // OpenGL Viewport and Callbacks =========================
-    glViewport(0, 0, m_ViewWidth, m_ViewHeight);
+    // for high-DPI displays, framebuffer size is actually a multiple of window size
+    int frameBufferWidth, frameBufferHeight;
+    glfwGetFramebufferSize(m_Window, &frameBufferWidth, &frameBufferHeight);
+    glViewport(0, 0, frameBufferWidth, frameBufferHeight);
+
     glfwSetFramebufferSizeCallback(m_Window, framebuffer_size_callback);
     glfwSetKeyCallback(m_Window, keyCallback);
 
@@ -159,13 +164,13 @@ void Window::DisplayLoop()
         
         // FPS counter
 		++frameCount;
-		std::cerr << "window frame: " << frameCount++ << std::endl;
         float currentTime = (float)glfwGetTime();
         // deltaTime
         m_DeltaTime = currentTime - prevTickTime;
         prevTickTime = currentTime;
         if (currentTime - previousFPSTime >= 1.0f) {
-            Util::println(std::to_string(frameCount));
+            std::cerr << "FPS: " << frameCount << std::endl;
+            // Util::println(std::to_string(frameCount));
             frameCount = 0;
             previousFPSTime = currentTime;
         }
@@ -180,41 +185,46 @@ void Window::DisplayLoop()
 
         // camera.SetPosition(CGL::mainCamera.GetPosition());
         // camera.SetRotation(CGL::mainCamera.GetRotation());
-        
-        CGL::WaitOnUpdateDone();
-        /*
-        Note: this sync mechanism also gets rid of the problem where chuck runs away
-        e.g. if the time it takes the renderer flush the queue is greater than
-        the time it takes chuck to write, ie write rate > flush rate,
-        each command queue will get longer and longer, continually worsening performance
-        shouldn't happen because chuck runs in vm and the flushing happens natively but 
-        you never know
-        */
-        /*
-        two locks here:
-        1 for writing/swapping the command queues
-            - this lock is grabbed by chuck every time we do a CGL call
-            - supports writing CGL commands whenever, even outside game loop
-        1 for the condition_var used to synchronize audio and graphics each frame
-            - combined with the chuck-side update_event, allows for writing frame-accurate cgl commands
-            - exposes a gameloop to chuck, gauranteed to be executed once per frame
 
-        deadlock shouldn't happen because both locks are never held at the same time
-        */
-        { // critical section: swap command queus
-            CGL::SwapCommandQueues();
+        if (false) {
+            glClearColor(std::sin(.1f * frameCount), 0.3f, 0.3f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        } else { 
+            CGL::WaitOnUpdateDone();
+            /*
+            Note: this sync mechanism also gets rid of the problem where chuck runs away
+            e.g. if the time it takes the renderer flush the queue is greater than
+            the time it takes chuck to write, ie write rate > flush rate,
+            each command queue will get longer and longer, continually worsening performance
+            shouldn't happen because chuck runs in vm and the flushing happens natively but 
+            you never know
+            */
+            /*
+            two locks here:
+            1 for writing/swapping the command queues
+                - this lock is grabbed by chuck every time we do a CGL call
+                - supports writing CGL commands whenever, even outside game loop
+            1 for the condition_var used to synchronize audio and graphics each frame
+                - combined with the chuck-side update_event, allows for writing frame-accurate cgl commands
+                - exposes a gameloop to chuck, gauranteed to be executed once per frame
+
+            deadlock shouldn't happen because both locks are never held at the same time
+            */
+            { // critical section: swap command queus
+                CGL::SwapCommandQueues();
+            }
+
+            // done swapping the double buffer, let chuck know it's good to continue pushing commands
+            CglEvent::Broadcast(CglEventType::CGL_UPDATE);
+
+            // now apply changes from the command queue chuck is NO Longer writing to 
+            CGL::FlushCommandQueue(scene, false);
+
+            // now renderer can work on drawing the copied scenegraph ===
+
+            renderer.Clear();
+            renderer.RenderScene(&scene, &camera);
         }
-
-        // done swapping the double buffer, let chuck know it's good to continue pushing commands
-        CglEvent::Broadcast(CglEventType::CGL_UPDATE);
-
-        // now apply changes from the command queue chuck is NO Longer writing to 
-        CGL::FlushCommandQueue(scene, false);
-
-        // now renderer can work on drawing the copied scenegraph ===
-
-        renderer.Clear();
-        renderer.RenderScene(&scene, &camera);
 
 
         // Handle Events, Draw framebuffer

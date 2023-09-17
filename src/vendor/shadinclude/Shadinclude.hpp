@@ -62,6 +62,10 @@ MISCELLANEOUS
 - Language	:	C++ (can easily be converted into other languages)
 */
 
+#if defined(_WIN32) || defined(WIN32) || defined(__CYGWIN__) || defined(__MINGW32__) || defined(__BORLANDC__)
+#define OS_WIN
+#endif
+
 class Shadinclude
 {
 public:
@@ -77,6 +81,7 @@ public:
 		if (!file.is_open())
 		{
 			std::cerr << "ERROR: could not open the shader at: " << path << "\n" << std::endl;
+			std::cerr << "REASON: " << strerror(errno) << "\n" << std::endl;
 			return fullSourceCode;
 		}
 
@@ -95,7 +100,12 @@ public:
 				// The include path is relative to the current shader file path
 				std::string pathOfThisFile;
 				getFilePath(path, pathOfThisFile);
-				lineBuffer.insert(0, pathOfThisFile);
+				lineBuffer.insert(0, "./" + pathOfThisFile);
+
+				// remove carriage return \r\n if not windows
+				#if !defined(OS_WIN)
+				lineBuffer.erase(remove(lineBuffer.begin(), lineBuffer.end(), '\r'), lineBuffer.end());
+				#endif
 
 				// By using recursion, the new include file can be extracted
 				// and inserted at this location in the shader source code

@@ -39,10 +39,10 @@ moonSystem.AddChild(moon);
 
 
 InputManager IM;
-spork ~ IM.start(0);
+spork ~ IM.start(2);
 
 MouseManager MM;
-spork ~ MM.start(0);
+spork ~ MM.start(2);
 
 CglUpdate UpdateEvent;
 CglFrame FrameEvent;
@@ -63,13 +63,10 @@ fun void Update(time t, dur dt)
 	sun.SetRotation(@(0.0, .1 * ftime, 0.0));
 	earth.SetRotation(@(0.0, .4 * ftime, 0.0));
 	moon.SetRotation(@(0.0, .9 * ftime, 0.0));
-}
 
-fun void FreeUpdate() {
-	while (10::ms => now) {
-	}
-} 
-// spork ~ FreeUpdate();
+	// <<< "sun pos", sun.GetRotation() >>>;
+	// <<< "moon pos", moon.GetWorldPosition() >>>;
+}
 
 // flycamera controls
 @(0.0, 1.0, 0.0) => vec3 UP;
@@ -90,6 +87,9 @@ fun void cameraUpdate(time t, dur dt)
 		mainCamera.TranslateBy(cameraSpeed * UP);
 	if (IM.isKeyDown(IM.KEY_E))
 		mainCamera.TranslateBy(-cameraSpeed * UP);
+
+	<<< "pos", mainCamera.GetPosition() >>>;
+	<<< "rot", mainCamera.GetRotation() >>>;
 
 	// mouse lookaround
 
@@ -143,8 +143,11 @@ fun void GameLoop(){
 		cameraUpdate(now, deltaTime);
 		Update(now, deltaTime);
 
+		// <<< "inside chuck framecount: " + frameCounter >>>;
+
 		// End update, begin render
-		if (autoRender) { CGL.Render(); } // tell renderer its safe to copy and draw
+		CGL.Render();
+		// if (autoRender) { CGL.Render(); } // tell renderer its safe to copy and draw
 	}
 } spork ~ GameLoop();
 

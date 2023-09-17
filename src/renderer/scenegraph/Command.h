@@ -241,12 +241,12 @@ class UpdateMaterialCommand : public SceneGraphCommand
 {
 public:
     UpdateMaterialCommand(Material* mat) 
-        : m_MatData(mat->GenUpdate()), m_MatID(mat->GetID()) {
+        : m_Mat(mat), m_MatData(mat->GenUpdate()), m_MatID(mat->GetID()) {
         assert(mat->GetMaterialType() != MaterialType::Base);  // must be a concrete material
     };
     ~UpdateMaterialCommand() {
         if (m_MatData) {
-            delete m_MatData;
+            m_Mat->FreeUpdate(m_MatData);
         }
     }
     virtual void execute(Scene* scene) override {
@@ -258,6 +258,7 @@ public:
                   << std::endl;
     }
 private:
+    Material* m_Mat;
     void* m_MatData;
     size_t m_MatID;
 };
@@ -292,10 +293,10 @@ class UpdateGeometryCommand : public SceneGraphCommand
 {
 public:
     UpdateGeometryCommand(Geometry* geo)
-        : m_GeoData(geo->GenUpdate()), m_GeoID(geo->GetID()) {};
+        : m_Geo(geo), m_GeoData(geo->GenUpdate()), m_GeoID(geo->GetID()) {};
     ~UpdateGeometryCommand() {
         if (m_GeoData) {
-            delete m_GeoData;
+            m_Geo->FreeUpdate(m_GeoData);
         }
     }
     virtual void execute(Scene* scene) override {
@@ -307,6 +308,7 @@ public:
             << std::endl;
     }
 private:
+    Geometry* m_Geo;
     void* m_GeoData;
     size_t m_GeoID;
 };

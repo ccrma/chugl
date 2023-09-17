@@ -50,13 +50,11 @@ ipch
 .vscode
 
 # CMake
-build/
+src/build
 
 # vim
 *~
 
 # chuck executable
 chuck-1.5.1.4
-
-
-
+src/chuck.exe

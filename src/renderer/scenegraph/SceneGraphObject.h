@@ -75,7 +75,7 @@ public:
 	inline SceneGraphObject* GetParent() { return m_Parent;  }
 	inline void SetParent(SceneGraphObject* parent) { m_Parent = parent;  }
 	const std::string& GetName() const { return m_Name; }
-	const std::string& SetName(const std::string& name) { m_Name = name; }
+	void SetName(const std::string& name) { m_Name = name; }
 	const std::vector<SceneGraphObject*>& GetChildren() { return m_Children; }
 
 

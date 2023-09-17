@@ -18,7 +18,7 @@ void SphereGeometry::BuildGeometry()
 	m_Indices.clear();
 	m_Dirty = false;
 
-	constexpr float pi = glm::pi<float>();
+	const float pi = 3.14159265358979323846f;
 	const float epsilon = .00001f; // tolerance
 	m_WidthSeg = std::max(3, m_WidthSeg);
 	m_HeightSeg = std::max(2, m_HeightSeg);

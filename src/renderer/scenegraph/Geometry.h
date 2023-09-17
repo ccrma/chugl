@@ -2,8 +2,8 @@
 
 #include "SceneGraphNode.h"
 // TODO: move these rendererAPI abstractions into their own directory
-#include "renderer/VertexBufferLayout.h"
-#include "renderer/VertexArray.h"
+#include "../VertexBufferLayout.h"
+#include "../VertexArray.h"
 #include "glm/glm.hpp"
 #include "glm/gtc/constants.hpp"
 #include "glm/gtc/epsilon.hpp"
@@ -54,6 +54,7 @@ public:
 	virtual GeometryType GetGeoType() = 0;
 	virtual Geometry* Clone() = 0;  // deepcopy the geometry data
 	virtual void * GenUpdate() = 0;
+	virtual void FreeUpdate(void* data) = 0;
 	virtual void ApplyUpdate(void * data) = 0;
 
 	inline bool IsDirty() { return m_Dirty; }
@@ -85,14 +86,17 @@ public:
 		m_WidthSeg = widthSeg; m_HeightSeg = heightSeg; m_DepthSeg = depthSeg;	
 	}
 	virtual void BuildGeometry() override;  // given data, builds cpu-side index and vertex buffs
-	virtual GeometryType GetGeoType() { return GeometryType::Box; }
+	virtual GeometryType GetGeoType() override { return GeometryType::Box; }
 	virtual Geometry* Clone() override { 
 		return new BoxGeometry(m_Width, m_Height, m_Depth, m_WidthSeg, m_HeightSeg, m_DepthSeg);
 	}
 	virtual void * GenUpdate() override {
 		return new BoxGeoUpdateData{m_Width, m_Height, m_Depth, m_WidthSeg, m_HeightSeg, m_DepthSeg};
 	};
-	virtual void ApplyUpdate(void * data) {
+	virtual void FreeUpdate(void * data) override {
+		delete (BoxGeoUpdateData *)data;
+	}
+	virtual void ApplyUpdate(void * data) override {
 		BoxGeoUpdateData * updateData = (BoxGeoUpdateData *)data;
 		UpdateParams(updateData->width, updateData->height, updateData->depth, 
 			updateData->widthSeg, updateData->heightSeg, updateData->depthSeg);
@@ -136,7 +140,7 @@ public:
 		m_ThetaStart = thetaStart; m_ThetaLength = thetaLength;
 	}
 	virtual void BuildGeometry() override;  // given data, builds cpu-side index and vertex buffs
-	virtual GeometryType GetGeoType() { return GeometryType::Sphere; }
+	virtual GeometryType GetGeoType() override { return GeometryType::Sphere; }
 	virtual Geometry* Clone() override { 
 		return new SphereGeometry(
 			m_Radius, m_WidthSeg, m_HeightSeg, m_PhiStart, m_PhiLength, m_ThetaStart, m_ThetaLength
@@ -149,7 +153,10 @@ public:
 			m_Radius, m_WidthSeg, m_HeightSeg, m_PhiStart, m_PhiLength, m_ThetaStart, m_ThetaLength
 		};
 	};
-	virtual void ApplyUpdate(void * data) {
+	virtual void FreeUpdate(void* data) override {
+		delete (SphereGeoUpdateData*)data;
+	}
+	virtual void ApplyUpdate(void * data) override {
 		SphereGeoUpdateData * updateData = (SphereGeoUpdateData *)data;
 		UpdateParams(
 			updateData->radius, updateData->widthSeg, updateData->heightSeg, 

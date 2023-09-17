@@ -1,7 +1,8 @@
 #version 330 core
 
-#include "include/Globals.glsl"
-
+// INCLUDES ////////////////////////////////////////////////////////////////////
+#include include/Globals.glsl
+// END INCLUDES ////////////////////////////////////////////////////////////////
 // attributes
 layout (location = 0) in vec3 a_Pos;
 layout (location = 1) in vec3 a_Normal;
@@ -22,4 +23,4 @@ void main()
    v_Normal = vec3(u_Normal * vec4(a_Normal, 0.0));
 
    gl_Position = u_Projection * u_View * vec4(v_Pos, 1.0);
-};
+}
