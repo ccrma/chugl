@@ -1,11 +1,6 @@
 // Include this to access all the scene lighting info
 
-const int LIGHT_TYPE_NONE  = 0;
-const int LIGHT_TYPE_DIR   = 1;
-const int LIGHT_TYPE_POINT = 2;
-const int LIGHT_TYPE_SPOT  = 3;
-
-struct Light {
+struct PointLight {
 	// color info
 	vec3 ambient;
 	vec3 diffuse;
@@ -19,13 +14,22 @@ struct Light {
 
 	// transform
 	vec3 position;
-	vec3 direction;
-	
-	// type enum 
-	int type;
 };
 
-const int MAX_LIGHTS = 25;
-uniform int u_NumLights = 0;
-uniform Light u_Lights[MAX_LIGHTS];
+struct DirLight {
+	vec3 direction;
+
+	float intensity;
+
+	// color info
+	vec3 ambient;
+	vec3 diffuse;
+	vec3 specular;
+};
+
+const int MAX_LIGHTS = 12;
+uniform int u_NumPointLights = 0;
+uniform int u_NumDirLights = 0;
+uniform PointLight u_PointLights[MAX_LIGHTS];
+uniform DirLight u_DirLights[MAX_LIGHTS];
 

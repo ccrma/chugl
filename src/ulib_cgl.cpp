@@ -5,6 +5,7 @@
 #include "renderer/scenegraph/Camera.h"
 #include "renderer/scenegraph/Command.h"
 #include "renderer/scenegraph/Scene.h"
+#include "renderer/scenegraph/Light.h"
 
 #include "chuck_vm.h"
 
@@ -73,6 +74,20 @@ CK_DLL_CTOR(cgl_scene_ctor);
 CK_DLL_DTOR(cgl_scene_dtor);
 
 //-----------------------------------------------------------------------------
+// Object -> Light
+//-----------------------------------------------------------------------------
+CK_DLL_CTOR(cgl_light_ctor);  // abstract base class, no constructor
+CK_DLL_DTOR(cgl_light_dtor);
+
+// point light
+CK_DLL_CTOR(cgl_point_light_ctor);
+// CK_DLL_MFUN(cgl_light_point_set); // TODO: allow setting params
+
+// directional light
+CK_DLL_CTOR(cgl_dir_light_ctor);
+
+
+//-----------------------------------------------------------------------------
 // Geometry
 //-----------------------------------------------------------------------------
 CK_DLL_CTOR(cgl_geo_ctor);
@@ -101,6 +116,12 @@ CK_DLL_CTOR(cgl_mat_norm_ctor);
 CK_DLL_DTOR(cgl_mat_norm_dtor);
 CK_DLL_MFUN(cgl_set_use_local_normals);
 
+// phong specular mat
+CK_DLL_CTOR(cgl_mat_phong_ctor);
+CK_DLL_DTOR(cgl_mat_phong_dtor);
+
+
+
 //-----------------------------------------------------------------------------
 // Object -> Mesh
 //-----------------------------------------------------------------------------
@@ -127,6 +148,7 @@ t_CKBOOL init_chugl_cam(Chuck_DL_Query* QUERY);
 t_CKBOOL init_chugl_scene(Chuck_DL_Query* QUERY);
 t_CKBOOL init_chugl_group(Chuck_DL_Query* QUERY);
 t_CKBOOL init_chugl_mesh(Chuck_DL_Query* QUERY);
+t_CKBOOL init_chugl_light(Chuck_DL_Query* QUERY);
 
 static t_CKUINT cglframe_data_offset = 0;
 static t_CKUINT cglupdate_data_offset = 0;
@@ -150,6 +172,7 @@ t_CKBOOL init_chugl(Chuck_DL_Query * QUERY)
 	init_chugl_scene(QUERY);
 	init_chugl_group(QUERY);
 	init_chugl_mesh(QUERY);
+	init_chugl_light(QUERY);
 	// EM_poplog();
 	return true;
 }
@@ -314,6 +337,7 @@ CK_DLL_CTOR(cgl_geo_sphere_ctor)
 	CGL::PushCommand(new CreateGeometryCommand(sphereGeo));
 }
 
+
 //-----------------------------------------------------------------------------
 // init_chugl_mat()
 //-----------------------------------------------------------------------------
@@ -341,6 +365,12 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query* QUERY)
 	QUERY->add_mfun(QUERY, cgl_set_use_local_normals, "void", "useLocal");
 	QUERY->add_arg(QUERY, "int", "useLocal");
 
+	QUERY->end_class(QUERY);
+
+	// phong specular material
+	QUERY->begin_class(QUERY, "PhongMat", "CglMat");
+	QUERY->add_ctor(QUERY, cgl_mat_phong_ctor);
+	QUERY->add_dtor(QUERY, cgl_mat_phong_dtor);
 	QUERY->end_class(QUERY);
 
 	return true;
@@ -407,6 +437,20 @@ CK_DLL_MFUN(cgl_set_use_local_normals)
 	// TODO: add command for this 
 
 	CGL::PushCommand(new UpdateMaterialCommand(mat));
+}
+
+// phong mat fns
+CK_DLL_CTOR(cgl_mat_phong_ctor)
+{
+	PhongMaterial* phongMat = new PhongMaterial;
+	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT) phongMat;
+
+	// Creation command
+	CGL::PushCommand(new CreateMaterialCommand(phongMat));
+}
+
+CK_DLL_DTOR(cgl_mat_phong_dtor)
+{
 }
 
 //-----------------------------------------------------------------------------
@@ -864,6 +908,69 @@ CK_DLL_DTOR(cgl_group_dtor)
 	// TODO: need to remove from scenegraph
 }
 
+//-----------------------------------------------------------------------------
+// init_chugl_light()
+//-----------------------------------------------------------------------------
+t_CKBOOL init_chugl_light(Chuck_DL_Query* QUERY)
+{
+	// EM_log(CK_LOG_INFO, "ChuGL geometry");
+
+	// geometry
+	QUERY->begin_class(QUERY, "Light", "CglObject");
+	QUERY->add_ctor(QUERY, cgl_light_ctor);
+	QUERY->add_dtor(QUERY, cgl_light_dtor);
+	QUERY->end_class(QUERY);
+
+	QUERY->begin_class(QUERY, "PointLight", "Light");
+	QUERY->add_ctor(QUERY, cgl_point_light_ctor);
+	QUERY->add_dtor(QUERY, cgl_light_dtor);
+	// QUERY->add_mfun(QUERY, cgl_geo_box_set, "void", "set");
+	// QUERY->add_arg(QUERY, "float", "width");
+	// QUERY->add_arg(QUERY, "float", "height");
+	// QUERY->add_arg(QUERY, "float", "depth");
+	// QUERY->add_arg(QUERY, "int", "widthSeg");
+	// QUERY->add_arg(QUERY, "int", "heightSeg");
+	// QUERY->add_arg(QUERY, "int", "depthSeg");
+	QUERY->end_class(QUERY);
+
+	QUERY->begin_class(QUERY, "DirLight", "Light");
+	QUERY->add_ctor(QUERY, cgl_dir_light_ctor);
+	QUERY->add_dtor(QUERY, cgl_light_dtor);
+	QUERY->end_class(QUERY);
+
+	return true;
+}
+
+
+// CGL Lights ===================================================
+
+CK_DLL_CTOR(cgl_light_ctor)
+{
+	// abstract class. nothing to do
+}
+
+CK_DLL_DTOR(cgl_light_dtor)
+{
+	Group* group = (Group*)OBJ_MEMBER_INT(SELF, cglobject_data_offset);
+	CK_SAFE_DELETE(group);
+	OBJ_MEMBER_INT(SELF, cglobject_data_offset) = 0;  // zero out the memory
+
+	// TODO: need to remove from scenegraph with a destroy command
+}
+
+CK_DLL_CTOR(cgl_point_light_ctor)
+{
+	PointLight* light = new PointLight;
+	OBJ_MEMBER_INT(SELF, cglobject_data_offset) = (t_CKINT) light;
+	CGL::PushCommand(new CreateLightCommand(light));
+}
+
+CK_DLL_CTOR(cgl_dir_light_ctor)
+{
+	DirLight* light = new DirLight;
+	OBJ_MEMBER_INT(SELF, cglobject_data_offset) = (t_CKINT) light;
+	CGL::PushCommand(new CreateLightCommand(light));
+}
 
 //-----------------------------------------------------------------------------
 // ChuGL Event impl (TODO refactor into separate file)

@@ -44,8 +44,8 @@ public:
 	inline bool GetWireFrame() { return m_WireFrame; }
 	inline float GetWireFrameWidth() { return m_WireFrameLineWidth; }
 
-private:
 	// TODO: wireframing
+	// Note: keep these public so they are accessible by default copy constructor
 	bool m_WireFrame;
 	float m_WireFrameLineWidth;
 };
@@ -62,15 +62,11 @@ public:
 	}
 	virtual Material* Clone(bool copyID = true) override {
 		
-		NormalMaterial* normMat = new NormalMaterial();
+		// invoke copy constructor
+		NormalMaterial* normMat = new NormalMaterial(*this);
+
 		// id
 		if (copyID) { normMat->SetID(this->GetID()); }
-
-		// material uniforms
-		if (m_UseLocalNormals)
-			normMat->UseLocalNormals();
-		else
-			normMat->UseWorldNormals();
 
 		return normMat;
 	}
@@ -89,7 +85,7 @@ public:
 	}
 	void UseLocalNormals() { m_UseLocalNormals = true; }
 	void UseWorldNormals() { m_UseLocalNormals = false; }
-private:
+
 	bool m_UseLocalNormals;
 	// none, no textures!
 };
@@ -98,7 +94,7 @@ private:
 struct PhongMatUniforms {
     // textures (TODO change to shared ptr)
 	// can't use references here because textures can be unitialized, and they can be reassigned
-	Texture * diffuseMap, * specularMap; 
+	// Texture * diffuseMap, * specularMap; 
     // colors
     glm::vec3 diffuseColor, specularColor;
     // specular highlights
@@ -108,18 +104,41 @@ struct PhongMatUniforms {
 class PhongMaterial : public Material
 {
 public:
-	// TODO: use a locator class or something better to get the shader paths 
 	PhongMaterial(
-		Texture* diffuseMap = &Texture::DefaultWhiteTexture, 
-		Texture* specularMap = &Texture::DefaultWhiteTexture,
+		// Texture* diffuseMap = &Texture::DefaultWhiteTexture, 
+		// Texture* specularMap = &Texture::DefaultWhiteTexture,
 		glm::vec3 diffuseColor = glm::vec3(1.0f),
 		glm::vec3 specularColor = glm::vec3(1.0f),
 		float logShininess = 5  // ==> 32 shininess
 	) :
-		m_Uniforms({ diffuseMap, specularMap, diffuseColor, specularColor, logShininess })
+		// m_Uniforms({ diffuseMap, specularMap, diffuseColor, specularColor, logShininess })
+		// TODO: add texture support to chugl
+		// m_Uniforms({ Texture::GetDefaultWhiteTexture(), Texture::GetDefaultWhiteTexture(), diffuseColor, specularColor, logShininess })
+		m_Uniforms({ diffuseColor, specularColor, logShininess })
 	{
 
 	}
+
+	// clone
+	virtual Material* Clone(bool copyID = true) override {
+		PhongMaterial * phongMat = new PhongMaterial(*this);
+		if (copyID) phongMat->SetID(this->GetID());
+		return phongMat;
+	}
+
+	virtual void * GenUpdate() override {
+		return new PhongMatUniforms{ m_Uniforms };
+	}
+
+	virtual void FreeUpdate(void* data) override {
+		delete (PhongMatUniforms*)data;
+	}
+
+	virtual void ApplyUpdate(void* data) override {
+		assert(data && "phong material update data is null!");
+		m_Uniforms = *(PhongMatUniforms*)data;
+	}
+
 	virtual MaterialType GetMaterialType() override { return MaterialType::Phong; }
 	virtual void SetLocalUniforms(Shader* shader) override;
 private:

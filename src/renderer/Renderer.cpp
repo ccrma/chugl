@@ -3,6 +3,7 @@
 #include "Shader.h"
 #include "VertexArray.h"
 #include "scenegraph/Geometry.h"
+#include "scenegraph/Light.h"
 #include <glad/glad.h>
 
 
@@ -67,6 +68,45 @@ RenderMaterial* RenderMaterial::GetDefaultMaterial() {
 	return defaultMat;
 }
 
+void RenderMaterial::SetLightingUniforms(Scene* scene, const std::vector<Light*>& lights) {
+		// accumulators
+		int numPointLights = 0; 
+		int numDirLights = 0;
+
+		const std::string pointLightName = "u_PointLights";
+		const std::string dirLightName = "u_DirLights";
+
+		// loop over lights
+		for (int i = 0; i < lights.size(); i++) {
+			Light* light = lights[i];
+
+			// skip if not a child of current scene
+			if (!light || !light->BelongsToSceneObject(scene)) continue;
+
+			switch (light->GetLightType()) {
+				case LightType::None:
+					throw std::runtime_error("Light type not set");
+				case LightType::Point:
+					light->SetShaderUniforms(m_Shader, numPointLights);
+					++numPointLights;
+					break;
+				case LightType::Directional:
+					light->SetShaderUniforms(m_Shader, numDirLights);
+					++numDirLights;
+					break;
+				case LightType::Spot:
+					throw std::runtime_error("Spot lights not implemented");
+					break;
+				default:
+					throw std::runtime_error("Light type not set");
+			}
+		}
+
+		// set count uniforms
+		m_Shader->setInt("u_NumPointLights", numPointLights);
+		m_Shader->setInt("u_NumDirLights", numDirLights);
+	}
+
 
 
 
@@ -85,29 +125,3 @@ void Renderer::Clear(bool color, bool depth)
 	GLCall(glClear(clearBitfield));
 }
 
-void Renderer::Draw(VertexArray& va, Shader& shader)
-{
-	shader.Bind();
-	va.Bind();
-	if (va.GetIndexBuffer() == nullptr) {
-		GLCall(glDrawArrays(
-			GL_TRIANGLES,
-			0,  // starting index
-			va.GetVertexBuffer()->GetCount()
-		));
-	}
-	else
-	{
-		GLCall(glDrawElements(
-			GL_TRIANGLES,
-			va.GetIndexBufferCount(),
-			GL_UNSIGNED_INT,   // type of index in EBO
-			0  // offset
-		));
-	}
-}
-
-void Renderer::Draw(RenderGeometry* geo, Shader& shader)
-{
-	Draw(geo->GetArray(), shader);
-}

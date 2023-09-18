@@ -49,7 +49,7 @@ private:
 
 	// event queues, shared by all events
 	static std::vector<CglEvent*> m_FrameEvents;
-	static std::vector<CglEvent*> m_UpdateEvents;
+	static std::vector<CglEvent*> m_UpdateEvents;  // not used for now, will be used to support multiple windows
 	static std::vector<CglEvent*> m_WindowResizeEvents;
 };
 

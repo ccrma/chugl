@@ -53,7 +53,6 @@ namespace Util
 	inline void printErr(const std::string& str) {
 		std::cerr << str << std::endl;
 	}
-
 }
 
 

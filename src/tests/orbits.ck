@@ -39,10 +39,10 @@ moonSystem.AddChild(moon);
 
 
 InputManager IM;
-spork ~ IM.start(2);
+spork ~ IM.start(0);
 
 MouseManager MM;
-spork ~ MM.start(2);
+spork ~ MM.start(0);
 
 CglUpdate UpdateEvent;
 CglFrame FrameEvent;

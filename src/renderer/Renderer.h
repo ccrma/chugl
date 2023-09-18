@@ -82,6 +82,7 @@ public:
 	{	
 		std::string vertPath, fragPath;
 		// factory method to create the correct shader based on the material type
+		// TODO just hardcode strings in cpp for builtin shaders
 		switch(mat->GetMaterialType()) {
 			case MaterialType::Normal:
 				// TODO: really should abstract this to a shader resource locator class
@@ -89,9 +90,9 @@ public:
 				fragPath = "renderer/shaders/NormalFrag.glsl";
 				break;
 			case MaterialType::Phong:
- 				vertPath = "./res/shaders/BasicLightingVert.glsl";
-				fragPath = "./res/shaders/BasicLightingFrag.glsl";
-				assert(false && "phong unimplemented");
+ 				vertPath = "./renderer/shaders/BasicLightingVert.glsl";
+				fragPath = "./renderer/shaders/BasicLightingFrag.glsl";
+				break;
 			default:  // default material (normal mat for now)
 				vertPath = "renderer/shaders/BasicLightingVert.glsl";
 				fragPath = "renderer/shaders/NormalFrag.glsl";
@@ -103,18 +104,18 @@ public:
 	~RenderMaterial() {}
 
 	// CPU side data
-	Shader* GetShader() { return m_Shader; }
 	std::string GetVertPath() { return m_Shader->GetVertPath(); }
 	std::string GetFragPath() { return m_Shader->GetFragPath(); }
 	Material* GetMat() { return m_Mat; }
 
 	// GPU side data
+	Shader* GetShader() { return m_Shader; }
 	virtual void BindShader() { m_Shader->Bind(); }
 	void SetLocalUniforms() {
-		m_Mat->SetLocalUniforms(m_Shader);  // eventually move this logic out of Material and into RenderMaterial
+
+		m_Mat->SetLocalUniforms(m_Shader);  // TODO eventually move this logic out of Material and into RenderMaterial
 	}
 	void SetGlobalUniforms(const GlobalUniforms& globals) {
-		BindShader();
 
 		m_Shader->setMat4f("u_Model", globals.u_Model);
 		m_Shader->setMat4f("u_View", globals.u_View);
@@ -124,6 +125,9 @@ public:
 		m_Shader->setFloat("u_Time", globals.u_Time);
 	}
 
+	void SetLightingUniforms(Scene* scene, const std::vector<Light*>& lights); 
+
+
 public:  // statics
 	static RenderMaterial* GetDefaultMaterial();
 	static RenderMaterial* defaultMat;
@@ -131,6 +135,10 @@ public:  // statics
 private:
 	Material* m_Mat;
 	Shader* m_Shader;
+
+	// texture list
+	std::list<Texture*> m_Textures;
+
 
 };
 
@@ -141,8 +149,6 @@ class Renderer
 {
 public:
 	void Clear(bool color = true, bool depth = true);
-	void Draw(VertexArray& va, Shader& shader); // TODO: refactor to use materials
-	void Draw(RenderGeometry* geo, Shader& shader); // TODO: refactor to use materials
 	void Draw(RenderGeometry* renderGeo, RenderMaterial* renderMat) {
 		Shader* shader = renderMat->GetShader();
 		shader->Bind();
@@ -193,6 +199,9 @@ public:
 
 		// cache camera values
 		m_RenderState.ComputeCameraUniforms(m_MainCamera);
+
+		// cache current scene being rendered
+		m_RenderState.SetScene(scene);
 		
 		// TODO set globals (lighting)
 		RenderNodeAndChildren(scene);
@@ -246,6 +255,7 @@ private:  // private methods
 		RenderMaterial* renderMat = GetOrCreateRenderMat(mat);
 
 		// set uniforms
+		renderMat->BindShader();
 		renderMat->SetLocalUniforms();
 		renderMat->SetGlobalUniforms({
 			worldTransform,
@@ -255,6 +265,7 @@ private:  // private methods
 			m_RenderState.GetViewPos(),
 			0.0f // time
 		});
+		renderMat->SetLightingUniforms(m_RenderState.GetScene(), m_RenderState.GetScene()->m_Lights);
 
 		// draw
 		Draw(renderGeo, renderMat);
@@ -297,7 +308,6 @@ private:  // private member vars
 	Camera* m_MainCamera;
 
 	// GPU resources
-	// TODO: should I key on SceneGraphNode ID or pointer?
 	// std::unordered_map<Geometry*, RenderGeometry*> m_RenderGeometries;
 	std::unordered_map<size_t, RenderGeometry*> m_RenderGeometries;
 	// std::unordered_map<Material*, RenderMaterial*> m_RenderMaterials;
