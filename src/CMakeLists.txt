@@ -38,7 +38,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     CXX_STANDARD 11
     CXX_STANDARD_REQUIRED ON
 )
-# target_link_libraries(${PROJECT_NAME} PRIVATE raylib)
 
 
 # library dependencies
@@ -89,7 +88,7 @@ if ( MSVC )
     message(STATUS "Setting chuck executable to ${CHUCK_EXECUTABLE}")
     set_target_properties( ${PROJECT_NAME} PROPERTIES
         VS_DEBUGGER_COMMAND "${CHUCK_EXECUTABLE}"
-        VS_DEBUGGER_COMMAND_ARGUMENTS "--chugin-probe"
+        VS_DEBUGGER_COMMAND_ARGUMENTS "--chugin-path:${CMAKE_TARGET_DIR}/Debug"
         VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
     )
 endif()

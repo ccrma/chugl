@@ -69,8 +69,8 @@ glm::quat SceneGraphObject::GetWorldRotation()
 
 glm::vec3 SceneGraphObject::GetWorldPosition()
 {
-
-	return GetWorldMatrix() * glm::vec4(m_Position, 1.0);
+	if (!m_Parent) return m_Position;
+	return m_Parent->GetWorldMatrix() * glm::vec4(m_Position, 1.0);
 
 	//if (m_Parent == nullptr)
 	//	return m_Position;
@@ -230,4 +230,14 @@ bool SceneGraphObject::HasChild(SceneGraphObject* child)
 		return true;
 
 	return false;
+}
+
+bool SceneGraphObject::BelongsToSceneObject(SceneGraphObject *sgo)
+{
+	SceneGraphObject* parent = this;
+	while (parent != nullptr) {
+		if (parent == sgo) return true;
+		parent = parent->GetParent();
+	}
+    return false;
 }

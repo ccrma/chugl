@@ -3,6 +3,8 @@
 #include "glm/glm.hpp"
 
 class Camera;
+class Light;
+class Scene;
 
 // used to track state while rendering the scenegraph
 class RendererState  
@@ -24,6 +26,10 @@ public:
 	inline glm::mat4 GetCameraTransform() { return m_CameraTransform;  }
 	inline glm::vec3 GetViewPos() { return m_ViewPos;  }
 
+	// Scene stuff =========================================================
+	inline void SetScene(Scene* scene) { m_Scene = scene; }
+	inline Scene* GetScene() { return m_Scene; }
+
 	void Reset() {
 		m_ModelStack.clear();
 		m_ModelStack.push_back(glm::mat4(1.0f));
@@ -34,6 +40,9 @@ private:
 	// cache camera data
 	glm::mat4 m_ProjMat, m_ViewMat, m_CameraTransform;
 	glm::vec3 m_ViewPos;
+
+	// scene reference
+	Scene* m_Scene;
 
 
 };

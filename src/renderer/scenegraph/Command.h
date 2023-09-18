@@ -6,6 +6,7 @@
 #include "Scene.h"
 #include "Mesh.h"
 #include "Scene.h"
+#include "Light.h"
 
 
 
@@ -38,6 +39,7 @@ public:
                   << std::endl;
 
         scene->RegisterNode(newMat);
+        // TODO: also register materials
     }
 private:
     Material* mat;
@@ -64,6 +66,25 @@ public:
 
 private:
     Geometry* geo;
+};
+
+// create Light
+
+class CreateLightCommand : public SceneGraphCommand
+{
+public:
+    CreateLightCommand(Light* light) : light(light) {};
+    virtual void execute(Scene* scene) override {
+        Light* newLight = light->Clone();
+        newLight->SetID(light->GetID());  // copy ID
+        std::cout << "copied light with id: " + std::to_string(newLight->GetID())
+            << std::endl;
+
+        scene->RegisterNode(newLight);
+        scene->RegisterLight(newLight);
+    }
+private:
+    Light* light;
 };
 
 // create Group
@@ -241,8 +262,8 @@ class UpdateMaterialCommand : public SceneGraphCommand
 {
 public:
     UpdateMaterialCommand(Material* mat) 
-        : m_Mat(mat), m_MatData(mat->GenUpdate()), m_MatID(mat->GetID()) {
-        assert(mat->GetMaterialType() != MaterialType::Base);  // must be a concrete material
+        : m_Mat(nullptr), m_MatData(mat->GenUpdate()), m_MatID(mat->GetID()) {
+        assert(mat->GetMaterialType() != MaterialType::Base);
     };
     ~UpdateMaterialCommand() {
         if (m_MatData) {
@@ -250,15 +271,15 @@ public:
         }
     }
     virtual void execute(Scene* scene) override {
-        Material* mat = dynamic_cast<Material*>(scene->GetNode(m_MatID));
-        assert(mat);  
-        mat->ApplyUpdate(m_MatData);
+        m_Mat = dynamic_cast<Material*>(scene->GetNode(m_MatID));
+        assert(m_Mat);  
+        m_Mat->ApplyUpdate(m_MatData);
 
-        std::cout << "updated material with id: " + std::to_string(mat->GetID()) 
+        std::cout << "updated material with id: " + std::to_string(m_Mat->GetID()) 
                   << std::endl;
     }
 private:
-    Material* m_Mat;
+    Material* m_Mat;  // renderer side copy of the material
     void* m_MatData;
     size_t m_MatID;
 };
