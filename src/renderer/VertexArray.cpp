@@ -45,7 +45,7 @@ void VertexArray::AddBufferAndLayout(const VertexBuffer& vb, const VertexBufferL
 	/*
     glVertexAttribPointer(  // for vertex position
         0,  // which vertex attribute we want to configure, e.g. layout (location = 0) in vertex shader sets location of vertex attribute to 0
-        3,  // count of vertex attribute
+        3,  // count of vertex attribute (e.g. a UV has 2 floats, so 2)
         GL_FLOAT,  // type of data
         GL_FALSE,  // whether or not to normalize
         6 * sizeof(float),  // also can pass 0 for tightly packed attributes

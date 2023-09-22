@@ -17,6 +17,7 @@ add_library(renderer # TODO this whole structure is a mess I realize....can buil
     scenegraph/Scene.cpp
     scenegraph/SceneGraphNode.cpp
     scenegraph/SceneGraphObject.cpp
+    scenegraph/CGL_Texture.cpp
 )
 
 target_link_libraries(renderer
@@ -25,6 +26,7 @@ target_link_libraries(renderer
 
 target_include_directories(renderer 
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
+    PRIVATE ${CMAKE_SOURCE_DIR}/chuck/include/
 )
 
 message(cmake_current_source_dir=${CMAKE_CURRENT_SOURCE_DIR})

@@ -73,7 +73,6 @@ vec3 CalcPointLight(
 // TODO
 // vec3 CalcSpotLight() {}
 
-
 // main =====================================================================================
 void main()
 {
@@ -83,6 +82,7 @@ void main()
     // material color properties (ignore alpha channel for now)
     vec3 diffuse = texture(u_Material.diffuseMap, v_TexCoord).xyz * u_Material.diffuseColor;
     vec3 specular = texture(u_Material.specularMap, v_TexCoord).xyz * u_Material.specularColor;
+
 
     vec3 result = vec3(0.0);
 

@@ -12,9 +12,82 @@ enum class MaterialType {
 	Base = 0,
 	Normal,
 	Phong,
+	CustomShader
 };
 
-// helper struct for global uniforms
+enum class UniformType {
+	Float = 0,
+	Float2,
+	Float3,
+	Float4,
+	Mat4,
+	Int,
+	Int2,
+	Int3,
+	Int4,
+	Bool,
+	Texture
+};
+
+struct MaterialUniform {
+	UniformType type;
+	std::string name;
+	union {
+		float f;
+		float f2[2];
+		float f3[3];
+		float f4[4];
+		int i;
+		int i2[2];
+		int i3[3];
+		int i4[4];
+		bool b;
+		size_t texID;  // needs to be the ID so that when material is cloned into the renderer scenegraph it doesn't hold a chuck-side pointer reference
+		// TODO: don't need to support Mat4 until matrices added to chuck
+		// also at that point might want to stop using a union to be more space efficient
+		// but that also would make memory access less efficient
+	};
+
+	// constructors  (because prior c++20 you can only initialize the first type in a union??)
+	// also why doesn't cpp support C-style designated initializers?
+	static MaterialUniform Create(std::string s, float f0) {
+		MaterialUniform m; m.type = UniformType::Float; m.name = s; m.f = f0; return m;
+	}
+	static MaterialUniform Create(std::string s, float f0, float f1) {
+		MaterialUniform m; m.type = UniformType::Float2; m.name = s; m.f2[0] = f0; m.f2[1] = f1; return m;
+	}
+	static MaterialUniform Create(std::string s, float f0, float f1, float f2) {
+		MaterialUniform m; m.type = UniformType::Float3; m.name = s; m.f3[0] = f0; m.f3[1] = f1; m.f3[2] = f2; return m;
+	}
+	static MaterialUniform Create(std::string s, glm::vec3 v) {
+		MaterialUniform m; m.type = UniformType::Float3; m.name = s; m.f3[0] = v.x; m.f3[1] = v.y; m.f3[2] = v.z; return m;
+	}
+	static MaterialUniform Create(std::string s, float f0, float f1, float f2, float f3) {
+		MaterialUniform m; m.type = UniformType::Float4; m.name = s; m.f4[0] = f0; m.f4[1] = f1; m.f4[2] = f2; m.f4[3] = f3; return m;
+	}
+	static MaterialUniform Create(std::string s, glm::vec4 v) {
+		MaterialUniform m; m.type = UniformType::Float4; m.name = s; m.f4[0] = v.x; m.f4[1] = v.y; m.f4[2] = v.z; m.f4[3] = v.w; return m;
+	}
+	static MaterialUniform Create(std::string s, int i0) {
+		MaterialUniform m; m.type = UniformType::Int; m.name = s; m.i = i0; return m;
+	}
+	static MaterialUniform Create(std::string s, int i0, int i1) {
+		MaterialUniform m; m.type = UniformType::Int2; m.name = s; m.i2[0] = i0; m.i2[1] = i1; return m;
+	}
+	static MaterialUniform Create(std::string s, int i0, int i1, int i2) {
+		MaterialUniform m; m.type = UniformType::Int3; m.name = s; m.i3[0] = i0; m.i3[1] = i1; m.i3[2] = i2; return m;
+	}
+	static MaterialUniform Create(std::string s, int i0, int i1, int i2, int i3) {
+		MaterialUniform m; m.type = UniformType::Int4; m.name = s; m.i4[0] = i0; m.i4[1] = i1; m.i4[2] = i2; m.i4[3] = i3; return m;
+	}
+	static MaterialUniform Create(std::string s, bool b0) {
+		MaterialUniform m; m.type = UniformType::Bool; m.name = s; m.b = b0; return m;
+	}
+	static MaterialUniform Create(std::string s, size_t texID) {
+		MaterialUniform m; m.type = UniformType::Texture; m.name = s; m.texID = texID; return m;
+	}
+};
+
 
 // Material abstract base class
 class Material : public SceneGraphNode
@@ -24,123 +97,88 @@ public:
 	virtual ~Material() {}
 
 	virtual MaterialType GetMaterialType() { return MaterialType::Base; }
+	virtual std::vector<MaterialUniform>& GetLocalUniforms() { return m_Uniforms;  }  // for setting properties specific to the material, e.g. color
 
-	// TODO: need to decouple this from the scenegraph material,
-	// implement entirely in RenderMaterial but to do so need way to support generic
-	// uniform parameter specification.
-	// e.g. specify a uniform name, value, and type maybe stored in a cpu-side buffer
-	virtual void SetLocalUniforms(Shader* shader) = 0;  // for setting properties specific to the material, e.g. color
-	virtual Material* Clone(bool copyID = true) = 0;
+	virtual Material* Clone() = 0;
 
-	// these two commands are for telling a material how to update itself
-	// via an update command
-	// TODO: is there a better way to do this in cpp that doesn't involve void * ?
-	virtual void * GenUpdate() = 0;
-	virtual void FreeUpdate(void* data) = 0;
-	virtual void ApplyUpdate(void* data) = 0;
+	// commands for telling a material how to update itself
+	virtual std::vector<MaterialUniform>* GenUpdate() { return new std::vector<MaterialUniform>(m_Uniforms); }
+	virtual void ApplyUpdate(std::vector<MaterialUniform>* uniform_data) { m_Uniforms = *uniform_data; }
 
 	inline void SetWireFrame(bool wf) { m_WireFrame = wf; }
 	inline void SetWireFrameWidth(float width) { m_WireFrameLineWidth = width; }
 	inline bool GetWireFrame() { return m_WireFrame; }
 	inline float GetWireFrameWidth() { return m_WireFrameLineWidth; }
 
-	// TODO: wireframing
+	int AddUniform(MaterialUniform uniform) {
+		m_Uniforms.push_back(uniform);
+		return m_Uniforms.size() - 1;
+	}
+
 	// Note: keep these public so they are accessible by default copy constructor
 	bool m_WireFrame;
 	float m_WireFrameLineWidth;
+
+	// uniform list
+	std::vector<MaterialUniform> m_Uniforms;
 };
 
 // material that colors using worldspace normals as rgb
 class NormalMaterial : public Material
 {
 public:
-	NormalMaterial() : m_UseLocalNormals(false) {}
+	NormalMaterial() {
+		AddUniform(MaterialUniform::Create("u_UseLocalNormals", false));
+	}
+
 	virtual MaterialType GetMaterialType() override { return MaterialType::Normal; }
-	virtual void SetLocalUniforms(Shader* shader) override {
-		// set uniforms
-		shader->setInt("u_UseLocalNormal", m_UseLocalNormals ? 1 : 0);
-	}
-	virtual Material* Clone(bool copyID = true) override {
-		
-		// invoke copy constructor
-		NormalMaterial* normMat = new NormalMaterial(*this);
-
-		// id
-		if (copyID) { normMat->SetID(this->GetID()); }
-
-		return normMat;
-	}
-	virtual void * GenUpdate() override {
-		return new bool{ m_UseLocalNormals };
+	virtual Material* Clone() override { 
+		auto* mat = new NormalMaterial(*this);
+		mat->SetID(GetID());
+		return mat;
 	}
 
-	virtual void FreeUpdate(void* data) override {
-		delete (bool*)data;
-	}
-
-
-	virtual void ApplyUpdate(void* data) override {
-		assert(data && "normal material update data is null!");
-		m_UseLocalNormals = *(bool*)data;
-	}
-	void UseLocalNormals() { m_UseLocalNormals = true; }
-	void UseWorldNormals() { m_UseLocalNormals = false; }
-
-	bool m_UseLocalNormals;
-	// none, no textures!
+	void UseLocalNormals() { m_Uniforms[0].b = true; }
+	void UseWorldNormals() { m_Uniforms[0].b = false; }
+	bool GetUseLocalNormals() { return m_Uniforms[0].b; }
 };
 
-// match the materials definition in the frag shader!
-struct PhongMatUniforms {
-    // textures (TODO change to shared ptr)
-	// can't use references here because textures can be unitialized, and they can be reassigned
-	// Texture * diffuseMap, * specularMap; 
-    // colors
-    glm::vec3 diffuseColor, specularColor;
-    // specular highlights
-    float logShininess;  // LOG of shininess. e.g. logShininess = 5 ==> shininess = 2^5 = 32.
-};
-// phone lighting (ambient + diffuse + specular)
+// phong lighting (ambient + diffuse + specular)
 class PhongMaterial : public Material
 {
 public:
 	PhongMaterial(
-		// Texture* diffuseMap = &Texture::DefaultWhiteTexture, 
-		// Texture* specularMap = &Texture::DefaultWhiteTexture,
+		size_t diffuseMapID = 0,
+		size_t specularMapID = 0,
 		glm::vec3 diffuseColor = glm::vec3(1.0f),
 		glm::vec3 specularColor = glm::vec3(1.0f),
 		float logShininess = 5  // ==> 32 shininess
-	) :
-		// m_Uniforms({ diffuseMap, specularMap, diffuseColor, specularColor, logShininess })
-		// TODO: add texture support to chugl
-		// m_Uniforms({ Texture::GetDefaultWhiteTexture(), Texture::GetDefaultWhiteTexture(), diffuseColor, specularColor, logShininess })
-		m_Uniforms({ diffuseColor, specularColor, logShininess })
-	{
-
-	}
-
-	// clone
-	virtual Material* Clone(bool copyID = true) override {
-		PhongMaterial * phongMat = new PhongMaterial(*this);
-		if (copyID) phongMat->SetID(this->GetID());
-		return phongMat;
-	}
-
-	virtual void * GenUpdate() override {
-		return new PhongMatUniforms{ m_Uniforms };
-	}
-
-	virtual void FreeUpdate(void* data) override {
-		delete (PhongMatUniforms*)data;
-	}
-
-	virtual void ApplyUpdate(void* data) override {
-		assert(data && "phong material update data is null!");
-		m_Uniforms = *(PhongMatUniforms*)data;
+	) {
+		AddUniform(MaterialUniform::Create("u_Material.diffuseMap", diffuseMapID));
+		AddUniform(MaterialUniform::Create("u_Material.specularMap", specularMapID));
+		AddUniform(MaterialUniform::Create("u_Material.diffuseColor", diffuseColor));
+		AddUniform(MaterialUniform::Create("u_Material.specularColor", specularColor));
+		AddUniform(MaterialUniform::Create("u_Material.logShininess", std::pow(2.0f, logShininess)));
 	}
 
 	virtual MaterialType GetMaterialType() override { return MaterialType::Phong; }
-	virtual void SetLocalUniforms(Shader* shader) override;
-private:
-	PhongMatUniforms m_Uniforms;
+	virtual Material* Clone() override { 
+		auto* mat = new PhongMaterial(*this);
+		mat->SetID(GetID());
+		return mat;
+	}
+
+	// uniform getters
+	size_t GetDiffuseMapID() { return m_Uniforms[0].texID; }
+	size_t GetSpecularMapID() { return m_Uniforms[1].texID; }
+	glm::vec3 GetDiffuseColor() { return glm::vec3(m_Uniforms[2].f3[0], m_Uniforms[2].f3[1], m_Uniforms[2].f3[2]); }
+	glm::vec3 GetSpecularColor() { return glm::vec3(m_Uniforms[3].f3[0], m_Uniforms[3].f3[1], m_Uniforms[3].f3[2]); }
+	float GetLogShininess() { return m_Uniforms[4].f; }
+
+	// uniform setters
+	void SetDiffuseMap(CGL_Texture* texture) { m_Uniforms[0].texID = texture->GetID(); }
+	void SetSpecularMap(CGL_Texture* texture) { m_Uniforms[1].texID = texture->GetID(); }
+	void SetDiffuseColor(float r, float g, float b) { m_Uniforms[2].f3[0] = r; m_Uniforms[2].f3[1] = g; m_Uniforms[2].f3[2] = b; }
+	void SetSpecularColor(float r, float g, float b) { m_Uniforms[3].f3[0] = r; m_Uniforms[3].f3[1] = g; m_Uniforms[3].f3[2] = b; }
+	void SetLogShininess(float logShininess) { m_Uniforms[4].f = std::pow(2.0f, logShininess); }
 };

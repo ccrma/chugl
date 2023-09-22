@@ -29,12 +29,17 @@ public:
 	// uniform setters
 	void setBool(const std::string& name, bool value) const;
 	void setInt(const std::string& name, int value) const;
+	void setInt2(const std::string& name, int x, int y) const;
+	void setInt3(const std::string& name, int x, int y, int z) const;
+	void setInt4(const std::string& name, int x, int y, int z, int w) const;
 	void setFloat(const std::string& name, float value) const;
+	void setFloat2(const std::string& name, float x, float y) const;
 	void setFloat3(const std::string& name, float x, float y, float z) const;
 	void setFloat3(const std::string& name, const glm::vec3 pos) const;
 	void setFloat4(const std::string& name, float x, float y, float z, float w) const;
 	void setTextureUnits(unsigned int n = 8);
 	void setMat4f(const std::string& name, const glm::mat4& mat);
+
 
 	// getters/setters
 	std::string GetVertPath() const { return m_VertexPath; }

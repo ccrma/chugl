@@ -62,6 +62,7 @@ public:
 	{}
 	
 	virtual LightType GetLightType() override { return LightType::Point; }
+	// TODO: decouple from shader implementation
 	virtual void SetShaderUniforms(Shader* shader, int index) override;
 	virtual Light* Clone() override { return new PointLight(*this); }
 

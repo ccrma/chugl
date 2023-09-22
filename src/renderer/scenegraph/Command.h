@@ -7,6 +7,7 @@
 #include "Mesh.h"
 #include "Scene.h"
 #include "Light.h"
+#include "CGL_Texture.h"
 
 
 
@@ -34,7 +35,7 @@ public:
         assert(mat->GetMaterialType() != MaterialType::Base);  // must be a concrete material
     };
     virtual void execute(Scene* scene) override {
-        Material* newMat = mat->Clone(true);
+        Material* newMat = mat->Clone();
         std::cout << "copied material with id: " + std::to_string(newMat->GetID()) 
                   << std::endl;
 
@@ -68,20 +69,50 @@ private:
     Geometry* geo;
 };
 
-// create Light
+class CreateTextureCommand : public SceneGraphCommand
+{
+public:
+    CreateTextureCommand(CGL_Texture* tex) : texture(nullptr) {
+        texture = tex->Clone();  // for when chuck eventually has constructors
+        std::cout << "created texture with id: " + std::to_string(tex->GetID()) << std::endl;
+    }
+
+    virtual void execute(Scene* scene) override {
+        scene->RegisterNode(texture);
+        // TODO register to texture resource list
+
+        // create the texture on the gpu
+        /*
+        TODO: 
+        - should be registering texture in rendererState,
+        because a texture could belong to multiple scenes
+
+        - BUT, command right now is decoupled from the renderer, if we pass
+        RendererState as a param to Creation Commands, that couples
+            - is that ok?
+            - way to remain decoupled: allow passing in a callback function to the Command class somehow...
+        
+        Also need to the memory for passing data buffers from client code
+        */
+    }
+private:
+    CGL_Texture* texture;
+};
+
 
 class CreateLightCommand : public SceneGraphCommand
 {
 public:
-    CreateLightCommand(Light* light) : light(light) {};
+    CreateLightCommand(Light* l) : light(nullptr) {
+        light = l->Clone();
+        light->SetID(l->GetID());
+    };
     virtual void execute(Scene* scene) override {
-        Light* newLight = light->Clone();
-        newLight->SetID(light->GetID());  // copy ID
-        std::cout << "copied light with id: " + std::to_string(newLight->GetID())
+        std::cout << "copied light with id: " + std::to_string(light->GetID())
             << std::endl;
 
-        scene->RegisterNode(newLight);
-        scene->RegisterLight(newLight);
+        scene->RegisterNode(light);
+        scene->RegisterLight(light);
     }
 private:
     Light* light;
@@ -258,29 +289,23 @@ This is necessary to prevent accessing the original material while executing
 the command, as we are outside the "critical region" and no-longer have gauranteed
 thread-safe read/write access
 */
-class UpdateMaterialCommand : public SceneGraphCommand
+class UpdateMaterialUniformsCommand : public SceneGraphCommand
 {
 public:
-    UpdateMaterialCommand(Material* mat) 
-        : m_Mat(nullptr), m_MatData(mat->GenUpdate()), m_MatID(mat->GetID()) {
+    UpdateMaterialUniformsCommand(Material* mat) 
+        : m_MatData(mat->GenUpdate()), m_MatID(mat->GetID()) {
         assert(mat->GetMaterialType() != MaterialType::Base);
     };
-    ~UpdateMaterialCommand() {
-        if (m_MatData) {
-            m_Mat->FreeUpdate(m_MatData);
-        }
+    ~UpdateMaterialUniformsCommand() {
+        if (m_MatData) delete m_MatData;
     }
     virtual void execute(Scene* scene) override {
-        m_Mat = dynamic_cast<Material*>(scene->GetNode(m_MatID));
+        Material* m_Mat = dynamic_cast<Material*>(scene->GetNode(m_MatID));
         assert(m_Mat);  
         m_Mat->ApplyUpdate(m_MatData);
-
-        std::cout << "updated material with id: " + std::to_string(m_Mat->GetID()) 
-                  << std::endl;
     }
 private:
-    Material* m_Mat;  // renderer side copy of the material
-    void* m_MatData;
+    std::vector<MaterialUniform>* m_MatData;
     size_t m_MatID;
 };
 
@@ -333,4 +358,49 @@ private:
     void* m_GeoData;
     size_t m_GeoID;
 };
+
+class UpdateTextureSamplerCommand : public SceneGraphCommand
+{
+public:
+    UpdateTextureSamplerCommand(CGL_Texture * tex) : texID(tex->GetID()) {
+        samplerParams = tex->m_SamplerParams;
+    };
+
+    virtual void execute(Scene* scene) override {
+        CGL_Texture* tex = dynamic_cast<CGL_Texture*>(scene->GetNode(texID));
+        assert(tex);
+
+        // copy sampler params
+        tex->m_SamplerParams = samplerParams;
+        tex->m_NewSampler = true;  // set flag to let renderer know it needs to update texture sampling params on GPU
+    }
+
+
+private:
+    size_t texID;
+    CGL_TextureSamplerParams samplerParams;
+};
+
+
+class UpdateTexturePathCommand : public SceneGraphCommand
+{
+public:
+    UpdateTexturePathCommand(CGL_Texture * tex) : texID(tex->GetID()) {
+        filePath = tex->m_FilePath;
+    };
+
+    virtual void execute(Scene* scene) override {
+        CGL_Texture* tex = dynamic_cast<CGL_Texture*>(scene->GetNode(texID));
+        assert(tex);
+
+        tex->m_FilePath= filePath;
+        tex->m_NewFilePath = true;
+    }
+
+
+private:
+    size_t texID;
+    std::string filePath;
+};
+
 

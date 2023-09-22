@@ -15,6 +15,7 @@
 class VertexArray;
 class Shader;
 class Geometry;
+class Renderer;
 
 
 // Renderer helper classes (encapsulate SceneGraph classes)
@@ -78,7 +79,8 @@ struct GlobalUniforms {
 // Manages GPU side data for a material
 class RenderMaterial {
 public:
-	RenderMaterial(Material* mat) : m_Mat(mat), m_Shader(nullptr) 
+	RenderMaterial(Material* mat, Renderer* renderer) : 
+	m_Mat(mat), m_Shader(nullptr), m_Renderer(renderer)
 	{	
 		std::string vertPath, fragPath;
 		// factory method to create the correct shader based on the material type
@@ -111,10 +113,7 @@ public:
 	// GPU side data
 	Shader* GetShader() { return m_Shader; }
 	virtual void BindShader() { m_Shader->Bind(); }
-	void SetLocalUniforms() {
-
-		m_Mat->SetLocalUniforms(m_Shader);  // TODO eventually move this logic out of Material and into RenderMaterial
-	}
+	void SetLocalUniforms();
 	void SetGlobalUniforms(const GlobalUniforms& globals) {
 
 		m_Shader->setMat4f("u_Model", globals.u_Model);
@@ -129,16 +128,13 @@ public:
 
 
 public:  // statics
-	static RenderMaterial* GetDefaultMaterial();
+	static RenderMaterial* GetDefaultMaterial(Renderer* renderer);
 	static RenderMaterial* defaultMat;
 
 private:
 	Material* m_Mat;
 	Shader* m_Shader;
-
-	// texture list
-	std::list<Texture*> m_Textures;
-
+	Renderer* m_Renderer;
 
 };
 
@@ -207,7 +203,6 @@ public:
 		RenderNodeAndChildren(scene);
 	}
 
-private:  // private methods
 	void RenderNodeAndChildren(SceneGraphObject* sgo) {
 		// TODO add matrix caching
 		glm::mat4 worldTransform = m_RenderState.GetTopTransform() * sgo->GetModelMatrix();
@@ -286,7 +281,7 @@ private:  // private methods
 
 	RenderMaterial* GetOrCreateRenderMat(Material* mat) {
 		if (mat == nullptr) { // return default material
-			return RenderMaterial::GetDefaultMaterial();
+			return RenderMaterial::GetDefaultMaterial(this);
 		}
 
 		size_t ID = mat->GetID();
@@ -295,23 +290,36 @@ private:  // private methods
 		}
 
 		// not found, create it
-		RenderMaterial* renderMat = new RenderMaterial(mat);
+		RenderMaterial* renderMat = new RenderMaterial(mat, this);
 		// cache it
 		m_RenderMaterials[ID] = renderMat;
 		return renderMat;
 	}
 
+	Texture* GetOrCreateTexture(size_t ID) {
+		CGL_Texture* tex = dynamic_cast<CGL_Texture*>(m_RenderState.GetScene()->GetNode(ID));
+		if (!tex)  // no scenegraph texture, use default
+			return Texture::GetDefaultWhiteTexture();
+		
+		if (m_Textures.find(ID) != m_Textures.end()) {
+			return m_Textures[ID];
+		}
 
+		// not found, create it
+		Texture* texture = new Texture(tex);
+		// cache it
+		m_Textures[ID] = texture;
+		return texture;
+	}
 
 private:  // private member vars
 	RendererState m_RenderState;
 	Camera* m_MainCamera;
 
-	// GPU resources
-	// std::unordered_map<Geometry*, RenderGeometry*> m_RenderGeometries;
+	// GPU resources, map from SceneGraphNode ID to Renderer resource
 	std::unordered_map<size_t, RenderGeometry*> m_RenderGeometries;
-	// std::unordered_map<Material*, RenderMaterial*> m_RenderMaterials;
 	std::unordered_map<size_t, RenderMaterial*> m_RenderMaterials;
+	std::unordered_map<size_t, Texture*> m_Textures;
 
 };
 

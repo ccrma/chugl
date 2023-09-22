@@ -28,8 +28,8 @@ public class FlyCam {
 		if (IM.isKeyDown(IM.KEY_E))
 			mainCamera.TranslateBy(-cameraSpeed * UP);
 
-		<<< "pos", mainCamera.GetPosition() >>>;
-		<<< "rot", mainCamera.GetRotation() >>>;
+		// <<< "pos", mainCamera.GetPosition() >>>;
+		// <<< "rot", mainCamera.GetRotation() >>>;
 
 		// mouse lookaround
 

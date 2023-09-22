@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <iostream>
 #include <stdexcept>
 
@@ -6,8 +7,10 @@
 #include "renderer/scenegraph/Command.h"
 #include "renderer/scenegraph/Scene.h"
 #include "renderer/scenegraph/Light.h"
+#include "renderer/scenegraph/CGL_Texture.h"
 
 #include "chuck_vm.h"
+#include "chuck_dl.h"
 
 
 //-----------------------------------------------------------------------------
@@ -102,6 +105,28 @@ CK_DLL_CTOR(cgl_geo_sphere_ctor);
 
 
 //-----------------------------------------------------------------------------
+// Texture 
+//-----------------------------------------------------------------------------
+
+CK_DLL_CTOR(cgl_texture_ctor);
+CK_DLL_DTOR(cgl_texture_dtor);
+
+CK_DLL_MFUN(cgl_texture_set_wrap);
+CK_DLL_MFUN(cgl_texture_get_wrap_s);
+CK_DLL_MFUN(cgl_texture_get_wrap_t);
+
+CK_DLL_MFUN(cgl_texture_set_filter);
+CK_DLL_MFUN(cgl_texture_get_filter_min);
+CK_DLL_MFUN(cgl_texture_get_filter_mag);
+
+CK_DLL_MFUN(cgl_texture_set_data_filepath);  // set via image file
+CK_DLL_MFUN(cgl_texture_get_data_filepath);
+
+// CK_DLL_MFUN(cgl_texture_set_data_buffer);	 // set via chuck array
+
+// TODO: getters? 
+
+//-----------------------------------------------------------------------------
 // Materials
 //-----------------------------------------------------------------------------
 CK_DLL_CTOR(cgl_mat_ctor);
@@ -119,6 +144,13 @@ CK_DLL_MFUN(cgl_set_use_local_normals);
 // phong specular mat
 CK_DLL_CTOR(cgl_mat_phong_ctor);
 CK_DLL_DTOR(cgl_mat_phong_dtor);
+	// uniform setters
+CK_DLL_MFUN(cgl_mat_phong_set_diffuse_map);
+CK_DLL_MFUN(cgl_mat_phong_set_specular_map);
+CK_DLL_MFUN(cgl_mat_phong_set_diffuse_color);
+CK_DLL_MFUN(cgl_mat_phong_set_specular_color);
+CK_DLL_MFUN(cgl_mat_phong_set_log_shininess);
+	// uniform getters TODO
 
 
 
@@ -142,6 +174,7 @@ CK_DLL_DTOR(cgl_group_dtor);
 t_CKBOOL init_chugl_events(Chuck_DL_Query* QUERY);
 t_CKBOOL init_chugl_static_fns(Chuck_DL_Query* QUERY);
 t_CKBOOL init_chugl_geo(Chuck_DL_Query* QUERY);
+t_CKBOOL init_chugl_texture(Chuck_DL_Query* QUERY);
 t_CKBOOL init_chugl_mat(Chuck_DL_Query* QUERY);
 t_CKBOOL init_chugl_obj(Chuck_DL_Query* QUERY);
 t_CKBOOL init_chugl_cam(Chuck_DL_Query* QUERY);
@@ -150,22 +183,21 @@ t_CKBOOL init_chugl_group(Chuck_DL_Query* QUERY);
 t_CKBOOL init_chugl_mesh(Chuck_DL_Query* QUERY);
 t_CKBOOL init_chugl_light(Chuck_DL_Query* QUERY);
 
+
 static t_CKUINT cglframe_data_offset = 0;
 static t_CKUINT cglupdate_data_offset = 0;
 static t_CKUINT cglobject_data_offset = 0;
 static t_CKUINT cglcamera_data_offset = 0;
 static t_CKUINT cglgeo_data_offset = 0;
+static t_CKUINT cgltexture_data_offset = 0;
 static t_CKUINT cglmat_data_offset = 0;
 
-// DLL_QUERY cgl_query(Chuck_DL_Query* QUERY)
 t_CKBOOL init_chugl(Chuck_DL_Query * QUERY)
 {
-	// EM_pushlog();
-	// EM_log(CK_LOG_INFO, "loading ChuGL API");
-
 	init_chugl_events(QUERY);
 	init_chugl_static_fns(QUERY);
 	init_chugl_geo(QUERY);
+	init_chugl_texture(QUERY);
 	init_chugl_mat(QUERY);
 	init_chugl_obj(QUERY);
 	init_chugl_cam(QUERY);
@@ -173,7 +205,7 @@ t_CKBOOL init_chugl(Chuck_DL_Query * QUERY)
 	init_chugl_group(QUERY);
 	init_chugl_mesh(QUERY);
 	init_chugl_light(QUERY);
-	// EM_poplog();
+
 	return true;
 }
 
@@ -182,7 +214,6 @@ t_CKBOOL init_chugl(Chuck_DL_Query * QUERY)
 //-----------------------------------------------------------------------------
 t_CKBOOL init_chugl_events(Chuck_DL_Query* QUERY)
 {
-
 	CglEvent::s_SharedEventQueue = QUERY->api()->vm->create_event_buffer(
 		QUERY->vm()
 	);
@@ -259,9 +290,6 @@ CK_DLL_SFUN(cgl_render)
 //-----------------------------------------------------------------------------
 t_CKBOOL init_chugl_geo(Chuck_DL_Query* QUERY)
 {
-	// EM_log(CK_LOG_INFO, "ChuGL geometry");
-
-	// geometry
 	QUERY->begin_class(QUERY, "CglGeo", "Object");
 	QUERY->add_ctor(QUERY, cgl_geo_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
@@ -271,6 +299,7 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query* QUERY)
 	QUERY->begin_class(QUERY, "BoxGeo", "CglGeo");
 	QUERY->add_ctor(QUERY, cgl_geo_box_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
+
 	QUERY->add_mfun(QUERY, cgl_geo_box_set, "void", "set");
 	QUERY->add_arg(QUERY, "float", "width");
 	QUERY->add_arg(QUERY, "float", "height");
@@ -339,6 +368,137 @@ CK_DLL_CTOR(cgl_geo_sphere_ctor)
 
 
 //-----------------------------------------------------------------------------
+// init_chugl_texture()
+//-----------------------------------------------------------------------------
+
+t_CKBOOL init_chugl_texture(Chuck_DL_Query* QUERY)
+{
+	QUERY->begin_class(QUERY, "CglTexture", "Object");
+	QUERY->add_ctor(QUERY, cgl_texture_ctor);
+	QUERY->add_dtor(QUERY, cgl_texture_dtor);
+	cgltexture_data_offset = QUERY->add_mvar(QUERY, "int", "@cgltexture_dat", false);
+
+	// texture options (static constants) ---------------------------------
+    QUERY->add_svar( QUERY, "int", "WRAP_REPEAT", TRUE, (void *)&CGL_Texture::Repeat);
+    QUERY->add_svar( QUERY, "int", "WRAP_MIRRORED", TRUE, (void *)&CGL_Texture::MirroredRepeat);
+    QUERY->add_svar( QUERY, "int", "WRAP_CLAMP", TRUE, (void *)&CGL_Texture::ClampToEdge);
+
+	// not exposing mipmap filter options for simplicity
+    QUERY->add_svar( QUERY, "int", "FILTER_NEAREST", TRUE, (void *)&CGL_Texture::Nearest);
+    QUERY->add_svar( QUERY, "int", "FILTER_LINEAR", TRUE, (void *)&CGL_Texture::Linear);
+
+	// member fns -----------------------------------------------------------
+	QUERY->add_mfun(QUERY, cgl_texture_set_wrap, "void", "wrap");
+	QUERY->add_arg(QUERY, "int", "s");
+	QUERY->add_arg(QUERY, "int", "t");
+
+	QUERY->add_mfun(QUERY, cgl_texture_get_wrap_s, "int", "wrapS");
+	QUERY->add_mfun(QUERY, cgl_texture_get_wrap_t, "int", "wrapT");
+
+	QUERY->add_mfun(QUERY, cgl_texture_set_filter, "void", "filter");
+	QUERY->add_arg(QUERY, "int", "min");
+	QUERY->add_arg(QUERY, "int", "mag");
+	QUERY->add_mfun(QUERY, cgl_texture_get_filter_min, "int", "filterMin");
+	QUERY->add_mfun(QUERY, cgl_texture_get_filter_mag, "int", "filterMag");
+
+	QUERY->add_mfun(QUERY, cgl_texture_set_data_filepath, "string", "path");
+	QUERY->add_arg(QUERY, "string", "path");
+	QUERY->add_mfun(QUERY, cgl_texture_get_data_filepath, "string", "path");
+
+	// QUERY->add_mfun(QUERY, cgl_texture_set_data_buffer, "void", "buffer");
+	// TODO: no buffer getter bc chuck DL return doesn't support array types
+
+	QUERY->end_class(QUERY);
+
+	return true;
+}
+
+// CGL_Texture API impl =====================================================
+CK_DLL_CTOR(cgl_texture_ctor)
+{
+	CGL_Texture* texture = new CGL_Texture;
+	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT) texture;
+
+	// Creation command
+	CGL::PushCommand(new CreateTextureCommand(texture));
+}
+
+CK_DLL_DTOR(cgl_texture_dtor)
+{
+	CGL_Texture* texture = (CGL_Texture*)OBJ_MEMBER_INT(SELF, cgltexture_data_offset);
+	CK_SAFE_DELETE(texture);
+	OBJ_MEMBER_INT(SELF, cgltexture_data_offset) = 0;
+
+	// TODO: send destroy command to CGL command queue
+	//       - remove texture from scenegraph
+	// 	     - callback hook for renderer to remove TextureMat from cache
+	// idea: .dispose() of THREEjs. need to deliberately invoke freeing GPU resources from chuck side,
+	// chuck destructor does NOT implicitly free GPU resources (probably safer this way)
+}
+
+CK_DLL_MFUN(cgl_texture_set_wrap)
+{
+	CGL_Texture* texture = (CGL_Texture*)OBJ_MEMBER_INT(SELF, cgltexture_data_offset);
+	auto s = static_cast<CGL_TextureWrapMode>(GET_NEXT_INT(ARGS)); 
+	auto t = static_cast<CGL_TextureWrapMode>(GET_NEXT_INT(ARGS));
+	texture->SetWrapMode(s, t);
+
+	CGL::PushCommand(new UpdateTextureSamplerCommand(texture));
+}
+
+CK_DLL_MFUN(cgl_texture_get_wrap_s)
+{
+	CGL_Texture* texture = (CGL_Texture*)OBJ_MEMBER_INT(SELF, cgltexture_data_offset);
+	RETURN->v_int = static_cast<t_CKINT>(texture->m_SamplerParams.wrapS);
+}
+
+CK_DLL_MFUN(cgl_texture_get_wrap_t)
+{
+	CGL_Texture* texture = (CGL_Texture*)OBJ_MEMBER_INT(SELF, cgltexture_data_offset);
+	RETURN->v_int = static_cast<t_CKINT>(texture->m_SamplerParams.wrapS);
+}
+
+CK_DLL_MFUN(cgl_texture_set_filter)
+{
+	CGL_Texture* texture = (CGL_Texture*)OBJ_MEMBER_INT(SELF, cgltexture_data_offset);
+	auto min = static_cast<CGL_TextureFilterMode>(GET_NEXT_INT(ARGS)); 
+	auto mag = static_cast<CGL_TextureFilterMode>(GET_NEXT_INT(ARGS));
+	texture->SetFilterMode(min, mag);
+
+	CGL::PushCommand(new UpdateTextureSamplerCommand(texture));
+}
+
+CK_DLL_MFUN(cgl_texture_get_filter_min)
+{
+	CGL_Texture* texture = (CGL_Texture*)OBJ_MEMBER_INT(SELF, cgltexture_data_offset);
+	RETURN->v_int = static_cast<t_CKINT>(texture->m_SamplerParams.filterMin);
+}
+
+CK_DLL_MFUN(cgl_texture_get_filter_mag)
+{
+	CGL_Texture* texture = (CGL_Texture*)OBJ_MEMBER_INT(SELF, cgltexture_data_offset);
+	RETURN->v_int = static_cast<t_CKINT>(texture->m_SamplerParams.filterMag);
+}
+
+CK_DLL_MFUN(cgl_texture_set_data_filepath)
+{
+	CGL_Texture* texture = (CGL_Texture*)OBJ_MEMBER_INT(SELF, cgltexture_data_offset);
+	Chuck_String * path = GET_NEXT_STRING(ARGS);
+	texture->m_FilePath = path->str();
+
+	CGL::PushCommand(new UpdateTexturePathCommand(texture));
+
+	RETURN->v_string = path;
+}
+
+CK_DLL_MFUN(cgl_texture_get_data_filepath)
+{
+	CGL_Texture* texture = (CGL_Texture*)OBJ_MEMBER_INT(SELF, cgltexture_data_offset);
+    RETURN->v_string = (Chuck_String *) API->object->create_string(API, SHRED, texture->m_FilePath.c_str());
+}
+
+
+//-----------------------------------------------------------------------------
 // init_chugl_mat()
 //-----------------------------------------------------------------------------
 t_CKBOOL init_chugl_mat(Chuck_DL_Query* QUERY)
@@ -371,11 +531,28 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query* QUERY)
 	QUERY->begin_class(QUERY, "PhongMat", "CglMat");
 	QUERY->add_ctor(QUERY, cgl_mat_phong_ctor);
 	QUERY->add_dtor(QUERY, cgl_mat_phong_dtor);
+
+	QUERY->add_mfun(QUERY, cgl_mat_phong_set_diffuse_map, "void", "diffuseMap");
+	QUERY->add_arg(QUERY, "CglTexture", "tex");
+	
+	QUERY->add_mfun(QUERY, cgl_mat_phong_set_specular_map, "void", "specularMap");
+	QUERY->add_arg(QUERY, "CglTexture", "tex");
+
+	QUERY->add_mfun(QUERY, cgl_mat_phong_set_diffuse_color, "vec3", "diffuseColor");
+	QUERY->add_arg(QUERY, "vec3", "color");
+
+	QUERY->add_mfun(QUERY, cgl_mat_phong_set_specular_color, "vec3", "specularColor");
+	QUERY->add_arg(QUERY, "vec3", "color");
+
+	QUERY->add_mfun(QUERY, cgl_mat_phong_set_log_shininess, "float", "shine");
+	QUERY->add_arg(QUERY, "float", "shininess");
+
+	// TODO: add getters
+
 	QUERY->end_class(QUERY);
 
 	return true;
 }
-
 // CGL Materials ===================================================
 CK_DLL_CTOR(cgl_mat_ctor)
 {
@@ -436,7 +613,7 @@ CK_DLL_MFUN(cgl_set_use_local_normals)
 		mat->UseWorldNormals();
 	// TODO: add command for this 
 
-	CGL::PushCommand(new UpdateMaterialCommand(mat));
+	CGL::PushCommand(new UpdateMaterialUniformsCommand(mat));
 }
 
 // phong mat fns
@@ -451,6 +628,62 @@ CK_DLL_CTOR(cgl_mat_phong_ctor)
 
 CK_DLL_DTOR(cgl_mat_phong_dtor)
 {
+}
+
+CK_DLL_MFUN( cgl_mat_phong_set_diffuse_map )
+{
+	PhongMaterial* mat = (PhongMaterial*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	CGL_Texture* tex = (CGL_Texture*) OBJ_MEMBER_INT (GET_NEXT_OBJECT(ARGS), cgltexture_data_offset);
+	mat->SetDiffuseMap(tex);
+
+	// TODO: how do I return the chuck texture object? 
+	// RETURN->v_object = SELF;
+
+	// a lot of redundant work (entire uniform vector is copied). can optimize later
+	CGL::PushCommand(new UpdateMaterialUniformsCommand(mat));
+}
+
+CK_DLL_MFUN( cgl_mat_phong_set_specular_map )
+{
+	PhongMaterial* mat = (PhongMaterial*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	CGL_Texture* tex = (CGL_Texture*) OBJ_MEMBER_INT (GET_NEXT_OBJECT(ARGS), cgltexture_data_offset);
+	mat->SetSpecularMap(tex);
+
+	CGL::PushCommand(new UpdateMaterialUniformsCommand(mat));
+}
+
+
+CK_DLL_MFUN( cgl_mat_phong_set_diffuse_color )
+{
+	PhongMaterial* mat = (PhongMaterial*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
+	mat->SetDiffuseColor(color.x, color.y, color.z);
+
+	RETURN->v_vec3 = color;
+
+	CGL::PushCommand(new UpdateMaterialUniformsCommand(mat));
+}
+
+CK_DLL_MFUN( cgl_mat_phong_set_specular_color )
+{
+	PhongMaterial* mat = (PhongMaterial*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
+	mat->SetSpecularColor(color.x, color.y, color.z);
+
+	RETURN->v_vec3 = color;
+
+	CGL::PushCommand(new UpdateMaterialUniformsCommand(mat));
+}
+
+CK_DLL_MFUN( cgl_mat_phong_set_log_shininess )
+{
+	PhongMaterial* mat = (PhongMaterial*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	t_CKFLOAT shininess = GET_NEXT_FLOAT(ARGS);
+	mat->SetLogShininess(shininess);
+
+	RETURN->v_float = shininess;
+
+	CGL::PushCommand(new UpdateMaterialUniformsCommand(mat));
 }
 
 //-----------------------------------------------------------------------------

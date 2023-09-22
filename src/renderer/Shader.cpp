@@ -54,9 +54,29 @@ void Shader::setInt(const std::string& name, int value) const
     GLCall(glUniform1i(GetUniformLocation(name), value));
 }
 
+void Shader::setInt2(const std::string &name, int x, int y) const
+{
+    GLCall(glUniform2i(GetUniformLocation(name), x, y));
+}
+
+void Shader::setInt3(const std::string &name, int x, int y, int z) const
+{
+    GLCall(glUniform3i(GetUniformLocation(name), x, y, z));
+}
+
+void Shader::setInt4(const std::string &name, int x, int y, int z, int w) const
+{
+    GLCall(glUniform4i(GetUniformLocation(name), x, y, z, w));
+}
+
 void Shader::setFloat(const std::string& name, float value) const
 {
     GLCall(glUniform1f(GetUniformLocation(name), value));
+}
+
+void Shader::setFloat2(const std::string &name, float x, float y) const
+{
+    GLCall(glUniform2f(GetUniformLocation(name), x, y));
 }
 
 void Shader::setFloat3(const std::string& name, float x, float y, float z) const
@@ -193,9 +213,16 @@ int Shader::GetUniformLocation(const std::string& name) const
         return m_UniformLocationCache[name];
     }
 
+    // If location is equal to -1, the data passed in to uniform setters will be silently ignored and the specified uniform variable will not be changed.
     GLCall(unsigned int location = glGetUniformLocation(m_RendererID, name.c_str()));
-    if (location == -1)
-        std::cout << "Warning: uniform " << name << " does not exist" << std::endl;
+    // if (location == -1)
+    //     std::cout 
+    //         << "Warning: uniform " 
+    //         << name 
+    //         << " does not exist for shader: " 
+    //         << GetFragPath()
+    //         << GetVertPath()
+    //         << std::endl;
 
 	m_UniformLocationCache[name] = location;
     return location;
