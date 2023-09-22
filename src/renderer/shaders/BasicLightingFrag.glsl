@@ -56,7 +56,7 @@ vec3 CalcPointLight(
     float diff = max(dot(normal, lightDir), 0.0);
     // specular shading
     vec3 reflectDir = reflect(-lightDir, normal);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
+    float spec = max(pow(max(dot(viewDir, reflectDir), 0.0), shininess), 0.0);
     // attenuation
     float distance    = length(light.position - fragPos);
     float attenuation = 1.0 / (light.constant + light.linear * distance + 
@@ -82,7 +82,6 @@ void main()
     // material color properties (ignore alpha channel for now)
     vec3 diffuse = texture(u_Material.diffuseMap, v_TexCoord).xyz * u_Material.diffuseColor;
     vec3 specular = texture(u_Material.specularMap, v_TexCoord).xyz * u_Material.specularColor;
-
 
     vec3 result = vec3(0.0);
 

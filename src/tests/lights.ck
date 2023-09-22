@@ -24,7 +24,7 @@ CglGroup group;
 
 // Lighting
 PointLight light;
-// DirLight dirLight;
+DirLight dirLight;
 CglTexture tex;
 tex.path("./tests/textures/chuck-logo.png");
 PhongMat phongMat;
@@ -35,7 +35,7 @@ lightbulb.set( sphereGeo, normMat );
 
 scene.AddChild( mesh );
 scene.AddChild(group);
-// scene.AddChild(dirLight);
+scene.AddChild(dirLight);
 lightbulb.SetPosition( @(2, 0, 0) ); 
 lightbulb.SetScale( @(0.1, 0.1, 0.1) );
 group.AddChild( lightbulb );
@@ -55,7 +55,7 @@ while (true) {
 
     // rotate light
     group.RotateY( .85 * dt );
-    // dirLight.RotateX( .75 * dt);
+    dirLight.RotateX( .75 * dt);
 
     // camera update
     flycam.update( now, deltaTime );

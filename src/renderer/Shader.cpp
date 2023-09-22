@@ -215,14 +215,15 @@ int Shader::GetUniformLocation(const std::string& name) const
 
     // If location is equal to -1, the data passed in to uniform setters will be silently ignored and the specified uniform variable will not be changed.
     GLCall(unsigned int location = glGetUniformLocation(m_RendererID, name.c_str()));
-    // if (location == -1)
-    //     std::cout 
-    //         << "Warning: uniform " 
-    //         << name 
-    //         << " does not exist for shader: " 
-    //         << GetFragPath()
-    //         << GetVertPath()
-    //         << std::endl;
+    if (location == -1)
+        std::cout 
+            << "Warning: uniform " 
+            << name 
+            << " does not exist for shader: " 
+            << GetFragPath()
+            << "\n"
+            << GetVertPath()
+            << std::endl;
 
 	m_UniformLocationCache[name] = location;
     return location;

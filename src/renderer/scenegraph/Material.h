@@ -158,7 +158,7 @@ public:
 		AddUniform(MaterialUniform::Create("u_Material.specularMap", specularMapID));
 		AddUniform(MaterialUniform::Create("u_Material.diffuseColor", diffuseColor));
 		AddUniform(MaterialUniform::Create("u_Material.specularColor", specularColor));
-		AddUniform(MaterialUniform::Create("u_Material.logShininess", std::pow(2.0f, logShininess)));
+		AddUniform(MaterialUniform::Create("u_Material.shininess", std::pow(2.0f, logShininess)));
 	}
 
 	virtual MaterialType GetMaterialType() override { return MaterialType::Phong; }
