@@ -33,6 +33,14 @@ BoxGeo boxGeo;
 mesh.set(boxGeo, phong);
 scene.AddChild(mesh);
 
+/*
+
+DataTexture dt;
+dt.data(width, height, [1,2,3...])
+// inherit sampler properties (filter, wrap, mipmaps etc)
+
+*/
+
 
 0 => int frameCounter;
 now => time lastTime;

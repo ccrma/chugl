@@ -111,18 +111,26 @@ CK_DLL_CTOR(cgl_geo_sphere_ctor);
 CK_DLL_CTOR(cgl_texture_ctor);
 CK_DLL_DTOR(cgl_texture_dtor);
 
+// sampler wrap mode
 CK_DLL_MFUN(cgl_texture_set_wrap);
 CK_DLL_MFUN(cgl_texture_get_wrap_s);
 CK_DLL_MFUN(cgl_texture_get_wrap_t);
 
+// sampler filter mode
 CK_DLL_MFUN(cgl_texture_set_filter);
 CK_DLL_MFUN(cgl_texture_get_filter_min);
 CK_DLL_MFUN(cgl_texture_get_filter_mag);
 
-CK_DLL_MFUN(cgl_texture_set_data_filepath);  // set via image file
-CK_DLL_MFUN(cgl_texture_get_data_filepath);
+// Texture --> FileTexture (texture from filepath .png .jpg etc)
+CK_DLL_CTOR(cgl_texture_file_ctor);
+CK_DLL_MFUN(cgl_texture_file_set_filepath);
+CK_DLL_MFUN(cgl_texture_file_get_filepath);
 
-// CK_DLL_MFUN(cgl_texture_set_data_buffer);	 // set via chuck array
+// Texture --> DataTexture (texture from chuck array)
+CK_DLL_CTOR(cgl_texture_rawdata_ctor);
+CK_DLL_MFUN(cgl_texture_rawdata_set_data);
+// CK_DLL_MFUN(cgl_texture_rawdata_get_data);
+
 
 // TODO: getters? 
 
@@ -135,15 +143,24 @@ CK_DLL_DTOR(cgl_mat_dtor);
 // base material options
 CK_DLL_MFUN(cgl_mat_set_wireframe);
 CK_DLL_MFUN(cgl_mat_get_wireframe);
+	// uniform setters
+CK_DLL_MFUN(cgl_mat_set_uniform_float);
+CK_DLL_MFUN(cgl_mat_set_uniform_float2);
+CK_DLL_MFUN(cgl_mat_set_uniform_float3);
+CK_DLL_MFUN(cgl_mat_set_uniform_float4);
+CK_DLL_MFUN(cgl_mat_set_uniform_int);
+CK_DLL_MFUN(cgl_mat_set_uniform_int2);
+CK_DLL_MFUN(cgl_mat_set_uniform_int3);
+CK_DLL_MFUN(cgl_mat_set_uniform_int4);
+CK_DLL_MFUN(cgl_mat_set_uniform_bool);
+CK_DLL_MFUN(cgl_mat_set_uniform_texID);
 
 // normal mat
 CK_DLL_CTOR(cgl_mat_norm_ctor);
-CK_DLL_DTOR(cgl_mat_norm_dtor);
 CK_DLL_MFUN(cgl_set_use_local_normals);
 
 // phong specular mat
 CK_DLL_CTOR(cgl_mat_phong_ctor);
-CK_DLL_DTOR(cgl_mat_phong_dtor);
 	// uniform setters
 CK_DLL_MFUN(cgl_mat_phong_set_diffuse_map);
 CK_DLL_MFUN(cgl_mat_phong_set_specular_map);
@@ -151,6 +168,11 @@ CK_DLL_MFUN(cgl_mat_phong_set_diffuse_color);
 CK_DLL_MFUN(cgl_mat_phong_set_specular_color);
 CK_DLL_MFUN(cgl_mat_phong_set_log_shininess);
 	// uniform getters TODO
+
+// custom shader mat
+CK_DLL_CTOR(cgl_mat_custom_shader_ctor);
+CK_DLL_MFUN(cgl_mat_custom_shader_set_shaders);
+
 
 
 
@@ -400,15 +422,32 @@ t_CKBOOL init_chugl_texture(Chuck_DL_Query* QUERY)
 	QUERY->add_arg(QUERY, "int", "mag");
 	QUERY->add_mfun(QUERY, cgl_texture_get_filter_min, "int", "filterMin");
 	QUERY->add_mfun(QUERY, cgl_texture_get_filter_mag, "int", "filterMag");
-
-	QUERY->add_mfun(QUERY, cgl_texture_set_data_filepath, "string", "path");
-	QUERY->add_arg(QUERY, "string", "path");
-	QUERY->add_mfun(QUERY, cgl_texture_get_data_filepath, "string", "path");
-
-	// QUERY->add_mfun(QUERY, cgl_texture_set_data_buffer, "void", "buffer");
-	// TODO: no buffer getter bc chuck DL return doesn't support array types
-
 	QUERY->end_class(QUERY);
+
+
+	// FileTexture -----------------------------------------------------------
+	QUERY->begin_class(QUERY, "FileTexture", "CglTexture");
+	QUERY->add_ctor(QUERY, cgl_texture_file_ctor);
+	QUERY->add_dtor(QUERY, cgl_texture_dtor);
+
+	QUERY->add_mfun(QUERY, cgl_texture_file_set_filepath, "string", "path");
+	QUERY->add_arg(QUERY, "string", "path");
+	QUERY->add_mfun(QUERY, cgl_texture_file_get_filepath, "string", "path");
+	QUERY->end_class(QUERY);
+
+
+	// DataTexture -----------------------------------------------------------
+	QUERY->begin_class(QUERY, "DataTexture", "CglTexture");
+	QUERY->add_ctor(QUERY, cgl_texture_rawdata_ctor);
+	QUERY->add_dtor(QUERY, cgl_texture_dtor);
+
+	QUERY->add_mfun(QUERY, cgl_texture_rawdata_set_data, "void", "data");
+	QUERY->add_arg(QUERY, "float[]", "data");
+	QUERY->add_arg(QUERY, "int", "width");
+	QUERY->add_arg(QUERY, "int", "height");
+	QUERY->end_class(QUERY);
+
+
 
 	return true;
 }
@@ -416,11 +455,8 @@ t_CKBOOL init_chugl_texture(Chuck_DL_Query* QUERY)
 // CGL_Texture API impl =====================================================
 CK_DLL_CTOR(cgl_texture_ctor)
 {
-	CGL_Texture* texture = new CGL_Texture;
-	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT) texture;
-
-	// Creation command
-	CGL::PushCommand(new CreateTextureCommand(texture));
+	// abstract base texture class, do nothing
+	// chuck DLL will call all constructors in QUERY inheritance chain
 }
 
 CK_DLL_DTOR(cgl_texture_dtor)
@@ -480,21 +516,58 @@ CK_DLL_MFUN(cgl_texture_get_filter_mag)
 	RETURN->v_int = static_cast<t_CKINT>(texture->m_SamplerParams.filterMag);
 }
 
-CK_DLL_MFUN(cgl_texture_set_data_filepath)
+// FileTexture API impl =====================================================
+CK_DLL_CTOR(cgl_texture_file_ctor)
+{
+	std::cerr << "cgl_texture_file_ctor" << std::endl;
+
+	CGL_Texture* texture = new CGL_Texture(CGL_TextureType::File2D);
+	OBJ_MEMBER_INT(SELF, cgltexture_data_offset) = (t_CKINT) texture;
+
+	// Creation command
+	CGL::PushCommand(new CreateTextureCommand(texture));
+}
+
+CK_DLL_MFUN(cgl_texture_file_set_filepath)
 {
 	CGL_Texture* texture = (CGL_Texture*)OBJ_MEMBER_INT(SELF, cgltexture_data_offset);
 	Chuck_String * path = GET_NEXT_STRING(ARGS);
-	texture->m_FilePath = path->str();
+	texture->m_FilePath = path->str();  // note: doesn't make sense to update flags on chuck-side copy because renderer doesn't have access
 
 	CGL::PushCommand(new UpdateTexturePathCommand(texture));
 
 	RETURN->v_string = path;
 }
 
-CK_DLL_MFUN(cgl_texture_get_data_filepath)
+CK_DLL_MFUN(cgl_texture_file_get_filepath)
 {
 	CGL_Texture* texture = (CGL_Texture*)OBJ_MEMBER_INT(SELF, cgltexture_data_offset);
     RETURN->v_string = (Chuck_String *) API->object->create_string(API, SHRED, texture->m_FilePath.c_str());
+}
+
+// DataTexture API impl =====================================================
+CK_DLL_CTOR(cgl_texture_rawdata_ctor)
+{
+	std::cerr << "cgl_texture_rawdata_ctor" << std::endl;
+
+	CGL_Texture* texture = new CGL_Texture(CGL_TextureType::RawData);
+	OBJ_MEMBER_INT(SELF, cgltexture_data_offset) = (t_CKINT) texture;
+
+	// Creation command
+	CGL::PushCommand(new CreateTextureCommand(texture));
+}
+
+CK_DLL_MFUN(cgl_texture_rawdata_set_data)
+{
+	CGL_Texture* texture = (CGL_Texture *) OBJ_MEMBER_INT(SELF, cgltexture_data_offset);
+	Chuck_Array8* data = (Chuck_Array8*) GET_NEXT_OBJECT(ARGS);
+	t_CKINT width = GET_NEXT_INT(ARGS);
+	t_CKINT height = GET_NEXT_INT(ARGS);
+
+	// update chuck-side texture ( no copy to avoid blocking audio thread )
+	texture->SetRawData(data->m_vector, width, height, false);
+
+	CGL::PushCommand(new UpdateTextureDataCommand(texture->GetID(), data->m_vector, width, height));
 }
 
 
@@ -515,12 +588,65 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query* QUERY)
 
 	QUERY->add_mfun(QUERY, cgl_mat_get_wireframe, "int", "wireframe");
 
+	// uniform setters
+	QUERY->add_mfun(QUERY, cgl_mat_set_uniform_float, "void", "uniformFloat");
+	QUERY->add_arg(QUERY, "string", "name");
+	QUERY->add_arg(QUERY, "float", "f0");
+
+	QUERY->add_mfun(QUERY, cgl_mat_set_uniform_float2, "void", "uniformFloat2");
+	QUERY->add_arg(QUERY, "string", "name");
+	QUERY->add_arg(QUERY, "float", "f0");
+	QUERY->add_arg(QUERY, "float", "f1");
+
+	QUERY->add_mfun(QUERY, cgl_mat_set_uniform_float3, "void", "uniformFloat3");
+	QUERY->add_arg(QUERY, "string", "name");
+	QUERY->add_arg(QUERY, "float", "f0");
+	QUERY->add_arg(QUERY, "float", "f1");
+	QUERY->add_arg(QUERY, "float", "f2");
+
+	QUERY->add_mfun(QUERY, cgl_mat_set_uniform_float4, "void", "uniformFloat4");
+	QUERY->add_arg(QUERY, "string", "name");
+	QUERY->add_arg(QUERY, "float", "f0");
+	QUERY->add_arg(QUERY, "float", "f1");
+	QUERY->add_arg(QUERY, "float", "f2");
+	QUERY->add_arg(QUERY, "float", "f3");
+
+	QUERY->add_mfun(QUERY, cgl_mat_set_uniform_int, "void", "uniformInt");
+	QUERY->add_arg(QUERY, "string", "name");
+	QUERY->add_arg(QUERY, "int", "i0");
+
+	QUERY->add_mfun(QUERY, cgl_mat_set_uniform_int2, "void", "uniformInt2");
+	QUERY->add_arg(QUERY, "string", "name");
+	QUERY->add_arg(QUERY, "int", "i0");
+	QUERY->add_arg(QUERY, "int", "i1");
+
+	QUERY->add_mfun(QUERY, cgl_mat_set_uniform_int3, "void", "uniformInt3");
+	QUERY->add_arg(QUERY, "string", "name");
+	QUERY->add_arg(QUERY, "int", "i0");
+	QUERY->add_arg(QUERY, "int", "i1");
+	QUERY->add_arg(QUERY, "int", "i2");
+
+	QUERY->add_mfun(QUERY, cgl_mat_set_uniform_int4, "void", "uniformInt4");
+	QUERY->add_arg(QUERY, "string", "name");
+	QUERY->add_arg(QUERY, "int", "i0");
+	QUERY->add_arg(QUERY, "int", "i1");
+	QUERY->add_arg(QUERY, "int", "i2");
+	QUERY->add_arg(QUERY, "int", "i3");
+
+	QUERY->add_mfun(QUERY, cgl_mat_set_uniform_bool, "void", "uniformBool");
+	QUERY->add_arg(QUERY, "string", "name");
+	QUERY->add_arg(QUERY, "int", "b0");
+
+	QUERY->add_mfun(QUERY, cgl_mat_set_uniform_texID, "void", "uniformTexture");
+	QUERY->add_arg(QUERY, "string", "name");
+	QUERY->add_arg(QUERY, "CglTexture", "texture");
+
 	QUERY->end_class(QUERY);
 
 	// normal material
 	QUERY->begin_class(QUERY, "NormMat", "CglMat");
 	QUERY->add_ctor(QUERY, cgl_mat_norm_ctor);
-	QUERY->add_dtor(QUERY, cgl_mat_norm_dtor);
+	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 
 	QUERY->add_mfun(QUERY, cgl_set_use_local_normals, "void", "useLocal");
 	QUERY->add_arg(QUERY, "int", "useLocal");
@@ -530,7 +656,7 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query* QUERY)
 	// phong specular material
 	QUERY->begin_class(QUERY, "PhongMat", "CglMat");
 	QUERY->add_ctor(QUERY, cgl_mat_phong_ctor);
-	QUERY->add_dtor(QUERY, cgl_mat_phong_dtor);
+	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 
 	QUERY->add_mfun(QUERY, cgl_mat_phong_set_diffuse_map, "void", "diffuseMap");
 	QUERY->add_arg(QUERY, "CglTexture", "tex");
@@ -550,6 +676,18 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query* QUERY)
 	// TODO: add getters
 
 	QUERY->end_class(QUERY);
+
+	// custom shader material
+	QUERY->begin_class(QUERY, "ShaderMat", "CglMat");
+	QUERY->add_ctor(QUERY, cgl_mat_custom_shader_ctor);
+	QUERY->add_dtor(QUERY, cgl_mat_dtor);
+
+	QUERY->add_mfun(QUERY, cgl_mat_custom_shader_set_shaders, "void", "shaderPaths");
+	QUERY->add_arg(QUERY, "string", "vert");
+	QUERY->add_arg(QUERY, "string", "frag");
+
+	QUERY->end_class(QUERY);
+
 
 	return true;
 }
@@ -588,6 +726,148 @@ CK_DLL_MFUN(cgl_mat_get_wireframe)
 	RETURN->v_int = mat->GetWireFrame() ? 1 : 0;
 }
 
+// TODO: can refactor these uniform setters to call a shared function
+CK_DLL_MFUN( cgl_mat_set_uniform_float )
+{
+	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	Chuck_String* name = GET_NEXT_STRING(ARGS);
+	float value = static_cast<float>(GET_NEXT_FLOAT(ARGS));
+
+	MaterialUniform uniform = MaterialUniform::Create(name->str(), value);
+
+	mat->SetUniform(uniform);
+
+	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, uniform));
+}
+
+CK_DLL_MFUN( cgl_mat_set_uniform_float2 )
+{
+	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	Chuck_String* name = GET_NEXT_STRING(ARGS);
+	float value0 = static_cast<float>(GET_NEXT_FLOAT(ARGS));
+	float value1 = static_cast<float>(GET_NEXT_FLOAT(ARGS));
+
+	MaterialUniform uniform = MaterialUniform::Create(name->str(), value0, value1);
+
+	mat->SetUniform(uniform);
+
+	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, uniform));
+}
+
+CK_DLL_MFUN( cgl_mat_set_uniform_float3 )
+{
+	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	Chuck_String* name = GET_NEXT_STRING(ARGS);
+	float value0 = static_cast<float>(GET_NEXT_FLOAT(ARGS));
+	float value1 = static_cast<float>(GET_NEXT_FLOAT(ARGS));
+	float value2 = static_cast<float>(GET_NEXT_FLOAT(ARGS));
+
+	MaterialUniform uniform = MaterialUniform::Create(name->str(), value0, value1, value2);
+
+	mat->SetUniform(uniform);
+
+	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, uniform));
+}
+
+CK_DLL_MFUN( cgl_mat_set_uniform_float4 )
+{
+	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	Chuck_String* name = GET_NEXT_STRING(ARGS);
+	float value0 = static_cast<float>(GET_NEXT_FLOAT(ARGS));
+	float value1 = static_cast<float>(GET_NEXT_FLOAT(ARGS));
+	float value2 = static_cast<float>(GET_NEXT_FLOAT(ARGS));
+	float value3 = static_cast<float>(GET_NEXT_FLOAT(ARGS));
+
+	MaterialUniform uniform = MaterialUniform::Create(name->str(), value0, value1, value2, value3);
+
+	mat->SetUniform(uniform);
+
+	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, uniform));
+}
+
+CK_DLL_MFUN( cgl_mat_set_uniform_int )
+{
+	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	Chuck_String* name = GET_NEXT_STRING(ARGS);
+	int value = static_cast<int>(GET_NEXT_INT(ARGS));
+
+	MaterialUniform uniform = MaterialUniform::Create(name->str(), value);
+
+	mat->SetUniform(uniform);
+
+	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, uniform));
+}
+
+CK_DLL_MFUN( cgl_mat_set_uniform_int2 )
+{
+	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	Chuck_String* name = GET_NEXT_STRING(ARGS);
+	int value0 = static_cast<int>(GET_NEXT_INT(ARGS));
+	int value1 = static_cast<int>(GET_NEXT_INT(ARGS));
+
+	MaterialUniform uniform = MaterialUniform::Create(name->str(), value0, value1);
+
+	mat->SetUniform(uniform);
+
+	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, uniform));
+}
+
+CK_DLL_MFUN( cgl_mat_set_uniform_int3 )
+{
+	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	Chuck_String* name = GET_NEXT_STRING(ARGS);
+	int value0 = static_cast<int>(GET_NEXT_INT(ARGS));
+	int value1 = static_cast<int>(GET_NEXT_INT(ARGS));
+	int value2 = static_cast<int>(GET_NEXT_INT(ARGS));
+
+	MaterialUniform uniform = MaterialUniform::Create(name->str(), value0, value1, value2);
+
+	mat->SetUniform(uniform);
+
+	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, uniform));
+}
+
+CK_DLL_MFUN( cgl_mat_set_uniform_int4 )
+{
+	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	Chuck_String* name = GET_NEXT_STRING(ARGS);
+	int value0 = static_cast<int>(GET_NEXT_INT(ARGS));
+	int value1 = static_cast<int>(GET_NEXT_INT(ARGS));
+	int value2 = static_cast<int>(GET_NEXT_INT(ARGS));
+	int value3 = static_cast<int>(GET_NEXT_INT(ARGS));
+
+	MaterialUniform uniform = MaterialUniform::Create(name->str(), value0, value1, value2, value3);
+
+	mat->SetUniform(uniform);
+
+	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, uniform));
+}
+
+CK_DLL_MFUN(cgl_mat_set_uniform_bool) {
+	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	Chuck_String* name = GET_NEXT_STRING(ARGS);
+	bool value = static_cast<bool>(GET_NEXT_INT(ARGS));
+
+	MaterialUniform uniform = MaterialUniform::Create(name->str(), value);
+
+	mat->SetUniform(uniform);
+
+	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, uniform));
+}
+
+CK_DLL_MFUN(cgl_mat_set_uniform_texID) {
+	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	Chuck_String* name = GET_NEXT_STRING(ARGS);
+	CGL_Texture* tex = (CGL_Texture*) OBJ_MEMBER_INT (GET_NEXT_OBJECT(ARGS), cgltexture_data_offset);
+
+	MaterialUniform uniform = MaterialUniform::Create(name->str(), tex->GetID());
+
+	mat->SetUniform(uniform);
+
+	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, uniform));
+}
+
+
 CK_DLL_CTOR(cgl_mat_norm_ctor)
 {
 	std::cerr << "cgl_mat_norm_ctor";
@@ -599,10 +879,6 @@ CK_DLL_CTOR(cgl_mat_norm_ctor)
 	CGL::PushCommand(new CreateMaterialCommand(normMat));
 }
 
-CK_DLL_DTOR(cgl_mat_norm_dtor)
-{
-	// TODO: implement
-}
 CK_DLL_MFUN(cgl_set_use_local_normals)
 {
 	NormalMaterial* mat = (NormalMaterial*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
@@ -624,10 +900,6 @@ CK_DLL_CTOR(cgl_mat_phong_ctor)
 
 	// Creation command
 	CGL::PushCommand(new CreateMaterialCommand(phongMat));
-}
-
-CK_DLL_DTOR(cgl_mat_phong_dtor)
-{
 }
 
 CK_DLL_MFUN( cgl_mat_phong_set_diffuse_map )
@@ -685,6 +957,30 @@ CK_DLL_MFUN( cgl_mat_phong_set_log_shininess )
 
 	CGL::PushCommand(new UpdateMaterialUniformsCommand(mat));
 }
+
+// custom shader mat fns ---------------------------------
+CK_DLL_CTOR( cgl_mat_custom_shader_ctor )
+{
+	ShaderMaterial* shaderMat = new ShaderMaterial("", "");
+	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT) shaderMat;
+
+	// Creation command
+	CGL::PushCommand(new CreateMaterialCommand(shaderMat));
+}
+
+CK_DLL_MFUN( cgl_mat_custom_shader_set_shaders )
+{
+	ShaderMaterial* mat = (ShaderMaterial*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	Chuck_String* vertPath = GET_NEXT_STRING(ARGS);
+	Chuck_String* fragPath = GET_NEXT_STRING(ARGS);
+
+	mat->SetShaderPaths(vertPath->str(), fragPath->str());
+
+	CGL::PushCommand(new UpdateMaterialShadersCommand(mat));
+}
+
+
+
 
 //-----------------------------------------------------------------------------
 // init_chugl_obj()

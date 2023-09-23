@@ -1,12 +1,19 @@
 public class FlyCam {
 
-	CglCamera mainCamera;
+	CglCamera @ mainCamera;
 	InputManager @ IM;
 	MouseManager @ MM;
+
+	fun void init(InputManager @ im, MouseManager @ mm, CglCamera @ cam) {
+		im @=> this.IM;
+		mm @=> this.MM;
+		cam @=> this.mainCamera;
+	}
 
 	fun void init(InputManager @ im, MouseManager @ mm) {
 		im @=> this.IM;
 		mm @=> this.MM;
+		new CglCamera @=> this.mainCamera;
 	}
 
 	@(0.0, 1.0, 0.0) => vec3 UP;

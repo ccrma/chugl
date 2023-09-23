@@ -9,17 +9,19 @@
 class SceneGraphNode
 {
 public:
+
+// data
+	size_t m_ID;
+
+// methods
 	SceneGraphNode() : m_ID(SceneGraphNode::idCounter++) {
 		std::cout << "created node with id: " + std::to_string(m_ID) << std::endl;
 	}
 	virtual ~SceneGraphNode() {}  // virtual destructor to enable deleting polymorphically
 
 	inline size_t GetID() { return m_ID; }
-	inline void SetID(size_t id) { m_ID = id; }  // TODO this should really be protected or friend
+	inline void SetID(size_t id) { m_ID = id; }
 
-public:  // static
+// static
 	static size_t idCounter;
-
-private:
-	size_t m_ID;
 };

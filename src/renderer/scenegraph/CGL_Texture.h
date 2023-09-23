@@ -34,19 +34,22 @@ Params:
 #include "chuck_def.h"
 
 #include <string>
+#include <vector>
 
 
-// typedef t_CKUINT CGL_TextureWrapMode;
-// typedef t_CKUINT CGL_TextureFilterMode;
+enum CGL_TextureType : t_CKUINT {
+    Base = 0,
+    File2D,
+    RawData,
+    Count
+};
 
-// wrap mode enums
 enum class CGL_TextureWrapMode : t_CKUINT {
     Repeat = 0,
     MirroredRepeat,
     ClampToEdge
 };
 
-// filter mode
 enum class CGL_TextureFilterMode : t_CKUINT {
     Nearest = 0,
     Linear,
@@ -56,17 +59,17 @@ enum class CGL_TextureFilterMode : t_CKUINT {
     // Linear_MipmapLinear
 };
 
-enum class CGL_TextureType {
-    Base = 0,
-    Texture2D,
-    TextureRawData,
-    TextureCubeMap
-};
 
 struct CGL_TextureSamplerParams {
     CGL_TextureWrapMode wrapS, wrapT;  // ST <==> UV
     CGL_TextureFilterMode filterMin, filterMag;
     bool genMipMaps;
+
+    // default constructor
+    CGL_TextureSamplerParams() : wrapS(CGL_TextureWrapMode::ClampToEdge), wrapT(CGL_TextureWrapMode::ClampToEdge),
+        filterMin(CGL_TextureFilterMode::Linear), filterMag(CGL_TextureFilterMode::Linear),
+        genMipMaps(true)
+        {}
 };
 
 
@@ -74,55 +77,30 @@ class CGL_Texture : public SceneGraphNode
 {
 public:
     // default constructor
-    CGL_Texture() : m_FilePath(""), m_ImgBuffer(nullptr),
-        m_Width(0), m_Height(0), 
-        m_SamplerParams({CGL_TextureWrapMode::ClampToEdge, CGL_TextureWrapMode::ClampToEdge,
-            CGL_TextureFilterMode::Linear, CGL_TextureFilterMode::Linear,
-            true})
+    CGL_Texture(CGL_TextureType t = CGL_TextureType::Base) : 
+        type(t), m_UpdateFlags(0),
+        m_FilePath(""),
+        m_Width(0), m_Height(0)
         {}
-
-    // create texture from file
-    CGL_Texture(const std::string& path) : 
-        m_FilePath(path), m_ImgBuffer(nullptr),
-        m_Width(0), m_Height(0),
-        m_SamplerParams({CGL_TextureWrapMode::ClampToEdge, CGL_TextureWrapMode::ClampToEdge,
-            CGL_TextureFilterMode::Linear, CGL_TextureFilterMode::Linear,
-            true})
-        {}
-
-    // build texture from raw data buffer
-    // TODO: values need to be converted to [0, 255] range
-    CGL_Texture(int texWidth, int texHeight, unsigned char* texBuffer) :
-        m_FilePath(""), m_ImgBuffer(texBuffer),
-        m_Width(texWidth), m_Height(texHeight),
-        m_SamplerParams({CGL_TextureWrapMode::ClampToEdge, CGL_TextureWrapMode::ClampToEdge,
-            CGL_TextureFilterMode::Linear, CGL_TextureFilterMode::Linear,
-            true})
-        {}
-
-    virtual ~CGL_Texture() {
-        std::cerr << "entring CGL_Texture destructor" << std::endl;
-        if (m_ImgBuffer) {
-            std::cerr << "deleting m_ImgBuffer" << std::endl;
-            delete[] m_ImgBuffer;
-        }
-    };
-
-    virtual CGL_TextureType GetTextureType() { return CGL_TextureType::Texture2D; }  // TODO: refactor to make this abstract base class
 
     CGL_Texture * Clone() {
         CGL_Texture * tex = new CGL_Texture(*this);
         tex->SetID(GetID());
-        // TODO: handle m_ImgBuffer memory. 
-        // for now not a problem bc chuck doesn't support constructors yet or passing array types through DLL interface
         return tex;
     }
 
-    bool NeedsUpdate() { return m_NewSampler || m_NewData || m_NewFilePath; }
-    void ResetUpdateFlags() { m_NewSampler = false; m_NewData = false; m_NewFilePath = false; }
-    bool HasNewSampler() { return m_NewSampler; }
-    bool HasNewData() { return m_NewData; }
-    bool HasNewFilePath() { return m_NewFilePath; }
+    bool NeedsUpdate() { return m_UpdateFlags != 0; }
+    void ResetUpdateFlags() { m_UpdateFlags = 0; }
+
+    bool HasNewSampler() { return m_UpdateFlags & CGL_Texture::NEW_SAMPLER; }
+    bool HasNewRawData() { return m_UpdateFlags & CGL_Texture::NEW_RAWDATA; }
+    bool HasNewFilePath() { return m_UpdateFlags & CGL_Texture::NEW_FILEPATH; }
+    bool HasNewDimensions() { return m_UpdateFlags & CGL_Texture::NEW_DIMENSIONS; }
+
+    bool SetNewSampler() { return m_UpdateFlags |= CGL_Texture::NEW_SAMPLER; }
+    bool SetNewRawData() { return m_UpdateFlags |= CGL_Texture::NEW_RAWDATA; }
+    bool SetNewFilePath() { return m_UpdateFlags |= CGL_Texture::NEW_FILEPATH; }
+    bool SetNewDimensions() { return m_UpdateFlags |= CGL_Texture::NEW_DIMENSIONS; }
 
 
     // set texture params
@@ -134,21 +112,32 @@ public:
     void SetFilterMode(CGL_TextureFilterMode min, CGL_TextureFilterMode mag) { 
         m_SamplerParams.filterMin = min; m_SamplerParams.filterMag = mag; 
     }
+
+    // File methods
     void SetFilePath(const std::string& path) { m_FilePath = path; }
-    void SetRawData(int texWidth, int texHeight, unsigned char* texBuffer) { m_Width = texWidth; m_Height = texHeight; m_ImgBuffer = texBuffer; }
 
-
-
+    // RawData methods
+    void SetRawData(
+        std::vector<double>& ck_array, 
+        int texWidth, 
+        int texHeight,
+        bool doCopy
+    );
 
 // member vars ==========================================================================================================
+    CGL_TextureType type;
+
     // update flags. these are set in the UpdateTextureXXX commands, and reset by renderer after regenerating GPU data
-    bool m_NewSampler; // whether to reset texture sampling params
-    bool m_NewData;   // whether to raw texture data buffer has changed
-    bool m_NewFilePath;   // whether filepath has changed
+    unsigned int m_UpdateFlags;
+    const static unsigned int NEW_SAMPLER; // whether to reset texture sampling params
+    const static unsigned int NEW_RAWDATA;   // whether to raw texture data buffer has changed
+    const static unsigned int NEW_FILEPATH;   // whether filepath has changed
+    const static unsigned int NEW_DIMENSIONS;     // whether texture dimensions have changed
     
-    std::string m_FilePath;
-    unsigned char * m_ImgBuffer;
-    int m_Width, m_Height;
+    // DATA (TODO put in union or refactor this into multiple classes w/ polymorphism)
+    std::string m_FilePath;                                        // for FileTexture
+    std::vector<unsigned char> m_DataBuffer; int m_Width, m_Height; // for DataTexture
+    
 
     // sampler options
     // TODO: image mapping type (https://threejs.org/docs/index.html#api/en/constants/Textures)

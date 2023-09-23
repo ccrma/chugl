@@ -31,19 +31,17 @@ public:
 class CreateMaterialCommand : public SceneGraphCommand
 {
 public:
-    CreateMaterialCommand(Material* mat) : mat(mat) {
+    CreateMaterialCommand(Material* mat) : newMat(mat->Clone()) {
         assert(mat->GetMaterialType() != MaterialType::Base);  // must be a concrete material
     };
     virtual void execute(Scene* scene) override {
-        Material* newMat = mat->Clone();
         std::cout << "copied material with id: " + std::to_string(newMat->GetID()) 
                   << std::endl;
 
         scene->RegisterNode(newMat);
-        // TODO: also register materials
     }
 private:
-    Material* mat;
+    Material* newMat;
 };
 
 // create geometry
@@ -305,8 +303,25 @@ public:
         m_Mat->ApplyUpdate(m_MatData);
     }
 private:
-    std::vector<MaterialUniform>* m_MatData;
+    void* m_MatData;
     size_t m_MatID;
+};
+
+// only updates a single uniform, rather than bulk
+class UpdateMaterialUniformCommand : public SceneGraphCommand
+{
+public:
+    UpdateMaterialUniformCommand(Material* mat, MaterialUniform uniform) 
+        : m_MatID(mat->GetID()), m_Uniform(uniform) {};
+        
+    virtual void execute(Scene* scene) override {
+        Material* m_Mat = dynamic_cast<Material*>(scene->GetNode(m_MatID));
+        assert(m_Mat);  
+        m_Mat->SetUniform(m_Uniform);
+    }
+private:
+    size_t m_MatID;
+    MaterialUniform m_Uniform;
 };
 
 // this probably should go under UpdateMaterialCommand but don't have
@@ -333,6 +348,28 @@ private:
     size_t m_MatID;
     bool m_Wireframe;
     float m_WireframeLineWidth;
+};
+
+class UpdateMaterialShadersCommand : public SceneGraphCommand
+{
+public:
+    UpdateMaterialShadersCommand(ShaderMaterial* mat) 
+        : m_MatID(mat->GetID()),
+        m_VertexShaderPath(mat->m_VertShaderPath),
+        m_FragmentShaderPath(mat->m_FragShaderPath)
+    {};
+
+    virtual void execute(Scene* scene) override {
+        ShaderMaterial* mat = dynamic_cast<ShaderMaterial*>(scene->GetNode(m_MatID));
+        assert(mat);  
+
+        mat->m_VertShaderPath = m_VertexShaderPath;
+        mat->m_FragShaderPath = m_FragmentShaderPath;
+    }
+
+private:
+    size_t m_MatID;
+    std::string m_VertexShaderPath, m_FragmentShaderPath;
 };
 
 class UpdateGeometryCommand : public SceneGraphCommand
@@ -372,9 +409,8 @@ public:
 
         // copy sampler params
         tex->m_SamplerParams = samplerParams;
-        tex->m_NewSampler = true;  // set flag to let renderer know it needs to update texture sampling params on GPU
+        tex->SetNewSampler();  // set flag to let renderer know it needs to update texture sampling params on GPU
     }
-
 
 private:
     size_t texID;
@@ -393,14 +429,53 @@ public:
         CGL_Texture* tex = dynamic_cast<CGL_Texture*>(scene->GetNode(texID));
         assert(tex);
 
-        tex->m_FilePath= filePath;
-        tex->m_NewFilePath = true;
-    }
+        // if no change, do nothing
+        if (tex->m_FilePath == filePath) return;
+        std::cout << " changing path to " << filePath << std::endl;
 
+        tex->m_FilePath = filePath;
+        tex->SetNewFilePath();
+        tex->SetNewSampler();  // need to reset sampler after regerating texture
+    }
 
 private:
     size_t texID;
     std::string filePath;
+};
+
+class UpdateTextureDataCommand : public SceneGraphCommand
+{
+public:
+    UpdateTextureDataCommand(size_t id, std::vector<double>& ck_array, int w, int h) 
+    : texID(id), width(w), height(h) {
+        // copy tex params
+        dataBuffer.reserve(ck_array.size());
+        for (auto& val : ck_array) {
+            dataBuffer.emplace_back(static_cast<unsigned char>(val));
+        }
+    };
+
+    virtual void execute(Scene* scene) override {
+        CGL_Texture* tex = dynamic_cast<CGL_Texture*>(scene->GetNode(texID));
+        assert(tex);
+
+        // first check if dimensions changed and we need to regen
+        if (tex->m_Width != width || tex->m_Height != height) {
+            tex->m_Width = width;
+            tex->m_Height = height;
+            tex->SetNewDimensions();
+            tex->SetNewSampler();  // need to reset sampler after regerating texture
+        }
+
+        // move vector into texture
+        tex->m_DataBuffer = std::move(dataBuffer);
+        tex->SetNewRawData();
+    }
+
+private:
+    size_t texID;
+    std::vector<unsigned char> dataBuffer;
+    int width, height;
 };
 
 

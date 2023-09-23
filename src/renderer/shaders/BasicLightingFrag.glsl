@@ -80,8 +80,10 @@ void main()
     vec3 viewDir = normalize(u_ViewPos - v_Pos);  // direction from camera to this frag
 
     // material color properties (ignore alpha channel for now)
-    vec3 diffuse = texture(u_Material.diffuseMap, v_TexCoord).xyz * u_Material.diffuseColor;
-    vec3 specular = texture(u_Material.specularMap, v_TexCoord).xyz * u_Material.specularColor;
+    vec4 diffuseTex = texture(u_Material.diffuseMap, v_TexCoord);
+    vec4 specularTex = texture(u_Material.specularMap, v_TexCoord);
+    vec3 diffuse = diffuseTex.xyz * u_Material.diffuseColor;
+    vec3 specular = specularTex.xyz * u_Material.specularColor;
 
     vec3 result = vec3(0.0);
 
@@ -101,5 +103,8 @@ void main()
         );
     }
 
-    FragColor = vec4(result, 1.0);
+    FragColor = vec4(
+        result, 
+        max(diffuseTex.a, specularTex.a)         // TODO jank alpha blending for now
+    );
 }

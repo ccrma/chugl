@@ -59,7 +59,51 @@ void RenderGeometry::BuildGeometry() {
 // set static vars
 RenderMaterial* RenderMaterial::defaultMat = nullptr;
 
-// statics
+RenderMaterial::RenderMaterial(Material *mat, Renderer *renderer) : m_Mat(mat), m_Shader(nullptr), m_Renderer(renderer)
+{
+	std::string vertPath, fragPath;
+	// factory method to create the correct shader based on the material type
+	// TODO just hardcode strings in cpp for builtin shaders
+	switch(mat->GetMaterialType()) {
+		case MaterialType::Normal:
+			// TODO: really should abstract this to a shader resource locator class
+			vertPath = "renderer/shaders/BasicLightingVert.glsl";
+			fragPath = "renderer/shaders/NormalFrag.glsl";
+			break;
+		case MaterialType::Phong:
+			vertPath = "./renderer/shaders/BasicLightingVert.glsl";
+			fragPath = "./renderer/shaders/BasicLightingFrag.glsl";
+			break;
+		case MaterialType::CustomShader:
+			// until ChucK gets destructors, we default to default shader
+			vertPath = ((ShaderMaterial*) mat)->m_VertShaderPath == "" ? "renderer/shaders/BasicLightingVert.glsl" : ((ShaderMaterial*) mat)->m_VertShaderPath;
+			fragPath = ((ShaderMaterial*) mat)->m_FragShaderPath == "" ? "renderer/shaders/NormalFrag.glsl" : ((ShaderMaterial*) mat)->m_FragShaderPath;
+			break;
+		default:  // default material (normal mat for now)
+			vertPath = "renderer/shaders/BasicLightingVert.glsl";
+			fragPath = "renderer/shaders/NormalFrag.glsl";
+	}
+
+	// TODO: cache and share shader programs across render materials
+	// TODO: add default shader (unity hot pink? or mango UV is better)
+	m_Shader = new Shader(vertPath, fragPath);
+}
+
+void RenderMaterial::UpdateShader()
+{
+	if (!m_Mat) return;
+	if (m_Mat->GetMaterialType() != MaterialType::CustomShader) return;
+
+	// TODO: add hot reloading
+	ShaderMaterial* mat = dynamic_cast<ShaderMaterial*>(m_Mat);
+	if ( mat->m_VertShaderPath != m_Shader->GetVertPath() ||
+		mat->m_FragShaderPath != m_Shader->GetFragPath()) {
+		// Note: we DON'T delete the previous shader program because it may be in use by other render materials
+		// Yes might leak, but you shouldn't be creating that many shaders anyways
+		// long term fix: add ref counting, delete the shader if its linked to 0 render materials
+		m_Shader = new Shader(mat->m_VertShaderPath, mat->m_FragShaderPath);
+	}
+}
 
 RenderMaterial* RenderMaterial::GetDefaultMaterial(Renderer* renderer) {
 	if (defaultMat == nullptr)
@@ -71,9 +115,9 @@ RenderMaterial* RenderMaterial::GetDefaultMaterial(Renderer* renderer) {
 void RenderMaterial::SetLocalUniforms()
 {
 	size_t textureCounter = 0;
-	for (size_t i = 0; i < m_Mat->m_Uniforms.size(); i++)
+	for (auto& it: m_Mat->m_Uniforms)
 	{
-		auto& uniform = m_Mat->m_Uniforms[i];
+		auto& uniform = it.second;
 		Texture* rendererTexture;
 		switch (uniform.type)
 		{
@@ -168,7 +212,8 @@ void RenderMaterial::SetLightingUniforms(Scene *scene, const std::vector<Light *
 
 void Renderer::Clear(bool color, bool depth)
 {	
-	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+	// glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+	glClearColor(.9f, 0.9f, 0.9f, 1.0f);
 	unsigned int clearBitfield = 0;
 	if (color)
 		clearBitfield |= GL_COLOR_BUFFER_BIT;

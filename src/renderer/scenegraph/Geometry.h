@@ -59,6 +59,8 @@ public:
 
 	inline bool IsDirty() { return m_Dirty; }
 
+	// geometry data, only computed/stored in the renderer-side copy!
+	// chuck-side will only store high-level params like width, heigh, #segments etc
 	std::vector<Index> m_Indices;
 	std::vector<Vertex> m_Vertices;
 
@@ -165,6 +167,7 @@ public:
 	};
 
 public:
+	// TODO: refactor this to just use struct type
 	float m_Radius;
 	int m_WidthSeg, m_HeightSeg;
 	float m_PhiStart, m_PhiLength;

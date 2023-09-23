@@ -9,9 +9,6 @@ uniform mat4 u_Normal;
 // camera
 uniform vec3 u_ViewPos;
 
-// time
-uniform float u_Time;
-
 // mouse TODO
 
 // TODO: add what shadertoy passes

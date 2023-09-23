@@ -79,30 +79,8 @@ struct GlobalUniforms {
 // Manages GPU side data for a material
 class RenderMaterial {
 public:
-	RenderMaterial(Material* mat, Renderer* renderer) : 
-	m_Mat(mat), m_Shader(nullptr), m_Renderer(renderer)
-	{	
-		std::string vertPath, fragPath;
-		// factory method to create the correct shader based on the material type
-		// TODO just hardcode strings in cpp for builtin shaders
-		switch(mat->GetMaterialType()) {
-			case MaterialType::Normal:
-				// TODO: really should abstract this to a shader resource locator class
-				vertPath = "renderer/shaders/BasicLightingVert.glsl";
-				fragPath = "renderer/shaders/NormalFrag.glsl";
-				break;
-			case MaterialType::Phong:
- 				vertPath = "./renderer/shaders/BasicLightingVert.glsl";
-				fragPath = "./renderer/shaders/BasicLightingFrag.glsl";
-				break;
-			default:  // default material (normal mat for now)
-				vertPath = "renderer/shaders/BasicLightingVert.glsl";
-				fragPath = "renderer/shaders/NormalFrag.glsl";
-		}
+	RenderMaterial(Material* mat, Renderer* renderer);
 
-		m_Shader = new Shader(vertPath, fragPath);
-
-	}
 	~RenderMaterial() {}
 
 	// CPU side data
@@ -112,7 +90,8 @@ public:
 
 	// GPU side data
 	Shader* GetShader() { return m_Shader; }
-	virtual void BindShader() { m_Shader->Bind(); }
+	void UpdateShader();
+	void BindShader() { m_Shader->Bind(); }
 	void SetLocalUniforms();
 	void SetGlobalUniforms(const GlobalUniforms& globals) {
 
@@ -121,7 +100,6 @@ public:
 		m_Shader->setMat4f("u_Projection", globals.u_Projection);
 		m_Shader->setMat4f("u_Normal", globals.u_Normal);
 		m_Shader->setFloat3("u_ViewPos", globals.u_ViewPos);
-		m_Shader->setFloat("u_Time", globals.u_Time);
 	}
 
 	void SetLightingUniforms(Scene* scene, const std::vector<Light*>& lights); 
@@ -249,6 +227,9 @@ public:
 		// lookup or create render material
 		RenderMaterial* renderMat = GetOrCreateRenderMat(mat);
 
+		// update shader program if changed
+		renderMat->UpdateShader();
+
 		// set uniforms
 		renderMat->BindShader();
 		renderMat->SetLocalUniforms();
@@ -257,13 +238,16 @@ public:
 			m_RenderState.GetViewMat(),
 			m_RenderState.GetProjMat(),
 			glm::transpose(glm::inverse(worldTransform)),  // TODO cache this normal matrix or move to math util library
-			m_RenderState.GetViewPos(),
-			0.0f // time
+			m_RenderState.GetViewPos()
 		});
 		renderMat->SetLightingUniforms(m_RenderState.GetScene(), m_RenderState.GetScene()->m_Lights);
 
 		// draw
 		Draw(renderGeo, renderMat);
+
+		// std::cerr << " num textures: " << m_Textures.size() << std::endl;
+		// std::cerr << " num geometries: " << m_RenderGeometries.size() << std::endl;
+		// std::cerr << " num rendermaterials: " << m_RenderMaterials.size() << std::endl;
 	}
 
 	RenderGeometry* GetOrCreateRenderGeo(Geometry* geo) {

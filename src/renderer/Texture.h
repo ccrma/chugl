@@ -6,9 +6,13 @@ class Texture
 {
 private:
 	unsigned int m_RendererID;	   // openGL generated UID for this texture
+
+	// params for if this texture is NOT tied to a CGL_texture
 	std::string m_FilePath;		   // path to texture
 	unsigned char* m_LocalBuffer;  // CPU-side texture data 
 	int m_Width, m_Height, m_BPP;  // texture params
+
+	// otherwise this data to generate a texture is stored here
 	CGL_Texture* m_CGL_Texture;	   // CGL texture object
 
 public:
@@ -35,10 +39,12 @@ private:
 	// Assumes texture is already bound!
 	// will not unbind, so they can be efficiently composed
 	void GenTextureFromPath(const std::string& path);
+	void GenTextureFromBuffer(
+		int texWidth, int texHeight, unsigned char* texBuffer
+	);
 	void SetSamplerParams(const CGL_TextureSamplerParams& params);
 	void SetWrapMode(unsigned int axis, CGL_TextureWrapMode mode);
 	void SetFilterMode(unsigned int op, CGL_TextureFilterMode mode, bool enableMipMaps);
-
 };
 
 

@@ -4,7 +4,7 @@
 class Window
 {
 public:
-	Window(int viewWidth = 640, int viewHeight = 480);
+	Window(int viewWidth = 2*640, int viewHeight = 2*480);
 	// Window(int viewWidth = 3840, int viewHeight = 2160);
 	~Window();
 

@@ -86,7 +86,7 @@ Texture::Texture(int texWidth, int texHeight, int bytesPerPixel, unsigned char *
 }
 
 Texture::Texture(CGL_Texture *cglTexture)
-	: m_RendererID(0), m_FilePath(cglTexture->m_FilePath), m_LocalBuffer(cglTexture->m_ImgBuffer),
+	: m_RendererID(0), m_FilePath(cglTexture->m_FilePath), m_LocalBuffer(nullptr),
 	m_Width(cglTexture->m_Width), m_Height(cglTexture->m_Height), m_BPP(0),
 	m_CGL_Texture(cglTexture)
 {
@@ -99,20 +99,24 @@ Texture::Texture(CGL_Texture *cglTexture)
 	
 	// no constructors in chuck for now, this is for when they are eventually added
 	// switch on texture type
-	switch (cglTexture->GetTextureType())
+	switch (cglTexture->type)
 	{
-		case CGL_TextureType::Texture2D:
-			GenTextureFromPath(cglTexture->m_FilePath);
-			SetSamplerParams(cglTexture->m_SamplerParams);
-			break;
 		case CGL_TextureType::Base:
-			throw std::runtime_error("Base type not allowed");
-		case CGL_TextureType::TextureCubeMap:
-			throw std::runtime_error("cubemap not supported");
+			throw std::runtime_error("trying to init abstract base CGL_Texture");
+		case CGL_TextureType::File2D:
+			GenTextureFromPath(cglTexture->m_FilePath);
+			break;
+		case CGL_TextureType::RawData:
+			GenTextureFromBuffer(
+				cglTexture->m_Width, cglTexture->m_Height,
+				cglTexture->m_DataBuffer.data()
+			);
+			break;
 		default:
 			throw std::runtime_error("Texture type undefined");
 	}
 
+	SetSamplerParams(cglTexture->m_SamplerParams);
 	Unbind();
 }
 
@@ -128,13 +132,33 @@ void Texture::Update()
 
 	if (!m_CGL_Texture->NeedsUpdate()) return;
 
-	if (m_CGL_Texture->m_NewFilePath)
+	if (m_CGL_Texture->HasNewFilePath())
 		GenTextureFromPath(m_CGL_Texture->m_FilePath);
 
-	if (m_CGL_Texture->m_NewSampler)
-		SetSamplerParams(m_CGL_Texture->m_SamplerParams);
+	if (m_CGL_Texture->HasNewRawData()) {
+		if (m_CGL_Texture->HasNewDimensions()) {
+			// new dimensions, need to recreate from scratch
+			GenTextureFromBuffer(
+				m_CGL_Texture->m_Width, m_CGL_Texture->m_Height,
+				m_CGL_Texture->m_DataBuffer.data()
+			);
+		} else {
+			// same dimensions, just copy in place
+			glTexSubImage2D(
+				GL_TEXTURE_2D,
+				0, // mipmap level
+				0, 0,  // offset
+				m_CGL_Texture->m_Width, m_CGL_Texture->m_Height,  // texture dims
+				GL_RGBA,  // format we want to store texture (TODO: should be based off bytes per pixel...right now hardcoded to 4)
+				GL_UNSIGNED_BYTE,  // size of each channel on CPU
+				m_CGL_Texture->m_DataBuffer.data()// texture buffer
+			);
+		}
+	}
 
-	// TODO: support for data textures
+	// always update sampler params last, because generating mipmaps must happen AFTER image data is loaded 
+	if (m_CGL_Texture->HasNewSampler())
+		SetSamplerParams(m_CGL_Texture->m_SamplerParams);
 
 	m_CGL_Texture->ResetUpdateFlags();
 }
@@ -207,6 +231,20 @@ void Texture::GenTextureFromPath(const std::string &path)
 
 	// free local image data
 	stbi_image_free(m_LocalBuffer);
+}
+
+void Texture::GenTextureFromBuffer(int texWidth, int texHeight, unsigned char *texBuffer)
+{
+	glTexImage2D(
+		GL_TEXTURE_2D,
+		0, 
+		GL_RGBA8,  // format we want to store texture (TODO: should be based off bytes per pixel...right now hardcoded to 4)
+		texWidth, texHeight,  // texture dims
+		0,  // legacy border width, always set 0
+		GL_RGBA,  // format of texture on CPU
+		GL_UNSIGNED_BYTE,  // size of each channel on CPU
+		texBuffer
+	);
 }
 
 void Texture::SetSamplerParams(const CGL_TextureSamplerParams &params)
