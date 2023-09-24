@@ -37,6 +37,8 @@ CK_DLL_SFUN(cgl_render);
 CK_DLL_CTOR(cgl_obj_ctor);
 CK_DLL_DTOR(cgl_obj_dtor);
 
+CK_DLL_MFUN(cgl_obj_get_id);
+
 // transform API
 CK_DLL_MFUN(cgl_obj_get_right);
 CK_DLL_MFUN(cgl_obj_get_forward);
@@ -141,6 +143,7 @@ CK_DLL_CTOR(cgl_mat_ctor);
 CK_DLL_DTOR(cgl_mat_dtor);
 
 // base material options
+	// TODO: add polygon modes https://stackoverflow.com/questions/55825588/what-is-the-difference-between-gl-points-and-gl-point
 CK_DLL_MFUN(cgl_mat_set_wireframe);
 CK_DLL_MFUN(cgl_mat_get_wireframe);
 	// uniform setters
@@ -256,6 +259,9 @@ t_CKBOOL init_chugl_events(Chuck_DL_Query* QUERY)
 	QUERY->add_ctor(QUERY, cgl_update_ctor);
 	QUERY->add_dtor(QUERY, cgl_update_dtor);
 	cglupdate_data_offset = QUERY->add_mvar(QUERY, "int", "@cglupdate_data", false);
+
+	// TODO: add "waiting_on" callback
+
 	QUERY->end_class(QUERY);
 
 	return true;
@@ -296,6 +302,9 @@ t_CKBOOL init_chugl_static_fns(Chuck_DL_Query* QUERY)
 
 	QUERY->begin_class(QUERY, "CGL", "Object");  // for global stuff
 	QUERY->add_sfun(QUERY, cgl_render, "void", "Render");
+
+	//
+
 	QUERY->end_class(QUERY);
 
 	return true;
@@ -717,7 +726,7 @@ CK_DLL_MFUN(cgl_mat_set_wireframe)
 	RETURN->v_int = wf ? 1 : 0;
 
 	// TODO: need to add command for this
-	CGL::PushCommand(new UpdateWireframeCommand(mat));
+	CGL::PushCommand(new UpdateMaterialOptionCommand(mat, *mat->GetOption(Material::WIREFRAME)));
 }
 
 CK_DLL_MFUN(cgl_mat_get_wireframe)
@@ -889,7 +898,9 @@ CK_DLL_MFUN(cgl_set_use_local_normals)
 		mat->UseWorldNormals();
 	// TODO: add command for this 
 
-	CGL::PushCommand(new UpdateMaterialUniformsCommand(mat));
+	CGL::PushCommand(new UpdateMaterialUniformCommand(
+		mat, *(mat->GetUniform(NormalMaterial::USE_LOCAL_NORMALS_UNAME)))
+	);
 }
 
 // phong mat fns
@@ -912,7 +923,9 @@ CK_DLL_MFUN( cgl_mat_phong_set_diffuse_map )
 	// RETURN->v_object = SELF;
 
 	// a lot of redundant work (entire uniform vector is copied). can optimize later
-	CGL::PushCommand(new UpdateMaterialUniformsCommand(mat));
+	CGL::PushCommand(new UpdateMaterialUniformCommand(
+		mat, *mat->GetUniform(PhongMaterial::DIFFUSE_MAP_UNAME)
+	));
 }
 
 CK_DLL_MFUN( cgl_mat_phong_set_specular_map )
@@ -921,7 +934,9 @@ CK_DLL_MFUN( cgl_mat_phong_set_specular_map )
 	CGL_Texture* tex = (CGL_Texture*) OBJ_MEMBER_INT (GET_NEXT_OBJECT(ARGS), cgltexture_data_offset);
 	mat->SetSpecularMap(tex);
 
-	CGL::PushCommand(new UpdateMaterialUniformsCommand(mat));
+	CGL::PushCommand(new UpdateMaterialUniformCommand(
+		mat, *mat->GetUniform(PhongMaterial::SPECULAR_MAP_UNAME)
+	));
 }
 
 
@@ -933,7 +948,9 @@ CK_DLL_MFUN( cgl_mat_phong_set_diffuse_color )
 
 	RETURN->v_vec3 = color;
 
-	CGL::PushCommand(new UpdateMaterialUniformsCommand(mat));
+	CGL::PushCommand(new UpdateMaterialUniformCommand(
+		mat, *mat->GetUniform(PhongMaterial::DIFFUSE_COLOR_UNAME)
+	));
 }
 
 CK_DLL_MFUN( cgl_mat_phong_set_specular_color )
@@ -944,7 +961,9 @@ CK_DLL_MFUN( cgl_mat_phong_set_specular_color )
 
 	RETURN->v_vec3 = color;
 
-	CGL::PushCommand(new UpdateMaterialUniformsCommand(mat));
+	CGL::PushCommand(new UpdateMaterialUniformCommand(
+		mat, *mat->GetUniform(PhongMaterial::SPECULAR_COLOR_UNAME)
+	));
 }
 
 CK_DLL_MFUN( cgl_mat_phong_set_log_shininess )
@@ -955,7 +974,9 @@ CK_DLL_MFUN( cgl_mat_phong_set_log_shininess )
 
 	RETURN->v_float = shininess;
 
-	CGL::PushCommand(new UpdateMaterialUniformsCommand(mat));
+	CGL::PushCommand(new UpdateMaterialUniformCommand(
+		mat, *mat->GetUniform(PhongMaterial::SHININESS_UNAME)
+	));
 }
 
 // custom shader mat fns ---------------------------------
@@ -994,6 +1015,9 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query* QUERY)
 	QUERY->add_ctor(QUERY, cgl_obj_ctor);
 	QUERY->add_dtor(QUERY, cgl_obj_dtor);
 	cglobject_data_offset = QUERY->add_mvar(QUERY, "int", "@cglobject_data", false);
+
+	QUERY->add_mfun(QUERY, cgl_obj_get_id, "int", "GetID");
+
 
 	// transform getters ===========
 	// get obj direction vectors in world space
@@ -1071,13 +1095,19 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query* QUERY)
 // CGLObject DLL ==============================================
 CK_DLL_CTOR(cgl_obj_ctor)
 {
-	OBJ_MEMBER_INT(SELF, cglobject_data_offset) = (t_CKINT) new SceneGraphObject();
+	// no ctor, meant to be abstract class
 }
 CK_DLL_DTOR(cgl_obj_dtor)
 {
 	SceneGraphObject* cglObj = (SceneGraphObject*)OBJ_MEMBER_INT(SELF, cglobject_data_offset);
 	CK_SAFE_DELETE(cglObj);
 	OBJ_MEMBER_INT(SELF, cglobject_data_offset) = 0;
+}
+
+CK_DLL_MFUN(cgl_obj_get_id)
+{
+	SceneGraphObject* cglObj = (SceneGraphObject*)OBJ_MEMBER_INT(SELF, cglobject_data_offset);
+	RETURN->v_int = cglObj->GetID();
 }
 
 CK_DLL_MFUN(cgl_obj_get_right)

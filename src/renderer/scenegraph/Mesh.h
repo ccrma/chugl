@@ -3,12 +3,18 @@
 
 class Geometry;
 class Material;
+
 // container for a geometry + material
 class Mesh : public SceneGraphObject
 {
 public:
-	Mesh(Geometry *geo, Material* mat) : m_Geometry(geo), m_Material(mat) {}
-	Mesh() : m_Geometry(nullptr), m_Material(nullptr) {}
+	Mesh(Geometry *geo, Material* mat) : m_Geometry(geo), m_Material(mat) {
+		fprintf(stderr, "Mesh(%d) with geo mat\n", m_ID);
+	}
+	Mesh() : m_Geometry(nullptr), m_Material(nullptr) {
+		fprintf(stderr, "Mesh(%d) default ctor \n", m_ID);
+	}
+	
 	virtual bool IsMesh() override { return true; }
 
 	inline Geometry* GetGeometry() { return m_Geometry; }

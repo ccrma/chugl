@@ -15,7 +15,7 @@ public:
 
 // methods
 	SceneGraphNode() : m_ID(SceneGraphNode::idCounter++) {
-		std::cout << "created node with id: " + std::to_string(m_ID) << std::endl;
+		// std::cout << "created node with id: " + std::to_string(m_ID) << std::endl;
 	}
 	virtual ~SceneGraphNode() {}  // virtual destructor to enable deleting polymorphically
 

@@ -1,7 +1,7 @@
 <<< "Testing CglTexture features" >>>;
 
 <<< "Initializing CglTexture" >>>;
-CglTexture tex;
+FileTexture tex;
 
 <<< "Printing static vars" >>>;
 <<< "CglTexture.WRAP_REPEAT = ", CglTexture.WRAP_REPEAT >>>; 

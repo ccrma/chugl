@@ -8,6 +8,9 @@ class Light;
 class Scene : public SceneGraphObject
 {
 public:
+	Scene() {
+		fprintf(stderr, "Scene constructor (%d)\n", m_ID);
+	}
 	virtual bool IsScene() override { return true; }
 
 	Scene * Clone() {

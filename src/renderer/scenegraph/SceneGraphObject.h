@@ -20,7 +20,9 @@ public:
 		m_Rotation(rotation),
 		m_Scale(scale),
 		m_Parent(nullptr)
-	{}
+	{
+	}
+	virtual ~SceneGraphObject() {}
 
 	
 	// Useful Constants (move to separate constants file?)

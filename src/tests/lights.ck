@@ -26,7 +26,7 @@ shaderMat.shaderPaths(
     "renderer/shaders/BasicLightingVert.glsl",
     "renderer/shaders/mangoFrag.glsl"
 );
-shaderMat.wireframe(1);
+// shaderMat.wireframe(1);
 CglGroup group;
 
 // Lighting

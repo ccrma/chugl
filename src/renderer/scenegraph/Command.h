@@ -14,7 +14,14 @@
 class SceneGraphCommand
 {
 public:
+    // constructor called by chuck audio thread.
+    // DO NOT store pointer references to audio-thread scenegraph
+
 	virtual ~SceneGraphCommand() {}
+
+    // execute called by renderer thread.
+    // must NOT use any pointer references to audio-thread scenegraph
+    // @param scene: the render-thread's scene graph
 	virtual void execute(Scene* scene) = 0;
 };
 
@@ -113,7 +120,7 @@ public:
         scene->RegisterLight(light);
     }
 private:
-    Light* light;
+    Light* light;  // DON"T DELETE passed to renderer scenegraph
 };
 
 // create Group
@@ -138,6 +145,8 @@ class CreateMeshCommand : public SceneGraphCommand
 {
 public:
     CreateMeshCommand(Mesh* mesh) : mesh(mesh) {
+        // TODO: clone this instead. follow light model. 
+        std::cerr << "creating mesh with id: " << mesh->GetID() << std::endl;
 
     };
     virtual void execute(Scene* scene) override {
@@ -277,34 +286,35 @@ private:
 
 
 /*
-TODO: let this command be the example pattern for how to update any SceneGraphNode
+This command is an example pattern for how to update arbitrary
+data in any SceneGraphNode
 
 a material needs to define
 1. GenUpdate()  -- allocates the data for the copy
 2. ApplyUpdate() -- reads in the data and applies the changes
+3. FreeUpdate() -- frees the allocated memory
 
 This is necessary to prevent accessing the original material while executing
 the command, as we are outside the "critical region" and no-longer have gauranteed
 thread-safe read/write access
 */
-class UpdateMaterialUniformsCommand : public SceneGraphCommand
+class UpdateMaterialCommand : public SceneGraphCommand
 {
 public:
-    UpdateMaterialUniformsCommand(Material* mat) 
+    UpdateMaterialCommand(Material* mat) 
         : m_MatData(mat->GenUpdate()), m_MatID(mat->GetID()) {
         assert(mat->GetMaterialType() != MaterialType::Base);
     };
-    ~UpdateMaterialUniformsCommand() {
-        if (m_MatData) delete m_MatData;
-    }
+    ~UpdateMaterialCommand() { m_Mat->FreeUpdate(m_MatData); }
     virtual void execute(Scene* scene) override {
-        Material* m_Mat = dynamic_cast<Material*>(scene->GetNode(m_MatID));
+        m_Mat = dynamic_cast<Material*>(scene->GetNode(m_MatID));
         assert(m_Mat);  
         m_Mat->ApplyUpdate(m_MatData);
     }
 private:
     void* m_MatData;
     size_t m_MatID;
+    Material* m_Mat;
 };
 
 // only updates a single uniform, rather than bulk
@@ -313,7 +323,7 @@ class UpdateMaterialUniformCommand : public SceneGraphCommand
 public:
     UpdateMaterialUniformCommand(Material* mat, MaterialUniform uniform) 
         : m_MatID(mat->GetID()), m_Uniform(uniform) {};
-        
+
     virtual void execute(Scene* scene) override {
         Material* m_Mat = dynamic_cast<Material*>(scene->GetNode(m_MatID));
         assert(m_Mat);  
@@ -324,30 +334,22 @@ private:
     MaterialUniform m_Uniform;
 };
 
-// this probably should go under UpdateMaterialCommand but don't have
-// time right now to figure out the inheritence stuff
-class UpdateWireframeCommand : public SceneGraphCommand
+// update single material option
+class UpdateMaterialOptionCommand: public SceneGraphCommand
 {
 public:
-    UpdateWireframeCommand(Material* mat) 
-        : m_MatID(mat->GetID()),
-        m_Wireframe(mat->GetWireFrame()),
-        m_WireframeLineWidth(mat->GetWireFrameWidth())
+    UpdateMaterialOptionCommand(Material* mat, MaterialOption option) 
+        : m_MatID(mat->GetID()), m_Option(option)
     {};
     virtual void execute(Scene* scene) override {
         Material* mat = dynamic_cast<Material*>(scene->GetNode(m_MatID));
         assert(mat);  
 
-        mat->SetWireFrame(m_Wireframe);
-        mat->SetWireFrameWidth(m_WireframeLineWidth);
-
-        std::cout << "updated material wireframe with id: " + std::to_string(mat->GetID()) 
-                  << std::endl;
+        mat->SetOption(m_Option);
     }
 private:
     size_t m_MatID;
-    bool m_Wireframe;
-    float m_WireframeLineWidth;
+    MaterialOption m_Option;
 };
 
 class UpdateMaterialShadersCommand : public SceneGraphCommand

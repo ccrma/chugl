@@ -48,7 +48,9 @@ struct Index {
 class Geometry : public SceneGraphNode // abstract base class for buffered geometry data
 {
 public:
-	Geometry() : m_Dirty(true) {}
+	Geometry() : m_Dirty(true) {
+		fprintf(stderr, "Geometry constructor (%d)\n", m_ID);
+	}
 	virtual ~Geometry() {}
 	virtual void BuildGeometry() = 0;  // given data, builds cpu-side index and vertex buffs
 	virtual GeometryType GetGeoType() = 0;

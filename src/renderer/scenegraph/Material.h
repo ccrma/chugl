@@ -88,12 +88,56 @@ struct MaterialUniform {
 	}
 };
 
+enum MaterialOptionParam : unsigned int {
+	WireFrame = 0,
+	WireFrameWidth
+};
+
+enum MaterialOptionType : unsigned int {
+	Float = 0,
+	Int,
+	UnsignedInt,
+	Bool
+};
+
+struct MaterialOption {
+	MaterialOptionParam param; 	 // what option (e.g. wireframe, wireframe width, etc.)
+	MaterialOptionType type; // what type of option (float, int, bool, etc.)
+	union {   			     // option value
+		float f;
+		int i;
+		unsigned int ui;
+		bool b;
+	};
+
+	// constructors  (because prior c++20 you can only initialize the first type in a union??)
+	static MaterialOption Create(MaterialOptionParam param, float f) {
+		MaterialOption m; m.type = MaterialOptionType::Float; m.param = param; m.f = f;  return m;
+	}
+	static MaterialOption Create(MaterialOptionParam param, int i) {
+		MaterialOption m; m.type = MaterialOptionType::Int; m.param = param; m.i = i;  return m;
+	}
+	static MaterialOption Create(MaterialOptionParam param, unsigned int ui) {
+		MaterialOption m; m.type = MaterialOptionType::UnsignedInt; m.param = param; m.ui = ui;  return m;
+	}
+	static MaterialOption Create(MaterialOptionParam param, bool b) {
+		MaterialOption m; m.type = MaterialOptionType::Bool; m.param = param; m.b = b;  return m;
+	}
+};
+
 
 // Material abstract base class
 class Material : public SceneGraphNode
 {
 public:
-	Material() : m_WireFrame(false), m_WireFrameLineWidth(1.0f) {};
+	Material() {
+		// set default material options
+		SetOption(MaterialOption::Create(WIREFRAME, false));
+		SetOption(MaterialOption::Create(WIREFRAME_WIDTH, 1.0f));
+
+		std::cerr << "Material constructor called, ID = " << GetID() << std::endl;
+
+	};
 	virtual ~Material() {}
 
 	virtual MaterialType GetMaterialType() { return MaterialType::Base; }
@@ -107,31 +151,46 @@ public:
 		// maybe parse entire command queue and collapse related commands... 
 	virtual void * GenUpdate() { return new LocalUniformCache(m_Uniforms); }
 	virtual void ApplyUpdate(void* uniform_data) { m_Uniforms = *(LocalUniformCache*)uniform_data; }
+	virtual void FreeUpdate(void* uniform_data) { if (uniform_data) delete (LocalUniformCache*)uniform_data; }
 
-	inline void SetWireFrame(bool wf) { m_WireFrame = wf; }
-	inline void SetWireFrameWidth(float width) { m_WireFrameLineWidth = width; }
-	inline bool GetWireFrame() { return m_WireFrame; }
-	inline float GetWireFrameWidth() { return m_WireFrameLineWidth; }
+	// option setters
+	inline void SetWireFrame(bool wf) {  SetOption(MaterialOption::Create(WIREFRAME, wf)); }
+	inline void SetWireFrameWidth(float width) { SetOption(MaterialOption::Create(WIREFRAME_WIDTH, width)); }
+	
+	// option getters
+	inline bool GetWireFrame() { return GetOption(WIREFRAME)->b; }
+	inline float GetWireFrameWidth() { return GetOption(WIREFRAME_WIDTH)->f; }
 
-	int SetUniform(MaterialUniform uniform) {
+	inline void SetOption(MaterialOption options) {
+		m_Options[options.param] = options;
+	}
+
+	inline MaterialOption* GetOption(MaterialOptionParam p) {
+		return (m_Options.find(p) != m_Options.end()) ? &m_Options[p] : nullptr;
+	}
+
+	inline void SetUniform(MaterialUniform uniform) {
 		m_Uniforms[uniform.name] = uniform;
-		return m_Uniforms.size() - 1;
 	}
 
-	MaterialUniform* GetUniform(std::string s) {
-		if (m_Uniforms.find(s) != m_Uniforms.end())
-			return &m_Uniforms[s];
-		else
-			return nullptr;
+	inline MaterialUniform* GetUniform(std::string s) {
+		return (m_Uniforms.find(s) != m_Uniforms.end()) ? &m_Uniforms[s] : nullptr;
 	}
 
-	// Note: keep these public so they are accessible by default copy constructor
-	bool m_WireFrame;
-	float m_WireFrameLineWidth;
+	// material options (affect rendering state, not directly passed to shader)
+	std::unordered_map<MaterialOptionParam, MaterialOption> m_Options;
 
-	// uniform cache
+	// uniform cache (copied to shader on render)
 	typedef std::unordered_map<std::string, MaterialUniform> LocalUniformCache;
 	LocalUniformCache m_Uniforms;
+
+public:  // static consts
+
+	// static material options, for passing into chuck as svars if ever needed
+	static const MaterialOptionParam WIREFRAME;
+	static const MaterialOptionParam WIREFRAME_WIDTH;
+
+
 };
 
 // material that colors using worldspace normals as rgb
@@ -225,8 +284,7 @@ public:
 	ShaderMaterial (
 		std::string vertexShaderPath, std::string fragmentShaderPath
 	) : m_FragShaderPath(fragmentShaderPath), m_VertShaderPath(vertexShaderPath)
-	 {
-
+	{
 	}
 
 	virtual MaterialType GetMaterialType() override { return MaterialType::CustomShader; }

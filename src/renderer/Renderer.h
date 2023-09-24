@@ -130,8 +130,10 @@ public:
 		VertexArray& va = renderGeo->GetArray();
 		va.Bind();
 
+		Material* CGL_mat = renderMat->GetMat();
+
 		// wireframe
-		if (renderMat->GetMat()->GetWireFrame()) {
+		if (CGL_mat->GetWireFrame()) {
 			GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_LINE));
 		} else {
 			GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));

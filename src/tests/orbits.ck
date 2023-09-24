@@ -10,13 +10,16 @@ BoxGeo boxGeo;
 NormMat normMat;
 normMat.useLocal(1);
 
+NormMat worldspaceNormMat;
+worldspaceNormMat.useLocal(0);
+
 // scene setup
 CglScene scene;
 CglGroup sunSystem, earthSystem, moonSystem;
 CglMesh  sun, earth, moon;
 
 sun.set(boxGeo, normMat); 
-earth.set(boxGeo, normMat);
+earth.set(boxGeo, worldspaceNormMat);
 moon.set(boxGeo, normMat);
 
 earthSystem.SetPosition(@(2.2, 0.0, 0.0));
@@ -88,8 +91,8 @@ fun void cameraUpdate(time t, dur dt)
 	if (IM.isKeyDown(IM.KEY_E))
 		mainCamera.TranslateBy(-cameraSpeed * UP);
 
-	<<< "pos", mainCamera.GetPosition() >>>;
-	<<< "rot", mainCamera.GetRotation() >>>;
+	// <<< "pos", mainCamera.GetPosition() >>>;
+	// <<< "rot", mainCamera.GetRotation() >>>;
 
 	// mouse lookaround
 

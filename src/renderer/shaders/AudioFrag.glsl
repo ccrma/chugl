@@ -12,7 +12,7 @@ uniform sampler2D u_AudioTexture; // TODO: can do this faster with Uniform Buffe
 uniform int u_AmplitudeIndex;  // where we are currently writing to in amp history graph
 
 
-// #include <common>  // https://github.com/mrdoob/three.js/blob/dev/src/renderers/shaders/ShaderChunk/common.glsl.js
+// helper fns at: https://github.com/mrdoob/three.js/blob/dev/src/renderers/shaders/ShaderChunk/common.glsl.js
  
 // Created by inigo quilez - iq/2013
 // https://www.youtube.com/c/InigoQuilez

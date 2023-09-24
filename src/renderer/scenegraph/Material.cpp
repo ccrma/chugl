@@ -1,9 +1,17 @@
 #include "Material.h"
 
-// normMat static defines
+// base Material static defines ========================
+
+// material options
+const MaterialOptionParam Material::WIREFRAME = MaterialOptionParam::WireFrame;
+const MaterialOptionParam Material::WIREFRAME_WIDTH = MaterialOptionParam::WireFrameWidth;
+
+
+
+// normMat static defines ========================
 const std::string NormalMaterial::USE_LOCAL_NORMALS_UNAME = "u_UseLocalNormal";
 
-// phong static defines
+// phong static defines ========================
 const std::string PhongMaterial::DIFFUSE_MAP_UNAME = "u_Material.diffuseMap";
 const std::string PhongMaterial::SPECULAR_MAP_UNAME = "u_Material.specularMap";
 const std::string PhongMaterial::DIFFUSE_COLOR_UNAME = "u_Material.diffuseColor";
