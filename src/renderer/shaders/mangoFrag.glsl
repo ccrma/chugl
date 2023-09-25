@@ -12,6 +12,6 @@ uniform float u_Time;
 void main()
 {
     FragColor = vec4(
-        v_TexCoord, 0.0, 1.0
+        v_TexCoord, sin(u_Time), 1.0
     );
 }

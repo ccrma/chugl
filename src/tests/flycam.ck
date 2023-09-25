@@ -52,4 +52,20 @@ public class FlyCam {
 		mainCamera.RotateOnWorldAxis(UP, -mouseDeltas.x);
 	}
 
+	fun void selfUpdate() {
+		now => time lastTime;
+		CglUpdate UpdateEvent;
+		while (true) {
+			// time bookkeeping
+			now - lastTime => dur deltaTime;
+			now => lastTime;
+
+			update(now, deltaTime);
+
+			// signal ready for next update
+			// UpdateEvent => now;
+			CGL.nextFrame() => now;
+		}
+	}
+
 }

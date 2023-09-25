@@ -116,7 +116,7 @@ UpdateEvent => now;
 }
 */
 // Game loop 
-CGL.Render(); // kick of the renderer
+// CGL.Render(); // kick of the renderer
 fun void GameLoop(){
 	while (true) {
 		// 10::ms => now;  // don't need events anymore!!!
@@ -134,7 +134,7 @@ fun void GameLoop(){
 		let the chuck VM take care of syncing? how would this work?
 
 		*/
-		UpdateEvent => now;
+		// UpdateEvent => now;
 		// FrameEvent => now;
 		frameCounter++;
 		
@@ -149,26 +149,13 @@ fun void GameLoop(){
 		// <<< "inside chuck framecount: " + frameCounter >>>;
 
 		// End update, begin render
-		CGL.Render();
+		// CGL.Render();
+		// UpdateEvent => now;
+		CGL.nextFrame() => now;
 		// if (autoRender) { CGL.Render(); } // tell renderer its safe to copy and draw
 	}
 } spork ~ GameLoop();
 
-// TODO: create Entity-component-system abstraction and move update logic into components
-fun void TriggerRenderListener() {
-	while (true) {
-		IM.keyDownEvent(IM.KEY_SPACE) => now;
-		CGL.Render();
-	}
-} spork ~ TriggerRenderListener();
-
-fun void ToggleRenderListener() {
-	while (true) {
-		IM.keyDownEvent(IM.KEY_Z) => now;
-		1 - autoRender => autoRender;
-		CGL.Render();
-	}
-} spork ~ ToggleRenderListener();
 
 while (true) {
 	1::second => now;

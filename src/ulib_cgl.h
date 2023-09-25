@@ -5,6 +5,8 @@
 
 
 #include <condition_variable>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 t_CKBOOL init_chugl(Chuck_DL_Query * QUERY);
@@ -73,6 +75,27 @@ public: // command queue methods
 	static void SwapCommandQueues();
 	static void FlushCommandQueue(Scene& scene, bool swap);
 	static void PushCommand(SceneGraphCommand * cmd);
+
+private:
+	// hashset to track registered shreds
+	static std::unordered_set<Chuck_VM_Shred*> m_RegisteredShreds;
+	static std::vector<Chuck_VM_Shred*> m_WaitingShreds;  // shreds for other others to finish their update logic
+	static std::unordered_map<Chuck_VM_Shred*, Chuck_DL_Api::Object> m_ShredEventMap;  // map of shreds to CglUpdate Event 
+public:
+	static void RegisterShred(Chuck_VM_Shred* shred);
+	static void UnregisterShred(Chuck_VM_Shred* shred);
+	static bool IsShredRegistered(Chuck_VM_Shred* shred);
+	static size_t GetNumRegisteredShreds();
+	static void RegisterShredWaiting(Chuck_VM_Shred* shred);
+	static void ClearShredWaiting();
+	static size_t GetNumShredsWaiting();
+
+	// shred event map helper fns
+	static Chuck_DL_Api::Object GetCachedShredUpdateEvent(
+		Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM
+	);
+
+
 
 private: // attributes
 	// command queues 

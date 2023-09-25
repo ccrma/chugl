@@ -148,9 +148,7 @@ fun void cameraUpdate(time t, dur dt)
 
 // Game loop 
 fun void GameLoop(){
-	CGL.Render(); // kick of the renderer
 	while (true) {
-		UpdateEvent => now; // will deadlock if UpdateEvent is broadcast before this shred begins waiting 
 
 		// 70::ms => now;  // why does this not deadlock???
 		// FrameEvent => now;
@@ -166,7 +164,7 @@ fun void GameLoop(){
         UpdateVisualizer();
 
 		// End update, begin render
-		CGL.Render();  // TODO: CGL.Render() should also block shred on UpdateEvent, to prevent deadlock
+		CGL.nextFrame() => now;  // TODO: CGL.Render() should also block shred on UpdateEvent, to prevent deadlock
 		// 17::ms => now;  // forces deadlock, bc of bug I have written about. with this delay, shred is not
 		// getting on the UpdateEvent waitqueue in time before renderer broadcasts it.
 		// solution is to somehow get on it before calling Render(), something like CGL.Render() => now;

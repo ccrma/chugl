@@ -214,8 +214,12 @@ void Window::DisplayLoop()
                 CGL::SwapCommandQueues();
             }
 
+            // std::cerr << "renderer awake, broadcasting" << std::endl;
+
             // done swapping the double buffer, let chuck know it's good to continue pushing commands
             CglEvent::Broadcast(CglEventType::CGL_UPDATE);
+
+            // std::cerr << "CGL_UPDATE, broadcasted" << std::endl;
 
             // now apply changes from the command queue chuck is NO Longer writing to 
             CGL::FlushCommandQueue(scene, false);

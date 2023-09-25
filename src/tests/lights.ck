@@ -10,6 +10,7 @@ spork ~ MM.start(0);
 
 FlyCam flycam;
 flycam.init(IM, MM);
+spork ~ flycam.selfUpdate();
 
 CglUpdate UpdateEvent;
 
@@ -88,8 +89,8 @@ fun void AlternateTextures() {
 
 
 while (true) {
-    CGL.Render();
-    UpdateEvent => now;
+    // CGL.Render();
+
 
     // compute timing
     frameCounter++;
@@ -100,12 +101,13 @@ while (true) {
     // rotate light
     group.RotateY( .85 * dt );
     dirLight.RotateX( .75 * dt);
-    
-    shaderMat.uniformFloat("u_Time", now/second);
-    <<< "u_Time: " + now/second >>>;
 
-    // camera update
-    flycam.update( now, deltaTime );
+    // 
+    shaderMat.uniformFloat("u_Time", now/second);
+    // <<< "u_Time: " + now/second >>>;
+
+    // UpdateEvent => now;
+    CGL.nextFrame() => now;
 }
 
 

@@ -124,9 +124,7 @@ fun void UpdateAudioTexture() {
 
 // Game loop  =============================================================
 fun void GameLoop(){
-	CGL.Render(); // kick of the renderer
 	while (true) {
-		UpdateEvent => now;
 
 		1 +=> G.frameCounter;
 		
@@ -145,7 +143,8 @@ fun void GameLoop(){
         }
 
 		// End update, begin render
-		CGL.Render();
+		// CGL.nextFrame() => now;
+        UpdateEvent => now;
 	}
 } 
 

@@ -23,11 +23,15 @@ CK_DLL_DTOR(cgl_frame_dtor);
 CK_DLL_CTOR(cgl_update_ctor);
 CK_DLL_DTOR(cgl_update_dtor);
 
+CK_DLL_MFUN(cgl_update_event_waiting_on);
+
 
 //-----------------------------------------------------------------------------
 // Static Fns
 //-----------------------------------------------------------------------------
-CK_DLL_SFUN(cgl_render);
+CK_DLL_SFUN(cgl_next_frame);
+CK_DLL_SFUN(cgl_register);
+CK_DLL_SFUN(cgl_unregister);
 
 
 //-----------------------------------------------------------------------------
@@ -260,7 +264,8 @@ t_CKBOOL init_chugl_events(Chuck_DL_Query* QUERY)
 	QUERY->add_dtor(QUERY, cgl_update_dtor);
 	cglupdate_data_offset = QUERY->add_mvar(QUERY, "int", "@cglupdate_data", false);
 
-	// TODO: add "waiting_on" callback
+	QUERY->add_mfun(QUERY, cgl_update_event_waiting_on, "void", "waiting_on");
+
 
 	QUERY->end_class(QUERY);
 
@@ -286,12 +291,42 @@ CK_DLL_CTOR(cgl_update_ctor)
 	OBJ_MEMBER_INT(SELF, cglupdate_data_offset) = (t_CKINT) new CglEvent(
 		(Chuck_Event*)SELF, SHRED->vm_ref, API, CglEventType::CGL_UPDATE
 	);
+	std::cerr << "!!!!cgl_update_ctor" << std::endl;
 }
 CK_DLL_DTOR(cgl_update_dtor)
 {
 	CglEvent* cglEvent = (CglEvent*)OBJ_MEMBER_INT(SELF, cglupdate_data_offset);
 	CK_SAFE_DELETE(cglEvent);
 	OBJ_MEMBER_INT(SELF, cglupdate_data_offset) = 0;
+
+	std::cerr << "~~~~cgl_update_dtor" << std::endl;
+}
+CK_DLL_MFUN(cgl_update_event_waiting_on)
+{
+	// THIS IS A VERY IMPORTANT FUNCTION. See 
+	// https://trello.com/c/Gddnu21j/6-chuglrender-refactor-possible-deadlock-between-cglupdate-and-render
+	// and 
+	// https://github.com/ccrma/chugl/blob/2023-chugl-int/design/multishred-render-1.ck
+	// for further context
+
+	// not used for now, will become relevant if we ever want to support multiple 
+	// windows and/or renderers
+	CglEvent* cglEvent = (CglEvent*)OBJ_MEMBER_INT(SELF, cglupdate_data_offset);
+
+	// Add shred (no-op if already added)
+	CGL::RegisterShred(SHRED);
+	// std::cerr << "REGISTERED SHRED " << SHRED << std::endl;
+
+	// Add shred to waiting list
+	CGL::RegisterShredWaiting(SHRED);
+	// std::cerr << "REGISTERED SHRED WAITING" << SHRED << std::endl;
+
+	// if #waiting == #registered, all CGL shreds have finished work, and we are safe to wakeup the renderer
+	if (CGL::GetNumShredsWaiting() >= CGL::GetNumRegisteredShreds()) {
+		// std::cerr << "#waiting == #registered == " << CGL::GetNumShredsWaiting() << " waking up renderer" << std::endl;
+		CGL::ClearShredWaiting();  // clear thread waitlist 
+		CGL::Render();
+	}
 }
 //-----------------------------------------------------------------------------
 // init_chugl_static_fns()
@@ -301,18 +336,35 @@ t_CKBOOL init_chugl_static_fns(Chuck_DL_Query* QUERY)
 	// EM_log(CK_LOG_INFO, "ChuGL static fns");
 
 	QUERY->begin_class(QUERY, "CGL", "Object");  // for global stuff
-	QUERY->add_sfun(QUERY, cgl_render, "void", "Render");
+	QUERY->add_sfun(QUERY, cgl_next_frame, "CglUpdate", "nextFrame");
 
-	//
+	QUERY->add_sfun(QUERY, cgl_unregister, "void", "unregister");
+	QUERY->add_sfun(QUERY, cgl_register, "void", "register");
+
 
 	QUERY->end_class(QUERY);
 
 	return true;
 }
 /*============CGL static fns============*/
-CK_DLL_SFUN(cgl_render)
+CK_DLL_SFUN(cgl_next_frame)
 {
-	CGL::Render();
+
+	// extract CglEvent from obj
+	// TODO: workaround bug where create() object API is not calling preconstructors
+	// https://trello.com/c/JwhVQEpv/48-cglnextframe-now-not-calling-preconstructor-of-cglupdate
+	RETURN->v_object = (Chuck_Object *)CGL::GetCachedShredUpdateEvent(
+		SHRED, API, VM
+	);
+
+}
+CK_DLL_SFUN(cgl_register)
+{
+	CGL::RegisterShred(SHRED);
+}
+CK_DLL_SFUN(cgl_unregister)
+{
+	CGL::UnregisterShred(SHRED);
 }
 
 
@@ -1607,6 +1659,11 @@ Scene CGL::mainScene;
 SceneGraphObject CGL::mainCamera;
 // Chuck_Event CGL::s_UpdateChuckEvent;
 
+// Initialization for Shred Registration structures
+std::unordered_set<Chuck_VM_Shred*> CGL::m_RegisteredShreds;
+std::vector<Chuck_VM_Shred*> CGL::m_WaitingShreds;
+std::unordered_map<Chuck_VM_Shred*, Chuck_DL_Api::Object> CGL::m_ShredEventMap;  // map of shreds to CglUpdate Event 
+
 // CGL static command queue initialization
 std::vector<SceneGraphCommand*> CGL::m_ThisCommandQueue;
 std::vector<SceneGraphCommand*> CGL::m_ThatCommandQueue;
@@ -1672,3 +1729,54 @@ void CGL::PushCommand(SceneGraphCommand * cmd) {
 	// add the command to the write queue
 	writeQueue.push_back(cmd);
 }
+
+void CGL::RegisterShred(Chuck_VM_Shred *shred)
+{
+	m_RegisteredShreds.insert(shred);
+}
+
+void CGL::UnregisterShred(Chuck_VM_Shred *shred)
+{
+	m_RegisteredShreds.erase(shred);
+}
+
+bool CGL::IsShredRegistered(Chuck_VM_Shred *shred)
+{
+	return m_RegisteredShreds.find(shred) != m_RegisteredShreds.end();
+}
+
+size_t CGL::GetNumRegisteredShreds()
+{
+    return m_RegisteredShreds.size();
+}
+
+size_t CGL::GetNumShredsWaiting()
+{
+	return m_WaitingShreds.size();
+}
+
+void CGL::ClearShredWaiting() {
+	m_WaitingShreds.clear();
+}
+
+void CGL::RegisterShredWaiting(Chuck_VM_Shred* shred)
+{
+	m_WaitingShreds.push_back(shred);
+}
+
+
+Chuck_DL_Api::Object CGL::GetCachedShredUpdateEvent(Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM) { 
+	// lookup
+	if (m_ShredEventMap.find(shred) != m_ShredEventMap.end()) {
+		return m_ShredEventMap[shred];
+	} else {
+		Chuck_DL_Api::Type type = API->object->get_type(API, shred, "CglUpdate");
+		Chuck_DL_Api::Object obj = API->object->create(API, shred, type);
+		cgl_update_ctor( (Chuck_Object*)obj, NULL, VM, shred, API );
+		m_ShredEventMap[shred] = obj;
+		return obj;
+	}
+
+}
+
+
