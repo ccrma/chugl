@@ -3,10 +3,14 @@
 // INCLUDES ////////////////////////////////////////////////////////////////////
 #include include/Globals.glsl
 // END INCLUDES ////////////////////////////////////////////////////////////////
-// attributes
+// attributes (must match vertex attrib array)
 layout (location = 0) in vec3 a_Pos;
 layout (location = 1) in vec3 a_Normal;
-layout (location = 2) in vec2 a_TexCoord;
+layout (location = 3) in vec2 a_TexCoord;
+
+// note: declaring extra attributes does not break
+// layout (location = 2) in vec2 a_Color;
+// layout (location = 4) in vec2 a_UV2;
 
 // varyings (interpolated and passed to frag shader)
 out vec3 v_Pos;

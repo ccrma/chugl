@@ -10,6 +10,7 @@ spork ~ MM.start(0);
 CglCamera mainCamera;
 FlyCam flycam;
 flycam.init(IM, MM, mainCamera);
+spork ~ flycam.selfUpdate();
 
 // Audio ============================================================
 512 => int WAVEFORM_LENGTH;  // openGL textures must be power of 2
@@ -74,7 +75,6 @@ class Globals {
     second / samp => float srate;
 } Globals G;
 
-CglUpdate UpdateEvent;
 CglScene scene;
 BoxGeo boxGeo;
 500 => int NUM_MESHES;
@@ -143,8 +143,7 @@ fun void GameLoop(){
         }
 
 		// End update, begin render
-		// CGL.nextFrame() => now;
-        UpdateEvent => now;
+		CGL.nextFrame() => now;
 	}
 } 
 

@@ -1,4 +1,39 @@
 #include "Geometry.h"
+/* =============================================================================
+									Base Geo
+===============================================================================*/
+
+// constants
+const unsigned int Geometry::POSITION_ATTRIB_IDX = 0;
+const unsigned int Geometry::NORMAL_ATTRIB_IDX = 1;
+const unsigned int Geometry::COLOR_ATTRIB_IDX = 2;
+const unsigned int Geometry::UV0_ATTRIB_IDX = 3;
+
+// methods
+void Geometry::AddVertex(Vertex v)
+{
+	auto& posAttrib = m_Attributes[POSITION_ATTRIB_IDX];
+	auto& normAttrib = m_Attributes[NORMAL_ATTRIB_IDX];
+	auto& uvAttrib = m_Attributes[UV0_ATTRIB_IDX];
+
+	posAttrib.data.push_back(v.Position.x);
+	posAttrib.data.push_back(v.Position.y);
+	posAttrib.data.push_back(v.Position.z);
+
+	normAttrib.data.push_back(v.Normal.x);
+	normAttrib.data.push_back(v.Normal.y);
+	normAttrib.data.push_back(v.Normal.z);
+
+	uvAttrib.data.push_back(v.TexCoords.x);
+	uvAttrib.data.push_back(v.TexCoords.y);
+}
+
+void Geometry::AddTriangleIndices(unsigned int i1, unsigned int i2, unsigned int i3)
+{
+	m_Indices.push_back(i1);
+	m_Indices.push_back(i2);
+	m_Indices.push_back(i3);
+}
 
 /* =============================================================================
 									Sphere Geo
@@ -14,8 +49,7 @@ m_ThetaStart(thetaStart), m_ThetaLength(thetaLength)
 
 void SphereGeometry::BuildGeometry()
 {
-	m_Vertices.clear();
-	m_Indices.clear();
+	ResetVertexData();
 	m_Dirty = false;
 
 	const float pi = 3.14159265358979323846f;
@@ -61,7 +95,7 @@ void SphereGeometry::BuildGeometry()
 			vert.TexCoords.x = u + uOffset;
 			vert.TexCoords.y = 1 - v;
 
-			m_Vertices.push_back(vert);
+			AddVertex(vert);
 
 			grid.push_back(index++);
 		}
@@ -78,12 +112,10 @@ void SphereGeometry::BuildGeometry()
 			const unsigned int c = grid[(rowSize * (iy + 1)) + ix];
 			const unsigned int d = grid[rowSize * (iy + 1) + (ix + 1)];
 
-			if (iy != 0 || m_ThetaStart > epsilon) {
-				m_Indices.push_back({ a, b, d });
-			};
-			if (iy != (size_t)m_HeightSeg- 1 || thetaEnd < pi - epsilon) {
-				m_Indices.push_back({ b, c, d });
-			};
+			if (iy != 0 || m_ThetaStart > epsilon)
+				AddTriangleIndices(a, b, d);
+			if (iy != (size_t)m_HeightSeg- 1 || thetaEnd < pi - epsilon)
+				AddTriangleIndices(b, c, d);
 		}
 	}
 
@@ -102,8 +134,8 @@ m_WidthSeg(widthSeg), m_HeightSeg(heightSeg), m_DepthSeg(depthSeg)
 
 void BoxGeometry::BuildGeometry()
 {
-	m_Vertices.clear(); 
-	m_Indices.clear();
+	ResetVertexData();
+	m_Dirty = false;
 
 	buildPlane('z', 'y', 'x', -1, -1, m_Depth, m_Height, m_Width, m_DepthSeg, m_HeightSeg, 0); // px
 	buildPlane('z', 'y', 'x', 1, -1, m_Depth, m_Height, -m_Width, m_DepthSeg, m_HeightSeg, 1); // nx
@@ -112,7 +144,6 @@ void BoxGeometry::BuildGeometry()
 	buildPlane('x', 'y', 'z', 1, -1, m_Width, m_Height, m_Depth, m_WidthSeg, m_HeightSeg, 4); // pz
 	buildPlane('x', 'y', 'z', -1, -1, m_Width, m_Height, -m_Depth, m_WidthSeg, m_HeightSeg, 5); // nz
 
-	m_Dirty = false;
 }
 
 void BoxGeometry::buildPlane(char u, char v, char w, int udir, int vdir, float width, float height, float depth, int gridX, int gridY, int materialIndex) {
@@ -127,14 +158,18 @@ void BoxGeometry::buildPlane(char u, char v, char w, int udir, int vdir, float w
 	const int gridX1 = gridX + 1;
 	const int gridY1 = gridY + 1;
 
-	unsigned int vertexCounter = 0;
+	// unsigned int vertexCounter = 0;
 	unsigned int groupCount = 0;
 
 	const glm::vec3 vector = glm::vec3(0.0);
 
+	auto& posAttrib = m_Attributes[POSITION_ATTRIB_IDX];
+	auto& normAttrib = m_Attributes[NORMAL_ATTRIB_IDX];
+	auto& uvAttrib = m_Attributes[UV0_ATTRIB_IDX];
+
 	// save number of vertices BEFORE adding any this round
 	// used to figure out indices
-	const int numberOfVertices = m_Vertices.size();
+	const int numberOfVertices = posAttrib.data.size() / posAttrib.numComponents;
 
 	// generate vertices, normals and uvs
 	for (int iy = 0; iy < gridY1; iy++) {
@@ -160,10 +195,10 @@ void BoxGeometry::buildPlane(char u, char v, char w, int udir, int vdir, float w
 			vert.TexCoords.y = (1 - (iy / gridY));
 
 			// copy to list
-			m_Vertices.push_back(vert);
+			AddVertex(vert);
 
 			// counters
-			vertexCounter += 1;
+			// vertexCounter += 1;
 		}
 	}
 
@@ -182,8 +217,8 @@ void BoxGeometry::buildPlane(char u, char v, char w, int udir, int vdir, float w
 			unsigned int d = numberOfVertices + (ix + 1) + gridX1 * iy;
 
 			// faces
-			m_Indices.push_back({ a, b, d });
-			m_Indices.push_back({ b, c, d });
+			AddTriangleIndices(a, b, d);
+			AddTriangleIndices(b, c, d);
 
 			// increase group counter
 			groupCount += 6;
@@ -198,4 +233,3 @@ void BoxGeometry::buildPlane(char u, char v, char w, int udir, int vdir, float w
 	// calculate new start value for groups
 	// groupStart += groupCount;
 }
-

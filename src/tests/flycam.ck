@@ -53,6 +53,7 @@ public class FlyCam {
 	}
 
 	fun void selfUpdate() {
+		<<< "flycam: selfUpdate mode" >>>;
 		now => time lastTime;
 		CglUpdate UpdateEvent;
 		while (true) {

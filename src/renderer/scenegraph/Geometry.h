@@ -1,13 +1,10 @@
 #pragma once
-
 #include "SceneGraphNode.h"
-// TODO: move these rendererAPI abstractions into their own directory
-#include "../VertexBufferLayout.h"
-#include "../VertexArray.h"
 #include "glm/glm.hpp"
 #include "glm/gtc/constants.hpp"
 #include "glm/gtc/epsilon.hpp"
 #include <vector>
+#include <unordered_map>
 
 enum class GeometryType {
 	Base = 0,
@@ -24,7 +21,7 @@ struct Vertex {
     glm::vec3 Position;
     glm::vec3 Normal;
     glm::vec2 TexCoords;
-	
+
 	static float& VecIndex(glm::vec3& vec, char c) {
 		if (c == 'x' || c == 'r')
 			return vec.x;
@@ -39,8 +36,27 @@ struct Vertex {
 	float& Norm(char c) { return VecIndex(Normal, c); }
 };
 
-struct Index {
-	unsigned int a, b, c;
+// attribute struct for CGL Geometry
+struct CGL_GeoAttribute {
+	std::string name;  // attribute name
+	unsigned int location;  // attribute array ptr location
+	unsigned int numComponents;  // number of components per vertex attribute accepted values are (1,2,3,4)
+	bool normalize;
+	std::vector<float> data;  // data for this attribute
+
+	CGL_GeoAttribute() : name("") {}
+
+	CGL_GeoAttribute(
+		const std::string& n, unsigned int loc, unsigned int numComp
+	) : name(n), location(loc), numComponents(numComp), normalize(false) {}
+
+	size_t SizeInBytes() const {
+		return data.size() * sizeof(float);
+	}
+
+	size_t NumVertices() const {
+		return data.size() / numComponents;
+	}
 };
 
 // returns reference to float at index 'c'
@@ -59,14 +75,36 @@ public:
 	virtual void FreeUpdate(void* data) = 0;
 	virtual void ApplyUpdate(void * data) = 0;
 
+	void ResetVertexData() {
+		m_Attributes.clear();
+		m_Indices.clear();
+
+		// reset attribute map
+		m_Attributes[POSITION_ATTRIB_IDX] = CGL_GeoAttribute("position", POSITION_ATTRIB_IDX, 3);
+		m_Attributes[NORMAL_ATTRIB_IDX] = CGL_GeoAttribute("normal", NORMAL_ATTRIB_IDX, 3);
+		m_Attributes[COLOR_ATTRIB_IDX] = CGL_GeoAttribute("color", COLOR_ATTRIB_IDX, 3);
+		m_Attributes[UV0_ATTRIB_IDX] = CGL_GeoAttribute("uv", UV0_ATTRIB_IDX, 2);
+	}
+	void AddVertex(Vertex v);
+	void AddTriangleIndices(unsigned int i1, unsigned int i2, unsigned int i3);
+
 	inline bool IsDirty() { return m_Dirty; }
 
 	// geometry data, only computed/stored in the renderer-side copy!
 	// chuck-side will only store high-level params like width, heigh, #segments etc
-	std::vector<Index> m_Indices;
-	std::vector<Vertex> m_Vertices;
+	std::vector<unsigned int> m_Indices;
+
+	typedef std::unordered_map<unsigned int, CGL_GeoAttribute> AttributeMap;
+	AttributeMap m_Attributes;
+	// std::vector<Vertex> m_Vertices;
 
 	bool m_Dirty;  // if true, rebuild buffers
+
+public:  // constants
+	static const unsigned int POSITION_ATTRIB_IDX;
+	static const unsigned int NORMAL_ATTRIB_IDX;
+	static const unsigned int COLOR_ATTRIB_IDX;
+	static const unsigned int UV0_ATTRIB_IDX;
 };
 
 struct BoxGeoUpdateData

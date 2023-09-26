@@ -21,35 +21,53 @@ void RenderGeometry::BuildGeometry() {
 	VertexArray& va = GetArray();
 	va.Bind();
 
-	auto& vertices = GetVertices();
+	auto& attributes = GetAttributes();
 	auto& indices = GetIndices();
 
-	// set vbo
-	VertexBuffer& vb = GetBuffer();
-	vb.SetBuffer(
-		(void*)&vertices[0],
-		vertices.size() * sizeof(Vertex),  // size in bytes
-		vertices.size(),  // num elements
-		GL_STATIC_DRAW  // probably static? the actual buffer geometry shouldn't be modified too much
-	);
+	// set vbo size to # non-zero length attributes
+	int numNonZeroLengthAttribs = 0;
+	for (auto& it : attributes) {
+		auto& attrib = it.second;
+		if (attrib.NumVertices() > 0)
+			++numNonZeroLengthAttribs;
+	}
+	m_VBs.resize(numNonZeroLengthAttribs);
 
-	// set attributes
-	auto& layout = GetLayout();
-	layout.Push("position", GL_FLOAT, 3, false);  //
-	layout.Push("normal", GL_FLOAT, 3, false);  // 
-	layout.Push("uv", GL_FLOAT, 2, false);  //
+	// loop over attributes
+	size_t lastNumVertices = 0;
+	size_t i = 0;
+	for (auto& it : attributes) {
+		auto& attrib = it.second;
+		if (attrib.NumVertices() == 0)  continue;  // skip over unused attributes
+		auto& vb = m_VBs[i];
+		vb.SetBuffer(
+			(void*) attrib.data.data(),
+			attrib.SizeInBytes(),
+			attrib.NumVertices(),
+			GL_STATIC_DRAW  // probably static? the actual buffer geometry shouldn't be modified too much
+		);
 
-											// set indices
-	IndexBuffer& ib = GetIndex();
-	ib.SetBuffer(
-		&indices[0],
-		(unsigned int) (3 * indices.size()),   // x3 because each index has 3 ints
-		GL_STATIC_DRAW
-	);
+		// sanity check on num vertices
+		if (i == 0)
+			lastNumVertices = attrib.NumVertices();
+		else if (i > 0 && attrib.NumVertices() != lastNumVertices)
+			throw std::runtime_error("RenderGeometry::BuildGeometry(): number of vertices in each attribute must match");
 
-	// add to VAO
-	va.AddBufferAndLayout(vb, layout);  // add vertex attrib pointers to VAO state
-	va.AddIndexBuffer(ib);  // add index buffer to VAO 
+		++i;
+		// add to VAO
+		va.AddBufferAndLayout(vb, attrib);  // add vertex attrib pointers to VAO state
+	}
+
+	// add indices
+	if (indices.size() > 0)
+	{
+		IndexBuffer &ib = GetIndex();
+		ib.SetBuffer(
+			&indices[0],
+			indices.size(),
+			GL_STATIC_DRAW);
+		va.AddIndexBuffer(ib); // add index buffer to VAO
+	}
 }
 
 /* =============================================================================
@@ -222,3 +240,35 @@ void Renderer::Clear(bool color, bool depth)
 	GLCall(glClear(clearBitfield));
 }
 
+void Renderer::Draw(RenderGeometry *renderGeo, RenderMaterial *renderMat)
+{
+	Shader* shader = renderMat->GetShader();
+	shader->Bind();
+
+	VertexArray& va = renderGeo->GetArray();
+	va.Bind();
+
+	Material* CGL_mat = renderMat->GetMat();
+
+	// wireframe
+	if (CGL_mat->GetWireFrame()) {
+		GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_LINE));
+	} else {
+		GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
+	}
+
+	if (renderGeo->ShouldDrawIndexed()) {
+		GLCall(glDrawElements(
+			GL_TRIANGLES,
+			renderGeo->GetIndices().size(),  // length of index buffer
+			GL_UNSIGNED_INT,   // type of index in EBO
+			0  // offset
+		));
+	} else {
+		GLCall(glDrawArrays(
+			GL_TRIANGLES,
+			0,  // starting index
+			renderGeo->GetNumVertices()  // number of VERTICES to render
+		));
+	}
+}

@@ -1,6 +1,10 @@
 #pragma once
 
 #include "RendererState.h"
+#include "VertexBuffer.h"
+#include "IndexBuffer.h"
+#include "VertexArray.h"
+
 #include "scenegraph/SceneGraphObject.h"
 #include "scenegraph/Scene.h"
 #include "scenegraph/Mesh.h"
@@ -12,7 +16,6 @@
 #include <vector>
 #include <unordered_map>
 
-class VertexArray;
 class Shader;
 class Geometry;
 class Renderer;
@@ -41,16 +44,18 @@ public:
 
     inline void Bind() { m_VA.Bind(); }  // bind the underlying geometry
 	inline bool IsDirty() { return m_Geo->IsDirty(); }
+	bool ShouldDrawIndexed() { return m_Geo->m_Indices.size() > 0;}
 	void BuildGeometry();
+	unsigned int GetNumVertices() { return m_Geo->m_Attributes[Geometry::POSITION_ATTRIB_IDX].NumVertices(); }
+
 
 
 	// CPU side data
-	std::vector<Index>& GetIndices() { return m_Geo->m_Indices; }
-	std::vector<Vertex>& GetVertices() { return m_Geo->m_Vertices; }
+	std::vector<unsigned int>& GetIndices() { return m_Geo->m_Indices; }
+	Geometry::AttributeMap& GetAttributes() { return m_Geo->m_Attributes; }
 
 	// GPU buffers
-	VertexBufferLayout& GetLayout() { return m_Layout; }
-	VertexBuffer& GetBuffer() { return m_VB; }
+	std::vector<VertexBuffer>& GetBuffers() { return m_VBs; }
 	VertexArray& GetArray() { return m_VA; }
 	IndexBuffer& GetIndex() { return m_IB; }
 private:
@@ -58,12 +63,12 @@ private:
     
 	// GPU buffer data
     VertexArray m_VA;
-    VertexBuffer m_VB;
+    std::vector<VertexBuffer> m_VBs;
 	IndexBuffer m_IB;
-    VertexBufferLayout m_Layout;
 };
 
 struct GlobalUniforms {
+	// MVP matrices
 	glm::mat4 u_Model, u_View, u_Projection;
 
 	// normals
@@ -71,9 +76,6 @@ struct GlobalUniforms {
 
 	// camera
 	glm::vec3 u_ViewPos;
-
-	// time
-	float u_Time;
 };
 
 // Manages GPU side data for a material
@@ -123,39 +125,7 @@ class Renderer
 {
 public:
 	void Clear(bool color = true, bool depth = true);
-	void Draw(RenderGeometry* renderGeo, RenderMaterial* renderMat) {
-		Shader* shader = renderMat->GetShader();
-		shader->Bind();
-
-		VertexArray& va = renderGeo->GetArray();
-		va.Bind();
-
-		Material* CGL_mat = renderMat->GetMat();
-
-		// wireframe
-		if (CGL_mat->GetWireFrame()) {
-			GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_LINE));
-		} else {
-			GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
-		}
-
-		if (va.GetIndexBuffer() == nullptr) {
-			GLCall(glDrawArrays(
-				GL_TRIANGLES,
-				0,  // starting index
-				va.GetVertexBuffer()->GetCount()
-			));
-		}
-		else
-		{
-			GLCall(glDrawElements(
-				GL_TRIANGLES,
-				va.GetIndexBufferCount(),
-				GL_UNSIGNED_INT,   // type of index in EBO
-				0  // offset
-			));
-		}
-	}
+	void Draw(RenderGeometry* renderGeo, RenderMaterial* renderMat);
 
 
 
