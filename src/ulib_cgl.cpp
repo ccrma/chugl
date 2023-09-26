@@ -311,6 +311,7 @@ CK_DLL_MFUN(cgl_update_event_waiting_on)
 
 	// not used for now, will become relevant if we ever want to support multiple 
 	// windows and/or renderers
+	// std::cerr << "entered waiting_on" << std::endl;
 	CglEvent* cglEvent = (CglEvent*)OBJ_MEMBER_INT(SELF, cglupdate_data_offset);
 
 	// Add shred (no-op if already added)
@@ -1766,6 +1767,8 @@ void CGL::RegisterShredWaiting(Chuck_VM_Shred* shred)
 
 
 Chuck_DL_Api::Object CGL::GetCachedShredUpdateEvent(Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM) { 
+	// log size
+	// std::cerr << "shred event map size: " + std::to_string(m_ShredEventMap.size()) << std::endl;
 	// lookup
 	if (m_ShredEventMap.find(shred) != m_ShredEventMap.end()) {
 		return m_ShredEventMap[shred];

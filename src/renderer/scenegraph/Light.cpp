@@ -1,8 +1,10 @@
 #include "scenegraph/Light.h"
 #include "scenegraph/SceneGraphObject.h"
 #include "Shader.h"
-#define GLM_ENABLE_EXPERIMENTAL
-#include "glm/ext.hpp"
+
+// doesn't compile on mac
+// #define GLM_ENABLE_EXPERIMENTAL
+// #include "glm/ext.hpp"
 
 void PointLight::SetShaderUniforms(Shader *shader, int index)
 {

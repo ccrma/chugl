@@ -85,6 +85,8 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
     }
     glfwMakeContextCurrent(m_Window);
 
+
+
     // VSYNC =================================================
     glfwSwapInterval(1);  
     std::cerr << "VSYNC: " << glfwGetWindowAttrib(m_Window, GLFW_DOUBLEBUFFER) << std::endl;
@@ -94,6 +96,14 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
     {
         throw std::runtime_error("Failed to initialize GLAD");
     }
+
+    // Print Context Info =================================================
+    std::cerr << "====================OpenGL Context Info========================" << std::endl;
+    std::cerr << "OpenGL Version: " << glGetString(GL_VERSION) << std::endl;
+    std::cerr << "OpenGL Vendor: " << glGetString(GL_VENDOR) << std::endl;
+    std::cerr << "OpenGL Renderer: " << glGetString(GL_RENDERER) << std::endl;
+    std::cerr << "OpenGL Shading Language Version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
+    std::cerr << "===============================================================" << std::endl;
 
     // OpenGL Viewport and Callbacks =========================
     // for high-DPI displays, framebuffer size is actually a multiple of window size
@@ -210,6 +220,7 @@ void Window::DisplayLoop()
 
             deadlock shouldn't happen because both locks are never held at the same time
             */
+            // std::cerr << "swapping queues" << std::endl;
             { // critical section: swap command queus
                 CGL::SwapCommandQueues();
             }
@@ -235,8 +246,6 @@ void Window::DisplayLoop()
         glfwPollEvents();
         //glfwWaitEvents();  // blocking version of PollEvents. How does blocking work? "puts the calling thread to sleep until at least one event is available in the event queue" https://www.glfw.org/docs/latest/group__window.html#ga15a5a1ee5b3c2ca6b15ca209a12efd14
         glfwSwapBuffers(m_Window);  // blocks until glfwSwapInterval screen updates have occured
-#ifdef __HACK_THIS__
-#endif
     }
 }
 

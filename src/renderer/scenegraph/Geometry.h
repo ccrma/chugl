@@ -49,7 +49,7 @@ class Geometry : public SceneGraphNode // abstract base class for buffered geome
 {
 public:
 	Geometry() : m_Dirty(true) {
-		fprintf(stderr, "Geometry constructor (%d)\n", m_ID);
+		fprintf(stderr, "Geometry constructor (%zu)\n", m_ID);
 	}
 	virtual ~Geometry() {}
 	virtual void BuildGeometry() = 0;  // given data, builds cpu-side index and vertex buffs

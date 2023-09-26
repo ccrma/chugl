@@ -179,7 +179,6 @@ public:
 		// cache current scene being rendered
 		m_RenderState.SetScene(scene);
 		
-		// TODO set globals (lighting)
 		RenderNodeAndChildren(scene);
 	}
 

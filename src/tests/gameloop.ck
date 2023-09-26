@@ -1,7 +1,11 @@
-// 0 => int fc;
+0 => int fc;
+now => time lastTime;
 // CglUpdate UpdateEvent;
 while (true) {
-    // <<< "fc: ", fc++ >>>;
+    now - lastTime => dur dt;
+    now => lastTime;
+    <<< "fc: ", fc++ , "now: ", now, "dt: ", dt>>>;
+
     CGL.nextFrame() => now;
     // UpdateEvent => now;
 }

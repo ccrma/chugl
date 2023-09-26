@@ -12,8 +12,6 @@ FlyCam flycam;
 flycam.init(IM, MM);
 spork ~ flycam.selfUpdate();
 
-CglUpdate UpdateEvent;
-
 NormMat normMat;
 BoxGeo boxGeo;
 SphereGeo sphereGeo;
@@ -106,7 +104,6 @@ while (true) {
     shaderMat.uniformFloat("u_Time", now/second);
     // <<< "u_Time: " + now/second >>>;
 
-    // UpdateEvent => now;
     CGL.nextFrame() => now;
 }
 

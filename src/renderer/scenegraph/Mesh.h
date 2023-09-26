@@ -9,10 +9,10 @@ class Mesh : public SceneGraphObject
 {
 public:
 	Mesh(Geometry *geo, Material* mat) : m_Geometry(geo), m_Material(mat) {
-		fprintf(stderr, "Mesh(%d) with geo mat\n", m_ID);
+		fprintf(stderr, "Mesh(%zu) with geo mat\n", m_ID);
 	}
 	Mesh() : m_Geometry(nullptr), m_Material(nullptr) {
-		fprintf(stderr, "Mesh(%d) default ctor \n", m_ID);
+		fprintf(stderr, "Mesh(%zu) default ctor \n", m_ID);
 	}
 	
 	virtual bool IsMesh() override { return true; }

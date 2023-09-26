@@ -5,6 +5,7 @@
 #include "../Texture.h"
 #include "../Shader.h"
 #include <string>
+#include <unordered_map>
 // #include <cmath>
 
 // builtin material type struct
@@ -135,7 +136,7 @@ public:
 		SetOption(MaterialOption::Create(WIREFRAME, false));
 		SetOption(MaterialOption::Create(WIREFRAME_WIDTH, 1.0f));
 
-		std::cerr << "Material constructor called, ID = " << GetID() << std::endl;
+		std::cerr << "Material constructor called, ID = " << this->GetID() << std::endl;
 
 	};
 	virtual ~Material() {}
@@ -178,7 +179,8 @@ public:
 	}
 
 	// material options (affect rendering state, not directly passed to shader)
-	std::unordered_map<MaterialOptionParam, MaterialOption> m_Options;
+	// need to pass hash function, enum keys not supported until c++14 :(
+	std::unordered_map<MaterialOptionParam, MaterialOption, std::hash<unsigned int>> m_Options;
 
 	// uniform cache (copied to shader on render)
 	typedef std::unordered_map<std::string, MaterialUniform> LocalUniformCache;
