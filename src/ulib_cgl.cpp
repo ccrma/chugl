@@ -69,6 +69,7 @@ CK_DLL_MFUN(cgl_obj_get_world_pos);
 
 // parent-child scenegraph API
 CK_DLL_MFUN(cgl_obj_add_child);
+CK_DLL_GFUN(ggen_op_gruck);
 
 //-----------------------------------------------------------------------------
 // Object -> BaseCamera
@@ -227,7 +228,7 @@ t_CKBOOL init_chugl_light(Chuck_DL_Query* QUERY);
 
 static t_CKUINT cglframe_data_offset = 0;
 static t_CKUINT cglupdate_data_offset = 0;
-static t_CKUINT cglobject_data_offset = 0;
+static t_CKUINT ggen_data_offset = 0;
 static t_CKUINT cglcamera_data_offset = 0;
 static t_CKUINT cglgeo_data_offset = 0;
 static t_CKUINT cgltexture_data_offset = 0;
@@ -1181,11 +1182,11 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query* QUERY)
 {
 	// EM_log(CK_LOG_INFO, "ChuGL Object");
 
-	// CglObject =========================================
-	QUERY->begin_class(QUERY, "CglObject", "Object");
+	// GGen =========================================
+	QUERY->begin_class(QUERY, "GGen", "Object");
 	QUERY->add_ctor(QUERY, cgl_obj_ctor);
 	QUERY->add_dtor(QUERY, cgl_obj_dtor);
-	cglobject_data_offset = QUERY->add_mvar(QUERY, "int", "@cglobject_data", false);
+	ggen_data_offset = QUERY->add_mvar(QUERY, "int", "@ggen_data", false);
 
 	QUERY->add_mfun(QUERY, cgl_obj_get_id, "int", "GetID");
 
@@ -1203,60 +1204,63 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query* QUERY)
 	QUERY->add_mfun(QUERY, cgl_obj_get_world_pos, "vec3", "GetWorldPosition");
 
 	// transform setters ===========
-	QUERY->add_mfun(QUERY, cgl_obj_translate_by, "CglObject", "TranslateBy");
+	QUERY->add_mfun(QUERY, cgl_obj_translate_by, "GGen", "TranslateBy");
 	QUERY->add_arg(QUERY, "vec3", "trans_vec");
 
-	QUERY->add_mfun(QUERY, cgl_obj_scale_by, "CglObject", "ScaleBy");
+	QUERY->add_mfun(QUERY, cgl_obj_scale_by, "GGen", "ScaleBy");
 	QUERY->add_arg(QUERY, "vec3", "scale_vec");
 
-	QUERY->add_mfun(QUERY, cgl_obj_rot_on_local_axis, "CglObject", "RotateOnLocalAxis");
+	QUERY->add_mfun(QUERY, cgl_obj_rot_on_local_axis, "GGen", "RotateOnLocalAxis");
 	QUERY->add_arg(QUERY, "vec3", "axis");
 	QUERY->add_arg(QUERY, "float", "deg");
 
-	QUERY->add_mfun(QUERY, cgl_obj_rot_on_world_axis, "CglObject", "RotateOnWorldAxis");
+	QUERY->add_mfun(QUERY, cgl_obj_rot_on_world_axis, "GGen", "RotateOnWorldAxis");
 	QUERY->add_arg(QUERY, "vec3", "axis");
 	QUERY->add_arg(QUERY, "float", "deg");
 
-	QUERY->add_mfun(QUERY, cgl_obj_rot_x, "CglObject", "RotateX");
+	QUERY->add_mfun(QUERY, cgl_obj_rot_x, "GGen", "RotateX");
 	QUERY->add_arg(QUERY, "float", "deg");
 
-	QUERY->add_mfun(QUERY, cgl_obj_rot_y, "CglObject", "RotateY");
+	QUERY->add_mfun(QUERY, cgl_obj_rot_y, "GGen", "RotateY");
 	QUERY->add_arg(QUERY, "float", "deg");
 
-	QUERY->add_mfun(QUERY, cgl_obj_rot_z, "CglObject", "RotateZ");
+	QUERY->add_mfun(QUERY, cgl_obj_rot_z, "GGen", "RotateZ");
 	QUERY->add_arg(QUERY, "float", "deg");
 
-	QUERY->add_mfun(QUERY, cgl_obj_pos_x, "CglObject", "PosX");
+	QUERY->add_mfun(QUERY, cgl_obj_pos_x, "GGen", "PosX");
 	QUERY->add_arg(QUERY, "float", "pos");
 
-	QUERY->add_mfun(QUERY, cgl_obj_pos_y, "CglObject", "PosY");
+	QUERY->add_mfun(QUERY, cgl_obj_pos_y, "GGen", "PosY");
 	QUERY->add_arg(QUERY, "float", "pos");
 
-	QUERY->add_mfun(QUERY, cgl_obj_pos_z, "CglObject", "PosZ");
+	QUERY->add_mfun(QUERY, cgl_obj_pos_z, "GGen", "PosZ");
 	QUERY->add_arg(QUERY, "float", "pos");
 
-	QUERY->add_mfun(QUERY, cgl_obj_lookat_vec3, "CglObject", "LookAt");
+	QUERY->add_mfun(QUERY, cgl_obj_lookat_vec3, "GGen", "LookAt");
 	QUERY->add_arg(QUERY, "vec3", "pos");
 
-	QUERY->add_mfun(QUERY, cgl_obj_lookat_float, "CglObject", "LookAt");
+	QUERY->add_mfun(QUERY, cgl_obj_lookat_float, "GGen", "LookAt");
 	QUERY->add_arg(QUERY, "float", "x");
 	QUERY->add_arg(QUERY, "float", "y");
 	QUERY->add_arg(QUERY, "float", "z");
 
-	QUERY->add_mfun(QUERY, cgl_obj_set_pos, "CglObject", "SetPosition");
+	QUERY->add_mfun(QUERY, cgl_obj_set_pos, "GGen", "SetPosition");
 	QUERY->add_arg(QUERY, "vec3", "pos_vec");
 
-	QUERY->add_mfun(QUERY, cgl_obj_set_rot, "CglObject", "SetRotation");  // sets from eulers
+	QUERY->add_mfun(QUERY, cgl_obj_set_rot, "GGen", "SetRotation");  // sets from eulers
 	QUERY->add_arg(QUERY, "vec3", "eulers");
 
-	QUERY->add_mfun(QUERY, cgl_obj_set_scale, "CglObject", "SetScale");  
+	QUERY->add_mfun(QUERY, cgl_obj_set_scale, "GGen", "SetScale");
 	QUERY->add_arg(QUERY, "vec3", "scale");
 
 
 	// scenegraph relationship methods ===========
 	QUERY->add_mfun(QUERY, cgl_obj_add_child, "void", "AddChild");  
-	QUERY->add_arg(QUERY, "CglObject", "child");
-
+	QUERY->add_arg(QUERY, "GGen", "child");
+    
+    // overload GGen --> GGen
+    QUERY->add_op_overload_binary( QUERY, ggen_op_gruck, "GGen", "-->",
+                                   "GGen", "lhs", "GGen", "rhs" );
 
 	QUERY->end_class(QUERY);
 
@@ -1270,33 +1274,33 @@ CK_DLL_CTOR(cgl_obj_ctor)
 }
 CK_DLL_DTOR(cgl_obj_dtor)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*)OBJ_MEMBER_INT(SELF, cglobject_data_offset);
+	SceneGraphObject* cglObj = (SceneGraphObject*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	CK_SAFE_DELETE(cglObj);
-	OBJ_MEMBER_INT(SELF, cglobject_data_offset) = 0;
+	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;
 }
 
 CK_DLL_MFUN(cgl_obj_get_id)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*)OBJ_MEMBER_INT(SELF, cglobject_data_offset);
+	SceneGraphObject* cglObj = (SceneGraphObject*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	RETURN->v_int = cglObj->GetID();
 }
 
 CK_DLL_MFUN(cgl_obj_get_right)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*)OBJ_MEMBER_INT(SELF, cglobject_data_offset);
+	SceneGraphObject* cglObj = (SceneGraphObject*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	const auto& right = cglObj->GetRight();
 	RETURN->v_vec3 = { right.x, right.y, right.z };
 }
 CK_DLL_MFUN(cgl_obj_get_forward)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*)OBJ_MEMBER_INT(SELF, cglobject_data_offset);
+	SceneGraphObject* cglObj = (SceneGraphObject*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	const auto& vec = cglObj->GetForward();
 	RETURN->v_vec3 = { vec.x, vec.y, vec.z };
 }
 
 CK_DLL_MFUN(cgl_obj_get_up)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*)OBJ_MEMBER_INT(SELF, cglobject_data_offset);
+	SceneGraphObject* cglObj = (SceneGraphObject*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	const auto& vec = cglObj->GetUp();
 	RETURN->v_vec3 = { vec.x, vec.y, vec.z };
 }
@@ -1304,7 +1308,7 @@ CK_DLL_MFUN(cgl_obj_get_up)
 
 CK_DLL_MFUN(cgl_obj_translate_by)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, cglobject_data_offset);
+	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
 	t_CKVEC3 trans = GET_NEXT_VEC3(ARGS);
 	cglObj->Translate(glm::vec3(trans.x, trans.y, trans.z));
 
@@ -1316,7 +1320,7 @@ CK_DLL_MFUN(cgl_obj_translate_by)
 
 CK_DLL_MFUN(cgl_obj_scale_by)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, cglobject_data_offset);
+	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
 	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
 	cglObj->Scale(glm::vec3(vec.x, vec.y, vec.z));
 	RETURN->v_object = SELF;
@@ -1325,7 +1329,7 @@ CK_DLL_MFUN(cgl_obj_scale_by)
 
 CK_DLL_MFUN(cgl_obj_rot_on_local_axis)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, cglobject_data_offset);
+	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
 	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
 	t_CKFLOAT deg = GET_NEXT_FLOAT(ARGS);
 	cglObj->RotateOnLocalAxis(glm::vec3(vec.x, vec.y, vec.z), deg);
@@ -1337,7 +1341,7 @@ CK_DLL_MFUN(cgl_obj_rot_on_local_axis)
 
 CK_DLL_MFUN(cgl_obj_rot_on_world_axis)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, cglobject_data_offset);
+	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
 	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
 	t_CKFLOAT deg = GET_NEXT_FLOAT(ARGS);
 	cglObj->RotateOnWorldAxis(glm::vec3(vec.x, vec.y, vec.z), deg);
@@ -1349,7 +1353,7 @@ CK_DLL_MFUN(cgl_obj_rot_on_world_axis)
 
 CK_DLL_MFUN(cgl_obj_rot_x)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, cglobject_data_offset);
+	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
 	t_CKFLOAT deg = GET_NEXT_FLOAT(ARGS);
 	cglObj->RotateX(deg);
 	RETURN->v_object = SELF;
@@ -1358,7 +1362,7 @@ CK_DLL_MFUN(cgl_obj_rot_x)
 
 CK_DLL_MFUN(cgl_obj_rot_y)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, cglobject_data_offset);
+	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
 	t_CKFLOAT deg = GET_NEXT_FLOAT(ARGS);
 	cglObj->RotateY(deg);
 	RETURN->v_object = SELF;
@@ -1367,7 +1371,7 @@ CK_DLL_MFUN(cgl_obj_rot_y)
 
 CK_DLL_MFUN(cgl_obj_rot_z)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, cglobject_data_offset);
+	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
 	t_CKFLOAT deg = GET_NEXT_FLOAT(ARGS);
 	cglObj->RotateZ(deg);
 	RETURN->v_object = SELF;
@@ -1376,7 +1380,7 @@ CK_DLL_MFUN(cgl_obj_rot_z)
 
 CK_DLL_MFUN(cgl_obj_pos_x)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, cglobject_data_offset);
+	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
 	t_CKFLOAT posX = GET_NEXT_FLOAT(ARGS);
 	glm::vec3 pos = cglObj->GetPosition();
 	pos.x = posX;
@@ -1387,7 +1391,7 @@ CK_DLL_MFUN(cgl_obj_pos_x)
 
 CK_DLL_MFUN(cgl_obj_pos_y)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, cglobject_data_offset);
+	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
 	t_CKFLOAT posY= GET_NEXT_FLOAT(ARGS);
 	glm::vec3 pos = cglObj->GetPosition();
 	pos.y = posY;
@@ -1398,7 +1402,7 @@ CK_DLL_MFUN(cgl_obj_pos_y)
 
 CK_DLL_MFUN(cgl_obj_pos_z)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, cglobject_data_offset);
+	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
 	t_CKFLOAT posZ = GET_NEXT_FLOAT(ARGS);
 	glm::vec3 pos = cglObj->GetPosition();
 	pos.z = posZ;
@@ -1409,7 +1413,7 @@ CK_DLL_MFUN(cgl_obj_pos_z)
 
 CK_DLL_MFUN(cgl_obj_lookat_vec3)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, cglobject_data_offset);
+	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
 	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
 	cglObj->LookAt(glm::vec3(vec.x, vec.y, vec.z));
 	RETURN->v_object = SELF;
@@ -1418,7 +1422,7 @@ CK_DLL_MFUN(cgl_obj_lookat_vec3)
 
 CK_DLL_MFUN(cgl_obj_lookat_float)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, cglobject_data_offset);
+	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
 	t_CKFLOAT x = GET_NEXT_FLOAT(ARGS);
 	t_CKFLOAT y = GET_NEXT_FLOAT(ARGS);
 	t_CKFLOAT z = GET_NEXT_FLOAT(ARGS);
@@ -1429,7 +1433,7 @@ CK_DLL_MFUN(cgl_obj_lookat_float)
 
 CK_DLL_MFUN(cgl_obj_set_pos)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, cglobject_data_offset);
+	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
 	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
 	cglObj->SetPosition(glm::vec3(vec.x, vec.y, vec.z));
 	RETURN->v_object = SELF;
@@ -1438,7 +1442,7 @@ CK_DLL_MFUN(cgl_obj_set_pos)
 
 CK_DLL_MFUN(cgl_obj_set_rot)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, cglobject_data_offset);
+	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
 	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
 	cglObj->SetRotation(glm::vec3(vec.x, vec.y, vec.z));
 	RETURN->v_object = SELF;
@@ -1447,7 +1451,7 @@ CK_DLL_MFUN(cgl_obj_set_rot)
 
 CK_DLL_MFUN(cgl_obj_set_scale)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, cglobject_data_offset);
+	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
 	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
 	cglObj->SetScale(glm::vec3(vec.x, vec.y, vec.z));
 	RETURN->v_object = SELF;
@@ -1456,42 +1460,61 @@ CK_DLL_MFUN(cgl_obj_set_scale)
 
 CK_DLL_MFUN(cgl_obj_get_pos)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, cglobject_data_offset);
+	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
 	const auto& vec = cglObj->GetPosition();
 	RETURN->v_vec3 = { vec.x, vec.y, vec.z };
 }
 
 CK_DLL_MFUN(cgl_obj_get_world_pos)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, cglobject_data_offset);
+	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
 	const auto& vec = cglObj->GetWorldPosition();
 	RETURN->v_vec3 = { vec.x, vec.y, vec.z };
 }
 
 CK_DLL_MFUN(cgl_obj_get_rot)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, cglobject_data_offset);
+	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
 	const auto& vec = glm::degrees(glm::eulerAngles(cglObj->GetRotation()));
 	RETURN->v_vec3 = { vec.x, vec.y, vec.z };
 }
 
 CK_DLL_MFUN(cgl_obj_get_scale)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, cglobject_data_offset);
+	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
 	const auto& vec = cglObj->GetScale();
 	RETURN->v_vec3 = { vec.x, vec.y, vec.z };
 }
 
 CK_DLL_MFUN(cgl_obj_add_child)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, cglobject_data_offset);
+	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
 	Chuck_Object* child_obj = GET_NEXT_OBJECT(ARGS);
-	SceneGraphObject* child = (SceneGraphObject*) OBJ_MEMBER_INT (child_obj, cglobject_data_offset);
+	SceneGraphObject* child = (SceneGraphObject*) OBJ_MEMBER_INT (child_obj, ggen_data_offset);
 	cglObj->AddChild(child);
 
 	// command
 	CGL::PushCommand(new AddChildCommand(cglObj, child));
 }
+
+CK_DLL_GFUN(ggen_op_gruck)
+{
+    // get the arguments
+    Chuck_Object * lhs = GET_NEXT_OBJECT(ARGS);
+    Chuck_Object * rhs = GET_NEXT_OBJECT(ARGS);
+    // get internal representation
+    SceneGraphObject * LHS = (SceneGraphObject*) OBJ_MEMBER_INT (lhs, ggen_data_offset);
+    SceneGraphObject * RHS = (SceneGraphObject*) OBJ_MEMBER_INT (rhs, ggen_data_offset);
+    // add child
+    RHS->AddChild(LHS);
+
+    // command
+    CGL::PushCommand(new AddChildCommand(RHS, LHS));
+    
+    // return RHS
+    RETURN->v_object = rhs;
+}
+
 
 //-----------------------------------------------------------------------------
 // init_chugl_scene()
@@ -1500,7 +1523,7 @@ t_CKBOOL init_chugl_scene(Chuck_DL_Query* QUERY)
 {
 	// EM_log(CK_LOG_INFO, "ChuGL scene");
 	// CGL scene
-	QUERY->begin_class(QUERY, "CglScene", "CglObject");
+	QUERY->begin_class(QUERY, "CglScene", "GGen");
 	QUERY->add_ctor(QUERY, cgl_scene_ctor);
 	QUERY->add_dtor(QUERY, cgl_scene_dtor);
 	QUERY->end_class(QUERY);
@@ -1510,13 +1533,13 @@ t_CKBOOL init_chugl_scene(Chuck_DL_Query* QUERY)
 // CGL Scene ==============================================
 CK_DLL_CTOR(cgl_scene_ctor)
 {
-	OBJ_MEMBER_INT(SELF, cglobject_data_offset) = (t_CKINT) &CGL::mainScene;
+	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT) &CGL::mainScene;
 }
 CK_DLL_DTOR(cgl_scene_dtor)
 {
-	Scene* mainScene = (Scene*)OBJ_MEMBER_INT(SELF, cglobject_data_offset);
+	Scene* mainScene = (Scene*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	// don't call delete! because this is a static var
-	OBJ_MEMBER_INT(SELF, cglobject_data_offset) = 0;  // zero out the memory
+	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;  // zero out the memory
 }
 
 //-----------------------------------------------------------------------------
@@ -1526,7 +1549,7 @@ t_CKBOOL init_chugl_cam(Chuck_DL_Query* QUERY)
 {
 	// EM_log(CK_LOG_INFO, "ChuGL Camera");
 	// CGL camera
-	QUERY->begin_class(QUERY, "CglCamera", "CglObject");
+	QUERY->begin_class(QUERY, "CglCamera", "GGen");
 	QUERY->add_ctor(QUERY, cgl_cam_ctor);
 	QUERY->add_dtor(QUERY, cgl_cam_dtor);
 	// cglcamera_data_offset = QUERY->add_mvar(QUERY, "int", "@cglcamera_data", false);
@@ -1543,13 +1566,13 @@ CK_DLL_CTOR(cgl_cam_ctor)
 	// to use the same offset. wtf!!
 	// TODO: ask Ge is this is the right way to do inheritence in this DLL interface
 	//OBJ_MEMBER_INT(SELF, cglcamera_data_offset) = (t_CKINT) &CGL::mainCamera;
-	OBJ_MEMBER_INT(SELF, cglobject_data_offset) = (t_CKINT) &CGL::mainCamera;
+	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT) &CGL::mainCamera;
 }
 CK_DLL_DTOR(cgl_cam_dtor)
 {
-	Camera* mainCam = (Camera*)OBJ_MEMBER_INT(SELF, cglobject_data_offset);
+	Camera* mainCam = (Camera*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	// don't call delete! because this is a static var
-	OBJ_MEMBER_INT(SELF, cglobject_data_offset) = 0;  // zero out the memory
+	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;  // zero out the memory
 }
 
 //-----------------------------------------------------------------------------
@@ -1559,7 +1582,7 @@ t_CKBOOL init_chugl_mesh(Chuck_DL_Query* QUERY)
 {
 	// EM_log(CK_LOG_INFO, "ChuGL scene");
 
-	QUERY->begin_class(QUERY, "CglMesh", "CglObject");
+	QUERY->begin_class(QUERY, "CglMesh", "GGen");
 	QUERY->add_ctor(QUERY, cgl_mesh_ctor);
 	QUERY->add_dtor(QUERY, cgl_mesh_dtor);
 	
@@ -1575,22 +1598,22 @@ t_CKBOOL init_chugl_mesh(Chuck_DL_Query* QUERY)
 CK_DLL_CTOR(cgl_mesh_ctor)
 {
 	Mesh* mesh = new Mesh();
-	OBJ_MEMBER_INT(SELF, cglobject_data_offset) = (t_CKINT) mesh;
+	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT) mesh;
 	CGL::PushCommand(new CreateMeshCommand(mesh));
 }
 
 CK_DLL_DTOR(cgl_mesh_dtor)
 {
-	Mesh* mesh = (Mesh*)OBJ_MEMBER_INT(SELF, cglobject_data_offset);
+	Mesh* mesh = (Mesh*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	CK_SAFE_DELETE(mesh);
-	OBJ_MEMBER_INT(SELF, cglobject_data_offset) = 0;  // zero out the memory
+	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;  // zero out the memory
 
 	// TODO: need to remove from scenegraph
 }
 
 CK_DLL_MFUN(cgl_mesh_set)
 {
-	Mesh* mesh = (Mesh*)OBJ_MEMBER_INT(SELF, cglobject_data_offset);
+	Mesh* mesh = (Mesh*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
     //Geometry * geo = (Geometry *)GET_NEXT_OBJECT(ARGS);
     //Material * mat = (Material *)GET_NEXT_OBJECT(ARGS);
     Chuck_Object* geo_obj = GET_NEXT_OBJECT(ARGS);
@@ -1614,7 +1637,7 @@ t_CKBOOL init_chugl_group(Chuck_DL_Query* QUERY)
 	// EM_log(CK_LOG_INFO, "ChuGL group");
 
 	// CGL Group
-	QUERY->begin_class(QUERY, "CglGroup", "CglObject");
+	QUERY->begin_class(QUERY, "CglGroup", "GGen");
 	QUERY->add_ctor(QUERY, cgl_group_ctor);
 	QUERY->add_dtor(QUERY, cgl_group_dtor);
 	QUERY->end_class(QUERY);
@@ -1625,15 +1648,15 @@ t_CKBOOL init_chugl_group(Chuck_DL_Query* QUERY)
 CK_DLL_CTOR(cgl_group_ctor)
 {
 	Group* group = new Group;
-	OBJ_MEMBER_INT(SELF, cglobject_data_offset) = (t_CKINT) group;
+	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT) group;
 	CGL::PushCommand(new CreateGroupCommand(group));
 }
 
 CK_DLL_DTOR(cgl_group_dtor)
 {
-	Group* group = (Group*)OBJ_MEMBER_INT(SELF, cglobject_data_offset);
+	Group* group = (Group*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	CK_SAFE_DELETE(group);
-	OBJ_MEMBER_INT(SELF, cglobject_data_offset) = 0;  // zero out the memory
+	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;  // zero out the memory
 
 	// TODO: need to remove from scenegraph
 }
@@ -1646,7 +1669,7 @@ t_CKBOOL init_chugl_light(Chuck_DL_Query* QUERY)
 	// EM_log(CK_LOG_INFO, "ChuGL geometry");
 
 	// geometry
-	QUERY->begin_class(QUERY, "Light", "CglObject");
+	QUERY->begin_class(QUERY, "Light", "GGen");
 	QUERY->add_ctor(QUERY, cgl_light_ctor);
 	QUERY->add_dtor(QUERY, cgl_light_dtor);
 	QUERY->end_class(QUERY);
@@ -1681,9 +1704,9 @@ CK_DLL_CTOR(cgl_light_ctor)
 
 CK_DLL_DTOR(cgl_light_dtor)
 {
-	Group* group = (Group*)OBJ_MEMBER_INT(SELF, cglobject_data_offset);
+	Group* group = (Group*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	CK_SAFE_DELETE(group);
-	OBJ_MEMBER_INT(SELF, cglobject_data_offset) = 0;  // zero out the memory
+	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;  // zero out the memory
 
 	// TODO: need to remove from scenegraph with a destroy command
 }
@@ -1691,14 +1714,14 @@ CK_DLL_DTOR(cgl_light_dtor)
 CK_DLL_CTOR(cgl_point_light_ctor)
 {
 	PointLight* light = new PointLight;
-	OBJ_MEMBER_INT(SELF, cglobject_data_offset) = (t_CKINT) light;
+	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT) light;
 	CGL::PushCommand(new CreateLightCommand(light));
 }
 
 CK_DLL_CTOR(cgl_dir_light_ctor)
 {
 	DirLight* light = new DirLight;
-	OBJ_MEMBER_INT(SELF, cglobject_data_offset) = (t_CKINT) light;
+	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT) light;
 	CGL::PushCommand(new CreateLightCommand(light));
 }
 
