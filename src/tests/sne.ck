@@ -46,10 +46,12 @@ BoxGeo boxGeo;
 NormMat normMat;  
 NormMat headNormMat;
 normMat.useLocal(true);  // use local space normals (so we can tell orientation)
-headNormMat.wireframe(true);
+headNormMat.polygonMode(CglMat.POLYGON_LINE);  // wireframe mode
+// headNormMat.wireframe(true);
 
 NormMat wireframeNormMat;
-wireframeNormMat.wireframe(true);
+wireframeNormMat.polygonMode(CglMat.POLYGON_LINE);
+// wireframeNormMat.wireframe(true);
 
 // ECS classes ==================================================
 
@@ -180,7 +182,8 @@ class Grid {
 	BoxGeo gridGeo;
 
 	NormMat gridMat;
-	gridMat.wireframe(true);
+	gridMat.polygonMode(CglMat.POLYGON_LINE);
+	// gridMat.wireframe(true);
 
 	// hashset of each grid cell
 	vec3 emptyCells[];

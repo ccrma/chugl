@@ -90,8 +90,15 @@ struct MaterialUniform {
 };
 
 enum MaterialOptionParam : unsigned int {
-	WireFrame = 0,
-	WireFrameWidth
+	PolygonMode = 0,
+	LineWidth,
+	PointSize
+};
+
+enum MaterialPolygonMode : unsigned int {
+	Fill = 0,
+	Line,
+	Point
 };
 
 enum MaterialOptionType : unsigned int {
@@ -109,6 +116,7 @@ struct MaterialOption {
 		int i;
 		unsigned int ui;
 		bool b;
+		MaterialPolygonMode polygonMode;
 	};
 
 	// constructors  (because prior c++20 you can only initialize the first type in a union??)
@@ -124,6 +132,9 @@ struct MaterialOption {
 	static MaterialOption Create(MaterialOptionParam param, bool b) {
 		MaterialOption m; m.type = MaterialOptionType::Bool; m.param = param; m.b = b;  return m;
 	}
+	static MaterialOption Create(MaterialOptionParam param, MaterialPolygonMode polygonMode) {
+		MaterialOption m; m.type = MaterialOptionType::UnsignedInt; m.param = param; m.polygonMode = polygonMode;  return m;
+	}
 };
 
 
@@ -133,8 +144,9 @@ class Material : public SceneGraphNode
 public:
 	Material() {
 		// set default material options
-		SetOption(MaterialOption::Create(WIREFRAME, false));
-		SetOption(MaterialOption::Create(WIREFRAME_WIDTH, 1.0f));
+		SetOption(MaterialOption::Create(POLYGON_MODE, MaterialPolygonMode::Fill));
+		SetOption(MaterialOption::Create(LINE_WIDTH, 1.0f));
+		SetOption(MaterialOption::Create(POINT_SIZE, 1.0f));
 
 		std::cerr << "Material constructor called, ID = " << this->GetID() << std::endl;
 
@@ -154,14 +166,6 @@ public:
 	virtual void ApplyUpdate(void* uniform_data) { m_Uniforms = *(LocalUniformCache*)uniform_data; }
 	virtual void FreeUpdate(void* uniform_data) { if (uniform_data) delete (LocalUniformCache*)uniform_data; }
 
-	// option setters
-	inline void SetWireFrame(bool wf) {  SetOption(MaterialOption::Create(WIREFRAME, wf)); }
-	inline void SetWireFrameWidth(float width) { SetOption(MaterialOption::Create(WIREFRAME_WIDTH, width)); }
-	
-	// option getters
-	inline bool GetWireFrame() { return GetOption(WIREFRAME)->b; }
-	inline float GetWireFrameWidth() { return GetOption(WIREFRAME_WIDTH)->f; }
-
 	inline void SetOption(MaterialOption options) {
 		m_Options[options.param] = options;
 	}
@@ -169,6 +173,17 @@ public:
 	inline MaterialOption* GetOption(MaterialOptionParam p) {
 		return (m_Options.find(p) != m_Options.end()) ? &m_Options[p] : nullptr;
 	}
+
+	// Option getters
+	MaterialPolygonMode GetPolygonMode() { return m_Options[MaterialOptionParam::PolygonMode].polygonMode; }
+	float GetLineWidth() { return m_Options[MaterialOptionParam::LineWidth].f; }
+	float GetPointSize() { return m_Options[MaterialOptionParam::PointSize].f; }
+
+	// option setters
+	void SetPolygonMode(MaterialPolygonMode mode) { m_Options[MaterialOptionParam::PolygonMode].polygonMode = mode; }
+	void SetLineWidth(float width) { m_Options[MaterialOptionParam::LineWidth].f = width; }
+	void SetPointSize(float size) { m_Options[MaterialOptionParam::PointSize].f = size; }
+
 
 	inline void SetUniform(MaterialUniform uniform) {
 		m_Uniforms[uniform.name] = uniform;
@@ -189,8 +204,14 @@ public:
 public:  // static consts
 
 	// static material options, for passing into chuck as svars if ever needed
-	static const MaterialOptionParam WIREFRAME;
-	static const MaterialOptionParam WIREFRAME_WIDTH;
+	static const MaterialOptionParam POLYGON_MODE;
+	static const MaterialOptionParam LINE_WIDTH;
+	static const MaterialOptionParam POINT_SIZE;
+
+	// supported polygon modes
+	static const MaterialPolygonMode POLYGON_FILL;
+	static const MaterialPolygonMode POLYGON_LINE;
+	static const MaterialPolygonMode POLYGON_POINT;
 
 
 };

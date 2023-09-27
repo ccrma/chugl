@@ -3,10 +3,14 @@
 // base Material static defines ========================
 
 // material options
-const MaterialOptionParam Material::WIREFRAME = MaterialOptionParam::WireFrame;
-const MaterialOptionParam Material::WIREFRAME_WIDTH = MaterialOptionParam::WireFrameWidth;
+const MaterialOptionParam Material::POLYGON_MODE = MaterialOptionParam::PolygonMode;
+const MaterialOptionParam Material::LINE_WIDTH = MaterialOptionParam::LineWidth;
+const MaterialOptionParam Material::POINT_SIZE = MaterialOptionParam::PointSize;
 
 
+const MaterialPolygonMode Material::POLYGON_FILL = MaterialPolygonMode::Fill;
+const MaterialPolygonMode Material::POLYGON_LINE = MaterialPolygonMode::Line;
+const MaterialPolygonMode Material::POLYGON_POINT = MaterialPolygonMode::Point;
 
 // normMat static defines ========================
 const std::string NormalMaterial::USE_LOCAL_NORMALS_UNAME = "u_UseLocalNormal";

@@ -297,12 +297,27 @@ void Renderer::Draw(RenderGeometry *renderGeo, RenderMaterial *renderMat)
 
 	Material* CGL_mat = renderMat->GetMat();
 
-	// wireframe
-	if (CGL_mat->GetWireFrame()) {
-		GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_LINE));
-	} else {
-		GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
+	// set polygon mode
+	switch (CGL_mat->GetPolygonMode()) {
+		case MaterialPolygonMode::Fill:
+			GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
+			break;
+		case MaterialPolygonMode::Line:
+			GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_LINE));
+			// set line width
+			GLCall(glLineWidth(CGL_mat->GetLineWidth()));
+			break;
+		case MaterialPolygonMode::Point:
+			GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_POINT));
+			// set point size
+			GLCall(glPointSize(CGL_mat->GetPointSize()));
+			break;
+		default:
+			throw std::runtime_error("Polygon mode not set");
 	}
+
+	// set line width
+
 
 	if (renderGeo->ShouldDrawIndexed()) {
 		GLCall(glDrawElements(

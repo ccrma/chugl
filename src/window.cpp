@@ -139,6 +139,10 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
     // MSAA
     GLCall(glEnable(GL_MULTISAMPLE));
 
+    // Line and point smoothing
+    GLCall(glEnable(GL_LINE_SMOOTH));
+    // GLCall(glEnable(GL_POINT_SMOOTH));  // not defined by glad
+
 
 }
 

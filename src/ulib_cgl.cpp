@@ -154,8 +154,8 @@ CK_DLL_DTOR(cgl_mat_dtor);
 
 // base material options
 	// TODO: add polygon modes https://stackoverflow.com/questions/55825588/what-is-the-difference-between-gl-points-and-gl-point
-CK_DLL_MFUN(cgl_mat_set_wireframe);
-CK_DLL_MFUN(cgl_mat_get_wireframe);
+CK_DLL_MFUN(cgl_mat_set_polygon_mode);
+CK_DLL_MFUN(cgl_mat_get_polygon_mode);
 	// uniform setters
 CK_DLL_MFUN(cgl_mat_set_uniform_float);
 CK_DLL_MFUN(cgl_mat_set_uniform_float2);
@@ -710,10 +710,15 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query* QUERY)
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 	cglmat_data_offset = QUERY->add_mvar(QUERY, "int", "@cglmat_data", false);
 
-	QUERY->add_mfun(QUERY, cgl_mat_set_wireframe, "int", "wireframe");
-	QUERY->add_arg(QUERY, "int", "wf");
+	// Material params (static constants) ---------------------------------
+    QUERY->add_svar(QUERY, "int", "POLYGON_FILL", TRUE, (void *)&Material::POLYGON_FILL);
+    QUERY->add_svar(QUERY, "int", "POLYGON_LINE", TRUE, (void *)&Material::POLYGON_LINE);
+	QUERY->add_svar(QUERY, "int", "POLYGON_POINT", TRUE, (void*)&Material::POLYGON_POINT);
 
-	QUERY->add_mfun(QUERY, cgl_mat_get_wireframe, "int", "wireframe");
+	QUERY->add_mfun(QUERY, cgl_mat_set_polygon_mode, "int", "polygonMode");
+	QUERY->add_arg(QUERY, "int", "mode");
+
+	QUERY->add_mfun(QUERY, cgl_mat_get_polygon_mode, "int", "polygonMode");
 
 	// uniform setters
 	QUERY->add_mfun(QUERY, cgl_mat_set_uniform_float, "void", "uniformFloat");
@@ -836,21 +841,22 @@ CK_DLL_DTOR(cgl_mat_dtor)  // all geos can share this base destructor
 	// 	     - callback hook for renderer to remove RenderMat from cache
 }
 
-CK_DLL_MFUN(cgl_mat_set_wireframe)
+CK_DLL_MFUN(cgl_mat_set_polygon_mode)
 {
 	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
-	t_CKINT wf = GET_NEXT_INT(ARGS);
-	mat->SetWireFrame(wf);
-	RETURN->v_int = wf ? 1 : 0;
+	auto mode  = GET_NEXT_INT(ARGS);
+	
+	mat->SetPolygonMode((MaterialPolygonMode) mode);
 
-	// TODO: need to add command for this
-	CGL::PushCommand(new UpdateMaterialOptionCommand(mat, *mat->GetOption(Material::WIREFRAME)));
+	RETURN->v_int = mode;
+
+	CGL::PushCommand(new UpdateMaterialOptionCommand(mat, *mat->GetOption(MaterialOptionParam::PolygonMode)));
 }
 
-CK_DLL_MFUN(cgl_mat_get_wireframe)
+CK_DLL_MFUN(cgl_mat_get_polygon_mode)
 {
 	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
-	RETURN->v_int = mat->GetWireFrame() ? 1 : 0;
+	RETURN->v_int = mat->GetPolygonMode();
 }
 
 // TODO: can refactor these uniform setters to call a shared function
