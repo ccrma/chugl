@@ -57,6 +57,7 @@ struct CGL_GeoAttribute {
 	size_t NumVertices() const {
 		return data.size() / numComponents;
 	}
+
 };
 
 // returns reference to float at index 'c'
@@ -87,6 +88,13 @@ public:
 	}
 	void AddVertex(Vertex v);
 	void AddTriangleIndices(unsigned int i1, unsigned int i2, unsigned int i3);
+
+	// moves attribute into attributeMap. param attrib is unusable afterwards
+	// uses move semantics to prevent copying
+	void AddAttribute(CGL_GeoAttribute&& attrib) {
+		m_Attributes[attrib.location] = std::move(attrib);
+		m_Dirty = true;
+	}
 
 	inline bool IsDirty() { return m_Dirty; }
 
@@ -130,7 +138,9 @@ public:
 	virtual void BuildGeometry() override;  // given data, builds cpu-side index and vertex buffs
 	virtual GeometryType GetGeoType() override { return GeometryType::Box; }
 	virtual Geometry* Clone() override { 
-		return new BoxGeometry(m_Width, m_Height, m_Depth, m_WidthSeg, m_HeightSeg, m_DepthSeg);
+		auto* geo = new BoxGeometry(m_Width, m_Height, m_Depth, m_WidthSeg, m_HeightSeg, m_DepthSeg);
+		geo->SetID(GetID());
+		return geo;
 	}
 	virtual void * GenUpdate() override {
 		return new BoxGeoUpdateData{m_Width, m_Height, m_Depth, m_WidthSeg, m_HeightSeg, m_DepthSeg};
@@ -184,9 +194,11 @@ public:
 	virtual void BuildGeometry() override;  // given data, builds cpu-side index and vertex buffs
 	virtual GeometryType GetGeoType() override { return GeometryType::Sphere; }
 	virtual Geometry* Clone() override { 
-		return new SphereGeometry(
+		auto* geo = new SphereGeometry(
 			m_Radius, m_WidthSeg, m_HeightSeg, m_PhiStart, m_PhiLength, m_ThetaStart, m_ThetaLength
 		); 
+		geo->SetID(GetID());
+		return geo;
 	}
 
 	// update command methods
@@ -214,3 +226,23 @@ public:
 	float m_ThetaStart, m_ThetaLength;
 };
 
+class CustomGeometry : public Geometry
+{
+public:
+	virtual void BuildGeometry() override {
+		// nothing to do, geometry buffers are already passed from user
+		m_Dirty = false;
+	}
+	virtual GeometryType GetGeoType() override { return GeometryType::Custom; }
+
+	virtual Geometry* Clone() override {
+		auto* geo = new CustomGeometry(*this);
+		geo->SetID(GetID());
+		return geo;
+	};
+
+	// currently unused for custom geo
+	virtual void* GenUpdate() { return nullptr; }
+	virtual void FreeUpdate(void* data) {}
+	virtual void ApplyUpdate(void * data) {}
+};

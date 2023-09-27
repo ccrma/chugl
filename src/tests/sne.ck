@@ -201,7 +201,7 @@ class Grid {
 	}
 
 	fun int IsCellEmpty(vec3 pos) {
-		return emptyCells.find(VecToString(pos));
+		return emptyCells.isInMap(VecToString(pos));
 	}
 
 	fun vec3 GetRandomEmptyCell() {
@@ -561,10 +561,10 @@ fun void cameraUpdate(time t, dur dt)
 
 // Game loop 
 fun void GameLoop(){
-	CGL.Render(); // kick of the renderer
+	// CGL.Render(); // kick of the renderer
 	while (true) {
-		UpdateEvent => now;
-		<<< "==== update loop " >>>;
+		// UpdateEvent => now;
+		// <<< "==== update loop " >>>;
 		1 +=> G.frameCounter;
 		
 		// compute timing
@@ -576,7 +576,8 @@ fun void GameLoop(){
 		Update();
 
 		// End update, begin render
-		CGL.Render();
+		// CGL.Render();
+		CGL.nextFrame() => now;
 	}
 } 
 

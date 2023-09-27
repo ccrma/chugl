@@ -56,12 +56,12 @@ void zero();
 string keys[0];
 arr.getKeys(keys);
 <<< "keys size pre erase", keys.size() >>>;
-<<< "arr find pre erase", arr.find("hello") >>>;
+<<< "arr find pre erase", arr.isInMap("hello") >>>;
 
 arr.erase("hello");
 arr.getKeys(keys);
 <<< "keys size post erase", keys.size() >>>;
-<<< "arr find pos erase", arr.find("hello") >>>;
+<<< "arr find pos erase", arr.isInMap("hello") >>>;
 <<< @(1.0, 1.0, 2.0) >>>;
 
 

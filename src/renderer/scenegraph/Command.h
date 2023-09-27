@@ -55,19 +55,11 @@ private:
 class CreateGeometryCommand : public SceneGraphCommand
 {
 public:
-    CreateGeometryCommand(Geometry* geo) : geo(geo) {};
+    CreateGeometryCommand(Geometry* g) : geo(g->Clone()) {};
     virtual void execute(Scene* scene) override {
-        Geometry* newGeo = geo->Clone();
-
-        // assign the gpu buffer data
-        // JK we do this in renderer instead
-        // newGeo->BuildGeometry();
-
-        newGeo->SetID(geo->GetID());  // copy ID
-        std::cout << "copied geometry with id: " + std::to_string(newGeo->GetID())
+        std::cout << "copied geometry with id: " + std::to_string(geo->GetID())
             << std::endl;
-
-        scene->RegisterNode(newGeo);
+        scene->RegisterNode(geo);
     }
 
 private:
@@ -396,6 +388,39 @@ private:
     Geometry* m_Geo;
     void* m_GeoData;
     size_t m_GeoID;
+};
+
+class UpdateGeometryAttributeCommand : public SceneGraphCommand
+{
+public:
+    UpdateGeometryAttributeCommand(
+        Geometry* geo,
+        std::string attribName,
+        unsigned int location,
+        unsigned int numComponents,
+        std::vector<double>& attribData,
+        bool normalize = false
+    ) : m_GeoID(geo->GetID()), m_Attrib() {
+        // copy data into m_attrib
+        m_Attrib.name = attribName;
+        m_Attrib.location = location;
+        m_Attrib.numComponents = numComponents;
+        m_Attrib.normalize = normalize;
+        m_Attrib.data.reserve(attribData.size());
+        for (auto& val : attribData) {
+            m_Attrib.data.emplace_back(static_cast<float>(val));
+        }
+    };
+
+    virtual void execute(Scene* scene) override {
+        Geometry* geo = dynamic_cast<Geometry*>(scene->GetNode(m_GeoID));
+        assert(geo);
+        geo->AddAttribute(std::move(m_Attrib));
+    }
+
+private:
+    size_t m_GeoID;
+    CGL_GeoAttribute m_Attrib;
 };
 
 class UpdateTextureSamplerCommand : public SceneGraphCommand

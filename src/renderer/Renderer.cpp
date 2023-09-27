@@ -24,14 +24,27 @@ void RenderGeometry::BuildGeometry() {
 	auto& attributes = GetAttributes();
 	auto& indices = GetIndices();
 
+	// erase buffers for unused attributes
+	// ACTUALLY don't need to do this because glBufferData() will overwrite previous data
+	// for (auto& it : m_VBs) {
+	// 	auto location = it.first;
+	// 	if (
+	// 		attributes.find(location) == attributes.end()
+	// 		||
+	// 		attributes[location].NumVertices() == 0
+	// 	) {
+	// 		// clear buffer data
+	// 	}
+	// }
+
 	// set vbo size to # non-zero length attributes
-	int numNonZeroLengthAttribs = 0;
-	for (auto& it : attributes) {
-		auto& attrib = it.second;
-		if (attrib.NumVertices() > 0)
-			++numNonZeroLengthAttribs;
-	}
-	m_VBs.resize(numNonZeroLengthAttribs);
+	// int numNonZeroLengthAttribs = 0;
+	// for (auto& it : attributes) {
+	// 	auto& attrib = it.second;
+	// 	if (attrib.NumVertices() > 0)
+	// 		++numNonZeroLengthAttribs;
+	// }
+	// m_VBs.resize(numNonZeroLengthAttribs);
 
 	// loop over attributes
 	size_t lastNumVertices = 0;
@@ -39,23 +52,57 @@ void RenderGeometry::BuildGeometry() {
 	for (auto& it : attributes) {
 		auto& attrib = it.second;
 		if (attrib.NumVertices() == 0)  continue;  // skip over unused attributes
-		auto& vb = m_VBs[i];
-		vb.SetBuffer(
-			(void*) attrib.data.data(),
-			attrib.SizeInBytes(),
-			attrib.NumVertices(),
-			GL_STATIC_DRAW  // probably static? the actual buffer geometry shouldn't be modified too much
-		);
+
+		// create new vbo if not already created
+		if (m_VBs.find(attrib.location) == m_VBs.end()) {
+			// using pointers otherwise destructor will be called when VertexBuffer goes out of scope,
+			// freeing the GPU buffer and causing a crash
+			// Maybe can do this with move semantics and move operators, but for now pointers are simpler and quicker
+			m_VBs[attrib.location] = new VertexBuffer(
+				(void*) attrib.data.data(),
+				attrib.SizeInBytes(),
+				attrib.NumVertices(),
+				GL_STATIC_DRAW  // TODO test GL_DYNAMIC and GL_STREAM
+			);
+		} else {
+			auto* vb = m_VBs[attrib.location];
+
+			// check if num vertices has changed; if so, regenerate
+			if (vb->GetCount() != attrib.NumVertices()) {
+				vb->SetBuffer(
+					(void*) attrib.data.data(),
+					attrib.SizeInBytes(),
+					attrib.NumVertices(),
+					GL_STATIC_DRAW  // probably static? the actual buffer geometry shouldn't be modified too much
+				);
+			} else {  // else just update the buffer data
+				vb->SubBuffer(
+					(void*) attrib.data.data(),
+					attrib.SizeInBytes(),
+					0
+				);
+			}
+		}
+
+		// TODO: how do you "unbind" a buffer and attrib pointer from a VAO??
 
 		// sanity check on num vertices
-		if (i == 0)
+		if (i == 0) {
 			lastNumVertices = attrib.NumVertices();
-		else if (i > 0 && attrib.NumVertices() != lastNumVertices)
-			throw std::runtime_error("RenderGeometry::BuildGeometry(): number of vertices in each attribute must match");
+		}
+		else if (i > 0 && attrib.NumVertices() != lastNumVertices) {
+			fprintf(stderr, 
+				"lastNumVertices: %zu\n attrib.NumVertices(): %zu\n for attribute: %s\n", 
+				lastNumVertices, attrib.NumVertices(), attrib.name.c_str()
+			);
+			throw std::runtime_error(
+				"RenderGeometry::BuildGeometry(): number of vertices in each attribute must match\n"
+			);
+		}
 
 		++i;
 		// add to VAO
-		va.AddBufferAndLayout(vb, attrib);  // add vertex attrib pointers to VAO state
+		va.AddBufferAndLayout(m_VBs[attrib.location], attrib);  // add vertex attrib pointers to VAO state
 	}
 
 	// add indices

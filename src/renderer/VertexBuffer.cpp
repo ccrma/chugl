@@ -12,8 +12,9 @@ VertexBuffer::VertexBuffer(const void* data, unsigned int size, unsigned int cou
 	: m_Count(count), m_Size(size)
 {
 	GLCall(glGenBuffers(1, &m_RendererID));
-	GLCall(glBindBuffer(GL_ARRAY_BUFFER, m_RendererID));
-	GLCall(glBufferData(GL_ARRAY_BUFFER, size, data, usage));
+	SetBuffer(data, size, count, usage);
+	// GLCall(glBindBuffer(GL_ARRAY_BUFFER, m_RendererID));
+	// GLCall(glBufferData(GL_ARRAY_BUFFER, size, data, usage));
 }
 
 VertexBuffer::~VertexBuffer()
@@ -27,9 +28,17 @@ void VertexBuffer::SetBuffer(const void* data, unsigned int size, unsigned int c
 {
 	m_Count = count;
 	m_Size = size;
-	GLCall(glBindBuffer(GL_ARRAY_BUFFER, m_RendererID));
+	Bind();
 	GLCall(glBufferData(GL_ARRAY_BUFFER, size, data, usage));
 }
+
+// substitutes buffer data in place, rather than recreating new one
+void VertexBuffer::SubBuffer(const void *data, unsigned int size, unsigned int offset)
+{
+	Bind();
+	GLCall(glBufferSubData(GL_ARRAY_BUFFER, offset, size, data));
+}
+
 
 void VertexBuffer::Bind() const
 {

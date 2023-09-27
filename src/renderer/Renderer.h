@@ -55,7 +55,8 @@ public:
 	Geometry::AttributeMap& GetAttributes() { return m_Geo->m_Attributes; }
 
 	// GPU buffers
-	std::vector<VertexBuffer>& GetBuffers() { return m_VBs; }
+	typedef std::unordered_map<unsigned int, VertexBuffer*> VertexBufferCache;
+	VertexBufferCache& GetBuffers() { return m_VBs; }
 	VertexArray& GetArray() { return m_VA; }
 	IndexBuffer& GetIndex() { return m_IB; }
 private:
@@ -63,7 +64,7 @@ private:
     
 	// GPU buffer data
     VertexArray m_VA;
-    std::vector<VertexBuffer> m_VBs;
+	VertexBufferCache m_VBs;
 	IndexBuffer m_IB;
 };
 

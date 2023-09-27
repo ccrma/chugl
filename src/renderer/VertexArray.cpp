@@ -56,10 +56,10 @@ void VertexArray::AddBufferAndLayout(const VertexBuffer& vb, const VertexBufferL
 }
 */
 
-void VertexArray::AddBufferAndLayout(const VertexBuffer &vb, const CGL_GeoAttribute &attribute)
+void VertexArray::AddBufferAndLayout(const VertexBuffer *vb, const CGL_GeoAttribute &attribute)
 {
 	Bind();
-	vb.Bind();
+	vb->Bind();
 
 	GLCall(glEnableVertexAttribArray(attribute.location));
 	GLCall(glVertexAttribPointer(

@@ -75,6 +75,10 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
     glfwWindowHint (GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint (GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     #endif
+
+    // window hints =============================================
+    glfwWindowHint(GLFW_SAMPLES, 4);  // MSAA
+
     
     // create window ============================================
     m_Window = glfwCreateWindow(m_ViewWidth, m_ViewHeight, "CGL", NULL, NULL);
@@ -131,6 +135,9 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
 
     // depth testing
     GLCall(glEnable(GL_DEPTH_TEST));
+
+    // MSAA
+    GLCall(glEnable(GL_MULTISAMPLE));
 
 
 }

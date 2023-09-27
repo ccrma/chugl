@@ -108,6 +108,12 @@ CK_DLL_MFUN(cgl_geo_box_set);
 
 // sphere
 CK_DLL_CTOR(cgl_geo_sphere_ctor);
+// TODO: sphere parameter setter
+
+// custom
+CK_DLL_CTOR(cgl_geo_custom_ctor);
+CK_DLL_MFUN(cgl_geo_set_attribute);  // general case for any kind of vertex data
+CK_DLL_MFUN(cgl_geo_set_positions);
 
 
 //-----------------------------------------------------------------------------
@@ -378,6 +384,8 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query* QUERY)
 	QUERY->add_ctor(QUERY, cgl_geo_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 	cglgeo_data_offset = QUERY->add_mvar(QUERY, "int", "@cglgeo_data", false);  // TODO: still bugged?
+
+	// TODO: add svars for attribute locations
 	QUERY->end_class(QUERY);
 
 	QUERY->begin_class(QUERY, "BoxGeo", "CglGeo");
@@ -396,6 +404,23 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query* QUERY)
 	QUERY->begin_class(QUERY, "SphereGeo", "CglGeo");
 	QUERY->add_ctor(QUERY, cgl_geo_sphere_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
+	QUERY->end_class(QUERY);
+
+	// custom geo
+	QUERY->begin_class(QUERY, "CustomGeo", "CglGeo");
+	QUERY->add_ctor(QUERY, cgl_geo_custom_ctor);
+	QUERY->add_dtor(QUERY, cgl_geo_dtor);
+
+	QUERY->add_mfun(QUERY, cgl_geo_set_attribute, "void", "setAttribute");
+	QUERY->add_arg(QUERY, "string", "name");
+	QUERY->add_arg(QUERY, "int", "location");
+	QUERY->add_arg(QUERY, "int", "numComponents");
+	// QUERY->add_arg(QUERY, "int", "normalize");
+	QUERY->add_arg(QUERY, "float[]", "data");
+
+	QUERY->add_mfun(QUERY, cgl_geo_set_positions, "void", "setPositions");
+	QUERY->add_arg(QUERY, "float[]", "positions");
+	
 	QUERY->end_class(QUERY);
 
 	return true;
@@ -425,11 +450,7 @@ CK_DLL_CTOR(cgl_geo_box_ctor)
 }
 
 CK_DLL_MFUN(cgl_geo_box_set)
-{
-	BoxGeometry* geo = (BoxGeometry*)OBJ_MEMBER_INT(SELF, cglgeo_data_offset);
-	t_CKFLOAT width = GET_NEXT_FLOAT(ARGS);
-	t_CKFLOAT height = GET_NEXT_FLOAT(ARGS);
-	t_CKFLOAT depth = GET_NEXT_FLOAT(ARGS);
+{ BoxGeometry* geo = (BoxGeometry*)OBJ_MEMBER_INT(SELF, cglgeo_data_offset); t_CKFLOAT width = GET_NEXT_FLOAT(ARGS); t_CKFLOAT height = GET_NEXT_FLOAT(ARGS); t_CKFLOAT depth = GET_NEXT_FLOAT(ARGS);
 	t_CKINT widthSeg = GET_NEXT_INT(ARGS);
 	t_CKINT heightSeg = GET_NEXT_INT(ARGS);
 	t_CKINT depthSeg = GET_NEXT_INT(ARGS);
@@ -448,6 +469,50 @@ CK_DLL_CTOR(cgl_geo_sphere_ctor)
 
 	// Creation command
 	CGL::PushCommand(new CreateGeometryCommand(sphereGeo));
+}
+
+// Custom geo ---------
+CK_DLL_CTOR(cgl_geo_custom_ctor)
+{
+	std::cerr << "cgl_custom_ctor\n";
+	CustomGeometry* customGeo = new CustomGeometry;
+	OBJ_MEMBER_INT(SELF, cglgeo_data_offset) = (t_CKINT) customGeo;
+	std::cerr << "finished initializing customgeo\n";
+
+	// Creation command
+	CGL::PushCommand(new CreateGeometryCommand(customGeo));
+}
+
+CK_DLL_MFUN(cgl_geo_set_attribute)
+{
+	CustomGeometry* geo = (CustomGeometry*)OBJ_MEMBER_INT(SELF, cglgeo_data_offset);
+	Chuck_String* name = GET_NEXT_STRING(ARGS);
+	t_CKINT location = GET_NEXT_INT(ARGS);
+	t_CKINT numComponents = GET_NEXT_INT(ARGS);
+	bool normalize = GET_NEXT_INT(ARGS);
+	Chuck_Array8* data = (Chuck_Array8*) GET_NEXT_OBJECT(ARGS);
+
+	// not stored in chuck-side copy to save time
+	// geo->SetAttribute(name, location, numComponents, normalize, data);
+
+	CGL::PushCommand(
+		new UpdateGeometryAttributeCommand(
+			geo, name->str(), location, numComponents, data->m_vector, normalize
+		)
+	);
+}
+
+CK_DLL_MFUN(cgl_geo_set_positions)
+{
+	CustomGeometry* geo = (CustomGeometry*)OBJ_MEMBER_INT(SELF, cglgeo_data_offset);
+
+	Chuck_Array8* data = (Chuck_Array8*) GET_NEXT_OBJECT(ARGS);
+
+	CGL::PushCommand(
+		new UpdateGeometryAttributeCommand(
+			geo, "position", Geometry::POSITION_ATTRIB_IDX, 3, data->m_vector, false
+		)
+	);
 }
 
 
