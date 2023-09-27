@@ -30,16 +30,17 @@ earth.SetScale(@(0.4, 0.4, 0.4));
 moon.SetScale(@(0.12, 0.12, 0.12));
 
 // create graph
-scene.AddChild(sunSystem);
+// scene.AddChild(sunSystem);
+// sunSystem.AddChild(sun);
+// sunSystem.AddChild(earthSystem);
+// earthSystem.AddChild(earth);
+// earthSystem.AddChild(moonSystem);
+// moonSystem.AddChild(moon);
 
-sunSystem.AddChild(sun);
-sunSystem.AddChild(earthSystem);
-
-earthSystem.AddChild(earth);
-earthSystem.AddChild(moonSystem);
-
-moonSystem.AddChild(moon);
-
+moonSystem --> earthSystem --> sunSystem --> scene;
+sun --> sunSystem;
+earth --> earthSystem;
+moon --> moonSystem;
 
 InputManager IM;
 spork ~ IM.start(0);
