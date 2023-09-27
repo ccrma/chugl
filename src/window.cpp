@@ -143,6 +143,9 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
     GLCall(glEnable(GL_LINE_SMOOTH));
     // GLCall(glEnable(GL_POINT_SMOOTH));  // not defined by glad
 
+    // point size
+    GLCall(glEnable(GL_PROGRAM_POINT_SIZE));
+
 
 }
 

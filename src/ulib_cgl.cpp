@@ -153,9 +153,12 @@ CK_DLL_CTOR(cgl_mat_ctor);
 CK_DLL_DTOR(cgl_mat_dtor);
 
 // base material options
-	// TODO: add polygon modes https://stackoverflow.com/questions/55825588/what-is-the-difference-between-gl-points-and-gl-point
 CK_DLL_MFUN(cgl_mat_set_polygon_mode);
 CK_DLL_MFUN(cgl_mat_get_polygon_mode);
+CK_DLL_MFUN(cgl_mat_set_point_size);
+// CK_DLL_MFUN(cgl_mat_set_line_width);
+// CK_DLL_MFUN(cgl_mat_set_cull_mode);  // TODO
+
 	// uniform setters
 CK_DLL_MFUN(cgl_mat_set_uniform_float);
 CK_DLL_MFUN(cgl_mat_set_uniform_float2);
@@ -185,6 +188,9 @@ CK_DLL_MFUN(cgl_mat_phong_set_log_shininess);
 // custom shader mat
 CK_DLL_CTOR(cgl_mat_custom_shader_ctor);
 CK_DLL_MFUN(cgl_mat_custom_shader_set_shaders);
+
+// points mat
+CK_DLL_CTOR(cgl_mat_points_ctor);
 
 
 
@@ -717,8 +723,12 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query* QUERY)
 
 	QUERY->add_mfun(QUERY, cgl_mat_set_polygon_mode, "int", "polygonMode");
 	QUERY->add_arg(QUERY, "int", "mode");
-
 	QUERY->add_mfun(QUERY, cgl_mat_get_polygon_mode, "int", "polygonMode");
+
+	QUERY->add_mfun(QUERY, cgl_mat_set_point_size, "void", "pointSize");
+	QUERY->add_arg(QUERY, "float", "size");
+	// QUERY->add_mfun(QUERY, cgl_mat_set_line_width, "void", "lineWidth");
+	// QUERY->add_arg(QUERY, "float", "width");
 
 	// uniform setters
 	QUERY->add_mfun(QUERY, cgl_mat_set_uniform_float, "void", "uniformFloat");
@@ -820,6 +830,13 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query* QUERY)
 
 	QUERY->end_class(QUERY);
 
+	// points material
+	QUERY->begin_class(QUERY, "PointsMat", "CglMat");
+	QUERY->add_ctor(QUERY, cgl_mat_points_ctor);
+	QUERY->add_dtor(QUERY, cgl_mat_dtor);
+
+	QUERY->end_class(QUERY);
+
 
 	return true;
 }
@@ -858,6 +875,26 @@ CK_DLL_MFUN(cgl_mat_get_polygon_mode)
 	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
 	RETURN->v_int = mat->GetPolygonMode();
 }
+
+// point size setter
+CK_DLL_MFUN(cgl_mat_set_point_size)
+{
+	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	auto size = GET_NEXT_FLOAT(ARGS);
+	mat->SetPointSize(size);
+
+CGL::PushCommand(new UpdateMaterialUniformCommand(mat, *mat->GetUniform(Material::POINT_SIZE_UNAME)));
+}
+
+// line width setter
+// CK_DLL_MFUN(cgl_mat_set_line_width)
+// {
+// 	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+// 	auto width = GET_NEXT_FLOAT(ARGS);
+// 	mat->SetLineWidth(width);
+
+// 	CGL::PushCommand(new UpdateMaterialOptionCommand(mat, *mat->GetOption(MaterialOptionParam::LineWidth)));
+// }
 
 // TODO: can refactor these uniform setters to call a shared function
 CK_DLL_MFUN( cgl_mat_set_uniform_float )
@@ -1122,6 +1159,16 @@ CK_DLL_MFUN( cgl_mat_custom_shader_set_shaders )
 	mat->SetShaderPaths(vertPath->str(), fragPath->str());
 
 	CGL::PushCommand(new UpdateMaterialShadersCommand(mat));
+}
+
+// points mat fns ---------------------------------
+CK_DLL_CTOR( cgl_mat_points_ctor )
+{
+	PointsMaterial* pointsMat = new PointsMaterial;
+	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT) pointsMat;
+
+	// Creation command
+	CGL::PushCommand(new CreateMaterialCommand(pointsMat));
 }
 
 

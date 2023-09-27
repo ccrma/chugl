@@ -13,7 +13,8 @@ enum class MaterialType : unsigned int {
 	Base = 0,
 	Normal,
 	Phong,
-	CustomShader
+	CustomShader,
+	Points
 };
 
 enum class UniformType {
@@ -91,8 +92,6 @@ struct MaterialUniform {
 
 enum MaterialOptionParam : unsigned int {
 	PolygonMode = 0,
-	LineWidth,
-	PointSize
 };
 
 enum MaterialPolygonMode : unsigned int {
@@ -145,11 +144,11 @@ public:
 	Material() {
 		// set default material options
 		SetOption(MaterialOption::Create(POLYGON_MODE, MaterialPolygonMode::Fill));
-		SetOption(MaterialOption::Create(LINE_WIDTH, 1.0f));
-		SetOption(MaterialOption::Create(POINT_SIZE, 1.0f));
+
+		// set default material uniforms
+		SetUniform(MaterialUniform::Create(POINT_SIZE_UNAME, 5.0f));
 
 		std::cerr << "Material constructor called, ID = " << this->GetID() << std::endl;
-
 	};
 	virtual ~Material() {}
 
@@ -176,13 +175,13 @@ public:
 
 	// Option getters
 	MaterialPolygonMode GetPolygonMode() { return m_Options[MaterialOptionParam::PolygonMode].polygonMode; }
-	float GetLineWidth() { return m_Options[MaterialOptionParam::LineWidth].f; }
-	float GetPointSize() { return m_Options[MaterialOptionParam::PointSize].f; }
+	// float GetLineWidth() { return m_Options[MaterialOptionParam::LineWidth].f; }
+	float GetPointSize() { return m_Uniforms[POINT_SIZE_UNAME].f; } 
 
 	// option setters
 	void SetPolygonMode(MaterialPolygonMode mode) { m_Options[MaterialOptionParam::PolygonMode].polygonMode = mode; }
-	void SetLineWidth(float width) { m_Options[MaterialOptionParam::LineWidth].f = width; }
-	void SetPointSize(float size) { m_Options[MaterialOptionParam::PointSize].f = size; }
+	// virtual void SetLineWidth(float width) { m_Options[MaterialOptionParam::LineWidth].f = width; }
+	virtual void SetPointSize(float size) { m_Uniforms[POINT_SIZE_UNAME].f = size; }
 
 
 	inline void SetUniform(MaterialUniform uniform) {
@@ -213,6 +212,8 @@ public:  // static consts
 	static const MaterialPolygonMode POLYGON_LINE;
 	static const MaterialPolygonMode POLYGON_POINT;
 
+	// uniform names
+	static const std::string POINT_SIZE_UNAME;
 
 };
 
@@ -327,5 +328,24 @@ public:
 	// virtual void ApplyUpdate(std::vector<MaterialUniform>* uniform_data) { m_Uniforms = *uniform_data; }
 
 	std::string m_VertShaderPath, m_FragShaderPath;	
+};
+
+// Points material
+class PointsMaterial : public Material
+{
+public:
+	PointsMaterial() {
+		SetOption(MaterialOption::Create(POLYGON_MODE, MaterialPolygonMode::Point));
+	}
+
+	virtual MaterialType GetMaterialType() override { return MaterialType::Points; }
+	virtual Material* Clone() override {
+		auto* mat = new PointsMaterial(*this);
+		mat->SetID(GetID());
+		return mat;
+	};
+
+public: // static const
+
 };
 

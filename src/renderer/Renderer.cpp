@@ -144,6 +144,10 @@ RenderMaterial::RenderMaterial(Material *mat, Renderer *renderer) : m_Mat(mat), 
 			vertPath = ((ShaderMaterial*) mat)->m_VertShaderPath == "" ? "renderer/shaders/BasicLightingVert.glsl" : ((ShaderMaterial*) mat)->m_VertShaderPath;
 			fragPath = ((ShaderMaterial*) mat)->m_FragShaderPath == "" ? "renderer/shaders/NormalFrag.glsl" : ((ShaderMaterial*) mat)->m_FragShaderPath;
 			break;
+		case MaterialType::Points:
+			vertPath = "./renderer/shaders/PointsVert.glsl";
+			fragPath = "./renderer/shaders/PointsFrag.glsl";
+			break;
 		default:  // default material (normal mat for now)
 			vertPath = "renderer/shaders/BasicLightingVert.glsl";
 			fragPath = "renderer/shaders/NormalFrag.glsl";
@@ -305,7 +309,7 @@ void Renderer::Draw(RenderGeometry *renderGeo, RenderMaterial *renderMat)
 		case MaterialPolygonMode::Line:
 			GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_LINE));
 			// set line width
-			GLCall(glLineWidth(CGL_mat->GetLineWidth()));
+			// GLCall(glLineWidth(CGL_mat->GetLineWidth()));
 			break;
 		case MaterialPolygonMode::Point:
 			GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_POINT));
@@ -316,19 +320,28 @@ void Renderer::Draw(RenderGeometry *renderGeo, RenderMaterial *renderMat)
 			throw std::runtime_error("Polygon mode not set");
 	}
 
-	// set line width
+
+	// set primitive mode
+	GLenum primitive = GL_TRIANGLES;
+	switch (CGL_mat->GetMaterialType()) {
+		case MaterialType::Points:
+			primitive = GL_POINTS;
+			break;
+		default:
+			primitive = GL_TRIANGLES;
+	}
 
 
 	if (renderGeo->ShouldDrawIndexed()) {
 		GLCall(glDrawElements(
-			GL_TRIANGLES,
+			primitive,
 			renderGeo->GetIndices().size(),  // length of index buffer
 			GL_UNSIGNED_INT,   // type of index in EBO
 			0  // offset
 		));
 	} else {
 		GLCall(glDrawArrays(
-			GL_TRIANGLES,
+			primitive,
 			0,  // starting index
 			renderGeo->GetNumVertices()  // number of VERTICES to render
 		));
