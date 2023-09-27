@@ -15,6 +15,7 @@ NormMat fillMat, wireMat, pointMat;
 fillMat.polygonMode(CglMat.POLYGON_FILL);
 wireMat.polygonMode(CglMat.POLYGON_LINE);
 pointMat.polygonMode(CglMat.POLYGON_POINT);
+pointMat.pointSize(15.0);    // note: mac m1 doesn't support glPointSize. this becomes a no-op
 
 SphereGeo sphereGeo;
 

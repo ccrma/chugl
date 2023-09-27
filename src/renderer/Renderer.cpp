@@ -301,6 +301,7 @@ void Renderer::Draw(RenderGeometry *renderGeo, RenderMaterial *renderMat)
 
 	Material* CGL_mat = renderMat->GetMat();
 
+	GLenum primitive = GL_TRIANGLES;
 	// set polygon mode
 	switch (CGL_mat->GetPolygonMode()) {
 		case MaterialPolygonMode::Fill:
@@ -313,6 +314,7 @@ void Renderer::Draw(RenderGeometry *renderGeo, RenderMaterial *renderMat)
 			break;
 		case MaterialPolygonMode::Point:
 			GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_POINT));
+			primitive = GL_POINTS;  // on mac only renders points if primitive is also set to points
 			// set point size
 			GLCall(glPointSize(CGL_mat->GetPointSize()));
 			break;
@@ -322,14 +324,13 @@ void Renderer::Draw(RenderGeometry *renderGeo, RenderMaterial *renderMat)
 
 
 	// set primitive mode
-	GLenum primitive = GL_TRIANGLES;
-	switch (CGL_mat->GetMaterialType()) {
-		case MaterialType::Points:
-			primitive = GL_POINTS;
-			break;
-		default:
-			primitive = GL_TRIANGLES;
-	}
+	// switch (CGL_mat->GetMaterialType()) {
+	// 	case MaterialType::Points:
+	// 		primitive = GL_POINTS;
+	// 		break;
+	// 	default:
+	// 		primitive = GL_TRIANGLES;
+	// }
 
 
 	if (renderGeo->ShouldDrawIndexed()) {
