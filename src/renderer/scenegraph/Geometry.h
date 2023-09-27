@@ -242,7 +242,7 @@ public:
 	};
 
 	// currently unused for custom geo
-	virtual void* GenUpdate() { return nullptr; }
-	virtual void FreeUpdate(void* data) {}
-	virtual void ApplyUpdate(void * data) {}
+	virtual void* GenUpdate() override { return nullptr; }
+	virtual void FreeUpdate(void* data) override {}
+	virtual void ApplyUpdate(void * data) override {}
 };
