@@ -17,6 +17,9 @@ layout (location = 3) in vec2 a_TexCoord;
 // uniforms (passed in from program)
 uniform float u_PointSize;
 
+// whether or not to adjust size based on distance to camera
+uniform bool u_PointSizeAttenuation;
+
 // varyings (interpolated and passed to frag shader)
 out vec3 v_Pos;
 out vec3 v_Color;
@@ -34,5 +37,5 @@ void main()
 //    v_Normal = vec3(u_Normal * vec4(a_Normal, 0.0));
 
     gl_Position = u_Projection * u_View * vec4(v_Pos, 1.0);
-    gl_PointSize = u_PointSize / gl_Position.w; // scale point size by distance to camera
+    gl_PointSize = mix(u_PointSize, u_PointSize / gl_Position.w, u_PointSizeAttenuation); // scale point size by distance to camera
 }

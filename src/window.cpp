@@ -92,6 +92,7 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
 
 
     // VSYNC =================================================
+    // glfwSwapInterval(0);  // TODO: for now disabling vsync introduces jitter
     glfwSwapInterval(1);  
     std::cerr << "VSYNC: " << glfwGetWindowAttrib(m_Window, GLFW_DOUBLEBUFFER) << std::endl;
 
@@ -156,9 +157,6 @@ Window::~Window()
 }
 
 
-// TODO: actually want to move this into chuck_main function, out of CGL window class
-// so that chuck_main and my standalone rendering engine can have separate gameloop logic 
-// chuck_main version needs to synchronize, standalone rendering engine doesn't
 void Window::DisplayLoop()
 {
     Renderer renderer;
@@ -174,8 +172,6 @@ void Window::DisplayLoop()
     scene.RegisterNode(&scene);  // register itself
     camera.SetID(CGL::mainCamera.GetID());  // copy maincam ID
     scene.RegisterNode(&camera);  // register camera
-
-
 
     // Render Loop ===========================================
     float previousFPSTime = (float)glfwGetTime();
@@ -199,62 +195,39 @@ void Window::DisplayLoop()
             previousFPSTime = currentTime;
         }
 
-        // trigger Frame event in Chuck
-        CglEvent::Broadcast(CglEventType::CGL_FRAME);
+        CGL::WaitOnUpdateDone();
+        /*
+        Note: this sync mechanism also gets rid of the problem where chuck runs away
+        e.g. if the time it takes the renderer flush the queue is greater than
+        the time it takes chuck to write, ie write rate > flush rate,
+        each command queue will get longer and longer, continually worsening performance
+        shouldn't happen because chuck runs in vm and the flushing happens natively but 
+        you never know
+        */
+        /*
+        two locks here:
+        1 for writing/swapping the command queues
+            - this lock is grabbed by chuck every time we do a CGL call
+            - supports writing CGL commands whenever, even outside game loop
+        1 for the condition_var used to synchronize audio and graphics each frame
+            - combined with the chuck-side update_event, allows for writing frame-accurate cgl commands
+            - exposes a gameloop to chuck, gauranteed to be executed once per frame
 
-        // wait to render until instructed by chuck
-        // TODO: will probably have to re-enable this
-
-        // chuck done with writes, renderer is good to read from the scene graph!
-
-        // camera.SetPosition(CGL::mainCamera.GetPosition());
-        // camera.SetRotation(CGL::mainCamera.GetRotation());
-
-        if (false) {
-            glClearColor(std::sin(.1f * frameCount), 0.3f, 0.3f, 1.0f);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        } else { 
-            CGL::WaitOnUpdateDone();
-            /*
-            Note: this sync mechanism also gets rid of the problem where chuck runs away
-            e.g. if the time it takes the renderer flush the queue is greater than
-            the time it takes chuck to write, ie write rate > flush rate,
-            each command queue will get longer and longer, continually worsening performance
-            shouldn't happen because chuck runs in vm and the flushing happens natively but 
-            you never know
-            */
-            /*
-            two locks here:
-            1 for writing/swapping the command queues
-                - this lock is grabbed by chuck every time we do a CGL call
-                - supports writing CGL commands whenever, even outside game loop
-            1 for the condition_var used to synchronize audio and graphics each frame
-                - combined with the chuck-side update_event, allows for writing frame-accurate cgl commands
-                - exposes a gameloop to chuck, gauranteed to be executed once per frame
-
-            deadlock shouldn't happen because both locks are never held at the same time
-            */
-            // std::cerr << "swapping queues" << std::endl;
-            { // critical section: swap command queus
-                CGL::SwapCommandQueues();
-            }
-
-            // std::cerr << "renderer awake, broadcasting" << std::endl;
-
-            // done swapping the double buffer, let chuck know it's good to continue pushing commands
-            CglEvent::Broadcast(CglEventType::CGL_UPDATE);
-
-            // std::cerr << "CGL_UPDATE, broadcasted" << std::endl;
-
-            // now apply changes from the command queue chuck is NO Longer writing to 
-            CGL::FlushCommandQueue(scene, false);
-
-            // now renderer can work on drawing the copied scenegraph ===
-
-            renderer.Clear();
-            renderer.RenderScene(&scene, &camera);
+        deadlock shouldn't happen because both locks are never held at the same time
+        */
+        { // critical section: swap command queus
+            CGL::SwapCommandQueues();
         }
 
+        // done swapping the double buffer, let chuck know it's good to continue pushing commands
+        CglEvent::Broadcast(CglEventType::CGL_UPDATE);
+
+        // now apply changes from the command queue chuck is NO Longer writing to 
+        CGL::FlushCommandQueue(scene, false);
+
+        // now renderer can work on drawing the copied scenegraph 
+        renderer.Clear();
+        renderer.RenderScene(&scene, &camera);
 
         // Handle Events, Draw framebuffer
         glfwPollEvents();

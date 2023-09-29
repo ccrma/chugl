@@ -14,7 +14,8 @@ enum class MaterialType : unsigned int {
 	Normal,
 	Phong,
 	CustomShader,
-	Points
+	Points,
+	Mango
 };
 
 enum class UniformType {
@@ -336,6 +337,15 @@ class PointsMaterial : public Material
 public:
 	PointsMaterial() {
 		SetOption(MaterialOption::Create(POLYGON_MODE, MaterialPolygonMode::Point));
+
+		// set point size attenuation option
+		SetUniform(MaterialUniform::Create(POINT_SIZE_ATTENUATION_UNAME, true));
+
+		// point color
+		SetUniform(MaterialUniform::Create(POINT_COLOR_UNAME, 1.0f, 1.0f, 1.0f));
+		
+		// point sprite texture
+		SetUniform(MaterialUniform::Create(POINT_SPRITE_TEXTURE_UNAME, (size_t)0));
 	}
 
 	virtual MaterialType GetMaterialType() override { return MaterialType::Points; }
@@ -345,7 +355,42 @@ public:
 		return mat;
 	};
 
-public: // static const
+	// uniform setters
+	void SetSizeAttenuation(bool b) { m_Uniforms[POINT_SIZE_ATTENUATION_UNAME].b = b; }
+	void SetSprite(CGL_Texture* texture) { m_Uniforms[POINT_SPRITE_TEXTURE_UNAME].texID = texture->GetID(); }
+	void SetColor(float r, float g, float b) { 
+		auto& uniform = m_Uniforms[POINT_COLOR_UNAME];
+		uniform.f3[0] = r; uniform.f3[1] = g; uniform.f3[2] = b;
+	}
 
+	// uniform getters
+	bool GetSizeAttenuation() { return m_Uniforms[POINT_SIZE_ATTENUATION_UNAME].b; }
+	size_t GetSpriteID() { return m_Uniforms[POINT_SPRITE_TEXTURE_UNAME].texID; }
+	glm::vec3 GetColor() { 
+		auto& matUniform = m_Uniforms[POINT_COLOR_UNAME];
+		return glm::vec3(matUniform.f3[0], matUniform.f3[1], matUniform.f3[2]); 
+	}
+
+
+public: // static const
+	static const std::string POINT_SIZE_ATTENUATION_UNAME;
+	static const std::string POINT_COLOR_UNAME;
+	static const std::string POINT_SPRITE_TEXTURE_UNAME;
 };
 
+
+// UV debug mat
+class MangoMaterial : public Material
+{
+public:
+	MangoMaterial() {
+	}
+
+	virtual MaterialType GetMaterialType() override { return MaterialType::Mango; }
+	virtual Material* Clone() override {
+		auto* mat = new MangoMaterial(*this);
+		mat->SetID(GetID());
+		return mat;
+	}
+
+};

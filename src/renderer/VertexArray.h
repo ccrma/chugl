@@ -18,6 +18,8 @@ public:
 	void Bind() const;
 	void Unbind() const;
 
+	void RemoveAttribute(const CGL_GeoAttribute& attribute);
+	void RemoveAttribute(unsigned int location);
 	void AddBufferAndLayout(const VertexBuffer* vb, const CGL_GeoAttribute& attribute);
 	void AddIndexBuffer(const IndexBuffer& ib);
 };

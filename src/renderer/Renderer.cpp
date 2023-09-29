@@ -24,18 +24,22 @@ void RenderGeometry::BuildGeometry() {
 	auto& attributes = GetAttributes();
 	auto& indices = GetIndices();
 
-	// erase buffers for unused attributes
-	// ACTUALLY don't need to do this because glBufferData() will overwrite previous data
-	// for (auto& it : m_VBs) {
-	// 	auto location = it.first;
-	// 	if (
-	// 		attributes.find(location) == attributes.end()
-	// 		||
-	// 		attributes[location].NumVertices() == 0
-	// 	) {
-	// 		// clear buffer data
-	// 	}
-	// }
+	// disable unused vertex buffers 
+	for (auto& it : m_VBs) {
+		auto location = it.first;
+		if (
+			attributes.find(location) == attributes.end()
+			||
+			attributes[location].NumVertices() == 0
+		) {
+			// disable attribute
+			va.RemoveAttribute(location);
+
+		}
+	}
+
+	// quick hack to set default color
+	GLCall(glVertexAttrib3f(Geometry::COLOR_ATTRIB_IDX, 1.0f, 1.0f, 1.0f));
 
 	// set vbo size to # non-zero length attributes
 	// int numNonZeroLengthAttribs = 0;
@@ -147,6 +151,10 @@ RenderMaterial::RenderMaterial(Material *mat, Renderer *renderer) : m_Mat(mat), 
 		case MaterialType::Points:
 			vertPath = "./renderer/shaders/PointsVert.glsl";
 			fragPath = "./renderer/shaders/PointsFrag.glsl";
+			break;
+		case MaterialType::Mango:
+			vertPath = "./renderer/shaders/BasicLightingVert.glsl";
+			fragPath = "./renderer/shaders/mangoFrag.glsl";
 			break;
 		default:  // default material (normal mat for now)
 			vertPath = "renderer/shaders/BasicLightingVert.glsl";
@@ -282,7 +290,8 @@ void RenderMaterial::SetLightingUniforms(Scene *scene, const std::vector<Light *
 void Renderer::Clear(bool color, bool depth)
 {	
 	// glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-	glClearColor(.9f, 0.9f, 0.9f, 1.0f);
+	// glClearColor(.9f, 0.9f, 0.9f, 1.0f);
+	glClearColor(.8f, 0.8f, 0.8f, 1.0f);
 	unsigned int clearBitfield = 0;
 	if (color)
 		clearBitfield |= GL_COLOR_BUFFER_BIT;

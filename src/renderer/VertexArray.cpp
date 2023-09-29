@@ -56,6 +56,18 @@ void VertexArray::AddBufferAndLayout(const VertexBuffer& vb, const VertexBufferL
 }
 */
 
+void VertexArray::RemoveAttribute(const CGL_GeoAttribute &attribute)
+{
+	Bind();
+	GLCall(glDisableVertexAttribArray(attribute.location));
+}
+
+void VertexArray::RemoveAttribute(unsigned int location)
+{
+	Bind();
+	GLCall(glDisableVertexAttribArray(location));
+}
+
 void VertexArray::AddBufferAndLayout(const VertexBuffer *vb, const CGL_GeoAttribute &attribute)
 {
 	Bind();

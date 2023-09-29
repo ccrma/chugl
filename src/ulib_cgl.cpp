@@ -115,6 +115,10 @@ CK_DLL_CTOR(cgl_geo_sphere_ctor);
 CK_DLL_CTOR(cgl_geo_custom_ctor);
 CK_DLL_MFUN(cgl_geo_set_attribute);  // general case for any kind of vertex data
 CK_DLL_MFUN(cgl_geo_set_positions);
+CK_DLL_MFUN(cgl_geo_set_colors);
+CK_DLL_MFUN(cgl_geo_set_normals);
+CK_DLL_MFUN(cgl_geo_set_uvs);
+
 
 
 //-----------------------------------------------------------------------------
@@ -193,6 +197,16 @@ CK_DLL_MFUN(cgl_mat_custom_shader_set_shaders);
 // points mat
 CK_DLL_CTOR(cgl_mat_points_ctor);
 
+CK_DLL_MFUN(cgl_mat_points_set_size_attenuation);
+CK_DLL_MFUN(cgl_mat_points_get_size_attenuation);
+
+CK_DLL_MFUN(cgl_mat_points_set_sprite);
+CK_DLL_MFUN(cgl_mat_points_set_color);
+
+
+// mango mat (for debugging UVs)
+CK_DLL_CTOR(cgl_mat_mango_ctor);
+
 
 
 
@@ -259,6 +273,7 @@ t_CKBOOL init_chugl_events(Chuck_DL_Query* QUERY)
 	CglEvent::s_SharedEventQueue = QUERY->api()->vm->create_event_buffer(
 		QUERY->vm()
 	);
+	assert(CglEvent::s_SharedEventQueue);
 
 	// Frame event =================================
 	QUERY->begin_class(QUERY, "CglFrame", "Event");
@@ -324,12 +339,10 @@ CK_DLL_MFUN(cgl_update_event_waiting_on)
 
 	// not used for now, will become relevant if we ever want to support multiple 
 	// windows and/or renderers
-	// std::cerr << "entered waiting_on" << std::endl;
 	CglEvent* cglEvent = (CglEvent*)OBJ_MEMBER_INT(SELF, cglupdate_data_offset);
 
 	// Add shred (no-op if already added)
 	CGL::RegisterShred(SHRED);
-	// std::cerr << "REGISTERED SHRED " << SHRED << std::endl;
 
 	// Add shred to waiting list
 	CGL::RegisterShredWaiting(SHRED);
@@ -337,9 +350,12 @@ CK_DLL_MFUN(cgl_update_event_waiting_on)
 
 	// if #waiting == #registered, all CGL shreds have finished work, and we are safe to wakeup the renderer
 	if (CGL::GetNumShredsWaiting() >= CGL::GetNumRegisteredShreds()) {
-		// std::cerr << "#waiting == #registered == " << CGL::GetNumShredsWaiting() << " waking up renderer" << std::endl;
 		CGL::ClearShredWaiting();  // clear thread waitlist 
 		CGL::Render();
+		// context switch
+		// context switch
+
+		// TODO process manages sent from glfw --> chuck
 	}
 }
 //-----------------------------------------------------------------------------
@@ -427,6 +443,15 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query* QUERY)
 
 	QUERY->add_mfun(QUERY, cgl_geo_set_positions, "void", "setPositions");
 	QUERY->add_arg(QUERY, "float[]", "positions");
+
+	QUERY->add_mfun(QUERY, cgl_geo_set_colors, "void", "setColors");
+	QUERY->add_arg(QUERY, "float[]", "colors");
+
+	QUERY->add_mfun(QUERY, cgl_geo_set_normals, "void", "setNormals");
+	QUERY->add_arg(QUERY, "float[]", "normals");
+	
+	QUERY->add_mfun(QUERY, cgl_geo_set_uvs, "void", "setUVs");
+	QUERY->add_arg(QUERY, "float[]", "uvs");
 	
 	QUERY->end_class(QUERY);
 
@@ -518,6 +543,48 @@ CK_DLL_MFUN(cgl_geo_set_positions)
 	CGL::PushCommand(
 		new UpdateGeometryAttributeCommand(
 			geo, "position", Geometry::POSITION_ATTRIB_IDX, 3, data->m_vector, false
+		)
+	);
+}
+
+// set colors
+CK_DLL_MFUN(cgl_geo_set_colors)
+{
+	CustomGeometry* geo = (CustomGeometry*)OBJ_MEMBER_INT(SELF, cglgeo_data_offset);
+
+	Chuck_Array8* data = (Chuck_Array8*) GET_NEXT_OBJECT(ARGS);
+
+	CGL::PushCommand(
+		new UpdateGeometryAttributeCommand(
+			geo, "color", Geometry::COLOR_ATTRIB_IDX, 3, data->m_vector, false
+		)
+	);
+}
+
+// set normals
+CK_DLL_MFUN(cgl_geo_set_normals)
+{
+	CustomGeometry* geo = (CustomGeometry*)OBJ_MEMBER_INT(SELF, cglgeo_data_offset);
+
+	Chuck_Array8* data = (Chuck_Array8*) GET_NEXT_OBJECT(ARGS);
+
+	CGL::PushCommand(
+		new UpdateGeometryAttributeCommand(
+			geo, "normal", Geometry::NORMAL_ATTRIB_IDX, 3, data->m_vector, false
+		)
+	);
+}
+
+// set uvs
+CK_DLL_MFUN(cgl_geo_set_uvs)
+{
+	CustomGeometry* geo = (CustomGeometry*)OBJ_MEMBER_INT(SELF, cglgeo_data_offset);
+
+	Chuck_Array8* data = (Chuck_Array8*) GET_NEXT_OBJECT(ARGS);
+
+	CGL::PushCommand(
+		new UpdateGeometryAttributeCommand(
+			geo, "uv", Geometry::UV0_ATTRIB_IDX, 2, data->m_vector, false
 		)
 	);
 }
@@ -836,8 +903,23 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query* QUERY)
 	QUERY->add_ctor(QUERY, cgl_mat_points_ctor);
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 
+	QUERY->add_mfun(QUERY, cgl_mat_points_set_size_attenuation, "int", "attenuate");
+	QUERY->add_arg(QUERY, "int", "attenuation");
+	QUERY->add_mfun(QUERY, cgl_mat_points_get_size_attenuation, "int", "attenuate");
+
+	QUERY->add_mfun(QUERY, cgl_mat_points_set_sprite, "CglTexture", "sprite");
+	QUERY->add_arg(QUERY, "CglTexture", "sprite");
+
+	QUERY->add_mfun(QUERY, cgl_mat_points_set_color, "vec3", "color");
+	QUERY->add_arg(QUERY, "vec3", "color");
+
 	QUERY->end_class(QUERY);
 
+	// mango material
+	QUERY->begin_class(QUERY, "MangoMat", "CglMat");
+	QUERY->add_ctor(QUERY, cgl_mat_mango_ctor);
+	QUERY->add_dtor(QUERY, cgl_mat_dtor);
+	QUERY->end_class(QUERY);
 
 	return true;
 }
@@ -1170,6 +1252,55 @@ CK_DLL_CTOR( cgl_mat_points_ctor )
 
 	// Creation command
 	CGL::PushCommand(new CreateMaterialCommand(pointsMat));
+}
+
+CK_DLL_MFUN( cgl_mat_points_set_size_attenuation )
+{
+	PointsMaterial* mat = (PointsMaterial*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	t_CKINT attenuation = GET_NEXT_INT(ARGS);
+	mat->SetSizeAttenuation(attenuation);
+
+	RETURN->v_int = attenuation;
+
+	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, *mat->GetUniform(PointsMaterial::POINT_SIZE_ATTENUATION_UNAME)));
+}
+
+CK_DLL_MFUN( cgl_mat_points_get_size_attenuation )
+{
+	PointsMaterial* mat = (PointsMaterial*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+
+	RETURN->v_int = mat->GetSizeAttenuation() ? 1 : 0;
+}
+
+CK_DLL_MFUN( cgl_mat_points_set_sprite )
+{
+	PointsMaterial* mat = (PointsMaterial*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	CGL_Texture* tex = (CGL_Texture*) OBJ_MEMBER_INT (GET_NEXT_OBJECT(ARGS), cgltexture_data_offset);
+	mat->SetSprite(tex);
+
+	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, *mat->GetUniform(PointsMaterial::POINT_SPRITE_TEXTURE_UNAME)));
+}
+
+// set point color
+CK_DLL_MFUN( cgl_mat_points_set_color )
+{
+	PointsMaterial* mat = (PointsMaterial*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
+	mat->SetColor(color.x, color.y, color.z);
+
+	RETURN->v_vec3 = color;
+
+	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, *mat->GetUniform(PointsMaterial::POINT_COLOR_UNAME)));
+}
+
+// mango mat fns ---------------------------------
+CK_DLL_CTOR( cgl_mat_mango_ctor )
+{
+	MangoMaterial* mangoMat = new MangoMaterial;
+	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT) mangoMat;
+
+	// Creation command
+	CGL::PushCommand(new CreateMaterialCommand(mangoMat));
 }
 
 

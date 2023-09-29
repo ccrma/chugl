@@ -24,3 +24,6 @@ const std::string PhongMaterial::SPECULAR_COLOR_UNAME = "u_Material.specularColo
 const std::string PhongMaterial::SHININESS_UNAME = "u_Material.shininess";
 
 // points mat static defines ========================
+const std::string PointsMaterial::POINT_SIZE_ATTENUATION_UNAME = "u_PointSizeAttenuation";
+const std::string PointsMaterial::POINT_COLOR_UNAME = "u_PointColor";
+const std::string PointsMaterial::POINT_SPRITE_TEXTURE_UNAME = "u_PointTexture";

@@ -49,7 +49,6 @@ public:
 	unsigned int GetNumVertices() { return m_Geo->m_Attributes[Geometry::POSITION_ATTRIB_IDX].NumVertices(); }
 
 
-
 	// CPU side data
 	std::vector<unsigned int>& GetIndices() { return m_Geo->m_Indices; }
 	Geometry::AttributeMap& GetAttributes() { return m_Geo->m_Attributes; }
