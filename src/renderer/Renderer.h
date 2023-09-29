@@ -4,6 +4,7 @@
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
 #include "VertexArray.h"
+#include "Util.h"
 
 #include "scenegraph/SceneGraphObject.h"
 #include "scenegraph/Scene.h"
@@ -148,7 +149,7 @@ public:
 
 		// cache current scene being rendered
 		m_RenderState.SetScene(scene);
-		
+
 		RenderNodeAndChildren(scene);
 	}
 
@@ -267,6 +268,8 @@ public:
 		return texture;
 	}
 
+	Shader* GetOrCreateShader(const std::string& vertPath, const std::string& fragPath);
+
 private:  // private member vars
 	RendererState m_RenderState;
 	Camera* m_MainCamera;
@@ -275,6 +278,10 @@ private:  // private member vars
 	std::unordered_map<size_t, RenderGeometry*> m_RenderGeometries;
 	std::unordered_map<size_t, RenderMaterial*> m_RenderMaterials;
 	std::unordered_map<size_t, Texture*> m_Textures;
+	// shader cache
+	typedef std::pair<std::string, std::string> ShaderKey;
+	std::unordered_map<ShaderKey, Shader*, Util::hash_pair> m_Shaders;
+
 
 };
 

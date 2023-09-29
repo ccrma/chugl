@@ -56,6 +56,13 @@ customGeo.setUVs(
     ]
 );
 
+customGeo.setIndices(
+    [
+        0, 1, 2,
+        3, 4, 5
+    ]
+);
+
 
 CglScene scene;
 NormMat normMat;

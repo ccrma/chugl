@@ -91,8 +91,12 @@ public:
 
 	// moves attribute into attributeMap. param attrib is unusable afterwards
 	// uses move semantics to prevent copying
-	void AddAttribute(CGL_GeoAttribute&& attrib) {
+	void AddAttribute(CGL_GeoAttribute& attrib) {
 		m_Attributes[attrib.location] = std::move(attrib);
+		m_Dirty = true;
+	}
+	void SetIndices(std::vector<unsigned int>& indices) {
+		m_Indices = std::move(indices);
 		m_Dirty = true;
 	}
 

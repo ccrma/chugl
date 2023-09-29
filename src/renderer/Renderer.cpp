@@ -161,9 +161,7 @@ RenderMaterial::RenderMaterial(Material *mat, Renderer *renderer) : m_Mat(mat), 
 			fragPath = "renderer/shaders/NormalFrag.glsl";
 	}
 
-	// TODO: cache and share shader programs across render materials
-	// TODO: add default shader (unity hot pink? or mango UV is better)
-	m_Shader = new Shader(vertPath, fragPath);
+	m_Shader = renderer->GetOrCreateShader(vertPath, fragPath);
 }
 
 void RenderMaterial::UpdateShader()
@@ -178,7 +176,7 @@ void RenderMaterial::UpdateShader()
 		// Note: we DON'T delete the previous shader program because it may be in use by other render materials
 		// Yes might leak, but you shouldn't be creating that many shaders anyways
 		// long term fix: add ref counting, delete the shader if its linked to 0 render materials
-		m_Shader = new Shader(mat->m_VertShaderPath, mat->m_FragShaderPath);
+		m_Shader = m_Renderer->GetOrCreateShader(mat->m_VertShaderPath, mat->m_FragShaderPath);
 	}
 }
 
@@ -356,4 +354,18 @@ void Renderer::Draw(RenderGeometry *renderGeo, RenderMaterial *renderMat)
 			renderGeo->GetNumVertices()  // number of VERTICES to render
 		));
 	}
+}
+
+Shader *Renderer::GetOrCreateShader(const std::string &vertPath, const std::string &fragPath)
+{
+	ShaderKey key = std::make_pair(vertPath, fragPath);
+	if (m_Shaders.find(key) != m_Shaders.end()) {
+		return m_Shaders[key];
+	}
+
+	// not found, create it
+	Shader* shader = new Shader(vertPath, fragPath);
+	// cache it
+	m_Shaders[key] = shader;
+	return shader;
 }

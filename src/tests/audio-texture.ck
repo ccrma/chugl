@@ -77,7 +77,7 @@ class Globals {
 
 CglScene scene;
 BoxGeo boxGeo;
-500 => int NUM_MESHES;
+1000 => int NUM_MESHES;
 CglMesh meshes[NUM_MESHES];
 ShaderMat shaderMat; // custom shader material
 shaderMat.shaderPaths(

@@ -415,12 +415,36 @@ public:
     virtual void execute(Scene* scene) override {
         Geometry* geo = dynamic_cast<Geometry*>(scene->GetNode(m_GeoID));
         assert(geo);
-        geo->AddAttribute(std::move(m_Attrib));
+        geo->AddAttribute(m_Attrib);
     }
 
 private:
     size_t m_GeoID;
     CGL_GeoAttribute m_Attrib;
+};
+
+class UpdateGeometryIndicesCommand : public SceneGraphCommand
+{
+public:
+    UpdateGeometryIndicesCommand(
+        Geometry* geo,
+        std::vector<t_CKUINT>& indices
+    ) : m_GeoID(geo->GetID()) {
+        m_Indices.reserve(indices.size());
+        for (auto& val : indices) {
+            m_Indices.emplace_back(val);
+        }
+    };
+
+    virtual void execute(Scene* scene) override {
+        Geometry* geo = dynamic_cast<Geometry*>(scene->GetNode(m_GeoID));
+        assert(geo);
+        geo->SetIndices(m_Indices);
+    }
+
+private:
+    size_t m_GeoID;
+    std::vector<unsigned int> m_Indices;
 };
 
 class UpdateTextureSamplerCommand : public SceneGraphCommand

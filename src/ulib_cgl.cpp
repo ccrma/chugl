@@ -118,6 +118,7 @@ CK_DLL_MFUN(cgl_geo_set_positions);
 CK_DLL_MFUN(cgl_geo_set_colors);
 CK_DLL_MFUN(cgl_geo_set_normals);
 CK_DLL_MFUN(cgl_geo_set_uvs);
+CK_DLL_MFUN(cgl_geo_set_indices);
 
 
 
@@ -452,6 +453,10 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query* QUERY)
 	
 	QUERY->add_mfun(QUERY, cgl_geo_set_uvs, "void", "setUVs");
 	QUERY->add_arg(QUERY, "float[]", "uvs");
+
+	QUERY->add_mfun(QUERY, cgl_geo_set_indices, "void", "setIndices");
+	QUERY->add_arg(QUERY, "int[]", "uvs");
+
 	
 	QUERY->end_class(QUERY);
 
@@ -586,6 +591,18 @@ CK_DLL_MFUN(cgl_geo_set_uvs)
 		new UpdateGeometryAttributeCommand(
 			geo, "uv", Geometry::UV0_ATTRIB_IDX, 2, data->m_vector, false
 		)
+	);
+}
+
+// set indices
+CK_DLL_MFUN(cgl_geo_set_indices)
+{
+	CustomGeometry* geo = (CustomGeometry*)OBJ_MEMBER_INT(SELF, cglgeo_data_offset);
+
+	Chuck_Array4* data = (Chuck_Array4*) GET_NEXT_OBJECT(ARGS);
+
+	CGL::PushCommand(
+		new UpdateGeometryIndicesCommand(geo, data->m_vector)
 	);
 }
 
