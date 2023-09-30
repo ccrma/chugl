@@ -114,6 +114,13 @@ void Window::UpdateState()
         } else if (Scene::windowMode == CGL::WINDOW_MAXIMIZED) {
             // maximize
             glfwMaximizeWindow(m_Window);
+        } else if (Scene::windowMode == CGL::WINDOW_RESTORE) {
+            // restore
+            glfwRestoreWindow(m_Window);
+        } else if (Scene::windowMode == CGL::WINDOW_SET_SIZE) {
+            // if in windowed mode, sets size in screen coordinates
+            // if in full screen, changes resolution 
+            glfwSetWindowSize(m_Window, Scene::windowedWidth, Scene::windowedHeight);
         }
     }
 }

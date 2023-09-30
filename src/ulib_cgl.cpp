@@ -54,7 +54,7 @@ CK_DLL_SFUN(cgl_framebuffer_get_height);
 CK_DLL_SFUN(cgl_window_fullscreen);
 CK_DLL_SFUN(cgl_window_windowed);
 // CK_DLL_SFUN(cgl_window_maximize);
-// CK_DLL_SFUN(cgl_window_set_size);
+CK_DLL_SFUN(cgl_window_set_size);
 
 
 
@@ -233,6 +233,16 @@ CK_DLL_MFUN(cgl_mat_points_set_color);
 
 // mango mat (for debugging UVs)
 CK_DLL_CTOR(cgl_mat_mango_ctor);
+
+// basic line mat (note: line rendering is not well supported on modern OpenGL)
+// most hardware doesn't support variable line width
+// "using the build-in OpenGL functionality for this task is very limited, if working at all."
+// for a better soln using texture-buffer line meshes, see: https://github.com/mhalber/Lines#texture-buffer-lines
+CK_DLL_CTOR(cgl_mat_line_ctor);
+CK_DLL_MFUN(cgl_mat_line_set_color);
+CK_DLL_MFUN(cgl_mat_line_set_width);  // many platforms only support fixed width 1.0
+CK_DLL_MFUN(cgl_mat_line_set_mode);  // many platforms only support fixed width 1.0
+
 
 
 
@@ -453,6 +463,9 @@ t_CKBOOL init_chugl_static_fns(Chuck_DL_Query* QUERY)
 	QUERY->add_arg(QUERY, "int", "width");
 	QUERY->add_arg(QUERY, "int", "height");
 	// QUERY->add_sfun(QUERY, cgl_window_maximize, "void", "maximize");  // kind of bugged, not sure how this is different from fullscreen
+	QUERY->add_sfun(QUERY, cgl_window_set_size, "void", "windowSize");
+	QUERY->add_arg(QUERY, "int", "width");
+	QUERY->add_arg(QUERY, "int", "height");
 
 	QUERY->end_class(QUERY);
 
@@ -518,6 +531,12 @@ CK_DLL_SFUN(cgl_window_windowed) {
 // CK_DLL_SFUN(cgl_window_maximize) { CGL::PushCommand(new SetWindowModeCommand(CGL::WINDOW_MAXIMIZED)); }
 
 	// QUERY->add_sfun(QUERY, cgl_window_windowed, "void", "windowed");
+// set windowsize
+CK_DLL_SFUN(cgl_window_set_size) { 
+	t_CKINT width = GET_NEXT_INT(ARGS);
+	t_CKINT height = GET_NEXT_INT(ARGS);
+	CGL::PushCommand(new SetWindowModeCommand(CGL::WINDOW_SET_SIZE, width, height)); 
+}
 
 //-----------------------------------------------------------------------------
 // init_chugl_geo()
@@ -1058,6 +1077,27 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query* QUERY)
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 	QUERY->end_class(QUERY);
 
+	// line material
+	QUERY->begin_class(QUERY, "LineMat", "CglMat");
+	QUERY->add_ctor(QUERY, cgl_mat_line_ctor);
+	QUERY->add_dtor(QUERY, cgl_mat_dtor);
+
+		// static vars
+	QUERY->add_svar(QUERY, "int", "LINE_SEGMENT", TRUE, (void *)&LineMaterial::LINE_SEGMENTS_MODE);
+	QUERY->add_svar(QUERY, "int", "LINE_STRIP", TRUE, (void *)&LineMaterial::LINE_STRIP_MODE);
+	QUERY->add_svar(QUERY, "int", "LINE_LOOP", TRUE, (void *)&LineMaterial::LINE_LOOP_MODE);
+
+	QUERY->add_mfun(QUERY, cgl_mat_line_set_color, "vec3", "color");
+	QUERY->add_arg(QUERY, "vec3", "color");
+
+	QUERY->add_mfun(QUERY, cgl_mat_line_set_width, "float", "width");
+	QUERY->add_arg(QUERY, "float", "width");
+
+	QUERY->add_mfun(QUERY, cgl_mat_line_set_mode, "int", "mode");
+	QUERY->add_arg(QUERY, "int", "mode");
+
+	QUERY->end_class(QUERY);
+
 	return true;
 }
 // CGL Materials ===================================================
@@ -1440,7 +1480,44 @@ CK_DLL_CTOR( cgl_mat_mango_ctor )
 	CGL::PushCommand(new CreateMaterialCommand(mangoMat));
 }
 
+// line mat fns ---------------------------------
 
+CK_DLL_CTOR( cgl_mat_line_ctor )
+{
+	LineMaterial* lineMat = new LineMaterial;
+	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT) lineMat;
+	CGL::PushCommand(new CreateMaterialCommand(lineMat));
+}
+
+CK_DLL_MFUN( cgl_mat_line_set_color )
+{
+	LineMaterial* mat = (LineMaterial*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
+	mat->SetColor(color.x, color.y, color.z);
+
+	RETURN->v_vec3 = color;
+	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, *mat->GetUniform(LineMaterial::LINE_COLOR_UNAME)));
+}
+
+CK_DLL_MFUN( cgl_mat_line_set_width )
+{
+	LineMaterial* mat = (LineMaterial*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	t_CKFLOAT width = GET_NEXT_FLOAT(ARGS);
+	mat->SetLineWidth(width);
+
+	RETURN->v_float = width;
+	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, *mat->GetUniform(Material::LINE_WIDTH_UNAME)));
+}
+
+CK_DLL_MFUN( cgl_mat_line_set_mode )
+{
+	LineMaterial* mat = (LineMaterial*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	t_CKINT mode = GET_NEXT_INT(ARGS);
+	mat->SetLineMode((MaterialPrimitiveMode) mode);
+
+	RETURN->v_int = mode;
+	CGL::PushCommand(new UpdateMaterialOptionCommand(mat, *mat->GetOption(MaterialOptionParam::PrimitiveMode)));
+}
 
 
 //-----------------------------------------------------------------------------
@@ -2103,6 +2180,8 @@ const unsigned int CGL::WINDOW_WINDOWED = 0;
 const unsigned int CGL::WINDOW_FULLSCREEN = 1;
 const unsigned int CGL::WINDOW_MAXIMIZED = 2;
 const unsigned int CGL::WINDOW_RESTORE = 3;
+const unsigned int CGL::WINDOW_SET_SIZE = 4;
+
 
 
 // can pick a better name maybe...calling this wakes up renderer thread

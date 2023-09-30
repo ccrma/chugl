@@ -156,6 +156,10 @@ RenderMaterial::RenderMaterial(Material *mat, Renderer *renderer) : m_Mat(mat), 
 			vertPath = "./renderer/shaders/BasicLightingVert.glsl";
 			fragPath = "./renderer/shaders/mangoFrag.glsl";
 			break;
+		case MaterialType::Line:  // TODO: implement
+			vertPath = "./renderer/shaders/LineVert.glsl";
+			fragPath = "./renderer/shaders/LineFrag.glsl";
+			break;
 		default:  // default material (normal mat for now)
 			vertPath = "renderer/shaders/BasicLightingVert.glsl";
 			fragPath = "renderer/shaders/NormalFrag.glsl";
@@ -308,7 +312,6 @@ void Renderer::Draw(RenderGeometry *renderGeo, RenderMaterial *renderMat)
 
 	Material* CGL_mat = renderMat->GetMat();
 
-	GLenum primitive = GL_TRIANGLES;
 	// set polygon mode
 	switch (CGL_mat->GetPolygonMode()) {
 		case MaterialPolygonMode::Fill:
@@ -317,11 +320,10 @@ void Renderer::Draw(RenderGeometry *renderGeo, RenderMaterial *renderMat)
 		case MaterialPolygonMode::Line:
 			GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_LINE));
 			// set line width
-			// GLCall(glLineWidth(CGL_mat->GetLineWidth()));
+			GLCall(glLineWidth(CGL_mat->GetLineWidth()));
 			break;
 		case MaterialPolygonMode::Point:
 			GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_POINT));
-			primitive = GL_POINTS;  // on mac only renders points if primitive is also set to points
 			// set point size
 			GLCall(glPointSize(CGL_mat->GetPointSize()));
 			break;
@@ -330,14 +332,30 @@ void Renderer::Draw(RenderGeometry *renderGeo, RenderMaterial *renderMat)
 	}
 
 
+	GLenum primitive = GL_TRIANGLES;
 	// set primitive mode
-	// switch (CGL_mat->GetMaterialType()) {
-	// 	case MaterialType::Points:
-	// 		primitive = GL_POINTS;
-	// 		break;
-	// 	default:
-	// 		primitive = GL_TRIANGLES;
-	// }
+	switch (CGL_mat->GetPrimitiveMode()) {
+		case MaterialPrimitiveMode::Triangles:
+			primitive = GL_TRIANGLES;
+			break;
+		case MaterialPrimitiveMode::TriangleStrip:
+			primitive = GL_TRIANGLE_STRIP;
+			break;
+		case MaterialPrimitiveMode::Points:
+			primitive = GL_POINTS;
+			break;
+		case MaterialPrimitiveMode::Lines:
+			primitive = GL_LINES;
+			break;
+		case MaterialPrimitiveMode::LineStrip:
+			primitive = GL_LINE_STRIP;
+			break;
+		case MaterialPrimitiveMode::LineLoop:
+			primitive = GL_LINE_LOOP;
+			break;
+		default:
+			primitive = GL_TRIANGLES;
+	}
 
 
 	if (renderGeo->ShouldDrawIndexed()) {

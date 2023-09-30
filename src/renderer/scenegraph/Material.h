@@ -15,7 +15,8 @@ enum class MaterialType : unsigned int {
 	Phong,
 	CustomShader,
 	Points,
-	Mango
+	Mango,
+	Line
 };
 
 enum class UniformType {
@@ -93,12 +94,22 @@ struct MaterialUniform {
 
 enum MaterialOptionParam : unsigned int {
 	PolygonMode = 0,
+	PrimitiveMode
 };
 
 enum MaterialPolygonMode : unsigned int {
 	Fill = 0,
 	Line,
 	Point
+};
+
+enum MaterialPrimitiveMode : unsigned int {
+	Triangles = 0,
+	TriangleStrip,
+	Lines,
+	LineStrip,
+	LineLoop,
+	Points,
 };
 
 enum MaterialOptionType : unsigned int {
@@ -117,6 +128,7 @@ struct MaterialOption {
 		unsigned int ui;
 		bool b;
 		MaterialPolygonMode polygonMode;
+		MaterialPrimitiveMode primitiveMode;
 	};
 
 	// constructors  (because prior c++20 you can only initialize the first type in a union??)
@@ -135,6 +147,9 @@ struct MaterialOption {
 	static MaterialOption Create(MaterialOptionParam param, MaterialPolygonMode polygonMode) {
 		MaterialOption m; m.type = MaterialOptionType::UnsignedInt; m.param = param; m.polygonMode = polygonMode;  return m;
 	}
+	static MaterialOption Create(MaterialOptionParam param, MaterialPrimitiveMode primitiveMode) {
+		MaterialOption m; m.type = MaterialOptionType::UnsignedInt; m.param = param; m.primitiveMode = primitiveMode;  return m;
+	}
 };
 
 
@@ -144,10 +159,14 @@ class Material : public SceneGraphNode
 public:
 	Material() {
 		// set default material options
-		SetOption(MaterialOption::Create(POLYGON_MODE, MaterialPolygonMode::Fill));
+		SetOption(MaterialOption::Create(MaterialOptionParam::PolygonMode, MaterialPolygonMode::Fill));
+		// default to triangle primitives
+		SetOption(MaterialOption::Create(MaterialOptionParam::PrimitiveMode, MaterialPrimitiveMode::Triangles));
+
 
 		// set default material uniforms
-		SetUniform(MaterialUniform::Create(POINT_SIZE_UNAME, 5.0f));
+		SetUniform(MaterialUniform::Create(POINT_SIZE_UNAME, 25.0f));
+		SetUniform(MaterialUniform::Create(LINE_WIDTH_UNAME, 1.0f));
 
 		std::cerr << "Material constructor called, ID = " << this->GetID() << std::endl;
 	};
@@ -170,19 +189,23 @@ public:
 		m_Options[options.param] = options;
 	}
 
+
 	inline MaterialOption* GetOption(MaterialOptionParam p) {
 		return (m_Options.find(p) != m_Options.end()) ? &m_Options[p] : nullptr;
 	}
 
 	// Option getters
 	MaterialPolygonMode GetPolygonMode() { return m_Options[MaterialOptionParam::PolygonMode].polygonMode; }
+	MaterialPrimitiveMode GetPrimitiveMode() { return m_Options[MaterialOptionParam::PrimitiveMode].primitiveMode;}
 	// float GetLineWidth() { return m_Options[MaterialOptionParam::LineWidth].f; }
 	float GetPointSize() { return m_Uniforms[POINT_SIZE_UNAME].f; } 
+	float GetLineWidth() { return m_Uniforms[LINE_WIDTH_UNAME].f; }
 
 	// option setters
 	void SetPolygonMode(MaterialPolygonMode mode) { m_Options[MaterialOptionParam::PolygonMode].polygonMode = mode; }
 	// virtual void SetLineWidth(float width) { m_Options[MaterialOptionParam::LineWidth].f = width; }
 	virtual void SetPointSize(float size) { m_Uniforms[POINT_SIZE_UNAME].f = size; }
+	void SetLineWidth(float width) { m_Uniforms[LINE_WIDTH_UNAME].f = width; }
 
 
 	inline void SetUniform(MaterialUniform uniform) {
@@ -204,9 +227,9 @@ public:
 public:  // static consts
 
 	// static material options, for passing into chuck as svars if ever needed
-	static const MaterialOptionParam POLYGON_MODE;
-	static const MaterialOptionParam LINE_WIDTH;
-	static const MaterialOptionParam POINT_SIZE;
+	// static const MaterialOptionParam POLYGON_MODE;
+	// static const MaterialOptionParam LINE_WIDTH;
+	// static const MaterialOptionParam POINT_SIZE;
 
 	// supported polygon modes
 	static const MaterialPolygonMode POLYGON_FILL;
@@ -215,6 +238,7 @@ public:  // static consts
 
 	// uniform names
 	static const std::string POINT_SIZE_UNAME;
+	static const std::string LINE_WIDTH_UNAME;
 
 };
 
@@ -336,7 +360,8 @@ class PointsMaterial : public Material
 {
 public:
 	PointsMaterial() {
-		SetOption(MaterialOption::Create(POLYGON_MODE, MaterialPolygonMode::Point));
+		SetOption(MaterialOption::Create(MaterialOptionParam::PolygonMode, MaterialPolygonMode::Point));
+		SetOption(MaterialOption::Create(MaterialOptionParam::PrimitiveMode, MaterialPrimitiveMode::Points));
 
 		// set point size attenuation option
 		SetUniform(MaterialUniform::Create(POINT_SIZE_ATTENUATION_UNAME, true));
@@ -392,5 +417,46 @@ public:
 		mat->SetID(GetID());
 		return mat;
 	}
+
+};
+
+// Line mat
+class LineMaterial : public Material
+{
+public:
+	LineMaterial() {
+		SetOption(MaterialOption::Create(MaterialOptionParam::PolygonMode, MaterialPolygonMode::Line));
+		SetOption(MaterialOption::Create(MaterialOptionParam::PrimitiveMode, MaterialPrimitiveMode::LineStrip));
+
+		// init line color to magenta (shows up on white and black backgrounds)
+		SetUniform(MaterialUniform::Create(LINE_COLOR_UNAME, 1.0f, 0.0f, 1.0f));
+	}
+
+	virtual MaterialType GetMaterialType() override { return MaterialType::Line; }
+	virtual Material* Clone() override {
+		auto* mat = new LineMaterial(*this);
+		mat->SetID(GetID());
+		return mat;
+	}
+	void SetColor(float r, float g, float b) { 
+		auto& uniform = m_Uniforms[LINE_COLOR_UNAME];
+		uniform.f3[0] = r; uniform.f3[1] = g; uniform.f3[2] = b;
+	}
+	glm::vec3 GetColor() { 
+		auto& matUniform = m_Uniforms[LINE_COLOR_UNAME];
+		return glm::vec3(matUniform.f3[0], matUniform.f3[1], matUniform.f3[2]); 
+	}
+
+	// primitive mode setters
+	void SetLineMode(MaterialPrimitiveMode mode) { SetOption(MaterialOption::Create(MaterialOptionParam::PrimitiveMode, mode)); }
+	void SetLineStrip() { SetLineMode(MaterialPrimitiveMode::LineStrip); }
+	void SetLineLoop() { SetLineMode(MaterialPrimitiveMode::LineLoop); }
+	void SetLines() { SetLineMode(MaterialPrimitiveMode::Lines); }
+
+public:
+	static const std::string LINE_COLOR_UNAME;
+	static const unsigned int LINE_SEGMENTS_MODE;
+	static const unsigned int LINE_STRIP_MODE;
+	static const unsigned int LINE_LOOP_MODE;
 
 };

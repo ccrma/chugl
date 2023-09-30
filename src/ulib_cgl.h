@@ -124,6 +124,7 @@ public: // window modes
 	static const unsigned int WINDOW_FULLSCREEN;
 	static const unsigned int WINDOW_MAXIMIZED;
 	static const unsigned int WINDOW_RESTORE;
+	static const unsigned int WINDOW_SET_SIZE;
 
 private: // attributes
 	// command queues 
