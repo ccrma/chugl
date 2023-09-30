@@ -95,7 +95,35 @@ public:
 		Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM
 	);
 
+public: // global, lock-protected state for sending info from GLFW --> Chuck
+	struct WindowState {  // TODO: will need to be non-static if we support multiple windows
+		int windowWidth, windowHeight;
+		int framebufferWidth, framebufferHeight;
+		double mouseX, mouseY;
+		double glfwTime, deltaTime;
+	};
+	static WindowState s_WindowState;
+	static std::mutex s_WindowStateLock;
+	// making these doubles to reduce lock frequency
+	static std::pair<double, double> GetMousePos();
+	static std::pair<int, int> GetWindowSize();
+	static std::pair<int, int> GetFramebufferSize();
+	static std::pair<double, double> GetTimeInfo();
+	static void SetMousePos(double x, double y);
+	static void SetWindowSize(int width, int height);
+	static void SetFramebufferSize(int width, int height);
+	static void SetTimeInfo(double glfwTime, double deltaTime);
 
+public:  // mouse modes
+	static const unsigned int MOUSE_NORMAL;
+	static const unsigned int MOUSE_HIDDEN;
+	static const unsigned int MOUSE_LOCKED;
+
+public: // window modes
+	static const unsigned int WINDOW_WINDOWED;
+	static const unsigned int WINDOW_FULLSCREEN;
+	static const unsigned int WINDOW_MAXIMIZED;
+	static const unsigned int WINDOW_RESTORE;
 
 private: // attributes
 	// command queues 

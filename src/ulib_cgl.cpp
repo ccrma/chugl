@@ -22,6 +22,9 @@ CK_DLL_DTOR(cgl_frame_dtor);
 // update event
 CK_DLL_CTOR(cgl_update_ctor);
 CK_DLL_DTOR(cgl_update_dtor);
+// window resize
+CK_DLL_CTOR(cgl_window_resize_ctor);
+CK_DLL_DTOR(cgl_window_resize_dtor);
 
 CK_DLL_MFUN(cgl_update_event_waiting_on);
 
@@ -32,6 +35,29 @@ CK_DLL_MFUN(cgl_update_event_waiting_on);
 CK_DLL_SFUN(cgl_next_frame);
 CK_DLL_SFUN(cgl_register);
 CK_DLL_SFUN(cgl_unregister);
+
+// glfw-state
+// CK_DLL_SFUN(cgl_window_get_width);
+// CK_DLL_SFUN(cgl_window_get_height);
+CK_DLL_SFUN(cgl_window_get_time);
+CK_DLL_SFUN(cgl_window_get_dt);
+CK_DLL_SFUN(cgl_mouse_get_pos_x);
+CK_DLL_SFUN(cgl_mouse_get_pos_y);
+CK_DLL_SFUN(cgl_mouse_set_mode);
+CK_DLL_SFUN(cgl_mouse_hide);
+CK_DLL_SFUN(cgl_mouse_lock);
+CK_DLL_SFUN(cgl_mouse_show);
+CK_DLL_SFUN(cgl_framebuffer_get_width);
+CK_DLL_SFUN(cgl_framebuffer_get_height);
+
+// glfw windowing fns
+CK_DLL_SFUN(cgl_window_fullscreen);
+CK_DLL_SFUN(cgl_window_windowed);
+// CK_DLL_SFUN(cgl_window_maximize);
+// CK_DLL_SFUN(cgl_window_set_size);
+
+
+
 
 
 //-----------------------------------------------------------------------------
@@ -243,6 +269,7 @@ t_CKBOOL init_chugl_light(Chuck_DL_Query* QUERY);
 
 static t_CKUINT cglframe_data_offset = 0;
 static t_CKUINT cglupdate_data_offset = 0;
+static t_CKUINT cglwindow_resize_data_offset = 0;
 static t_CKUINT ggen_data_offset = 0;
 static t_CKUINT cglcamera_data_offset = 0;
 static t_CKUINT cglgeo_data_offset = 0;
@@ -298,6 +325,14 @@ t_CKBOOL init_chugl_events(Chuck_DL_Query* QUERY)
 
 	QUERY->end_class(QUERY);
 
+	// Window resize event ================================
+	QUERY->begin_class(QUERY, "WindowResize", "Event");
+	QUERY->add_ctor(QUERY, cgl_window_resize_ctor);
+	QUERY->add_dtor(QUERY, cgl_window_resize_dtor);
+
+	cglwindow_resize_data_offset = QUERY->add_mvar(QUERY, "int", "@cglwindow_resize_data", false);
+	QUERY->end_class(QUERY);
+	
 	return true;
 }
 
@@ -359,19 +394,65 @@ CK_DLL_MFUN(cgl_update_event_waiting_on)
 		// TODO process manages sent from glfw --> chuck
 	}
 }
+
+// window resize event
+CK_DLL_CTOR(cgl_window_resize_ctor)
+{
+	// store reference to our new class
+	OBJ_MEMBER_INT(SELF, cglwindow_resize_data_offset) = (t_CKINT) new CglEvent(
+		(Chuck_Event*)SELF, SHRED->vm_ref, API, CglEventType::CGL_WINDOW_RESIZE
+	);
+}
+CK_DLL_DTOR(cgl_window_resize_dtor)
+{
+	CglEvent* cglEvent = (CglEvent*)OBJ_MEMBER_INT(SELF, cglwindow_resize_data_offset);
+	CK_SAFE_DELETE(cglEvent);
+	OBJ_MEMBER_INT(SELF, cglwindow_resize_data_offset) = 0;
+}
+
 //-----------------------------------------------------------------------------
 // init_chugl_static_fns()
 //-----------------------------------------------------------------------------
 t_CKBOOL init_chugl_static_fns(Chuck_DL_Query* QUERY)
 {
-	// EM_log(CK_LOG_INFO, "ChuGL static fns");
+
+
 
 	QUERY->begin_class(QUERY, "CGL", "Object");  // for global stuff
+	// static vars
+	// This will hide the cursor and lock it to the specified window. 
+    QUERY->add_svar( QUERY, "int", "MOUSE_LOCKED", TRUE, (void *)&CGL::MOUSE_LOCKED);
+	// the cursor to become hidden when it is over a window but still want it to behave normally
+    QUERY->add_svar( QUERY, "int", "MOUSE_HIDDEN", TRUE, (void *)&CGL::MOUSE_HIDDEN);
+	// This mode puts no limit on the motion of the cursor.
+	QUERY->add_svar( QUERY, "int", "MOUSE_NORMAL", TRUE, (void *)&CGL::MOUSE_NORMAL);
+
 	QUERY->add_sfun(QUERY, cgl_next_frame, "CglUpdate", "nextFrame");
 
 	QUERY->add_sfun(QUERY, cgl_unregister, "void", "unregister");
 	QUERY->add_sfun(QUERY, cgl_register, "void", "register");
 
+	// window state getters
+	// QUERY->add_sfun(QUERY, cgl_window_get_width, "int", "windowWidth");
+	// QUERY->add_sfun(QUERY, cgl_window_get_height, "int", "windowHeight");
+	QUERY->add_sfun(QUERY, cgl_framebuffer_get_width, "int", "framebufferWidth");
+	QUERY->add_sfun(QUERY, cgl_framebuffer_get_height, "int", "framebufferHeight");
+	QUERY->add_sfun(QUERY, cgl_window_get_time, "float", "time");
+	QUERY->add_sfun(QUERY, cgl_window_get_dt, "float", "dt");
+	QUERY->add_sfun(QUERY, cgl_mouse_get_pos_x, "float", "mouseX");
+	QUERY->add_sfun(QUERY, cgl_mouse_get_pos_y, "float", "mouseY");
+	QUERY->add_sfun(QUERY, cgl_mouse_set_mode, "void", "mouseMode");
+	QUERY->add_arg(QUERY, "int", "mode");
+
+	QUERY->add_sfun(QUERY, cgl_mouse_hide, "void", "hideCursor");
+	QUERY->add_sfun(QUERY, cgl_mouse_lock, "void", "lockCursor");
+	QUERY->add_sfun(QUERY, cgl_mouse_show, "void", "showCursor");
+
+	QUERY->add_sfun(QUERY, cgl_window_fullscreen, "void", "fullscreen");
+	QUERY->add_sfun(QUERY, cgl_window_windowed, "void", "windowed");
+	QUERY->add_arg(QUERY, "int", "width");
+	QUERY->add_arg(QUERY, "int", "height");
+	// QUERY->add_sfun(QUERY, cgl_window_maximize, "void", "maximize");  // kind of bugged, not sure how this is different from fullscreen
 
 	QUERY->end_class(QUERY);
 
@@ -389,15 +470,54 @@ CK_DLL_SFUN(cgl_next_frame)
 	);
 
 }
-CK_DLL_SFUN(cgl_register)
+
+CK_DLL_SFUN(cgl_register) { CGL::RegisterShred(SHRED); }
+CK_DLL_SFUN(cgl_unregister) { CGL::UnregisterShred(SHRED); }
+
+// get window width
+// CK_DLL_SFUN(cgl_window_get_width) { RETURN->v_int = CGL::GetWindowSize().first; }
+// get window height
+// CK_DLL_SFUN(cgl_window_get_height) { RETURN->v_int = CGL::GetWindowSize().second; }
+// get framebuffer width
+CK_DLL_SFUN(cgl_framebuffer_get_width) { RETURN->v_int = CGL::GetFramebufferSize().first; }
+// get framebuffer height
+CK_DLL_SFUN(cgl_framebuffer_get_height) { RETURN->v_int = CGL::GetFramebufferSize().second; }
+// get glfw time
+CK_DLL_SFUN(cgl_window_get_time) { RETURN->v_float = CGL::GetTimeInfo().first; }
+// get glfw dt
+CK_DLL_SFUN(cgl_window_get_dt) { RETURN->v_float = CGL::GetTimeInfo().second; }
+// get mouse x
+CK_DLL_SFUN(cgl_mouse_get_pos_x) { RETURN->v_float = CGL::GetMousePos().first; }
+// get mouse y
+CK_DLL_SFUN(cgl_mouse_get_pos_y) { RETURN->v_float = CGL::GetMousePos().second; }
+
+// set mouse mode
+CK_DLL_SFUN(cgl_mouse_set_mode)
 {
-	CGL::RegisterShred(SHRED);
-}
-CK_DLL_SFUN(cgl_unregister)
-{
-	CGL::UnregisterShred(SHRED);
+	t_CKINT mode = GET_NEXT_INT(ARGS);
+	CGL::PushCommand(new SetMouseModeCommand(mode));
 }
 
+// hide mouse
+CK_DLL_SFUN(cgl_mouse_hide) { CGL::PushCommand(new SetMouseModeCommand(CGL::MOUSE_HIDDEN)); }
+// lock mouse
+CK_DLL_SFUN(cgl_mouse_lock) { CGL::PushCommand(new SetMouseModeCommand(CGL::MOUSE_LOCKED)); }
+// show mouse
+CK_DLL_SFUN(cgl_mouse_show) { CGL::PushCommand(new SetMouseModeCommand(CGL::MOUSE_NORMAL)); }
+
+
+// set fullscreen
+CK_DLL_SFUN(cgl_window_fullscreen) { CGL::PushCommand(new SetWindowModeCommand(CGL::WINDOW_FULLSCREEN)); }
+// set windowed
+CK_DLL_SFUN(cgl_window_windowed) { 
+	t_CKINT width = GET_NEXT_INT(ARGS);
+	t_CKINT height = GET_NEXT_INT(ARGS);
+	CGL::PushCommand(new SetWindowModeCommand(CGL::WINDOW_WINDOWED, width, height)); 
+}
+// set maximize
+// CK_DLL_SFUN(cgl_window_maximize) { CGL::PushCommand(new SetWindowModeCommand(CGL::WINDOW_MAXIMIZED)); }
+
+	// QUERY->add_sfun(QUERY, cgl_window_windowed, "void", "windowed");
 
 //-----------------------------------------------------------------------------
 // init_chugl_geo()
@@ -1912,6 +2032,8 @@ CglEvent::~CglEvent()
 {
 	auto& eventQueue = GetEventQueue(m_EventType);
 
+	// TODO: this is not locksafe...can get removed while renderer is reading
+
 	// remove from listeners list
 	auto it = std::find(eventQueue.begin(), eventQueue.end(), this);
 	assert(it != eventQueue.end());  // sanity check
@@ -1960,6 +2082,29 @@ std::vector<SceneGraphCommand*> CGL::m_ThatCommandQueue;
 bool CGL::m_CQReadTarget = false;  // false = this, true = that
 std::mutex CGL::m_CQLock; // only held when 1: adding new command and 2: swapping the read/write queues
 
+// CGL window state initialization
+
+std::mutex CGL::s_WindowStateLock;
+CGL::WindowState CGL::s_WindowState = {
+	1, 1, // window width and height (in screen coordinates)
+	1, 1, // frame buffer width and height (in pixels)
+	0.0, 0.0, // mouse X, mouse Y
+	0.0, 0.0 // glfw time, delta time
+};
+
+// mouse modes
+const unsigned int CGL::MOUSE_NORMAL = 0;
+const unsigned int CGL::MOUSE_HIDDEN = 1;
+const unsigned int CGL::MOUSE_LOCKED = 2;
+
+// window modes
+
+const unsigned int CGL::WINDOW_WINDOWED = 0;
+const unsigned int CGL::WINDOW_FULLSCREEN = 1;
+const unsigned int CGL::WINDOW_MAXIMIZED = 2;
+const unsigned int CGL::WINDOW_RESTORE = 3;
+
+
 // can pick a better name maybe...calling this wakes up renderer thread
 void CGL::Render()
 {
@@ -2000,7 +2145,7 @@ void CGL::FlushCommandQueue(Scene& scene, bool swap) {  // TODO: shouldn't comma
 	// std::cout << "flushing " + std::to_string(readQueue.size()) + " commands\n";
 
 	// execute all commands in the read queue
-	for (auto& cmd : readQueue) {
+	for (SceneGraphCommand* cmd : readQueue) {
 		cmd->execute(&scene);
 		delete cmd;  // release memory TODO make this a unique_ptr or something instead
 	}
@@ -2068,7 +2213,56 @@ Chuck_DL_Api::Object CGL::GetCachedShredUpdateEvent(Chuck_VM_Shred *shred, CK_DL
 		m_ShredEventMap[shred] = obj;
 		return obj;
 	}
-
 }
 
+std::pair<double, double> CGL::GetMousePos()
+{
+	std::unique_lock<std::mutex> lock(s_WindowStateLock);
+	return std::pair<double, double>(s_WindowState.mouseX, s_WindowState.mouseY);
+}
 
+std::pair<int, int> CGL::GetWindowSize()
+{
+	std::unique_lock<std::mutex> lock(s_WindowStateLock);
+	return std::pair<int, int>(s_WindowState.windowWidth, s_WindowState.windowHeight);
+}
+
+std::pair<int, int> CGL::GetFramebufferSize()
+{
+	std::unique_lock<std::mutex> lock(s_WindowStateLock);
+	return std::pair<int, int>(s_WindowState.framebufferWidth, s_WindowState.framebufferHeight);
+}
+
+std::pair<double, double> CGL::GetTimeInfo()
+{
+	std::unique_lock<std::mutex> lock(s_WindowStateLock);
+	return std::pair<double, double>(s_WindowState.glfwTime, s_WindowState.deltaTime);
+}
+
+void CGL::SetMousePos(double x, double y)
+{
+	std::unique_lock<std::mutex> lock(s_WindowStateLock);
+	s_WindowState.mouseX = x;
+	s_WindowState.mouseY = y;
+}
+
+void CGL::SetWindowSize(int width, int height)
+{
+	std::unique_lock<std::mutex> lock(s_WindowStateLock);
+	s_WindowState.windowWidth = width;
+	s_WindowState.windowHeight = height;
+}
+
+void CGL::SetFramebufferSize(int width, int height)
+{
+	std::unique_lock<std::mutex> lock(s_WindowStateLock);
+	s_WindowState.framebufferWidth = width;
+	s_WindowState.framebufferHeight = height;
+}
+
+void CGL::SetTimeInfo(double glfwTime, double deltaTime)
+{
+	std::unique_lock<std::mutex> lock(s_WindowStateLock);
+	s_WindowState.glfwTime = glfwTime;
+	s_WindowState.deltaTime = deltaTime;
+}

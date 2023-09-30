@@ -10,6 +10,11 @@ spork ~ flycam.selfUpdate();
 
 // ===============================
 
+CGL.fullscreen();
+CGL.lockCursor();
+
+// Scene setup ===================
+
 CglScene scene;
 PointsMat pointsMat;  pointsMat.pointSize(55.0);
 NormMat normMat;

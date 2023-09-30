@@ -1,5 +1,8 @@
 #pragma once
 #include "renderer/Includes.h"
+#include <unordered_map>
+
+class Scene;
 
 class Window
 {
@@ -18,10 +21,16 @@ public:
 	inline int GetViewWidth() { return m_ViewWidth; }
 	inline int GetViewHeight() { return m_ViewHeight; }
 	void SetViewSize(int width, int height);
+
+	void UpdateState();
 private:
 	// member vars
 	GLFWwindow* m_Window;
 	int m_ViewWidth, m_ViewHeight;
 	float m_DeltaTime = 0.0f;
 
+public: // statics
+	static std::unordered_map<GLFWwindow*, Window*> s_WindowMap;
+	static Window* GetWindow(GLFWwindow* window) { return s_WindowMap[window]; }
+	static void SetWindow(GLFWwindow* window, Window* w) { s_WindowMap[window] = w; }
 };

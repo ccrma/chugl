@@ -23,6 +23,11 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+/* =============================================================================
+						    * GLFW callbacks *	
+===============================================================================*/
+
+// window size in pixels
 static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     // TODO: figure out how to get access to active window object
@@ -31,31 +36,46 @@ static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
         0, 0,  // index of lower left corner of viewport, in pixels
         width, height
     );
+    // update window state
+    Window* w = Window::GetWindow(window);
+    w->SetViewSize(width, height);
+    CGL::SetFramebufferSize(width, height);
+
+    CglEvent::Broadcast(CglEventType::CGL_WINDOW_RESIZE);  // doesn't matter if we brodcast this in frambuffer callback or window size callback
 }
 
-static void processKeyboadInput(GLFWwindow* window)
+// window sizs in screen-space coordinates
+static void window_size_callback(GLFWwindow* window, int width, int height)
 {
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
+    CGL::SetWindowSize(width, height);
 }
 
-static bool drawFill = true;
+static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
+{
+    CGL::SetMousePos(xpos, ypos);
+}
+
 static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-    if (key == GLFW_KEY_L && action == GLFW_PRESS) {
-        if (drawFill) {
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-            drawFill = false;
-        }
-        else {
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-            drawFill = true;
-        }
-    }
-    if (key == GLFW_KEY_R && action == GLFW_PRESS) {
-        // TODO: reload currently active shader
-    }
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, GLFW_TRUE);
 }
+
+
+static void glfwErrorCallback(int error, const char* description)
+{
+    fprintf(stderr, "Error[%i]: %s\n", error, description);
+}
+
+
+
+
+/* =============================================================================
+						    * Window *	
+===============================================================================*/
+
+// static initializers
+std::unordered_map<GLFWwindow*, Window*> Window::s_WindowMap;
 
 
 void Window::SetViewSize(int width, int height)
@@ -64,8 +84,46 @@ void Window::SetViewSize(int width, int height)
     m_ViewHeight = height;
 }
 
+void Window::UpdateState()
+{
+    // mouse mode
+    if (Scene::updateMouseMode) {
+        if (Scene::mouseMode == CGL::MOUSE_NORMAL) {
+            glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        }
+        else if (Scene::mouseMode == CGL::MOUSE_HIDDEN) {
+            glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+        }
+        else if (Scene::mouseMode == CGL::MOUSE_LOCKED) {
+            glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        }
+    }
+
+    if (Scene::updateWindowMode) {
+        if (Scene::windowMode == CGL::WINDOW_WINDOWED) {
+            // set window (pos at 100,100 so title bar appears....silly)
+            glfwSetWindowMonitor(m_Window, NULL, 100, 100, Scene::windowedWidth, Scene::windowedHeight, GLFW_DONT_CARE);
+            //re-enable decorations
+            glfwSetWindowAttrib(m_Window, GLFW_DECORATED, GLFW_TRUE);
+        }
+        else if (Scene::windowMode == CGL::WINDOW_FULLSCREEN) {
+            // set to primary monitor
+            GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+            const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+            glfwSetWindowMonitor(m_Window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+        } else if (Scene::windowMode == CGL::WINDOW_MAXIMIZED) {
+            // maximize
+            glfwMaximizeWindow(m_Window);
+        }
+    }
+}
+
+
 Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHeight(viewHeight), m_DeltaTime(0.0f)
 {
+    // Set error callback ======================================
+    glfwSetErrorCallback(glfwErrorCallback);
+
     // init and select openGL version ==========================
     glfwInit();
     #ifdef __APPLE__
@@ -81,20 +139,21 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
 
     
     // create window ============================================
-    m_Window = glfwCreateWindow(m_ViewWidth, m_ViewHeight, "CGL", NULL, NULL);
+    m_Window = glfwCreateWindow(m_ViewWidth, m_ViewHeight, "ChuGL", NULL, NULL);
     if (m_Window == NULL)
     {
         glfwTerminate();
         throw std::runtime_error("Failed to create GLFW window");
     }
     glfwMakeContextCurrent(m_Window);
+    SetWindow(m_Window, this);  // add to static map
+    CGL::SetWindowSize(m_ViewWidth, m_ViewHeight);
 
 
 
     // VSYNC =================================================
     // glfwSwapInterval(0);  // TODO: for now disabling vsync introduces jitter
     glfwSwapInterval(1);  
-    std::cerr << "VSYNC: " << glfwGetWindowAttrib(m_Window, GLFW_DOUBLEBUFFER) << std::endl;
 
     // Initialize GLAD =======================================
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
@@ -103,6 +162,8 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
     }
 
     // Print Context Info =================================================
+    std::cerr << "====================GLFW Info========================" << std::endl;
+    std::cerr << "GLFW Version: " << glfwGetVersionString() << std::endl;
     std::cerr << "====================OpenGL Context Info========================" << std::endl;
     std::cerr << "OpenGL Version: " << glGetString(GL_VERSION) << std::endl;
     std::cerr << "OpenGL Vendor: " << glGetString(GL_VENDOR) << std::endl;
@@ -120,8 +181,7 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
     glfwSetKeyCallback(m_Window, keyCallback);
 
     // mouse settings =====================================
-    glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    // glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetCursorPosCallback(m_Window, cursor_position_callback);
 
 
     // OpenGL Metadata =======================================
@@ -153,6 +213,7 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
 Window::~Window()
 {   
     std::cout << "calling window destructor, terminating glfw window" << std::endl;
+    glfwDestroyWindow(m_Window);
 	glfwTerminate();
 }
 
@@ -179,9 +240,6 @@ void Window::DisplayLoop()
     int frameCount = 0;
     while (!glfwWindowShouldClose(m_Window))
     {
-        // input
-        processKeyboadInput(m_Window);
-        
         // FPS counter
 		++frameCount;
         float currentTime = (float)glfwGetTime();
@@ -194,6 +252,7 @@ void Window::DisplayLoop()
             frameCount = 0;
             previousFPSTime = currentTime;
         }
+        CGL::SetTimeInfo(currentTime, m_DeltaTime);
 
         CGL::WaitOnUpdateDone();
         /*
@@ -220,10 +279,17 @@ void Window::DisplayLoop()
         }
 
         // done swapping the double buffer, let chuck know it's good to continue pushing commands
+        // TODO: does this need to be lock protected?
+        // scenario: another shred is spawned which is NOT blocked and initializes a new shred, writing to event queue  
+        // at the same time render thread is reading from event queue and broadcasting
+        // temp workaround: create all your shreds and Chugl events BEFORE calling first .Render()
         CglEvent::Broadcast(CglEventType::CGL_UPDATE);
 
         // now apply changes from the command queue chuck is NO Longer writing to 
         CGL::FlushCommandQueue(scene, false);
+        
+        // process any glfw options passed from chuck
+        UpdateState();
 
         // now renderer can work on drawing the copied scenegraph 
         renderer.Clear();

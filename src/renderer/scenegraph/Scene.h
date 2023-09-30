@@ -62,4 +62,14 @@ private:  // attributes
 	std::unordered_map<size_t, SceneGraphNode*> m_SceneGraphMap;  // map of all scene graph objects
 
 
+public: // major hack, for now because there's only 1 scene, storing render state options here
+	// THESE ARE NOT THREADSAFE, ONLY WRITE/READ FROM RENDER THREAD
+	static unsigned int mouseMode;
+	static bool updateMouseMode; 
+
+	static unsigned int windowMode;  // which mode, fullscreen or windowed
+	static bool updateWindowMode;  // whether to update window mode
+	static int windowedWidth, windowedHeight;  // last user-set window size
+
+
 };

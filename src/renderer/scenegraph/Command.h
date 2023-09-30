@@ -25,7 +25,38 @@ public:
 	virtual void execute(Scene* scene) = 0;
 };
 
+//==================== Window Manager Commands =======================//
+class SetMouseModeCommand : public SceneGraphCommand
+{
+public:
+    SetMouseModeCommand(int mode) : m_Mode(mode) {};
+    virtual void execute(Scene* scene) override {
+        // so hacky...but we do this to decouple from the renderer
+        Scene::updateMouseMode = true;
+        Scene::mouseMode = m_Mode;
+    }
+private:
+    int m_Mode;
+};
 
+class SetWindowModeCommand : public SceneGraphCommand
+{
+public:
+    SetWindowModeCommand(int mode, int width = 0, int height = 0) 
+        : m_Mode(mode), m_Width(width), m_Height(height) {};
+    virtual void execute(Scene* scene) override {
+        Scene::updateWindowMode = true;
+        Scene::windowMode = m_Mode;
+
+        if (m_Width > 0 && m_Height > 0) {
+            Scene::windowedWidth = m_Width;
+            Scene::windowedHeight = m_Height;
+        }
+    }
+private:
+    int m_Mode;
+    int m_Width, m_Height;
+};
 
 //==================== Creation Commands =====a==================//
 // TODO: all this creation command logic can be moved into the classes themselves
