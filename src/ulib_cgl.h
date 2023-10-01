@@ -134,6 +134,12 @@ public: // window modes
 	static const unsigned int WINDOW_RESTORE;
 	static const unsigned int WINDOW_SET_SIZE;
 
+public: // global main thread hook
+	static Chuck_DL_MainThreadHook* hook;
+	static bool hookActivated;
+	static void ActivateHook();
+	static void DeactivateHook();
+
 private: // attributes
 	// command queues 
 	// the commands need to be executed before renderering...putting here for now

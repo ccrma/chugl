@@ -31,6 +31,7 @@ Renderer Window::renderer;
 Camera Window::camera;
 Scene Window::scene;
 
+
 /* =============================================================================
 						    * GLFW callbacks *	
 ===============================================================================*/
@@ -135,7 +136,6 @@ void Window::UpdateState()
         }
     }
 }
-
 
 Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHeight(viewHeight), m_DeltaTime(0.0f)
 {

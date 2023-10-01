@@ -9,7 +9,7 @@ class Scene : public SceneGraphObject
 {
 public:
 	Scene() {
-		fprintf(stderr, "Scene constructor (%zu)\n", m_ID);
+		// fprintf(stderr, "Scene constructor (%zu)\n", m_ID);
 	}
 	virtual bool IsScene() override { return true; }
 
@@ -64,6 +64,9 @@ private:  // attributes
 
 public: // major hack, for now because there's only 1 scene, storing render state options here
 	// THESE ARE NOT THREADSAFE, ONLY WRITE/READ FROM RENDER THREAD
+	// set indirectly via scenegraph commands
+	// all this in order to maintain strict decoupling between scenegraph and any specific renderer impl
+	// but maybe these modes can be stored in CGL class? or create a "window" scenegraph type that stores per-window metadata and settings
 	static unsigned int mouseMode;
 	static bool updateMouseMode; 
 

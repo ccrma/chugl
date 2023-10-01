@@ -433,6 +433,9 @@ CK_DLL_MFUN(cgl_update_event_waiting_on)
 	// windows and/or renderers
 	CglEvent* cglEvent = (CglEvent*)OBJ_MEMBER_INT(SELF, cglupdate_data_offset);
 
+	// activate chugl main thread hook (no-op if already activated)
+	CGL::ActivateHook(); 
+
 	// Add shred (no-op if already added)
 	CGL::RegisterShred(SHRED);
 
@@ -2351,7 +2354,23 @@ const unsigned int CGL::WINDOW_MAXIMIZED = 2;
 const unsigned int CGL::WINDOW_RESTORE = 3;
 const unsigned int CGL::WINDOW_SET_SIZE = 4;
 
+// main loop hook
+Chuck_DL_MainThreadHook* CGL::hook = nullptr;
+bool CGL::hookActivated = false;
 
+void CGL::ActivateHook()
+{
+    if (hookActivated || !hook) return;
+    hook->activate(hook);
+    hookActivated = true;
+}
+
+void CGL::DeactivateHook()
+{
+    if (!hookActivated || !hook) return;
+    hook->deactivate(hook);
+    hookActivated = false;
+}
 
 // can pick a better name maybe...calling this wakes up renderer thread
 void CGL::Render()

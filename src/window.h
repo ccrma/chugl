@@ -40,4 +40,5 @@ public:  // default GGens
     static Renderer renderer;
 	static Camera camera;
     static Scene scene;
+
 };

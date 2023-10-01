@@ -19,78 +19,32 @@
 #include <iostream>
 #include <cmath>
 
-static Chuck_DL_MainThreadHook* hook;
-
 t_CKBOOL chugl_main_loop_hook(void* bindle)
 {
     Window window;
     std::cerr << "INSIDE chugl main loop hook!" << std::endl;
 
     window.DisplayLoop();
-    /*
-    glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-#ifdef __APPLE__
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#endif
-
-    GLFWwindow* window = glfwCreateWindow(640, 480, "chugl.chug", NULL, NULL);
-    glfwMakeContextCurrent(window);
-
-    // Initialize GLAD =======================================
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-    {
-        throw std::runtime_error("Failed to initialize GLAD");
-    }
-
-    glfwSwapInterval(1); // vsync
-
-    int fc{ 0 };
-    while (!glfwWindowShouldClose(window)) {
-		std::cerr << "window frame: " << fc++ << std::endl;
-        glClearColor(0.0f, .5f + .5f * std::sin(.1 * fc), .5f + .5f * std::sin(.14 * fc), 1.0);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        glfwSwapBuffers(window);
-
-        glfwPollEvents();
-    }
-    */
 
     std::cerr << "==exiting chugl window==" << std::endl;
-    hook->deactivate(hook);
-    // glfwTerminate();
+    CGL::DeactivateHook();
 
     return TRUE;
 }
 
 t_CKBOOL chugl_main_loop_quit(void* bindle)
 {
-    // Chuck_UI_Manager* ui_manager = (Chuck_UI_Manager*)bindle;
-    // ui_manager->shutdown();
-
     std::cerr << "LEAVING chugl main loop hook" << std::endl;
     // window.Terminate();
     return true;
 }
 
-
 CK_DLL_QUERY(ChuGL)
 {
     // hmm, don't change this...
     QUERY->setname(QUERY, "ChuGL");
-
-    // TODO init window singleton
-
-    hook = QUERY->create_main_thread_hook(QUERY, chugl_main_loop_hook, chugl_main_loop_quit, NULL);
-    hook->activate(hook);
-
+    CGL::hook = QUERY->create_main_thread_hook(QUERY, chugl_main_loop_hook, chugl_main_loop_quit, NULL);
     init_chugl(QUERY);
-
-
     // wasn't that a breeze?
     return TRUE;
 }
-
