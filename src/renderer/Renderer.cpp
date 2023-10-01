@@ -131,48 +131,58 @@ RenderMaterial* RenderMaterial::defaultMat = nullptr;
 
 RenderMaterial::RenderMaterial(Material *mat, Renderer *renderer) : m_Mat(mat), m_Shader(nullptr), m_Renderer(renderer)
 {
-
-	// testing shader codegen
-	std::cerr << ShaderCode::GenShaderSource("BASIC_VERTEX_SHADER") << std::endl;
-
-
-
+	std::string vert, frag;
+	bool vertIsPath = false, fragIsPath = false;
 	std::string vertPath, fragPath;
 	// factory method to create the correct shader based on the material type
 	// TODO just hardcode strings in cpp for builtin shaders
 	switch(mat->GetMaterialType()) {
 		case MaterialType::Normal:
 			// TODO: really should abstract this to a shader resource locator class
-			vertPath = "renderer/shaders/BasicLightingVert.glsl";
-			fragPath = "renderer/shaders/NormalFrag.glsl";
+			vert = ShaderCode::GenShaderSource("BASIC_VERT");
+			frag = ShaderCode::GenShaderSource("NORMAL_FRAG");
 			break;
 		case MaterialType::Phong:
-			vertPath = "./renderer/shaders/BasicLightingVert.glsl";
-			fragPath = "./renderer/shaders/BasicLightingFrag.glsl";
+			vert = ShaderCode::GenShaderSource("BASIC_VERT");
+			frag = ShaderCode::GenShaderSource("PHONG_FRAG");
 			break;
 		case MaterialType::CustomShader:
 			// until ChucK gets destructors, we default to default shader
-			vertPath = ((ShaderMaterial*) mat)->m_VertShaderPath == "" ? "renderer/shaders/BasicLightingVert.glsl" : ((ShaderMaterial*) mat)->m_VertShaderPath;
-			fragPath = ((ShaderMaterial*) mat)->m_FragShaderPath == "" ? "renderer/shaders/NormalFrag.glsl" : ((ShaderMaterial*) mat)->m_FragShaderPath;
+			vertPath = ((ShaderMaterial*)mat)->m_VertShaderPath;
+			fragPath = ((ShaderMaterial*)mat)->m_FragShaderPath;
+			if (vertPath == "") {
+				vert = ShaderCode::GenShaderSource("BASIC_VERT");
+				vertIsPath = false;
+			} else {
+				vert = vertPath;
+				vertIsPath = true;
+			}
+			if (fragPath == "") {
+				frag = ShaderCode::GenShaderSource("NORMAL_FRAG");
+				fragIsPath = false;
+			} else {
+				frag = fragPath;
+				fragIsPath = true;
+			}
 			break;
 		case MaterialType::Points:
-			vertPath = "./renderer/shaders/PointsVert.glsl";
-			fragPath = "./renderer/shaders/PointsFrag.glsl";
+			vert = ShaderCode::GenShaderSource("POINTS_VERT");
+			frag = ShaderCode::GenShaderSource("POINTS_FRAG");
 			break;
 		case MaterialType::Mango:
-			vertPath = "./renderer/shaders/BasicLightingVert.glsl";
-			fragPath = "./renderer/shaders/mangoFrag.glsl";
+			vert = ShaderCode::GenShaderSource("BASIC_VERT");
+			frag = ShaderCode::GenShaderSource("MANGO_FRAG");
 			break;
 		case MaterialType::Line:  // TODO: implement
-			vertPath = "./renderer/shaders/LineVert.glsl";
-			fragPath = "./renderer/shaders/LineFrag.glsl";
+			vert = ShaderCode::GenShaderSource("LINES_VERT");
+			frag = ShaderCode::GenShaderSource("LINES_FRAG");
 			break;
 		default:  // default material (normal mat for now)
-			vertPath = "renderer/shaders/BasicLightingVert.glsl";
-			fragPath = "renderer/shaders/NormalFrag.glsl";
+			vert = ShaderCode::GenShaderSource("BASIC_VERT");
+			frag = ShaderCode::GenShaderSource("NORMAL_FRAG");
 	}
 
-	m_Shader = renderer->GetOrCreateShader(vertPath, fragPath);
+	m_Shader = renderer->GetOrCreateShader(vert, frag, vertIsPath, fragIsPath);
 }
 
 void RenderMaterial::UpdateShader()
@@ -187,7 +197,7 @@ void RenderMaterial::UpdateShader()
 		// Note: we DON'T delete the previous shader program because it may be in use by other render materials
 		// Yes might leak, but you shouldn't be creating that many shaders anyways
 		// long term fix: add ref counting, delete the shader if its linked to 0 render materials
-		m_Shader = m_Renderer->GetOrCreateShader(mat->m_VertShaderPath, mat->m_FragShaderPath);
+		m_Shader = m_Renderer->GetOrCreateShader(mat->m_VertShaderPath, mat->m_FragShaderPath, true, true);
 	}
 }
 
@@ -381,15 +391,18 @@ void Renderer::Draw(RenderGeometry *renderGeo, RenderMaterial *renderMat)
 	}
 }
 
-Shader *Renderer::GetOrCreateShader(const std::string &vertPath, const std::string &fragPath)
+Shader *Renderer::GetOrCreateShader(
+	const std::string &vert, const std::string &frag,
+	bool vertIsPath, bool fragIsPath
+)
 {
-	ShaderKey key = std::make_pair(vertPath, fragPath);
+	ShaderKey key = std::make_pair(vert, frag);
 	if (m_Shaders.find(key) != m_Shaders.end()) {
 		return m_Shaders[key];
 	}
 
 	// not found, create it
-	Shader* shader = new Shader(vertPath, fragPath);
+	Shader* shader = new Shader(vert, frag, vertIsPath, fragIsPath);
 	// cache it
 	m_Shaders[key] = shader;
 	return shader;

@@ -5,10 +5,31 @@
 #include <shadinclude/Shadinclude.hpp>
 
 // TODO: break this into read file, compile, link&validate separate functions
-Shader::Shader(const std::string& vertexPath, const std::string& fragmentPath)
-    : m_VertexPath(vertexPath), m_FragmentPath(fragmentPath)
+Shader::Shader(
+    const std::string& vertex, const std::string& fragment,
+    bool vertexFromFile, bool fragmentFromFile
+)
+    : m_VertexPath(""), m_FragmentPath(""), 
+    m_VertexSource(""), m_FragmentSource(""),
+    m_VertFromFile(vertexFromFile), m_FragFromFile(fragmentFromFile)
 {
-    m_RendererID = CreateShaderProgram(vertexPath, fragmentPath);
+    if (vertexFromFile) {
+        m_VertexSource = Shadinclude::load(vertex);
+        m_VertexPath = vertex;
+    }
+    else {
+        m_VertexSource = vertex;
+    }
+
+    if (fragmentFromFile) {
+        m_FragmentSource = Shadinclude::load(fragment);
+        m_FragmentPath = fragment;
+    }
+    else {
+        m_FragmentSource = fragment;
+    }
+
+    m_RendererID = CreateShaderProgram(m_VertexSource, m_FragmentSource);
     ASSERT(m_RendererID);
 
     Bind();
@@ -21,6 +42,7 @@ Shader::~Shader()
 
 void Shader::Reload()
 {
+    assert(false); // not implemented yet
     unsigned int reloadedProgram = CreateShaderProgram(m_VertexPath, m_FragmentPath);
     if (!reloadedProgram) { Util::println("failed to reload shader program"); }
 
@@ -136,40 +158,9 @@ unsigned int Shader::CompileShader(const std::string& source, unsigned int type)
 	return id;
 }
 
-unsigned int Shader::CreateShaderProgram(const std::string& vertexPath, const std::string& fragPath)
+// compiles shader from source strings (NOT file paths)
+unsigned int Shader::CreateShaderProgram(const std::string& vertexCode, const std::string& fragmentCode)
 {
-
-    // 1. retrieve the vertex/fragment source code from filePath
-    std::string vertexCode = Shadinclude::load(vertexPath, "#include");
-    std::string fragmentCode = Shadinclude::load(fragPath, "#include"); 
-    /*
-    std::ifstream vShaderFile;
-    std::ifstream fShaderFile;
-    // ensure ifstream objects can throw exceptions:
-    vShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-    fShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-    try
-    {
-        // open files
-        vShaderFile.open(vertexPath);
-        fShaderFile.open(fragPath);
-        std::stringstream vShaderStream, fShaderStream;
-        // read file's buffer contents into streams
-        vShaderStream << vShaderFile.rdbuf();
-        fShaderStream << fShaderFile.rdbuf();
-        // close file handlers
-        vShaderFile.close();
-        fShaderFile.close();
-        // convert stream into string
-        vertexCode = vShaderStream.str();
-        fragmentCode = fShaderStream.str();
-    }
-    catch (std::ifstream::failure e)
-    {
-        std::cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ" << std::endl;
-        return 0;
-    }
-    */
 
     // Shader Compilation ================================
     unsigned int vertexShader, fragmentShader;

@@ -13,6 +13,14 @@
 
 ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
     {"SHADER_VERSION", "#version 330 core\n"},
+    {"DEFAULT_ATTRIBUTES",
+    R"(
+        // attributes (must match vertex attrib array)
+        layout (location = 0) in vec3 a_Pos;
+        layout (location = 1) in vec3 a_Normal;
+        layout (location = 2) in vec3 a_Color;
+        layout (location = 3) in vec2 a_TexCoord;
+    )"},
     {"TRANSFORM_UNIFORMS",
      R"(
         uniform mat4 u_Model;
@@ -62,14 +70,10 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
         uniform PointLight u_PointLights[MAX_LIGHTS];
         uniform DirLight u_DirLights[MAX_LIGHTS];
     )"},
-    {"BASIC_VERTEX_SHADER",
+    {"BASIC_VERT",
      R"(
         #include TRANSFORM_UNIFORMS
-
-        layout (location = 0) in vec3 a_Pos;
-        layout (location = 1) in vec3 a_Normal;
-        layout (location = 2) in vec3 a_Color;
-        layout (location = 3) in vec2 a_TexCoord;
+        #include DEFAULT_ATTRIBUTES
 
         // varyings (interpolated and passed to frag shader)
         out vec3 v_Pos;
@@ -90,11 +94,241 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
 
             gl_Position = u_Projection * u_View * vec4(v_Pos, 1.0);
         }
+    )"},
+    {"NORMAL_FRAG",
+     R"(
+        uniform int u_UseLocalNormal = 0;
+
+        in vec3 v_Normal;       // world space normal
+        in vec3 v_LocalNormal;  // local space normal
+
+        // output
+        out vec4 FragColor;
+
+        // fragment shader for light sources to always be white
+        void main()
+        {
+            FragColor = (1 - u_UseLocalNormal) * vec4(normalize(v_Normal), 1.0) + 
+                        (u_UseLocalNormal) * vec4(normalize(v_LocalNormal), 1.0);
+        }
+    )"},
+    {"PHONG_FRAG",
+     R"(
+        #include TRANSFORM_UNIFORMS
+        #include LIGHTING_UNIFORMS
+
+        struct Material {
+            // textures
+            sampler2D diffuseMap;
+            sampler2D specularMap;
+
+            // colors
+            vec3 diffuseColor;
+            vec3 specularColor;
+
+            // specular highlights
+            float shininess;  // range from (0, 2^n). must be > 0. logarithmic scale.
+        };
+        uniform Material u_Material;
+
+        in vec3 v_Pos;  // world space frag position
+        in vec3 v_Normal;
+        in vec2 v_TexCoord;
+
+        // output ==========================================================================
+        out vec4 FragColor;
+
+        // functions to calculate light contribution ======================================
+        vec3 CalcDirLight(  // contribution of directional light
+            DirLight light, vec3 normal, vec3 viewDir,
+            float shininess, vec3 diffuseCol, vec3 specularCol
+        ) {
+            vec3 lightDir = normalize(-light.direction);
+            // diffuse shading
+            float diff = max(dot(normal, lightDir), 0.0);
+            // specular shading
+            vec3 reflectDir = reflect(-lightDir, normal);
+            float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
+            // combine results
+            vec3 ambient  = light.ambient  * diffuseCol;
+            vec3 diffuse  = light.diffuse  * diff * diffuseCol;
+            vec3 specular = light.specular * spec * specularCol;
+            return (ambient + diffuse + specular) * light.intensity;
+        }
+
+        // contribution from point lights
+        vec3 CalcPointLight(
+            PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir,
+            float shininess, vec3 diffuseCol, vec3 specularCol
+        ) {
+            vec3 lightDir = normalize(light.position - fragPos);
+            // diffuse shading
+            float diff = max(dot(normal, lightDir), 0.0);
+            // specular shading
+            vec3 reflectDir = reflect(-lightDir, normal);
+            float spec = max(pow(max(dot(viewDir, reflectDir), 0.0), shininess), 0.0);
+            // attenuation
+            float distance    = length(light.position - fragPos);
+            float attenuation = 1.0 / (light.constant + light.linear * distance + 
+                        light.quadratic * (distance * distance));    
+            // combine results
+            vec3 ambient  = light.ambient  * diffuseCol;
+            vec3 diffuse  = light.diffuse  * diff * diffuseCol;
+            vec3 specular = light.specular * spec * specularCol;
+
+            // attenuate
+            return (ambient + diffuse + specular) * attenuation * light.intensity;
+        } 
+
+        // TODO
+        // vec3 CalcSpotLight() {}
+
+        // main =====================================================================================
+        void main()
+        {
+            vec3 norm = normalize(v_Normal);  // fragment normal direction
+            vec3 viewDir = normalize(u_ViewPos - v_Pos);  // direction from camera to this frag
+
+            // material color properties (ignore alpha channel for now)
+            vec4 diffuseTex = texture(u_Material.diffuseMap, v_TexCoord);
+            vec4 specularTex = texture(u_Material.specularMap, v_TexCoord);
+            vec3 diffuse = diffuseTex.xyz * u_Material.diffuseColor;
+            vec3 specular = specularTex.xyz * u_Material.specularColor;
+
+            vec3 result = vec3(0.0);
+
+            // loop through point lights
+            for (int i = 0; i < u_NumPointLights; i++) {
+                PointLight light = u_PointLights[i];
+                result += CalcPointLight(
+                    light, norm, v_Pos, viewDir, u_Material.shininess, diffuse, specular
+                );
+            }
+
+            // loop through directional lights
+            for (int i = 0; i < u_NumDirLights; i++) {
+                DirLight light = u_DirLights[i];
+                result += CalcDirLight(
+                    light, norm, viewDir, u_Material.shininess, diffuse, specular
+                );
+            }
+
+            FragColor = vec4(
+                result, 
+                max(diffuseTex.a, specularTex.a)         // TODO jank alpha blending for now
+            );
+        }
+    )"},
+    {"POINTS_VERT",
+     R"(
+        #include TRANSFORM_UNIFORMS
+        #include DEFAULT_ATTRIBUTES
+
+        // uniforms (passed in from program)
+        uniform float u_PointSize;
+
+        // whether or not to adjust size based on distance to camera
+        uniform bool u_PointSizeAttenuation;
+
+        // varyings (interpolated and passed to frag shader)
+        out vec3 v_Pos;
+        out vec3 v_Color;
+        // out vec3 v_Normal;		 // world space normal
+        // out vec3 v_LocalNormal;  // local space normal
+        out vec2 v_TexCoord;
+
+        void main()
+        {
+            v_Pos = vec3(u_Model * vec4(a_Pos, 1.0));  // world space position
+            v_Color = a_Color;
+            v_TexCoord = a_TexCoord;
+
+            gl_Position = u_Projection * u_View * vec4(v_Pos, 1.0);
+            gl_PointSize = mix(u_PointSize, u_PointSize / gl_Position.w, u_PointSizeAttenuation); // scale point size by distance to camera
+        }
+    )"},
+    {"POINTS_FRAG",
+     R"(
+        in vec3 v_Pos;
+        in vec3 v_Color;
+        in vec2 v_TexCoord;
+
+        // output
+        out vec4 FragColor;
+
+        // uniforms
+        uniform float u_PointSize;
+        uniform vec3 u_PointColor;
+        uniform sampler2D u_PointTexture;
+
+        void main()
+        {
+            vec4 texColor = texture(u_PointTexture, gl_PointCoord);
+            // FragColor = vec4(vec3(texColor.a), 1.0);
+
+            FragColor = vec4( u_PointColor * v_Color * texColor.rgb, texColor.a );
+            // FragColor = vec4( u_Point * v_Color * texColor.rgb, 1.0 )
+            // FragColor = vec4(u_PointSize, 0.0, 0.0, 1.0);
+            // FragColor = vec4(v_Color, 1.0);
+            // FragColor = vec4(v_TexCoord, 0.0, 1.0);
+        }
+    )"},
+    {"LINES_VERT",
+     R"(
+        #include TRANSFORM_UNIFORMS
+        #include DEFAULT_ATTRIBUTES
+
+        uniform float u_LineWidth;
+
+        // varyings (interpolated and passed to frag shader)
+        out vec3 v_Pos;
+        out vec3 v_Color;
+
+        void main()
+        {
+            v_Pos = vec3(u_Model * vec4(a_Pos, 1.0));  // world space position
+            v_Color = a_Color;
+
+            gl_Position = u_Projection * u_View * vec4(v_Pos, 1.0);
+        }
+    )"},
+    {"LINES_FRAG",
+     R"(
+        in vec3 v_Pos;
+        in vec3 v_Color;
+
+        // output
+        out vec4 FragColor;
+
+        // uniforms
+        uniform float u_LineWidth;
+        uniform vec3 u_LineColor;
+
+        void main()
+        {
+            FragColor = vec4( u_LineColor * v_Color, 1.0 );
+        }
+    )"},
+    {
+    "MANGO_FRAG",
+    R"(
+        in vec3 v_Pos;
+        in vec2 v_TexCoord;
+
+        // output
+        out vec4 FragColor;
+
+        // uniforms
+        uniform float u_Time;
+
+        void main()
+        {
+            FragColor = vec4(
+                v_TexCoord, .5 * sin(u_Time) + .5, 1.0
+            );
+        }
     )"}
-
 };
-
-
 
 // ====================================================================================================
 //  ShaderCode impl
@@ -117,5 +351,5 @@ std::string ShaderCode::GenShaderSource(const std::string& name) {
         source.replace(pos, end - pos + 1, includeSource);
         pos = source.find("#include");
     }
-    return source;
+    return s_CodeMap["SHADER_VERSION"] + source;
 }

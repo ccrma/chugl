@@ -20,7 +20,11 @@ public class FlyCam {
 	@(1.0, 0.0, 0.0) => vec3 RIGHT;
 	fun void update(time t, dur dt)
 	{
-		2.5 * (dt / second) => float cameraSpeed;
+		this.update(dt/second);
+	}
+
+	fun void update(float dt) {
+		2.5 * dt => float cameraSpeed;
 		// camera movement
 		if (IM.isKeyDown(IM.KEY_W))
 			mainCamera.TranslateBy(cameraSpeed * mainCamera.GetForward());

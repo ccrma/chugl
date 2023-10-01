@@ -268,7 +268,10 @@ public:
 		return texture;
 	}
 
-	Shader* GetOrCreateShader(const std::string& vertPath, const std::string& fragPath);
+	Shader* GetOrCreateShader(
+		const std::string& vertPath, const std::string& fragPath,
+		bool vertIsPath, bool fragIsPath
+	);
 
 private:  // private member vars
 	RendererState m_RenderState;

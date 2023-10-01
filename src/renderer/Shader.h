@@ -14,9 +14,14 @@ class Shader
 {
 public:
 	unsigned int m_RendererID;  // program ID
-	const std::string m_VertexPath, m_FragmentPath;
+	std::string m_VertexPath, m_FragmentPath;
+	std::string m_VertexSource, m_FragmentSource;
+	bool m_FragFromFile, m_VertFromFile;  // true if gen from file, false if gen from string
 
-	Shader(const std::string& vertexPath, const std::string& fragmentPath);
+	Shader(
+		const std::string& vertexPath, const std::string& fragmentPath,
+		bool vertexFromFile, bool fragmentFromFile
+	);
 	~Shader();
 
 	// hot reloading!
@@ -49,6 +54,5 @@ private:
 	static unsigned int CompileShader(const std::string& source, unsigned int type);
 	unsigned int CreateShaderProgram(const std::string& vertexPath, const std::string& fragPath);
 	int GetUniformLocation(const std::string& name) const;
-
 
 };

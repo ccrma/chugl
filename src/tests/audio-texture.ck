@@ -12,6 +12,11 @@ FlyCam flycam;
 flycam.init(IM, MM, mainCamera);
 spork ~ flycam.selfUpdate();
 
+CGL.fullscreen();
+CGL.lockCursor();
+mainCamera.clip(0.1, 1000);
+
+
 // Audio ============================================================
 512 => int WAVEFORM_LENGTH;  // openGL textures must be power of 2
 
@@ -134,7 +139,8 @@ fun void GameLoop(){
         G.deltaTime/second => float dt;
 
 		// Update logic
-        flycam.update(now, G.deltaTime);
+        // flycam.update(now, G.deltaTime);
+        flycam.update(CGL.dt());  // kind of looks smoother?
         UpdateAudioTexture();
 
         for ( CglMesh @ mesh : meshes ) {

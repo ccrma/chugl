@@ -1,5 +1,4 @@
 // Include this to access all the scene lighting info
-
 struct PointLight {
 	// color info
 	vec3 ambient;
