@@ -3,6 +3,7 @@ add_library(renderer # TODO this whole structure is a mess I realize....can buil
     Renderer.cpp
     RendererState.cpp
     Shader.cpp
+    ShaderCode.cpp
     Texture.cpp
     VertexArray.cpp
     VertexBuffer.cpp

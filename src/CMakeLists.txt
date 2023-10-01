@@ -68,7 +68,7 @@ target_include_directories(${PROJECT_NAME}
 
 # set install destination by platform
 if (APPLE)
-    set(INSTALL_DESTINATION "/usr/local/lib/chuck")
+    set(INSTALL_DESTINATION "~/.chuck/lib")
     message(STATUS "chugl.chug Install destination: ${INSTALL_DESTINATION}")
     install(TARGETS ${PROJECT_NAME} DESTINATION ${INSTALL_DESTINATION})
 endif()

@@ -5,6 +5,7 @@
 #include "scenegraph/Geometry.h"
 #include "scenegraph/Light.h"
 #include <glad/glad.h>
+#include "ShaderCode.h"
 
 
 /* =============================================================================
@@ -130,6 +131,12 @@ RenderMaterial* RenderMaterial::defaultMat = nullptr;
 
 RenderMaterial::RenderMaterial(Material *mat, Renderer *renderer) : m_Mat(mat), m_Shader(nullptr), m_Renderer(renderer)
 {
+
+	// testing shader codegen
+	std::cerr << ShaderCode::GenShaderSource("BASIC_VERTEX_SHADER") << std::endl;
+
+
+
 	std::string vertPath, fragPath;
 	// factory method to create the correct shader based on the material type
 	// TODO just hardcode strings in cpp for builtin shaders
