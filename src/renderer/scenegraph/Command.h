@@ -195,21 +195,21 @@ private:
 };
 
 // create Camera
-class CreateCameraCommand : public SceneGraphCommand
-{
-public:
-    CreateCameraCommand(Camera* camera) : m_Camera(camera) {};
-    virtual void execute(Scene* scene) override {
-        Camera* newCamera = m_Camera->Clone();
-        newCamera->SetID(m_Camera->GetID());  // copy ID
-        std::cout << "copied camera with id: " + std::to_string(newCamera->GetID())
-            << std::endl;
+// class CreateCameraCommand : public SceneGraphCommand
+// {
+// public:
+//     CreateCameraCommand(Camera* camera) : m_Camera(camera) {};
+//     virtual void execute(Scene* scene) override {
+//         Camera* newCamera = m_Camera->Clone();
+//         newCamera->SetID(m_Camera->GetID());  // copy ID
+//         std::cout << "copied camera with id: " + std::to_string(newCamera->GetID())
+//             << std::endl;
 
-        scene->RegisterNode(newCamera);
-    }
-private:
-    Camera* m_Camera;
-};
+//         scene->RegisterNode(newCamera);
+//     }
+// private:
+//     Camera* m_Camera;
+// };
 
 // Create Scene
 class CreateSceneCommand : public SceneGraphCommand
@@ -560,4 +560,19 @@ private:
     int width, height;
 };
 
+class UpdateCameraCommand : public SceneGraphCommand
+{
+public:
+    UpdateCameraCommand(Camera* cam) : 
+        m_CamID(cam->GetID()), params(cam->params)
+    {};
+    virtual void execute(Scene* scene) override {
+        Camera* cam = dynamic_cast<Camera*>(scene->GetNode(m_CamID));
+        assert(cam);
+        cam->params = params;
+    }
+private:
+    size_t m_CamID;
+    CameraParams params;
+};
 

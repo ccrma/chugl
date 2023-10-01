@@ -3,25 +3,57 @@
 #include "SceneGraphObject.h"
 #include "glm/glm.hpp"
 
-enum class CameraType {
+enum CameraType : unsigned int {
 	NONE = 0,
 	PERSPECTIVE,
 	ORTHO,
 };
 
+struct CameraParams {
+	float aspect;
+	float fov;
+	float size;  // orthographic size (scales view volume while preserving ratio of widht to height)
+	float nearPlane;
+	float farPlane;
+	CameraType type;
+};
+
+// for now compressing both types into a single object (bc can only have 1 camera anyways)
 class Camera : public SceneGraphObject
 {
 public:
-	virtual glm::mat4 GetProjectionMatrix() = 0;  // mat to transform from view space --> clip space 
-	virtual inline glm::mat4 GetViewMatrix() { return GetInvModelMatrix(); }
-	virtual inline CameraType GetCameraType() { return CameraType::NONE;  }
+	Camera(
+		// default perspective params
+		float aspect = 4.0/3.0,  // viewWidth / viewHeight
+		float fov = 45.0f, // fov in radians
+		// default ortho params
+		float size = 6.6f,
+		// shared params
+		float nearPlane = 0.1f,  
+		float farPlane = 100.0f
+	) : params({aspect, fov, size, nearPlane, farPlane, CameraType::PERSPECTIVE})
+	{}
+	bool IsCamera() override { return true;  }
+	void SetPerspective() { params.type = CameraType::PERSPECTIVE; }
+	void SetOrtho() { params.type = CameraType::ORTHO; }
+	void SetClipPlanes(float n, float f) { params.nearPlane = n; params.farPlane = f; }
+	void SetFOV(float fov) { params.fov = fov; }
+	void SetSize(float size) { params.size = size; }
+	glm::mat4 GetViewMatrix() { return GetInvModelMatrix(); }
+	CameraType GetMode() { return params.type;  }
+	glm::mat4 GetProjectionMatrix();  // mat to transform from view space --> clip space 
+	float GetClipNear() { return params.nearPlane; }
+	float GetClipFar() { return params.farPlane; }
+	float GetFOV() { return params.fov; }
+	float GetSize() { return params.size; }
 
-	virtual Camera* Clone() = 0;
+	CameraParams params;
 
-	virtual bool IsCamera() override { return true;  }
-
+	static const unsigned int MODE_PERSPECTIVE;
+	static const unsigned int MODE_ORTHO;
 };
 
+/*
 class PerspectiveCamera : public Camera
 {
 public:
@@ -78,3 +110,4 @@ public:
 	float m_Left, m_Right, m_Bottom, m_Top, m_Near, m_Far;
 private:
 };
+*/

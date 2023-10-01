@@ -1,6 +1,8 @@
 0 => int frameCounter;
 now => time lastTime;
 
+CGL.mainCam() @=> CglCamera cam;
+
 // controls
 InputManager IM;
 spork ~ IM.start(0);

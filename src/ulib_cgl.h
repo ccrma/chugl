@@ -12,6 +12,7 @@
 t_CKBOOL init_chugl(Chuck_DL_Query * QUERY);
 
 // foward decls =========================================
+class Camera;
 class Scene;
 class SceneGraphObject;
 class SceneGraphCommand;
@@ -66,7 +67,9 @@ public:
 	static std::condition_variable renderCondition;
 
 	static Scene mainScene;
-	static SceneGraphObject mainCamera;
+	static Camera mainCamera;
+	static bool mainCameraInitialized;
+	static Chuck_DL_Api::Object DL_mainCamera;
 	// static PerspectiveCamera mainCamera;
 
 	// static Chuck_Event s_UpdateChuckEvent;  // event used for waiting on update()
@@ -92,6 +95,11 @@ public:
 
 	// shred event map helper fns
 	static Chuck_DL_Api::Object GetCachedShredUpdateEvent(
+		Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM
+	);
+
+public:  // default GGens
+	static Chuck_DL_Api::Object GetMainCamera(
 		Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM
 	);
 

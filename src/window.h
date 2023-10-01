@@ -3,6 +3,8 @@
 #include <unordered_map>
 
 class Scene;
+class Camera;
+class Renderer;
 
 class Window
 {
@@ -33,4 +35,9 @@ public: // statics
 	static std::unordered_map<GLFWwindow*, Window*> s_WindowMap;
 	static Window* GetWindow(GLFWwindow* window) { return s_WindowMap[window]; }
 	static void SetWindow(GLFWwindow* window, Window* w) { s_WindowMap[window] = w; }
+
+public:  // default GGens
+    static Renderer renderer;
+	static Camera camera;
+    static Scene scene;
 };

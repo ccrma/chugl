@@ -25,10 +25,13 @@ fun void cycleWindowModes() {
     while (true) {
         <<< "fullscreenn" >>>;
         CGL.fullscreen();
-        2.5::second => now;
+        1.5::second => now;
         <<< "windowed" >>>;
         CGL.windowed(400, 600);
-        2.5::second => now;
+        1.5::second => now;
+        <<< "setting size" >>>;
+        CGL.windowSize(300, 100);
+        1.5::second => now;
     }
 } spork ~ cycleWindowModes();
 

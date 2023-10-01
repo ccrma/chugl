@@ -26,6 +26,10 @@ public class MouseManager
         return tmp;
     }
 
+    fun float GetScrollDelta() {
+        return motionDeltas.z;
+    }
+
     fun void start(int device) {
         // HID input and a HID message
         Hid hi;

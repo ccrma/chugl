@@ -56,6 +56,10 @@ CK_DLL_SFUN(cgl_window_windowed);
 // CK_DLL_SFUN(cgl_window_maximize);
 CK_DLL_SFUN(cgl_window_set_size);
 
+// accessing shared default GGens
+CK_DLL_SFUN(cgl_get_main_camera);
+
+
 
 
 
@@ -102,6 +106,25 @@ CK_DLL_GFUN(ggen_op_gruck);
 //-----------------------------------------------------------------------------
 CK_DLL_CTOR(cgl_cam_ctor);
 CK_DLL_DTOR(cgl_cam_dtor);
+
+CK_DLL_MFUN(cgl_cam_set_mode_persp);  // switch to perspective mode
+CK_DLL_MFUN(cgl_cam_set_mode_ortho);  // switch to perspective mode
+CK_DLL_MFUN(cgl_cam_get_mode);  // switch to perspective mode
+
+CK_DLL_MFUN(cgl_cam_set_clip);
+CK_DLL_MFUN(cgl_cam_get_clip_near);
+CK_DLL_MFUN(cgl_cam_get_clip_far);
+
+// perspective camera params
+// (no aspect, that's set automatically by renderer window resize callback)
+CK_DLL_MFUN(cgl_cam_set_pers_fov);  // set in degrees
+CK_DLL_MFUN(cgl_cam_get_pers_fov);  // 
+
+// ortho camera params
+CK_DLL_MFUN(cgl_cam_set_ortho_size);     // size of view volume (preserves screen aspect ratio)
+CK_DLL_MFUN(cgl_cam_get_ortho_size);     // 
+
+
 
 //-----------------------------------------------------------------------------
 // Object -> Scene
@@ -275,6 +298,7 @@ t_CKBOOL init_chugl_scene(Chuck_DL_Query* QUERY);
 t_CKBOOL init_chugl_group(Chuck_DL_Query* QUERY);
 t_CKBOOL init_chugl_mesh(Chuck_DL_Query* QUERY);
 t_CKBOOL init_chugl_light(Chuck_DL_Query* QUERY);
+t_CKBOOL create_chugl_default_objs(Chuck_DL_Query* QUERY);
 
 
 static t_CKUINT cglframe_data_offset = 0;
@@ -287,9 +311,8 @@ static t_CKUINT cgltexture_data_offset = 0;
 static t_CKUINT cglmat_data_offset = 0;
 
 t_CKBOOL init_chugl(Chuck_DL_Query * QUERY)
-{
+{	
 	init_chugl_events(QUERY);
-	init_chugl_static_fns(QUERY);
 	init_chugl_geo(QUERY);
 	init_chugl_texture(QUERY);
 	init_chugl_mat(QUERY);
@@ -299,7 +322,34 @@ t_CKBOOL init_chugl(Chuck_DL_Query * QUERY)
 	init_chugl_group(QUERY);
 	init_chugl_mesh(QUERY);
 	init_chugl_light(QUERY);
+	create_chugl_default_objs(QUERY);
+	init_chugl_static_fns(QUERY);
 
+	return true;
+}
+
+
+	// Chuck_DL_Api::Type type = API->object->get_type(API, shred, "CglUpdate");
+	// Chuck_DL_Api::Object obj = API->object->create(API, shred, type);
+	// cgl_update_ctor( (Chuck_Object*)obj, NULL, VM, shred, API );
+	// m_ShredEventMap[shred] = obj;
+	// return obj;
+
+//-----------------------------------------------------------------------------
+// create_chugl_default_objs()
+//-----------------------------------------------------------------------------
+t_CKBOOL create_chugl_default_objs(Chuck_DL_Query* QUERY)
+{
+	// threadsafe event queue
+	CglEvent::s_SharedEventQueue = QUERY->api()->vm->create_event_buffer(
+		QUERY->vm()
+	);
+	assert(CglEvent::s_SharedEventQueue);
+
+	// main camera
+	// Chuck_DL_Api::Type type = QUERY->api()->object->get_type(QUERY->api(), NULL, "CglCamera");
+	// Chuck_DL_Api::Object obj = QUERY->api()->object->create(QUERY->api(), NULL, type);
+	
 	return true;
 }
 
@@ -308,10 +358,6 @@ t_CKBOOL init_chugl(Chuck_DL_Query * QUERY)
 //-----------------------------------------------------------------------------
 t_CKBOOL init_chugl_events(Chuck_DL_Query* QUERY)
 {
-	CglEvent::s_SharedEventQueue = QUERY->api()->vm->create_event_buffer(
-		QUERY->vm()
-	);
-	assert(CglEvent::s_SharedEventQueue);
 
 	// Frame event =================================
 	QUERY->begin_class(QUERY, "CglFrame", "Event");
@@ -467,6 +513,11 @@ t_CKBOOL init_chugl_static_fns(Chuck_DL_Query* QUERY)
 	QUERY->add_arg(QUERY, "int", "width");
 	QUERY->add_arg(QUERY, "int", "height");
 
+	// Main Camera
+	// TODO: is it possible to add an svar of type CglCamera?
+	QUERY->add_sfun(QUERY, cgl_get_main_camera, "CglCamera", "mainCam");
+
+
 	QUERY->end_class(QUERY);
 
 	return true;
@@ -481,7 +532,6 @@ CK_DLL_SFUN(cgl_next_frame)
 	RETURN->v_object = (Chuck_Object *)CGL::GetCachedShredUpdateEvent(
 		SHRED, API, VM
 	);
-
 }
 
 CK_DLL_SFUN(cgl_register) { CGL::RegisterShred(SHRED); }
@@ -536,6 +586,13 @@ CK_DLL_SFUN(cgl_window_set_size) {
 	t_CKINT width = GET_NEXT_INT(ARGS);
 	t_CKINT height = GET_NEXT_INT(ARGS);
 	CGL::PushCommand(new SetWindowModeCommand(CGL::WINDOW_SET_SIZE, width, height)); 
+}
+
+CK_DLL_SFUN(cgl_get_main_camera)
+{
+	RETURN->v_object = (Chuck_Object *)CGL::GetMainCamera(
+		SHRED, API, VM
+	);
 }
 
 //-----------------------------------------------------------------------------
@@ -1897,7 +1954,35 @@ t_CKBOOL init_chugl_cam(Chuck_DL_Query* QUERY)
 	QUERY->begin_class(QUERY, "CglCamera", "GGen");
 	QUERY->add_ctor(QUERY, cgl_cam_ctor);
 	QUERY->add_dtor(QUERY, cgl_cam_dtor);
-	// cglcamera_data_offset = QUERY->add_mvar(QUERY, "int", "@cglcamera_data", false);
+
+	// static vars
+	// perspective mode 
+	QUERY->add_svar(QUERY, "int", "MODE_PERSP", true, (void*)&Camera::MODE_PERSPECTIVE);
+	QUERY->add_svar(QUERY, "int", "MODE_ORTHO", true, (void*)&Camera::MODE_ORTHO);
+
+
+	QUERY->add_mfun(QUERY, cgl_cam_set_mode_persp, "void", "perspective");
+	QUERY->add_mfun(QUERY, cgl_cam_set_mode_ortho, "void", "orthographic");
+	QUERY->add_mfun(QUERY, cgl_cam_get_mode, "int", "mode");
+
+	// clipping planes
+	QUERY->add_mfun(QUERY, cgl_cam_set_clip, "void", "clip");
+	QUERY->add_arg(QUERY, "float", "near");
+	QUERY->add_arg(QUERY, "float", "far");
+	QUERY->add_mfun(QUERY, cgl_cam_get_clip_near, "float", "clipNear");
+	QUERY->add_mfun(QUERY, cgl_cam_get_clip_far, "float", "clipFar");
+
+	// fov (in degrees)
+	QUERY->add_mfun(QUERY, cgl_cam_set_pers_fov, "float", "fov");
+	QUERY->add_arg(QUERY, "float", "f");
+	QUERY->add_mfun(QUERY, cgl_cam_get_pers_fov, "float", "fov");
+
+	// ortho view size
+	QUERY->add_mfun(QUERY, cgl_cam_set_ortho_size, "float", "viewSize");
+	QUERY->add_arg(QUERY, "float", "s");
+	QUERY->add_mfun(QUERY, cgl_cam_get_ortho_size, "float", "viewSize");
+
+
 	QUERY->end_class(QUERY);
 
 	return true;
@@ -1915,10 +2000,91 @@ CK_DLL_CTOR(cgl_cam_ctor)
 }
 CK_DLL_DTOR(cgl_cam_dtor)
 {
-	Camera* mainCam = (Camera*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	// TODO: no destructors for static vars (we don't want one camera handle falling out of scope to delete the only camera)
+
+	// Camera* mainCam = (Camera*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	// don't call delete! because this is a static var
-	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;  // zero out the memory
+	// OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;  // zero out the memory
 }
+
+CK_DLL_MFUN(cgl_cam_set_mode_persp)
+{
+	Camera* cam = (Camera*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	cam->SetPerspective();
+
+	CGL::PushCommand(new UpdateCameraCommand(cam));
+}
+
+CK_DLL_MFUN(cgl_cam_set_mode_ortho)
+{
+	Camera* cam = (Camera*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	cam->SetOrtho();
+
+	CGL::PushCommand(new UpdateCameraCommand(cam));
+}
+
+CK_DLL_MFUN(cgl_cam_get_mode)
+{
+	Camera* cam = (Camera*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	RETURN->v_int = cam->GetMode();
+}
+
+CK_DLL_MFUN(cgl_cam_set_clip)
+{
+	Camera* cam = (Camera*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKFLOAT n = GET_NEXT_FLOAT(ARGS);
+	t_CKFLOAT f = GET_NEXT_FLOAT(ARGS);
+	cam->SetClipPlanes(n, f);
+
+	CGL::PushCommand(new UpdateCameraCommand(cam));
+}
+
+CK_DLL_MFUN(cgl_cam_get_clip_near)
+{
+	Camera* cam = (Camera*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	RETURN->v_float = cam->GetClipNear();
+}
+
+CK_DLL_MFUN(cgl_cam_get_clip_far)
+{
+	Camera* cam = (Camera*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	RETURN->v_float = cam->GetClipFar();
+}
+
+CK_DLL_MFUN(cgl_cam_set_pers_fov)
+{
+	Camera* cam = (Camera*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKFLOAT f = GET_NEXT_FLOAT(ARGS);
+	cam->SetFOV(f);
+
+	RETURN->v_float = f;
+
+	CGL::PushCommand(new UpdateCameraCommand(cam));
+}
+
+CK_DLL_MFUN(cgl_cam_get_pers_fov)
+{
+	Camera* cam = (Camera*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	RETURN->v_float = cam->GetFOV();
+}
+
+CK_DLL_MFUN(cgl_cam_set_ortho_size)
+{
+	Camera* cam = (Camera*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKFLOAT s = GET_NEXT_FLOAT(ARGS);
+	cam->SetSize(s);
+
+	RETURN->v_float = s;
+
+	CGL::PushCommand(new UpdateCameraCommand(cam));
+}
+
+CK_DLL_MFUN(cgl_cam_get_ortho_size)
+{
+	Camera* cam = (Camera*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	RETURN->v_float = cam->GetSize();
+}
+
 
 //-----------------------------------------------------------------------------
 // init_chugl_mesh()
@@ -2145,7 +2311,10 @@ bool CGL::shouldRender = false;
 std::mutex CGL::GameLoopLock;
 std::condition_variable CGL::renderCondition;
 Scene CGL::mainScene;
-SceneGraphObject CGL::mainCamera;
+
+Camera CGL::mainCamera;
+bool CGL::mainCameraInitialized = false;
+Chuck_DL_Api::Object CGL::DL_mainCamera;
 // Chuck_Event CGL::s_UpdateChuckEvent;
 
 // Initialization for Shred Registration structures
@@ -2290,6 +2459,20 @@ Chuck_DL_Api::Object CGL::GetCachedShredUpdateEvent(Chuck_VM_Shred *shred, CK_DL
 		Chuck_DL_Api::Object obj = API->object->create(API, shred, type);
 		cgl_update_ctor( (Chuck_Object*)obj, NULL, VM, shred, API );
 		m_ShredEventMap[shred] = obj;
+		return obj;
+	}
+}
+Chuck_DL_Api::Object CGL::GetMainCamera(
+	Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM
+) {
+	if (CGL::mainCameraInitialized) {
+		return CGL::DL_mainCamera;
+	} else {
+		Chuck_DL_Api::Type type = API->object->get_type(API, shred, "CglCamera");
+		// note: for creation shred is just passed in for the VM reference
+		Chuck_DL_Api::Object obj = API->object->create(API, shred, type);
+		cgl_cam_ctor( (Chuck_Object*)obj, NULL, VM, shred, API );
+		CGL::DL_mainCamera = obj;
 		return obj;
 	}
 }

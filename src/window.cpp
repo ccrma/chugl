@@ -23,6 +23,14 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+
+/* =============================================================================
+						    * Static init *	
+===============================================================================*/
+Renderer Window::renderer;
+Camera Window::camera;
+Scene Window::scene;
+
 /* =============================================================================
 						    * GLFW callbacks *	
 ===============================================================================*/
@@ -40,6 +48,9 @@ static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     Window* w = Window::GetWindow(window);
     w->SetViewSize(width, height);
     CGL::SetFramebufferSize(width, height);
+
+    // auto-update camera aspect
+    Window::camera.params.aspect = (float)width / (float)height;
 
     CglEvent::Broadcast(CglEventType::CGL_WINDOW_RESIZE);  // doesn't matter if we brodcast this in frambuffer callback or window size callback
 }
@@ -227,13 +238,10 @@ Window::~Window()
 
 void Window::DisplayLoop()
 {
-    Renderer renderer;
-
     // Scene setup ==========================================
-	PerspectiveCamera camera(float(m_ViewWidth) / (float)m_ViewHeight); // the camera copy
+    camera.params.aspect = (float(m_ViewWidth) / (float)m_ViewHeight);
     camera.SetPosition(0.0f, 0.0f, 3.0f);
 
-    Scene scene;
 
     // Copy from CGL scenegraph ====================================    
     scene.SetID(CGL::mainScene.GetID());  // copy scene ID
