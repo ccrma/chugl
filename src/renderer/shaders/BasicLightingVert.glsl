@@ -1,8 +1,15 @@
 #version 330 core
 
-// INCLUDES ////////////////////////////////////////////////////////////////////
-#include include/Globals.glsl
-// END INCLUDES ////////////////////////////////////////////////////////////////
+// MVP
+uniform mat4 u_Model;
+uniform mat4 u_View;
+uniform mat4 u_Projection;
+
+// normals
+uniform mat4 u_Normal;
+
+// camera
+uniform vec3 u_ViewPos;
 // attributes (must match vertex attrib array)
 layout (location = 0) in vec3 a_Pos;
 layout (location = 1) in vec3 a_Normal;

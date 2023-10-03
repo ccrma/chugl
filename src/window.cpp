@@ -307,7 +307,7 @@ void Window::DisplayLoop()
         UpdateState();
 
         // now renderer can work on drawing the copied scenegraph 
-        renderer.Clear();
+        renderer.Clear(scene.GetBackgroundColor());
         renderer.RenderScene(&scene, &camera);
 
         // Handle Events, Draw framebuffer

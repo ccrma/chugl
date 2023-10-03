@@ -139,26 +139,26 @@ RenderMaterial::RenderMaterial(Material *mat, Renderer *renderer) : m_Mat(mat), 
 	switch(mat->GetMaterialType()) {
 		case MaterialType::Normal:
 			// TODO: really should abstract this to a shader resource locator class
-			vert = ShaderCode::GenShaderSource("BASIC_VERT");
-			frag = ShaderCode::GenShaderSource("NORMAL_FRAG");
+			vert = ShaderCode::GenShaderSource("BASIC_VERT", ShaderType::Vertex);
+			frag = ShaderCode::GenShaderSource("NORMAL_FRAG", ShaderType::Fragment);
 			break;
 		case MaterialType::Phong:
-			vert = ShaderCode::GenShaderSource("BASIC_VERT");
-			frag = ShaderCode::GenShaderSource("PHONG_FRAG");
+			vert = ShaderCode::GenShaderSource("BASIC_VERT", ShaderType::Vertex);
+			frag = ShaderCode::GenShaderSource("PHONG_FRAG", ShaderType::Fragment);
 			break;
 		case MaterialType::CustomShader:
 			// until ChucK gets destructors, we default to default shader
 			vertPath = ((ShaderMaterial*)mat)->m_VertShaderPath;
 			fragPath = ((ShaderMaterial*)mat)->m_FragShaderPath;
 			if (vertPath == "") {
-				vert = ShaderCode::GenShaderSource("BASIC_VERT");
+				vert = ShaderCode::GenShaderSource("BASIC_VERT", ShaderType::Vertex);
 				vertIsPath = false;
 			} else {
 				vert = vertPath;
 				vertIsPath = true;
 			}
 			if (fragPath == "") {
-				frag = ShaderCode::GenShaderSource("NORMAL_FRAG");
+				frag = ShaderCode::GenShaderSource("NORMAL_FRAG", ShaderType::Fragment);
 				fragIsPath = false;
 			} else {
 				frag = fragPath;
@@ -166,20 +166,20 @@ RenderMaterial::RenderMaterial(Material *mat, Renderer *renderer) : m_Mat(mat), 
 			}
 			break;
 		case MaterialType::Points:
-			vert = ShaderCode::GenShaderSource("POINTS_VERT");
-			frag = ShaderCode::GenShaderSource("POINTS_FRAG");
+			vert = ShaderCode::GenShaderSource("POINTS_VERT", ShaderType::Vertex);
+			frag = ShaderCode::GenShaderSource("POINTS_FRAG", ShaderType::Fragment);
 			break;
 		case MaterialType::Mango:
-			vert = ShaderCode::GenShaderSource("BASIC_VERT");
-			frag = ShaderCode::GenShaderSource("MANGO_FRAG");
+			vert = ShaderCode::GenShaderSource("BASIC_VERT", ShaderType::Vertex);
+			frag = ShaderCode::GenShaderSource("MANGO_FRAG", ShaderType::Fragment);
 			break;
 		case MaterialType::Line:  // TODO: implement
-			vert = ShaderCode::GenShaderSource("LINES_VERT");
-			frag = ShaderCode::GenShaderSource("LINES_FRAG");
+			vert = ShaderCode::GenShaderSource("LINES_VERT", ShaderType::Vertex);
+			frag = ShaderCode::GenShaderSource("LINES_FRAG", ShaderType::Fragment);
 			break;
 		default:  // default material (normal mat for now)
-			vert = ShaderCode::GenShaderSource("BASIC_VERT");
-			frag = ShaderCode::GenShaderSource("NORMAL_FRAG");
+			vert = ShaderCode::GenShaderSource("BASIC_VERT", ShaderType::Vertex);
+			frag = ShaderCode::GenShaderSource("NORMAL_FRAG", ShaderType::Fragment);
 	}
 
 	m_Shader = renderer->GetOrCreateShader(vert, frag, vertIsPath, fragIsPath);
@@ -302,15 +302,23 @@ void RenderMaterial::SetLightingUniforms(Scene *scene, const std::vector<Light *
     m_Shader->setInt("u_NumDirLights", numDirLights);
 }
 
+// sets fog uniforms, assumes shader already bound
+void RenderMaterial::SetFogUniforms(Scene *scene)
+{
+	// uniform names must match definitions in ShaderCode.cpp
+	m_Shader->setFloat3("u_FogParams.color", scene->m_FogUniforms.color);
+	m_Shader->setFloat("u_FogParams.density", scene->m_FogUniforms.density);
+	m_Shader->setInt("u_FogParams.type", (int)scene->m_FogUniforms.type);
+	m_Shader->setBool("u_FogParams.enabled", scene->m_FogUniforms.enabled);
+}
+
 /* =============================================================================
 								Renderer	
 ===============================================================================*/
 
-void Renderer::Clear(bool color, bool depth)
+void Renderer::Clear(glm::vec3 bgCol, bool color, bool depth)
 {	
-	// glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-	// glClearColor(.9f, 0.9f, 0.9f, 1.0f);
-	glClearColor(.8f, 0.8f, 0.8f, 1.0f);
+	GLCall(glClearColor(bgCol.r, bgCol.g, bgCol.b, 1.0f));
 	unsigned int clearBitfield = 0;
 	if (color)
 		clearBitfield |= GL_COLOR_BUFFER_BIT;

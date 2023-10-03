@@ -1,4 +1,5 @@
 #include "ShaderCode.h"
+#include <iostream>
 
 // #define REGISTER_CODE(var) \
 //     do { \
@@ -13,6 +14,12 @@
 
 ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
     {"SHADER_VERSION", "#version 330 core\n"},
+    {"FRAG_OUT_COLOR_DEF", 
+    R"(
+    out vec4 FragColor;
+    vec4 result = vec4(0.0);
+    )"},
+    {"FRAG_OUTPUT", "FragColor = result;\n"},
     {"DEFAULT_ATTRIBUTES",
     R"(
         // attributes (must match vertex attrib array)
@@ -70,6 +77,58 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
         uniform PointLight u_PointLights[MAX_LIGHTS];
         uniform DirLight u_DirLights[MAX_LIGHTS];
     )"},
+    {
+    "FOG_UNIFORMS",
+    R"(
+        struct FogParameters
+        {
+            vec3 color;
+            float density;
+            
+            int type;  // exp fog or exp^2
+            bool enabled;
+        };
+
+        float getFogFactor(FogParameters params, float fogCoordinate)
+        {
+            float fogFactor = 0.0;
+
+            if(params.type == 0) {
+                fogFactor = exp(-params.density * fogCoordinate);
+            }
+            else if(params.type == 1) {
+                fogFactor = exp(-pow(params.density * fogCoordinate, 2.0));
+            }
+            
+            return 1.0 - clamp(fogFactor, 0.0, 1.0);
+        }
+
+        uniform FogParameters u_FogParams;
+    )"},
+    {
+    "FOG_BODY",
+    R"(
+        if (u_FogParams.enabled) {
+            float fogCoordinate = abs(v_EyePos.z / v_EyePos.w);  // distance in eyespace
+            // float fogCoordinate = length(v_Pos - u_ViewPos);  // TODO: this is wrong (should be in eye space
+            result = mix(result, vec4(u_FogParams.color, 1.0), getFogFactor(u_FogParams, fogCoordinate));
+        }
+    )"},
+    {
+    "EYE_POS_BODY",
+    R"(
+            v_EyePos = u_View * u_Model * vec4(a_Pos, 1.0);  // eye space position
+    )"},
+    {"BASIC_FRAG_VARYINGS",
+     R"(
+        // varyings (interpolated and passed to frag shader)
+        in vec3 v_Pos;
+        in vec4 v_EyePos;
+        in vec3 v_Normal;		 // world space normal
+        in vec3 v_LocalNormal;  // local space normal
+        in vec3 v_Color;
+        in vec2 v_TexCoord;
+    )"},
     {"BASIC_VERT",
      R"(
         #include TRANSFORM_UNIFORMS
@@ -77,6 +136,7 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
 
         // varyings (interpolated and passed to frag shader)
         out vec3 v_Pos;
+        out vec4 v_EyePos;
         out vec3 v_Normal;		 // world space normal
         out vec3 v_LocalNormal;  // local space normal
         out vec3 v_Color;
@@ -85,37 +145,35 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
         void main()
         {
             v_Pos = vec3(u_Model * vec4(a_Pos, 1.0));  // world space position
+            #include EYE_POS_BODY
+            gl_Position = u_Projection * v_EyePos;  // clip space position
+
             v_TexCoord = a_TexCoord;
 
             v_LocalNormal = a_Normal;  
             v_Normal = vec3(u_Normal * vec4(a_Normal, 0.0));
 
             v_Color = a_Color;
-
-            gl_Position = u_Projection * u_View * vec4(v_Pos, 1.0);
         }
+
     )"},
     {"NORMAL_FRAG",
      R"(
+        #include BASIC_FRAG_VARYINGS
+
         uniform int u_UseLocalNormal = 0;
-
-        in vec3 v_Normal;       // world space normal
-        in vec3 v_LocalNormal;  // local space normal
-
-        // output
-        out vec4 FragColor;
 
         // fragment shader for light sources to always be white
         void main()
         {
-            FragColor = (1 - u_UseLocalNormal) * vec4(normalize(v_Normal), 1.0) + 
+            result = (1 - u_UseLocalNormal) * vec4(normalize(v_Normal), 1.0) + 
                         (u_UseLocalNormal) * vec4(normalize(v_LocalNormal), 1.0);
-        }
     )"},
     {"PHONG_FRAG",
      R"(
         #include TRANSFORM_UNIFORMS
         #include LIGHTING_UNIFORMS
+        #include BASIC_FRAG_VARYINGS
 
         struct Material {
             // textures
@@ -131,12 +189,7 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
         };
         uniform Material u_Material;
 
-        in vec3 v_Pos;  // world space frag position
-        in vec3 v_Normal;
-        in vec2 v_TexCoord;
-
         // output ==========================================================================
-        out vec4 FragColor;
 
         // functions to calculate light contribution ======================================
         vec3 CalcDirLight(  // contribution of directional light
@@ -195,12 +248,12 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
             vec3 diffuse = diffuseTex.xyz * u_Material.diffuseColor;
             vec3 specular = specularTex.xyz * u_Material.specularColor;
 
-            vec3 result = vec3(0.0);
+            vec3 lighting = vec3(0.0);
 
             // loop through point lights
             for (int i = 0; i < u_NumPointLights; i++) {
                 PointLight light = u_PointLights[i];
-                result += CalcPointLight(
+                lighting += CalcPointLight(
                     light, norm, v_Pos, viewDir, u_Material.shininess, diffuse, specular
                 );
             }
@@ -208,16 +261,15 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
             // loop through directional lights
             for (int i = 0; i < u_NumDirLights; i++) {
                 DirLight light = u_DirLights[i];
-                result += CalcDirLight(
+                lighting += CalcDirLight(
                     light, norm, viewDir, u_Material.shininess, diffuse, specular
                 );
             }
 
-            FragColor = vec4(
-                result, 
+            result = vec4(
+                lighting, 
                 max(diffuseTex.a, specularTex.a)         // TODO jank alpha blending for now
             );
-        }
     )"},
     {"POINTS_VERT",
      R"(
@@ -232,6 +284,7 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
 
         // varyings (interpolated and passed to frag shader)
         out vec3 v_Pos;
+        out vec4 v_EyePos;
         out vec3 v_Color;
         // out vec3 v_Normal;		 // world space normal
         // out vec3 v_LocalNormal;  // local space normal
@@ -240,6 +293,7 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
         void main()
         {
             v_Pos = vec3(u_Model * vec4(a_Pos, 1.0));  // world space position
+            #include EYE_POS_BODY
             v_Color = a_Color;
             v_TexCoord = a_TexCoord;
 
@@ -250,11 +304,11 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
     {"POINTS_FRAG",
      R"(
         in vec3 v_Pos;
+        in vec4 v_EyePos;
         in vec3 v_Color;
         in vec2 v_TexCoord;
 
         // output
-        out vec4 FragColor;
 
         // uniforms
         uniform float u_PointSize;
@@ -264,14 +318,7 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
         void main()
         {
             vec4 texColor = texture(u_PointTexture, gl_PointCoord);
-            // FragColor = vec4(vec3(texColor.a), 1.0);
-
-            FragColor = vec4( u_PointColor * v_Color * texColor.rgb, texColor.a );
-            // FragColor = vec4( u_Point * v_Color * texColor.rgb, 1.0 )
-            // FragColor = vec4(u_PointSize, 0.0, 0.0, 1.0);
-            // FragColor = vec4(v_Color, 1.0);
-            // FragColor = vec4(v_TexCoord, 0.0, 1.0);
-        }
+            result = vec4( u_PointColor * v_Color * texColor.rgb, texColor.a );
     )"},
     {"LINES_VERT",
      R"(
@@ -282,11 +329,13 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
 
         // varyings (interpolated and passed to frag shader)
         out vec3 v_Pos;
+        out vec4 v_EyePos;
         out vec3 v_Color;
 
         void main()
         {
             v_Pos = vec3(u_Model * vec4(a_Pos, 1.0));  // world space position
+            #include EYE_POS_BODY
             v_Color = a_Color;
 
             gl_Position = u_Projection * u_View * vec4(v_Pos, 1.0);
@@ -295,10 +344,10 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
     {"LINES_FRAG",
      R"(
         in vec3 v_Pos;
+        in vec4 v_EyePos;
         in vec3 v_Color;
 
         // output
-        out vec4 FragColor;
 
         // uniforms
         uniform float u_LineWidth;
@@ -306,27 +355,23 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
 
         void main()
         {
-            FragColor = vec4( u_LineColor * v_Color, 1.0 );
-        }
+            result = vec4( u_LineColor * v_Color, 1.0 );
     )"},
     {
     "MANGO_FRAG",
     R"(
-        in vec3 v_Pos;
-        in vec2 v_TexCoord;
+        #include BASIC_FRAG_VARYINGS
 
         // output
-        out vec4 FragColor;
 
         // uniforms
         uniform float u_Time;
 
         void main()
         {
-            FragColor = vec4(
+            result = vec4(
                 v_TexCoord, .5 * sin(u_Time) + .5, 1.0
             );
-        }
     )"}
 };
 
@@ -340,7 +385,11 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
 //     REGISTER_CODE(SHADER_VERSION);
 // }
 
-std::string ShaderCode::GenShaderSource(const std::string& name) {
+std::string ShaderCode::GenShaderSource(
+    const std::string& name,
+    ShaderType type,
+    bool fog
+) {
     std::string source = s_CodeMap[name];
     size_t pos = source.find("#include");
     while (pos != std::string::npos) {
@@ -351,5 +400,20 @@ std::string ShaderCode::GenShaderSource(const std::string& name) {
         source.replace(pos, end - pos + 1, includeSource);
         pos = source.find("#include");
     }
-    return s_CodeMap["SHADER_VERSION"] + source;
+
+    if (type == ShaderType::Vertex) {
+        return s_CodeMap["SHADER_VERSION"] + source;
+    } else if (type == ShaderType::Fragment) {
+        return (
+            s_CodeMap["SHADER_VERSION"] + 
+            s_CodeMap["FRAG_OUT_COLOR_DEF"] + 
+            (fog ? s_CodeMap["FOG_UNIFORMS"] : "") +
+            source +
+            (fog ? s_CodeMap["FOG_BODY"] : "") +
+            s_CodeMap["FRAG_OUTPUT"] +
+            "\n}"
+        );
+    } else {
+        throw std::runtime_error("ShaderCode::GenShaderSource: invalid shader type");
+    }
 }
