@@ -576,3 +576,29 @@ private:
     CameraParams params;
 };
 
+// TODO refactor scene to have uniform cache map like base Material class
+class UpdateSceneFogCommand : public SceneGraphCommand
+{
+public:
+    UpdateSceneFogCommand(Scene* scene) : fog(scene->m_FogUniforms)
+    {};
+
+    virtual void execute(Scene* scene) override {
+        scene->m_FogUniforms = fog;
+    }
+private:
+    FogUniforms fog;
+};
+
+class UpdateSceneBackgroundColorCommand : public SceneGraphCommand
+{
+public:
+    UpdateSceneBackgroundColorCommand(Scene* scene) : color(scene->GetBackgroundColor())
+    {};
+
+    virtual void execute(Scene* scene) override {
+        scene->SetBackgroundColor(color.x, color.y, color.z);
+    }
+private:
+    glm::vec3 color;
+};

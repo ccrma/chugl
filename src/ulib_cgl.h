@@ -67,6 +67,9 @@ public:
 	static std::condition_variable renderCondition;
 
 	static Scene mainScene;
+	static bool mainSceneInitialized;
+	static Chuck_DL_Api::Object DL_mainScene;
+
 	static Camera mainCamera;
 	static bool mainCameraInitialized;
 	static Chuck_DL_Api::Object DL_mainCamera;
@@ -100,6 +103,9 @@ public:
 
 public:  // default GGens
 	static Chuck_DL_Api::Object GetMainCamera(
+		Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM
+	);
+	static Chuck_DL_Api::Object GetMainScene(
 		Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM
 	);
 

@@ -106,6 +106,7 @@ public:
 	}
 
 	void SetLightingUniforms(Scene* scene, const std::vector<Light*>& lights); 
+	void SetFogUniforms(Scene* scene);
 
 
 public:  // statics
@@ -125,7 +126,7 @@ private:
 class Renderer
 {
 public:
-	void Clear(bool color = true, bool depth = true);
+	void Clear(glm::vec3 bgCol, bool color = true, bool depth = true);
 	void Draw(RenderGeometry* renderGeo, RenderMaterial* renderMat);
 
 
@@ -212,6 +213,7 @@ public:
 			glm::transpose(glm::inverse(worldTransform)),  // TODO cache this normal matrix or move to math util library
 			m_RenderState.GetViewPos()
 		});
+		renderMat->SetFogUniforms(m_RenderState.GetScene());
 		renderMat->SetLightingUniforms(m_RenderState.GetScene(), m_RenderState.GetScene()->m_Lights);
 
 		// draw

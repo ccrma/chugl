@@ -58,6 +58,8 @@ CK_DLL_SFUN(cgl_window_set_size);
 
 // accessing shared default GGens
 CK_DLL_SFUN(cgl_get_main_camera);
+CK_DLL_SFUN(cgl_get_main_scene);
+
 
 
 
@@ -131,6 +133,23 @@ CK_DLL_MFUN(cgl_cam_get_ortho_size);     //
 //-----------------------------------------------------------------------------
 CK_DLL_CTOR(cgl_scene_ctor);
 CK_DLL_DTOR(cgl_scene_dtor);
+
+CK_DLL_MFUN(cgl_scene_set_background_color);
+CK_DLL_MFUN(cgl_scene_get_background_color);
+
+// fog fns
+CK_DLL_MFUN(cgl_scene_set_fog_color);
+CK_DLL_MFUN(cgl_scene_set_fog_density);
+CK_DLL_MFUN(cgl_scene_set_fog_type);
+
+CK_DLL_MFUN(cgl_scene_set_fog_enabled);
+CK_DLL_MFUN(cgl_scene_set_fog_disabled);
+
+CK_DLL_MFUN(cgl_scene_get_fog_color);
+CK_DLL_MFUN(cgl_scene_get_fog_density);
+CK_DLL_MFUN(cgl_scene_get_fog_type);
+
+
 
 //-----------------------------------------------------------------------------
 // Object -> Light
@@ -520,6 +539,8 @@ t_CKBOOL init_chugl_static_fns(Chuck_DL_Query* QUERY)
 	// TODO: is it possible to add an svar of type CglCamera?
 	QUERY->add_sfun(QUERY, cgl_get_main_camera, "CglCamera", "mainCam");
 
+	// Main scene
+	QUERY->add_sfun(QUERY, cgl_get_main_scene, "CglScene", "scene");
 
 	QUERY->end_class(QUERY);
 
@@ -594,6 +615,13 @@ CK_DLL_SFUN(cgl_window_set_size) {
 CK_DLL_SFUN(cgl_get_main_camera)
 {
 	RETURN->v_object = (Chuck_Object *)CGL::GetMainCamera(
+		SHRED, API, VM
+	);
+}
+
+CK_DLL_SFUN(cgl_get_main_scene)
+{
+	RETURN->v_object = (Chuck_Object *)CGL::GetMainScene(
 		SHRED, API, VM
 	);
 }
@@ -1931,6 +1959,34 @@ t_CKBOOL init_chugl_scene(Chuck_DL_Query* QUERY)
 	QUERY->begin_class(QUERY, "CglScene", "GGen");
 	QUERY->add_ctor(QUERY, cgl_scene_ctor);
 	QUERY->add_dtor(QUERY, cgl_scene_dtor);
+
+	// static constants
+	// TODO: add linear fog? but doesn't even look as good
+	QUERY->add_svar(QUERY, "int", "FOG_EXP", true, (void*)&Scene::FOG_EXP);
+	QUERY->add_svar(QUERY, "int", "FOG_EXP2", true, (void*)&Scene::FOG_EXP2);
+
+
+	// background color
+	QUERY->add_mfun(QUERY, cgl_scene_set_background_color, "vec3", "backgroundColor");
+	QUERY->add_arg(QUERY, "vec3", "color");
+	QUERY->add_mfun(QUERY, cgl_scene_get_background_color, "vec3", "backgroundColor");
+
+	// fog member vars
+	QUERY->add_mfun(QUERY, cgl_scene_set_fog_color, "vec3", "fogColor");
+	QUERY->add_arg(QUERY, "vec3", "color");
+	QUERY->add_mfun(QUERY, cgl_scene_get_fog_color, "vec3", "fogColor");
+
+	QUERY->add_mfun(QUERY, cgl_scene_set_fog_density, "float", "fogDensity");
+	QUERY->add_arg(QUERY, "float", "density");
+	QUERY->add_mfun(QUERY, cgl_scene_get_fog_density, "float", "fogDensity");
+
+	QUERY->add_mfun(QUERY, cgl_scene_set_fog_type, "int", "fogType");
+	QUERY->add_arg(QUERY, "int", "type");
+	QUERY->add_mfun(QUERY, cgl_scene_get_fog_type, "int", "fogType");
+
+	QUERY->add_mfun(QUERY, cgl_scene_set_fog_enabled, "void", "enableFog");
+	QUERY->add_mfun(QUERY, cgl_scene_set_fog_disabled, "void", "disableFog");
+
 	QUERY->end_class(QUERY);
 
 	return true;
@@ -1942,10 +1998,78 @@ CK_DLL_CTOR(cgl_scene_ctor)
 }
 CK_DLL_DTOR(cgl_scene_dtor)
 {
-	Scene* mainScene = (Scene*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	// Scene* mainScene = (Scene*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	// don't call delete! because this is a static var
 	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;  // zero out the memory
 }
+
+CK_DLL_MFUN(cgl_scene_set_background_color) {
+	Scene* scene = (Scene*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
+	scene->SetBackgroundColor(color.x, color.y, color.z);
+	RETURN->v_vec3 = color;
+	CGL::PushCommand(new UpdateSceneBackgroundColorCommand(scene));
+}
+
+CK_DLL_MFUN(cgl_scene_get_background_color) {
+	Scene* scene = (Scene*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	const auto& color = scene->GetBackgroundColor();
+	RETURN->v_vec3 = { color.x, color.y, color.z };
+}
+
+CK_DLL_MFUN(cgl_scene_set_fog_color) {
+	Scene* scene = (Scene*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
+	scene->SetFogColor(color.x, color.y, color.z);
+	RETURN->v_vec3 = color;
+	CGL::PushCommand(new UpdateSceneFogCommand(scene));
+}
+
+CK_DLL_MFUN(cgl_scene_get_fog_color) {
+	Scene* scene = (Scene*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	const auto& color = scene->GetFogColor();
+	RETURN->v_vec3 = { color.x, color.y, color.z };
+}
+
+CK_DLL_MFUN(cgl_scene_set_fog_density) {
+	Scene* scene = (Scene*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKFLOAT density = GET_NEXT_FLOAT(ARGS);
+	scene->SetFogDensity(density);
+	RETURN->v_float = density;
+	CGL::PushCommand(new UpdateSceneFogCommand(scene));
+}
+
+CK_DLL_MFUN(cgl_scene_get_fog_density) {
+	Scene* scene = (Scene*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	RETURN->v_float = scene->GetFogDensity();
+}
+
+CK_DLL_MFUN(cgl_scene_set_fog_type) {
+	Scene* scene = (Scene*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKINT type = GET_NEXT_INT(ARGS);
+	scene->SetFogType((FogType)type);
+	RETURN->v_int = type;
+	CGL::PushCommand(new UpdateSceneFogCommand(scene));
+}
+
+CK_DLL_MFUN(cgl_scene_get_fog_type) {
+	Scene* scene = (Scene*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	RETURN->v_int = scene->GetFogType();
+}
+
+CK_DLL_MFUN(cgl_scene_set_fog_enabled) {
+	Scene* scene = (Scene*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	scene->SetFogEnabled(true);
+	CGL::PushCommand(new UpdateSceneFogCommand(scene));
+}
+
+CK_DLL_MFUN(cgl_scene_set_fog_disabled) {
+	Scene* scene = (Scene*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	scene->SetFogEnabled(false);
+	CGL::PushCommand(new UpdateSceneFogCommand(scene));
+}
+
+
 
 //-----------------------------------------------------------------------------
 // init_chugl_cam()
@@ -2007,7 +2131,7 @@ CK_DLL_DTOR(cgl_cam_dtor)
 
 	// Camera* mainCam = (Camera*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	// don't call delete! because this is a static var
-	// OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;  // zero out the memory
+	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;  // zero out the memory
 }
 
 CK_DLL_MFUN(cgl_cam_set_mode_persp)
@@ -2313,11 +2437,14 @@ void CglEvent::Broadcast(CglEventType event_type)
 bool CGL::shouldRender = false;
 std::mutex CGL::GameLoopLock;
 std::condition_variable CGL::renderCondition;
-Scene CGL::mainScene;
 
 Camera CGL::mainCamera;
 bool CGL::mainCameraInitialized = false;
 Chuck_DL_Api::Object CGL::DL_mainCamera;
+
+Scene CGL::mainScene;
+bool CGL::mainSceneInitialized = false;
+Chuck_DL_Api::Object CGL::DL_mainScene;
 // Chuck_Event CGL::s_UpdateChuckEvent;
 
 // Initialization for Shred Registration structures
@@ -2481,6 +2608,7 @@ Chuck_DL_Api::Object CGL::GetCachedShredUpdateEvent(Chuck_VM_Shred *shred, CK_DL
 		return obj;
 	}
 }
+
 Chuck_DL_Api::Object CGL::GetMainCamera(
 	Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM
 ) {
@@ -2492,6 +2620,20 @@ Chuck_DL_Api::Object CGL::GetMainCamera(
 		Chuck_DL_Api::Object obj = API->object->create(API, shred, type);
 		cgl_cam_ctor( (Chuck_Object*)obj, NULL, VM, shred, API );
 		CGL::DL_mainCamera = obj;
+		return obj;
+	}
+}
+
+Chuck_DL_Api::Object CGL::GetMainScene(Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM)
+{
+	if (CGL::mainSceneInitialized) {
+		return CGL::DL_mainScene;
+	} else {
+		Chuck_DL_Api::Type type = API->object->get_type(API, shred, "CglScene");
+		// note: for creation shred is just passed in for the VM reference
+		Chuck_DL_Api::Object obj = API->object->create(API, shred, type);
+		cgl_scene_ctor( (Chuck_Object*)obj, NULL, VM, shred, API );
+		CGL::DL_mainScene = obj;
 		return obj;
 	}
 }

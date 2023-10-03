@@ -5,10 +5,25 @@
 class Light;
 
 
+enum FogType : unsigned int {
+	Exponential = 0,
+	ExponentialSquared
+};
+
+struct FogUniforms {
+	glm::vec3 color;
+	float density;
+	FogType type;
+	bool enabled;
+
+	FogUniforms() 
+	: color(glm::vec3(0.0f)), density(0.0f), type(FogType::Exponential), enabled(true) {}
+};
+
 class Scene : public SceneGraphObject
 {
 public:
-	Scene() {
+	Scene() : m_BackgroundColor(glm::vec3(0.0f)) {
 		// fprintf(stderr, "Scene constructor (%zu)\n", m_ID);
 	}
 	virtual bool IsScene() override { return true; }
@@ -61,6 +76,27 @@ private:  // attributes
 	// to support multiple scenes in the future, can make this map static
 	std::unordered_map<size_t, SceneGraphNode*> m_SceneGraphMap;  // map of all scene graph objects
 
+public: // fog
+	FogUniforms m_FogUniforms;
+	static const unsigned int FOG_EXP;
+	static const unsigned int FOG_EXP2;
+	void SetFogColor(float r, float g, float b) {
+		m_FogUniforms.color = glm::vec3(r, g, b);
+	}
+	glm::vec3 GetFogColor() { return m_FogUniforms.color; }
+	void SetFogDensity(float d) { m_FogUniforms.density = d; }
+	float GetFogDensity() { return m_FogUniforms.density; }
+	void SetFogType(FogType type) { m_FogUniforms.type = type; }
+	FogType GetFogType() { return m_FogUniforms.type; }
+	void SetFogEnabled(bool enabled) { m_FogUniforms.enabled = enabled; }
+	bool GetFogEnabled() { return m_FogUniforms.enabled; }
+
+public: // background color ie clear color
+	glm::vec3 m_BackgroundColor;
+	void SetBackgroundColor(float r, float g, float b) {
+		m_BackgroundColor = glm::vec3(r, g, b);
+	}
+	glm::vec3 GetBackgroundColor() { return m_BackgroundColor; }
 
 public: // major hack, for now because there's only 1 scene, storing render state options here
 	// THESE ARE NOT THREADSAFE, ONLY WRITE/READ FROM RENDER THREAD

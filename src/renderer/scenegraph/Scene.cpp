@@ -10,3 +10,7 @@ unsigned int Scene::windowMode = 0;  // which mode, fullscreen or windowed
 bool Scene::updateWindowMode = false;  // whether to update window mode
 int Scene::windowedWidth = 0;
 int Scene::windowedHeight = 0;  // last user-set window size
+
+// fog modes
+const unsigned int Scene::FOG_EXP = FogType::Exponential;
+const unsigned int Scene::FOG_EXP2 = FogType::ExponentialSquared;

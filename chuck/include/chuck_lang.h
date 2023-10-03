@@ -168,6 +168,10 @@ CK_DLL_MFUN( shred_sourcePath ); // added 1.3.0.0
 CK_DLL_MFUN( shred_sourceDir ); // added 1.3.0.0
 CK_DLL_MFUN( shred_sourceDir2 ); // added 1.3.2.0
 CK_DLL_SFUN( shred_fromId ); // added 1.3.2.0
+CK_DLL_MFUN( shred_ctrl_hintChildMemSize ); // added 1.5.1.4
+CK_DLL_MFUN( shred_cget_hintChildMemSize ); // added 1.5.1.4
+CK_DLL_MFUN( shred_ctrl_hintChildRegSize ); // added 1.5.1.4
+CK_DLL_MFUN( shred_cget_hintChildRegSize ); // added 1.5.1.4
 
 
 //-----------------------------------------------------------------------------
@@ -207,6 +211,7 @@ CK_DLL_MFUN( event_signal );
 CK_DLL_MFUN( event_broadcast );
 CK_DLL_MFUN( event_wait );
 CK_DLL_MFUN( event_can_wait );
+CK_DLL_MFUN( event_waiting_on );
 
 
 //-----------------------------------------------------------------------------
@@ -230,6 +235,7 @@ CK_DLL_MFUN( string_substringN);
 CK_DLL_MFUN( string_insert);
 CK_DLL_MFUN( string_replace);
 CK_DLL_MFUN( string_replaceN);
+CK_DLL_MFUN( string_replace_str);
 CK_DLL_MFUN( string_find);
 CK_DLL_MFUN( string_findStart);
 CK_DLL_MFUN( string_findStr);

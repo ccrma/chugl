@@ -239,6 +239,7 @@ public:  // static consts
 	// uniform names
 	static const std::string POINT_SIZE_UNAME;
 	static const std::string LINE_WIDTH_UNAME;
+	// static const std::string AFFECTED_BY_FOG_UNAME;  // TODO
 
 };
 
