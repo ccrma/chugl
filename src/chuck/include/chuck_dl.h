@@ -49,7 +49,7 @@
 // major version must be the same between chuck:chugin
 #define CK_DLL_VERSION_MAJOR (0x0008)
 // minor version of chugin must be less than or equal to chuck's
-#define CK_DLL_VERSION_MINOR (0x0001)
+#define CK_DLL_VERSION_MINOR (0x0002)
 #define CK_DLL_VERSION_MAKE(maj,min) ((t_CKUINT)(((maj) << 16) | (min)))
 #define CK_DLL_VERSION_GETMAJOR(v) (((v) >> 16) & 0xFFFF)
 #define CK_DLL_VERSION_GETMINOR(v) ((v) & 0xFFFF)
@@ -171,6 +171,67 @@ struct Chuck_UAnaBlobProxy;
 #endif
 
 typedef const Chuck_DL_Api::Api *CK_DL_API;
+
+
+
+
+//------------------------------------------------------------------------------
+// name: union Chuck_DL_Return
+// desc: dynamic link return function return struct
+//------------------------------------------------------------------------------
+union Chuck_DL_Return
+{
+    t_CKINT v_int;
+    t_CKUINT v_uint;
+    t_CKFLOAT v_float;
+    t_CKDUR v_dur;
+    t_CKTIME v_time;
+    t_CKCOMPLEX v_complex;
+    t_CKPOLAR v_polar;
+    t_CKVEC3 v_vec3; // ge: added 1.3.5.3
+    t_CKVEC4 v_vec4; // ge: added 1.3.5.3
+    Chuck_Object * v_object;
+    Chuck_String * v_string;
+
+    Chuck_DL_Return() { v_vec4.x = v_vec4.y = v_vec4.z = v_vec4.w = 0; }
+};
+
+
+
+
+//------------------------------------------------------------------------------
+// name: struct Chuck_DL_Arg
+// desc: import / dynamic link function argument | 1.5.1.4
+//------------------------------------------------------------------------------
+struct Chuck_DL_Arg
+{
+    // which kind of data (e.g., int and object * are both kinds of ints)
+    te_KindOf kind;
+    // the data in a union; re-using DL_Return for this
+    Chuck_DL_Return value;
+
+    // constructor
+    Chuck_DL_Arg() { kind = kindof_VOID; }
+    // size in bytes
+    t_CKUINT sizeInBytes()
+    {
+        // check data kind
+        switch( kind )
+        {
+            case kindof_INT: return sz_INT;
+            case kindof_FLOAT: return sz_FLOAT;
+            case kindof_COMPLEX: return sz_COMPLEX;
+            case kindof_VEC3: return sz_COMPLEX;
+            case kindof_VEC4: return sz_VEC4;
+            case kindof_VOID: return sz_VOID;
+        }
+        // unhandled
+        return 0;
+    }
+};
+
+
+
 
 // macro for defining ChucK DLL export functions
 // example: CK_DLL_EXPORT(int) foo() { return 1; }
@@ -332,8 +393,10 @@ typedef t_CKBOOL (CK_DLL_CALL * f_end_class)( Chuck_DL_Query * query );
 typedef Chuck_DL_MainThreadHook * (CK_DLL_CALL * f_create_main_thread_hook)( Chuck_DL_Query * query, f_mainthreadhook hook, f_mainthreadquit quit, void * bindle );
 // register a callback function to receive notification from the VM about shreds (add, remove, etc.)
 typedef void (CK_DLL_CALL * f_register_shreds_watcher)( Chuck_DL_Query * query, f_shreds_watcher cb, t_CKUINT options, void * bindle );
-// unegister a shreds notification callback
+// unregister a shreds notification callback
 typedef void (CK_DLL_CALL * f_unregister_shreds_watcher)( Chuck_DL_Query * query, f_shreds_watcher cb );
+// call a Chuck_Object member function (defined in chuck or in c++) in IMMEDIATE MODE
+typedef Chuck_DL_Return (CK_DLL_CALL * f_invoke_mfun)( Chuck_Object * obj, t_CKUINT func_vt_offset, Chuck_VM * vm, Chuck_VM_Shred * shred, Chuck_DL_Arg * ARGS, t_CKUINT numArgs );
 
 // documentation
 // set current class documentation
@@ -647,63 +710,6 @@ Chuck_DL_Value * make_new_svar( const char * t, const char * n, t_CKBOOL c, void
 
 
 
-//------------------------------------------------------------------------------
-// name: union Chuck_DL_Return
-// desc: dynamic link return function return struct
-//------------------------------------------------------------------------------
-union Chuck_DL_Return
-{
-    t_CKINT v_int;
-    t_CKUINT v_uint;
-    t_CKFLOAT v_float;
-    t_CKDUR v_dur;
-    t_CKTIME v_time;
-    t_CKCOMPLEX v_complex;
-    t_CKPOLAR v_polar;
-    t_CKVEC3 v_vec3; // ge: added 1.3.5.3
-    t_CKVEC4 v_vec4; // ge: added 1.3.5.3
-    Chuck_Object * v_object;
-    Chuck_String * v_string;
-
-    Chuck_DL_Return() { v_vec4.x = v_vec4.y = v_vec4.z = v_vec4.w = 0; }
-};
-
-
-
-
-//------------------------------------------------------------------------------
-// name: struct Chuck_DL_Arg
-// desc: import / dynamic link function argument | 1.5.1.4
-//------------------------------------------------------------------------------
-struct Chuck_DL_Arg
-{
-    // which kind of data (e.g., int and object * are both kinds of ints)
-    te_KindOf kind;
-    // the data in a union; re-using DL_Return for this
-    Chuck_DL_Return value;
-
-    // constructor
-    Chuck_DL_Arg() { kind = kindof_VOID; }
-    // size in bytes
-    t_CKUINT sizeInBytes()
-    {
-        // check data kind
-        switch( kind )
-        {
-            case kindof_INT: return sz_INT;
-            case kindof_FLOAT: return sz_FLOAT;
-            case kindof_COMPLEX: return sz_COMPLEX;
-            case kindof_VEC3: return sz_COMPLEX;
-            case kindof_VEC4: return sz_VEC4;
-            case kindof_VOID: return sz_VOID;
-        }
-        // unhandled
-        return 0;
-    }
-};
-
-
-
 
 //-----------------------------------------------------------------------------
 // name: struct Chuck_DLL
@@ -794,9 +800,12 @@ public:
 //-----------------------------------------------------------------------------
 // directly invoke a chuck member function's native implementation from c++
 // using object + vtable offset | 1.5.1.4 (ge & andrew)
-Chuck_DL_Return ck_invoke_mfun( Chuck_Object * obj, t_CKUINT func_vt_offset,
-                                Chuck_VM * vm, Chuck_VM_Shred * shred,
-                                Chuck_DL_Arg * ARGS, t_CKUINT numArgs );
+// NOTE this will call the member function in IMMEDIATE MODE,
+// marking it as a time-critical function when called in this manner;
+// any time/event operations therein will throw an exception
+Chuck_DL_Return ck_invoke_mfun_immediate_mode( Chuck_Object * obj, t_CKUINT func_vt_offset,
+                                               Chuck_VM * vm, Chuck_VM_Shred * shred,
+                                               Chuck_DL_Arg * ARGS, t_CKUINT numArgs );
 
 
 
@@ -809,7 +818,7 @@ namespace Chuck_DL_Api
 typedef void * Object;
 typedef void * Type;
 typedef void * String;
-typedef void * Array4; // 1.5.0.1 (ge) added
+typedef void * ArrayInt; // 1.5.0.1 (ge) added
 
 struct Api
 {
@@ -820,14 +829,19 @@ public:
     struct VMApi
     {
         VMApi();
-        // get sample rate (legacy as of 1.5.1.4)
-        t_CKUINT (* const get_srate)( CK_DL_API, Chuck_VM_Shred * );
         // get sample rate | 1.5.1.4
         t_CKUINT (* const srate)( Chuck_VM * vm );
         // create a new lock-free one-producer, one-consumer buffer | 1.5.1.4
         CBufferSimple * (* const create_event_buffer)( Chuck_VM * vm );
         // queue an event; num_msg must be 1; buffer should be created using create_event_buffer() above | 1.5.1.4
         t_CKBOOL (* const queue_event)( Chuck_VM * vm, Chuck_Event * event, t_CKINT num_msg, CBufferSimple * buffer );
+        // invoke Chuck_Object member function (defined either in chuck or c++) | 1.5.1.4 (ge & andrew)
+        // NOTE this will call the member function in IMMEDIATE MODE,
+        // marking it as a time-critical function when called in this manner;
+        // any time/event operations therein will throw an exception
+        // Chuck_DL_Return (CK_DLL_CALL * invoke_mfun_immediate_mode)
+        // ( Chuck_Object * obj, t_CKUINT func_vt_offset, Chuck_VM * vm, Chuck_VM_Shred * shred, Chuck_DL_Arg * ARGS, t_CKUINT numArgs );
+        f_invoke_mfun invoke_mfun_immediate_mode;
     } * const vm;
 
     struct ObjectApi
@@ -839,11 +853,15 @@ public:
     // intent: this allows for chugins to access member variables and create chuck strings
     public:
         // function pointer get_type()
-        Type (* const get_type)( CK_DL_API, Chuck_VM_Shred *, const char * name );
-        // function pointer create()
-        Object (* const create)( CK_DL_API, Chuck_VM_Shred *, Type type );
+        Type (* const get_type)( CK_DL_API, Chuck_VM *, const char * name );
+        // function pointer for get_vtable_offset(); returns < 0 if not found
+        t_CKINT (* const get_vtable_offset)( CK_DL_API, Chuck_VM *, const char * typee, const char * value );
+        // function pointer create_with_shred()
+        Object (* const create_with_shred)( CK_DL_API, Chuck_VM_Shred *, Type type );
+        // function pointer create_no_shred()
+        Object (* const create_no_shred)( CK_DL_API, Chuck_VM *, Type type );
         // function pointer create_string()
-        String (* const create_string)( CK_DL_API, Chuck_VM_Shred *, const char * value );
+        String (* const create_string)( CK_DL_API, Chuck_VM *, const char * value );
         // function pointers for get_mvar_*()
         t_CKBOOL (* const get_mvar_int)( CK_DL_API, Object object, const char * name, t_CKINT & value );
         t_CKBOOL (* const get_mvar_float)( CK_DL_API, Object object, const char * name, t_CKFLOAT & value );
@@ -853,11 +871,11 @@ public:
         t_CKBOOL (* const get_mvar_object)( CK_DL_API, Object object, const char * name, Object & value );
         // function pointer for set_string()
         t_CKBOOL (* const set_string)( CK_DL_API, String string, const char * value );
-        // array4 operations
-        t_CKBOOL (* const array4_size)( CK_DL_API, Array4 array, t_CKINT & value );
-        t_CKBOOL (* const array4_push_back)( CK_DL_API, Array4 array, t_CKUINT value );
-        t_CKBOOL (* const array4_get_idx)( CK_DL_API, Array4 array, t_CKINT idx, t_CKUINT & value );
-        t_CKBOOL (* const array4_get_key)( CK_DL_API, Array4 array, const std::string & key, t_CKUINT & value );
+        // array_int operations
+        t_CKBOOL (* const array_int_size)( CK_DL_API, ArrayInt array, t_CKINT & value );
+        t_CKBOOL (* const array_int_push_back)( CK_DL_API, ArrayInt array, t_CKUINT value );
+        t_CKBOOL (* const array_int_get_idx)( CK_DL_API, ArrayInt array, t_CKINT idx, t_CKUINT & value );
+        t_CKBOOL (* const array_int_get_key)( CK_DL_API, ArrayInt array, const std::string & key, t_CKUINT & value );
     } * const object;
 
     Api() :

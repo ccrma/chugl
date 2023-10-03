@@ -6,6 +6,8 @@
 * Calling "Node" instead of "entity" in case we ever switch to ECS system, where Entity means something different
 */
 
+struct Chuck_Object;
+
 class SceneGraphNode
 {
 public:
@@ -14,7 +16,7 @@ public:
 	size_t m_ID;
 
 // methods
-	SceneGraphNode() : m_ID(SceneGraphNode::idCounter++) {
+	SceneGraphNode() : m_ID(SceneGraphNode::idCounter++), m_ChuckObject(nullptr) {
 		// std::cout << "created node with id: " + std::to_string(m_ID) << std::endl;
 	}
 	virtual ~SceneGraphNode() {}  // virtual destructor to enable deleting polymorphically
@@ -24,4 +26,6 @@ public:
 
 // static
 	static size_t idCounter;
+
+	Chuck_Object* m_ChuckObject;
 };

@@ -113,6 +113,15 @@ public:  // default GGens
 		Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM
 	);
 
+public: // scenegraph update traversal
+ 
+	// TODO: what happens when graphics window loses focus for a long time and then returns?
+	// does it suddenly pass a large dt? if so we may need to throttle
+	static void UpdateSceneGraph(
+		Scene& scene, CK_DL_API API, Chuck_VM* VM, Chuck_VM_Shred* shred
+	);
+	static t_CKINT our_update_vt_offset;
+
 public: // global, lock-protected state for sending info from GLFW --> Chuck
 	struct WindowState {  // TODO: will need to be non-static if we support multiple windows
 		int windowWidth, windowHeight;

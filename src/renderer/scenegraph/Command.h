@@ -163,6 +163,20 @@ private:
     Group* group;
 };
 
+// create base GGen (semantically same as empty group)
+class CreateSceneGraphObjectCommand : public SceneGraphCommand
+{
+public:
+    CreateSceneGraphObjectCommand(SceneGraphObject* obj) : m_ID(obj->GetID()) {}
+    virtual void execute(Scene* scene) override {
+        SceneGraphObject* obj = new SceneGraphObject;
+        obj->SetID(m_ID);  // copy ID
+        scene->RegisterNode(obj);
+    }
+private:
+    size_t m_ID;
+};
+
 // create Mesh
 class CreateMeshCommand : public SceneGraphCommand
 {
