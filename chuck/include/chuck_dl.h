@@ -38,8 +38,9 @@
 #define __CHUCK_DL_H__
 
 #include "chuck_def.h"
-#include "chuck_oo.h"
+#include "chuck_absyn.h"
 #include "chuck_carrier.h"
+#include "chuck_oo.h"
 #include <string>
 #include <vector>
 #include <map>
@@ -203,6 +204,8 @@ typedef const Chuck_DL_Api::Api *CK_DL_API;
 // macro for defining ChucK DLL export static functions
 // example: CK_DLL_SFUN(foo) | 1.4.1.0 (ge) added TYPE to static prototype
 #define CK_DLL_SFUN(name) CK_DLL_EXPORT(void) name( Chuck_Type * TYPE, void * ARGS, Chuck_DL_Return * RETURN, Chuck_VM * VM, Chuck_VM_Shred * SHRED, CK_DL_API API )
+// example: CK_DLL_GFUN(foo) | 1.5.1.4 (ge & andrew) added for global-scope function, e.g., for op overloads
+#define CK_DLL_GFUN(name) CK_DLL_EXPORT(void) name( void * ARGS, Chuck_DL_Return * RETURN, Chuck_VM * VM, Chuck_VM_Shred * SHRED, CK_DL_API API )
 // macro for defining ChucK DLL export ugen tick functions
 // example: CK_DLL_TICK(foo)
 #define CK_DLL_TICK(name) CK_DLL_EXPORT(t_CKBOOL) name( Chuck_Object * SELF, SAMPLE in, SAMPLE * out, CK_DL_API API )
@@ -221,7 +224,9 @@ typedef const Chuck_DL_Api::Api *CK_DL_API;
 // macro for defining ChucK DLL export uana tock functions
 // example: CK_DLL_TOCK(foo)
 #define CK_DLL_TOCK(name) CK_DLL_EXPORT(t_CKBOOL) name( Chuck_Object * SELF, Chuck_UAna * UANA, Chuck_UAnaBlobProxy * BLOB, CK_DL_API API )
-
+// macro for defining Chuck DLL export shreds watcher functions
+// example: CK_DLL_SHREDS_WATCHER(foo)
+#define CK_DLL_SHREDS_WATCHER(name) CK_DLL_EXPORT(void) name( Chuck_VM_Shred * SHRED, t_CKINT CODE, t_CKINT PARAM, Chuck_VM * VM, void * BINDLE )
 
 // macros for DLL exports
 // example: DLL_QUERY  query( Chuck_DL_Query * QUERY )
@@ -252,6 +257,8 @@ typedef t_CKVOID (CK_DLL_CALL * f_dtor)( Chuck_Object * SELF, Chuck_VM * VM, Chu
 typedef t_CKVOID (CK_DLL_CALL * f_mfun)( Chuck_Object * SELF, void * ARGS, Chuck_DL_Return * RETURN, Chuck_VM * VM, Chuck_VM_Shred * SHRED, CK_DL_API API );
 // 1.4.1.0 (ge) added TYPE to static prototype
 typedef t_CKVOID (CK_DLL_CALL * f_sfun)( Chuck_Type * TYPE, void * ARGS, Chuck_DL_Return * RETURN, Chuck_VM * VM, Chuck_VM_Shred * SHRED, CK_DL_API API );
+// 1.5.1.4 (ge & andrew) added for global-scope function, e.g., for op overloads
+typedef t_CKVOID (CK_DLL_CALL * f_gfun)( void * ARGS, Chuck_DL_Return * RETURN, Chuck_VM * VM, Chuck_VM_Shred * SHRED, CK_DL_API API );
 // ugen specific
 typedef t_CKBOOL (CK_DLL_CALL * f_tick)( Chuck_Object * SELF, SAMPLE in, SAMPLE * out, CK_DL_API API );
 typedef t_CKBOOL (CK_DLL_CALL * f_tickf)( Chuck_Object * SELF, SAMPLE * in, SAMPLE * out, t_CKUINT nframes, CK_DL_API API );
@@ -264,6 +271,8 @@ typedef t_CKBOOL (CK_DLL_CALL * f_tock)( Chuck_Object * SELF, Chuck_UAna * UANA,
 typedef t_CKBOOL (CK_DLL_CALL * f_mainthreadhook)( void * bindle );
 // "main thread" quit (stop running hook)
 typedef t_CKBOOL (CK_DLL_CALL * f_mainthreadquit)( void * bindle );
+// shreds watcher callback
+typedef t_CKBOOL (CK_DLL_CALL * f_shreds_watcher)( Chuck_VM_Shred * SHRED, t_CKINT CODE, t_CKINT PARAM, Chuck_VM * VM, void * BINDLE );
 }
 
 
@@ -292,6 +301,15 @@ typedef void (CK_DLL_CALL * f_add_dtor)( Chuck_DL_Query * query, f_dtor dtor );
 typedef void (CK_DLL_CALL * f_add_mfun)( Chuck_DL_Query * query, f_mfun mfun, const char * type, const char * name );
 // add static function - args to follow
 typedef void (CK_DLL_CALL * f_add_sfun)( Chuck_DL_Query * query, f_sfun sfun, const char * type, const char * name );
+// add binary operator overload - args included
+typedef void (CK_DLL_CALL * f_add_op_overload_binary)( Chuck_DL_Query * query, f_gfun gfun, const char * type, const char * op,
+                                                       const char * lhsType, const char * lhsName, const char * rhsType, const char * rhsName );
+// add unary (prefix) operator overload - arg included
+typedef void (CK_DLL_CALL * f_add_op_overload_prefix)( Chuck_DL_Query * query, f_gfun gfun, const char * type, const char * op,
+                                                       const char * argType, const char * argName );
+// add unary (postfix) operator overload - args included
+typedef void (CK_DLL_CALL * f_add_op_overload_postfix)( Chuck_DL_Query * query, f_gfun gfun, const char * type, const char * op,
+                                                       const char * argType, const char * argName );
 // add member variable
 typedef t_CKUINT (CK_DLL_CALL * f_add_mvar)( Chuck_DL_Query * query,
              const char * type, const char * name, t_CKBOOL is_const ); // TODO: public/protected/private
@@ -312,6 +330,10 @@ typedef void (CK_DLL_CALL * f_add_ugen_funcf_auto_num_channels)( Chuck_DL_Query 
 typedef t_CKBOOL (CK_DLL_CALL * f_end_class)( Chuck_DL_Query * query );
 // create main thread hook- used for executing a "hook" function in the main thread of a primary chuck instance
 typedef Chuck_DL_MainThreadHook * (CK_DLL_CALL * f_create_main_thread_hook)( Chuck_DL_Query * query, f_mainthreadhook hook, f_mainthreadquit quit, void * bindle );
+// register a callback function to receive notification from the VM about shreds (add, remove, etc.)
+typedef void (CK_DLL_CALL * f_register_shreds_watcher)( Chuck_DL_Query * query, f_shreds_watcher cb, t_CKUINT options, void * bindle );
+// unegister a shreds notification callback
+typedef void (CK_DLL_CALL * f_unregister_shreds_watcher)( Chuck_DL_Query * query, f_shreds_watcher cb );
 
 // documentation
 // set current class documentation
@@ -322,7 +344,31 @@ typedef t_CKBOOL (CK_DLL_CALL * f_add_example)( Chuck_DL_Query * query, const ch
 typedef t_CKBOOL (CK_DLL_CALL * f_doc_func)( Chuck_DL_Query * query, const char * doc );
 // set last mvar documentation
 typedef t_CKBOOL (CK_DLL_CALL * f_doc_var)( Chuck_DL_Query * query, const char * doc );
-}
+
+// shreds watcher flags; meant to bitwise-OR together in options
+// these will also be passed back to the callback...
+typedef enum {
+    CKVM_SHREDS_WATCH_NONE = 0,
+    CKVM_SHREDS_WATCH_SPORK = 1,
+    CKVM_SHREDS_WATCH_REMOVE = 2,
+    CKVM_SHREDS_WATCH_SUSPEND = 4,
+    CKVM_SHREDS_WATCH_ACTIVATE = 8,
+    CKVM_SHREDS_WATCH_ALL = 0x7fffffff
+} ckvmShredsWatcherFlag;
+
+} // end extern "C"
+
+
+
+//-----------------------------------------------------------------------------
+// invoking chuck functions from c++
+//-----------------------------------------------------------------------------
+// directly invoke a chuck member function's native implementation from c++
+// using object + vtable offset
+Chuck_DL_Return ck_invoke_mfun_native( Chuck_Object * obj, t_CKUINT func_vt_offset,
+                                       Chuck_VM * vm, Chuck_VM_Shred * shred, void * ARGS );
+
+
 
 
 //-----------------------------------------------------------------------------
@@ -341,6 +387,7 @@ public:
     Chuck_VM * vm() const { return m_carrier->vm; }
     Chuck_Env * env() const { return m_carrier->env; }
     Chuck_Carrier * carrier() const { return m_carrier; }
+    CK_DL_API api() const { return m_api; } // 1.5.1.4
 
 public:
     // function pointers - to be called from client module
@@ -385,12 +432,26 @@ public:
     // re-added 1.4.0.1
     f_create_main_thread_hook create_main_thread_hook;
 
+    // add binary operator overload; args included | 1.5.1.4 (ge & andrew)
+    f_add_op_overload_binary add_op_overload_binary;
+    // add unary (prefix) operator overload; arg included
+    f_add_op_overload_prefix add_op_overload_prefix;
+    // add unary (postfix) operator overload; arg included
+    f_add_op_overload_postfix add_op_overload_postfix;
+
+    // register shred notifcations | 1.5.1.4 (ge & andrew)
+    f_register_shreds_watcher register_shreds_watcher;
+    // un-register shred notifcations | 1.5.1.4 (ge & andrew)
+    f_unregister_shreds_watcher unregister_shreds_watcher;
+
+public:
+    //-------------------------------------------------------------------------
     // NOTE: everything below std::anything cannot be reliably accessed
     // by offset between dynamic modules, since std::anything could be variable
     // size -- put everything need to be accessed across modules above here!
     // discovered by the vigilant and forever traumatized Jack Atherton,
     // fixed during REFACTOR-2017; warning by the guilt-ridden Ge Wang
-
+    //-------------------------------------------------------------------------
     // dll
     Chuck_DLL * dll_ref;
     // reserved
@@ -411,13 +472,19 @@ public:
     // collection of class
     std::vector<Chuck_DL_Class *> classes;
     // stack
-    std::vector<Chuck_DL_Class * >stack;
+    std::vector<Chuck_DL_Class * > stack;
 
     // flag any error encountered during the query | 1.5.0.5 (ge) added
     t_CKBOOL errorEncountered;
 
+    // DL API reference | 1.5.1.4
+    CK_DL_API m_api;
+
+    // collection of operator overloads
+    std::vector<Chuck_DL_Func *> op_overloads;
+
     // constructor
-    Chuck_DL_Query( Chuck_Carrier * carrier );
+    Chuck_DL_Query( Chuck_Carrier * carrier, Chuck_DLL * dll = NULL );
     // desctructor
     ~Chuck_DL_Query() { this->clear(); }
     // clear
@@ -463,11 +530,14 @@ struct Chuck_DL_Class
     std::vector<Chuck_DL_Class *> classes;
     // current mvar offset
     t_CKUINT current_mvar_offset;
-
+    // # of ugen input and output channels
     t_CKUINT ugen_num_in, ugen_num_out;
-
+    // ckdoc: class description
     std::string doc;
+    // ckdoc: examples
     std::vector<std::string> examples;
+    // origin string (e.g., filepath if coming from chugin DLL)
+    std::string hint_dll_filepath;
 
     // constructor
     Chuck_DL_Class() { dtor = NULL; ugen_tick = NULL; ugen_tickf = NULL; ugen_pmsg = NULL; uana_tock = NULL; ugen_pmsg = NULL; current_mvar_offset = 0; ugen_num_in = ugen_num_out = 0; }
@@ -505,6 +575,21 @@ struct Chuck_DL_Value
 
 
 //-----------------------------------------------------------------------------
+// name: enum te_Op_OverloadKind | 1.5.1.4 (ge) added
+// desc: enumeration for kinds of operator overload
+//-----------------------------------------------------------------------------
+enum te_Op_OverloadKind
+{
+    te_op_overload_none,
+    te_op_overload_binary,    // LHS op RHS
+    te_op_overload_unary_pre, //     op RHS
+    te_op_overload_unary_post // LHS op
+};
+
+
+
+
+//-----------------------------------------------------------------------------
 // name: struct Chuck_DL_Func
 // desc: function from module
 //-----------------------------------------------------------------------------
@@ -515,16 +600,20 @@ struct Chuck_DL_Func
     // the return type
     std::string type;
     // the pointer
-    union { f_ctor ctor; f_dtor dtor; f_mfun mfun; f_sfun sfun; t_CKUINT addr; };
+    union { f_ctor ctor; f_dtor dtor; f_mfun mfun; f_sfun sfun; f_gfun gfun; t_CKUINT addr; };
     // arguments
     std::vector<Chuck_DL_Value *> args;
     // description
     std::string doc;
+    // is this an operator overload? if so, which kind? | 1.5.1.4
+    te_Op_OverloadKind opOverloadKind;
+    // operator to overload | 1.5.1.4
+    ae_Operator op2overload;
 
     // constructor
-    Chuck_DL_Func() { ctor = NULL; }
+    Chuck_DL_Func() { ctor = NULL; opOverloadKind = te_op_overload_none; op2overload = ae_op_none; }
     Chuck_DL_Func( const char * t, const char * n, t_CKUINT a )
-    { name = n; type = t; addr = a; }
+    { name = n; type = t; addr = a; opOverloadKind = te_op_overload_none; op2overload = ae_op_none; }
     // destructor
     ~Chuck_DL_Func();
     // add arg
@@ -634,7 +723,7 @@ public:
     Chuck_DLL( Chuck_Carrier * carrier, const char * xid = NULL )
         : m_handle(NULL), m_id(xid ? xid : ""),
         m_done_query(FALSE), m_version_func(NULL), m_query_func(NULL),
-        m_query( carrier ), m_versionMajor(0), m_versionMinor(0)
+        m_query( carrier, this ), m_versionMajor(0), m_versionMinor(0)
     { }
     // destructor
     ~Chuck_DLL() { this->unload(); }
@@ -691,7 +780,14 @@ public:
     struct VMApi
     {
         VMApi();
+        // get sample rate (legacy as of 1.5.1.4)
         t_CKUINT (* const get_srate)( CK_DL_API, Chuck_VM_Shred * );
+        // get sample rate | 1.5.1.4
+        t_CKUINT (* const srate)( Chuck_VM * vm );
+        // create a new lock-free one-producer, one-consumer buffer | 1.5.1.4
+        CBufferSimple * (* const create_event_buffer)( Chuck_VM * vm );
+        // queue an event; num_msg must be 1; buffer should be created using create_event_buffer() above | 1.5.1.4
+        t_CKBOOL (* const queue_event)( Chuck_VM * vm, Chuck_Event * event, t_CKINT num_msg, CBufferSimple * buffer );
     } * const vm;
 
     struct ObjectApi
@@ -718,7 +814,10 @@ public:
         // function pointer for set_string()
         t_CKBOOL (* const set_string)( CK_DL_API, String string, const char * value );
         // array4 operations
+        t_CKBOOL (* const array4_size)( CK_DL_API, Array4 array, t_CKINT & value );
         t_CKBOOL (* const array4_push_back)( CK_DL_API, Array4 array, t_CKUINT value );
+        t_CKBOOL (* const array4_get_idx)( CK_DL_API, Array4 array, t_CKINT idx, t_CKUINT & value );
+        t_CKBOOL (* const array4_get_key)( CK_DL_API, Array4 array, const std::string & key, t_CKUINT & value );
     } * const object;
 
     Api() :
@@ -768,8 +867,9 @@ private:
           void * dlsym( void * handle, const char * symbol );
           const char * dlerror( void );
           int dlclose( void * handle );
-          // 1.4.2.0 (ge) | added DLERROR_BUFFER_LENGTH
-          #define DLERROR_BUFFER_LENGTH 128
+          // 1.4.2.0 (ge) added DLERROR_BUFFER_LENGTH
+          // 1.5.1.4 (ge) increased DLERROR_BUFFER_LENGTH from 128 to 512
+          #define DLERROR_BUFFER_LENGTH 512
           static char dlerror_buffer[DLERROR_BUFFER_LENGTH];
 
           #ifdef __cplusplus

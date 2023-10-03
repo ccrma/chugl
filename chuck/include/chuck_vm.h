@@ -53,8 +53,8 @@
 //-----------------------------------------------------------------------------
 // vm defines
 //-----------------------------------------------------------------------------
-#define CVM_MEM_STACK_SIZE          (0x1 << 16)
-#define CVM_REG_STACK_SIZE          (0x1 << 14)
+#define CKVM_MEM_STACK_SIZE          (0x1 << 16)
+#define CKVM_REG_STACK_SIZE          (0x1 << 14)
 
 
 // forward references
@@ -89,7 +89,7 @@ public:
     ~Chuck_VM_Stack();
 
 public:
-    // initialize stack
+    // initialize stack of at least 'size' bytes
     t_CKBOOL initialize( t_CKUINT size );
     // shutdown and cleanup stack
     t_CKBOOL shutdown();
@@ -108,6 +108,7 @@ public: // linked list
 
 public: // state
     t_CKBOOL m_is_init;
+    t_CKUINT m_size; // 1.5.1.4
 };
 
 
@@ -171,8 +172,8 @@ public:
 
     // initialize shred
     t_CKBOOL initialize( Chuck_VM_Code * c,
-                         t_CKUINT mem_st_size = CVM_MEM_STACK_SIZE,
-                         t_CKUINT reg_st_size = CVM_REG_STACK_SIZE );
+                         t_CKUINT mem_st_size = 0,
+                         t_CKUINT reg_st_size = 0 );
     // shutdown shred
     t_CKBOOL shutdown();
     // run the shred on vm
@@ -190,6 +191,14 @@ public:
     // add get shred id | 1.5.0.8 (ge)
     t_CKUINT get_id() const { return this->xid; }
 
+    // affects children shreds sporked from this one
+    // mem is memory / call stack (for local vars)
+    t_CKINT childSetMemSize( t_CKINT sizeInBytes );
+    t_CKINT childGetMemSize( );
+    // reg is rester / operand stack (for evaluating expressions)
+    t_CKINT childSetRegSize( t_CKINT sizeInBytes );
+    t_CKINT childGetRegSize( );
+
     #ifndef __DISABLE_SERIAL__
     // HACK - spencer (added 1.3.2.0)
     // add/remove SerialIO devices to close on shred exit
@@ -202,23 +211,34 @@ public:
 // data
 //-----------------------------------------------------------------------------
 public: // machine components
-    // stacks
-    Chuck_VM_Stack * mem;
-    Chuck_VM_Stack * reg;
+    // stacks; mem for "memory" and reg for "register"
+    Chuck_VM_Stack * mem; // call stack
+    Chuck_VM_Stack * reg; // operand stack
 
     // ref to base stack - if this is the root, then base is mem
     Chuck_VM_Stack * base_ref;
 
-    // code
+    // current vm code being run (this could change, e.g., across func calls)
     Chuck_VM_Code * code;
-    Chuck_VM_Code * code_orig; // the one to release
+    // the original vm code attached to this shred (also: the one to release)
+    Chuck_VM_Code * code_orig;
+    // instructions
     Chuck_Instr ** instr;
-    Chuck_VM_Shred * parent;
-    std::map<t_CKUINT, Chuck_VM_Shred *> children;
-    t_CKUINT pc;
 
+    // parent shred
+    Chuck_VM_Shred * parent;
+    // children shreds
+    std::map<t_CKUINT, Chuck_VM_Shred *> children;
+
+    // child stack size hints | 1.5.1.4
+    t_CKINT memStackSize;
+    t_CKINT regStackSize;
+
+    // program counter
+    t_CKUINT pc;
     // time
     t_CKTIME now;
+    // when started, in chuck time, relative to start of VM
     t_CKTIME start;
     // vm reference
     Chuck_VM * vm_ref;
@@ -268,6 +288,30 @@ private:
     // serial IO list for event synchronization
     std::list<Chuck_IO_Serial *> * m_serials;
 #endif
+};
+
+
+
+
+//-----------------------------------------------------------------------------
+// name: struct Chuck_VM_Shreds_Watcher
+// desc: ChucK virtual machine
+//-----------------------------------------------------------------------------
+struct Chuck_VM_Shreds_Watcher
+{
+    // function pointer to call
+    f_shreds_watcher cb;
+    // user data
+    void * userdata;
+
+    // constructor
+    Chuck_VM_Shreds_Watcher( f_shreds_watcher f = NULL, void * data = NULL ) : cb(f), userdata(data) { }
+    // copy constructor
+    Chuck_VM_Shreds_Watcher( const Chuck_VM_Shreds_Watcher & other )
+    : cb(other.cb), userdata(other.userdata) { }
+    // ==
+    bool operator ==( const Chuck_VM_Shreds_Watcher & other )
+    { return this->cb == other.cb; }
 };
 
 
@@ -502,10 +546,10 @@ public: // shredsuck
     // get reference to shreduler
     Chuck_VM_Shreduler * shreduler() const;
     // the next spork ID
-    t_CKUINT next_id();
+    t_CKUINT next_id( const Chuck_VM_Shred * shred = NULL );
     // the last used spork ID
     t_CKUINT last_id() const;
-    // reset ID to lowest current ID + 1; returns what next ID would be
+    // reset ID to highest current ID + 1; returns what next ID would be
     t_CKUINT reset_id();
     // the current chuck time | 1.5.0.8
     t_CKTIME now() const;
@@ -536,15 +580,18 @@ public: // VM message queue
     // process a VM message immediately (synchronous but not thread-safe)
     // NOTE assumes msg is dynamically allocated using `new`; will be deleted by VM
     // NOTE this processes the msg immediately on calling thread
-    t_CKUINT process_msg( Chuck_Msg * msg );
+    t_CKUINT process_msg( Chuck_Msg * & msg );
     // get reply from reply buffer
     Chuck_Msg * get_reply();
 
     // CBufferSimple added 1.3.0.0 to fix uber-crash
     t_CKBOOL queue_event( Chuck_Event * event, t_CKINT num_msg = 1, CBufferSimple * buffer = NULL );
-    // added 1.3.0.0 to fix uber-crash
+    // added 1.3.0.0 to fix uber-crash (allocates and attaches new buffer)
     CBufferSimple * create_event_buffer();
+    // added 1.3.0.0 to fix uber-crash (detaches and deletes buffer)
     void destroy_event_buffer( CBufferSimple * buffer );
+    // added 1.5.1.3 for granularity in handling synchronization
+    void detach_event_buffer_without_delete( CBufferSimple * buffer );
 
 public: // get error
     const char * last_error() const
@@ -558,6 +605,15 @@ public:
     Chuck_IO_Cherr * cherr() const { return m_carrier->cherr; }
     // 1.4.1.0 (jack): get associated globals manager
     Chuck_Globals_Manager * globals_manager() const { return m_globals_manager; }
+
+public:
+    // subscribe shreds watcher callback | 1.5.1.4
+    void subscribe_watcher( f_shreds_watcher cb, t_CKUINT options, void * data = NULL );
+    // notify watchers | 1.5.1.4
+    void notify_watchers( ckvmShredsWatcherFlag which, Chuck_VM_Shred * shred,
+                          std::list<Chuck_VM_Shreds_Watcher> & v );
+    // remove shreds watcher callback | 1.5.1.4
+    void remove_watcher( f_shreds_watcher cb );
 
 //-----------------------------------------------------------------------------
 // data
@@ -611,6 +667,7 @@ protected:
     Chuck_VM_Shred * m_shreds;
     t_CKUINT m_num_shreds;
     t_CKUINT m_shred_id;
+    t_CKBOOL m_shred_check4dupes; // 1.5.1.4
     Chuck_VM_Shreduler * m_shreduler;
     // place to put dumped shreds
     std::vector<Chuck_VM_Shred *> m_shred_dump;
@@ -627,6 +684,13 @@ protected:
 protected:
     // 1.4.1.0 (jack): manager for global variables
     Chuck_Globals_Manager * m_globals_manager;
+
+protected:
+    // 1.5.1.4 (ge & andrew) shreds watchers
+    std::list<Chuck_VM_Shreds_Watcher> m_shreds_watchers_spork;
+    std::list<Chuck_VM_Shreds_Watcher> m_shreds_watchers_remove;
+    std::list<Chuck_VM_Shreds_Watcher> m_shreds_watchers_suspend;
+    std::list<Chuck_VM_Shreds_Watcher> m_shreds_watchers_activate;
 };
 
 
@@ -674,10 +738,14 @@ struct Chuck_Msg
     Chuck_VM_Code * code;
     // VM shred pointer, as applicable
     Chuck_VM_Shred * shred;
+    // parent shred, as applicable
+    Chuck_VM_Shred * parent;
     // time, as applicable
     t_CKTIME when;
     // pointer to status struct, as applicable
     Chuck_VM_Status * status;
+    // whether to always add | 1.5.1.4
+    t_CKBOOL alwaysAdd;
 
     // reply callback
     ck_msg_func reply_cb;
