@@ -2000,7 +2000,9 @@ CK_DLL_DTOR(cgl_scene_dtor)
 {
 	// Scene* mainScene = (Scene*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	// don't call delete! because this is a static var
-	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;  // zero out the memory
+
+	// TODO is this necessary? 
+	// OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;  // zero out the memory
 }
 
 CK_DLL_MFUN(cgl_scene_set_background_color) {
@@ -2131,7 +2133,7 @@ CK_DLL_DTOR(cgl_cam_dtor)
 
 	// Camera* mainCam = (Camera*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	// don't call delete! because this is a static var
-	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;  // zero out the memory
+	// OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;  // zero out the memory
 }
 
 CK_DLL_MFUN(cgl_cam_set_mode_persp)
