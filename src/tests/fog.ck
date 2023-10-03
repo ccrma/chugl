@@ -8,7 +8,7 @@ FlyCam flycam;
 flycam.init(IM, MM);
 spork ~ flycam.selfUpdate();
 
-CGL.fullscreen();
+// CGL.fullscreen();
 CGL.lockCursor();
 CGL.mainCam().clip(0.1, 1000);
 
@@ -63,7 +63,7 @@ fun void cycleFogType() {
 spork ~ cycleFogType(); 
 
 fun void lerpFogCol() {
-    while (true) {
+    repeat (300) {
         Math.sin(0.3 * (now/second)) * 0.5 + 0.5 => float b;
         Math.sin(0.4 * (now/second)) * 0.5 + 0.5 => float g;
         Math.sin(0.7 * (now/second)) * 0.5 + 0.5 => float r;
@@ -71,6 +71,7 @@ fun void lerpFogCol() {
         scene.backgroundColor(@(r, g, b));
         CGL.nextFrame() => now;
     }
+    <<< "lerp Fog color shred dying :(" >>>;
 }
 spork ~ lerpFogCol();
 

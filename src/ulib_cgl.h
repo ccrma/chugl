@@ -85,19 +85,23 @@ public: // command queue methods
 private:
 	// hashset to track registered shreds
 	static std::unordered_set<Chuck_VM_Shred*> m_RegisteredShreds;
-	static std::vector<Chuck_VM_Shred*> m_WaitingShreds;  // shreds for other others to finish their update logic
-	static std::unordered_map<Chuck_VM_Shred*, Chuck_DL_Api::Object> m_ShredEventMap;  // map of shreds to CglUpdate Event 
+	static std::unordered_set<Chuck_VM_Shred*> m_WaitingShreds;  // shreds for other others to finish their update logic
+
+	static Chuck_DL_Api::Object s_UpdateEvent;
+
+	// static std::unordered_map<Chuck_VM_Shred*, Chuck_DL_Api::Object> m_ShredEventMap;  // map of shreds to CglUpdate Event 
 public:
 	static void RegisterShred(Chuck_VM_Shred* shred);
 	static void UnregisterShred(Chuck_VM_Shred* shred);
 	static bool IsShredRegistered(Chuck_VM_Shred* shred);
 	static size_t GetNumRegisteredShreds();
 	static void RegisterShredWaiting(Chuck_VM_Shred* shred);
+	static void UnregisterShredWaiting(Chuck_VM_Shred* shred);
 	static void ClearShredWaiting();
 	static size_t GetNumShredsWaiting();
 
 	// shred event map helper fns
-	static Chuck_DL_Api::Object GetCachedShredUpdateEvent(
+	static Chuck_DL_Api::Object GetShredUpdateEvent(
 		Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM
 	);
 

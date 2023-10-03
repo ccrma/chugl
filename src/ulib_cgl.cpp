@@ -12,6 +12,11 @@
 #include "chuck_vm.h"
 #include "chuck_dl.h"
 
+//-----------------------------------------------------------------------------
+// ChuGL Event Listeners
+//-----------------------------------------------------------------------------
+CK_DLL_SHREDS_WATCHER(cgl_shred_on_destroy_listener);
+
 
 //-----------------------------------------------------------------------------
 // ChuGL Events
@@ -59,6 +64,11 @@ CK_DLL_SFUN(cgl_window_set_size);
 // accessing shared default GGens
 CK_DLL_SFUN(cgl_get_main_camera);
 CK_DLL_SFUN(cgl_get_main_scene);
+
+// chugl shred debug
+CK_DLL_SFUN(cgl_get_num_registered_shreds);
+CK_DLL_SFUN(cgl_get_num_registered_waiting_shreds);
+
 
 
 
@@ -368,9 +378,26 @@ t_CKBOOL create_chugl_default_objs(Chuck_DL_Query* QUERY)
 	// main camera
 	// Chuck_DL_Api::Type type = QUERY->api()->object->get_type(QUERY->api(), NULL, "CglCamera");
 	// Chuck_DL_Api::Object obj = QUERY->api()->object->create(QUERY->api(), NULL, type);
+
+	// shred destroy listener
+	QUERY->register_shreds_watcher(QUERY, cgl_shred_on_destroy_listener, CKVM_SHREDS_WATCH_REMOVE, NULL);
 	
 	return true;
 }
+
+CK_DLL_SHREDS_WATCHER(cgl_shred_on_destroy_listener)
+{
+	// called when shred is taken out of circulation for any reason
+	// e.g. reached end, removed, VM cleared, etc.
+	assert(CODE == CKVM_SHREDS_WATCH_REMOVE);
+
+	// remove from registered list
+	CGL::UnregisterShred(SHRED);
+
+	// remove from waiting list
+	CGL::UnregisterShredWaiting(SHRED);
+}
+
 
 //-----------------------------------------------------------------------------
 // init_chugl_events()
@@ -542,6 +569,11 @@ t_CKBOOL init_chugl_static_fns(Chuck_DL_Query* QUERY)
 	// Main scene
 	QUERY->add_sfun(QUERY, cgl_get_main_scene, "CglScene", "scene");
 
+	// chugl shred debug
+	QUERY->add_sfun(QUERY, cgl_get_num_registered_shreds, "int", "numRegisteredShreds");
+	QUERY->add_sfun(QUERY, cgl_get_num_registered_waiting_shreds, "int", "numRegisteredWaitingShreds");
+
+
 	QUERY->end_class(QUERY);
 
 	return true;
@@ -553,7 +585,7 @@ CK_DLL_SFUN(cgl_next_frame)
 	// extract CglEvent from obj
 	// TODO: workaround bug where create() object API is not calling preconstructors
 	// https://trello.com/c/JwhVQEpv/48-cglnextframe-now-not-calling-preconstructor-of-cglupdate
-	RETURN->v_object = (Chuck_Object *)CGL::GetCachedShredUpdateEvent(
+	RETURN->v_object = (Chuck_Object *)CGL::GetShredUpdateEvent(
 		SHRED, API, VM
 	);
 }
@@ -624,6 +656,15 @@ CK_DLL_SFUN(cgl_get_main_scene)
 	RETURN->v_object = (Chuck_Object *)CGL::GetMainScene(
 		SHRED, API, VM
 	);
+}
+
+CK_DLL_SFUN(cgl_get_num_registered_shreds)
+{
+	RETURN->v_int = CGL::GetNumRegisteredShreds();
+}
+CK_DLL_SFUN(cgl_get_num_registered_waiting_shreds)
+{
+	RETURN->v_int = CGL::GetNumShredsWaiting();
 }
 
 //-----------------------------------------------------------------------------
@@ -2451,8 +2492,11 @@ Chuck_DL_Api::Object CGL::DL_mainScene;
 
 // Initialization for Shred Registration structures
 std::unordered_set<Chuck_VM_Shred*> CGL::m_RegisteredShreds;
-std::vector<Chuck_VM_Shred*> CGL::m_WaitingShreds;
-std::unordered_map<Chuck_VM_Shred*, Chuck_DL_Api::Object> CGL::m_ShredEventMap;  // map of shreds to CglUpdate Event 
+std::unordered_set<Chuck_VM_Shred*> CGL::m_WaitingShreds;
+
+Chuck_DL_Api::Object CGL::s_UpdateEvent = nullptr;
+
+// std::unordered_map<Chuck_VM_Shred*, Chuck_DL_Api::Object> CGL::m_ShredEventMap;  // map of shreds to CglUpdate Event 
 
 // CGL static command queue initialization
 std::vector<SceneGraphCommand*> CGL::m_ThisCommandQueue;
@@ -2592,23 +2636,31 @@ void CGL::ClearShredWaiting() {
 
 void CGL::RegisterShredWaiting(Chuck_VM_Shred* shred)
 {
-	m_WaitingShreds.push_back(shred);
+	// m_WaitingShreds.push_back(shred);
+	m_WaitingShreds.insert(shred);
+}
+void CGL::UnregisterShredWaiting(Chuck_VM_Shred* shred)
+{
+	m_WaitingShreds.erase(shred);
 }
 
 
-Chuck_DL_Api::Object CGL::GetCachedShredUpdateEvent(Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM) { 
+Chuck_DL_Api::Object CGL::GetShredUpdateEvent(Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM) { 
 	// log size
 	// std::cerr << "shred event map size: " + std::to_string(m_ShredEventMap.size()) << std::endl;
 	// lookup
-	if (m_ShredEventMap.find(shred) != m_ShredEventMap.end()) {
-		return m_ShredEventMap[shred];
-	} else {
+	if (s_UpdateEvent == nullptr) {
 		Chuck_DL_Api::Type type = API->object->get_type(API, shred, "CglUpdate");
 		Chuck_DL_Api::Object obj = API->object->create(API, shred, type);
+
+		// for now constructor will add chuck event to the eventQueue
+		// as long as there is only one, and it's created in first call to nextFrame BEFORE renderer wakes up then this is threadsafe
+		// TODO to support multiple windows, chugl event queue read/write will need to be lock protected
 		cgl_update_ctor( (Chuck_Object*)obj, NULL, VM, shred, API );
-		m_ShredEventMap[shred] = obj;
-		return obj;
+		
+		s_UpdateEvent = obj;
 	}
+	return s_UpdateEvent;
 }
 
 Chuck_DL_Api::Object CGL::GetMainCamera(
