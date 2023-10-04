@@ -7,13 +7,13 @@ spork ~ IM.start(0);
 MouseManager MM;
 spork ~ MM.start(0);
 
-CglCamera mainCamera;
+GCamera mainCamera;
 FlyCam flycam;
 flycam.init(IM, MM, mainCamera);
 spork ~ flycam.selfUpdate();
 
-CGL.fullscreen();
-CGL.lockCursor();
+GG.fullscreen();
+GG.lockCursor();
 mainCamera.clip(0.1, 1000);
 
 
@@ -80,10 +80,10 @@ class Globals {
     second / samp => float srate;
 } Globals G;
 
-CglScene scene;
-BoxGeo boxGeo;
+GScene scene;
+BoxGeometry boxGeo;
 1000 => int NUM_MESHES;
-CglMesh meshes[NUM_MESHES];
+GMesh meshes[NUM_MESHES];
 ShaderMat shaderMat; // custom shader material
 shaderMat.shaderPaths(
     "renderer/shaders/BasicLightingVert.glsl",
@@ -95,10 +95,10 @@ DataTexture tex;
 for ( 0 => int i; i < NUM_MESHES/10; i++) {
     for ( 0 => int j; j < 10; j++) {
         10 * i + j => int index;
-        meshes[index] @=> CglMesh @ mesh;
+        meshes[index] @=> GMesh @ mesh;
         mesh.set( boxGeo, shaderMat );
-        scene.AddChild( mesh );
-        mesh.SetPosition(@(2*i, 2*j, 0));
+        mesh --> scene;
+        mesh.position(@(2*i, 2*j, 0));
     }
 }
 
@@ -140,16 +140,16 @@ fun void GameLoop(){
 
 		// Update logic
         // flycam.update(now, G.deltaTime);
-        flycam.update(CGL.dt());  // kind of looks smoother?
+        flycam.update(GG.dt());  // kind of looks smoother?
         UpdateAudioTexture();
 
-        for ( CglMesh @ mesh : meshes ) {
-            mesh.RotateX( .27 * dt );
-            mesh.RotateY( .15 * dt );
+        for ( GMesh @ mesh : meshes ) {
+            mesh.rotX( .27 * dt );
+            mesh.rotY( .15 * dt );
         }
 
 		// End update, begin render
-		CGL.nextFrame() => now;
+		GG.nextFrame() => now;
 	}
 } 
 

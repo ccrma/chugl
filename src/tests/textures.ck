@@ -1,18 +1,18 @@
-<<< "Testing CglTexture features" >>>;
+<<< "Testing Texture features" >>>;
 
-<<< "Initializing CglTexture" >>>;
+<<< "Initializing Texture" >>>;
 FileTexture tex;
 
 <<< "Printing static vars" >>>;
-<<< "CglTexture.WRAP_REPEAT = ", CglTexture.WRAP_REPEAT >>>; 
-<<< "CglTexture.WRAP_MIRRORED = ", CglTexture.WRAP_MIRRORED >>>; 
-<<< "CglTexture.WRAP_CLAMP = ", CglTexture.WRAP_CLAMP >>>; 
-<<< "CglTexture.FILTER_NEAREST = ", CglTexture.FILTER_NEAREST >>>; 
-<<< "CglTexture.FILTER_LINEAR = ", CglTexture.FILTER_LINEAR >>>; 
+<<< "Texture.WRAP_REPEAT = ", Texture.WRAP_REPEAT >>>; 
+<<< "Texture.WRAP_MIRRORED = ", Texture.WRAP_MIRRORED >>>; 
+<<< "Texture.WRAP_CLAMP = ", Texture.WRAP_CLAMP >>>; 
+<<< "Texture.FILTER_NEAREST = ", Texture.FILTER_NEAREST >>>; 
+<<< "Texture.FILTER_LINEAR = ", Texture.FILTER_LINEAR >>>; 
 
-<<< "=========Testing CglTexture setters and getters=========" >>>;
-tex.wrap(CglTexture.WRAP_MIRRORED, CglTexture.WRAP_MIRRORED);
-tex.filter(CglTexture.FILTER_NEAREST, CglTexture.FILTER_LINEAR);
+<<< "=========Testing Texture setters and getters=========" >>>;
+tex.wrap(Texture.WRAP_MIRRORED, Texture.WRAP_MIRRORED);
+tex.filter(Texture.FILTER_NEAREST, Texture.FILTER_LINEAR);
 
 <<< "tex.wrapS() = ", tex.wrapS() >>>;
 <<< "tex.wrapT() = ", tex.wrapT() >>>;
@@ -27,11 +27,11 @@ PhongMat phong;
 phong.diffuseMap(tex);
 
 // attach material to mesh
-CglScene scene;
-CglMesh mesh;
-BoxGeo boxGeo;
+GScene scene;
+GMesh mesh;
+BoxGeometry boxGeo;
 mesh.set(boxGeo, phong);
-scene.AddChild(mesh);
+mesh --> scene;
 
 /*
 
@@ -44,10 +44,10 @@ dt.data(width, height, [1,2,3...])
 
 0 => int frameCounter;
 now => time lastTime;
-CglUpdate UpdateEvent;
+NextFrameEvent UpdateEvent;
 
 while (true) {
-    CGL.Render();
+    GG.Render();
     UpdateEvent => now;
 
     // compute timing

@@ -10,8 +10,8 @@ spork ~ flycam.selfUpdate();
 
 // ===============================
 
-CustomGeo customGeo;
-customGeo.setPositions(
+CustomGeometry CustomGeometry;
+CustomGeometrypositions(
     // vertex positions for a plane
     [
         // left triangle
@@ -26,7 +26,7 @@ customGeo.setPositions(
     ]
 );
 
-customGeo.setNormals(
+CustomGeometry.setNormals(
     // vertex normals for a plane
     [
         // left triangle
@@ -41,7 +41,7 @@ customGeo.setNormals(
     ]
 );
 
-customGeo.setUVs(
+CustomGeometry.setUVs(
     // vertex uvs for a plane
     [
         // left triangle
@@ -56,7 +56,7 @@ customGeo.setUVs(
     ]
 );
 
-customGeo.setIndices(
+CustomGeometry.setIndices(
     [
         0, 1, 2,
         3, 4, 5
@@ -64,13 +64,13 @@ customGeo.setIndices(
 );
 
 
-CglScene scene;
+GScene scene;
 NormMat normMat;
 MangoMat mangoMat;
-CglMesh mesh;
+GMesh mesh;
 
-mesh.set(customGeo, mangoMat);
-mesh.SetPosition(@(0.0, 0.0, -5.0));
+mesh.set(CustomGeometry, mangoMat);
+mesh.position(@(0.0, 0.0, -5.0));
 
 mesh --> scene;
 
@@ -88,5 +88,5 @@ while (true) {
     mangoMat.uniformFloat("u_Time", now/second);
     5::ms => now;  // need to put this so it doesn't hang 
 
-    CGL.nextFrame() => now;
+    GG.nextFrame() => now;
 }

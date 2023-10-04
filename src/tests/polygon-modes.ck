@@ -10,31 +10,31 @@ spork ~ flycam.selfUpdate();
 
 // ===============================
 
-CglScene scene;
+GScene scene;
 NormMat fillMat, wireMat, pointMat;
 fillMat.polygonMode(CglMat.POLYGON_FILL);
 wireMat.polygonMode(CglMat.POLYGON_LINE);
 pointMat.polygonMode(CglMat.POLYGON_POINT);
 pointMat.pointSize(15.0);    // note: mac m1 doesn't support glPointSize. this becomes a no-op
 
-SphereGeo sphereGeo;
+SphereGeometry  SphereGeometry ;
 
 
-CglMesh fillMesh, wireMesh, pointMesh;
+GMesh fillMesh, wireMesh, pointMesh;
 
-fillMesh.set(sphereGeo, fillMat);
-wireMesh.set(sphereGeo, wireMat);
-pointMesh.set(sphereGeo, pointMat);
+fillMesh.set(SphereGeometry , fillMat);
+wireMesh.set(SphereGeometry , wireMat);
+pointMesh.set(SphereGeometry , pointMat);
 
 // add to scene
-scene.AddChild(fillMesh);
-scene.AddChild(wireMesh);
-scene.AddChild(pointMesh);
+fillMesh --> scene;
+wireMesh --> scene;
+pointMesh --> scene;
 
 // set positions
-fillMesh.SetPosition(@(-1, 0, 0));
-wireMesh.SetPosition(@(0, 0, 0));
-pointMesh.SetPosition(@(1, 0, 0));
+fillMesh.position(@(-1, 0, 0));
+wireMesh.position(@(0, 0, 0));
+pointMesh.position(@(1, 0, 0));
 
 
 0 => int frameCounter;
@@ -48,5 +48,5 @@ while (true) {
 
 
     
-    CGL.nextFrame() => now;
+    GG.nextFrame() => now;
 }

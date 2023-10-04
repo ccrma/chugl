@@ -1,7 +1,7 @@
 0 => int frameCounter;
 now => time lastTime;
 
-CGL.mainCam() @=> CglCamera cam;
+GG.camera() @=> GCamera cam;
 
 // controls
 InputManager IM;
@@ -15,14 +15,14 @@ flycam.init(IM, MM);
 spork ~ flycam.selfUpdate();
 
 NormMat normMat;
-BoxGeo boxGeo;
-SphereGeo sphereGeo;
+BoxGeometry boxGeo;
+SphereGeometry  SphereGeometry ;
 
-CglScene scene;
-CglMesh mesh;
-CglMesh fileMesh;
-CglMesh lightbulb;
-CglMesh shaderMesh; ShaderMat shaderMat; 
+GScene scene;
+GMesh mesh;
+GMesh fileMesh;
+GMesh lightbulb;
+GMesh shaderMesh; ShaderMat shaderMat; 
 shaderMat.shaderPaths(
     "renderer/shaders/BasicLightingVert.glsl",
     "renderer/shaders/mangoFrag.glsl"
@@ -36,7 +36,7 @@ DirLight dirLight;
 FileTexture tex;
 DataTexture dataTex;
 dataTex.data([1.0, 0.0, 1.0, 1.0], 1, 1);
-dataTex.filter(CglTexture.FILTER_NEAREST, CglTexture.FILTER_NEAREST);
+dataTex.filter(Texture.FILTER_NEAREST, Texture.FILTER_NEAREST);
 tex.path("./tests/textures/awesomeface.png");
 PhongMat phongMat;
 phongMat.diffuseMap(dataTex);
@@ -47,20 +47,19 @@ filePhongMat.diffuseMap(tex);
 mesh.set( boxGeo, phongMat );
 fileMesh.set(boxGeo, filePhongMat);
 shaderMesh.set( boxGeo, shaderMat );
-lightbulb.set( sphereGeo, normMat );
+lightbulb.set( SphereGeometry , normMat );
 
-scene.AddChild( mesh );
-scene.AddChild(fileMesh);
-scene.AddChild(group);
-scene.AddChild(dirLight);
-scene.AddChild(shaderMesh);
+mesh --> scene;
+fileMesh --> scene;
+group --> scene;
+dirLight --> scene;
+shaderMesh --> scene;
 
-fileMesh.SetPosition(@(0, 1.5, 0));
-shaderMesh.SetPosition(@(0, -1.5, 0));
-lightbulb.SetPosition( @(2, 0, 0) );
-lightbulb.SetScale( @(0.1, 0.1, 0.1) );
-group.AddChild( lightbulb );
-lightbulb.AddChild( light );
+fileMesh.position(@(0, 1.5, 0));
+shaderMesh.position(@(0, -1.5, 0));
+lightbulb.position( @(2, 0, 0) );
+lightbulb.scale( @(0.1, 0.1, 0.1) );
+light --> lightbulb --> group;
 
 fun void AlternateTextures() {
     while (true) {
@@ -89,7 +88,7 @@ fun void AlternateTextures() {
 
 
 while (true) {
-    // CGL.Render();
+    // GG.Render();
 
 
     // compute timing
@@ -99,14 +98,14 @@ while (true) {
     deltaTime/second => float dt;
 
     // rotate light
-    group.RotateY( .85 * dt );
-    dirLight.RotateX( .75 * dt);
+    group.rotY( .85 * dt );
+    dirLight.rotX( .75 * dt);
 
     // 
     shaderMat.uniformFloat("u_Time", now/second);
     // <<< "u_Time: " + now/second >>>;
 
-    CGL.nextFrame() => now;
+    GG.nextFrame() => now;
 }
 
 

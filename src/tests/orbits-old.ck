@@ -4,8 +4,8 @@ tests scenegraph parent/child relations + local vs global transforms + rotation
 */
 
 // initialize geos
-SphereGeo sphereGeo;
-BoxGeo boxGeo;
+SphereGeometry  SphereGeometry ;
+BoxGeometry boxGeo;
 // init materials
 NormMat normMat;
 normMat.useLocal(1);
@@ -14,28 +14,20 @@ NormMat worldspaceNormMat;
 worldspaceNormMat.useLocal(0);
 
 // scene setup
-CglScene scene;
+GScene scene;
 CglGroup sunSystem, earthSystem, moonSystem;
-CglMesh  sun, earth, moon;
+GMesh  sun, earth, moon;
 
 sun.set(boxGeo, normMat); 
 earth.set(boxGeo, worldspaceNormMat);
 moon.set(boxGeo, normMat);
 
-earthSystem.SetPosition(@(2.2, 0.0, 0.0));
-moonSystem.SetPosition(@(.55, 0.0, 0.0));
+earthSystem.position(@(2.2, 0.0, 0.0));
+moonSystem.position(@(.55, 0.0, 0.0));
 
-sun.SetScale(@(2.0, 2.0, 2.0));
-earth.SetScale(@(0.4, 0.4, 0.4));
-moon.SetScale(@(0.12, 0.12, 0.12));
-
-// create graph
-// scene.AddChild(sunSystem);
-// sunSystem.AddChild(sun);
-// sunSystem.AddChild(earthSystem);
-// earthSystem.AddChild(earth);
-// earthSystem.AddChild(moonSystem);
-// moonSystem.AddChild(moon);
+sun.scale(@(2.0, 2.0, 2.0));
+earth.scale(@(0.4, 0.4, 0.4));
+moon.scale(@(0.12, 0.12, 0.12));
 
 moonSystem --> earthSystem --> sunSystem --> scene;
 sun --> sunSystem;
@@ -48,14 +40,14 @@ spork ~ IM.start(0);
 MouseManager MM;
 spork ~ MM.start(0);
 
-CglUpdate UpdateEvent;
-CglFrame FrameEvent;
-CglCamera mainCamera;
+NextFrameEvent UpdateEvent;
+
+GCamera mainCamera;
 0 => int frameCounter;
 1 => int autoRender;
 now => time lastTime;
 
-mainCamera.SetPosition(@(0.0, 0.0, 3.0));
+mainCamera.position(@(0.0, 0.0, 3.0));
 
 
 fun void grucker() {
@@ -73,12 +65,12 @@ fun void Update(time t, dur dt)
 {
 	t / second => float ftime;
 
-	sunSystem.SetRotation(@(0.0, .5 * ftime, 0.0));
-	earthSystem.SetRotation(@(0.0, .7 * ftime, 0.0));
+	sunSystem.rotation(@(0.0, .5 * ftime, 0.0));
+	earthSystem.rotation(@(0.0, .7 * ftime, 0.0));
 
-	sun.SetRotation(@(0.0, .1 * ftime, 0.0));
-	earth.SetRotation(@(0.0, .4 * ftime, 0.0));
-	moon.SetRotation(@(0.0, .9 * ftime, 0.0));
+	sun.rotation(@(0.0, .1 * ftime, 0.0));
+	earth.rotation(@(0.0, .4 * ftime, 0.0));
+	moon.rotation(@(0.0, .9 * ftime, 0.0));
 
 	// <<< "sun pos", sun.GetRotation() >>>;
 	// <<< "moon pos", moon.GetWorldPosition() >>>;
@@ -92,19 +84,19 @@ fun void cameraUpdate(time t, dur dt)
 	2.5 * (dt / second) => float cameraSpeed;
 	// camera movement
 	if (IM.isKeyDown(IM.KEY_W))
-		mainCamera.TranslateBy(cameraSpeed * mainCamera.GetForward());
+		mainCamera.translate(cameraSpeed * mainCamera.forward());
 	if (IM.isKeyDown(IM.KEY_S))
-		mainCamera.TranslateBy(-cameraSpeed * mainCamera.GetForward());
+		mainCamera.translate(-cameraSpeed * mainCamera.forward());
 	if (IM.isKeyDown(IM.KEY_D))
-		mainCamera.TranslateBy(cameraSpeed * mainCamera.GetRight());
+		mainCamera.translate(cameraSpeed * mainCamera.right());
 	if (IM.isKeyDown(IM.KEY_A))
-		mainCamera.TranslateBy(-cameraSpeed * mainCamera.GetRight());
+		mainCamera.translate(-cameraSpeed * mainCamera.right());
 	if (IM.isKeyDown(IM.KEY_Q))
-		mainCamera.TranslateBy(cameraSpeed * UP);
+		mainCamera.translate(cameraSpeed * UP);
 	if (IM.isKeyDown(IM.KEY_E))
-		mainCamera.TranslateBy(-cameraSpeed * UP);
+		mainCamera.translate(-cameraSpeed * UP);
 
-	// <<< "pos", mainCamera.GetPosition() >>>;
+	// <<< "pos", mainCamera.pos() >>>;
 	// <<< "rot", mainCamera.GetRotation() >>>;
 
 	// mouse lookaround
@@ -114,22 +106,22 @@ fun void cameraUpdate(time t, dur dt)
 
 	// <<< mouseDeltas >>>;
 
-	// for mouse deltaY, rotate around GetRight axis
-	mainCamera.RotateOnLocalAxis(RIGHT, -mouseDeltas.y);
+	// for mouse deltaY, rotate around right axis
+	mainCamera.rotateOnLocalAxis(RIGHT, -mouseDeltas.y);
 
 	// for mouse deltaX, rotate around (0,1,0)
-	mainCamera.RotateOnWorldAxis(UP, -mouseDeltas.x);
+	mainCamera.rotateOnWorldAxis(UP, -mouseDeltas.x);
 }
 
 
 /*  wrap these into single event, good ergonomics
 {
-CGL.Render();  // tell renderer its safe to copy and draw
+GG.Render();  // tell renderer its safe to copy and draw
 UpdateEvent => now;
 }
 */
 // Game loop 
-// CGL.Render(); // kick of the renderer
+// GG.Render(); // kick of the renderer
 fun void GameLoop(){
 	while (true) {
 		// 10::ms => now;  // don't need events anymore!!!
@@ -162,10 +154,10 @@ fun void GameLoop(){
 		// <<< "inside chuck framecount: " + frameCounter >>>;
 
 		// End update, begin render
-		// CGL.Render();
+		// GG.Render();
 		// UpdateEvent => now;
-		CGL.nextFrame() => now;
-		// if (autoRender) { CGL.Render(); } // tell renderer its safe to copy and draw
+		GG.nextFrame() => now;
+		// if (autoRender) { GG.Render(); } // tell renderer its safe to copy and draw
 	}
 } spork ~ GameLoop();
 

@@ -10,27 +10,27 @@ spork ~ flycam.selfUpdate();
 
 // ===============================
 
-CglScene scene;
-CglMesh meshes[3];
-SphereGeo sphereGeo;
-BoxGeo boxGeo;
+GScene scene;
+GMesh meshes[3];
+SphereGeometry  SphereGeometry ;
+BoxGeometry boxGeo;
 MangoMat mangoMat;
 
-meshes[0].set(sphereGeo, mangoMat);
+meshes[0].set(SphereGeometry , mangoMat);
 meshes[1].set(boxGeo, mangoMat);
-meshes[2].set(sphereGeo, mangoMat);
+meshes[2].set(SphereGeometry , mangoMat);
 
 for (auto mesh : meshes) {
     mesh --> scene;
 }
 
-meshes[0].SetPosition(@(-2, 0, -5));
-meshes[1].SetPosition(@(0, 0, -5));
-meshes[2].SetPosition(@(2, 0, -5));
+meshes[0].position(@(-2, 0, -5));
+meshes[1].position(@(0, 0, -5));
+meshes[2].position(@(2, 0, -5));
 
 // camera setup ==================
 
-CGL.mainCam() @=> CglCamera @ cam;
+GG.camera() @=> GCamera @ cam;
 // cam.orthographic();
 
 int mode;
@@ -39,11 +39,11 @@ fun void cycleCameraModes() {
         2::second => now;
         <<< "persp mode" >>>;
         cam.perspective();
-        CglCamera.MODE_PERSP => mode;
+        GCamera.MODE_PERSP => mode;
         2::second => now;
         <<< "ortho mode" >>>;
         cam.orthographic();
-        CglCamera.MODE_ORTHO => mode;
+        GCamera.MODE_ORTHO => mode;
     }
 
 } 
@@ -53,14 +53,14 @@ fun void scrollZoom() {
     MM.GetScrollDelta() / 300.0 => float scroll_delta;
     if (scroll_delta == 0) return;
 
-    <<< "cam mode:  ", cam.mode(), "mode persp", CglCamera.MODE_PERSP, 
-        "mode ortho", CglCamera.MODE_ORTHO, "fov", cam.fov(), "size", cam.viewSize() >>>;
+    <<< "cam mode:  ", cam.mode(), "mode persp", GCamera.MODE_PERSP, 
+        "mode ortho", GCamera.MODE_ORTHO, "fov", cam.fov(), "size", cam.viewSize() >>>;
 
     // TODO why does this integer comparison not work??
-    if (mode == CglCamera.MODE_PERSP) {
+    if (mode == GCamera.MODE_PERSP) {
         <<< "setting  fov" >>>;
         cam.fov() - scroll_delta => cam.fov;
-    } else if (mode == CglCamera.MODE_ORTHO) {
+    } else if (mode == GCamera.MODE_ORTHO) {
         <<< "setting  size" >>>;
         cam.viewSize() - scroll_delta => cam.viewSize;
     } else {
@@ -81,5 +81,5 @@ while (true) {
 
     scrollZoom();
 
-    CGL.nextFrame() => now;
+    GG.nextFrame() => now;
 }

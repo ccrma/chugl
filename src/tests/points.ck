@@ -10,19 +10,19 @@ spork ~ flycam.selfUpdate();
 
 // ===============================
 
-CGL.fullscreen();
-CGL.lockCursor();
+GG.fullscreen();
+GG.lockCursor();
 
 // Scene setup ===================
 
-CglScene scene;
+GScene scene;
 PointsMat pointsMat;  pointsMat.pointSize(55.0);
 NormMat normMat;
-CglMesh pointMesh;
+GMesh pointMesh;
 
 // points stress test
 100 => int POINTS_PER_AXIS;
-CustomGeo pointsGeo;
+CustomGeometry pointsGeo;
 float pointPos[POINTS_PER_AXIS * POINTS_PER_AXIS * POINTS_PER_AXIS * 3];
 float pointColor[pointPos.size()];
 
@@ -52,8 +52,8 @@ for (int k; k < POINTS_PER_AXIS; k++) {
 
 <<< "Rendering ", pointPos.size()/3, " points!" >>>;
 
-pointsGeo.setPositions(pointPos);
-pointsGeo.setColors(pointColor);
+pointsGeo.positions(pointPos);
+pointsGeo.colors(pointColor);
 
 pointMesh.set(pointsGeo, pointsMat);
 pointMesh --> scene;
@@ -78,5 +78,5 @@ while (true) {
 
     // <<< "fc: ", fc++ , "now: ", now, "dt: ", dt, "dSamps: ", deltaTime >>>;
 
-    CGL.nextFrame() => now;
+    GG.nextFrame() => now;
 }

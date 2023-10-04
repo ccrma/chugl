@@ -10,7 +10,7 @@ spork ~ flycam.selfUpdate();
 
 // ===============================
 
-CglScene scene;
+GScene scene;
 
 // Game loop =====================
 
@@ -23,5 +23,5 @@ while (true) {
     now => lastTime;
     deltaTime/second => float dt;
 
-    CGL.nextFrame() => now;
+    GG.nextFrame() => now;
 }

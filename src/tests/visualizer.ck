@@ -70,45 +70,45 @@ fun void SpectrumWriter() {
 spork ~ SpectrumWriter();
 
 // Scene Setup =============================================================
-CglUpdate UpdateEvent;
-CglFrame FrameEvent;
-CglCamera mainCamera; mainCamera.SetPosition(3 * BACK);
-CglScene scene;
+NextFrameEvent UpdateEvent;
 
-BoxGeo boxGeo;
-SphereGeo sphereGeo;
+GCamera mainCamera; mainCamera.position(3 * BACK);
+GScene scene;
+
+BoxGeometry boxGeo;
+SphereGeometry  SphereGeometry ;
 NormMat normMat;  
 
-CglMesh waveformBoxMeshes[WAVEFORM_LENGTH];
-CglMesh spectrumBoxMeshes[WAVEFORM_LENGTH];
+GMesh waveformBoxMeshes[WAVEFORM_LENGTH];
+GMesh spectrumBoxMeshes[WAVEFORM_LENGTH];
 50.0 / WAVEFORM_LENGTH => float boxScale;
 
 // initialize boxes for waveform
 for (0 => int i; i < WAVEFORM_LENGTH; i++) {
     waveformBoxMeshes[i].set(boxGeo, normMat);
-    waveformBoxMeshes[i].SetScale(boxScale * UNIFORM);
-    waveformBoxMeshes[i].SetPosition(((-WAVEFORM_LENGTH/2) + i) * RIGHT * boxScale);
-    scene.AddChild(waveformBoxMeshes[i]);
+    waveformBoxMeshes[i].scale(boxScale * UNIFORM);
+    waveformBoxMeshes[i].position(((-WAVEFORM_LENGTH/2) + i) * RIGHT * boxScale);
+    waveformBoxMeshes[i] --> scene;
 
-    spectrumBoxMeshes[i].set(sphereGeo, normMat);  // TODO add different material for spectrum
-    spectrumBoxMeshes[i].SetScale(boxScale * UNIFORM);
-    spectrumBoxMeshes[i].SetPosition(((-WAVEFORM_LENGTH/2) + i) * RIGHT * boxScale + FORWARD);
-    scene.AddChild(spectrumBoxMeshes[i]);
+    spectrumBoxMeshes[i].set(SphereGeometry , normMat);  // TODO add different material for spectrum
+    spectrumBoxMeshes[i].scale(boxScale * UNIFORM);
+    spectrumBoxMeshes[i].position(((-WAVEFORM_LENGTH/2) + i) * RIGHT * boxScale + FORWARD);
+    (spectrumBoxMeshes[i]) --> scene;
 }
 
 fun void UpdateVisualizer() {
     for (0 => int i; i < WAVEFORM_LENGTH; i++) {
-        waveformBoxMeshes[i].PosY((5 * (waveform[i]))); // waveform
+        waveformBoxMeshes[i].posY((5 * (waveform[i]))); // waveform
 
         // no interpolation
-        // spectrumBoxMeshes[i].PosY((5 * Math.pow((spectrum[i]$polar).mag, .1))); // spectrum
+        // spectrumBoxMeshes[i].posY((5 * Math.pow((spectrum[i]$polar).mag, .1))); // spectrum
 
         // add interpolation
-        spectrumBoxMeshes[i].GetPosition() => vec3 spectrumBoxPos;
+        spectrumBoxMeshes[i].pos() => vec3 spectrumBoxPos;
         5 * Math.pow((spectrum[i]$polar).mag, .1) => float spectrumBoxTargetY;
         spectrumBoxPos.y => float spectrumBoxCurrentY;
         0.14 => float interpSpeed;
-        spectrumBoxMeshes[i].PosY(spectrumBoxCurrentY + (spectrumBoxTargetY - spectrumBoxCurrentY) * interpSpeed); // spectrum
+        spectrumBoxMeshes[i].posY(spectrumBoxCurrentY + (spectrumBoxTargetY - spectrumBoxCurrentY) * interpSpeed); // spectrum
     }
 }
 
@@ -120,28 +120,28 @@ fun void cameraUpdate(time t, dur dt)
 	.001 => float mouseSpeed;
 	MM.GetDeltas() * mouseSpeed => vec3 mouseDeltas;
 
-	// for mouse deltaY, rotate around GetRight axis
-	mainCamera.RotateOnLocalAxis(RIGHT, -mouseDeltas.y);
+	// for mouse deltaY, rotate around right axis
+	mainCamera.rotateOnLocalAxis(RIGHT, -mouseDeltas.y);
 
 	// for mouse deltaX, rotate around (0,1,0)
-	mainCamera.RotateOnWorldAxis(UP, -mouseDeltas.x);
+	mainCamera.rotateOnWorldAxis(UP, -mouseDeltas.x);
 
 	2.5 * (dt / second) => float cameraSpeed;
 	if (IM.isKeyDown(IM.KEY_LEFTSHIFT))
 		2.5 *=> cameraSpeed;
 	// camera movement
 	if (IM.isKeyDown(IM.KEY_W))
-		mainCamera.TranslateBy(cameraSpeed * mainCamera.GetForward());
+		mainCamera.translate(cameraSpeed * mainCamera.forward());
 	if (IM.isKeyDown(IM.KEY_S))
-		mainCamera.TranslateBy(-cameraSpeed * mainCamera.GetForward());
+		mainCamera.translate(-cameraSpeed * mainCamera.forward());
 	if (IM.isKeyDown(IM.KEY_D))
-		mainCamera.TranslateBy(cameraSpeed * mainCamera.GetRight());
+		mainCamera.translate(cameraSpeed * mainCamera.right());
 	if (IM.isKeyDown(IM.KEY_A))
-		mainCamera.TranslateBy(-cameraSpeed * mainCamera.GetRight());
+		mainCamera.translate(-cameraSpeed * mainCamera.right());
 	if (IM.isKeyDown(IM.KEY_Q))
-		mainCamera.TranslateBy(cameraSpeed * UP);
+		mainCamera.translate(cameraSpeed * UP);
 	if (IM.isKeyDown(IM.KEY_E))
-		mainCamera.TranslateBy(-cameraSpeed * UP);
+		mainCamera.translate(-cameraSpeed * UP);
 
 }
 
@@ -164,10 +164,10 @@ fun void GameLoop(){
         UpdateVisualizer();
 
 		// End update, begin render
-		CGL.nextFrame() => now;  // TODO: CGL.Render() should also block shred on UpdateEvent, to prevent deadlock
+		GG.nextFrame() => now;  // TODO: GG.Render() should also block shred on UpdateEvent, to prevent deadlock
 		// 17::ms => now;  // forces deadlock, bc of bug I have written about. with this delay, shred is not
 		// getting on the UpdateEvent waitqueue in time before renderer broadcasts it.
-		// solution is to somehow get on it before calling Render(), something like CGL.Render() => now;
+		// solution is to somehow get on it before calling Render(), something like GG.Render() => now;
 	}
 } 
 

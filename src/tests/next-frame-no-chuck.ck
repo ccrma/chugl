@@ -1,4 +1,4 @@
 while (true) {
-   CGL.nextFrame();
+   GG.nextFrame();
    1::second => now;
 }

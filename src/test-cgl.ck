@@ -3,16 +3,16 @@
 0 => int frameCounter;
 now => time lastTime;
 
-CglUpdate UpdateEvent;
-CglFrame FrameEvent;
+NextFrameEvent UpdateEvent;
+
 
 NormMat normMat;
-BoxGeo boxGeo;
-SphereGeo sphereGeo;
+BoxGeometry boxGeo;
+SphereGeometry  SphereGeometry ;
 
-CglScene scene;
-CglMesh mesh;
-CglMesh lightbulb;
+GScene scene;
+GMesh mesh;
+GMesh lightbulb;
 CglGroup group;
 
 // Lighting
@@ -20,18 +20,16 @@ PointLight light;
 PhongMat phongMat;
 
 mesh.set( boxGeo, phongMat );
-lightbulb.set( sphereGeo, normMat );
+lightbulb.set( SphereGeometry , normMat );
 
-scene.AddChild( mesh );
-scene.AddChild(group);
-lightbulb.SetPosition( @(2, 0, 0) );  
-group.AddChild( lightbulb );
-lightbulb.AddChild( light );
+mesh --> scene;
+light --> lightbulb --> group --> scene;
+lightbulb.position( @(2, 0, 0) );  
 
 
 
 while (true) {
-    CGL.Render();
+    GG.Render();
     UpdateEvent => now;
 
     // compute timing
@@ -43,10 +41,10 @@ while (true) {
     deltaTime/second => float dt;
 
     // rotate light
-    group.RotateY( 0.5 * dt );
+    group.rotY( 0.5 * dt );
     <<< "light position", light.GetWorldPosition() >>>;
     <<< "lightbulb position", lightbulb.GetWorldPosition() >>>;
-    // <<< "lightbulb local position", lightbulb.GetPosition() >>>;
+    // <<< "lightbulb local position", lightbulb.pos() >>>;
     // <<< "group position", group.GetWorldPosition() >>>;
 }
 

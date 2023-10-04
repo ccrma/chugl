@@ -1,24 +1,47 @@
-CGL.fullscreen(); // gotta go fastral
+GG.fullscreen(); // gotta go fastral
 
-BoxGeo geo;
+BoxGeometry geo;
 NormMat mat;
 
+now => time lastTime;
+dur deltaTime;
 class covfefe extends GGen {
 
-    CglMesh mesh;
-    mesh.set(geo, mat);
+    GMesh meshWindowTime;
+    meshWindowTime.set(geo, mat);
 
-    mesh --> this;
+    GMesh meshChuckTime;
+    meshChuckTime.set(geo, mat);
+
+    meshWindowTime --> this;
+    meshChuckTime --> this;
+
+    @(-1.0, 0.0, 0.0) => meshWindowTime.position;
+    @(1, 0.0, 0.0) => meshChuckTime.position;
+
+    1.8 => float rotSpeed;
 
     fun void update(float dt) {
-        // <<< "covfefe ", dt >>>;
-        mesh.RotateX( .27 * dt );
+        deltaTime / second => float chuck_dt;
+        <<< "window dt: ", dt,  " | chuck dt:",  chuck_dt >>>;
+        meshWindowTime.rotX( rotSpeed * dt );
+        meshChuckTime.rotX( rotSpeed * chuck_dt );
     }
 }
 
-// covfefe c --> CGL.scene();
-covfefe c --> CGL.scene();
+// covfefe c; 
+// 0 => int connected;
+covfefe c --> GG.scene(); 
 
 while (true) {
-    CGL.nextFrame() => now;
+    // <<< "next frame" >>>;
+    // <<< "main now", now >>>;
+    now - lastTime => deltaTime;
+    now => lastTime;
+
+    // if (now / second > 2 && !connected) {
+    //     c --> GG.scene();
+    // }
+
+    GG.nextFrame() => now;
 }

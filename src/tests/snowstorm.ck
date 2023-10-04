@@ -10,12 +10,12 @@ spork ~ flycam.selfUpdate();
 
 // ===============================
 
-CglScene scene;
+GScene scene;
 FileTexture tex;
 tex.path("./tests/textures/snowflake7_alpha.png");
 
-SphereGeo geo;
-CglMesh mesh;
+SphereGeometry  geo;
+GMesh mesh;
 PointsMat mat;  mat.pointSize(55.0);
 mat.sprite(tex);
 // mat.color(@(0.0, 1.0, 0.0));
@@ -36,5 +36,5 @@ while (true) {
     now => lastTime;
     deltaTime/second => float dt;
 
-    CGL.nextFrame() => now;
+    GG.nextFrame() => now;
 }

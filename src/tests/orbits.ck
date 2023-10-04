@@ -9,7 +9,7 @@ class Body extends GGen {
 	1.0 => float rotSpeed;
 
 	fun void update(float dt) {
-		rotSpeed * dt => body.rotateY;
+		rotSpeed * dt => body.rotY;
 	}
 }
 
@@ -25,7 +25,7 @@ earth --> earthSystem;
 moon --> moonSystem;
 
 // set wireframe
-planetMat.mode(CGL.LINES);
+planetMat.mode(GG.LINES);
 for (auto planet : planets)
 	planet.mat(planetMat);
 
@@ -42,12 +42,12 @@ fun void Update(time t, dur dt)
 {
 	t / second => float ftime;
 
-	sunSystem.SetRotation(@(0.0, .5 * ftime, 0.0));
-	earthSystem.SetRotation(@(0.0, .7 * ftime, 0.0));
+	sunSystem.rotation(@(0.0, .5 * ftime, 0.0));
+	earthSystem.rotation(@(0.0, .7 * ftime, 0.0));
 
-	sun.SetRotation(@(0.0, .1 * ftime, 0.0));
-	earth.SetRotation(@(0.0, .4 * ftime, 0.0));
-	moon.SetRotation(@(0.0, .9 * ftime, 0.0));
+	sun.rotation(@(0.0, .1 * ftime, 0.0));
+	earth.rotation(@(0.0, .4 * ftime, 0.0));
+	moon.rotation(@(0.0, .9 * ftime, 0.0));
 }
 
 now => time lastTime;
@@ -59,5 +59,5 @@ while (true) {
 	// Update logic
 	Update(now, deltaTime);
 
-	CGL.nextFrame() => now;
+	GG.nextFrame() => now;
 }

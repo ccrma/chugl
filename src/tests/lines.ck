@@ -10,10 +10,10 @@ spork ~ flycam.selfUpdate();
 
 // ===============================
 
-CGL.fullscreen();
-CGL.lockCursor();
+GG.fullscreen();
+GG.lockCursor();
 
-CustomGeo lineGeo;
+CustomGeometry lineGeo;
 // construct line segment
 [
     0.0, 0.0, 0.0,
@@ -31,14 +31,14 @@ for (0 => int i; i < colors.size(); i++) {
     Math.random2f(0.0, 1.0) => colors[i];
 }
 
-lineGeo.setPositions(positions);
-lineGeo.setColors(colors);
+lineGeopositions(positions);
+lineGeo.colors(colors);
 
-CglScene scene;
+GScene scene;
 LineMat lineMat;
-CglMesh mesh;
+GMesh mesh;
 mesh.set(lineGeo, lineMat);
-mesh.SetPosition(@(0.0, 0.0, -5.0));
+mesh.position(@(0.0, 0.0, -5.0));
 mesh --> scene;
 
 // testers =====================
@@ -87,5 +87,5 @@ while (true) {
     now => lastTime;
     deltaTime/second => float dt;
 
-    CGL.nextFrame() => now;
+    GG.nextFrame() => now;
 }

@@ -40,8 +40,8 @@ fun int VecEquals(vec3 a, vec3 b) {
 // Resource Initialization ==================================================
 
 // initialize geos
-SphereGeo sphereGeo;
-BoxGeo boxGeo;
+SphereGeometry  SphereGeometry ;
+BoxGeometry boxGeo;
 // init materials
 NormMat normMat;  
 NormMat headNormMat;
@@ -68,9 +68,9 @@ class Segment {
 
 	null @=> Segment @ next;
 
-	CglMesh mesh;
+	GMesh mesh;
 
-	fun void Constructor(CglGeo @ geo, CglMat @ mat) {
+	fun void Constructor(Geometry @ geo, CglMat @ mat) {
 		// create mesh
 		mesh.set(geo, mat);
 	}
@@ -80,7 +80,7 @@ class Segment {
 	}
 
 	fun static Segment @ Create(
-		CglGeo @ geo, 
+		Geometry @ geo, 
 		CglMat @ mat,
 		vec3 pos
 	) {
@@ -99,12 +99,12 @@ class Segment {
 	}
 
 	fun vec3 GetPos() {
-		return mesh.GetPosition();
+		return mesh.pos();
 	}
 
 	fun void SetPos(vec3 pos) {
 		<<< "setpos", pos >>>;
-		mesh.SetPosition(pos);
+		mesh.position(pos);
 	}
 
 	// returns whether point inside segment
@@ -130,45 +130,11 @@ class Segment {
 // class Laser {
 
 // 	// Geometry
-// 	CglMesh laserMesh;
-// 	BoxGeo laserGeo;
+// 	GMesh laserMesh;
+// 	BoxGeometry laserGeo;
 
 
 
-
-// 	fun void Constructor(
-// 		vec3 dir, vec3 startPos, vec3 endPos,
-// 		vec3 rot,
-// 		int height, int width, 
-// 		CglScene @ scene
-// 	) {
-// 		CglMesh laserMesh;
-// 		laserGeo.set(
-// 			height * 1.0, width * 1.0, depth * 1.0,
-// 			height, width, depth 
-// 		)
-// 		laserMesh.set(
-// 			laserGeo, wireframeNormMat
-// 		);
-
-// 		height => this.h;
-// 		width => this.w;
-// 		depth => this.d;
-
-// 		-w / 2 => minX; w / 2 => maxX;
-// 		-h / 2 => minY; h / 2 => maxY;
-// 		-d / 2 => minZ; d / 2 => maxZ;
-
-// 		gridGeo.set(
-// 		);
-// 		gridMesh.set(gridGeo, gridMat);
-// 		scene.AddChild(gridMesh);
-
-
-// 		scene.AddChild(laserMesh);
-
-// 	}
-// }
 
 
 class Grid {
@@ -178,8 +144,8 @@ class Grid {
 
     int minX, minY, minZ, maxX, maxY, maxZ;
 
-	CglMesh gridMesh;
-	BoxGeo gridGeo;
+	GMesh gridMesh;
+	BoxGeometry gridGeo;
 
 	NormMat gridMat;
 	gridMat.polygonMode(CglMat.POLYGON_LINE);
@@ -216,7 +182,7 @@ class Grid {
 	
     fun void Constructor(
 		int height, int width, int depth,
-		CglScene@ scene
+		GScene@ scene
 	) {
 		height => this.h;
 		width => this.w;
@@ -231,7 +197,7 @@ class Grid {
 			height, width, depth 
 		);
 		gridMesh.set(gridGeo, gridMat);
-		scene.AddChild(gridMesh);
+		gridMesh --> scene;
 
 		// populate empty cells
 		new vec3[0] @=> emptyCells;
@@ -257,8 +223,8 @@ class Grid {
 
 
 class Snake {
-	CglScene @ scene;
-    CglGeo @ geo;  // snake segment shape 
+	GScene @ scene;
+    Geometry @ geo;  // snake segment shape 
     CglMat @ mat;  // snake material
 
     CglGroup snakeObj;  // parent group for all segments
@@ -293,20 +259,20 @@ class Snake {
 	// 	seg @=> this.tail;
 	// 	this.head.SetNext(this.tail);
 
-	// 	// seg.mesh.set(sphereGeo, mat);
+	// 	// seg.mesh.set(SphereGeometry , mat);
 	// }
 
     // constructor. call this first!
     fun void Constructor(
-		CglGeo @ snakeGeo, CglMat @ snakeMat,
-		CglScene @ scene
+		Geometry @ snakeGeo, CglMat @ snakeMat,
+		GScene @ scene
 	) {
         snakeGeo @=> this.geo;
         snakeMat @=> this.mat;
 		scene @=> this.scene;
 
 		// add to scene
-		scene.AddChild(snakeObj);
+		snakeObj --> scene;
 
 		// create 1-seg sneck
 		Segment seg;
@@ -317,7 +283,7 @@ class Snake {
 		head.SetNext(tail);
 
 		// add to scene
-		snakeObj.AddChild(seg.mesh);
+		seg.mesh --> snakeObj;
 
 		// spawn food
 		SpawnFood();
@@ -340,7 +306,7 @@ class Snake {
 	// adds segment to head of snake
 	fun void AddSegment(Segment @ seg) {
 		// add to scene
-		snakeObj.AddChild(seg.mesh);
+		seg.mesh --> snakeObj;
 
 		// update linked list
 		seg.SetNext(tail);
@@ -353,13 +319,13 @@ class Snake {
 	// spawn a food!
 	fun void SpawnFood() {
 		G.grid.GetRandomEmptyCell() => vec3 pos;
-		Segment.Create(sphereGeo, normMat, pos) @=> Segment @ food;
+		Segment.Create(SphereGeometry , normMat, pos) @=> Segment @ food;
 
 		// update state
 		G.grid.SetCellFull(pos);
 		food @=> G.food;
 
-		scene.AddChild(food.mesh);
+		food.mesh --> scene;
 	}
 
     // moves the snake by 1 step
@@ -464,10 +430,10 @@ class Snake {
 
 
 // Scene Setup =============================================================
-CglUpdate UpdateEvent;
-CglFrame FrameEvent;
-CglCamera mainCamera; 
-CglScene scene;
+NextFrameEvent UpdateEvent;
+
+GCamera mainCamera; 
+GScene scene;
 
 Grid grid;
 grid.Constructor(21, 21, 21, scene);
@@ -508,7 +474,7 @@ spork ~ SnakeInputHandler();
 // fun void WorldMovement() {
 // 	while (true) {
 // 		10::ms => now;
-// 		scene.RotateOnLocalAxis(UP, 0.002);
+// 		scene.rotateOnLocalAxis(UP, 0.002);
 // 	}
 // } spork ~ WorldMovement();
 
@@ -528,7 +494,7 @@ fun void cameraUpdate(time t, dur dt)
 	// TODO: needs to be relative to the snake direction
 	// OR just have wasd control camera pivot
 	// OR use orbit camera controls
-	// mainCamera.SetPosition(snake.head.GetPos() + @(0.0, 3.0, 3.0));
+	// mainCamera.position(snake.head.GetPos() + @(0.0, 3.0, 3.0));
 	// OR make grid, snake, everything child of one group
 	// and use mouse/keys to ROTATE the group itself, like spinning the whole world around
 
@@ -536,35 +502,35 @@ fun void cameraUpdate(time t, dur dt)
 	.001 => float mouseSpeed;
 	MM.GetDeltas() * mouseSpeed => vec3 mouseDeltas;
 
-	// for mouse deltaY, rotate around GetRight axis
-	mainCamera.RotateOnLocalAxis(RIGHT, -mouseDeltas.y);
+	// for mouse deltaY, rotate around right axis
+	mainCamera.rotateOnLocalAxis(RIGHT, -mouseDeltas.y);
 
 	// for mouse deltaX, rotate around (0,1,0)
-	mainCamera.RotateOnWorldAxis(UP, -mouseDeltas.x);
+	mainCamera.rotateOnWorldAxis(UP, -mouseDeltas.x);
 
 	2.5 * (dt / second) => float cameraSpeed;
 	if (IM.isKeyDown(IM.KEY_LEFTSHIFT))
 		2.5 *=> cameraSpeed;
 	// camera movement
 	if (IM.isKeyDown(IM.KEY_W))
-		mainCamera.TranslateBy(cameraSpeed * mainCamera.GetForward());
+		mainCamera.translate(cameraSpeed * mainCamera.forward());
 	if (IM.isKeyDown(IM.KEY_S))
-		mainCamera.TranslateBy(-cameraSpeed * mainCamera.GetForward());
+		mainCamera.translate(-cameraSpeed * mainCamera.forward());
 	if (IM.isKeyDown(IM.KEY_D))
-		mainCamera.TranslateBy(cameraSpeed * mainCamera.GetRight());
+		mainCamera.translate(cameraSpeed * mainCamera.right());
 	if (IM.isKeyDown(IM.KEY_A))
-		mainCamera.TranslateBy(-cameraSpeed * mainCamera.GetRight());
+		mainCamera.translate(-cameraSpeed * mainCamera.right());
 	if (IM.isKeyDown(IM.KEY_Q))
-		mainCamera.TranslateBy(cameraSpeed * UP);
+		mainCamera.translate(cameraSpeed * UP);
 	if (IM.isKeyDown(IM.KEY_E))
-		mainCamera.TranslateBy(-cameraSpeed * UP);
+		mainCamera.translate(-cameraSpeed * UP);
 
 }
 
 
 // Game loop 
 fun void GameLoop(){
-	// CGL.Render(); // kick of the renderer
+	// GG.Render(); // kick of the renderer
 	while (true) {
 		// UpdateEvent => now;
 		// <<< "==== update loop " >>>;
@@ -579,8 +545,8 @@ fun void GameLoop(){
 		Update();
 
 		// End update, begin render
-		// CGL.Render();
-		CGL.nextFrame() => now;
+		// GG.Render();
+		GG.nextFrame() => now;
 	}
 } 
 

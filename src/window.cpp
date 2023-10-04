@@ -257,6 +257,12 @@ void Window::DisplayLoop()
     int frameCount = 0;
     while (!glfwWindowShouldClose(m_Window))
     {
+        CGL::WaitOnUpdateDone();  
+        // TODO: why does putting this AFTER time calculation cause everything to be so choppy at high FPS?
+        // hypothesis: puts time calculation into the critical region
+        // time is updated only when all chuck shreds are on wait queue
+        // guaranteeing that when they awake, they'll be using fresh dt data
+
         // FPS counter
 		++frameCount;
         float currentTime = (float)glfwGetTime();
@@ -271,7 +277,6 @@ void Window::DisplayLoop()
         }
         CGL::SetTimeInfo(currentTime, m_DeltaTime);
 
-        CGL::WaitOnUpdateDone();
         /*
         Note: this sync mechanism also gets rid of the problem where chuck runs away
         e.g. if the time it takes the renderer flush the queue is greater than

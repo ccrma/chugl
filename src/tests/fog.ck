@@ -8,25 +8,25 @@ FlyCam flycam;
 flycam.init(IM, MM);
 spork ~ flycam.selfUpdate();
 
-// CGL.fullscreen();
-CGL.lockCursor();
-CGL.mainCam().clip(0.1, 1000);
+// GG.fullscreen();
+GG.lockCursor();
+GG.camera().clip(0.1, 1000);
 
 // ===============================
 
-CGL.scene() @=> CglScene @ scene;
+GG.scene() @=> GScene @ scene;
 
 40 => int AXIS_LENGTH;
 
-CglMesh meshes[AXIS_LENGTH * AXIS_LENGTH];
+GMesh meshes[AXIS_LENGTH * AXIS_LENGTH];
 NormMat normMat;
-SphereGeo sphereGeo;
+SphereGeometry  SphereGeometry ;
 
 for (0 => int i; i < AXIS_LENGTH; i++) {
     for (0 => int j; j < AXIS_LENGTH; j++) {
-        meshes[i * AXIS_LENGTH + j] @=> CglMesh @ mesh;
-        mesh.set(sphereGeo, normMat);
-        mesh.SetPosition(2.0 * @(i, 0, -j));
+        meshes[i * AXIS_LENGTH + j] @=> GMesh @ mesh;
+        mesh.set(SphereGeometry , normMat);
+        mesh.position(2.0 * @(i, 0, -j));
         mesh --> scene;
     }
 }
@@ -45,7 +45,7 @@ fun void pingPongFogDensity() {
     while (true) {
         Math.sin(0.5 * (now/second)) * 0.3 + 0.3 => density;
         scene.fogDensity(density);
-        CGL.nextFrame() => now;
+        GG.nextFrame() => now;
     }
 }
 spork ~ pingPongFogDensity();
@@ -69,7 +69,7 @@ fun void lerpFogCol() {
         Math.sin(0.7 * (now/second)) * 0.5 + 0.5 => float r;
         scene.fogColor(@(r, g, b));
         scene.backgroundColor(@(r, g, b));
-        CGL.nextFrame() => now;
+        GG.nextFrame() => now;
     }
     <<< "lerp Fog color shred dying :(" >>>;
 }
@@ -104,5 +104,5 @@ while (true) {
     now => lastTime;
     deltaTime/second => float dt;
 
-    CGL.nextFrame() => now;
+    GG.nextFrame() => now;
 }
