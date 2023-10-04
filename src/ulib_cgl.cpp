@@ -379,7 +379,7 @@ t_CKBOOL create_chugl_default_objs(Chuck_DL_Query* QUERY)
 
 	// update() vt offset
 	// find the offset for update 
-    CGL::our_update_vt_offset = QUERY->api()->object->get_vtable_offset(QUERY->api(), QUERY->vm(), "GGen", "update");
+    CGL::our_update_vt_offset = QUERY->api()->object->get_vtable_offset(QUERY->vm(), "GGen", "update");
 	
 	return true;
 }
@@ -482,7 +482,10 @@ CK_DLL_MFUN(cgl_update_event_waiting_on)
 	CGL::ActivateHook(); 
 
 	// Add shred (no-op if already added)
-	CGL::RegisterShred(SHRED);
+	// CGL::RegisterShred(SHRED);
+
+	// flips the boolean flag for this shred to true, meaning it has successfully 
+	CGL::MarkShredWaited(SHRED);  
 
 	// Add shred to waiting list
 	CGL::RegisterShredWaiting(SHRED);
@@ -584,9 +587,22 @@ CK_DLL_SFUN(cgl_next_frame)
 	// extract CglEvent from obj
 	// TODO: workaround bug where create() object API is not calling preconstructors
 	// https://trello.com/c/JwhVQEpv/48-cglnextframe-now-not-calling-preconstructor-of-cglupdate
+
+	if (!CGL::HasShredWaited(SHRED)) {
+		API->vm->throw_exception(
+			"NextFrameNotWaitedOnViolation",
+			"You are calling .nextFrame() without chucking to now!\n"
+			"Please replace this line with .nextFrame() => now;",
+			SHRED
+		);
+	} 
+
 	RETURN->v_object = (Chuck_Object *)CGL::GetShredUpdateEvent(
 		SHRED, API, VM
 	);
+
+	// register shred and set has-waited flag to false
+	CGL::RegisterShred(SHRED);	
 }
 
 CK_DLL_SFUN(cgl_register) { CGL::RegisterShred(SHRED); }
@@ -1027,7 +1043,7 @@ CK_DLL_MFUN(cgl_texture_file_set_filepath)
 CK_DLL_MFUN(cgl_texture_file_get_filepath)
 {
 	CGL_Texture* texture = (CGL_Texture*)OBJ_MEMBER_INT(SELF, cgltexture_data_offset);
-    RETURN->v_string = (Chuck_String *) API->object->create_string(API, VM, texture->m_FilePath.c_str());
+    RETURN->v_string = (Chuck_String *) API->object->create_string(VM, texture->m_FilePath.c_str(), false);
 }
 
 // DataTexture API impl =====================================================
@@ -2523,7 +2539,7 @@ Chuck_DL_Api::Object CGL::DL_mainScene;
 t_CKINT CGL::our_update_vt_offset = -1;
 
 // Initialization for Shred Registration structures
-std::unordered_set<Chuck_VM_Shred*> CGL::m_RegisteredShreds;
+std::unordered_map<Chuck_VM_Shred*, bool> CGL::m_RegisteredShreds;
 std::unordered_set<Chuck_VM_Shred*> CGL::m_WaitingShreds;
 
 Chuck_DL_Api::Object CGL::s_UpdateEvent = nullptr;
@@ -2639,7 +2655,7 @@ void CGL::PushCommand(SceneGraphCommand * cmd) {
 
 void CGL::RegisterShred(Chuck_VM_Shred *shred)
 {
-	m_RegisteredShreds.insert(shred);
+	m_RegisteredShreds[shred] = false;
 }
 
 void CGL::UnregisterShred(Chuck_VM_Shred *shred)
@@ -2650,6 +2666,19 @@ void CGL::UnregisterShred(Chuck_VM_Shred *shred)
 bool CGL::IsShredRegistered(Chuck_VM_Shred *shred)
 {
 	return m_RegisteredShreds.find(shred) != m_RegisteredShreds.end();
+}
+
+void CGL::MarkShredWaited(Chuck_VM_Shred *shred)
+{
+	m_RegisteredShreds[shred] = true;
+}
+
+// returns false if shred has called .nextFrame() in previous frame 
+// without chucking to now e.g. .nextFrame() => now;
+bool CGL::HasShredWaited(Chuck_VM_Shred *shred)
+{
+	if (!IsShredRegistered(shred)) return true;  // never called before
+	return m_RegisteredShreds[shred];
 }
 
 size_t CGL::GetNumRegisteredShreds()
@@ -2682,8 +2711,8 @@ Chuck_DL_Api::Object CGL::GetShredUpdateEvent(Chuck_VM_Shred *shred, CK_DL_API A
 	// std::cerr << "shred event map size: " + std::to_string(m_ShredEventMap.size()) << std::endl;
 	// lookup
 	if (s_UpdateEvent == nullptr) {
-		Chuck_DL_Api::Type type = API->object->get_type(API, VM, "CglUpdate");
-		Chuck_DL_Api::Object obj = API->object->create_no_shred(API, VM, type);
+		Chuck_DL_Api::Type type = API->object->get_type(VM, "CglUpdate");
+		Chuck_DL_Api::Object obj = API->object->create_without_shred(VM, type, true);
 
 		// for now constructor will add chuck event to the eventQueue
 		// as long as there is only one, and it's created in first call to nextFrame BEFORE renderer wakes up then this is threadsafe
@@ -2701,9 +2730,9 @@ Chuck_DL_Api::Object CGL::GetMainCamera(
 	if (CGL::mainCameraInitialized) {
 		return CGL::DL_mainCamera;
 	} else {
-		Chuck_DL_Api::Type type = API->object->get_type(API, VM, "CglCamera");
+		Chuck_DL_Api::Type type = API->object->get_type(VM, "CglCamera");
 		// note: for creation shred is just passed in for the VM reference
-		Chuck_DL_Api::Object obj = API->object->create_with_shred(API, shred, type);
+		Chuck_DL_Api::Object obj = API->object->create_with_shred(shred, type, true);
 		cgl_cam_ctor( (Chuck_Object*)obj, NULL, VM, shred, API );
 		CGL::DL_mainCamera = obj;
 		return obj;
@@ -2715,9 +2744,9 @@ Chuck_DL_Api::Object CGL::GetMainScene(Chuck_VM_Shred *shred, CK_DL_API API, Chu
 	if (CGL::mainSceneInitialized) {
 		return CGL::DL_mainScene;
 	} else {
-		Chuck_DL_Api::Type type = API->object->get_type(API, VM, "CglScene");
+		Chuck_DL_Api::Type type = API->object->get_type(VM, "CglScene");
 		// note: for creation shred is just passed in for the VM reference
-		Chuck_DL_Api::Object obj = API->object->create_with_shred(API, shred, type);
+		Chuck_DL_Api::Object obj = API->object->create_with_shred(shred, type, true);
 		cgl_scene_ctor( (Chuck_Object*)obj, NULL, VM, shred, API );
 		CGL::DL_mainScene = obj;
 		return obj;

@@ -395,8 +395,6 @@ typedef Chuck_DL_MainThreadHook * (CK_DLL_CALL * f_create_main_thread_hook)( Chu
 typedef void (CK_DLL_CALL * f_register_shreds_watcher)( Chuck_DL_Query * query, f_shreds_watcher cb, t_CKUINT options, void * bindle );
 // unregister a shreds notification callback
 typedef void (CK_DLL_CALL * f_unregister_shreds_watcher)( Chuck_DL_Query * query, f_shreds_watcher cb );
-// call a Chuck_Object member function (defined in chuck or in c++) in IMMEDIATE MODE
-typedef Chuck_DL_Return (CK_DLL_CALL * f_invoke_mfun)( Chuck_Object * obj, t_CKUINT func_vt_offset, Chuck_VM * vm, Chuck_VM_Shred * shred, Chuck_DL_Arg * ARGS, t_CKUINT numArgs );
 
 // documentation
 // set current class documentation
@@ -841,7 +839,12 @@ public:
         // any time/event operations therein will throw an exception
         // Chuck_DL_Return (CK_DLL_CALL * invoke_mfun_immediate_mode)
         // ( Chuck_Object * obj, t_CKUINT func_vt_offset, Chuck_VM * vm, Chuck_VM_Shred * shred, Chuck_DL_Arg * ARGS, t_CKUINT numArgs );
-        f_invoke_mfun invoke_mfun_immediate_mode;
+        Chuck_DL_Return (CK_DLL_CALL * const invoke_mfun_immediate_mode)( Chuck_Object * obj, t_CKUINT func_vt_offset,
+                                                                          Chuck_VM * vm, Chuck_VM_Shred * shred, Chuck_DL_Arg * ARGS, t_CKUINT numArgs );
+        // throw an exception; if shred is passed in, it will be halted
+        void (CK_DLL_CALL * const throw_exception)( const char * exception, const char * desc, Chuck_VM_Shred * shred );
+        // log a message in the chuck logging system
+        void (CK_DLL_CALL * const em_log)( t_CKINT level, const char * text );
     } * const vm;
 
     struct ObjectApi
@@ -853,29 +856,40 @@ public:
     // intent: this allows for chugins to access member variables and create chuck strings
     public:
         // function pointer get_type()
-        Type (* const get_type)( CK_DL_API, Chuck_VM *, const char * name );
+        Type (* const get_type)( Chuck_VM *, const char * name );
         // function pointer for get_vtable_offset(); returns < 0 if not found
-        t_CKINT (* const get_vtable_offset)( CK_DL_API, Chuck_VM *, const char * typee, const char * value );
-        // function pointer create_with_shred()
-        Object (* const create_with_shred)( CK_DL_API, Chuck_VM_Shred *, Type type );
-        // function pointer create_no_shred()
-        Object (* const create_no_shred)( CK_DL_API, Chuck_VM *, Type type );
-        // function pointer create_string()
-        String (* const create_string)( CK_DL_API, Chuck_VM *, const char * value );
+        t_CKINT (* const get_vtable_offset)( Chuck_VM *, const char * typee, const char * value );
+        // add reference count
+        void (* const add_ref)( Object object );
+        // release reference count
+        void (* const release)( Object object );
+        // get reference count
+        t_CKUINT (* const refcount)( Object object );
+        // instantiating and initializing a ChucK object by type, with reference to a parent shred
+        // if addRef == TRUE the newly created object will have a reference count of 1; otherwise 0
+        // NOTE set addRef to TRUE if you intend to keep a reference of the newly created object around (e.g., in the chugin)
+        // NOTE set addref to FALSE if the created object is to be returned without keeping a reference around
+        Object (* const create_with_shred)( Chuck_VM_Shred *, Type type, t_CKBOOL addRef );
+        // instantiating and initializing a ChucK object by type, with no reference to a parent shred
+        // if addRef == TRUE the newly created object will have a reference count of 1; otherwise 0
+        Object (* const create_without_shred)( Chuck_VM *, Type type, t_CKBOOL addRef );
+        // instantiate and initialize a ChucK string by type
+        // if addRef == TRUE the newly created object will have a reference count of 1; otherwise 0
+        String (* const create_string)( Chuck_VM *, const char * value, t_CKBOOL addRef );
         // function pointers for get_mvar_*()
-        t_CKBOOL (* const get_mvar_int)( CK_DL_API, Object object, const char * name, t_CKINT & value );
-        t_CKBOOL (* const get_mvar_float)( CK_DL_API, Object object, const char * name, t_CKFLOAT & value );
-        t_CKBOOL (* const get_mvar_dur)( CK_DL_API, Object object, const char * name, t_CKDUR & value );
-        t_CKBOOL (* const get_mvar_time)( CK_DL_API, Object object, const char * name, t_CKTIME & value );
-        t_CKBOOL (* const get_mvar_string)( CK_DL_API, Object object, const char * name, String & value );
-        t_CKBOOL (* const get_mvar_object)( CK_DL_API, Object object, const char * name, Object & value );
+        t_CKBOOL (* const get_mvar_int)( Object object, const char * name, t_CKINT & value );
+        t_CKBOOL (* const get_mvar_float)( Object object, const char * name, t_CKFLOAT & value );
+        t_CKBOOL (* const get_mvar_dur)( Object object, const char * name, t_CKDUR & value );
+        t_CKBOOL (* const get_mvar_time)( Object object, const char * name, t_CKTIME & value );
+        t_CKBOOL (* const get_mvar_string)( Object object, const char * name, String & value );
+        t_CKBOOL (* const get_mvar_object)( Object object, const char * name, Object & value );
         // function pointer for set_string()
-        t_CKBOOL (* const set_string)( CK_DL_API, String string, const char * value );
+        t_CKBOOL (* const set_string)( String string, const char * value );
         // array_int operations
-        t_CKBOOL (* const array_int_size)( CK_DL_API, ArrayInt array, t_CKINT & value );
-        t_CKBOOL (* const array_int_push_back)( CK_DL_API, ArrayInt array, t_CKUINT value );
-        t_CKBOOL (* const array_int_get_idx)( CK_DL_API, ArrayInt array, t_CKINT idx, t_CKUINT & value );
-        t_CKBOOL (* const array_int_get_key)( CK_DL_API, ArrayInt array, const std::string & key, t_CKUINT & value );
+        t_CKBOOL (* const array_int_size)( ArrayInt array, t_CKINT & value );
+        t_CKBOOL (* const array_int_push_back)( ArrayInt array, t_CKUINT value );
+        t_CKBOOL (* const array_int_get_idx)( ArrayInt array, t_CKINT idx, t_CKUINT & value );
+        t_CKBOOL (* const array_int_get_key)( ArrayInt array, const std::string & key, t_CKUINT & value );
     } * const object;
 
     Api() :

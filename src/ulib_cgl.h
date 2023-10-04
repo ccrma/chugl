@@ -84,7 +84,8 @@ public: // command queue methods
 
 private:
 	// hashset to track registered shreds
-	static std::unordered_set<Chuck_VM_Shred*> m_RegisteredShreds;
+	// the key bool is set to false when a shred calls nextFrame, and true in the waiting on callback
+	static std::unordered_map<Chuck_VM_Shred*, bool> m_RegisteredShreds;
 	static std::unordered_set<Chuck_VM_Shred*> m_WaitingShreds;  // shreds for other others to finish their update logic
 
 	static Chuck_DL_Api::Object s_UpdateEvent;
@@ -94,6 +95,8 @@ public:
 	static void RegisterShred(Chuck_VM_Shred* shred);
 	static void UnregisterShred(Chuck_VM_Shred* shred);
 	static bool IsShredRegistered(Chuck_VM_Shred* shred);
+	static void MarkShredWaited(Chuck_VM_Shred* shred);
+	static bool HasShredWaited(Chuck_VM_Shred *shred);
 	static size_t GetNumRegisteredShreds();
 	static void RegisterShredWaiting(Chuck_VM_Shred* shred);
 	static void UnregisterShredWaiting(Chuck_VM_Shred* shred);

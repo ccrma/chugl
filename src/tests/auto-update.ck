@@ -8,7 +8,7 @@ class covfefe extends GGen {
     CglMesh mesh;
     mesh.set(geo, mat);
 
-    mesh --> this --> CGL.scene();
+    mesh --> this;
 
     fun void update(float dt) {
         // <<< "covfefe ", dt >>>;
@@ -17,7 +17,7 @@ class covfefe extends GGen {
 }
 
 // covfefe c --> CGL.scene();
-covfefe c;
+covfefe c --> CGL.scene();
 
 while (true) {
     CGL.nextFrame() => now;
