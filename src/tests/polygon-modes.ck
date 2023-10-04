@@ -24,7 +24,7 @@ GMesh fillMesh, wireMesh, pointMesh;
 
 fillMesh.set(SphereGeometry , fillMat);
 wireMesh.set(SphereGeometry , wireMat);
-pointMesh.set(SphereGeometry , pointMat);
+pointMesh.set(SphereGeometry , pointMat);  // TODO this is still crunk on mac
 
 // add to scene
 fillMesh --> scene;

@@ -10,6 +10,7 @@ enum class GeometryType {
 	Base = 0,
 	Box,
 	Sphere,
+	Circle,
 	Cylinder,
 	Cone,
 	Plane,
@@ -100,6 +101,10 @@ public:
 		m_Dirty = true;
 	}
 
+	// attribute getters
+	CGL_GeoAttribute& GetAttribute(unsigned int idx) { return m_Attributes[idx]; }
+	CGL_GeoAttribute& GetPositions() { return m_Attributes[POSITION_ATTRIB_IDX]; }
+
 	inline bool IsDirty() { return m_Dirty; }
 
 	// geometry data, only computed/stored in the renderer-side copy!
@@ -119,47 +124,45 @@ public:  // constants
 	static const unsigned int UV0_ATTRIB_IDX;
 };
 
-struct BoxGeoUpdateData
-{
-	float width, height, depth;
-	int widthSeg, heightSeg, depthSeg;
-};
-
 class BoxGeometry : public Geometry
 {
+public:
+	struct Params {
+		float width, height, depth;
+		int widthSeg, heightSeg, depthSeg;
+	} m_Params;
 public:
 	BoxGeometry(
 		float width = 1, float height = 1, float depth = 1,
 		int widthSeg = 1, int heightSeg = 1, int depthSeg = 1
-	);
+	) : m_Params {width, height, depth, widthSeg, heightSeg, depthSeg}
+	{}
+
 	void UpdateParams(
-			float width, float height, float depth, int widthSeg, int heightSeg, int depthSeg) 
-	{
+		float width, float height, float depth,
+		int widthSeg, int heightSeg, int depthSeg
+	) {
+		m_Params = {width, height, depth, widthSeg, heightSeg, depthSeg};
 		m_Dirty = true;
-		m_Width = width; m_Height = height; m_Depth = depth;
-		m_WidthSeg = widthSeg; m_HeightSeg = heightSeg; m_DepthSeg = depthSeg;	
 	}
+
 	virtual void BuildGeometry() override;  // given data, builds cpu-side index and vertex buffs
 	virtual GeometryType GetGeoType() override { return GeometryType::Box; }
 	virtual Geometry* Clone() override { 
-		auto* geo = new BoxGeometry(m_Width, m_Height, m_Depth, m_WidthSeg, m_HeightSeg, m_DepthSeg);
+		BoxGeometry* geo = new BoxGeometry(*this);
 		geo->SetID(GetID());
 		return geo;
 	}
 	virtual void * GenUpdate() override {
-		return new BoxGeoUpdateData{m_Width, m_Height, m_Depth, m_WidthSeg, m_HeightSeg, m_DepthSeg};
-	};
+		return new BoxGeometry::Params(m_Params);
+	}
 	virtual void FreeUpdate(void * data) override {
-		delete (BoxGeoUpdateData *)data;
+		delete (BoxGeometry::Params *)data;
 	}
 	virtual void ApplyUpdate(void * data) override {
-		BoxGeoUpdateData * updateData = (BoxGeoUpdateData *)data;
-		UpdateParams(updateData->width, updateData->height, updateData->depth, 
-			updateData->widthSeg, updateData->heightSeg, updateData->depthSeg);
-	};
+		m_Params = *(BoxGeometry::Params *)data;
+	}
 
-	float m_Width, m_Height, m_Depth;
-	int m_WidthSeg, m_HeightSeg, m_DepthSeg;
 private:
 	void buildPlane(
 		char u, char v, char w, 
@@ -170,64 +173,54 @@ private:
 	);
 };
 
-struct SphereGeoUpdateData
-{
-	float radius;
-	int widthSeg, heightSeg;
-	float phiStart, phiLength;
-	float thetaStart, thetaLength;
-};
-
 class SphereGeometry : public Geometry
 {
+public: 
+	struct Params 
+	{
+		float radius;
+		int widthSeg, heightSeg;
+		float phiStart, phiLength;
+		float thetaStart, thetaLength;
+	} m_Params;
 public:
 	SphereGeometry(
 		float radius = 0.5, int widthSegments = 32, int heightSegments = 16, 
 		float phiStart = 0.0, float phiLength = glm::pi<float>() * 2.0, // how much along circumference
 		float thetaStart = 0.0, float thetaLength = glm::pi<float>()  // how much along central diameter
-	);
+	) : m_Params {
+		radius, widthSegments, heightSegments, phiStart, phiLength, thetaStart, thetaLength
+	} 
+	{}
+
 	void UpdateParams(
 		float radius, int widthSeg, int heightSeg, 
-		float phiStart, float phiLength, float thetaStart, float thetaLength)
-	{
+		float phiStart, float phiLength, float thetaStart, float thetaLength
+	) {
+		m_Params = {
+			radius, widthSeg, heightSeg, phiStart, phiLength, thetaStart, thetaLength
+		};
 		m_Dirty = true;
-		m_Radius = radius; m_WidthSeg = widthSeg; m_HeightSeg = heightSeg;
-		m_PhiStart = phiStart; m_PhiLength = phiLength;
-		m_ThetaStart = thetaStart; m_ThetaLength = thetaLength;
 	}
+
 	virtual void BuildGeometry() override;  // given data, builds cpu-side index and vertex buffs
 	virtual GeometryType GetGeoType() override { return GeometryType::Sphere; }
 	virtual Geometry* Clone() override { 
-		auto* geo = new SphereGeometry(
-			m_Radius, m_WidthSeg, m_HeightSeg, m_PhiStart, m_PhiLength, m_ThetaStart, m_ThetaLength
-		); 
+		SphereGeometry* geo = new SphereGeometry(*this); 
 		geo->SetID(GetID());
 		return geo;
 	}
 
 	// update command methods
 	virtual void * GenUpdate() override {
-		return new SphereGeoUpdateData{
-			m_Radius, m_WidthSeg, m_HeightSeg, m_PhiStart, m_PhiLength, m_ThetaStart, m_ThetaLength
-		};
+		return new SphereGeometry::Params(m_Params);
 	};
 	virtual void FreeUpdate(void* data) override {
-		delete (SphereGeoUpdateData*)data;
+		delete (SphereGeometry::Params*)data;
 	}
 	virtual void ApplyUpdate(void * data) override {
-		SphereGeoUpdateData * updateData = (SphereGeoUpdateData *)data;
-		UpdateParams(
-			updateData->radius, updateData->widthSeg, updateData->heightSeg, 
-			updateData->phiStart, updateData->phiLength, updateData->thetaStart, updateData->thetaLength
-		);
-	};
-
-public:
-	// TODO: refactor this to just use struct type
-	float m_Radius;
-	int m_WidthSeg, m_HeightSeg;
-	float m_PhiStart, m_PhiLength;
-	float m_ThetaStart, m_ThetaLength;
+		m_Params = *(SphereGeometry::Params*)data;
+	}
 };
 
 class CustomGeometry : public Geometry
@@ -250,3 +243,46 @@ public:
 	virtual void FreeUpdate(void* data) override {}
 	virtual void ApplyUpdate(void * data) override {}
 };
+
+class CircleGeometry : public Geometry
+{
+public:
+	struct Params {
+		float radius;
+		int segments;
+		float thetaStart;
+		float thetaLength;
+	} m_Params;
+public:
+	CircleGeometry(
+		float radius = 1, int segments = 32, 
+		float thetaStart = 0, float thetaLength = glm::pi<float>() * 2.0
+	) : m_Params{radius, segments, thetaStart, thetaLength}
+	{ 
+		m_Params.segments = std::max(3, m_Params.segments);
+		// for now don't build geometry
+		// at least until chuck API implements geometry buffer getters 
+	}
+
+	virtual void BuildGeometry() override;  // given data, builds cpu-side index and vertex buffs
+	virtual GeometryType GetGeoType() override { return GeometryType::Circle; }
+	virtual Geometry* Clone() override { 
+		CircleGeometry* geo = new CircleGeometry(*this);
+		geo->SetID(GetID());
+		return geo;
+	}
+
+	// update command methods
+	virtual void * GenUpdate() override {
+		return new CircleGeometry::Params(m_Params);
+	};
+	virtual void FreeUpdate(void* data) override {
+		delete (CircleGeometry::Params*) data;
+	}
+	virtual void ApplyUpdate(void * data) override {
+		m_Params = *(CircleGeometry::Params*)data;
+	}
+};
+
+
+

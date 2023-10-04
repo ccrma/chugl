@@ -88,8 +88,8 @@ class CreateGeometryCommand : public SceneGraphCommand
 public:
     CreateGeometryCommand(Geometry* g) : geo(g->Clone()) {};
     virtual void execute(Scene* scene) override {
-        std::cout << "copied geometry with id: " + std::to_string(geo->GetID())
-            << std::endl;
+        // std::cout << "copied geometry with id: " + std::to_string(geo->GetID())
+        //     << std::endl;
         scene->RegisterNode(geo);
     }
 

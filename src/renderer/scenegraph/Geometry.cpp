@@ -39,14 +39,6 @@ void Geometry::AddTriangleIndices(unsigned int i1, unsigned int i2, unsigned int
 									Sphere Geo
 ===============================================================================*/
 
-SphereGeometry::SphereGeometry(float radius, int widthSegments, int heightSegments, float phiStart, float phiLength, float thetaStart, float thetaLength) : 
-m_Radius(radius), m_WidthSeg(widthSegments), m_HeightSeg(heightSegments),
-m_PhiStart(phiStart), m_PhiLength(phiLength),
-m_ThetaStart(thetaStart), m_ThetaLength(thetaLength)
-{
-	BuildGeometry();
-}
-
 void SphereGeometry::BuildGeometry()
 {
 	ResetVertexData();
@@ -54,39 +46,39 @@ void SphereGeometry::BuildGeometry()
 
 	const float pi = 3.14159265358979323846f;
 	const float epsilon = .00001f; // tolerance
-	m_WidthSeg = std::max(3, m_WidthSeg);
-	m_HeightSeg = std::max(2, m_HeightSeg);
+	m_Params.widthSeg = std::max(3, m_Params.widthSeg);
+	m_Params.heightSeg = std::max(2, m_Params.heightSeg);
 
-	const float thetaEnd = std::min(m_ThetaStart + m_ThetaLength, pi);
+	const float thetaEnd = std::min(m_Params.thetaStart + m_Params.thetaLength, pi);
 
 	unsigned int index = 0;
 	std::vector<unsigned int> grid;
 
 
 	// generate vertices, normals and uvs
-	for (int iy = 0; iy <= m_HeightSeg; iy++) {
+	for (int iy = 0; iy <= m_Params.heightSeg; iy++) {
 
-		const float v = (float)iy / (float)m_HeightSeg;
+		const float v = (float)iy / (float)m_Params.heightSeg;
 
 		// special case for the poles
 		float uOffset = 0;
-		if (iy == 0 && glm::epsilonEqual(m_ThetaStart, 0.0f, epsilon)) {
-			uOffset = 0.5f / m_WidthSeg;
+		if (iy == 0 && glm::epsilonEqual(m_Params.thetaStart, 0.0f, epsilon)) {
+			uOffset = 0.5f / m_Params.widthSeg;
 		}
-		else if (iy == m_HeightSeg&& glm::epsilonEqual(thetaEnd, pi, epsilon)) {
-			uOffset = -0.5 / m_WidthSeg;
+		else if (iy == m_Params.heightSeg&& glm::epsilonEqual(thetaEnd, pi, epsilon)) {
+			uOffset = -0.5 / m_Params.widthSeg;
 		}
 
-		for (int ix = 0; ix <= m_WidthSeg; ix++) {
+		for (int ix = 0; ix <= m_Params.widthSeg; ix++) {
 
-			const float u = (float)ix / (float)m_WidthSeg;
+			const float u = (float)ix / (float)m_Params.widthSeg;
 
 			Vertex vert;
 
 			// vertex
-			vert.Position.x = -m_Radius * glm::cos(m_PhiStart + u * m_PhiLength) * glm::sin(m_ThetaStart + v * m_ThetaLength);
-			vert.Position.y = m_Radius * glm::cos(m_ThetaStart + v * m_ThetaLength);
-			vert.Position.z = m_Radius * glm::sin(m_PhiStart + u * m_PhiLength) * glm::sin(m_ThetaStart + v * m_ThetaLength);
+			vert.Position.x = -m_Params.radius * glm::cos(m_Params.phiStart + u * m_Params.phiLength) * glm::sin(m_Params.thetaStart + v * m_Params.thetaLength);
+			vert.Position.y = m_Params.radius * glm::cos(m_Params.thetaStart + v * m_Params.thetaLength);
+			vert.Position.z = m_Params.radius * glm::sin(m_Params.phiStart + u * m_Params.phiLength) * glm::sin(m_Params.thetaStart + v * m_Params.thetaLength);
 
 			// normal
 			vert.Normal = glm::normalize(vert.Position);
@@ -103,18 +95,18 @@ void SphereGeometry::BuildGeometry()
 
 	// indices
 
-	const size_t rowSize = (size_t)m_WidthSeg+ 1;
-	for (size_t iy = 0; iy < m_HeightSeg; iy++) {
-		for (size_t ix = 0; ix < m_WidthSeg; ix++) {
+	const size_t rowSize = (size_t)m_Params.widthSeg+ 1;
+	for (size_t iy = 0; iy < m_Params.heightSeg; iy++) {
+		for (size_t ix = 0; ix < m_Params.widthSeg; ix++) {
 
 			const unsigned int a = grid[(iy * rowSize) + ix + 1];
 			const unsigned int b = grid[(iy * rowSize) + ix];
 			const unsigned int c = grid[(rowSize * (iy + 1)) + ix];
 			const unsigned int d = grid[rowSize * (iy + 1) + (ix + 1)];
 
-			if (iy != 0 || m_ThetaStart > epsilon)
+			if (iy != 0 || m_Params.thetaStart > epsilon)
 				AddTriangleIndices(a, b, d);
-			if (iy != (size_t)m_HeightSeg- 1 || thetaEnd < pi - epsilon)
+			if (iy != (size_t)m_Params.heightSeg- 1 || thetaEnd < pi - epsilon)
 				AddTriangleIndices(b, c, d);
 		}
 	}
@@ -125,24 +117,17 @@ void SphereGeometry::BuildGeometry()
 									Box Geo
 ===============================================================================*/
 
-BoxGeometry::BoxGeometry(float width, float height, float depth, int widthSeg, int heightSeg, int depthSeg) : m_Width(width), m_Height(height), m_Depth(depth),
-m_WidthSeg(widthSeg), m_HeightSeg(heightSeg), m_DepthSeg(depthSeg)
-{
-	std::cout << "calling boxgeo constructor\n";
-	BuildGeometry();
-}
-
 void BoxGeometry::BuildGeometry()
 {
 	ResetVertexData();
 	m_Dirty = false;
 
-	buildPlane('z', 'y', 'x', -1, -1, m_Depth, m_Height, m_Width, m_DepthSeg, m_HeightSeg, 0); // px
-	buildPlane('z', 'y', 'x', 1, -1, m_Depth, m_Height, -m_Width, m_DepthSeg, m_HeightSeg, 1); // nx
-	buildPlane('x', 'z', 'y', 1, 1, m_Width, m_Depth, m_Height, m_WidthSeg, m_DepthSeg, 2); // py
-	buildPlane('x', 'z', 'y', 1, -1, m_Width, m_Depth, -m_Height, m_WidthSeg, m_DepthSeg, 3); // ny
-	buildPlane('x', 'y', 'z', 1, -1, m_Width, m_Height, m_Depth, m_WidthSeg, m_HeightSeg, 4); // pz
-	buildPlane('x', 'y', 'z', -1, -1, m_Width, m_Height, -m_Depth, m_WidthSeg, m_HeightSeg, 5); // nz
+	buildPlane('z', 'y', 'x', -1, -1, m_Params.depth, m_Params.height, m_Params.width, m_Params.depthSeg, m_Params.heightSeg, 0); // px
+	buildPlane('z', 'y', 'x', 1, -1, m_Params.depth, m_Params.height, -m_Params.width, m_Params.depthSeg, m_Params.heightSeg, 1); // nx
+	buildPlane('x', 'z', 'y', 1, 1, m_Params.width, m_Params.depth, m_Params.height, m_Params.widthSeg, m_Params.depthSeg, 2); // py
+	buildPlane('x', 'z', 'y', 1, -1, m_Params.width, m_Params.depth, -m_Params.height, m_Params.widthSeg, m_Params.depthSeg, 3); // ny
+	buildPlane('x', 'y', 'z', 1, -1, m_Params.width, m_Params.height, m_Params.depth, m_Params.widthSeg, m_Params.heightSeg, 4); // pz
+	buildPlane('x', 'y', 'z', -1, -1, m_Params.width, m_Params.height, -m_Params.depth, m_Params.widthSeg, m_Params.heightSeg, 5); // nz
 
 }
 
@@ -233,3 +218,46 @@ void BoxGeometry::buildPlane(char u, char v, char w, int udir, int vdir, float w
 	// calculate new start value for groups
 	// groupStart += groupCount;
 }
+
+/* =============================================================================
+									Circle Geo
+===============================================================================*/
+
+void CircleGeometry::BuildGeometry()
+{
+	Vertex initVert;
+	initVert.Position = glm::vec3(0, 0, 0);
+	initVert.Normal = glm::vec3(0, 0, 1);
+	initVert.TexCoords.x = 0.5;
+	initVert.TexCoords.y = 0.5;
+	AddVertex(initVert);
+
+	auto& positions = GetPositions().data;
+
+	for ( int s = 0, i = 3; s <= m_Params.segments; s++, i += 3 ) {
+
+		const float segment = m_Params.thetaLength + s / m_Params.segments * m_Params.thetaLength;
+		Vertex v;
+
+		// vertex
+
+		v.Position.x = m_Params.radius * glm::cos( segment );
+		v.Position.y = m_Params.radius * glm::sin( segment );
+
+		// normal
+		v.Normal = glm::vec3( 0, 0, 1.0 );
+
+		// uvs
+		v.TexCoords.x = ( positions[ i ] / m_Params.radius + 1.0 ) / 2.0;
+		v.TexCoords.y = ( positions[ i + 1 ] / m_Params.radius + 1.0 ) / 2.0;
+
+
+		AddVertex(v);
+
+	}
+
+	// indices
+
+	for ( int i = 1; i <= m_Params.segments; i ++ )
+		AddTriangleIndices( i, i + 1, 0 );
+};
