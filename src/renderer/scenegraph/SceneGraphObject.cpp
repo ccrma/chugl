@@ -211,7 +211,7 @@ void SceneGraphObject::AddChild(SceneGraphObject* child)
 	}
 
 	// assign to new parent
-	child->SetParent(this);
+	child->m_Parent = this;
 
 	// add to list of children
 	m_Children.push_back(child);
@@ -222,7 +222,7 @@ void SceneGraphObject::RemoveChild(SceneGraphObject* child)
 	auto it = std::find(m_Children.begin(), m_Children.end(), child);
 	if (it != m_Children.end()) {
 		m_Children.erase(it);  // remove from children list
-		child->SetParent(nullptr);  // delete child's parent
+		child->m_Parent = nullptr;  // delete child's parent
 	}
 }
 

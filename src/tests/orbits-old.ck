@@ -57,6 +57,18 @@ now => time lastTime;
 
 mainCamera.SetPosition(@(0.0, 0.0, 3.0));
 
+
+fun void grucker() {
+	while (true) {
+		earthSystem --> sunSystem;
+		1::second => now;
+		earthSystem --< sunSystem;
+		1::second => now;
+	}
+}
+spork ~ grucker();
+
+
 fun void Update(time t, dur dt) 
 {
 	t / second => float ftime;

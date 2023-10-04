@@ -247,19 +247,34 @@ private:
 //==================== SceneGraph Relationship Commands =======================//
 
 // add child
-class AddChildCommand : public SceneGraphCommand
+class RelationshipCommand : public SceneGraphCommand
 {
 public:
-    AddChildCommand(SceneGraphObject* parent, SceneGraphObject* child) :
-        m_ParentID(parent->GetID()), m_ChildID(child->GetID()) {};
+    enum Relation : unsigned int {
+        AddChild = 0,
+        RemoveChild
+    };
+
+    RelationshipCommand(SceneGraphObject* parent, SceneGraphObject* child, Relation r) :
+        m_ParentID(parent->GetID()), m_ChildID(child->GetID()), rel(r) {};
+
     virtual void execute(Scene* scene) override {
         SceneGraphObject* parent = dynamic_cast<SceneGraphObject*>(scene->GetNode(m_ParentID));
         SceneGraphObject* child = dynamic_cast<SceneGraphObject*>(scene->GetNode(m_ChildID));
 
         assert(parent && child);
-        parent->AddChild(child);
+
+        switch (rel) {
+        case AddChild:
+            parent->AddChild(child);
+            break;
+        case RemoveChild:
+            parent->RemoveChild(child);
+            break;
+        }
     }
 private:
+    Relation rel;
     size_t m_ParentID, m_ChildID;
 };
 

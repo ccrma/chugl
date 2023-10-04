@@ -106,7 +106,15 @@ CK_DLL_MFUN(cgl_obj_get_world_pos);
 
 // parent-child scenegraph API
 CK_DLL_MFUN(cgl_obj_add_child);
-CK_DLL_GFUN(ggen_op_gruck);
+// CK_DLL_MFUN(cgl_obj_disconnect);
+// CK_DLL_MFUN(cgl_obj_get_parent);
+// CK_DLL_MFUN(cgl_obj_get_children);
+
+// TODO: these need reference counting
+CK_DLL_GFUN(ggen_op_gruck);  // add child
+CK_DLL_GFUN(ggen_op_ungruck);  // remove child
+
+
 
 //-----------------------------------------------------------------------------
 // Object -> BaseCamera
@@ -1754,6 +1762,10 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query* QUERY)
     QUERY->add_op_overload_binary( QUERY, ggen_op_gruck, "GGen", "-->",
                                    "GGen", "lhs", "GGen", "rhs" );
 
+    QUERY->add_op_overload_binary( QUERY, ggen_op_ungruck, "GGen", "--<",
+                                   "GGen", "lhs", "GGen", "rhs" );
+	
+
 	QUERY->end_class(QUERY);
 
 	return true;
@@ -1780,7 +1792,7 @@ CK_DLL_CTOR(cgl_obj_ctor)
 CK_DLL_DTOR(cgl_obj_dtor)
 {
 	SceneGraphObject* cglObj = (SceneGraphObject*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	CK_SAFE_DELETE(cglObj);
+	// CK_SAFE_DELETE(cglObj);  // TODO: the bandit ship of ref count memory managemnet
 	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;
 }
 
@@ -2001,10 +2013,30 @@ CK_DLL_MFUN(cgl_obj_add_child)
 	cglObj->AddChild(child);
 
 	// command
-	CGL::PushCommand(new AddChildCommand(cglObj, child));
+	CGL::PushCommand(new RelationshipCommand(cglObj, child, RelationshipCommand::Relation::AddChild));
 }
 
 CK_DLL_GFUN(ggen_op_gruck)
+{
+    // get the arguments
+    Chuck_Object * lhs = GET_NEXT_OBJECT(ARGS);
+    Chuck_Object * rhs = GET_NEXT_OBJECT(ARGS);
+
+    // get internal representation
+    SceneGraphObject * LHS = (SceneGraphObject*) OBJ_MEMBER_INT (lhs, ggen_data_offset);
+    SceneGraphObject * RHS = (SceneGraphObject*) OBJ_MEMBER_INT (rhs, ggen_data_offset);
+
+    // add child
+    RHS->AddChild(LHS);
+
+    // command
+	CGL::PushCommand(new RelationshipCommand(RHS, LHS, RelationshipCommand::Relation::AddChild));
+    
+    // return RHS
+    RETURN->v_object = rhs;
+}
+
+CK_DLL_GFUN(ggen_op_ungruck)
 {
     // get the arguments
     Chuck_Object * lhs = GET_NEXT_OBJECT(ARGS);
@@ -2013,15 +2045,14 @@ CK_DLL_GFUN(ggen_op_gruck)
     SceneGraphObject * LHS = (SceneGraphObject*) OBJ_MEMBER_INT (lhs, ggen_data_offset);
     SceneGraphObject * RHS = (SceneGraphObject*) OBJ_MEMBER_INT (rhs, ggen_data_offset);
     // add child
-    RHS->AddChild(LHS);
+    RHS->RemoveChild(LHS);
 
     // command
-    CGL::PushCommand(new AddChildCommand(RHS, LHS));
+	CGL::PushCommand(new RelationshipCommand(RHS, LHS, RelationshipCommand::Relation::RemoveChild));
     
     // return RHS
     RETURN->v_object = rhs;
 }
-
 
 //-----------------------------------------------------------------------------
 // init_chugl_scene()
