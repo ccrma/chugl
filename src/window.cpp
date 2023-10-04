@@ -51,7 +51,9 @@ static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     CGL::SetFramebufferSize(width, height);
 
     // auto-update camera aspect
-    Window::camera.params.aspect = (float)width / (float)height;
+    if (height > 0) {  // don't change aspect if screen minimizes, otherwises causes div by 0 crash
+        Window::camera.params.aspect = (float)width / (float)height;
+    }
 
     CglEvent::Broadcast(CglEventType::CGL_WINDOW_RESIZE);  // doesn't matter if we brodcast this in frambuffer callback or window size callback
 }
