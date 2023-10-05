@@ -66,6 +66,9 @@ CK_DLL_SFUN(cgl_get_main_scene);
 CK_DLL_SFUN(cgl_get_num_registered_shreds);
 CK_DLL_SFUN(cgl_get_num_registered_waiting_shreds);
 
+// chugl toggle whether to use system time or chuck time
+CK_DLL_SFUN(cgl_use_chuck_time);
+
 
 //-----------------------------------------------------------------------------
 // ChuGL Object
@@ -186,7 +189,25 @@ CK_DLL_MFUN(cgl_geo_box_set);
 
 // sphere
 CK_DLL_CTOR(cgl_geo_sphere_ctor);
+CK_DLL_MFUN(cgl_geo_sphere_set);
 // TODO: sphere parameter setter
+
+// circle
+CK_DLL_CTOR(cgl_geo_circle_ctor);
+CK_DLL_MFUN(cgl_geo_circle_set);
+
+// plane
+CK_DLL_CTOR(cgl_geo_plane_ctor);
+CK_DLL_MFUN(cgl_geo_plane_set);
+
+// torus
+CK_DLL_CTOR(cgl_geo_torus_ctor);
+CK_DLL_MFUN(cgl_geo_torus_set);
+
+// lathe
+CK_DLL_CTOR(cgl_geo_lathe_ctor);
+CK_DLL_MFUN(cgl_geo_lathe_set);
+CK_DLL_MFUN(cgl_geo_lathe_set_no_points);
 
 // custom
 CK_DLL_CTOR(cgl_geo_custom_ctor);
@@ -309,7 +330,7 @@ CK_DLL_MFUN(cgl_mesh_set);
 //-----------------------------------------------------------------------------
 // Object -> Mesh -> Gxxxxx 
 //-----------------------------------------------------------------------------
-// CK_DLL_CTOR(cgl_gcube_ctor);
+CK_DLL_CTOR(cgl_gcube_ctor);
 // CK_DLL_DTOR(cgl_gcube_dtor);
 
 
@@ -377,7 +398,7 @@ t_CKBOOL create_chugl_default_objs(Chuck_DL_Query* QUERY)
 	assert(CglEvent::s_SharedEventQueue);
 
 	// main camera
-	// Chuck_DL_Api::Type type = QUERY->api()->object->get_type(QUERY->api(), NULL, "GCamera");
+	// Chuck_DL_Api::Type type = QUERY->api()->type->lookup(QUERY->api(), NULL, "GCamera");
 	// Chuck_DL_Api::Object obj = QUERY->api()->object->create(QUERY->api(), NULL, type);
 
 	// shred destroy listener
@@ -554,6 +575,10 @@ t_CKBOOL init_chugl_static_fns(Chuck_DL_Query* QUERY)
 	QUERY->add_sfun(QUERY, cgl_get_num_registered_shreds, "int", "numRegisteredShreds");
 	QUERY->add_sfun(QUERY, cgl_get_num_registered_waiting_shreds, "int", "numRegisteredWaitingShreds");
 
+	// chugl chuck time for auto update(dt)
+	QUERY->add_sfun(QUERY, cgl_use_chuck_time, "void", "useChuckTime");
+	QUERY->add_arg(QUERY, "int", "use");
+
 	QUERY->end_class(QUERY);
 
 	return true;
@@ -660,6 +685,12 @@ CK_DLL_SFUN(cgl_get_num_registered_waiting_shreds)
 	RETURN->v_int = CGL::GetNumShredsWaiting();
 }
 
+
+CK_DLL_SFUN( cgl_use_chuck_time )
+{
+	CGL::useChuckTime = GET_NEXT_INT(ARGS) != 0;
+}
+
 //-----------------------------------------------------------------------------
 // init_chugl_geo()
 //-----------------------------------------------------------------------------
@@ -689,7 +720,71 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query* QUERY)
 	QUERY->begin_class(QUERY, "SphereGeometry", "Geometry");
 	QUERY->add_ctor(QUERY, cgl_geo_sphere_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
-	// TODO: add set
+
+	QUERY->add_mfun(QUERY, cgl_geo_sphere_set, "void", "set");
+	QUERY->add_arg(QUERY, "float", "radius");
+	QUERY->add_arg(QUERY, "int", "widthSeg");
+	QUERY->add_arg(QUERY, "int", "heightSeg");
+	QUERY->add_arg(QUERY, "float", "phiStart");
+	QUERY->add_arg(QUERY, "float", "phiLength");
+	QUERY->add_arg(QUERY, "float", "thetaStart");
+	QUERY->add_arg(QUERY, "float", "thetaLength");
+
+	QUERY->end_class(QUERY);
+
+	// circle geo
+	QUERY->begin_class(QUERY, "CircleGeometry", "Geometry");
+	QUERY->add_ctor(QUERY, cgl_geo_circle_ctor);
+	QUERY->add_dtor(QUERY, cgl_geo_dtor);
+
+	QUERY->add_mfun(QUERY, cgl_geo_circle_set, "void", "set");
+	QUERY->add_arg(QUERY, "float", "radius");
+	QUERY->add_arg(QUERY, "int", "segments");
+	QUERY->add_arg(QUERY, "float", "thetaStart");
+	QUERY->add_arg(QUERY, "float", "thetaLength");
+	QUERY->end_class(QUERY);
+
+	// plane geo
+	QUERY->begin_class(QUERY, "PlaneGeometry", "Geometry");
+	QUERY->add_ctor(QUERY, cgl_geo_plane_ctor);
+	QUERY->add_dtor(QUERY, cgl_geo_dtor);
+
+	QUERY->add_mfun(QUERY, cgl_geo_plane_set, "void", "set");
+	QUERY->add_arg(QUERY, "float", "width");
+	QUERY->add_arg(QUERY, "float", "height");
+	QUERY->add_arg(QUERY, "int", "widthSegments");
+	QUERY->add_arg(QUERY, "int", "heightSegments");
+	QUERY->end_class(QUERY);
+
+	// Torus geo
+	QUERY->begin_class(QUERY, "TorusGeometry", "Geometry");
+	QUERY->add_ctor(QUERY, cgl_geo_torus_ctor);
+	QUERY->add_dtor(QUERY, cgl_geo_dtor);
+
+	QUERY->add_mfun(QUERY, cgl_geo_torus_set, "void", "set");
+	QUERY->add_arg(QUERY, "float", "radius");
+	QUERY->add_arg(QUERY, "float", "tubeRadius");
+	QUERY->add_arg(QUERY, "int", "radialSegments");
+	QUERY->add_arg(QUERY, "int", "tubularSegments");
+	QUERY->add_arg(QUERY, "float", "arcLength");
+	QUERY->end_class(QUERY);
+
+	// lathe geo
+	QUERY->begin_class(QUERY, "LatheGeometry", "Geometry");
+	QUERY->add_ctor(QUERY, cgl_geo_lathe_ctor);
+	QUERY->add_dtor(QUERY, cgl_geo_dtor);
+
+	QUERY->add_mfun(QUERY, cgl_geo_lathe_set, "void", "set");
+	QUERY->add_arg(QUERY, "float[]", "points");  // these are converted to vec2s
+	QUERY->add_arg(QUERY, "int", "segments");
+	QUERY->add_arg(QUERY, "float", "phiStart");
+	QUERY->add_arg(QUERY, "float", "phiLength");
+
+	QUERY->add_mfun(QUERY, cgl_geo_lathe_set_no_points, "void", "set");
+	QUERY->add_arg(QUERY, "int", "segments");
+	QUERY->add_arg(QUERY, "float", "phiStart");
+	QUERY->add_arg(QUERY, "float", "phiLength");
+
 	QUERY->end_class(QUERY);
 
 	// custom geo
@@ -769,6 +864,128 @@ CK_DLL_CTOR(cgl_geo_sphere_ctor)
 	// Creation command
 	CGL::PushCommand(new CreateGeometryCommand(sphereGeometry));
 }
+
+CK_DLL_MFUN(cgl_geo_sphere_set)
+{
+	SphereGeometry* geo = (SphereGeometry*)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+	t_CKFLOAT radius = GET_NEXT_FLOAT(ARGS);
+	t_CKINT widthSeg = GET_NEXT_INT(ARGS);
+	t_CKINT heightSeg = GET_NEXT_INT(ARGS);
+	t_CKFLOAT phiStart = GET_NEXT_FLOAT(ARGS);
+	t_CKFLOAT phiLength = GET_NEXT_FLOAT(ARGS);
+	t_CKFLOAT thetaStart = GET_NEXT_FLOAT(ARGS);
+	t_CKFLOAT thetaLength = GET_NEXT_FLOAT(ARGS);
+	geo->UpdateParams(radius, widthSeg, heightSeg, phiStart, phiLength, thetaStart, thetaLength);
+
+	CGL::PushCommand(new UpdateGeometryCommand(geo));
+}
+
+// Circle geo ---------
+CK_DLL_CTOR(cgl_geo_circle_ctor)
+{
+	CircleGeometry* circleGeometry = new CircleGeometry;
+	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT) circleGeometry;
+	std::cerr << "finished initializing circlegeometry\n";
+
+	// Creation command
+	CGL::PushCommand(new CreateGeometryCommand(circleGeometry));
+}
+
+CK_DLL_MFUN(cgl_geo_circle_set)
+{
+	CircleGeometry* geo = (CircleGeometry*)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+	t_CKFLOAT radius = GET_NEXT_FLOAT(ARGS);
+	t_CKINT segments = GET_NEXT_INT(ARGS);
+	t_CKFLOAT thetaStart = GET_NEXT_FLOAT(ARGS);
+	t_CKFLOAT thetaLength = GET_NEXT_FLOAT(ARGS);
+	geo->UpdateParams(radius, segments, thetaStart, thetaLength);
+
+	CGL::PushCommand(new UpdateGeometryCommand(geo));
+}
+
+// plane geo ----------
+CK_DLL_CTOR(cgl_geo_plane_ctor)
+{
+	PlaneGeometry* planeGeometry = new PlaneGeometry;
+	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT) planeGeometry;
+	std::cerr << "finished initializing planegeometry\n";
+
+	// Creation command
+	CGL::PushCommand(new CreateGeometryCommand(planeGeometry));
+}
+
+CK_DLL_MFUN(cgl_geo_plane_set)
+{
+	PlaneGeometry* geo = (PlaneGeometry*)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+	t_CKFLOAT width = GET_NEXT_FLOAT(ARGS);
+	t_CKFLOAT height = GET_NEXT_FLOAT(ARGS);
+	t_CKINT widthSegments = GET_NEXT_INT(ARGS);
+	t_CKINT heightSegments = GET_NEXT_INT(ARGS);
+	geo->UpdateParams(width, height, widthSegments, heightSegments);
+
+	CGL::PushCommand(new UpdateGeometryCommand(geo));
+}
+
+// torus geo  ----------
+CK_DLL_CTOR(cgl_geo_torus_ctor)
+{
+	TorusGeometry* torusGeometry = new TorusGeometry;
+	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT) torusGeometry;
+	std::cerr << "finished initializing torusgeometry\n";
+
+	// Creation command
+	CGL::PushCommand(new CreateGeometryCommand(torusGeometry));
+}
+
+CK_DLL_MFUN(cgl_geo_torus_set)
+{
+	TorusGeometry* geo = (TorusGeometry*)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+	t_CKFLOAT radius = GET_NEXT_FLOAT(ARGS);
+	t_CKFLOAT tubeRadius = GET_NEXT_FLOAT(ARGS);
+	t_CKINT radialSegments = GET_NEXT_INT(ARGS);
+	t_CKINT tubularSegments = GET_NEXT_INT(ARGS);
+	t_CKFLOAT arcLength = GET_NEXT_FLOAT(ARGS);
+	geo->UpdateParams(radius, tubeRadius, radialSegments, tubularSegments, arcLength);
+
+	CGL::PushCommand(new UpdateGeometryCommand(geo));
+}
+
+// Lathe geo ----------
+CK_DLL_CTOR(cgl_geo_lathe_ctor)
+{
+	LatheGeometry* lathe= new LatheGeometry;
+	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT) lathe;
+	std::cerr << "finished initializing lathegeometry\n";
+
+	// Creation command
+	CGL::PushCommand(new CreateGeometryCommand(lathe));
+}
+
+CK_DLL_MFUN(cgl_geo_lathe_set)
+{
+	LatheGeometry* geo = (LatheGeometry*)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+
+	Chuck_ArrayFloat* points = (Chuck_ArrayFloat*) GET_NEXT_OBJECT(ARGS);
+	t_CKINT segments = GET_NEXT_INT(ARGS);
+	t_CKFLOAT phiStart = GET_NEXT_FLOAT(ARGS);
+	t_CKFLOAT phiLength = GET_NEXT_FLOAT(ARGS);
+
+	geo->UpdateParams(points->m_vector, segments, phiStart, phiLength);
+
+	CGL::PushCommand(new UpdateGeometryCommand(geo));
+}
+CK_DLL_MFUN(cgl_geo_lathe_set_no_points)
+{
+	LatheGeometry* geo = (LatheGeometry*)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+	t_CKINT segments = GET_NEXT_INT(ARGS);
+	t_CKFLOAT phiStart = GET_NEXT_FLOAT(ARGS);
+	t_CKFLOAT phiLength = GET_NEXT_FLOAT(ARGS);
+
+	geo->UpdateParams(segments, phiStart, phiLength);
+
+	CGL::PushCommand(new UpdateGeometryCommand(geo));
+}
+
 
 // Custom geo ---------
 CK_DLL_CTOR(cgl_geo_custom_ctor)
@@ -1742,11 +1959,9 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query* QUERY)
 // CGLObject DLL ==============================================
 CK_DLL_CTOR(cgl_obj_ctor)
 {
-	// TODO bug: this is actually called first, (log to verify it's true)
-	// so we are needlessly creating an extra scenegraphobject for types that inherit from SGO
-	// no ctor, meant to be abstract class
-	if (OBJ_MEMBER_INT(SELF, ggen_data_offset) == 0)  // no child constructor has been called
-	{
+	std::cerr << "cgl_obj_ctor" << std::endl;
+	Chuck_DL_Api::Type type = API->type->lookup(VM, "GGen");
+	if (API->type->is_equal(type, API->object->get_type(SELF))) {
 		SceneGraphObject* cglObj = new SceneGraphObject;
 		OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT) cglObj;
 
@@ -1754,13 +1969,11 @@ CK_DLL_CTOR(cgl_obj_ctor)
 
 		CGL::PushCommand(new CreateSceneGraphObjectCommand(cglObj));
 	}
-	else {
-		SceneGraphObject* cglObj = (SceneGraphObject*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-		// TODO: assign chuck_obj ptr here, and exclude scene and camera
-	}
 }
+
 CK_DLL_DTOR(cgl_obj_dtor)
 {
+	std::cerr << "cgl_obj_dtor" << std::endl;
 	SceneGraphObject* cglObj = (SceneGraphObject*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	// CK_SAFE_DELETE(cglObj);  // TODO: the bandit ship of ref count memory managemnet
 	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;
@@ -2298,16 +2511,20 @@ t_CKBOOL init_chugl_mesh(Chuck_DL_Query* QUERY)
 
 	QUERY->end_class(QUERY);
 
-	// QUERY->begin_class(QUERY, "GCube", "GMesh");
-	// QUERY->add_ctor(QUERY, cgl_gcube_ctor);
+	QUERY->begin_class(QUERY, "GCube", "GMesh");
+	QUERY->add_ctor(QUERY, cgl_gcube_ctor);
 	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
-	// QUERY->end_class(QUERY);
+	QUERY->end_class(QUERY);
 
 	return true;
 }
 // CGL Scene ==============================================
 CK_DLL_CTOR(cgl_mesh_ctor)
 {
+	// Chuck_DL_Api::Type type = API->type->lookup(VM, "GMesh");
+	// if (API->type->is_equal(type, API->object->get_type(SELF))) {
+	// 	std::cerr << "GMesh instantiated" << std::endl;
+	// }
 
 	Mesh* mesh = new Mesh();
 	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT) mesh;
@@ -2318,11 +2535,21 @@ CK_DLL_CTOR(cgl_mesh_ctor)
 
 CK_DLL_DTOR(cgl_mesh_dtor)
 {
+	std::cerr << "cgl_mesh_dtor" << std::endl;
 	Mesh* mesh = (Mesh*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	CK_SAFE_DELETE(mesh);
 	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;  // zero out the memory
 
 	// TODO: need to remove from scenegraph
+}
+
+static void cglMeshSet(Mesh* mesh, Geometry* geo, Material* mat)
+{
+	// set on CGL side
+	mesh->SetGeometry(geo);
+	mesh->SetMaterial(mat);
+	// command queue to update renderer side
+	CGL::PushCommand(new SetMeshCommand(mesh));
 }
 
 CK_DLL_MFUN(cgl_mesh_set)
@@ -2332,16 +2559,22 @@ CK_DLL_MFUN(cgl_mesh_set)
     //Material * mat = (Material *)GET_NEXT_OBJECT(ARGS);
     Chuck_Object* geo_obj = GET_NEXT_OBJECT(ARGS);
     Chuck_Object* mat_obj = GET_NEXT_OBJECT(ARGS); 
-    Geometry* geo = (Geometry *)OBJ_MEMBER_INT( geo_obj, geometry_data_offset );
-    Material* mat = (Material *)OBJ_MEMBER_INT( mat_obj, cglmat_data_offset);
-	
-	// set on CGL side
-	mesh->SetGeometry(geo);
-	mesh->SetMaterial(mat);
 
-	// command queue to update renderer side
-	CGL::PushCommand(new SetMeshCommand(mesh));
+    Geometry* geo = geo_obj == nullptr ? nullptr : (Geometry *)OBJ_MEMBER_INT( geo_obj, geometry_data_offset );
+    Material* mat = mat_obj == nullptr ? nullptr : (Material *)OBJ_MEMBER_INT( mat_obj, cglmat_data_offset);
+
+	cglMeshSet(mesh, geo, mat);
 }
+
+CK_DLL_CTOR(cgl_gcube_ctor)
+{
+	Mesh* mesh = (Mesh*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+
+	cglMeshSet(
+		mesh, &CGL::defaultBoxGeometry, &CGL::defaultNormalMaterial
+	);
+}
+
 
 //-----------------------------------------------------------------------------
 // init_chugl_group()
@@ -2531,6 +2764,10 @@ bool CGL::mainSceneInitialized = false;
 Chuck_DL_Api::Object CGL::DL_mainScene;
 // Chuck_Event CGL::s_UpdateChuckEvent;
 
+// chugl defaults static initialization
+BoxGeometry CGL::defaultBoxGeometry;
+NormalMaterial CGL::defaultNormalMaterial;
+
 // initialize offset into vtable for update() function on GGens. if < 0, not a valid offset.
 t_CKINT CGL::our_update_vt_offset = -1;
 
@@ -2570,6 +2807,11 @@ const unsigned int CGL::WINDOW_FULLSCREEN = 1;
 const unsigned int CGL::WINDOW_MAXIMIZED = 2;
 const unsigned int CGL::WINDOW_RESTORE = 3;
 const unsigned int CGL::WINDOW_SET_SIZE = 4;
+
+// chugl start time 
+double CGL::chuglChuckStartTime = 0.0;  // value of chuck `now` when chugl is first initialized
+double CGL::chuglLastUpdateTime = 0.0;
+bool CGL::useChuckTime = true;
 
 // main loop hook
 Chuck_DL_MainThreadHook* CGL::hook = nullptr;
@@ -2707,7 +2949,7 @@ Chuck_DL_Api::Object CGL::GetShredUpdateEvent(Chuck_VM_Shred *shred, CK_DL_API A
 	// std::cerr << "shred event map size: " + std::to_string(m_ShredEventMap.size()) << std::endl;
 	// lookup
 	if (s_UpdateEvent == nullptr) {
-		Chuck_DL_Api::Type type = API->object->get_type(VM, "NextFrameEvent");
+		Chuck_DL_Api::Type type = API->type->lookup(VM, "NextFrameEvent");
 		Chuck_DL_Api::Object obj = API->object->create_without_shred(VM, type, true);
 
 		// for now constructor will add chuck event to the eventQueue
@@ -2726,7 +2968,7 @@ Chuck_DL_Api::Object CGL::GetMainCamera(
 	if (CGL::mainCameraInitialized) {
 		return CGL::DL_mainCamera;
 	} else {
-		Chuck_DL_Api::Type type = API->object->get_type(VM, "GCamera");
+		Chuck_DL_Api::Type type = API->type->lookup(VM, "GCamera");
 		// note: for creation shred is just passed in for the VM reference
 		Chuck_DL_Api::Object obj = API->object->create_with_shred(shred, type, true);
 		cgl_cam_ctor( (Chuck_Object*)obj, NULL, VM, shred, API );
@@ -2740,7 +2982,7 @@ Chuck_DL_Api::Object CGL::GetMainScene(Chuck_VM_Shred *shred, CK_DL_API API, Chu
 	if (CGL::mainSceneInitialized) {
 		return CGL::DL_mainScene;
 	} else {
-		Chuck_DL_Api::Type type = API->object->get_type(VM, "GScene");
+		Chuck_DL_Api::Type type = API->type->lookup(VM, "GScene");
 		// note: for creation shred is just passed in for the VM reference
 		Chuck_DL_Api::Object obj = API->object->create_with_shred(shred, type, true);
 		cgl_scene_ctor( (Chuck_Object*)obj, NULL, VM, shred, API );
@@ -2754,11 +2996,21 @@ void CGL::UpdateSceneGraph(Scene &scene, CK_DL_API API, Chuck_VM *VM, Chuck_VM_S
 {
 	assert(CGL::our_update_vt_offset >= 0);
 
-	float dt = std::min(1.0, CGL::GetTimeInfo().second);  // this dt should be the same the one gotten by chuck CGL.dt()
+
+	t_CKTIME chuckTimeNow = API->vm->now(VM);
+	t_CKTIME chuckTimeDiff = chuckTimeNow - CGL::chuglLastUpdateTime;
+	t_CKFLOAT ckdt = chuckTimeDiff / API->vm->srate(VM);
+	CGL::chuglLastUpdateTime = chuckTimeNow;
 
     Chuck_DL_Arg theArg;
     theArg.kind = kindof_FLOAT;
-	theArg.value.v_float = dt;
+	if (CGL::useChuckTime) {
+		theArg.value.v_float = ckdt;
+	} else {
+		theArg.value.v_float = std::min(1.0, CGL::GetTimeInfo().second);  // this dt should be the same the one gotten by chuck CGL.dt()
+	}
+
+	// theArg.value.v_float = ckdt;
 
 	std::queue<SceneGraphObject*> queue;
 	queue.push(&scene);

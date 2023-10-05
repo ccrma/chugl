@@ -225,6 +225,9 @@ void BoxGeometry::buildPlane(char u, char v, char w, int udir, int vdir, float w
 
 void CircleGeometry::BuildGeometry()
 {
+	ResetVertexData();
+	m_Dirty = false;
+
 	Vertex initVert;
 	initVert.Position = glm::vec3(0, 0, 0);
 	initVert.Normal = glm::vec3(0, 0, 1);
@@ -234,13 +237,12 @@ void CircleGeometry::BuildGeometry()
 
 	auto& positions = GetPositions().data;
 
+	Vertex v;
 	for ( int s = 0, i = 3; s <= m_Params.segments; s++, i += 3 ) {
 
-		const float segment = m_Params.thetaLength + s / m_Params.segments * m_Params.thetaLength;
-		Vertex v;
+		const float segment = m_Params.thetaStart + (float) s / (float) m_Params.segments * m_Params.thetaLength;
 
 		// vertex
-
 		v.Position.x = m_Params.radius * glm::cos( segment );
 		v.Position.y = m_Params.radius * glm::sin( segment );
 
@@ -248,8 +250,10 @@ void CircleGeometry::BuildGeometry()
 		v.Normal = glm::vec3( 0, 0, 1.0 );
 
 		// uvs
-		v.TexCoords.x = ( positions[ i ] / m_Params.radius + 1.0 ) / 2.0;
-		v.TexCoords.y = ( positions[ i + 1 ] / m_Params.radius + 1.0 ) / 2.0;
+		// v.TexCoords.x = ( positions[ i ] / m_Params.radius + 1.0 ) / 2.0;
+		// v.TexCoords.y = ( positions[ i + 1 ] / m_Params.radius + 1.0 ) / 2.0;
+		v.TexCoords.x = ( v.Position.x / m_Params.radius + 1.0 ) / 2.0;
+		v.TexCoords.y = ( v.Position.y / m_Params.radius + 1.0 ) / 2.0;
 
 
 		AddVertex(v);
@@ -260,4 +264,263 @@ void CircleGeometry::BuildGeometry()
 
 	for ( int i = 1; i <= m_Params.segments; i ++ )
 		AddTriangleIndices( i, i + 1, 0 );
+	
 };
+
+void PlaneGeometry::BuildGeometry()
+{
+	ResetVertexData();
+	m_Dirty = false;
+
+	const float width_half = m_Params.width / 2.0;
+	const float height_half = m_Params.height / 2.0;
+
+	const int gridX = m_Params.widthSegments;
+	const int gridY = m_Params.heightSegments;
+
+	const int gridX1 = gridX + 1;
+	const int gridY1 = gridY + 1;
+
+	const float segment_width = m_Params.width / gridX;
+	const float segment_height = m_Params.height / gridY;
+
+	Vertex vert;
+	for ( int iy = 0; iy < gridY1; iy++ ) {
+		const float y = iy * segment_height - height_half;
+		for ( int ix = 0; ix < gridX1; ix++ ) {
+			const float x = ix * segment_width - width_half;
+
+			vert.Position = glm::vec3( x, - y, 0 );
+			vert.Normal = glm::vec3( 0, 0, 1 );
+			vert.TexCoords.x = (float) ix / (float) gridX;
+			vert.TexCoords.y = 1.0 - ((float) iy / (float) gridY);
+
+			AddVertex(vert);
+		}
+	}
+
+	for ( int iy = 0; iy < gridY; iy ++ ) {
+		for ( int ix = 0; ix < gridX; ix ++ ) {
+			const int a = ix + gridX1 * iy;
+			const int b = ix + gridX1 * ( iy + 1 );
+			const int c = ( ix + 1 ) + gridX1 * ( iy + 1 );
+			const int d = ( ix + 1 ) + gridX1 * iy;
+
+			AddTriangleIndices( a, b, d );
+			AddTriangleIndices( b, c, d );
+		}
+	}
+}
+
+void TorusGeometry::BuildGeometry()
+{
+	ResetVertexData();
+	m_Dirty = false;
+
+	glm::vec3 center;
+	Vertex vert;
+
+	auto tubularSegments = m_Params.tubularSegments;
+	auto radialSegments = m_Params.radialSegments;
+
+	for ( int j = 0; j <= m_Params.radialSegments; j++ ) {
+		for ( int i = 0; i <= m_Params.tubularSegments; i ++ ) {
+			const float u = (float) i / (float) m_Params.tubularSegments * m_Params.arcLength;
+			const float v = (float) j / (float) m_Params.radialSegments * glm::pi<float>() * 2.0;
+
+			// vertex
+			vert.Position.x = ( m_Params.radius + m_Params.tubeRadius * glm::cos( v ) ) * glm::cos( u );
+			vert.Position.y = ( m_Params.radius + m_Params.tubeRadius * glm::cos( v ) ) * glm::sin( u );
+			vert.Position.z = m_Params.tubeRadius * glm::sin( v );
+
+			// normal
+			center.x = m_Params.radius * glm::cos( u );
+			center.y = m_Params.radius * glm::sin( u );
+			vert.Normal = glm::normalize(vert.Position - center);
+
+			// uv
+			vert.TexCoords.x = (float) i / (float) m_Params.tubularSegments;
+			vert.TexCoords.y = (float) j / (float) m_Params.radialSegments;
+
+			AddVertex(vert);
+		}
+	}
+
+	// generate indices
+	for ( int j = 1; j <= m_Params.radialSegments; j ++ ) {
+		for ( int i = 1; i <= m_Params.tubularSegments; i ++ ) {
+			// indices
+			const int a = ( tubularSegments + 1 ) * j + i - 1;
+			const int b = ( tubularSegments + 1 ) * ( j - 1 ) + i - 1;
+			const int c = ( tubularSegments + 1 ) * ( j - 1 ) + i;
+			const int d = ( tubularSegments + 1 ) * j + i;
+
+			AddTriangleIndices( a, b, d );
+			AddTriangleIndices( b, c, d );
+		}
+	}
+}
+
+void LatheGeometry::UpdateParams(int segments, float phiStart, float phiLength)
+{
+	m_Params.segments = segments;
+	m_Params.phiStart = phiStart;
+	m_Params.phiLength = phiLength;
+	m_Dirty = true;
+}
+
+void LatheGeometry::UpdateParams(
+	std::vector<double> points, int segments, float phiStart, float phiLength
+) {
+	// convert points to glm::vec2
+	m_Params.points.clear();
+	for (int i = 0; i < points.size(); i += 2) {
+		if (i + 1 >= points.size()) break;
+		m_Params.points.push_back(glm::vec2(points[i], points[i+1]));
+	}
+	m_Params.segments = segments;
+	m_Params.phiStart = phiStart;
+	m_Params.phiLength = phiLength;
+	m_Dirty = true;
+}
+
+void LatheGeometry::BuildGeometry()
+{
+	ResetVertexData();
+	m_Dirty = false;
+
+	int segments = m_Params.segments;
+	auto& points = m_Params.points;
+	float phiStart = m_Params.phiStart;
+
+
+	float phiLength = glm::clamp<float>( m_Params.phiLength, 0, glm::pi<float>() * 2.0 );
+
+		// buffers
+		std::vector<float> initNormals;
+
+		// helper variables
+
+		const float inverseSegments = 1.0 / segments;
+		auto  normal = glm::vec3(0.0);
+		auto curNormal = glm::vec3(0.0);
+		auto prevNormal = glm::vec3(0.0);
+		float dx = 0;
+		float dy = 0;
+
+		// pre-compute normals for initial "meridian"
+
+		for ( int j = 0; j <= ( points.size() - 1 ); j ++ ) {
+				if (j == 0) {				// special handling for 1st vertex on path
+
+					dx = points[ j + 1 ].x - points[ j ].x;
+					dy = points[ j + 1 ].y - points[ j ].y;
+
+					normal.x = dy * 1.0;
+					normal.y = - dx;
+					normal.z = dy * 0.0;
+
+					prevNormal = normal;
+
+					normal = glm::normalize(normal);
+
+					// initNormals.push_back(normal);
+					initNormals.push_back(normal.x);
+					initNormals.push_back(normal.y);
+					initNormals.push_back(normal.z);
+
+				} else if  (j ==  points.size() - 1 )	{// special handling for last Vertex on path
+
+					// initNormals.push_back( prevNormal.x, prevNormal.y, prevNormal.z );
+					// initNormals.push_back(prevNormal);
+					initNormals.push_back(prevNormal.x);
+					initNormals.push_back(prevNormal.y);
+					initNormals.push_back(prevNormal.z);
+				} else {
+
+
+					dx = points[ j + 1 ].x - points[ j ].x;
+					dy = points[ j + 1 ].y - points[ j ].y;
+
+					normal.x = dy * 1.0;
+					normal.y = - dx;
+					normal.z = dy * 0.0;
+
+					curNormal = normal;
+
+					normal.x += prevNormal.x;
+					normal.y += prevNormal.y;
+					normal.z += prevNormal.z;
+
+					normal = glm::normalize(normal);
+
+					// initNormals.push_back( normal.x, normal.y, normal.z );
+					// initNormals.push_back( normal);
+					initNormals.push_back(normal.x);
+					initNormals.push_back(normal.y);
+					initNormals.push_back(normal.z);
+					prevNormal = curNormal;
+				}
+
+			}
+
+		// generate vertices, uvs and normals
+		Vertex vert;
+		for ( int i = 0; i <= segments; i++ ) {
+
+			const float phi = phiStart + i * inverseSegments * phiLength;
+
+			const float sin = glm::sin( phi );
+			const float cos = glm::cos( phi );
+
+			for ( int j = 0; j <= ( points.size() - 1 ); j ++ ) {
+
+				// vertex
+
+				vert.Position.x = points[ j ].x * sin;
+				vert.Position.y = points[ j ].y;
+				vert.Position.z = points[ j ].x * cos;
+
+				// uv
+				vert.TexCoords.x = (float) i / (float) segments;
+				vert.TexCoords.y = (float) j / (float) ( points.size() - 1 );
+
+				// normal
+				// auto initNorm = initNormals[ j ];
+				// vert.Normal.x = initNorm.x * sin;
+				// vert.Normal.y = initNorm.y;
+				// vert.Normal.z = initNorm.x * cos;
+
+				vert.Normal.x = initNormals[3 * j + 0] * sin;
+				vert.Normal.y = initNormals[3 * j + 1];
+				vert.Normal.z = initNormals[3 * j + 0] * cos;
+
+				AddVertex(vert);
+			}
+		}
+
+	// indices
+	for ( int i = 0; i < segments; i ++ ) {
+		for ( int j = 0; j < ( points.size() - 1 ); j ++ ) {
+
+			const int base = j + i * points.size();
+
+			const int a = base;
+			const int b = base + points.size();
+			const int c = base + points.size() + 1;
+			const int d = base + 1;
+
+			// faces
+			AddTriangleIndices( a, b, d );
+			AddTriangleIndices( c, d, b );
+		}
+	}
+}
+
+
+// void CapsuleGeometry::BuildGeometry()
+// {
+// 	ResetVertexData();
+// 	m_Dirty = false;
+// }
+

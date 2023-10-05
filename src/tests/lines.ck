@@ -10,20 +10,12 @@ spork ~ flycam.selfUpdate();
 
 // ===============================
 
-GG.fullscreen();
-GG.lockCursor();
+// GG.fullscreen();
+// GG.lockCursor();
 
 CustomGeometry lineGeo;
 // construct line segment
-[
-    0.0, 0.0, 0.0,
-    1.0, 0.0, 0.0,
-    0.0, 1.0, 0.0,
-    1.0, 1.0, 0.0,
-    0.0, 0.0, 1.0,
-    1.0, 0.0, 1.0,
-    0.0, 1.0, 1.0,
-] @=> float positions[];
+float positions[50000];
 
 float colors[positions.size()];
 // randomly assign colors
@@ -31,20 +23,21 @@ for (0 => int i; i < colors.size(); i++) {
     Math.random2f(0.0, 1.0) => colors[i];
 }
 
-lineGeopositions(positions);
+lineGeo.positions(positions);
 lineGeo.colors(colors);
 
 GScene scene;
 LineMat lineMat;
 GMesh mesh;
 mesh.set(lineGeo, lineMat);
+
 mesh.position(@(0.0, 0.0, -5.0));
 mesh --> scene;
 
 // testers =====================
 
 fun void cycleLineMode(LineMat @ mat) {
-    [LineMat.LINE_SEGMENT, LineMat.LINE_LOOP, LineMat.LINE_STRIP] @=> int line_modes[];
+    [LineMat.LINE_SEGMENTS, LineMat.LINE_LOOP, LineMat.LINE_STRIP] @=> int line_modes[];
     while (true) {
         for (0 => int i; i < line_modes.size(); i++) {
             line_modes[i] => mat.mode;
@@ -75,6 +68,22 @@ fun void cycleLineColor(LineMat @ mat) {
     }
 
 } spork ~ cycleLineColor(lineMat);
+
+fun void randomizePositions(CustomGeometry @ geo)
+{
+    while (true) {
+        // 1::second => now;
+        for (0 => int i; i < positions.size(); i++) {
+            Math.random2f(-1.0, 1.0) => positions[i];
+            Math.random2f(-1.0, 1.0) => positions[i];
+            Math.random2f(-1.0, 1.0) => positions[i];
+        }
+        geo.positions(positions);
+        GG.nextFrame() => now;
+    }
+}
+spork ~ randomizePositions(lineGeo);
+
 
 // Game loop =====================
 

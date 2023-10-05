@@ -17,6 +17,9 @@ class Scene;
 class SceneGraphObject;
 class SceneGraphCommand;
 
+class BoxGeometry;
+class NormalMaterial;
+
 
 // exports =========================================
 // DLL_QUERY cgl_query(Chuck_DL_Query* QUERY);
@@ -76,6 +79,10 @@ public:
 	// static PerspectiveCamera mainCamera;
 
 	// static Chuck_Event s_UpdateChuckEvent;  // event used for waiting on update()
+
+public:  // chugl default resources
+	static BoxGeometry defaultBoxGeometry;
+	static NormalMaterial defaultNormalMaterial;
 
 public: // command queue methods
 	static void SwapCommandQueues();
@@ -143,6 +150,11 @@ public: // global, lock-protected state for sending info from GLFW --> Chuck
 	static void SetWindowSize(int width, int height);
 	static void SetFramebufferSize(int width, int height);
 	static void SetTimeInfo(double glfwTime, double deltaTime);
+
+public:
+	static double chuglChuckStartTime;  // value of chuck `now` when chugl is first initialized
+	static double chuglLastUpdateTime;  // value of chuck `now` when chugl is first initialized
+	static bool useChuckTime;
 
 public:  // mouse modes
 	static const unsigned int MOUSE_NORMAL;

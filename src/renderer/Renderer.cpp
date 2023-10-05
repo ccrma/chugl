@@ -17,6 +17,7 @@ void RenderGeometry::BuildGeometry() {
 										 // set vao
 	if (m_Geo->IsDirty()) {
 		m_Geo->BuildGeometry();
+		m_Geo->m_Dirty = false;
 	}
 
 	VertexArray& va = GetArray();
@@ -337,24 +338,6 @@ void Renderer::Draw(RenderGeometry *renderGeo, RenderMaterial *renderMat)
 
 	Material* CGL_mat = renderMat->GetMat();
 
-	// set polygon mode
-	switch (CGL_mat->GetPolygonMode()) {
-		case MaterialPolygonMode::Fill:
-			GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
-			break;
-		case MaterialPolygonMode::Line:
-			GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_LINE));
-			// set line width
-			GLCall(glLineWidth(CGL_mat->GetLineWidth()));
-			break;
-		case MaterialPolygonMode::Point:
-			GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_POINT));
-			// set point size
-			GLCall(glPointSize(CGL_mat->GetPointSize()));
-			break;
-		default:
-			throw std::runtime_error("Polygon mode not set");
-	}
 
 
 	GLenum primitive = GL_TRIANGLES;
@@ -380,6 +363,29 @@ void Renderer::Draw(RenderGeometry *renderGeo, RenderMaterial *renderMat)
 			break;
 		default:
 			primitive = GL_TRIANGLES;
+	}
+
+	// set polygon mode
+	switch (CGL_mat->GetPolygonMode()) {
+		case MaterialPolygonMode::Fill:
+			GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
+			break;
+		case MaterialPolygonMode::Line:
+			GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_LINE));
+			// set line width
+			GLCall(glLineWidth(CGL_mat->GetLineWidth()));
+			break;
+		case MaterialPolygonMode::Point:
+			GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_POINT));
+			// if mac also set primitive, otherwise crashes (note point size is not supported, points are tiny!!)
+			#ifdef __APPLE__
+				primitive = GL_POINTS;
+			#endif
+			// set point size
+			GLCall(glPointSize(CGL_mat->GetPointSize()));
+			break;
+		default:
+			throw std::runtime_error("Polygon mode not set");
 	}
 
 

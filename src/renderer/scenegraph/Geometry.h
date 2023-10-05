@@ -12,9 +12,12 @@ enum class GeometryType {
 	Sphere,
 	Circle,
 	Cylinder,
+	Capsule,
+	Lathe,
 	Cone,
 	Plane,
 	Quad,
+	Torus,
 	Custom
 };
 
@@ -75,7 +78,9 @@ public:
 	virtual Geometry* Clone() = 0;  // deepcopy the geometry data
 	virtual void * GenUpdate() = 0;
 	virtual void FreeUpdate(void* data) = 0;
-	virtual void ApplyUpdate(void * data) = 0;
+	virtual void ApplyUpdate(void * data) {
+		m_Dirty = true;
+	};
 
 	void ResetVertexData() {
 		m_Attributes.clear();
@@ -161,6 +166,7 @@ public:
 	}
 	virtual void ApplyUpdate(void * data) override {
 		m_Params = *(BoxGeometry::Params *)data;
+		m_Dirty = true;
 	}
 
 private:
@@ -220,6 +226,7 @@ public:
 	}
 	virtual void ApplyUpdate(void * data) override {
 		m_Params = *(SphereGeometry::Params*)data;
+		m_Dirty = true;
 	}
 };
 
@@ -264,6 +271,13 @@ public:
 		// at least until chuck API implements geometry buffer getters 
 	}
 
+	void UpdateParams(
+		float radius, int segments, float thetaStart, float thetaLength
+	) {
+		m_Params = {radius, std::max(3, segments), thetaStart, thetaLength};
+		m_Dirty = true;
+	}
+
 	virtual void BuildGeometry() override;  // given data, builds cpu-side index and vertex buffs
 	virtual GeometryType GetGeoType() override { return GeometryType::Circle; }
 	virtual Geometry* Clone() override { 
@@ -281,8 +295,195 @@ public:
 	}
 	virtual void ApplyUpdate(void * data) override {
 		m_Params = *(CircleGeometry::Params*)data;
+		m_Dirty = true;
+	}
+};
+
+class PlaneGeometry: public Geometry
+{
+public:
+	struct Params {
+		float width;
+		float height;
+		int widthSegments;
+		int heightSegments;
+	} m_Params;
+public:
+	PlaneGeometry(
+		float width = 1, float height = 1, int widthSegments = 1, int heightSegments = 1
+	) : m_Params {width, height, widthSegments, heightSegments}
+	{}
+
+	void UpdateParams(
+		float width, float height, int widthSegments, int heightSegments	
+	) {
+		m_Params = {width, height, widthSegments, heightSegments};
+		m_Dirty = true;
+	}
+
+	virtual void BuildGeometry() override;  // given data, builds cpu-side index and vertex buffs
+	virtual GeometryType GetGeoType() override { return GeometryType::Plane; }
+	virtual Geometry* Clone() override { 
+		PlaneGeometry* geo = new PlaneGeometry(*this);
+		geo->SetID(GetID());
+		return geo;
+	}
+
+	// update command methods
+	virtual void * GenUpdate() override {
+		return new PlaneGeometry::Params(m_Params);
+	};
+	virtual void FreeUpdate(void* data) override {
+		delete (PlaneGeometry::Params*) data;
+	}
+	virtual void ApplyUpdate(void * data) override {
+		m_Params = *(PlaneGeometry::Params*)data;
+		m_Dirty = true;
+	}
+};
+
+class TorusGeometry: public Geometry
+{
+public:
+	struct Params {
+		float radius;
+		float tubeRadius;
+		int radialSegments;
+		int tubularSegments;
+		float arcLength;
+	} m_Params;
+public:
+	TorusGeometry(
+		float radius = 1.0, 
+		float tubeRadius = 0.4, 
+		int radialSegments = 12, 
+		int tubularSegments = 48,
+		float arcLength = glm::pi<float>() * 2.0
+	) : m_Params {radius, tubeRadius, radialSegments, tubularSegments, arcLength}
+	{}
+
+	void UpdateParams(
+		float radius, float tubeRadius, int radialSegments, int tubularSegments, float arcLength
+	) {
+		m_Params = {radius, tubeRadius, radialSegments, tubularSegments, arcLength};
+		m_Dirty = true;
+	}
+
+	virtual void BuildGeometry() override;  // given data, builds cpu-side index and vertex buffs
+	virtual GeometryType GetGeoType() override { return GeometryType::Torus; }
+	virtual Geometry* Clone() override { 
+		TorusGeometry* geo = new TorusGeometry(*this);
+		geo->SetID(GetID());
+		return geo;
+	}
+
+	// update command methods
+	virtual void * GenUpdate() override {
+		return new TorusGeometry::Params(m_Params);
+	};
+	virtual void FreeUpdate(void* data) override {
+		delete (TorusGeometry::Params*) data;
+	}
+	virtual void ApplyUpdate(void * data) override {
+		m_Params = *(TorusGeometry::Params*)data;
+		m_Dirty = true;
+	}
+};
+
+
+class LatheGeometry: public Geometry
+{
+public:
+	struct Params {
+		std::vector<glm::vec2> points;
+		int segments;
+		float phiStart;
+		float phiLength;
+	} m_Params;
+public:
+	LatheGeometry(
+		std::vector<glm::vec2> points = {glm::vec2(0, -0.5), glm::vec2(0.5, 0), glm::vec2(0, 0.5)}, 
+		int segments = 12, 
+		float phiStart = 0, 
+		float phiLength = glm::pi<float>() * 2.0
+	) : m_Params {points, segments, phiStart, phiLength}
+	{}
+
+	void UpdateParams(
+		std::vector<glm::vec2> points, int segments, float phiStart, float phiLength
+	) {
+		m_Params = {points, segments, phiStart, phiLength};
+		m_Dirty = true;
+	}
+	void UpdateParams(
+		int segments, float phiStart, float phiLength
+	);
+	void UpdateParams(
+		std::vector<double> points, int segments, float phiStart, float phiLength
+	);
+
+	virtual void BuildGeometry() override;  // given data, builds cpu-side index and vertex buffs
+	virtual GeometryType GetGeoType() override { return GeometryType::Lathe; }
+	virtual Geometry* Clone() override { 
+		LatheGeometry* geo = new LatheGeometry(*this);
+		geo->SetID(GetID());
+		return geo;
+	}
+
+	// update command methods
+	virtual void * GenUpdate() override {
+		return new LatheGeometry::Params(m_Params);
+	};
+	virtual void FreeUpdate(void* data) override {
+		delete (LatheGeometry::Params*) data;
+	}
+	virtual void ApplyUpdate(void * data) override {
+		m_Params = *(LatheGeometry::Params*)data;
+		m_Dirty = true;
 	}
 };
 
 
 
+// class CapsuleGeometry: public Geometry
+// {
+// public:
+// 	struct Params {
+// 		float radius;
+// 		float length;
+// 		int capSegments;
+// 		int radialSegments;
+// 	} m_Params;
+// public:
+// 	CapsuleGeometry(
+// 		float radius = 0.5, float length = 1.0, int capSegments = 4, int radialSegments = 8 
+// 	) : m_Params {radius, length, capSegments, radialSegments}
+// 	{}
+
+// 	void UpdateParams(
+// 		float radius, float length, int capSegments, int radialSegments
+// 	) {
+// 		m_Params = {radius, length, capSegments, radialSegments};
+// 		m_Dirty = true;
+// 	}
+
+// 	virtual void BuildGeometry() override;  // given data, builds cpu-side index and vertex buffs
+// 	virtual GeometryType GetGeoType() override { return GeometryType::Capsule; }
+// 	virtual Geometry* Clone() override { 
+// 		CapsuleGeometry* geo = new CapsuleGeometry(*this);
+// 		geo->SetID(GetID());
+// 		return geo;
+// 	}
+
+// 	// update command methods
+// 	virtual void * GenUpdate() override {
+// 		return new CapsuleGeometry::Params(m_Params);
+// 	};
+// 	virtual void FreeUpdate(void* data) override {
+// 		delete (CapsuleGeometry::Params*) data;
+// 	}
+// 	virtual void ApplyUpdate(void * data) override {
+// 		m_Params = *(CapsuleGeometry::Params*)data;
+// 		m_Dirty = true;
+// 	}
+// };

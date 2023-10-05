@@ -11,7 +11,7 @@ spork ~ flycam.selfUpdate();
 // ===============================
 
 CustomGeometry CustomGeometry;
-CustomGeometrypositions(
+CustomGeometry.positions(
     // vertex positions for a plane
     [
         // left triangle
@@ -26,7 +26,7 @@ CustomGeometrypositions(
     ]
 );
 
-CustomGeometry.setNormals(
+CustomGeometry.normals(
     // vertex normals for a plane
     [
         // left triangle
@@ -41,7 +41,7 @@ CustomGeometry.setNormals(
     ]
 );
 
-CustomGeometry.setUVs(
+CustomGeometry.uvs(
     // vertex uvs for a plane
     [
         // left triangle
@@ -56,7 +56,7 @@ CustomGeometry.setUVs(
     ]
 );
 
-CustomGeometry.setIndices(
+CustomGeometry.indices(
     [
         0, 1, 2,
         3, 4, 5
