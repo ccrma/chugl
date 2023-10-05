@@ -2828,7 +2828,7 @@ void CGL::DeactivateHook()
 {
     if (!hookActivated || !hook) return;
     hook->deactivate(hook);
-    hookActivated = false;
+    // hookActivated = false;  // don't set to false to prevent window from reactivating and reopening after escape
 }
 
 // can pick a better name maybe...calling this wakes up renderer thread
