@@ -176,10 +176,9 @@ public:
 	virtual std::unordered_map<std::string, MaterialUniform>& GetLocalUniforms() { return m_Uniforms;  }  // for setting properties specific to the material, e.g. color
 
 	virtual Material* Clone() = 0;
-	virtual Material* Dup(Chuck_Object* ckobj) {  // clone but get new ID 
+	virtual Material* Dup() {  // clone but get new ID 
 		auto* mat = Clone();
 		mat->NewID();
-		mat->m_ChuckObject = ckobj;
 		return mat;
 	}
 

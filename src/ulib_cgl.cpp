@@ -172,6 +172,7 @@ CK_DLL_CTOR(cgl_dir_light_ctor);
 //-----------------------------------------------------------------------------
 CK_DLL_CTOR(cgl_geo_ctor);
 CK_DLL_DTOR(cgl_geo_dtor);
+CK_DLL_MFUN(cgl_geo_clone);
 
 // box
 CK_DLL_CTOR(cgl_geo_box_ctor);
@@ -242,6 +243,7 @@ CK_DLL_MFUN(cgl_texture_rawdata_set_data);
 //-----------------------------------------------------------------------------
 CK_DLL_CTOR(cgl_mat_ctor);
 CK_DLL_DTOR(cgl_mat_dtor);
+CK_DLL_MFUN(cgl_mat_clone);
 
 // base material options
 CK_DLL_MFUN(cgl_mat_set_polygon_mode);
@@ -680,6 +682,9 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 	geometry_data_offset = QUERY->add_mvar(QUERY, "int", "@geometry_data", false); // TODO: still bugged?
 
+	// clone
+	QUERY->add_mfun(QUERY, cgl_geo_clone, Geometry::CKName(GeometryType::Base), "clone");
+
 	// TODO: add svars for attribute locations
 	QUERY->end_class(QUERY);
 
@@ -808,6 +813,13 @@ CK_DLL_DTOR(cgl_geo_dtor) // all geos can share this base destructor
 
 	// TODO: trigger destruction callback and scenegraph removal command
 }
+
+CK_DLL_MFUN(cgl_geo_clone)
+{
+	Geometry *geo = (Geometry *)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+	RETURN->v_object = CGL::CreateChuckObjFromGeo(API, VM, geo->Clone(), SHRED, false)->m_ChuckObject;
+}
+
 
 // box geo
 CK_DLL_CTOR(cgl_geo_box_ctor)
@@ -1263,6 +1275,9 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 	cglmat_data_offset = QUERY->add_mvar(QUERY, "int", "@cglmat_data", false);
 
+	// clone
+	QUERY->add_mfun(QUERY, cgl_mat_clone, Material::CKName(MaterialType::Base), "clone");
+
 	// Material params (static constants) ---------------------------------
 	QUERY->add_svar(QUERY, "int", "POLYGON_FILL", TRUE, (void *)&Material::POLYGON_FILL);
 	QUERY->add_svar(QUERY, "int", "POLYGON_LINE", TRUE, (void *)&Material::POLYGON_LINE);
@@ -1439,6 +1454,13 @@ CK_DLL_DTOR(cgl_mat_dtor) // all geos can share this base destructor
 	// TODO: send destroy command to CGL command queue
 	//       - remove material from scenegraph
 	// 	     - callback hook for renderer to remove RenderMat from cache
+}
+
+
+CK_DLL_MFUN(cgl_mat_clone)
+{
+	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	RETURN->v_object = CGL::CreateChuckObjFromMat(API, VM, mat->Clone(), SHRED, false)->m_ChuckObject;
 }
 
 CK_DLL_MFUN(cgl_mat_set_polygon_mode)
@@ -2612,81 +2634,25 @@ CK_DLL_MFUN(cgl_mesh_get_geo)
 }
 
 
-static Chuck_Object * cglMeshDupMat(CK_DL_API API, Chuck_VM *VM, Mesh *mesh, Chuck_VM_Shred *SHRED) {
-	if (!mesh->GetMaterial()) {
-		std::cerr << "cannot duplicate a null material" << std::endl;
-		return nullptr;
-	}
-	// create chuck object
-	// TODO cache the type
-	// create with shred because ??
-	// don't reference track, this is not a default that needs to stick around?
-	Chuck_DL_Api::Type type = API->type->lookup(VM, mesh->GetMaterial()->myCkName()); 
-	// must add refcount `true` here to prevent being immediately freed by chuck
-	Chuck_DL_Api::Object obj = API->object->create_with_shred(SHRED, type, true);  
-
-	// create new material and store chuck object pointer
-	Material *newMat = mesh->GetMaterial()->Dup(obj);
-
-	// set address in chuck obj
-	OBJ_MEMBER_INT(obj, cglmat_data_offset) = (t_CKINT)newMat;
-
-	// tell renderer to create a copy
-	CGL::PushCommand(new CreateMaterialCommand(newMat));
-	// set new mat on this mesh!
-	mesh->SetMaterial(newMat);
-	// tell renderer to set new mat on this mesh
-	CGL::PushCommand(new SetMeshCommand(mesh));
-
-	return obj;
-}
-
-static Chuck_Object * cglMeshDupGeo(CK_DL_API API, Chuck_VM *VM, Mesh *mesh, Chuck_VM_Shred *SHRED) {
-	if (!mesh->GetGeometry()) {
-		std::cerr << "cannot duplicate a null geometry" << std::endl;
-		return nullptr;
-	}
-
-	Chuck_DL_Api::Type type = API->type->lookup(VM, mesh->GetGeometry()->myCkName()); 
-	// need true add ref otherwise chuck immediately frees, causing segfault
-	Chuck_DL_Api::Object obj = API->object->create_with_shred(SHRED, type, true);  
-
-	// create new geo
-	Geometry *newGeo = mesh->GetGeometry()->Dup(obj);
-
-	// set address in chuck obj
-	OBJ_MEMBER_INT(obj, geometry_data_offset) = (t_CKINT)newGeo;
-
-	// tell renderer to create a copy
-	CGL::PushCommand(new CreateGeometryCommand(newGeo));
-	// set new geo on this mesh!
-	mesh->SetGeometry(newGeo);
-	// tell renderer to set new geo on this mesh
-	CGL::PushCommand(new SetMeshCommand(mesh));
-
-	return obj;
-}
 
 // duplicators
 CK_DLL_MFUN(cgl_mesh_dup_mat)
 {
 	Mesh *mesh = (Mesh *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	RETURN->v_object = cglMeshDupMat(API, VM, mesh, SHRED);
-	return;
+	RETURN->v_object = CGL::DupMeshMat(API, VM, mesh, SHRED)->m_ChuckObject;
 }
 
 CK_DLL_MFUN(cgl_mesh_dup_geo)
 {
 	Mesh *mesh = (Mesh *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	RETURN->v_object = cglMeshDupGeo(API, VM, mesh, SHRED);
-	return;
+	RETURN->v_object = CGL::DupMeshGeo(API, VM, mesh, SHRED)->m_ChuckObject;
 }
 
 CK_DLL_MFUN(cgl_mesh_dup_all)
 {
 	Mesh *mesh = (Mesh *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	cglMeshDupMat(API, VM, mesh, SHRED);
-	cglMeshDupGeo(API, VM, mesh, SHRED);
+	CGL::DupMeshGeo(API, VM, mesh, SHRED);
+	CGL::DupMeshMat(API, VM, mesh, SHRED);
 	RETURN->v_object = SELF;
 }
 
@@ -3025,6 +2991,70 @@ void CGL::PushCommand(SceneGraphCommand *cmd)
 	// add the command to the write queue
 	writeQueue.push_back(cmd);
 }
+
+// creates a chuck object for the passed-in mat. DOES NOT CLONE THE MATERIAL
+Material* CGL::CreateChuckObjFromMat(
+	CK_DL_API API, Chuck_VM *VM, Material *mat, Chuck_VM_Shred *SHRED, bool refcount
+)
+{
+	// create chuck obj
+	Chuck_DL_Api::Type type = API->type->lookup(VM, mat->myCkName());
+	Chuck_DL_Api::Object obj = API->object->create_with_shred(SHRED, type, refcount);
+	mat->m_ChuckObject = obj;
+
+	// set address in chuck obj
+	OBJ_MEMBER_INT(obj, cglmat_data_offset) = (t_CKINT)mat;
+
+	// tell renderer to create a copy
+	CGL::PushCommand(new CreateMaterialCommand(mat));
+	return mat;
+}
+
+// creates a chuck object for the passed-in go. DOES NOT CLONE THE GEO
+Geometry* CGL::CreateChuckObjFromGeo(CK_DL_API API, Chuck_VM *VM, Geometry *geo, Chuck_VM_Shred *SHRED, bool refcount)
+{
+	// create chuck obj
+	Chuck_DL_Api::Type type = API->type->lookup(VM, geo->myCkName());
+	Chuck_DL_Api::Object obj = API->object->create_with_shred(SHRED, type, refcount);
+	geo->m_ChuckObject = obj;
+
+	// set address in chuck obj
+	OBJ_MEMBER_INT(obj, geometry_data_offset) = (t_CKINT)geo;
+
+	// tell renderer to create a copy
+	CGL::PushCommand(new CreateGeometryCommand(geo));
+	return geo;
+}
+
+Material* CGL::DupMeshMat(CK_DL_API API, Chuck_VM *VM, Mesh *mesh, Chuck_VM_Shred *SHRED)
+{
+	if (!mesh->GetMaterial()) {
+		std::cerr << "cannot duplicate a null material" << std::endl;
+		return nullptr;
+	}
+	Material* newMat = CGL::CreateChuckObjFromMat(API, VM, mesh->GetMaterial()->Dup(), SHRED, true);
+	// set new mat on this mesh!
+	mesh->SetMaterial(newMat);
+	// tell renderer to set new mat on this mesh
+	CGL::PushCommand(new SetMeshCommand(mesh));
+	return newMat;
+}
+
+Geometry* CGL::DupMeshGeo(CK_DL_API API, Chuck_VM *VM, Mesh *mesh, Chuck_VM_Shred *SHRED)
+{
+	if (!mesh->GetGeometry()) {
+		std::cerr << "cannot duplicate a null geometry" << std::endl;
+		return nullptr;
+	}
+
+	Geometry* newGeo = CGL::CreateChuckObjFromGeo(API, VM, mesh->GetGeometry()->Dup(), SHRED, true);
+	// set new geo on this mesh!
+	mesh->SetGeometry(newGeo);
+	// tell renderer to set new geo on this mesh
+	CGL::PushCommand(new SetMeshCommand(mesh));
+	return newGeo;
+}
+
 
 void CGL::RegisterShred(Chuck_VM_Shred *shred)
 {

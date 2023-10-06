@@ -76,10 +76,9 @@ public:
 	virtual void BuildGeometry() = 0;  // given data, builds cpu-side index and vertex buffs
 	virtual GeometryType GetGeoType() = 0;
 	virtual Geometry* Clone() = 0;  // deepcopy the geometry data
-	virtual Geometry* Dup(Chuck_Object* obj) {
+	virtual Geometry* Dup() {
 		auto* geo = Clone();
 		geo->NewID();
-		geo->m_ChuckObject = obj;
 		return geo;
 	}
 	virtual void * GenUpdate() = 0;

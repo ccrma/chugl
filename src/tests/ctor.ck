@@ -16,8 +16,13 @@ mesh2.dupMat();
 mesh2.dupGeo();
 mesh2.mat().polygonMode(Material.POLYGON_LINE);
 
+mesh2.mat().clone() @=> Material @ clonedMat;
+
 mesh3.dup();
 (mesh3.geo() $ SphereGeometry).set(0.2, 32, 16, 0.0, Math.PI * 2.0, 0.0, Math.PI);
+mesh3.mat(clonedMat);
+mesh3.geo().clone() @=> Geometry @ clonedGeo;
+mesh.geo(clonedGeo);
 
 // <<< "mesh2 duplicated mat", mesh2.mat() >>>;
 // <<< "mesh original mat", mesh.mat() >>>;

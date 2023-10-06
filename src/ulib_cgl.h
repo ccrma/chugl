@@ -13,6 +13,9 @@ t_CKBOOL init_chugl(Chuck_DL_Query * QUERY);
 
 // foward decls =========================================
 class Camera;
+class Geometry;
+class Material;
+class Mesh;
 class Scene;
 class SceneGraphObject;
 class SceneGraphCommand;
@@ -98,6 +101,12 @@ private:
 	static Chuck_DL_Api::Object s_UpdateEvent;
 
 	// static std::unordered_map<Chuck_VM_Shred*, Chuck_DL_Api::Object> m_ShredEventMap;  // map of shreds to CglUpdate Event 
+public:  // creating chuck object helpers
+	static Material* CreateChuckObjFromMat(CK_DL_API API, Chuck_VM *VM, Material *mat, Chuck_VM_Shred *SHRED, bool refcount);
+	static Geometry* CreateChuckObjFromGeo(CK_DL_API API, Chuck_VM *VM, Geometry *geo, Chuck_VM_Shred *SHRED, bool refcount);
+	static Material* DupMeshMat(CK_DL_API API, Chuck_VM *VM, Mesh *mesh, Chuck_VM_Shred *SHRED);
+	static Geometry* DupMeshGeo(CK_DL_API API, Chuck_VM *VM, Mesh *mesh, Chuck_VM_Shred *SHRED);
+
 public:
 	static void RegisterShred(Chuck_VM_Shred* shred);
 	static void UnregisterShred(Chuck_VM_Shred* shred);
