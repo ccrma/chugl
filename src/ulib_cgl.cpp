@@ -1324,6 +1324,10 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 	QUERY->add_mfun(QUERY, cgl_mat_set_line_width, "void", "lineWidth");
 	QUERY->add_arg(QUERY, "float", "width");
 
+	// phong mat
+	QUERY->add_mfun(QUERY, cgl_mat_phong_set_log_shininess, "float", "shine");
+	QUERY->add_arg(QUERY, "float", "shininess");
+
 	// uniform setters
 	QUERY->add_mfun(QUERY, cgl_mat_set_uniform_float, "void", "uniformFloat");
 	QUERY->add_arg(QUERY, "string", "name");
@@ -1402,9 +1406,6 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 
 	QUERY->add_mfun(QUERY, cgl_mat_phong_set_specular_color, "vec3", "specularColor");
 	QUERY->add_arg(QUERY, "vec3", "color");
-
-	QUERY->add_mfun(QUERY, cgl_mat_phong_set_log_shininess, "float", "shine");
-	QUERY->add_arg(QUERY, "float", "shininess");
 
 	// TODO: add getters
 
@@ -2855,13 +2856,11 @@ t_CKBOOL init_chugl_light(Chuck_DL_Query *QUERY)
 	QUERY->add_arg(QUERY, "float", "linear");
 	QUERY->add_arg(QUERY, "float", "quadratic");
 
-	// TODO add args
 	QUERY->end_class(QUERY);
 
 	QUERY->begin_class(QUERY, Light::CKName(LightType::Directional), Light::CKName(LightType::Base));
 	QUERY->add_ctor(QUERY, cgl_dir_light_ctor);
 	QUERY->add_dtor(QUERY, cgl_light_dtor);
-	// TODO add args
 	QUERY->end_class(QUERY);
 
 	return true;
