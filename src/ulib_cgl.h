@@ -20,8 +20,6 @@ class Scene;
 class SceneGraphObject;
 class SceneGraphCommand;
 
-class BoxGeometry;
-class NormalMaterial;
 
 
 // exports =========================================
@@ -73,8 +71,6 @@ public:
 	static std::condition_variable renderCondition;
 
 	static Scene mainScene;
-	static bool mainSceneInitialized;
-	static Chuck_DL_Api::Object DL_mainScene;
 
 	static Camera mainCamera;
 	static bool mainCameraInitialized;
@@ -82,10 +78,6 @@ public:
 	// static PerspectiveCamera mainCamera;
 
 	// static Chuck_Event s_UpdateChuckEvent;  // event used for waiting on update()
-
-public:  // chugl default resources
-	static BoxGeometry defaultBoxGeometry;
-	static NormalMaterial defaultNormalMaterial;
 
 public: // command queue methods
 	static void SwapCommandQueues();

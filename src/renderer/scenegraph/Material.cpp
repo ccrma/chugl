@@ -22,10 +22,6 @@ Material::CkTypeMap Material::s_CkTypeMap = {
     {MaterialType::Mango, "MangoMat"},
 };
 
-const char * Material::CKName(MaterialType type) {
-    return s_CkTypeMap[type].c_str();
-}
-
 // normMat static defines ========================
 const std::string NormalMaterial::USE_LOCAL_NORMALS_UNAME = "u_UseLocalNormal";
 

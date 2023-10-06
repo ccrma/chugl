@@ -1,4 +1,5 @@
 #include "Scene.h"
+#include "Light.h"
 // static render state (options passed from chuck to configure glfw)
 
 // mouse modes
@@ -14,3 +15,28 @@ int Scene::windowedHeight = 0;  // last user-set window size
 // fog modes
 const unsigned int Scene::FOG_EXP = FogType::Exponential;
 const unsigned int Scene::FOG_EXP2 = FogType::ExponentialSquared;
+
+Scene::Scene() : m_BackgroundColor(glm::vec3(0.9f))
+{
+    // actually, going to create default light in ulib chugl for now
+    // so changes can be propagated to renderer thread
+    // Give every scene default dirlight
+    // m_DefaultLight = new DirLight;
+    // m_DefaultLight->SetRotation(glm::vec3(-45.0f, 0.0f, 0.0f));
+    // AddChild(m_DefaultLight);
+    // RegisterLight(m_DefaultLight);
+    // RegisterNode(m_DefaultLight);
+
+    // remember to create chuck object for this light in ulib_cgl
+}
+
+Scene::~Scene()
+{
+    // not deleting m_DefaultLight here in case there are other chuck-side references
+}
+
+void Scene::RegisterLight(Light* light)
+{
+    RegisterNode(light);
+    m_Lights.push_back(light);
+}

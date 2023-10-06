@@ -52,7 +52,7 @@ lightbulb.set( SphereGeometry , normMat );
 mesh --> scene;
 fileMesh --> scene;
 group --> scene;
-dirLight --> scene;
+// dirLight --> scene;
 shaderMesh --> scene;
 
 fileMesh.position(@(0, 1.5, 0));
@@ -100,6 +100,9 @@ while (true) {
     // rotate light
     group.rotY( .85 * dt );
     dirLight.rotX( .75 * dt);
+
+    <<< "light pos", light.worldPos() >>>;
+    <<< "lightbulb pos", lightbulb.worldPos() >>>;
 
     // 
     shaderMat.uniformFloat("u_Time", now/second);

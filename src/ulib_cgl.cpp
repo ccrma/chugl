@@ -142,6 +142,10 @@ CK_DLL_DTOR(cgl_scene_dtor);
 CK_DLL_MFUN(cgl_scene_set_background_color);
 CK_DLL_MFUN(cgl_scene_get_background_color);
 
+// light fns
+CK_DLL_MFUN(cgl_scene_get_num_lights);
+CK_DLL_MFUN(cgl_scene_get_default_light);
+
 // fog fns
 CK_DLL_MFUN(cgl_scene_set_fog_color);
 CK_DLL_MFUN(cgl_scene_set_fog_density);
@@ -363,10 +367,10 @@ t_CKBOOL init_chugl(Chuck_DL_Query *QUERY)
 	init_chugl_mat(QUERY);
 	init_chugl_obj(QUERY);
 	init_chugl_cam(QUERY);
-	init_chugl_scene(QUERY);
 	init_chugl_group(QUERY);
 	init_chugl_mesh(QUERY);
 	init_chugl_light(QUERY);
+	init_chugl_scene(QUERY);
 	create_chugl_default_objs(QUERY);
 	init_chugl_static_fns(QUERY);
 
@@ -2208,9 +2212,6 @@ CK_DLL_GFUN(ggen_op_gruck)
 	SceneGraphObject *LHS = (SceneGraphObject *)OBJ_MEMBER_INT(lhs, ggen_data_offset);
 	SceneGraphObject *RHS = (SceneGraphObject *)OBJ_MEMBER_INT(rhs, ggen_data_offset);
 
-	// add child
-	RHS->AddChild(LHS);
-
 	// command
 	CGL::PushCommand(new RelationshipCommand(RHS, LHS, RelationshipCommand::Relation::AddChild));
 
@@ -2226,8 +2227,6 @@ CK_DLL_GFUN(ggen_op_ungruck)
 	// get internal representation
 	SceneGraphObject *LHS = (SceneGraphObject *)OBJ_MEMBER_INT(lhs, ggen_data_offset);
 	SceneGraphObject *RHS = (SceneGraphObject *)OBJ_MEMBER_INT(rhs, ggen_data_offset);
-	// add child
-	RHS->RemoveChild(LHS);
 
 	// command
 	CGL::PushCommand(new RelationshipCommand(RHS, LHS, RelationshipCommand::Relation::RemoveChild));
@@ -2256,6 +2255,11 @@ t_CKBOOL init_chugl_scene(Chuck_DL_Query *QUERY)
 	QUERY->add_mfun(QUERY, cgl_scene_set_background_color, "vec3", "backgroundColor");
 	QUERY->add_arg(QUERY, "vec3", "color");
 	QUERY->add_mfun(QUERY, cgl_scene_get_background_color, "vec3", "backgroundColor");
+
+	// light
+	QUERY->add_mfun(QUERY, cgl_scene_get_default_light, Light::CKName(LightType::Base), "light");
+	QUERY->add_mfun(QUERY, cgl_scene_get_num_lights, "int", "numLights");
+
 
 	// fog member vars
 	QUERY->add_mfun(QUERY, cgl_scene_set_fog_color, "vec3", "fogColor");
@@ -2306,6 +2310,18 @@ CK_DLL_MFUN(cgl_scene_get_background_color)
 	const auto &color = scene->GetBackgroundColor();
 	RETURN->v_vec3 = {color.x, color.y, color.z};
 }
+
+CK_DLL_MFUN(cgl_scene_get_default_light)
+{
+	Scene *scene = (Scene *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	RETURN->v_object = scene->m_Lights.size() > 0 ? scene->m_Lights[0]->m_ChuckObject : nullptr;
+}
+
+CK_DLL_MFUN(cgl_scene_get_num_lights)
+{
+	Scene *scene = (Scene *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	RETURN->v_int = scene->m_Lights.size();
+}	
 
 CK_DLL_MFUN(cgl_scene_set_fog_color)
 {
@@ -2663,9 +2679,14 @@ CK_DLL_CTOR(cgl_gcube_ctor)
     Mesh *mesh = (Mesh *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
     // note: don't need to set m_ChuckObject here because already set in preconstructor of parent "GMesh"
 
-    // TODO need to create corresponding ck objects for all defaults
+	// create new mat and geo 
+	// Material* mat = new NormalMaterial;
+	Material* mat = new PhongMaterial;
+	CGL::CreateChuckObjFromMat(API, VM, mat, SHRED, true);
+	Geometry* geo = new BoxGeometry;
+	CGL::CreateChuckObjFromGeo(API, VM, geo, SHRED, true);
 
-    cglMeshSet(mesh, &CGL::defaultBoxGeometry, &CGL::defaultNormalMaterial);
+    cglMeshSet(mesh, geo, mat);
 }
 
 
@@ -2710,29 +2731,22 @@ CK_DLL_DTOR(cgl_group_dtor)
 //-----------------------------------------------------------------------------
 t_CKBOOL init_chugl_light(Chuck_DL_Query *QUERY)
 {
-	// EM_log(CK_LOG_INFO, "ChuGL geometry");
-
-	// geometry
-	QUERY->begin_class(QUERY, "Light", "GGen");
+	QUERY->begin_class(QUERY, Light::CKName(LightType::Base), "GGen");
 	QUERY->add_ctor(QUERY, cgl_light_ctor);
 	QUERY->add_dtor(QUERY, cgl_light_dtor);
+	// TODO: add args
 	QUERY->end_class(QUERY);
 
-	QUERY->begin_class(QUERY, "PointLight", "Light");
+	QUERY->begin_class(QUERY, Light::CKName(LightType::Point), Light::CKName(LightType::Base));
 	QUERY->add_ctor(QUERY, cgl_point_light_ctor);
 	QUERY->add_dtor(QUERY, cgl_light_dtor);
-	// QUERY->add_mfun(QUERY, cgl_geo_box_set, "void", "set");
-	// QUERY->add_arg(QUERY, "float", "width");
-	// QUERY->add_arg(QUERY, "float", "height");
-	// QUERY->add_arg(QUERY, "float", "depth");
-	// QUERY->add_arg(QUERY, "int", "widthSeg");
-	// QUERY->add_arg(QUERY, "int", "heightSeg");
-	// QUERY->add_arg(QUERY, "int", "depthSeg");
+	// TODO add args
 	QUERY->end_class(QUERY);
 
-	QUERY->begin_class(QUERY, "DirLight", "Light");
+	QUERY->begin_class(QUERY, Light::CKName(LightType::Directional), Light::CKName(LightType::Base));
 	QUERY->add_ctor(QUERY, cgl_dir_light_ctor);
 	QUERY->add_dtor(QUERY, cgl_light_dtor);
+	// TODO add args
 	QUERY->end_class(QUERY);
 
 	return true;
@@ -2759,9 +2773,7 @@ CK_DLL_CTOR(cgl_point_light_ctor)
 	PointLight *light = new PointLight;
 	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT)light;
 
-	light->m_ChuckObject = SELF;
-
-	CGL::PushCommand(new CreateLightCommand(light));
+	CGL::PushCommand(new CreateLightCommand(light, &CGL::mainScene, SELF));
 }
 
 CK_DLL_CTOR(cgl_dir_light_ctor)
@@ -2769,9 +2781,7 @@ CK_DLL_CTOR(cgl_dir_light_ctor)
 	DirLight *light = new DirLight;
 	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT)light;
 
-	light->m_ChuckObject = SELF;
-
-	CGL::PushCommand(new CreateLightCommand(light));
+	CGL::PushCommand(new CreateLightCommand(light, &CGL::mainScene, SELF));
 }
 
 //-----------------------------------------------------------------------------
@@ -2856,13 +2866,6 @@ bool CGL::mainCameraInitialized = false;
 Chuck_DL_Api::Object CGL::DL_mainCamera;
 
 Scene CGL::mainScene;
-bool CGL::mainSceneInitialized = false;
-Chuck_DL_Api::Object CGL::DL_mainScene;
-// Chuck_Event CGL::s_UpdateChuckEvent;
-
-// chugl defaults static initialization
-BoxGeometry CGL::defaultBoxGeometry;
-NormalMaterial CGL::defaultNormalMaterial;
 
 // initialize offset into vtable for update() function on GGens. if < 0, not a valid offset.
 t_CKINT CGL::our_update_vt_offset = -1;
@@ -2995,6 +2998,7 @@ void CGL::PushCommand(SceneGraphCommand *cmd)
 }
 
 // creates a chuck object for the passed-in mat. DOES NOT CLONE THE MATERIAL
+// DOES pass a creation command to create the material on render thread
 Material* CGL::CreateChuckObjFromMat(
 	CK_DL_API API, Chuck_VM *VM, Material *mat, Chuck_VM_Shred *SHRED, bool refcount
 )
@@ -3152,19 +3156,25 @@ Chuck_DL_Api::Object CGL::GetMainCamera(
 
 Chuck_DL_Api::Object CGL::GetMainScene(Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM)
 {
-	if (CGL::mainSceneInitialized)
-	{
-		return CGL::DL_mainScene;
-	}
-	else
-	{
+	if (CGL::mainScene.m_ChuckObject == nullptr) {
+		// TODO implement CreateSceneCommand
 		Chuck_DL_Api::Type type = API->type->lookup(VM, "GScene");
-		// note: for creation shred is just passed in for the VM reference
-		Chuck_DL_Api::Object obj = API->object->create(shred, type, true);
-		cgl_scene_ctor( (Chuck_Object*)obj, NULL, VM, shred, API );
-		CGL::DL_mainScene = obj;
-		return obj;
+		Chuck_DL_Api::Object sceneObj = API->object->create(shred, type, true);
+		OBJ_MEMBER_INT(sceneObj, ggen_data_offset) = (t_CKINT)&CGL::mainScene;
+		CGL::mainScene.m_ChuckObject = sceneObj;
+
+		// create default light
+		// TODO create generic create-chuck-obj method
+		Light* defaultLight = new DirLight;
+		Chuck_DL_Api::Type lightType = API->type->lookup(VM, defaultLight->myCkName());
+		Chuck_Object* lightObj = API->object->create(shred, lightType, true);  // refcount for scene
+		OBJ_MEMBER_INT(lightObj, ggen_data_offset) = (t_CKINT)defaultLight;  // chuck obj points to sgo
+		// creation command
+		CGL::PushCommand(new CreateLightCommand(defaultLight, &CGL::mainScene, lightObj));
+		// add to scene command
+		CGL::PushCommand(new RelationshipCommand(&CGL::mainScene, defaultLight, RelationshipCommand::Relation::AddChild));
 	}
+	return CGL::mainScene.m_ChuckObject;
 }
 
 // traverses chuck-side (audio thread) scenegraph and calls user-defined update() on GGens

@@ -222,7 +222,7 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
             float spec = max(pow(max(dot(viewDir, reflectDir), 0.0), shininess), 0.0);
             // attenuation
             float distance    = length(light.position - fragPos);
-            float attenuation = 1.0 / (light.constant + light.linear * distance + 
+            float attenuation = 1.0 / (1.0 + light.linear * distance + 
                         light.quadratic * (distance * distance));    
             // combine results
             vec3 ambient  = light.ambient  * diffuseCol;

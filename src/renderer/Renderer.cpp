@@ -284,7 +284,7 @@ void RenderMaterial::SetLightingUniforms(Scene *scene, const std::vector<Light *
 
         switch (light->GetLightType())
         {
-        case LightType::None:
+        case LightType::Base:
             throw std::runtime_error("Light type not set");
         case LightType::Point:
             light->SetShaderUniforms(m_Shader, numPointLights);

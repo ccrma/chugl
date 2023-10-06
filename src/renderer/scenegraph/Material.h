@@ -249,7 +249,7 @@ public:  // static consts
 public:  // static material type --> chuck type name map
 	typedef std::unordered_map<MaterialType, const std::string, EnumClassHash> CkTypeMap;
 	static CkTypeMap s_CkTypeMap;
-	static const char * CKName(MaterialType type);
+	static const char * CKName(MaterialType type) { return s_CkTypeMap[type].c_str(); }
 	virtual const char * myCkName() { return CKName(GetMaterialType()); }
 };
 

@@ -2,6 +2,14 @@
 #include "scenegraph/SceneGraphObject.h"
 #include "Shader.h"
 
+// ckname 
+Light::CkTypeMap Light::s_CkTypeMap = {
+	{LightType::Base, "GLight"},
+	{LightType::Point, "PointLight"},
+	{LightType::Directional, "DirLight"},
+	{LightType::Spot, "SpotLight"}
+};
+
 // doesn't compile on mac
 // #define GLM_ENABLE_EXPERIMENTAL
 // #include "glm/ext.hpp"

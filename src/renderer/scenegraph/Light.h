@@ -1,7 +1,9 @@
 #pragma once
 
 #include "SceneGraphObject.h"
+#include "SceneGraphNode.h"
 #include <glm/glm.hpp>
+#include <unordered_map>
 
 /*
 struct LightInfo {  // must match include/Lighting.glsl setup!!
@@ -30,7 +32,7 @@ class Shader;
 // end forward decls ====================================
 
 enum class LightType {  // must match include/Lighting.glsl setup!!
-	None = 0,
+	Base = 0,
 	Directional,
 	Point,
 	Spot
@@ -46,6 +48,11 @@ public:
 	virtual LightType GetLightType() = 0;
 	virtual void SetShaderUniforms(Shader* shader, int index) = 0;
 	virtual Light* Clone() = 0;
+public: // ck name
+	typedef std::unordered_map<LightType, const std::string, EnumClassHash> CkTypeMap;
+	static CkTypeMap s_CkTypeMap;
+	static const char * CKName(LightType type) { return s_CkTypeMap[type].c_str(); }
+	virtual const char * myCkName() { return CKName(GetLightType()); }
 };
 
 class PointLight : public Light

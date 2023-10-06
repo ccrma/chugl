@@ -30,8 +30,6 @@
 Renderer Window::renderer;
 Camera Window::camera;
 Scene Window::scene;
-BoxGeometry Window::boxGeometry;
-NormalMaterial Window::normalMaterial;
 
 
 /* =============================================================================
@@ -248,16 +246,11 @@ void Window::DisplayLoop()
 
 
     // Copy from CGL scenegraph ====================================    
+    // TODO should just clone these
     scene.SetID(CGL::mainScene.GetID());  // copy scene ID
     scene.RegisterNode(&scene);  // register itself
     camera.SetID(CGL::mainCamera.GetID());  // copy maincam ID
     scene.RegisterNode(&camera);  // register camera
-
-    // copy default materials
-    boxGeometry.SetID(CGL::defaultBoxGeometry.GetID());
-    scene.RegisterNode(&boxGeometry);
-    normalMaterial.SetID(CGL::defaultNormalMaterial.GetID());
-    scene.RegisterNode(&normalMaterial);
 
     // Render Loop ===========================================
     float previousFPSTime = (float)glfwGetTime();

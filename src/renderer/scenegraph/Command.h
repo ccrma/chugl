@@ -9,6 +9,7 @@
 #include "Light.h"
 #include "CGL_Texture.h"
 
+struct Chuck_Object;
 
 
 class SceneGraphCommand
@@ -131,16 +132,21 @@ private:
 class CreateLightCommand : public SceneGraphCommand
 {
 public:
-    CreateLightCommand(Light* l) : light(nullptr) {
+    CreateLightCommand(
+        Light* l, Scene* audioThreadScene, Chuck_Object* ckobj
+        // TODO add data offset here too?
+    ) : light(nullptr) {
+        audioThreadScene->RegisterLight(l);
+        l->m_ChuckObject = ckobj;
+
         light = l->Clone();
         light->SetID(l->GetID());
     };
-    virtual void execute(Scene* scene) override {
+    virtual void execute(Scene* renderThreadScene) override {
         std::cout << "copied light with id: " + std::to_string(light->GetID())
             << std::endl;
 
-        scene->RegisterNode(light);
-        scene->RegisterLight(light);
+        renderThreadScene->RegisterLight(light);
     }
 private:
     Light* light;  // DON"T DELETE passed to renderer scenegraph
@@ -256,15 +262,26 @@ public:
     };
 
     RelationshipCommand(SceneGraphObject* parent, SceneGraphObject* child, Relation r) :
-        m_ParentID(parent->GetID()), m_ChildID(child->GetID()), rel(r) {};
+        m_ParentID(parent->GetID()), m_ChildID(child->GetID()), rel(r) {
+            CreateRelation(parent, child, r);
+    };
 
     virtual void execute(Scene* scene) override {
         SceneGraphObject* parent = dynamic_cast<SceneGraphObject*>(scene->GetNode(m_ParentID));
         SceneGraphObject* child = dynamic_cast<SceneGraphObject*>(scene->GetNode(m_ChildID));
 
+        if (!parent || !child) __debugbreak();
+
         assert(parent && child);
 
-        switch (rel) {
+        CreateRelation(parent, child, rel);
+    }
+private:
+    Relation rel;
+    size_t m_ParentID, m_ChildID;
+
+    void CreateRelation(SceneGraphObject* parent, SceneGraphObject* child, Relation r) {
+        switch (r) {
         case AddChild:
             parent->AddChild(child);
             break;
@@ -273,9 +290,6 @@ public:
             break;
         }
     }
-private:
-    Relation rel;
-    size_t m_ParentID, m_ChildID;
 };
 
 
