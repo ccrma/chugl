@@ -8,6 +8,16 @@
 
 struct Chuck_Object;
 
+
+struct EnumClassHash
+{
+	template <typename T>
+	std::size_t operator()(T t) const
+	{
+		return static_cast<std::size_t>(t);
+	}
+};
+
 class SceneGraphNode
 {
 public:
@@ -23,6 +33,7 @@ public:
 
 	inline size_t GetID() { return m_ID; }
 	inline void SetID(size_t id) { m_ID = id; }
+	void NewID() { m_ID = SceneGraphNode::idCounter++; }
 
 // static
 	static size_t idCounter;

@@ -183,7 +183,7 @@ RenderMaterial::RenderMaterial(Material *mat, Renderer *renderer) : m_Mat(mat), 
 			frag = ShaderCode::GenShaderSource("NORMAL_FRAG", ShaderType::Fragment);
 	}
 
-	m_Shader = renderer->GetOrCreateShader(vert, frag, vertIsPath, fragIsPath);
+	m_Shader = new Shader(vert, frag, vertIsPath, fragIsPath);
 }
 
 void RenderMaterial::UpdateShader()
@@ -198,7 +198,11 @@ void RenderMaterial::UpdateShader()
 		// Note: we DON'T delete the previous shader program because it may be in use by other render materials
 		// Yes might leak, but you shouldn't be creating that many shaders anyways
 		// long term fix: add ref counting, delete the shader if its linked to 0 render materials
-		m_Shader = m_Renderer->GetOrCreateShader(mat->m_VertShaderPath, mat->m_FragShaderPath, true, true);
+		// actually deleting shouldn't be a problem now but still gotta figure 
+		// out how to do it correctly
+		// delete m_Shader;  // TODO
+
+		m_Shader = new Shader(mat->m_VertShaderPath, mat->m_FragShaderPath, true, true);
 	}
 }
 
@@ -405,6 +409,8 @@ void Renderer::Draw(RenderGeometry *renderGeo, RenderMaterial *renderMat)
 	}
 }
 
+// deprecating this function for now, bc we want different materials of the 
+// same type to actually use different shaders
 Shader *Renderer::GetOrCreateShader(
 	const std::string &vert, const std::string &frag,
 	bool vertIsPath, bool fragIsPath

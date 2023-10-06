@@ -11,6 +11,21 @@ const MaterialPolygonMode Material::POLYGON_POINT = MaterialPolygonMode::Point;
 const std::string Material::POINT_SIZE_UNAME = "u_PointSize";
 const std::string Material::LINE_WIDTH_UNAME = "u_LineWidth";
 
+// ck type name map 
+Material::CkTypeMap Material::s_CkTypeMap = {
+    {MaterialType::Base, "Material"},
+    {MaterialType::Normal, "NormMat"},
+    {MaterialType::Phong, "PhongMat"},
+    {MaterialType::Points, "PointsMat"},
+    {MaterialType::Line, "LineMat"},
+    {MaterialType::CustomShader, "ShaderMat"},
+    {MaterialType::Mango, "MangoMat"},
+};
+
+const char * Material::CKName(MaterialType type) {
+    return s_CkTypeMap[type].c_str();
+}
+
 // normMat static defines ========================
 const std::string NormalMaterial::USE_LOCAL_NORMALS_UNAME = "u_UseLocalNormal";
 

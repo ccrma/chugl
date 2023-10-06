@@ -76,6 +76,12 @@ public:
 	virtual void BuildGeometry() = 0;  // given data, builds cpu-side index and vertex buffs
 	virtual GeometryType GetGeoType() = 0;
 	virtual Geometry* Clone() = 0;  // deepcopy the geometry data
+	virtual Geometry* Dup(Chuck_Object* obj) {
+		auto* geo = Clone();
+		geo->NewID();
+		geo->m_ChuckObject = obj;
+		return geo;
+	}
 	virtual void * GenUpdate() = 0;
 	virtual void FreeUpdate(void* data) = 0;
 	virtual void ApplyUpdate(void * data) {
@@ -127,6 +133,13 @@ public:  // constants
 	static const unsigned int NORMAL_ATTRIB_IDX;
 	static const unsigned int COLOR_ATTRIB_IDX;
 	static const unsigned int UV0_ATTRIB_IDX;
+
+public: // chuck type names
+	// TODO can probably template this and genarlize across all scenegraph classes?
+	typedef std::unordered_map<GeometryType, const std::string, EnumClassHash> CkTypeMap;
+	static CkTypeMap s_CkTypeMap;
+	static const char * CKName(GeometryType type);
+	virtual const char * myCkName() { return CKName(GetGeoType()); }
 };
 
 class BoxGeometry : public Geometry

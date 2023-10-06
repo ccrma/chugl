@@ -176,6 +176,12 @@ public:
 	virtual std::unordered_map<std::string, MaterialUniform>& GetLocalUniforms() { return m_Uniforms;  }  // for setting properties specific to the material, e.g. color
 
 	virtual Material* Clone() = 0;
+	virtual Material* Dup(Chuck_Object* ckobj) {  // clone but get new ID 
+		auto* mat = Clone();
+		mat->NewID();
+		mat->m_ChuckObject = ckobj;
+		return mat;
+	}
 
 
 	// commands for telling a material how to update itself
@@ -241,6 +247,11 @@ public:  // static consts
 	static const std::string LINE_WIDTH_UNAME;
 	// static const std::string AFFECTED_BY_FOG_UNAME;  // TODO
 
+public:  // static material type --> chuck type name map
+	typedef std::unordered_map<MaterialType, const std::string, EnumClassHash> CkTypeMap;
+	static CkTypeMap s_CkTypeMap;
+	static const char * CKName(MaterialType type);
+	virtual const char * myCkName() { return CKName(GetMaterialType()); }
 };
 
 // material that colors using worldspace normals as rgb

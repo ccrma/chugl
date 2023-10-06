@@ -99,9 +99,9 @@ spork ~ latheSetter();
 GScene scene;
 MangoMat fillMat, wireMat, pointMat;
 NormMat normMat;
-fillMat.polygonMode(CglMat.POLYGON_FILL);
-wireMat.polygonMode(CglMat.POLYGON_LINE);
-pointMat.polygonMode(CglMat.POLYGON_POINT);
+fillMat.polygonMode(Material.POLYGON_FILL);
+wireMat.polygonMode(Material.POLYGON_LINE);
+pointMat.polygonMode(Material.POLYGON_POINT);
 pointMat.pointSize(55.0);    // note: mac m1 doesn't support glPointSize. this becomes a no-op
 
 GMesh meshes[geos.size()*4];

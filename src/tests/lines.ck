@@ -75,8 +75,6 @@ fun void randomizePositions(CustomGeometry @ geo)
         // 1::second => now;
         for (0 => int i; i < positions.size(); i++) {
             Math.random2f(-1.0, 1.0) => positions[i];
-            Math.random2f(-1.0, 1.0) => positions[i];
-            Math.random2f(-1.0, 1.0) => positions[i];
         }
         geo.positions(positions);
         GG.nextFrame() => now;

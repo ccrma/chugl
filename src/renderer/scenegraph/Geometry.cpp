@@ -35,6 +35,26 @@ void Geometry::AddTriangleIndices(unsigned int i1, unsigned int i2, unsigned int
 	m_Indices.push_back(i3);
 }
 
+// ck class names
+Geometry::CkTypeMap Geometry::s_CkTypeMap = {
+	{GeometryType::Base, "Geometry"},
+	{GeometryType::Box, "BoxGeometry"},
+	{GeometryType::Sphere, "SphereGeometry"},
+	{GeometryType::Circle, "CircleGeometry"},
+	{GeometryType::Cylinder, "CylinderGeometry"},
+	{GeometryType::Capsule, "CapsuleGeometry"},
+	{GeometryType::Lathe, "LatheGeometry"},
+	{GeometryType::Cone, "ConeGeometry"},
+	{GeometryType::Plane, "PlaneGeometry"},
+	{GeometryType::Quad, "QuadGeometry"},
+	{GeometryType::Torus, "TorusGeometry"},
+	{GeometryType::Custom, "CustomGeometry"}
+};
+
+const char * Geometry::CKName(GeometryType type) {
+    return s_CkTypeMap[type].c_str();
+}
+
 /* =============================================================================
 									Sphere Geo
 ===============================================================================*/

@@ -17,7 +17,6 @@
 //-----------------------------------------------------------------------------
 CK_DLL_SHREDS_WATCHER(cgl_shred_on_destroy_listener);
 
-
 //-----------------------------------------------------------------------------
 // ChuGL Events
 //-----------------------------------------------------------------------------
@@ -29,7 +28,6 @@ CK_DLL_CTOR(cgl_window_resize_ctor);
 CK_DLL_DTOR(cgl_window_resize_dtor);
 
 CK_DLL_MFUN(cgl_update_event_waiting_on);
-
 
 //-----------------------------------------------------------------------------
 // Static Fns
@@ -68,7 +66,6 @@ CK_DLL_SFUN(cgl_get_num_registered_waiting_shreds);
 
 // chugl toggle whether to use system time or chuck time
 CK_DLL_SFUN(cgl_use_chuck_time);
-
 
 //-----------------------------------------------------------------------------
 // ChuGL Object
@@ -110,10 +107,8 @@ CK_DLL_MFUN(cgl_obj_get_world_pos);
 // CK_DLL_MFUN(cgl_obj_get_children);
 
 // TODO: these need reference counting
-CK_DLL_GFUN(ggen_op_gruck);  // add child
-CK_DLL_GFUN(ggen_op_ungruck);  // remove child
-
-
+CK_DLL_GFUN(ggen_op_gruck);	  // add child
+CK_DLL_GFUN(ggen_op_ungruck); // remove child
 
 //-----------------------------------------------------------------------------
 // Object -> BaseCamera
@@ -121,9 +116,9 @@ CK_DLL_GFUN(ggen_op_ungruck);  // remove child
 CK_DLL_CTOR(cgl_cam_ctor);
 CK_DLL_DTOR(cgl_cam_dtor);
 
-CK_DLL_MFUN(cgl_cam_set_mode_persp);  // switch to perspective mode
-CK_DLL_MFUN(cgl_cam_set_mode_ortho);  // switch to perspective mode
-CK_DLL_MFUN(cgl_cam_get_mode);  // switch to perspective mode
+CK_DLL_MFUN(cgl_cam_set_mode_persp); // switch to perspective mode
+CK_DLL_MFUN(cgl_cam_set_mode_ortho); // switch to perspective mode
+CK_DLL_MFUN(cgl_cam_get_mode);		 // switch to perspective mode
 
 CK_DLL_MFUN(cgl_cam_set_clip);
 CK_DLL_MFUN(cgl_cam_get_clip_near);
@@ -131,14 +126,12 @@ CK_DLL_MFUN(cgl_cam_get_clip_far);
 
 // perspective camera params
 // (no aspect, that's set automatically by renderer window resize callback)
-CK_DLL_MFUN(cgl_cam_set_pers_fov);  // set in degrees
-CK_DLL_MFUN(cgl_cam_get_pers_fov);  // 
+CK_DLL_MFUN(cgl_cam_set_pers_fov); // set in degrees
+CK_DLL_MFUN(cgl_cam_get_pers_fov); //
 
 // ortho camera params
-CK_DLL_MFUN(cgl_cam_set_ortho_size);     // size of view volume (preserves screen aspect ratio)
-CK_DLL_MFUN(cgl_cam_get_ortho_size);     // 
-
-
+CK_DLL_MFUN(cgl_cam_set_ortho_size); // size of view volume (preserves screen aspect ratio)
+CK_DLL_MFUN(cgl_cam_get_ortho_size); //
 
 //-----------------------------------------------------------------------------
 // Object -> Scene
@@ -161,12 +154,10 @@ CK_DLL_MFUN(cgl_scene_get_fog_color);
 CK_DLL_MFUN(cgl_scene_get_fog_density);
 CK_DLL_MFUN(cgl_scene_get_fog_type);
 
-
-
 //-----------------------------------------------------------------------------
 // Object -> Light
 //-----------------------------------------------------------------------------
-CK_DLL_CTOR(cgl_light_ctor);  // abstract base class, no constructor
+CK_DLL_CTOR(cgl_light_ctor); // abstract base class, no constructor
 CK_DLL_DTOR(cgl_light_dtor);
 
 // point light
@@ -175,7 +166,6 @@ CK_DLL_CTOR(cgl_point_light_ctor);
 
 // directional light
 CK_DLL_CTOR(cgl_dir_light_ctor);
-
 
 //-----------------------------------------------------------------------------
 // Geometry
@@ -211,17 +201,15 @@ CK_DLL_MFUN(cgl_geo_lathe_set_no_points);
 
 // custom
 CK_DLL_CTOR(cgl_geo_custom_ctor);
-CK_DLL_MFUN(cgl_geo_set_attribute);  // general case for any kind of vertex data
+CK_DLL_MFUN(cgl_geo_set_attribute); // general case for any kind of vertex data
 CK_DLL_MFUN(cgl_geo_set_positions);
 CK_DLL_MFUN(cgl_geo_set_colors);
 CK_DLL_MFUN(cgl_geo_set_normals);
 CK_DLL_MFUN(cgl_geo_set_uvs);
 CK_DLL_MFUN(cgl_geo_set_indices);
 
-
-
 //-----------------------------------------------------------------------------
-// Texture 
+// Texture
 //-----------------------------------------------------------------------------
 
 CK_DLL_CTOR(cgl_texture_ctor);
@@ -247,8 +235,7 @@ CK_DLL_CTOR(cgl_texture_rawdata_ctor);
 CK_DLL_MFUN(cgl_texture_rawdata_set_data);
 // CK_DLL_MFUN(cgl_texture_rawdata_get_data);
 
-
-// TODO: getters? 
+// TODO: getters?
 
 //-----------------------------------------------------------------------------
 // Materials
@@ -263,7 +250,7 @@ CK_DLL_MFUN(cgl_mat_set_point_size);
 // CK_DLL_MFUN(cgl_mat_set_line_width);
 // CK_DLL_MFUN(cgl_mat_set_cull_mode);  // TODO
 
-	// uniform setters
+// uniform setters
 CK_DLL_MFUN(cgl_mat_set_uniform_float);
 CK_DLL_MFUN(cgl_mat_set_uniform_float2);
 CK_DLL_MFUN(cgl_mat_set_uniform_float3);
@@ -281,13 +268,13 @@ CK_DLL_MFUN(cgl_set_use_local_normals);
 
 // phong specular mat
 CK_DLL_CTOR(cgl_mat_phong_ctor);
-	// uniform setters
+// uniform setters
 CK_DLL_MFUN(cgl_mat_phong_set_diffuse_map);
 CK_DLL_MFUN(cgl_mat_phong_set_specular_map);
 CK_DLL_MFUN(cgl_mat_phong_set_diffuse_color);
 CK_DLL_MFUN(cgl_mat_phong_set_specular_color);
 CK_DLL_MFUN(cgl_mat_phong_set_log_shininess);
-	// uniform getters TODO
+// uniform getters TODO
 
 // custom shader mat
 CK_DLL_CTOR(cgl_mat_custom_shader_ctor);
@@ -302,7 +289,6 @@ CK_DLL_MFUN(cgl_mat_points_get_size_attenuation);
 CK_DLL_MFUN(cgl_mat_points_set_sprite);
 CK_DLL_MFUN(cgl_mat_points_set_color);
 
-
 // mango mat (for debugging UVs)
 CK_DLL_CTOR(cgl_mat_mango_ctor);
 
@@ -312,12 +298,8 @@ CK_DLL_CTOR(cgl_mat_mango_ctor);
 // for a better soln using texture-buffer line meshes, see: https://github.com/mhalber/Lines#texture-buffer-lines
 CK_DLL_CTOR(cgl_mat_line_ctor);
 CK_DLL_MFUN(cgl_mat_line_set_color);
-CK_DLL_MFUN(cgl_mat_line_set_width);  // many platforms only support fixed width 1.0
-CK_DLL_MFUN(cgl_mat_line_set_mode);  // many platforms only support fixed width 1.0
-
-
-
-
+CK_DLL_MFUN(cgl_mat_line_set_width); // many platforms only support fixed width 1.0
+CK_DLL_MFUN(cgl_mat_line_set_mode);	 // many platforms only support fixed width 1.0
 
 //-----------------------------------------------------------------------------
 // Object -> Mesh
@@ -325,14 +307,21 @@ CK_DLL_MFUN(cgl_mat_line_set_mode);  // many platforms only support fixed width 
 CK_DLL_CTOR(cgl_mesh_ctor);
 CK_DLL_DTOR(cgl_mesh_dtor);
 CK_DLL_MFUN(cgl_mesh_set);
+CK_DLL_MFUN(cgl_mesh_get_mat);
+CK_DLL_MFUN(cgl_mesh_get_geo);
+CK_DLL_MFUN(cgl_mesh_set_mat);
+CK_DLL_MFUN(cgl_mesh_set_geo);
 
+// duplicators
+CK_DLL_MFUN(cgl_mesh_dup_mat);
+CK_DLL_MFUN(cgl_mesh_dup_geo);
+CK_DLL_MFUN(cgl_mesh_dup_all);
 
 //-----------------------------------------------------------------------------
-// Object -> Mesh -> Gxxxxx 
+// Object -> Mesh -> Gxxxxx
 //-----------------------------------------------------------------------------
 CK_DLL_CTOR(cgl_gcube_ctor);
 // CK_DLL_DTOR(cgl_gcube_dtor);
-
 
 //-----------------------------------------------------------------------------
 // Object -> Group
@@ -340,23 +329,20 @@ CK_DLL_CTOR(cgl_gcube_ctor);
 CK_DLL_CTOR(cgl_group_ctor);
 CK_DLL_DTOR(cgl_group_dtor);
 
-
-
 // exports =========================================
 
-t_CKBOOL init_chugl_events(Chuck_DL_Query* QUERY);
-t_CKBOOL init_chugl_static_fns(Chuck_DL_Query* QUERY);
-t_CKBOOL init_chugl_geo(Chuck_DL_Query* QUERY);
-t_CKBOOL init_chugl_texture(Chuck_DL_Query* QUERY);
-t_CKBOOL init_chugl_mat(Chuck_DL_Query* QUERY);
-t_CKBOOL init_chugl_obj(Chuck_DL_Query* QUERY);
-t_CKBOOL init_chugl_cam(Chuck_DL_Query* QUERY);
-t_CKBOOL init_chugl_scene(Chuck_DL_Query* QUERY);
-t_CKBOOL init_chugl_group(Chuck_DL_Query* QUERY);
-t_CKBOOL init_chugl_mesh(Chuck_DL_Query* QUERY);
-t_CKBOOL init_chugl_light(Chuck_DL_Query* QUERY);
-t_CKBOOL create_chugl_default_objs(Chuck_DL_Query* QUERY);
-
+t_CKBOOL init_chugl_events(Chuck_DL_Query *QUERY);
+t_CKBOOL init_chugl_static_fns(Chuck_DL_Query *QUERY);
+t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY);
+t_CKBOOL init_chugl_texture(Chuck_DL_Query *QUERY);
+t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY);
+t_CKBOOL init_chugl_obj(Chuck_DL_Query *QUERY);
+t_CKBOOL init_chugl_cam(Chuck_DL_Query *QUERY);
+t_CKBOOL init_chugl_scene(Chuck_DL_Query *QUERY);
+t_CKBOOL init_chugl_group(Chuck_DL_Query *QUERY);
+t_CKBOOL init_chugl_mesh(Chuck_DL_Query *QUERY);
+t_CKBOOL init_chugl_light(Chuck_DL_Query *QUERY);
+t_CKBOOL create_chugl_default_objs(Chuck_DL_Query *QUERY);
 
 static t_CKUINT cglframe_data_offset = 0;
 static t_CKUINT cgl_next_frame_event_data_offset = 0;
@@ -367,8 +353,8 @@ static t_CKUINT geometry_data_offset = 0;
 static t_CKUINT texture_data_offset = 0;
 static t_CKUINT cglmat_data_offset = 0;
 
-t_CKBOOL init_chugl(Chuck_DL_Query * QUERY)
-{	
+t_CKBOOL init_chugl(Chuck_DL_Query *QUERY)
+{
 	init_chugl_events(QUERY);
 	init_chugl_geo(QUERY);
 	init_chugl_texture(QUERY);
@@ -385,16 +371,14 @@ t_CKBOOL init_chugl(Chuck_DL_Query * QUERY)
 	return true;
 }
 
-
 //-----------------------------------------------------------------------------
 // create_chugl_default_objs()
 //-----------------------------------------------------------------------------
-t_CKBOOL create_chugl_default_objs(Chuck_DL_Query* QUERY)
+t_CKBOOL create_chugl_default_objs(Chuck_DL_Query *QUERY)
 {
 	// threadsafe event queue
 	CglEvent::s_SharedEventQueue = QUERY->api()->vm->create_event_buffer(
-		QUERY->vm()
-	);
+		QUERY->vm());
 	assert(CglEvent::s_SharedEventQueue);
 
 	// main camera
@@ -405,9 +389,9 @@ t_CKBOOL create_chugl_default_objs(Chuck_DL_Query* QUERY)
 	QUERY->register_shreds_watcher(QUERY, cgl_shred_on_destroy_listener, CKVM_SHREDS_WATCH_REMOVE, NULL);
 
 	// update() vt offset
-	// find the offset for update 
-    CGL::our_update_vt_offset = QUERY->api()->object->get_vtable_offset(QUERY->vm(), "GGen", "update");
-	
+	// find the offset for update
+	CGL::our_update_vt_offset = QUERY->api()->object->get_vtable_offset(QUERY->vm(), "GGen", "update");
+
 	return true;
 }
 
@@ -424,11 +408,10 @@ CK_DLL_SHREDS_WATCHER(cgl_shred_on_destroy_listener)
 	CGL::UnregisterShredWaiting(SHRED);
 }
 
-
 //-----------------------------------------------------------------------------
 // init_chugl_events()
 //-----------------------------------------------------------------------------
-t_CKBOOL init_chugl_events(Chuck_DL_Query* QUERY)
+t_CKBOOL init_chugl_events(Chuck_DL_Query *QUERY)
 {
 	// Update event ================================
 	// triggered by main render thread after deepcopy is complete, and safe for chuck to begin updating the scene graph
@@ -447,7 +430,7 @@ t_CKBOOL init_chugl_events(Chuck_DL_Query* QUERY)
 
 	window_resize_event_data_offset = QUERY->add_mvar(QUERY, "int", "@cgl_window_resize_event_data", false);
 	QUERY->end_class(QUERY);
-	
+
 	return true;
 }
 
@@ -455,42 +438,42 @@ CK_DLL_CTOR(cgl_update_ctor)
 {
 	// store reference to our new class
 	OBJ_MEMBER_INT(SELF, cgl_next_frame_event_data_offset) = (t_CKINT) new CglEvent(
-		(Chuck_Event*)SELF, SHRED->vm_ref, API, CglEventType::CGL_UPDATE
-	);
+		(Chuck_Event *)SELF, SHRED->vm_ref, API, CglEventType::CGL_UPDATE);
 }
 CK_DLL_DTOR(cgl_update_dtor)
 {
-	CglEvent* cglEvent = (CglEvent*)OBJ_MEMBER_INT(SELF, cgl_next_frame_event_data_offset);
+	CglEvent *cglEvent = (CglEvent *)OBJ_MEMBER_INT(SELF, cgl_next_frame_event_data_offset);
 	CK_SAFE_DELETE(cglEvent);
 	OBJ_MEMBER_INT(SELF, cgl_next_frame_event_data_offset) = 0;
 }
 CK_DLL_MFUN(cgl_update_event_waiting_on)
 {
-	// THIS IS A VERY IMPORTANT FUNCTION. See 
+	// THIS IS A VERY IMPORTANT FUNCTION. See
 	// https://trello.com/c/Gddnu21j/6-chuglrender-refactor-possible-deadlock-between-cglupdate-and-render
-	// and 
+	// and
 	// https://github.com/ccrma/chugl/blob/2023-chugl-int/design/multishred-render-1.ck
 	// for further context
 
-	// not used for now, will become relevant if we ever want to support multiple 
+	// not used for now, will become relevant if we ever want to support multiple
 	// windows and/or renderers
-	CglEvent* cglEvent = (CglEvent*)OBJ_MEMBER_INT(SELF, cgl_next_frame_event_data_offset);
+	CglEvent *cglEvent = (CglEvent *)OBJ_MEMBER_INT(SELF, cgl_next_frame_event_data_offset);
 
 	// activate chugl main thread hook (no-op if already activated)
-	CGL::ActivateHook(); 
+	CGL::ActivateHook();
 
 	// Add shred (no-op if already added)
 	// CGL::RegisterShred(SHRED);
 
-	// flips the boolean flag for this shred to true, meaning it has successfully 
-	CGL::MarkShredWaited(SHRED);  
+	// flips the boolean flag for this shred to true, meaning it has successfully
+	CGL::MarkShredWaited(SHRED);
 
 	// Add shred to waiting list
 	CGL::RegisterShredWaiting(SHRED);
 	// std::cerr << "REGISTERED SHRED WAITING" << SHRED << std::endl;
 
 	// if #waiting == #registered, all CGL shreds have finished work, and we are safe to wakeup the renderer
-	if (CGL::GetNumShredsWaiting() >= CGL::GetNumRegisteredShreds()) {
+	if (CGL::GetNumShredsWaiting() >= CGL::GetNumRegisteredShreds())
+	{
 
 		// if this is very first time calling, set initial dt
 		// this allows chuck time and window dt to be totally synced!!
@@ -499,7 +482,7 @@ CK_DLL_MFUN(cgl_update_event_waiting_on)
 		// traverse scenegraph and call chuck-defined update() on all GGens
 		CGL::UpdateSceneGraph(CGL::mainScene, API, VM, SHRED);
 
-		CGL::ClearShredWaiting();  // clear thread waitlist 
+		CGL::ClearShredWaiting(); // clear thread waitlist
 		CGL::Render();
 	}
 }
@@ -509,12 +492,11 @@ CK_DLL_CTOR(cgl_window_resize_ctor)
 {
 	// store reference to our new class
 	OBJ_MEMBER_INT(SELF, window_resize_event_data_offset) = (t_CKINT) new CglEvent(
-		(Chuck_Event*)SELF, SHRED->vm_ref, API, CglEventType::CGL_WINDOW_RESIZE
-	);
+		(Chuck_Event *)SELF, SHRED->vm_ref, API, CglEventType::CGL_WINDOW_RESIZE);
 }
 CK_DLL_DTOR(cgl_window_resize_dtor)
 {
-	CglEvent* cglEvent = (CglEvent*)OBJ_MEMBER_INT(SELF, window_resize_event_data_offset);
+	CglEvent *cglEvent = (CglEvent *)OBJ_MEMBER_INT(SELF, window_resize_event_data_offset);
 	CK_SAFE_DELETE(cglEvent);
 	OBJ_MEMBER_INT(SELF, window_resize_event_data_offset) = 0;
 }
@@ -522,16 +504,16 @@ CK_DLL_DTOR(cgl_window_resize_dtor)
 //-----------------------------------------------------------------------------
 // init_chugl_static_fns()
 //-----------------------------------------------------------------------------
-t_CKBOOL init_chugl_static_fns(Chuck_DL_Query* QUERY)
+t_CKBOOL init_chugl_static_fns(Chuck_DL_Query *QUERY)
 {
-	QUERY->begin_class(QUERY, "GG", "Object");  // for global stuff
-	// static vars
-	// This will hide the cursor and lock it to the specified window. 
-    QUERY->add_svar( QUERY, "int", "MOUSE_LOCKED", TRUE, (void *)&CGL::MOUSE_LOCKED);
+	QUERY->begin_class(QUERY, "GG", "Object"); // for global stuff
+											   // static vars
+											   // This will hide the cursor and lock it to the specified window.
+	QUERY->add_svar(QUERY, "int", "MOUSE_LOCKED", TRUE, (void *)&CGL::MOUSE_LOCKED);
 	// the cursor to become hidden when it is over a window but still want it to behave normally
-    QUERY->add_svar( QUERY, "int", "MOUSE_HIDDEN", TRUE, (void *)&CGL::MOUSE_HIDDEN);
+	QUERY->add_svar(QUERY, "int", "MOUSE_HIDDEN", TRUE, (void *)&CGL::MOUSE_HIDDEN);
 	// This mode puts no limit on the motion of the cursor.
-	QUERY->add_svar( QUERY, "int", "MOUSE_NORMAL", TRUE, (void *)&CGL::MOUSE_NORMAL);
+	QUERY->add_svar(QUERY, "int", "MOUSE_NORMAL", TRUE, (void *)&CGL::MOUSE_NORMAL);
 
 	QUERY->add_sfun(QUERY, cgl_next_frame, "NextFrameEvent", "nextFrame");
 
@@ -591,21 +573,20 @@ CK_DLL_SFUN(cgl_next_frame)
 	// TODO: workaround bug where create() object API is not calling preconstructors
 	// https://trello.com/c/JwhVQEpv/48-cglnextframe-now-not-calling-preconstructor-of-cglupdate
 
-	if (!CGL::HasShredWaited(SHRED)) {
+	if (!CGL::HasShredWaited(SHRED))
+	{
 		API->vm->throw_exception(
 			"NextFrameNotWaitedOnViolation",
 			"You are calling .nextFrame() without chucking to now!\n"
 			"Please replace this line with .nextFrame() => now;",
-			SHRED
-		);
-	} 
+			SHRED);
+	}
 
 	RETURN->v_object = (Chuck_Object *)CGL::GetShredUpdateEvent(
-		SHRED, API, VM
-	);
+		SHRED, API, VM);
 
 	// register shred and set has-waited flag to false
-	CGL::RegisterShred(SHRED);	
+	CGL::RegisterShred(SHRED);
 }
 
 CK_DLL_SFUN(cgl_register) { CGL::RegisterShred(SHRED); }
@@ -642,38 +623,37 @@ CK_DLL_SFUN(cgl_mouse_lock) { CGL::PushCommand(new SetMouseModeCommand(CGL::MOUS
 // show mouse
 CK_DLL_SFUN(cgl_mouse_show) { CGL::PushCommand(new SetMouseModeCommand(CGL::MOUSE_NORMAL)); }
 
-
 // set fullscreen
 CK_DLL_SFUN(cgl_window_fullscreen) { CGL::PushCommand(new SetWindowModeCommand(CGL::WINDOW_FULLSCREEN)); }
 // set windowed
-CK_DLL_SFUN(cgl_window_windowed) { 
+CK_DLL_SFUN(cgl_window_windowed)
+{
 	t_CKINT width = GET_NEXT_INT(ARGS);
 	t_CKINT height = GET_NEXT_INT(ARGS);
-	CGL::PushCommand(new SetWindowModeCommand(CGL::WINDOW_WINDOWED, width, height)); 
+	CGL::PushCommand(new SetWindowModeCommand(CGL::WINDOW_WINDOWED, width, height));
 }
 // set maximize
 // CK_DLL_SFUN(cgl_window_maximize) { CGL::PushCommand(new SetWindowModeCommand(CGL::WINDOW_MAXIMIZED)); }
 
-	// QUERY->add_sfun(QUERY, cgl_window_windowed, "void", "windowed");
+// QUERY->add_sfun(QUERY, cgl_window_windowed, "void", "windowed");
 // set windowsize
-CK_DLL_SFUN(cgl_window_set_size) { 
+CK_DLL_SFUN(cgl_window_set_size)
+{
 	t_CKINT width = GET_NEXT_INT(ARGS);
 	t_CKINT height = GET_NEXT_INT(ARGS);
-	CGL::PushCommand(new SetWindowModeCommand(CGL::WINDOW_SET_SIZE, width, height)); 
+	CGL::PushCommand(new SetWindowModeCommand(CGL::WINDOW_SET_SIZE, width, height));
 }
 
 CK_DLL_SFUN(cgl_get_main_camera)
 {
 	RETURN->v_object = (Chuck_Object *)CGL::GetMainCamera(
-		SHRED, API, VM
-	);
+		SHRED, API, VM);
 }
 
 CK_DLL_SFUN(cgl_get_main_scene)
 {
 	RETURN->v_object = (Chuck_Object *)CGL::GetMainScene(
-		SHRED, API, VM
-	);
+		SHRED, API, VM);
 }
 
 CK_DLL_SFUN(cgl_get_num_registered_shreds)
@@ -685,8 +665,7 @@ CK_DLL_SFUN(cgl_get_num_registered_waiting_shreds)
 	RETURN->v_int = CGL::GetNumShredsWaiting();
 }
 
-
-CK_DLL_SFUN( cgl_use_chuck_time )
+CK_DLL_SFUN(cgl_use_chuck_time)
 {
 	CGL::useChuckTime = GET_NEXT_INT(ARGS) != 0;
 }
@@ -694,17 +673,17 @@ CK_DLL_SFUN( cgl_use_chuck_time )
 //-----------------------------------------------------------------------------
 // init_chugl_geo()
 //-----------------------------------------------------------------------------
-t_CKBOOL init_chugl_geo(Chuck_DL_Query* QUERY)
+t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 {
-	QUERY->begin_class(QUERY, "Geometry", "Object");
+	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Base) , "Object");
 	QUERY->add_ctor(QUERY, cgl_geo_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
-	geometry_data_offset = QUERY->add_mvar(QUERY, "int", "@geometry_data", false);  // TODO: still bugged?
+	geometry_data_offset = QUERY->add_mvar(QUERY, "int", "@geometry_data", false); // TODO: still bugged?
 
 	// TODO: add svars for attribute locations
 	QUERY->end_class(QUERY);
 
-	QUERY->begin_class(QUERY, "BoxGeometry", "Geometry");
+	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Box), Geometry::CKName(GeometryType::Base) );
 	QUERY->add_ctor(QUERY, cgl_geo_box_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 
@@ -717,7 +696,7 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query* QUERY)
 	QUERY->add_arg(QUERY, "int", "depthSeg");
 	QUERY->end_class(QUERY);
 
-	QUERY->begin_class(QUERY, "SphereGeometry", "Geometry");
+	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Sphere), Geometry::CKName(GeometryType::Base) );
 	QUERY->add_ctor(QUERY, cgl_geo_sphere_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 
@@ -733,7 +712,7 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query* QUERY)
 	QUERY->end_class(QUERY);
 
 	// circle geo
-	QUERY->begin_class(QUERY, "CircleGeometry", "Geometry");
+	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Circle), Geometry::CKName(GeometryType::Base) );
 	QUERY->add_ctor(QUERY, cgl_geo_circle_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 
@@ -745,7 +724,7 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query* QUERY)
 	QUERY->end_class(QUERY);
 
 	// plane geo
-	QUERY->begin_class(QUERY, "PlaneGeometry", "Geometry");
+	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Plane), Geometry::CKName(GeometryType::Base) );
 	QUERY->add_ctor(QUERY, cgl_geo_plane_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 
@@ -757,7 +736,7 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query* QUERY)
 	QUERY->end_class(QUERY);
 
 	// Torus geo
-	QUERY->begin_class(QUERY, "TorusGeometry", "Geometry");
+	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Torus), Geometry::CKName(GeometryType::Base) );
 	QUERY->add_ctor(QUERY, cgl_geo_torus_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 
@@ -770,12 +749,12 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query* QUERY)
 	QUERY->end_class(QUERY);
 
 	// lathe geo
-	QUERY->begin_class(QUERY, "LatheGeometry", "Geometry");
+	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Lathe), Geometry::CKName(GeometryType::Base) );
 	QUERY->add_ctor(QUERY, cgl_geo_lathe_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 
 	QUERY->add_mfun(QUERY, cgl_geo_lathe_set, "void", "set");
-	QUERY->add_arg(QUERY, "float[]", "points");  // these are converted to vec2s
+	QUERY->add_arg(QUERY, "float[]", "points"); // these are converted to vec2s
 	QUERY->add_arg(QUERY, "int", "segments");
 	QUERY->add_arg(QUERY, "float", "phiStart");
 	QUERY->add_arg(QUERY, "float", "phiLength");
@@ -788,7 +767,7 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query* QUERY)
 	QUERY->end_class(QUERY);
 
 	// custom geo
-	QUERY->begin_class(QUERY, "CustomGeometry", "Geometry");
+	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Custom), Geometry::CKName(GeometryType::Base) );
 	QUERY->add_ctor(QUERY, cgl_geo_custom_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 
@@ -807,14 +786,13 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query* QUERY)
 
 	QUERY->add_mfun(QUERY, cgl_geo_set_normals, "void", "normals");
 	QUERY->add_arg(QUERY, "float[]", "normals");
-	
+
 	QUERY->add_mfun(QUERY, cgl_geo_set_uvs, "void", "uvs");
 	QUERY->add_arg(QUERY, "float[]", "uvs");
 
 	QUERY->add_mfun(QUERY, cgl_geo_set_indices, "void", "indices");
 	QUERY->add_arg(QUERY, "int[]", "uvs");
 
-	
 	QUERY->end_class(QUERY);
 
 	return true;
@@ -822,11 +800,11 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query* QUERY)
 
 // CGL Geometry =======================
 CK_DLL_CTOR(cgl_geo_ctor) {}
-CK_DLL_DTOR(cgl_geo_dtor)  // all geos can share this base destructor
+CK_DLL_DTOR(cgl_geo_dtor) // all geos can share this base destructor
 {
-	Geometry* geo = (Geometry*)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+	Geometry *geo = (Geometry *)OBJ_MEMBER_INT(SELF, geometry_data_offset);
 	CK_SAFE_DELETE(geo);
-	OBJ_MEMBER_INT(SELF, geometry_data_offset) = 0;  // zero out the memory
+	OBJ_MEMBER_INT(SELF, geometry_data_offset) = 0; // zero out the memory
 
 	// TODO: trigger destruction callback and scenegraph removal command
 }
@@ -835,16 +813,23 @@ CK_DLL_DTOR(cgl_geo_dtor)  // all geos can share this base destructor
 CK_DLL_CTOR(cgl_geo_box_ctor)
 {
 	std::cerr << "cgl_box_ctor\n";
-	BoxGeometry* boxGeometry = new BoxGeometry;
-	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT) boxGeometry;
+	BoxGeometry *boxGeometry = new BoxGeometry;
+	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT)boxGeometry;
 	std::cerr << "finished initializing boxgeometry\n";
+
+	// set chuck object pointer
+	boxGeometry->m_ChuckObject = SELF;
 
 	// Creation command
 	CGL::PushCommand(new CreateGeometryCommand(boxGeometry));
 }
 
 CK_DLL_MFUN(cgl_geo_box_set)
-{ BoxGeometry* geo = (BoxGeometry*)OBJ_MEMBER_INT(SELF, geometry_data_offset); t_CKFLOAT width = GET_NEXT_FLOAT(ARGS); t_CKFLOAT height = GET_NEXT_FLOAT(ARGS); t_CKFLOAT depth = GET_NEXT_FLOAT(ARGS);
+{
+	BoxGeometry *geo = (BoxGeometry *)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+	t_CKFLOAT width = GET_NEXT_FLOAT(ARGS);
+	t_CKFLOAT height = GET_NEXT_FLOAT(ARGS);
+	t_CKFLOAT depth = GET_NEXT_FLOAT(ARGS);
 	t_CKINT widthSeg = GET_NEXT_INT(ARGS);
 	t_CKINT heightSeg = GET_NEXT_INT(ARGS);
 	t_CKINT depthSeg = GET_NEXT_INT(ARGS);
@@ -853,13 +838,15 @@ CK_DLL_MFUN(cgl_geo_box_set)
 	CGL::PushCommand(new UpdateGeometryCommand(geo));
 }
 
-// sphere geo 
+// sphere geo
 CK_DLL_CTOR(cgl_geo_sphere_ctor)
 {
 	std::cerr << "cgl_sphere_ctor\n";
-	SphereGeometry* sphereGeometry = new SphereGeometry;
-	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT) sphereGeometry;
+	SphereGeometry *sphereGeometry = new SphereGeometry;
+	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT)sphereGeometry;
 	std::cerr << "finished initializing spheregeometry\n";
+
+	sphereGeometry->m_ChuckObject = SELF;
 
 	// Creation command
 	CGL::PushCommand(new CreateGeometryCommand(sphereGeometry));
@@ -867,7 +854,7 @@ CK_DLL_CTOR(cgl_geo_sphere_ctor)
 
 CK_DLL_MFUN(cgl_geo_sphere_set)
 {
-	SphereGeometry* geo = (SphereGeometry*)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+	SphereGeometry *geo = (SphereGeometry *)OBJ_MEMBER_INT(SELF, geometry_data_offset);
 	t_CKFLOAT radius = GET_NEXT_FLOAT(ARGS);
 	t_CKINT widthSeg = GET_NEXT_INT(ARGS);
 	t_CKINT heightSeg = GET_NEXT_INT(ARGS);
@@ -883,9 +870,11 @@ CK_DLL_MFUN(cgl_geo_sphere_set)
 // Circle geo ---------
 CK_DLL_CTOR(cgl_geo_circle_ctor)
 {
-	CircleGeometry* circleGeometry = new CircleGeometry;
-	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT) circleGeometry;
+	CircleGeometry *circleGeometry = new CircleGeometry;
+	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT)circleGeometry;
 	std::cerr << "finished initializing circlegeometry\n";
+
+	circleGeometry->m_ChuckObject = SELF;
 
 	// Creation command
 	CGL::PushCommand(new CreateGeometryCommand(circleGeometry));
@@ -893,7 +882,7 @@ CK_DLL_CTOR(cgl_geo_circle_ctor)
 
 CK_DLL_MFUN(cgl_geo_circle_set)
 {
-	CircleGeometry* geo = (CircleGeometry*)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+	CircleGeometry *geo = (CircleGeometry *)OBJ_MEMBER_INT(SELF, geometry_data_offset);
 	t_CKFLOAT radius = GET_NEXT_FLOAT(ARGS);
 	t_CKINT segments = GET_NEXT_INT(ARGS);
 	t_CKFLOAT thetaStart = GET_NEXT_FLOAT(ARGS);
@@ -906,9 +895,11 @@ CK_DLL_MFUN(cgl_geo_circle_set)
 // plane geo ----------
 CK_DLL_CTOR(cgl_geo_plane_ctor)
 {
-	PlaneGeometry* planeGeometry = new PlaneGeometry;
-	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT) planeGeometry;
+	PlaneGeometry *planeGeometry = new PlaneGeometry;
+	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT)planeGeometry;
 	std::cerr << "finished initializing planegeometry\n";
+
+	planeGeometry->m_ChuckObject = SELF;
 
 	// Creation command
 	CGL::PushCommand(new CreateGeometryCommand(planeGeometry));
@@ -916,7 +907,7 @@ CK_DLL_CTOR(cgl_geo_plane_ctor)
 
 CK_DLL_MFUN(cgl_geo_plane_set)
 {
-	PlaneGeometry* geo = (PlaneGeometry*)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+	PlaneGeometry *geo = (PlaneGeometry *)OBJ_MEMBER_INT(SELF, geometry_data_offset);
 	t_CKFLOAT width = GET_NEXT_FLOAT(ARGS);
 	t_CKFLOAT height = GET_NEXT_FLOAT(ARGS);
 	t_CKINT widthSegments = GET_NEXT_INT(ARGS);
@@ -929,9 +920,11 @@ CK_DLL_MFUN(cgl_geo_plane_set)
 // torus geo  ----------
 CK_DLL_CTOR(cgl_geo_torus_ctor)
 {
-	TorusGeometry* torusGeometry = new TorusGeometry;
-	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT) torusGeometry;
+	TorusGeometry *torusGeometry = new TorusGeometry;
+	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT)torusGeometry;
 	std::cerr << "finished initializing torusgeometry\n";
+
+	torusGeometry->m_ChuckObject = SELF;
 
 	// Creation command
 	CGL::PushCommand(new CreateGeometryCommand(torusGeometry));
@@ -939,7 +932,7 @@ CK_DLL_CTOR(cgl_geo_torus_ctor)
 
 CK_DLL_MFUN(cgl_geo_torus_set)
 {
-	TorusGeometry* geo = (TorusGeometry*)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+	TorusGeometry *geo = (TorusGeometry *)OBJ_MEMBER_INT(SELF, geometry_data_offset);
 	t_CKFLOAT radius = GET_NEXT_FLOAT(ARGS);
 	t_CKFLOAT tubeRadius = GET_NEXT_FLOAT(ARGS);
 	t_CKINT radialSegments = GET_NEXT_INT(ARGS);
@@ -953,9 +946,11 @@ CK_DLL_MFUN(cgl_geo_torus_set)
 // Lathe geo ----------
 CK_DLL_CTOR(cgl_geo_lathe_ctor)
 {
-	LatheGeometry* lathe= new LatheGeometry;
-	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT) lathe;
+	LatheGeometry *lathe = new LatheGeometry;
+	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT)lathe;
 	std::cerr << "finished initializing lathegeometry\n";
+
+	lathe->m_ChuckObject = SELF;
 
 	// Creation command
 	CGL::PushCommand(new CreateGeometryCommand(lathe));
@@ -963,9 +958,9 @@ CK_DLL_CTOR(cgl_geo_lathe_ctor)
 
 CK_DLL_MFUN(cgl_geo_lathe_set)
 {
-	LatheGeometry* geo = (LatheGeometry*)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+	LatheGeometry *geo = (LatheGeometry *)OBJ_MEMBER_INT(SELF, geometry_data_offset);
 
-	Chuck_ArrayFloat* points = (Chuck_ArrayFloat*) GET_NEXT_OBJECT(ARGS);
+	Chuck_ArrayFloat *points = (Chuck_ArrayFloat *)GET_NEXT_OBJECT(ARGS);
 	t_CKINT segments = GET_NEXT_INT(ARGS);
 	t_CKFLOAT phiStart = GET_NEXT_FLOAT(ARGS);
 	t_CKFLOAT phiLength = GET_NEXT_FLOAT(ARGS);
@@ -976,7 +971,7 @@ CK_DLL_MFUN(cgl_geo_lathe_set)
 }
 CK_DLL_MFUN(cgl_geo_lathe_set_no_points)
 {
-	LatheGeometry* geo = (LatheGeometry*)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+	LatheGeometry *geo = (LatheGeometry *)OBJ_MEMBER_INT(SELF, geometry_data_offset);
 	t_CKINT segments = GET_NEXT_INT(ARGS);
 	t_CKFLOAT phiStart = GET_NEXT_FLOAT(ARGS);
 	t_CKFLOAT phiLength = GET_NEXT_FLOAT(ARGS);
@@ -986,14 +981,15 @@ CK_DLL_MFUN(cgl_geo_lathe_set_no_points)
 	CGL::PushCommand(new UpdateGeometryCommand(geo));
 }
 
-
 // Custom geo ---------
 CK_DLL_CTOR(cgl_geo_custom_ctor)
 {
 	std::cerr << "cgl_custom_ctor\n";
-	CustomGeometry* customGeometry = new CustomGeometry;
-	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT) customGeometry;
+	CustomGeometry *customGeometry = new CustomGeometry;
+	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT)customGeometry;
 	std::cerr << "finished initializing customgeometry\n";
+
+	customGeometry->m_ChuckObject = SELF;
 
 	// Creation command
 	CGL::PushCommand(new CreateGeometryCommand(customGeometry));
@@ -1001,96 +997,84 @@ CK_DLL_CTOR(cgl_geo_custom_ctor)
 
 CK_DLL_MFUN(cgl_geo_set_attribute)
 {
-	CustomGeometry* geo = (CustomGeometry*)OBJ_MEMBER_INT(SELF, geometry_data_offset);
-	Chuck_String* name = GET_NEXT_STRING(ARGS);
+	CustomGeometry *geo = (CustomGeometry *)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+	Chuck_String *name = GET_NEXT_STRING(ARGS);
 	t_CKINT location = GET_NEXT_INT(ARGS);
 	t_CKINT numComponents = GET_NEXT_INT(ARGS);
 	bool normalize = GET_NEXT_INT(ARGS);
-	Chuck_ArrayFloat* data = (Chuck_ArrayFloat*) GET_NEXT_OBJECT(ARGS);
+	Chuck_ArrayFloat *data = (Chuck_ArrayFloat *)GET_NEXT_OBJECT(ARGS);
 
 	// not stored in chuck-side copy to save time
 	// geo->SetAttribute(name, location, numComponents, normalize, data);
 
 	CGL::PushCommand(
 		new UpdateGeometryAttributeCommand(
-			geo, name->str(), location, numComponents, data->m_vector, normalize
-		)
-	);
+			geo, name->str(), location, numComponents, data->m_vector, normalize));
 }
 
 CK_DLL_MFUN(cgl_geo_set_positions)
 {
-	CustomGeometry* geo = (CustomGeometry*)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+	CustomGeometry *geo = (CustomGeometry *)OBJ_MEMBER_INT(SELF, geometry_data_offset);
 
-	Chuck_ArrayFloat* data = (Chuck_ArrayFloat*) GET_NEXT_OBJECT(ARGS);
+	Chuck_ArrayFloat *data = (Chuck_ArrayFloat *)GET_NEXT_OBJECT(ARGS);
 
 	CGL::PushCommand(
 		new UpdateGeometryAttributeCommand(
-			geo, "position", Geometry::POSITION_ATTRIB_IDX, 3, data->m_vector, false
-		)
-	);
+			geo, "position", Geometry::POSITION_ATTRIB_IDX, 3, data->m_vector, false));
 }
 
 // set colors
 CK_DLL_MFUN(cgl_geo_set_colors)
 {
-	CustomGeometry* geo = (CustomGeometry*)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+	CustomGeometry *geo = (CustomGeometry *)OBJ_MEMBER_INT(SELF, geometry_data_offset);
 
-	Chuck_ArrayFloat* data = (Chuck_ArrayFloat*) GET_NEXT_OBJECT(ARGS);
+	Chuck_ArrayFloat *data = (Chuck_ArrayFloat *)GET_NEXT_OBJECT(ARGS);
 
 	CGL::PushCommand(
 		new UpdateGeometryAttributeCommand(
-			geo, "color", Geometry::COLOR_ATTRIB_IDX, 3, data->m_vector, false
-		)
-	);
+			geo, "color", Geometry::COLOR_ATTRIB_IDX, 3, data->m_vector, false));
 }
 
 // set normals
 CK_DLL_MFUN(cgl_geo_set_normals)
 {
-	CustomGeometry* geo = (CustomGeometry*)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+	CustomGeometry *geo = (CustomGeometry *)OBJ_MEMBER_INT(SELF, geometry_data_offset);
 
-	Chuck_ArrayFloat* data = (Chuck_ArrayFloat*) GET_NEXT_OBJECT(ARGS);
+	Chuck_ArrayFloat *data = (Chuck_ArrayFloat *)GET_NEXT_OBJECT(ARGS);
 
 	CGL::PushCommand(
 		new UpdateGeometryAttributeCommand(
-			geo, "normal", Geometry::NORMAL_ATTRIB_IDX, 3, data->m_vector, false
-		)
-	);
+			geo, "normal", Geometry::NORMAL_ATTRIB_IDX, 3, data->m_vector, false));
 }
 
 // set uvs
 CK_DLL_MFUN(cgl_geo_set_uvs)
 {
-	CustomGeometry* geo = (CustomGeometry*)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+	CustomGeometry *geo = (CustomGeometry *)OBJ_MEMBER_INT(SELF, geometry_data_offset);
 
-	Chuck_ArrayFloat* data = (Chuck_ArrayFloat*) GET_NEXT_OBJECT(ARGS);
+	Chuck_ArrayFloat *data = (Chuck_ArrayFloat *)GET_NEXT_OBJECT(ARGS);
 
 	CGL::PushCommand(
 		new UpdateGeometryAttributeCommand(
-			geo, "uv", Geometry::UV0_ATTRIB_IDX, 2, data->m_vector, false
-		)
-	);
+			geo, "uv", Geometry::UV0_ATTRIB_IDX, 2, data->m_vector, false));
 }
 
 // set indices
 CK_DLL_MFUN(cgl_geo_set_indices)
 {
-	CustomGeometry* geo = (CustomGeometry*)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+	CustomGeometry *geo = (CustomGeometry *)OBJ_MEMBER_INT(SELF, geometry_data_offset);
 
-	Chuck_ArrayInt* data = (Chuck_ArrayInt*) GET_NEXT_OBJECT(ARGS);
+	Chuck_ArrayInt *data = (Chuck_ArrayInt *)GET_NEXT_OBJECT(ARGS);
 
 	CGL::PushCommand(
-		new UpdateGeometryIndicesCommand(geo, data->m_vector)
-	);
+		new UpdateGeometryIndicesCommand(geo, data->m_vector));
 }
-
 
 //-----------------------------------------------------------------------------
 // init_chugl_texture()
 //-----------------------------------------------------------------------------
 
-t_CKBOOL init_chugl_texture(Chuck_DL_Query* QUERY)
+t_CKBOOL init_chugl_texture(Chuck_DL_Query *QUERY)
 {
 	QUERY->begin_class(QUERY, "Texture", "Object");
 	QUERY->add_ctor(QUERY, cgl_texture_ctor);
@@ -1098,13 +1082,13 @@ t_CKBOOL init_chugl_texture(Chuck_DL_Query* QUERY)
 	texture_data_offset = QUERY->add_mvar(QUERY, "int", "@texture_dat", false);
 
 	// texture options (static constants) ---------------------------------
-    QUERY->add_svar( QUERY, "int", "WRAP_REPEAT", TRUE, (void *)&CGL_Texture::Repeat);
-    QUERY->add_svar( QUERY, "int", "WRAP_MIRRORED", TRUE, (void *)&CGL_Texture::MirroredRepeat);
-    QUERY->add_svar( QUERY, "int", "WRAP_CLAMP", TRUE, (void *)&CGL_Texture::ClampToEdge);
+	QUERY->add_svar(QUERY, "int", "WRAP_REPEAT", TRUE, (void *)&CGL_Texture::Repeat);
+	QUERY->add_svar(QUERY, "int", "WRAP_MIRRORED", TRUE, (void *)&CGL_Texture::MirroredRepeat);
+	QUERY->add_svar(QUERY, "int", "WRAP_CLAMP", TRUE, (void *)&CGL_Texture::ClampToEdge);
 
 	// not exposing mipmap filter options for simplicity
-    QUERY->add_svar( QUERY, "int", "FILTER_NEAREST", TRUE, (void *)&CGL_Texture::Nearest);
-    QUERY->add_svar( QUERY, "int", "FILTER_LINEAR", TRUE, (void *)&CGL_Texture::Linear);
+	QUERY->add_svar(QUERY, "int", "FILTER_NEAREST", TRUE, (void *)&CGL_Texture::Nearest);
+	QUERY->add_svar(QUERY, "int", "FILTER_LINEAR", TRUE, (void *)&CGL_Texture::Linear);
 
 	// member fns -----------------------------------------------------------
 	QUERY->add_mfun(QUERY, cgl_texture_set_wrap, "void", "wrap");
@@ -1121,7 +1105,6 @@ t_CKBOOL init_chugl_texture(Chuck_DL_Query* QUERY)
 	QUERY->add_mfun(QUERY, cgl_texture_get_filter_mag, "int", "filterMag");
 	QUERY->end_class(QUERY);
 
-
 	// FileTexture -----------------------------------------------------------
 	QUERY->begin_class(QUERY, "FileTexture", "Texture");
 	QUERY->add_ctor(QUERY, cgl_texture_file_ctor);
@@ -1131,7 +1114,6 @@ t_CKBOOL init_chugl_texture(Chuck_DL_Query* QUERY)
 	QUERY->add_arg(QUERY, "string", "path");
 	QUERY->add_mfun(QUERY, cgl_texture_file_get_filepath, "string", "path");
 	QUERY->end_class(QUERY);
-
 
 	// DataTexture -----------------------------------------------------------
 	QUERY->begin_class(QUERY, "DataTexture", "Texture");
@@ -1143,8 +1125,6 @@ t_CKBOOL init_chugl_texture(Chuck_DL_Query* QUERY)
 	QUERY->add_arg(QUERY, "int", "width");
 	QUERY->add_arg(QUERY, "int", "height");
 	QUERY->end_class(QUERY);
-
-
 
 	return true;
 }
@@ -1158,7 +1138,7 @@ CK_DLL_CTOR(cgl_texture_ctor)
 
 CK_DLL_DTOR(cgl_texture_dtor)
 {
-	CGL_Texture* texture = (CGL_Texture*)OBJ_MEMBER_INT(SELF, texture_data_offset);
+	CGL_Texture *texture = (CGL_Texture *)OBJ_MEMBER_INT(SELF, texture_data_offset);
 	CK_SAFE_DELETE(texture);
 	OBJ_MEMBER_INT(SELF, texture_data_offset) = 0;
 
@@ -1171,8 +1151,8 @@ CK_DLL_DTOR(cgl_texture_dtor)
 
 CK_DLL_MFUN(cgl_texture_set_wrap)
 {
-	CGL_Texture* texture = (CGL_Texture*)OBJ_MEMBER_INT(SELF, texture_data_offset);
-	auto s = static_cast<CGL_TextureWrapMode>(GET_NEXT_INT(ARGS)); 
+	CGL_Texture *texture = (CGL_Texture *)OBJ_MEMBER_INT(SELF, texture_data_offset);
+	auto s = static_cast<CGL_TextureWrapMode>(GET_NEXT_INT(ARGS));
 	auto t = static_cast<CGL_TextureWrapMode>(GET_NEXT_INT(ARGS));
 	texture->SetWrapMode(s, t);
 
@@ -1181,20 +1161,20 @@ CK_DLL_MFUN(cgl_texture_set_wrap)
 
 CK_DLL_MFUN(cgl_texture_get_wrap_s)
 {
-	CGL_Texture* texture = (CGL_Texture*)OBJ_MEMBER_INT(SELF, texture_data_offset);
+	CGL_Texture *texture = (CGL_Texture *)OBJ_MEMBER_INT(SELF, texture_data_offset);
 	RETURN->v_int = static_cast<t_CKINT>(texture->m_SamplerParams.wrapS);
 }
 
 CK_DLL_MFUN(cgl_texture_get_wrap_t)
 {
-	CGL_Texture* texture = (CGL_Texture*)OBJ_MEMBER_INT(SELF, texture_data_offset);
+	CGL_Texture *texture = (CGL_Texture *)OBJ_MEMBER_INT(SELF, texture_data_offset);
 	RETURN->v_int = static_cast<t_CKINT>(texture->m_SamplerParams.wrapS);
 }
 
 CK_DLL_MFUN(cgl_texture_set_filter)
 {
-	CGL_Texture* texture = (CGL_Texture*)OBJ_MEMBER_INT(SELF, texture_data_offset);
-	auto min = static_cast<CGL_TextureFilterMode>(GET_NEXT_INT(ARGS)); 
+	CGL_Texture *texture = (CGL_Texture *)OBJ_MEMBER_INT(SELF, texture_data_offset);
+	auto min = static_cast<CGL_TextureFilterMode>(GET_NEXT_INT(ARGS));
 	auto mag = static_cast<CGL_TextureFilterMode>(GET_NEXT_INT(ARGS));
 	texture->SetFilterMode(min, mag);
 
@@ -1203,13 +1183,13 @@ CK_DLL_MFUN(cgl_texture_set_filter)
 
 CK_DLL_MFUN(cgl_texture_get_filter_min)
 {
-	CGL_Texture* texture = (CGL_Texture*)OBJ_MEMBER_INT(SELF, texture_data_offset);
+	CGL_Texture *texture = (CGL_Texture *)OBJ_MEMBER_INT(SELF, texture_data_offset);
 	RETURN->v_int = static_cast<t_CKINT>(texture->m_SamplerParams.filterMin);
 }
 
 CK_DLL_MFUN(cgl_texture_get_filter_mag)
 {
-	CGL_Texture* texture = (CGL_Texture*)OBJ_MEMBER_INT(SELF, texture_data_offset);
+	CGL_Texture *texture = (CGL_Texture *)OBJ_MEMBER_INT(SELF, texture_data_offset);
 	RETURN->v_int = static_cast<t_CKINT>(texture->m_SamplerParams.filterMag);
 }
 
@@ -1218,8 +1198,10 @@ CK_DLL_CTOR(cgl_texture_file_ctor)
 {
 	std::cerr << "cgl_texture_file_ctor" << std::endl;
 
-	CGL_Texture* texture = new CGL_Texture(CGL_TextureType::File2D);
-	OBJ_MEMBER_INT(SELF, texture_data_offset) = (t_CKINT) texture;
+	CGL_Texture *texture = new CGL_Texture(CGL_TextureType::File2D);
+	OBJ_MEMBER_INT(SELF, texture_data_offset) = (t_CKINT)texture;
+
+	texture->m_ChuckObject = SELF;
 
 	// Creation command
 	CGL::PushCommand(new CreateTextureCommand(texture));
@@ -1227,9 +1209,9 @@ CK_DLL_CTOR(cgl_texture_file_ctor)
 
 CK_DLL_MFUN(cgl_texture_file_set_filepath)
 {
-	CGL_Texture* texture = (CGL_Texture*)OBJ_MEMBER_INT(SELF, texture_data_offset);
-	Chuck_String * path = GET_NEXT_STRING(ARGS);
-	texture->m_FilePath = path->str();  // note: doesn't make sense to update flags on chuck-side copy because renderer doesn't have access
+	CGL_Texture *texture = (CGL_Texture *)OBJ_MEMBER_INT(SELF, texture_data_offset);
+	Chuck_String *path = GET_NEXT_STRING(ARGS);
+	texture->m_FilePath = path->str(); // note: doesn't make sense to update flags on chuck-side copy because renderer doesn't have access
 
 	CGL::PushCommand(new UpdateTexturePathCommand(texture));
 
@@ -1238,8 +1220,8 @@ CK_DLL_MFUN(cgl_texture_file_set_filepath)
 
 CK_DLL_MFUN(cgl_texture_file_get_filepath)
 {
-	CGL_Texture* texture = (CGL_Texture*)OBJ_MEMBER_INT(SELF, texture_data_offset);
-    RETURN->v_string = (Chuck_String *) API->object->create_string(VM, texture->m_FilePath.c_str(), false);
+	CGL_Texture *texture = (CGL_Texture *)OBJ_MEMBER_INT(SELF, texture_data_offset);
+	RETURN->v_string = (Chuck_String *)API->object->create_string(VM, texture->m_FilePath.c_str(), false);
 }
 
 // DataTexture API impl =====================================================
@@ -1247,8 +1229,10 @@ CK_DLL_CTOR(cgl_texture_rawdata_ctor)
 {
 	std::cerr << "cgl_texture_rawdata_ctor" << std::endl;
 
-	CGL_Texture* texture = new CGL_Texture(CGL_TextureType::RawData);
-	OBJ_MEMBER_INT(SELF, texture_data_offset) = (t_CKINT) texture;
+	CGL_Texture *texture = new CGL_Texture(CGL_TextureType::RawData);
+	OBJ_MEMBER_INT(SELF, texture_data_offset) = (t_CKINT)texture;
+
+	texture->m_ChuckObject = SELF;
 
 	// Creation command
 	CGL::PushCommand(new CreateTextureCommand(texture));
@@ -1256,8 +1240,8 @@ CK_DLL_CTOR(cgl_texture_rawdata_ctor)
 
 CK_DLL_MFUN(cgl_texture_rawdata_set_data)
 {
-	CGL_Texture* texture = (CGL_Texture *) OBJ_MEMBER_INT(SELF, texture_data_offset);
-	Chuck_ArrayFloat* data = (Chuck_ArrayFloat*) GET_NEXT_OBJECT(ARGS);
+	CGL_Texture *texture = (CGL_Texture *)OBJ_MEMBER_INT(SELF, texture_data_offset);
+	Chuck_ArrayFloat *data = (Chuck_ArrayFloat *)GET_NEXT_OBJECT(ARGS);
 	t_CKINT width = GET_NEXT_INT(ARGS);
 	t_CKINT height = GET_NEXT_INT(ARGS);
 
@@ -1267,23 +1251,22 @@ CK_DLL_MFUN(cgl_texture_rawdata_set_data)
 	CGL::PushCommand(new UpdateTextureDataCommand(texture->GetID(), data->m_vector, width, height));
 }
 
-
 //-----------------------------------------------------------------------------
 // init_chugl_mat()
 //-----------------------------------------------------------------------------
-t_CKBOOL init_chugl_mat(Chuck_DL_Query* QUERY)
+t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 {
 	// EM_log(CK_LOG_INFO, "ChuGL materials");
 
-	QUERY->begin_class(QUERY, "CglMat", "Object");
+	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Base), "Object");
 	QUERY->add_ctor(QUERY, cgl_mat_ctor);
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 	cglmat_data_offset = QUERY->add_mvar(QUERY, "int", "@cglmat_data", false);
 
 	// Material params (static constants) ---------------------------------
-    QUERY->add_svar(QUERY, "int", "POLYGON_FILL", TRUE, (void *)&Material::POLYGON_FILL);
-    QUERY->add_svar(QUERY, "int", "POLYGON_LINE", TRUE, (void *)&Material::POLYGON_LINE);
-	QUERY->add_svar(QUERY, "int", "POLYGON_POINT", TRUE, (void*)&Material::POLYGON_POINT);
+	QUERY->add_svar(QUERY, "int", "POLYGON_FILL", TRUE, (void *)&Material::POLYGON_FILL);
+	QUERY->add_svar(QUERY, "int", "POLYGON_LINE", TRUE, (void *)&Material::POLYGON_LINE);
+	QUERY->add_svar(QUERY, "int", "POLYGON_POINT", TRUE, (void *)&Material::POLYGON_POINT);
 
 	QUERY->add_mfun(QUERY, cgl_mat_set_polygon_mode, "int", "polygonMode");
 	QUERY->add_arg(QUERY, "int", "mode");
@@ -1350,7 +1333,7 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query* QUERY)
 	QUERY->end_class(QUERY);
 
 	// normal material
-	QUERY->begin_class(QUERY, "NormMat", "CglMat");
+	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Normal), Material::CKName(MaterialType::Base));
 	QUERY->add_ctor(QUERY, cgl_mat_norm_ctor);
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 
@@ -1360,13 +1343,13 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query* QUERY)
 	QUERY->end_class(QUERY);
 
 	// phong specular material
-	QUERY->begin_class(QUERY, "PhongMat", "CglMat");
+	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Phong), Material::CKName(MaterialType::Base));
 	QUERY->add_ctor(QUERY, cgl_mat_phong_ctor);
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 
 	QUERY->add_mfun(QUERY, cgl_mat_phong_set_diffuse_map, "void", "diffuseMap");
 	QUERY->add_arg(QUERY, "Texture", "tex");
-	
+
 	QUERY->add_mfun(QUERY, cgl_mat_phong_set_specular_map, "void", "specularMap");
 	QUERY->add_arg(QUERY, "Texture", "tex");
 
@@ -1384,7 +1367,7 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query* QUERY)
 	QUERY->end_class(QUERY);
 
 	// custom shader material
-	QUERY->begin_class(QUERY, "ShaderMat", "CglMat");
+	QUERY->begin_class(QUERY, Material::CKName(MaterialType::CustomShader), Material::CKName(MaterialType::Base));
 	QUERY->add_ctor(QUERY, cgl_mat_custom_shader_ctor);
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 
@@ -1395,7 +1378,7 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query* QUERY)
 	QUERY->end_class(QUERY);
 
 	// points material
-	QUERY->begin_class(QUERY, "PointsMat", "CglMat");
+	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Points), Material::CKName(MaterialType::Base));
 	QUERY->add_ctor(QUERY, cgl_mat_points_ctor);
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 
@@ -1412,17 +1395,17 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query* QUERY)
 	QUERY->end_class(QUERY);
 
 	// mango material
-	QUERY->begin_class(QUERY, "MangoMat", "CglMat");
+	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Mango), Material::CKName(MaterialType::Base));
 	QUERY->add_ctor(QUERY, cgl_mat_mango_ctor);
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 	QUERY->end_class(QUERY);
 
 	// line material
-	QUERY->begin_class(QUERY, "LineMat", "CglMat");
+	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Line), Material::CKName(MaterialType::Base));
 	QUERY->add_ctor(QUERY, cgl_mat_line_ctor);
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 
-		// static vars
+	// static vars
 	QUERY->add_svar(QUERY, "int", "LINE_SEGMENTS", TRUE, (void *)&LineMaterial::LINE_SEGMENTS_MODE);
 	QUERY->add_svar(QUERY, "int", "LINE_STRIP", TRUE, (void *)&LineMaterial::LINE_STRIP_MODE);
 	QUERY->add_svar(QUERY, "int", "LINE_LOOP", TRUE, (void *)&LineMaterial::LINE_LOOP_MODE);
@@ -1447,11 +1430,11 @@ CK_DLL_CTOR(cgl_mat_ctor)
 	// dud, do nothing for now
 }
 
-CK_DLL_DTOR(cgl_mat_dtor)  // all geos can share this base destructor
+CK_DLL_DTOR(cgl_mat_dtor) // all geos can share this base destructor
 {
-	Material* mat = (Material*)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
 	CK_SAFE_DELETE(mat);
-	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = 0;  // zero out the memory
+	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = 0; // zero out the memory
 
 	// TODO: send destroy command to CGL command queue
 	//       - remove material from scenegraph
@@ -1460,10 +1443,10 @@ CK_DLL_DTOR(cgl_mat_dtor)  // all geos can share this base destructor
 
 CK_DLL_MFUN(cgl_mat_set_polygon_mode)
 {
-	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
-	auto mode  = GET_NEXT_INT(ARGS);
-	
-	mat->SetPolygonMode((MaterialPolygonMode) mode);
+	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	auto mode = GET_NEXT_INT(ARGS);
+
+	mat->SetPolygonMode((MaterialPolygonMode)mode);
 
 	RETURN->v_int = mode;
 
@@ -1472,18 +1455,18 @@ CK_DLL_MFUN(cgl_mat_set_polygon_mode)
 
 CK_DLL_MFUN(cgl_mat_get_polygon_mode)
 {
-	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
 	RETURN->v_int = mat->GetPolygonMode();
 }
 
 // point size setter
 CK_DLL_MFUN(cgl_mat_set_point_size)
 {
-	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
 	auto size = GET_NEXT_FLOAT(ARGS);
 	mat->SetPointSize(size);
 
-CGL::PushCommand(new UpdateMaterialUniformCommand(mat, *mat->GetUniform(Material::POINT_SIZE_UNAME)));
+	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, *mat->GetUniform(Material::POINT_SIZE_UNAME)));
 }
 
 // line width setter
@@ -1497,10 +1480,10 @@ CGL::PushCommand(new UpdateMaterialUniformCommand(mat, *mat->GetUniform(Material
 // }
 
 // TODO: can refactor these uniform setters to call a shared function
-CK_DLL_MFUN( cgl_mat_set_uniform_float )
+CK_DLL_MFUN(cgl_mat_set_uniform_float)
 {
-	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
-	Chuck_String* name = GET_NEXT_STRING(ARGS);
+	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	Chuck_String *name = GET_NEXT_STRING(ARGS);
 	float value = static_cast<float>(GET_NEXT_FLOAT(ARGS));
 
 	MaterialUniform uniform = MaterialUniform::Create(name->str(), value);
@@ -1510,10 +1493,10 @@ CK_DLL_MFUN( cgl_mat_set_uniform_float )
 	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, uniform));
 }
 
-CK_DLL_MFUN( cgl_mat_set_uniform_float2 )
+CK_DLL_MFUN(cgl_mat_set_uniform_float2)
 {
-	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
-	Chuck_String* name = GET_NEXT_STRING(ARGS);
+	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	Chuck_String *name = GET_NEXT_STRING(ARGS);
 	float value0 = static_cast<float>(GET_NEXT_FLOAT(ARGS));
 	float value1 = static_cast<float>(GET_NEXT_FLOAT(ARGS));
 
@@ -1524,10 +1507,10 @@ CK_DLL_MFUN( cgl_mat_set_uniform_float2 )
 	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, uniform));
 }
 
-CK_DLL_MFUN( cgl_mat_set_uniform_float3 )
+CK_DLL_MFUN(cgl_mat_set_uniform_float3)
 {
-	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
-	Chuck_String* name = GET_NEXT_STRING(ARGS);
+	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	Chuck_String *name = GET_NEXT_STRING(ARGS);
 	float value0 = static_cast<float>(GET_NEXT_FLOAT(ARGS));
 	float value1 = static_cast<float>(GET_NEXT_FLOAT(ARGS));
 	float value2 = static_cast<float>(GET_NEXT_FLOAT(ARGS));
@@ -1539,10 +1522,10 @@ CK_DLL_MFUN( cgl_mat_set_uniform_float3 )
 	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, uniform));
 }
 
-CK_DLL_MFUN( cgl_mat_set_uniform_float4 )
+CK_DLL_MFUN(cgl_mat_set_uniform_float4)
 {
-	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
-	Chuck_String* name = GET_NEXT_STRING(ARGS);
+	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	Chuck_String *name = GET_NEXT_STRING(ARGS);
 	float value0 = static_cast<float>(GET_NEXT_FLOAT(ARGS));
 	float value1 = static_cast<float>(GET_NEXT_FLOAT(ARGS));
 	float value2 = static_cast<float>(GET_NEXT_FLOAT(ARGS));
@@ -1555,10 +1538,10 @@ CK_DLL_MFUN( cgl_mat_set_uniform_float4 )
 	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, uniform));
 }
 
-CK_DLL_MFUN( cgl_mat_set_uniform_int )
+CK_DLL_MFUN(cgl_mat_set_uniform_int)
 {
-	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
-	Chuck_String* name = GET_NEXT_STRING(ARGS);
+	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	Chuck_String *name = GET_NEXT_STRING(ARGS);
 	int value = static_cast<int>(GET_NEXT_INT(ARGS));
 
 	MaterialUniform uniform = MaterialUniform::Create(name->str(), value);
@@ -1568,10 +1551,10 @@ CK_DLL_MFUN( cgl_mat_set_uniform_int )
 	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, uniform));
 }
 
-CK_DLL_MFUN( cgl_mat_set_uniform_int2 )
+CK_DLL_MFUN(cgl_mat_set_uniform_int2)
 {
-	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
-	Chuck_String* name = GET_NEXT_STRING(ARGS);
+	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	Chuck_String *name = GET_NEXT_STRING(ARGS);
 	int value0 = static_cast<int>(GET_NEXT_INT(ARGS));
 	int value1 = static_cast<int>(GET_NEXT_INT(ARGS));
 
@@ -1582,10 +1565,10 @@ CK_DLL_MFUN( cgl_mat_set_uniform_int2 )
 	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, uniform));
 }
 
-CK_DLL_MFUN( cgl_mat_set_uniform_int3 )
+CK_DLL_MFUN(cgl_mat_set_uniform_int3)
 {
-	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
-	Chuck_String* name = GET_NEXT_STRING(ARGS);
+	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	Chuck_String *name = GET_NEXT_STRING(ARGS);
 	int value0 = static_cast<int>(GET_NEXT_INT(ARGS));
 	int value1 = static_cast<int>(GET_NEXT_INT(ARGS));
 	int value2 = static_cast<int>(GET_NEXT_INT(ARGS));
@@ -1597,10 +1580,10 @@ CK_DLL_MFUN( cgl_mat_set_uniform_int3 )
 	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, uniform));
 }
 
-CK_DLL_MFUN( cgl_mat_set_uniform_int4 )
+CK_DLL_MFUN(cgl_mat_set_uniform_int4)
 {
-	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
-	Chuck_String* name = GET_NEXT_STRING(ARGS);
+	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	Chuck_String *name = GET_NEXT_STRING(ARGS);
 	int value0 = static_cast<int>(GET_NEXT_INT(ARGS));
 	int value1 = static_cast<int>(GET_NEXT_INT(ARGS));
 	int value2 = static_cast<int>(GET_NEXT_INT(ARGS));
@@ -1613,9 +1596,10 @@ CK_DLL_MFUN( cgl_mat_set_uniform_int4 )
 	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, uniform));
 }
 
-CK_DLL_MFUN(cgl_mat_set_uniform_bool) {
-	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
-	Chuck_String* name = GET_NEXT_STRING(ARGS);
+CK_DLL_MFUN(cgl_mat_set_uniform_bool)
+{
+	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	Chuck_String *name = GET_NEXT_STRING(ARGS);
 	bool value = static_cast<bool>(GET_NEXT_INT(ARGS));
 
 	MaterialUniform uniform = MaterialUniform::Create(name->str(), value);
@@ -1625,10 +1609,11 @@ CK_DLL_MFUN(cgl_mat_set_uniform_bool) {
 	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, uniform));
 }
 
-CK_DLL_MFUN(cgl_mat_set_uniform_texID) {
-	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
-	Chuck_String* name = GET_NEXT_STRING(ARGS);
-	CGL_Texture* tex = (CGL_Texture*) OBJ_MEMBER_INT (GET_NEXT_OBJECT(ARGS), texture_data_offset);
+CK_DLL_MFUN(cgl_mat_set_uniform_texID)
+{
+	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	Chuck_String *name = GET_NEXT_STRING(ARGS);
+	CGL_Texture *tex = (CGL_Texture *)OBJ_MEMBER_INT(GET_NEXT_OBJECT(ARGS), texture_data_offset);
 
 	MaterialUniform uniform = MaterialUniform::Create(name->str(), tex->GetID());
 
@@ -1637,13 +1622,14 @@ CK_DLL_MFUN(cgl_mat_set_uniform_texID) {
 	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, uniform));
 }
 
-
 CK_DLL_CTOR(cgl_mat_norm_ctor)
 {
 	std::cerr << "cgl_mat_norm_ctor";
-	NormalMaterial* normMat = new NormalMaterial;
-	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT) normMat;
+	NormalMaterial *normMat = new NormalMaterial;
+	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT)normMat;
 	std::cerr << "finished initializing norm material\n";
+
+	normMat->m_ChuckObject = SELF;
 
 	// Creation command
 	CGL::PushCommand(new CreateMaterialCommand(normMat));
@@ -1651,110 +1637,107 @@ CK_DLL_CTOR(cgl_mat_norm_ctor)
 
 CK_DLL_MFUN(cgl_set_use_local_normals)
 {
-	NormalMaterial* mat = (NormalMaterial*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	NormalMaterial *mat = (NormalMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
 	t_CKINT use_local = GET_NEXT_INT(ARGS);
 	if (use_local)
 		mat->UseLocalNormals();
 	else
 		mat->UseWorldNormals();
-	// TODO: add command for this 
+	// TODO: add command for this
 
 	CGL::PushCommand(new UpdateMaterialUniformCommand(
-		mat, *(mat->GetUniform(NormalMaterial::USE_LOCAL_NORMALS_UNAME)))
-	);
+		mat, *(mat->GetUniform(NormalMaterial::USE_LOCAL_NORMALS_UNAME))));
 }
 
 // phong mat fns
 CK_DLL_CTOR(cgl_mat_phong_ctor)
 {
-	PhongMaterial* phongMat = new PhongMaterial;
-	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT) phongMat;
+	PhongMaterial *phongMat = new PhongMaterial;
+	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT)phongMat;
+
+	phongMat->m_ChuckObject = SELF;
 
 	// Creation command
 	CGL::PushCommand(new CreateMaterialCommand(phongMat));
 }
 
-CK_DLL_MFUN( cgl_mat_phong_set_diffuse_map )
+CK_DLL_MFUN(cgl_mat_phong_set_diffuse_map)
 {
-	PhongMaterial* mat = (PhongMaterial*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
-	CGL_Texture* tex = (CGL_Texture*) OBJ_MEMBER_INT (GET_NEXT_OBJECT(ARGS), texture_data_offset);
+	PhongMaterial *mat = (PhongMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	CGL_Texture *tex = (CGL_Texture *)OBJ_MEMBER_INT(GET_NEXT_OBJECT(ARGS), texture_data_offset);
 	mat->SetDiffuseMap(tex);
 
-	// TODO: how do I return the chuck texture object? 
+	// TODO: how do I return the chuck texture object?
 	// RETURN->v_object = SELF;
 
 	// a lot of redundant work (entire uniform vector is copied). can optimize later
 	CGL::PushCommand(new UpdateMaterialUniformCommand(
-		mat, *mat->GetUniform(PhongMaterial::DIFFUSE_MAP_UNAME)
-	));
+		mat, *mat->GetUniform(PhongMaterial::DIFFUSE_MAP_UNAME)));
 }
 
-CK_DLL_MFUN( cgl_mat_phong_set_specular_map )
+CK_DLL_MFUN(cgl_mat_phong_set_specular_map)
 {
-	PhongMaterial* mat = (PhongMaterial*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
-	CGL_Texture* tex = (CGL_Texture*) OBJ_MEMBER_INT (GET_NEXT_OBJECT(ARGS), texture_data_offset);
+	PhongMaterial *mat = (PhongMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	CGL_Texture *tex = (CGL_Texture *)OBJ_MEMBER_INT(GET_NEXT_OBJECT(ARGS), texture_data_offset);
 	mat->SetSpecularMap(tex);
 
 	CGL::PushCommand(new UpdateMaterialUniformCommand(
-		mat, *mat->GetUniform(PhongMaterial::SPECULAR_MAP_UNAME)
-	));
+		mat, *mat->GetUniform(PhongMaterial::SPECULAR_MAP_UNAME)));
 }
 
-
-CK_DLL_MFUN( cgl_mat_phong_set_diffuse_color )
+CK_DLL_MFUN(cgl_mat_phong_set_diffuse_color)
 {
-	PhongMaterial* mat = (PhongMaterial*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	PhongMaterial *mat = (PhongMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
 	t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
 	mat->SetDiffuseColor(color.x, color.y, color.z);
 
 	RETURN->v_vec3 = color;
 
 	CGL::PushCommand(new UpdateMaterialUniformCommand(
-		mat, *mat->GetUniform(PhongMaterial::DIFFUSE_COLOR_UNAME)
-	));
+		mat, *mat->GetUniform(PhongMaterial::DIFFUSE_COLOR_UNAME)));
 }
 
-CK_DLL_MFUN( cgl_mat_phong_set_specular_color )
+CK_DLL_MFUN(cgl_mat_phong_set_specular_color)
 {
-	PhongMaterial* mat = (PhongMaterial*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	PhongMaterial *mat = (PhongMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
 	t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
 	mat->SetSpecularColor(color.x, color.y, color.z);
 
 	RETURN->v_vec3 = color;
 
 	CGL::PushCommand(new UpdateMaterialUniformCommand(
-		mat, *mat->GetUniform(PhongMaterial::SPECULAR_COLOR_UNAME)
-	));
+		mat, *mat->GetUniform(PhongMaterial::SPECULAR_COLOR_UNAME)));
 }
 
-CK_DLL_MFUN( cgl_mat_phong_set_log_shininess )
+CK_DLL_MFUN(cgl_mat_phong_set_log_shininess)
 {
-	PhongMaterial* mat = (PhongMaterial*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	PhongMaterial *mat = (PhongMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
 	t_CKFLOAT shininess = GET_NEXT_FLOAT(ARGS);
 	mat->SetLogShininess(shininess);
 
 	RETURN->v_float = shininess;
 
 	CGL::PushCommand(new UpdateMaterialUniformCommand(
-		mat, *mat->GetUniform(PhongMaterial::SHININESS_UNAME)
-	));
+		mat, *mat->GetUniform(PhongMaterial::SHININESS_UNAME)));
 }
 
 // custom shader mat fns ---------------------------------
-CK_DLL_CTOR( cgl_mat_custom_shader_ctor )
+CK_DLL_CTOR(cgl_mat_custom_shader_ctor)
 {
-	ShaderMaterial* shaderMat = new ShaderMaterial("", "");
-	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT) shaderMat;
+	ShaderMaterial *shaderMat = new ShaderMaterial("", "");
+	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT)shaderMat;
+
+	shaderMat->m_ChuckObject = SELF;
 
 	// Creation command
 	CGL::PushCommand(new CreateMaterialCommand(shaderMat));
 }
 
-CK_DLL_MFUN( cgl_mat_custom_shader_set_shaders )
+CK_DLL_MFUN(cgl_mat_custom_shader_set_shaders)
 {
-	ShaderMaterial* mat = (ShaderMaterial*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
-	Chuck_String* vertPath = GET_NEXT_STRING(ARGS);
-	Chuck_String* fragPath = GET_NEXT_STRING(ARGS);
+	ShaderMaterial *mat = (ShaderMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	Chuck_String *vertPath = GET_NEXT_STRING(ARGS);
+	Chuck_String *fragPath = GET_NEXT_STRING(ARGS);
 
 	mat->SetShaderPaths(vertPath->str(), fragPath->str());
 
@@ -1762,18 +1745,20 @@ CK_DLL_MFUN( cgl_mat_custom_shader_set_shaders )
 }
 
 // points mat fns ---------------------------------
-CK_DLL_CTOR( cgl_mat_points_ctor )
+CK_DLL_CTOR(cgl_mat_points_ctor)
 {
-	PointsMaterial* pointsMat = new PointsMaterial;
-	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT) pointsMat;
+	PointsMaterial *pointsMat = new PointsMaterial;
+	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT)pointsMat;
+
+	pointsMat->m_ChuckObject = SELF;
 
 	// Creation command
 	CGL::PushCommand(new CreateMaterialCommand(pointsMat));
 }
 
-CK_DLL_MFUN( cgl_mat_points_set_size_attenuation )
+CK_DLL_MFUN(cgl_mat_points_set_size_attenuation)
 {
-	PointsMaterial* mat = (PointsMaterial*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	PointsMaterial *mat = (PointsMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
 	t_CKINT attenuation = GET_NEXT_INT(ARGS);
 	mat->SetSizeAttenuation(attenuation);
 
@@ -1782,26 +1767,26 @@ CK_DLL_MFUN( cgl_mat_points_set_size_attenuation )
 	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, *mat->GetUniform(PointsMaterial::POINT_SIZE_ATTENUATION_UNAME)));
 }
 
-CK_DLL_MFUN( cgl_mat_points_get_size_attenuation )
+CK_DLL_MFUN(cgl_mat_points_get_size_attenuation)
 {
-	PointsMaterial* mat = (PointsMaterial*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	PointsMaterial *mat = (PointsMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
 
 	RETURN->v_int = mat->GetSizeAttenuation() ? 1 : 0;
 }
 
-CK_DLL_MFUN( cgl_mat_points_set_sprite )
+CK_DLL_MFUN(cgl_mat_points_set_sprite)
 {
-	PointsMaterial* mat = (PointsMaterial*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
-	CGL_Texture* tex = (CGL_Texture*) OBJ_MEMBER_INT (GET_NEXT_OBJECT(ARGS), texture_data_offset);
+	PointsMaterial *mat = (PointsMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	CGL_Texture *tex = (CGL_Texture *)OBJ_MEMBER_INT(GET_NEXT_OBJECT(ARGS), texture_data_offset);
 	mat->SetSprite(tex);
 
 	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, *mat->GetUniform(PointsMaterial::POINT_SPRITE_TEXTURE_UNAME)));
 }
 
 // set point color
-CK_DLL_MFUN( cgl_mat_points_set_color )
+CK_DLL_MFUN(cgl_mat_points_set_color)
 {
-	PointsMaterial* mat = (PointsMaterial*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	PointsMaterial *mat = (PointsMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
 	t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
 	mat->SetColor(color.x, color.y, color.z);
 
@@ -1811,10 +1796,12 @@ CK_DLL_MFUN( cgl_mat_points_set_color )
 }
 
 // mango mat fns ---------------------------------
-CK_DLL_CTOR( cgl_mat_mango_ctor )
+CK_DLL_CTOR(cgl_mat_mango_ctor)
 {
-	MangoMaterial* mangoMat = new MangoMaterial;
-	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT) mangoMat;
+	MangoMaterial *mangoMat = new MangoMaterial;
+	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT)mangoMat;
+
+	mangoMat->m_ChuckObject = SELF;
 
 	// Creation command
 	CGL::PushCommand(new CreateMaterialCommand(mangoMat));
@@ -1822,16 +1809,19 @@ CK_DLL_CTOR( cgl_mat_mango_ctor )
 
 // line mat fns ---------------------------------
 
-CK_DLL_CTOR( cgl_mat_line_ctor )
+CK_DLL_CTOR(cgl_mat_line_ctor)
 {
-	LineMaterial* lineMat = new LineMaterial;
-	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT) lineMat;
+	LineMaterial *lineMat = new LineMaterial;
+	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT)lineMat;
+	
+	lineMat->m_ChuckObject = SELF;
+
 	CGL::PushCommand(new CreateMaterialCommand(lineMat));
 }
 
-CK_DLL_MFUN( cgl_mat_line_set_color )
+CK_DLL_MFUN(cgl_mat_line_set_color)
 {
-	LineMaterial* mat = (LineMaterial*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	LineMaterial *mat = (LineMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
 	t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
 	mat->SetColor(color.x, color.y, color.z);
 
@@ -1839,9 +1829,9 @@ CK_DLL_MFUN( cgl_mat_line_set_color )
 	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, *mat->GetUniform(LineMaterial::LINE_COLOR_UNAME)));
 }
 
-CK_DLL_MFUN( cgl_mat_line_set_width )
+CK_DLL_MFUN(cgl_mat_line_set_width)
 {
-	LineMaterial* mat = (LineMaterial*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	LineMaterial *mat = (LineMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
 	t_CKFLOAT width = GET_NEXT_FLOAT(ARGS);
 	mat->SetLineWidth(width);
 
@@ -1849,21 +1839,20 @@ CK_DLL_MFUN( cgl_mat_line_set_width )
 	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, *mat->GetUniform(Material::LINE_WIDTH_UNAME)));
 }
 
-CK_DLL_MFUN( cgl_mat_line_set_mode )
+CK_DLL_MFUN(cgl_mat_line_set_mode)
 {
-	LineMaterial* mat = (LineMaterial*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
+	LineMaterial *mat = (LineMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
 	t_CKINT mode = GET_NEXT_INT(ARGS);
-	mat->SetLineMode((MaterialPrimitiveMode) mode);
+	mat->SetLineMode((MaterialPrimitiveMode)mode);
 
 	RETURN->v_int = mode;
 	CGL::PushCommand(new UpdateMaterialOptionCommand(mat, *mat->GetOption(MaterialOptionParam::PrimitiveMode)));
 }
 
-
 //-----------------------------------------------------------------------------
 // init_chugl_obj()
 //-----------------------------------------------------------------------------
-t_CKBOOL init_chugl_obj(Chuck_DL_Query* QUERY)
+t_CKBOOL init_chugl_obj(Chuck_DL_Query *QUERY)
 {
 	// EM_log(CK_LOG_INFO, "ChuGL Object");
 
@@ -1877,7 +1866,6 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query* QUERY)
 
 	QUERY->add_mfun(QUERY, cgl_obj_update, "void", "update");
 	QUERY->add_arg(QUERY, "float", "dt");
-
 
 	// transform getters ===========
 	// get obj direction vectors in world space
@@ -1935,21 +1923,19 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query* QUERY)
 	QUERY->add_mfun(QUERY, cgl_obj_set_pos, "GGen", "position");
 	QUERY->add_arg(QUERY, "vec3", "pos_vec");
 
-	QUERY->add_mfun(QUERY, cgl_obj_set_rot, "GGen", "rotation");  // sets from eulers
+	QUERY->add_mfun(QUERY, cgl_obj_set_rot, "GGen", "rotation"); // sets from eulers
 	QUERY->add_arg(QUERY, "vec3", "eulers");
 
 	QUERY->add_mfun(QUERY, cgl_obj_set_scale, "GGen", "scale");
 	QUERY->add_arg(QUERY, "vec3", "scale");
 
-
 	// scenegraph relationship methods ===========
-    // overload GGen --> GGen
-    QUERY->add_op_overload_binary( QUERY, ggen_op_gruck, "GGen", "-->",
-                                   "GGen", "lhs", "GGen", "rhs" );
+	// overload GGen --> GGen
+	QUERY->add_op_overload_binary(QUERY, ggen_op_gruck, "GGen", "-->",
+								  "GGen", "lhs", "GGen", "rhs");
 
-    QUERY->add_op_overload_binary( QUERY, ggen_op_ungruck, "GGen", "--<",
-                                   "GGen", "lhs", "GGen", "rhs" );
-	
+	QUERY->add_op_overload_binary(QUERY, ggen_op_ungruck, "GGen", "--<",
+								  "GGen", "lhs", "GGen", "rhs");
 
 	QUERY->end_class(QUERY);
 
@@ -1961,9 +1947,10 @@ CK_DLL_CTOR(cgl_obj_ctor)
 {
 	std::cerr << "cgl_obj_ctor" << std::endl;
 	Chuck_DL_Api::Type type = API->type->lookup(VM, "GGen");
-	if (API->type->is_equal(type, API->object->get_type(SELF))) {
-		SceneGraphObject* cglObj = new SceneGraphObject;
-		OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT) cglObj;
+	if (API->type->is_equal(type, API->object->get_type(SELF)))
+	{
+		SceneGraphObject *cglObj = new SceneGraphObject;
+		OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT)cglObj;
 
 		cglObj->m_ChuckObject = SELF;
 
@@ -1974,14 +1961,14 @@ CK_DLL_CTOR(cgl_obj_ctor)
 CK_DLL_DTOR(cgl_obj_dtor)
 {
 	std::cerr << "cgl_obj_dtor" << std::endl;
-	SceneGraphObject* cglObj = (SceneGraphObject*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	// CK_SAFE_DELETE(cglObj);  // TODO: the bandit ship of ref count memory managemnet
 	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;
 }
 
 CK_DLL_MFUN(cgl_obj_get_id)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	RETURN->v_int = cglObj->GetID();
 }
 
@@ -1989,28 +1976,27 @@ CK_DLL_MFUN(cgl_obj_update) {}
 
 CK_DLL_MFUN(cgl_obj_get_right)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	const auto& right = cglObj->GetRight();
-	RETURN->v_vec3 = { right.x, right.y, right.z };
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	const auto &right = cglObj->GetRight();
+	RETURN->v_vec3 = {right.x, right.y, right.z};
 }
 CK_DLL_MFUN(cgl_obj_get_forward)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	const auto& vec = cglObj->GetForward();
-	RETURN->v_vec3 = { vec.x, vec.y, vec.z };
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	const auto &vec = cglObj->GetForward();
+	RETURN->v_vec3 = {vec.x, vec.y, vec.z};
 }
 
 CK_DLL_MFUN(cgl_obj_get_up)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	const auto& vec = cglObj->GetUp();
-	RETURN->v_vec3 = { vec.x, vec.y, vec.z };
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	const auto &vec = cglObj->GetUp();
+	RETURN->v_vec3 = {vec.x, vec.y, vec.z};
 }
-
 
 CK_DLL_MFUN(cgl_obj_translate_by)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKVEC3 trans = GET_NEXT_VEC3(ARGS);
 	cglObj->Translate(glm::vec3(trans.x, trans.y, trans.z));
 
@@ -2022,7 +2008,7 @@ CK_DLL_MFUN(cgl_obj_translate_by)
 
 CK_DLL_MFUN(cgl_obj_scale_by)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
 	cglObj->Scale(glm::vec3(vec.x, vec.y, vec.z));
 	RETURN->v_object = SELF;
@@ -2031,7 +2017,7 @@ CK_DLL_MFUN(cgl_obj_scale_by)
 
 CK_DLL_MFUN(cgl_obj_rot_on_local_axis)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
 	t_CKFLOAT deg = GET_NEXT_FLOAT(ARGS);
 	cglObj->RotateOnLocalAxis(glm::vec3(vec.x, vec.y, vec.z), deg);
@@ -2043,7 +2029,7 @@ CK_DLL_MFUN(cgl_obj_rot_on_local_axis)
 
 CK_DLL_MFUN(cgl_obj_rot_on_world_axis)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
 	t_CKFLOAT deg = GET_NEXT_FLOAT(ARGS);
 	cglObj->RotateOnWorldAxis(glm::vec3(vec.x, vec.y, vec.z), deg);
@@ -2055,7 +2041,7 @@ CK_DLL_MFUN(cgl_obj_rot_on_world_axis)
 
 CK_DLL_MFUN(cgl_obj_rot_x)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKFLOAT deg = GET_NEXT_FLOAT(ARGS);
 	cglObj->RotateX(deg);
 	RETURN->v_object = SELF;
@@ -2064,7 +2050,7 @@ CK_DLL_MFUN(cgl_obj_rot_x)
 
 CK_DLL_MFUN(cgl_obj_rot_y)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKFLOAT deg = GET_NEXT_FLOAT(ARGS);
 	cglObj->RotateY(deg);
 	RETURN->v_object = SELF;
@@ -2073,7 +2059,7 @@ CK_DLL_MFUN(cgl_obj_rot_y)
 
 CK_DLL_MFUN(cgl_obj_rot_z)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKFLOAT deg = GET_NEXT_FLOAT(ARGS);
 	cglObj->RotateZ(deg);
 	RETURN->v_object = SELF;
@@ -2082,7 +2068,7 @@ CK_DLL_MFUN(cgl_obj_rot_z)
 
 CK_DLL_MFUN(cgl_obj_pos_x)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKFLOAT posX = GET_NEXT_FLOAT(ARGS);
 	glm::vec3 pos = cglObj->GetPosition();
 	pos.x = posX;
@@ -2093,8 +2079,8 @@ CK_DLL_MFUN(cgl_obj_pos_x)
 
 CK_DLL_MFUN(cgl_obj_pos_y)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
-	t_CKFLOAT posY= GET_NEXT_FLOAT(ARGS);
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKFLOAT posY = GET_NEXT_FLOAT(ARGS);
 	glm::vec3 pos = cglObj->GetPosition();
 	pos.y = posY;
 	cglObj->SetPosition(pos);
@@ -2104,7 +2090,7 @@ CK_DLL_MFUN(cgl_obj_pos_y)
 
 CK_DLL_MFUN(cgl_obj_pos_z)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKFLOAT posZ = GET_NEXT_FLOAT(ARGS);
 	glm::vec3 pos = cglObj->GetPosition();
 	pos.z = posZ;
@@ -2115,7 +2101,7 @@ CK_DLL_MFUN(cgl_obj_pos_z)
 
 CK_DLL_MFUN(cgl_obj_lookat_vec3)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
 	cglObj->LookAt(glm::vec3(vec.x, vec.y, vec.z));
 	RETURN->v_object = SELF;
@@ -2124,7 +2110,7 @@ CK_DLL_MFUN(cgl_obj_lookat_vec3)
 
 CK_DLL_MFUN(cgl_obj_lookat_float)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKFLOAT x = GET_NEXT_FLOAT(ARGS);
 	t_CKFLOAT y = GET_NEXT_FLOAT(ARGS);
 	t_CKFLOAT z = GET_NEXT_FLOAT(ARGS);
@@ -2135,7 +2121,7 @@ CK_DLL_MFUN(cgl_obj_lookat_float)
 
 CK_DLL_MFUN(cgl_obj_set_pos)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
 	cglObj->SetPosition(glm::vec3(vec.x, vec.y, vec.z));
 	RETURN->v_object = SELF;
@@ -2144,7 +2130,7 @@ CK_DLL_MFUN(cgl_obj_set_pos)
 
 CK_DLL_MFUN(cgl_obj_set_rot)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
 	cglObj->SetRotation(glm::vec3(vec.x, vec.y, vec.z));
 	RETURN->v_object = SELF;
@@ -2153,7 +2139,7 @@ CK_DLL_MFUN(cgl_obj_set_rot)
 
 CK_DLL_MFUN(cgl_obj_set_scale)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
 	cglObj->SetScale(glm::vec3(vec.x, vec.y, vec.z));
 	RETURN->v_object = SELF;
@@ -2162,74 +2148,74 @@ CK_DLL_MFUN(cgl_obj_set_scale)
 
 CK_DLL_MFUN(cgl_obj_get_pos)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
-	const auto& vec = cglObj->GetPosition();
-	RETURN->v_vec3 = { vec.x, vec.y, vec.z };
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	const auto &vec = cglObj->GetPosition();
+	RETURN->v_vec3 = {vec.x, vec.y, vec.z};
 }
 
 CK_DLL_MFUN(cgl_obj_get_world_pos)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
-	const auto& vec = cglObj->GetWorldPosition();
-	RETURN->v_vec3 = { vec.x, vec.y, vec.z };
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	const auto &vec = cglObj->GetWorldPosition();
+	RETURN->v_vec3 = {vec.x, vec.y, vec.z};
 }
 
 CK_DLL_MFUN(cgl_obj_get_rot)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
-	const auto& vec = glm::degrees(glm::eulerAngles(cglObj->GetRotation()));
-	RETURN->v_vec3 = { vec.x, vec.y, vec.z };
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	const auto &vec = glm::degrees(glm::eulerAngles(cglObj->GetRotation()));
+	RETURN->v_vec3 = {vec.x, vec.y, vec.z};
 }
 
 CK_DLL_MFUN(cgl_obj_get_scale)
 {
-	SceneGraphObject* cglObj = (SceneGraphObject*) OBJ_MEMBER_INT (SELF, ggen_data_offset);
-	const auto& vec = cglObj->GetScale();
-	RETURN->v_vec3 = { vec.x, vec.y, vec.z };
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	const auto &vec = cglObj->GetScale();
+	RETURN->v_vec3 = {vec.x, vec.y, vec.z};
 }
 
 CK_DLL_GFUN(ggen_op_gruck)
 {
-    // get the arguments
-    Chuck_Object * lhs = GET_NEXT_OBJECT(ARGS);
-    Chuck_Object * rhs = GET_NEXT_OBJECT(ARGS);
+	// get the arguments
+	Chuck_Object *lhs = GET_NEXT_OBJECT(ARGS);
+	Chuck_Object *rhs = GET_NEXT_OBJECT(ARGS);
 
-    // get internal representation
-    SceneGraphObject * LHS = (SceneGraphObject*) OBJ_MEMBER_INT (lhs, ggen_data_offset);
-    SceneGraphObject * RHS = (SceneGraphObject*) OBJ_MEMBER_INT (rhs, ggen_data_offset);
+	// get internal representation
+	SceneGraphObject *LHS = (SceneGraphObject *)OBJ_MEMBER_INT(lhs, ggen_data_offset);
+	SceneGraphObject *RHS = (SceneGraphObject *)OBJ_MEMBER_INT(rhs, ggen_data_offset);
 
-    // add child
-    RHS->AddChild(LHS);
+	// add child
+	RHS->AddChild(LHS);
 
-    // command
+	// command
 	CGL::PushCommand(new RelationshipCommand(RHS, LHS, RelationshipCommand::Relation::AddChild));
-    
-    // return RHS
-    RETURN->v_object = rhs;
+
+	// return RHS
+	RETURN->v_object = rhs;
 }
 
 CK_DLL_GFUN(ggen_op_ungruck)
 {
-    // get the arguments
-    Chuck_Object * lhs = GET_NEXT_OBJECT(ARGS);
-    Chuck_Object * rhs = GET_NEXT_OBJECT(ARGS);
-    // get internal representation
-    SceneGraphObject * LHS = (SceneGraphObject*) OBJ_MEMBER_INT (lhs, ggen_data_offset);
-    SceneGraphObject * RHS = (SceneGraphObject*) OBJ_MEMBER_INT (rhs, ggen_data_offset);
-    // add child
-    RHS->RemoveChild(LHS);
+	// get the arguments
+	Chuck_Object *lhs = GET_NEXT_OBJECT(ARGS);
+	Chuck_Object *rhs = GET_NEXT_OBJECT(ARGS);
+	// get internal representation
+	SceneGraphObject *LHS = (SceneGraphObject *)OBJ_MEMBER_INT(lhs, ggen_data_offset);
+	SceneGraphObject *RHS = (SceneGraphObject *)OBJ_MEMBER_INT(rhs, ggen_data_offset);
+	// add child
+	RHS->RemoveChild(LHS);
 
-    // command
+	// command
 	CGL::PushCommand(new RelationshipCommand(RHS, LHS, RelationshipCommand::Relation::RemoveChild));
-    
-    // return RHS
-    RETURN->v_object = rhs;
+
+	// return RHS
+	RETURN->v_object = rhs;
 }
 
 //-----------------------------------------------------------------------------
 // init_chugl_scene()
 //-----------------------------------------------------------------------------
-t_CKBOOL init_chugl_scene(Chuck_DL_Query* QUERY)
+t_CKBOOL init_chugl_scene(Chuck_DL_Query *QUERY)
 {
 	// EM_log(CK_LOG_INFO, "ChuGL scene");
 	// CGL scene
@@ -2239,9 +2225,8 @@ t_CKBOOL init_chugl_scene(Chuck_DL_Query* QUERY)
 
 	// static constants
 	// TODO: add linear fog? but doesn't even look as good
-	QUERY->add_svar(QUERY, "int", "FOG_EXP", true, (void*)&Scene::FOG_EXP);
-	QUERY->add_svar(QUERY, "int", "FOG_EXP2", true, (void*)&Scene::FOG_EXP2);
-
+	QUERY->add_svar(QUERY, "int", "FOG_EXP", true, (void *)&Scene::FOG_EXP);
+	QUERY->add_svar(QUERY, "int", "FOG_EXP2", true, (void *)&Scene::FOG_EXP2);
 
 	// background color
 	QUERY->add_mfun(QUERY, cgl_scene_set_background_color, "vec3", "backgroundColor");
@@ -2271,89 +2256,97 @@ t_CKBOOL init_chugl_scene(Chuck_DL_Query* QUERY)
 // CGL Scene ==============================================
 CK_DLL_CTOR(cgl_scene_ctor)
 {
-	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT) &CGL::mainScene;
+	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT)&CGL::mainScene;
 }
 CK_DLL_DTOR(cgl_scene_dtor)
 {
 	// Scene* mainScene = (Scene*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	// don't call delete! because this is a static var
 
-	// TODO is this necessary? 
+	// TODO is this necessary?
 	// OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;  // zero out the memory
 }
 
-CK_DLL_MFUN(cgl_scene_set_background_color) {
-	Scene* scene = (Scene*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+CK_DLL_MFUN(cgl_scene_set_background_color)
+{
+	Scene *scene = (Scene *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
 	scene->SetBackgroundColor(color.x, color.y, color.z);
 	RETURN->v_vec3 = color;
 	CGL::PushCommand(new UpdateSceneBackgroundColorCommand(scene));
 }
 
-CK_DLL_MFUN(cgl_scene_get_background_color) {
-	Scene* scene = (Scene*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	const auto& color = scene->GetBackgroundColor();
-	RETURN->v_vec3 = { color.x, color.y, color.z };
+CK_DLL_MFUN(cgl_scene_get_background_color)
+{
+	Scene *scene = (Scene *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	const auto &color = scene->GetBackgroundColor();
+	RETURN->v_vec3 = {color.x, color.y, color.z};
 }
 
-CK_DLL_MFUN(cgl_scene_set_fog_color) {
-	Scene* scene = (Scene*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+CK_DLL_MFUN(cgl_scene_set_fog_color)
+{
+	Scene *scene = (Scene *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
 	scene->SetFogColor(color.x, color.y, color.z);
 	RETURN->v_vec3 = color;
 	CGL::PushCommand(new UpdateSceneFogCommand(scene));
 }
 
-CK_DLL_MFUN(cgl_scene_get_fog_color) {
-	Scene* scene = (Scene*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	const auto& color = scene->GetFogColor();
-	RETURN->v_vec3 = { color.x, color.y, color.z };
+CK_DLL_MFUN(cgl_scene_get_fog_color)
+{
+	Scene *scene = (Scene *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	const auto &color = scene->GetFogColor();
+	RETURN->v_vec3 = {color.x, color.y, color.z};
 }
 
-CK_DLL_MFUN(cgl_scene_set_fog_density) {
-	Scene* scene = (Scene*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+CK_DLL_MFUN(cgl_scene_set_fog_density)
+{
+	Scene *scene = (Scene *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKFLOAT density = GET_NEXT_FLOAT(ARGS);
 	scene->SetFogDensity(density);
 	RETURN->v_float = density;
 	CGL::PushCommand(new UpdateSceneFogCommand(scene));
 }
 
-CK_DLL_MFUN(cgl_scene_get_fog_density) {
-	Scene* scene = (Scene*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+CK_DLL_MFUN(cgl_scene_get_fog_density)
+{
+	Scene *scene = (Scene *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	RETURN->v_float = scene->GetFogDensity();
 }
 
-CK_DLL_MFUN(cgl_scene_set_fog_type) {
-	Scene* scene = (Scene*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+CK_DLL_MFUN(cgl_scene_set_fog_type)
+{
+	Scene *scene = (Scene *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKINT type = GET_NEXT_INT(ARGS);
 	scene->SetFogType((FogType)type);
 	RETURN->v_int = type;
 	CGL::PushCommand(new UpdateSceneFogCommand(scene));
 }
 
-CK_DLL_MFUN(cgl_scene_get_fog_type) {
-	Scene* scene = (Scene*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+CK_DLL_MFUN(cgl_scene_get_fog_type)
+{
+	Scene *scene = (Scene *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	RETURN->v_int = scene->GetFogType();
 }
 
-CK_DLL_MFUN(cgl_scene_set_fog_enabled) {
-	Scene* scene = (Scene*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+CK_DLL_MFUN(cgl_scene_set_fog_enabled)
+{
+	Scene *scene = (Scene *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	scene->SetFogEnabled(true);
 	CGL::PushCommand(new UpdateSceneFogCommand(scene));
 }
 
-CK_DLL_MFUN(cgl_scene_set_fog_disabled) {
-	Scene* scene = (Scene*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+CK_DLL_MFUN(cgl_scene_set_fog_disabled)
+{
+	Scene *scene = (Scene *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	scene->SetFogEnabled(false);
 	CGL::PushCommand(new UpdateSceneFogCommand(scene));
 }
 
-
-
 //-----------------------------------------------------------------------------
 // init_chugl_cam()
 //-----------------------------------------------------------------------------
-t_CKBOOL init_chugl_cam(Chuck_DL_Query* QUERY)
+t_CKBOOL init_chugl_cam(Chuck_DL_Query *QUERY)
 {
 	// EM_log(CK_LOG_INFO, "ChuGL Camera");
 	// CGL camera
@@ -2362,10 +2355,9 @@ t_CKBOOL init_chugl_cam(Chuck_DL_Query* QUERY)
 	QUERY->add_dtor(QUERY, cgl_cam_dtor);
 
 	// static vars
-	// perspective mode 
-	QUERY->add_svar(QUERY, "int", "MODE_PERSP", true, (void*)&Camera::MODE_PERSPECTIVE);
-	QUERY->add_svar(QUERY, "int", "MODE_ORTHO", true, (void*)&Camera::MODE_ORTHO);
-
+	// perspective mode
+	QUERY->add_svar(QUERY, "int", "MODE_PERSP", true, (void *)&Camera::MODE_PERSPECTIVE);
+	QUERY->add_svar(QUERY, "int", "MODE_ORTHO", true, (void *)&Camera::MODE_ORTHO);
 
 	QUERY->add_mfun(QUERY, cgl_cam_set_mode_persp, "void", "perspective");
 	QUERY->add_mfun(QUERY, cgl_cam_set_mode_ortho, "void", "orthographic");
@@ -2388,7 +2380,6 @@ t_CKBOOL init_chugl_cam(Chuck_DL_Query* QUERY)
 	QUERY->add_arg(QUERY, "float", "s");
 	QUERY->add_mfun(QUERY, cgl_cam_get_ortho_size, "float", "viewSize");
 
-
 	QUERY->end_class(QUERY);
 
 	return true;
@@ -2397,13 +2388,13 @@ t_CKBOOL init_chugl_cam(Chuck_DL_Query* QUERY)
 // CGL Camera =======================
 CK_DLL_CTOR(cgl_cam_ctor)
 {
-	// store reference to main camera 
-	// NOT A BUG: camera inherits methods from cglobject, so it needs 
+	// store reference to main camera
+	// NOT A BUG: camera inherits methods from cglobject, so it needs
 	// to use the same offset. wtf!!
 	// TODO: ask Ge is this is the right way to do inheritence in this DLL interface
-	//OBJ_MEMBER_INT(SELF, gcamera_data_offset) = (t_CKINT) &CGL::mainCamera;
+	// OBJ_MEMBER_INT(SELF, gcamera_data_offset) = (t_CKINT) &CGL::mainCamera;
 
-	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT) (&CGL::mainCamera);
+	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT)(&CGL::mainCamera);
 }
 
 CK_DLL_DTOR(cgl_cam_dtor)
@@ -2412,12 +2403,12 @@ CK_DLL_DTOR(cgl_cam_dtor)
 
 	// Camera* mainCam = (Camera*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	// don't call delete! because this is a static var
-	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;  // zero out the memory
+	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0; // zero out the memory
 }
 
 CK_DLL_MFUN(cgl_cam_set_mode_persp)
 {
-	Camera* cam = (Camera*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	Camera *cam = (Camera *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	cam->SetPerspective();
 
 	CGL::PushCommand(new UpdateCameraCommand(cam));
@@ -2425,7 +2416,7 @@ CK_DLL_MFUN(cgl_cam_set_mode_persp)
 
 CK_DLL_MFUN(cgl_cam_set_mode_ortho)
 {
-	Camera* cam = (Camera*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	Camera *cam = (Camera *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	cam->SetOrtho();
 
 	CGL::PushCommand(new UpdateCameraCommand(cam));
@@ -2433,13 +2424,13 @@ CK_DLL_MFUN(cgl_cam_set_mode_ortho)
 
 CK_DLL_MFUN(cgl_cam_get_mode)
 {
-	Camera* cam = (Camera*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	Camera *cam = (Camera *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	RETURN->v_int = cam->GetMode();
 }
 
 CK_DLL_MFUN(cgl_cam_set_clip)
 {
-	Camera* cam = (Camera*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	Camera *cam = (Camera *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKFLOAT n = GET_NEXT_FLOAT(ARGS);
 	t_CKFLOAT f = GET_NEXT_FLOAT(ARGS);
 	cam->SetClipPlanes(n, f);
@@ -2449,19 +2440,19 @@ CK_DLL_MFUN(cgl_cam_set_clip)
 
 CK_DLL_MFUN(cgl_cam_get_clip_near)
 {
-	Camera* cam = (Camera*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	Camera *cam = (Camera *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	RETURN->v_float = cam->GetClipNear();
 }
 
 CK_DLL_MFUN(cgl_cam_get_clip_far)
 {
-	Camera* cam = (Camera*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	Camera *cam = (Camera *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	RETURN->v_float = cam->GetClipFar();
 }
 
 CK_DLL_MFUN(cgl_cam_set_pers_fov)
 {
-	Camera* cam = (Camera*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	Camera *cam = (Camera *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKFLOAT f = GET_NEXT_FLOAT(ARGS);
 	cam->SetFOV(f);
 
@@ -2472,13 +2463,13 @@ CK_DLL_MFUN(cgl_cam_set_pers_fov)
 
 CK_DLL_MFUN(cgl_cam_get_pers_fov)
 {
-	Camera* cam = (Camera*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	Camera *cam = (Camera *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	RETURN->v_float = cam->GetFOV();
 }
 
 CK_DLL_MFUN(cgl_cam_set_ortho_size)
 {
-	Camera* cam = (Camera*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	Camera *cam = (Camera *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKFLOAT s = GET_NEXT_FLOAT(ARGS);
 	cam->SetSize(s);
 
@@ -2489,25 +2480,37 @@ CK_DLL_MFUN(cgl_cam_set_ortho_size)
 
 CK_DLL_MFUN(cgl_cam_get_ortho_size)
 {
-	Camera* cam = (Camera*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	Camera *cam = (Camera *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	RETURN->v_float = cam->GetSize();
 }
-
 
 //-----------------------------------------------------------------------------
 // init_chugl_mesh()
 //-----------------------------------------------------------------------------
-t_CKBOOL init_chugl_mesh(Chuck_DL_Query* QUERY)
+t_CKBOOL init_chugl_mesh(Chuck_DL_Query *QUERY)
 {
 	// EM_log(CK_LOG_INFO, "ChuGL scene");
 
 	QUERY->begin_class(QUERY, "GMesh", "GGen");
 	QUERY->add_ctor(QUERY, cgl_mesh_ctor);
 	QUERY->add_dtor(QUERY, cgl_mesh_dtor);
-	
+
 	QUERY->add_mfun(QUERY, cgl_mesh_set, "void", "set");
-	QUERY->add_arg(QUERY, "Geometry", "geo");
-	QUERY->add_arg(QUERY, "CglMat", "mat");
+	QUERY->add_arg(QUERY, Geometry::CKName(GeometryType::Base) , "geo");
+	QUERY->add_arg(QUERY, Material::CKName(MaterialType::Base), "mat");
+
+	QUERY->add_mfun(QUERY, cgl_mesh_set_geo, Geometry::CKName(GeometryType::Base) , "geo");
+	QUERY->add_arg(QUERY, Geometry::CKName(GeometryType::Base) , "geo");
+
+	QUERY->add_mfun(QUERY, cgl_mesh_set_mat, Material::CKName(MaterialType::Base), "mat");
+	QUERY->add_arg(QUERY, Material::CKName(MaterialType::Base), "mat");
+
+	QUERY->add_mfun(QUERY, cgl_mesh_get_geo, Geometry::CKName(GeometryType::Base) , "geo");
+	QUERY->add_mfun(QUERY, cgl_mesh_get_mat, Material::CKName(MaterialType::Base), "mat");
+
+	QUERY->add_mfun(QUERY, cgl_mesh_dup_mat, Material::CKName(MaterialType::Base), "dupMat");
+	QUERY->add_mfun(QUERY, cgl_mesh_dup_geo, Geometry::CKName(GeometryType::Base) , "dupGeo");
+	QUERY->add_mfun(QUERY, cgl_mesh_dup_all, "GMesh", "dup");
 
 	QUERY->end_class(QUERY);
 
@@ -2526,8 +2529,8 @@ CK_DLL_CTOR(cgl_mesh_ctor)
 	// 	std::cerr << "GMesh instantiated" << std::endl;
 	// }
 
-	Mesh* mesh = new Mesh();
-	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT) mesh;
+	Mesh *mesh = new Mesh();
+	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT)mesh;
 
 	mesh->m_ChuckObject = SELF;
 	CGL::PushCommand(new CreateMeshCommand(mesh));
@@ -2536,14 +2539,14 @@ CK_DLL_CTOR(cgl_mesh_ctor)
 CK_DLL_DTOR(cgl_mesh_dtor)
 {
 	std::cerr << "cgl_mesh_dtor" << std::endl;
-	Mesh* mesh = (Mesh*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	Mesh *mesh = (Mesh *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	CK_SAFE_DELETE(mesh);
-	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;  // zero out the memory
+	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0; // zero out the memory
 
 	// TODO: need to remove from scenegraph
 }
 
-static void cglMeshSet(Mesh* mesh, Geometry* geo, Material* mat)
+static void cglMeshSet(Mesh *mesh, Geometry *geo, Material *mat)
 {
 	// set on CGL side
 	mesh->SetGeometry(geo);
@@ -2554,32 +2557,157 @@ static void cglMeshSet(Mesh* mesh, Geometry* geo, Material* mat)
 
 CK_DLL_MFUN(cgl_mesh_set)
 {
-	Mesh* mesh = (Mesh*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-    //Geometry * geo = (Geometry *)GET_NEXT_OBJECT(ARGS);
-    //Material * mat = (Material *)GET_NEXT_OBJECT(ARGS);
-    Chuck_Object* geo_obj = GET_NEXT_OBJECT(ARGS);
-    Chuck_Object* mat_obj = GET_NEXT_OBJECT(ARGS); 
+	Mesh *mesh = (Mesh *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	// Geometry * geo = (Geometry *)GET_NEXT_OBJECT(ARGS);
+	// Material * mat = (Material *)GET_NEXT_OBJECT(ARGS);
+	Chuck_Object *geo_obj = GET_NEXT_OBJECT(ARGS);
+	Chuck_Object *mat_obj = GET_NEXT_OBJECT(ARGS);
 
-    Geometry* geo = geo_obj == nullptr ? nullptr : (Geometry *)OBJ_MEMBER_INT( geo_obj, geometry_data_offset );
-    Material* mat = mat_obj == nullptr ? nullptr : (Material *)OBJ_MEMBER_INT( mat_obj, cglmat_data_offset);
+	Geometry *geo = geo_obj == nullptr ? nullptr : (Geometry *)OBJ_MEMBER_INT(geo_obj, geometry_data_offset);
+	Material *mat = mat_obj == nullptr ? nullptr : (Material *)OBJ_MEMBER_INT(mat_obj, cglmat_data_offset);
 
 	cglMeshSet(mesh, geo, mat);
 }
 
-CK_DLL_CTOR(cgl_gcube_ctor)
+CK_DLL_MFUN(cgl_mesh_set_geo)
 {
-	Mesh* mesh = (Mesh*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	Mesh *mesh = (Mesh *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	Chuck_Object *geo_obj = GET_NEXT_OBJECT(ARGS);
+	Geometry *geo = geo_obj == nullptr ? nullptr : (Geometry *)OBJ_MEMBER_INT(geo_obj, geometry_data_offset);
 
-	cglMeshSet(
-		mesh, &CGL::defaultBoxGeometry, &CGL::defaultNormalMaterial
-	);
+	mesh->SetGeometry(geo);
+
+	RETURN->v_object = geo_obj;
+
+	std::cerr << "cgl_mesh_set_geo" << std::endl;
+
+	CGL::PushCommand(new SetMeshCommand(mesh));
 }
 
+CK_DLL_MFUN(cgl_mesh_set_mat)
+{
+	Mesh *mesh = (Mesh *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	Chuck_Object *mat_obj = GET_NEXT_OBJECT(ARGS);
+	Material *mat = mat_obj == nullptr ? nullptr : (Material *)OBJ_MEMBER_INT(mat_obj, cglmat_data_offset);
+
+	mesh->SetMaterial(mat);
+
+	RETURN->v_object = mat_obj;
+
+	std::cerr << "cgl_mesh_set_mat" << std::endl;
+
+	CGL::PushCommand(new SetMeshCommand(mesh));
+}
+
+CK_DLL_MFUN(cgl_mesh_get_mat)
+{
+	Mesh *mesh = (Mesh *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	RETURN->v_object = mesh->GetMaterial()->m_ChuckObject;
+}
+
+CK_DLL_MFUN(cgl_mesh_get_geo)
+{
+	Mesh *mesh = (Mesh *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	RETURN->v_object = mesh->GetGeometry()->m_ChuckObject;
+}
+
+
+static Chuck_Object * cglMeshDupMat(CK_DL_API API, Chuck_VM *VM, Mesh *mesh, Chuck_VM_Shred *SHRED) {
+	if (!mesh->GetMaterial()) {
+		std::cerr << "cannot duplicate a null material" << std::endl;
+		return nullptr;
+	}
+	// create chuck object
+	// TODO cache the type
+	// create with shred because ??
+	// don't reference track, this is not a default that needs to stick around?
+	Chuck_DL_Api::Type type = API->type->lookup(VM, mesh->GetMaterial()->myCkName()); 
+	// must add refcount `true` here to prevent being immediately freed by chuck
+	Chuck_DL_Api::Object obj = API->object->create_with_shred(SHRED, type, true);  
+
+	// create new material and store chuck object pointer
+	Material *newMat = mesh->GetMaterial()->Dup(obj);
+
+	// set address in chuck obj
+	OBJ_MEMBER_INT(obj, cglmat_data_offset) = (t_CKINT)newMat;
+
+	// tell renderer to create a copy
+	CGL::PushCommand(new CreateMaterialCommand(newMat));
+	// set new mat on this mesh!
+	mesh->SetMaterial(newMat);
+	// tell renderer to set new mat on this mesh
+	CGL::PushCommand(new SetMeshCommand(mesh));
+
+	return obj;
+}
+
+static Chuck_Object * cglMeshDupGeo(CK_DL_API API, Chuck_VM *VM, Mesh *mesh, Chuck_VM_Shred *SHRED) {
+	if (!mesh->GetGeometry()) {
+		std::cerr << "cannot duplicate a null geometry" << std::endl;
+		return nullptr;
+	}
+
+	Chuck_DL_Api::Type type = API->type->lookup(VM, mesh->GetGeometry()->myCkName()); 
+	// need true add ref otherwise chuck immediately frees, causing segfault
+	Chuck_DL_Api::Object obj = API->object->create_with_shred(SHRED, type, true);  
+
+	// create new geo
+	Geometry *newGeo = mesh->GetGeometry()->Dup(obj);
+
+	// set address in chuck obj
+	OBJ_MEMBER_INT(obj, geometry_data_offset) = (t_CKINT)newGeo;
+
+	// tell renderer to create a copy
+	CGL::PushCommand(new CreateGeometryCommand(newGeo));
+	// set new geo on this mesh!
+	mesh->SetGeometry(newGeo);
+	// tell renderer to set new geo on this mesh
+	CGL::PushCommand(new SetMeshCommand(mesh));
+
+	return obj;
+}
+
+// duplicators
+CK_DLL_MFUN(cgl_mesh_dup_mat)
+{
+	Mesh *mesh = (Mesh *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	RETURN->v_object = cglMeshDupMat(API, VM, mesh, SHRED);
+	return;
+}
+
+CK_DLL_MFUN(cgl_mesh_dup_geo)
+{
+	Mesh *mesh = (Mesh *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	RETURN->v_object = cglMeshDupGeo(API, VM, mesh, SHRED);
+	return;
+}
+
+CK_DLL_MFUN(cgl_mesh_dup_all)
+{
+	Mesh *mesh = (Mesh *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	cglMeshDupMat(API, VM, mesh, SHRED);
+	cglMeshDupGeo(API, VM, mesh, SHRED);
+	RETURN->v_object = SELF;
+}
+
+CK_DLL_CTOR(cgl_gcube_ctor)
+{
+    Mesh *mesh = (Mesh *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+    // note: don't need to set m_ChuckObject here because already set in preconstructor of parent "GMesh"
+
+    // TODO need to create corresponding ck objects for all defaults
+
+    cglMeshSet(mesh, &CGL::defaultBoxGeometry, &CGL::defaultNormalMaterial);
+}
+
+
+	// QUERY->add_mfun(QUERY, cgl_mesh_dup_geo, Geometry::CKName(GeometryType::Base) , "dupGeo");
+	// QUERY->add_mfun(QUERY, cgl_mesh_dup_all, "GMesh", "dup");
 
 //-----------------------------------------------------------------------------
 // init_chugl_group()
 //-----------------------------------------------------------------------------
-t_CKBOOL init_chugl_group(Chuck_DL_Query* QUERY)
+t_CKBOOL init_chugl_group(Chuck_DL_Query *QUERY)
 {
 	// EM_log(CK_LOG_INFO, "ChuGL group");
 
@@ -2591,20 +2719,20 @@ t_CKBOOL init_chugl_group(Chuck_DL_Query* QUERY)
 
 	return true;
 }
-// CGL Group 
+// CGL Group
 CK_DLL_CTOR(cgl_group_ctor)
 {
-	Group* group = new Group;
-	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT) group;
+	Group *group = new Group;
+	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT)group;
 	group->m_ChuckObject = SELF;
 	CGL::PushCommand(new CreateGroupCommand(group));
 }
 
 CK_DLL_DTOR(cgl_group_dtor)
 {
-	Group* group = (Group*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	Group *group = (Group *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	CK_SAFE_DELETE(group);
-	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;  // zero out the memory
+	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0; // zero out the memory
 
 	// TODO: need to remove from scenegraph
 }
@@ -2612,7 +2740,7 @@ CK_DLL_DTOR(cgl_group_dtor)
 //-----------------------------------------------------------------------------
 // init_chugl_light()
 //-----------------------------------------------------------------------------
-t_CKBOOL init_chugl_light(Chuck_DL_Query* QUERY)
+t_CKBOOL init_chugl_light(Chuck_DL_Query *QUERY)
 {
 	// EM_log(CK_LOG_INFO, "ChuGL geometry");
 
@@ -2642,7 +2770,6 @@ t_CKBOOL init_chugl_light(Chuck_DL_Query* QUERY)
 	return true;
 }
 
-
 // CGL Lights ===================================================
 
 CK_DLL_CTOR(cgl_light_ctor)
@@ -2652,28 +2779,27 @@ CK_DLL_CTOR(cgl_light_ctor)
 
 CK_DLL_DTOR(cgl_light_dtor)
 {
-	Light* group = (Light*)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	Light *group = (Light *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	CK_SAFE_DELETE(group);
-	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;  // zero out the memory
+	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0; // zero out the memory
 
 	// TODO: need to remove from scenegraph with a destroy command
 }
 
 CK_DLL_CTOR(cgl_point_light_ctor)
 {
-	PointLight* light = new PointLight;
-	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT) light;
+	PointLight *light = new PointLight;
+	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT)light;
 
 	light->m_ChuckObject = SELF;
-
 
 	CGL::PushCommand(new CreateLightCommand(light));
 }
 
 CK_DLL_CTOR(cgl_dir_light_ctor)
 {
-	DirLight* light = new DirLight;
-	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT) light;
+	DirLight *light = new DirLight;
+	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT)light;
 
 	light->m_ChuckObject = SELF;
 
@@ -2684,20 +2810,24 @@ CK_DLL_CTOR(cgl_dir_light_ctor)
 // ChuGL Event impl (TODO refactor into separate file)
 //-----------------------------------------------------------------------------
 // CglEventstatic initialization (again, should be refactored to be accessible through chuck.h)
-std::vector<CglEvent*> CglEvent::m_FrameEvents;
-std::vector<CglEvent*> CglEvent::m_UpdateEvents;
-std::vector<CglEvent*> CglEvent::m_WindowResizeEvents;
-CBufferSimple* CglEvent::s_SharedEventQueue;
+std::vector<CglEvent *> CglEvent::m_FrameEvents;
+std::vector<CglEvent *> CglEvent::m_UpdateEvents;
+std::vector<CglEvent *> CglEvent::m_WindowResizeEvents;
+CBufferSimple *CglEvent::s_SharedEventQueue;
 
-std::vector<CglEvent*>& CglEvent::GetEventQueue(CglEventType type)
+std::vector<CglEvent *> &CglEvent::GetEventQueue(CglEventType type)
 {
-	switch (type) {
-	case CglEventType::CGL_UPDATE:			return m_UpdateEvents;
-	case CglEventType::CGL_FRAME:			return m_FrameEvents;
-	case CglEventType::CGL_WINDOW_RESIZE:	return m_WindowResizeEvents;
-	default:								throw std::runtime_error("invalid CGL event type");
+	switch (type)
+	{
+	case CglEventType::CGL_UPDATE:
+		return m_UpdateEvents;
+	case CglEventType::CGL_FRAME:
+		return m_FrameEvents;
+	case CglEventType::CGL_WINDOW_RESIZE:
+		return m_WindowResizeEvents;
+	default:
+		throw std::runtime_error("invalid CGL event type");
 	}
-	
 }
 
 /*
@@ -2708,8 +2838,7 @@ void CglEvent::wait(Chuck_VM_Shred* shred)
 */
 
 CglEvent::CglEvent(
-	Chuck_Event* event, Chuck_VM* vm, CK_DL_API api, CglEventType event_type
-)
+	Chuck_Event *event, Chuck_VM *vm, CK_DL_API api, CglEventType event_type)
 	: m_Event(event), m_VM(vm), m_API(api), m_EventType(event_type)
 {
 	GetEventQueue(event_type).push_back(this);
@@ -2717,22 +2846,21 @@ CglEvent::CglEvent(
 
 CglEvent::~CglEvent()
 {
-	auto& eventQueue = GetEventQueue(m_EventType);
+	auto &eventQueue = GetEventQueue(m_EventType);
 
 	// TODO: this is not locksafe...can get removed while renderer is reading
 
 	// remove from listeners list
 	auto it = std::find(eventQueue.begin(), eventQueue.end(), this);
-	assert(it != eventQueue.end());  // sanity check
+	assert(it != eventQueue.end()); // sanity check
 	if (it != eventQueue.end())
 		eventQueue.erase(it);
 }
 
 void CglEvent::Broadcast()
-{	
+{
 	// (should be) threadsafe
 	m_API->vm->queue_event(m_VM, m_Event, 1, s_SharedEventQueue);
-	
 
 	// using non-thread-safe event buffer for now
 	// m_VM->queue_event(m_Event, 1, NULL);
@@ -2742,8 +2870,8 @@ void CglEvent::Broadcast()
 // broadcasts all events of type event_type
 void CglEvent::Broadcast(CglEventType event_type)
 {
-	auto& eventQueue = GetEventQueue(event_type);
-	for (auto& event : eventQueue)
+	auto &eventQueue = GetEventQueue(event_type);
+	for (auto &event : eventQueue)
 		event->Broadcast();
 }
 //-----------------------------------------------------------------------------
@@ -2772,27 +2900,27 @@ NormalMaterial CGL::defaultNormalMaterial;
 t_CKINT CGL::our_update_vt_offset = -1;
 
 // Initialization for Shred Registration structures
-std::unordered_map<Chuck_VM_Shred*, bool> CGL::m_RegisteredShreds;
-std::unordered_set<Chuck_VM_Shred*> CGL::m_WaitingShreds;
+std::unordered_map<Chuck_VM_Shred *, bool> CGL::m_RegisteredShreds;
+std::unordered_set<Chuck_VM_Shred *> CGL::m_WaitingShreds;
 
 Chuck_DL_Api::Object CGL::s_UpdateEvent = nullptr;
 
-// std::unordered_map<Chuck_VM_Shred*, Chuck_DL_Api::Object> CGL::m_ShredEventMap;  // map of shreds to CglUpdate Event 
+// std::unordered_map<Chuck_VM_Shred*, Chuck_DL_Api::Object> CGL::m_ShredEventMap;  // map of shreds to CglUpdate Event
 
 // CGL static command queue initialization
-std::vector<SceneGraphCommand*> CGL::m_ThisCommandQueue;
-std::vector<SceneGraphCommand*> CGL::m_ThatCommandQueue;
-bool CGL::m_CQReadTarget = false;  // false = this, true = that
-std::mutex CGL::m_CQLock; // only held when 1: adding new command and 2: swapping the read/write queues
+std::vector<SceneGraphCommand *> CGL::m_ThisCommandQueue;
+std::vector<SceneGraphCommand *> CGL::m_ThatCommandQueue;
+bool CGL::m_CQReadTarget = false; // false = this, true = that
+std::mutex CGL::m_CQLock;		  // only held when 1: adding new command and 2: swapping the read/write queues
 
 // CGL window state initialization
 
 std::mutex CGL::s_WindowStateLock;
 CGL::WindowState CGL::s_WindowState = {
-	1, 1, // window width and height (in screen coordinates)
-	1, 1, // frame buffer width and height (in pixels)
+	1, 1,	  // window width and height (in screen coordinates)
+	1, 1,	  // frame buffer width and height (in pixels)
 	0.0, 0.0, // mouse X, mouse Y
-	0.0, 0.0 // glfw time, delta time
+	0.0, 0.0  // glfw time, delta time
 };
 
 // mouse modes
@@ -2808,27 +2936,29 @@ const unsigned int CGL::WINDOW_MAXIMIZED = 2;
 const unsigned int CGL::WINDOW_RESTORE = 3;
 const unsigned int CGL::WINDOW_SET_SIZE = 4;
 
-// chugl start time 
-double CGL::chuglChuckStartTime = 0.0;  // value of chuck `now` when chugl is first initialized
+// chugl start time
+double CGL::chuglChuckStartTime = 0.0; // value of chuck `now` when chugl is first initialized
 double CGL::chuglLastUpdateTime = 0.0;
 bool CGL::useChuckTime = true;
 
 // main loop hook
-Chuck_DL_MainThreadHook* CGL::hook = nullptr;
+Chuck_DL_MainThreadHook *CGL::hook = nullptr;
 bool CGL::hookActivated = false;
 
 void CGL::ActivateHook()
 {
-    if (hookActivated || !hook) return;
-    hook->activate(hook);
-    hookActivated = true;
+	if (hookActivated || !hook)
+		return;
+	hook->activate(hook);
+	hookActivated = true;
 }
 
 void CGL::DeactivateHook()
 {
-    if (!hookActivated || !hook) return;
-    hook->deactivate(hook);
-    // hookActivated = false;  // don't set to false to prevent window from reactivating and reopening after escape
+	if (!hookActivated || !hook)
+		return;
+	hook->deactivate(hook);
+	// hookActivated = false;  // don't set to false to prevent window from reactivating and reopening after escape
 }
 
 // can pick a better name maybe...calling this wakes up renderer thread
@@ -2838,19 +2968,22 @@ void CGL::Render()
 	shouldRender = true;
 	lock.unlock();
 
-	renderCondition.notify_one();  // wakeup the blocking render thread
+	renderCondition.notify_one(); // wakeup the blocking render thread
 }
 
 // sleep render thread until notified by chuck
-void CGL::WaitOnUpdateDone() {
+void CGL::WaitOnUpdateDone()
+{
 	std::unique_lock<std::mutex> lock(GameLoopLock);
-	renderCondition.wait(lock, []() { return shouldRender; });
-	shouldRender = false; 
+	renderCondition.wait(lock, []()
+						 { return shouldRender; });
+	shouldRender = false;
 	// lock auto releases in destructor
 }
 
 // swap the command queue double buffer
-void CGL::SwapCommandQueues() { 
+void CGL::SwapCommandQueues()
+{
 	// grab lock
 	std::lock_guard<std::mutex> lock(m_CQLock);
 	// swap
@@ -2859,33 +2992,35 @@ void CGL::SwapCommandQueues() {
 }
 
 // perform all queued commands to sync the renderer scenegraph with the CGL scenegraph
-void CGL::FlushCommandQueue(Scene& scene, bool swap) {  // TODO: shouldn't command be associated with scenes?
+void CGL::FlushCommandQueue(Scene &scene, bool swap)
+{ // TODO: shouldn't command be associated with scenes?
 	// swap the command queues (so we can read from what was just being written to)
 	if (swap)
-		SwapCommandQueues();  // Note: this already locks the command queue
+		SwapCommandQueues(); // Note: this already locks the command queue
 
 	// we no longer need to hold a lock here because all writes are done to the other queue
 
 	// get the new read queue
-	std::vector<SceneGraphCommand*>& readQueue = GetReadCommandQueue();\
-	// std::cout << "flushing " + std::to_string(readQueue.size()) + " commands\n";
+	std::vector<SceneGraphCommand *> &readQueue = GetReadCommandQueue(); // std::cout << "flushing " + std::to_string(readQueue.size()) + " commands\n";
 
 	// execute all commands in the read queue
-	for (SceneGraphCommand* cmd : readQueue) {
+	for (SceneGraphCommand *cmd : readQueue)
+	{
 		cmd->execute(&scene);
-		delete cmd;  // release memory TODO make this a unique_ptr or something instead
+		delete cmd; // release memory TODO make this a unique_ptr or something instead
 	}
 
 	readQueue.clear();
 }
 
 // adds command to the read queue
-void CGL::PushCommand(SceneGraphCommand * cmd) {
+void CGL::PushCommand(SceneGraphCommand *cmd)
+{
 	// lock the command queue
 	std::lock_guard<std::mutex> lock(m_CQLock);
 
 	// get the write queue
-	std::vector<SceneGraphCommand*>& writeQueue = GetWriteCommandQueue();
+	std::vector<SceneGraphCommand *> &writeQueue = GetWriteCommandQueue();
 
 	// add the command to the write queue
 	writeQueue.push_back(cmd);
@@ -2911,17 +3046,18 @@ void CGL::MarkShredWaited(Chuck_VM_Shred *shred)
 	m_RegisteredShreds[shred] = true;
 }
 
-// returns false if shred has called .nextFrame() in previous frame 
+// returns false if shred has called .nextFrame() in previous frame
 // without chucking to now e.g. .nextFrame() => now;
 bool CGL::HasShredWaited(Chuck_VM_Shred *shred)
 {
-	if (!IsShredRegistered(shred)) return true;  // never called before
+	if (!IsShredRegistered(shred))
+		return true; // never called before
 	return m_RegisteredShreds[shred];
 }
 
 size_t CGL::GetNumRegisteredShreds()
 {
-    return m_RegisteredShreds.size();
+	return m_RegisteredShreds.size();
 }
 
 size_t CGL::GetNumShredsWaiting()
@@ -2929,49 +3065,54 @@ size_t CGL::GetNumShredsWaiting()
 	return m_WaitingShreds.size();
 }
 
-void CGL::ClearShredWaiting() {
+void CGL::ClearShredWaiting()
+{
 	m_WaitingShreds.clear();
 }
 
-void CGL::RegisterShredWaiting(Chuck_VM_Shred* shred)
+void CGL::RegisterShredWaiting(Chuck_VM_Shred *shred)
 {
 	// m_WaitingShreds.push_back(shred);
 	m_WaitingShreds.insert(shred);
 }
-void CGL::UnregisterShredWaiting(Chuck_VM_Shred* shred)
+void CGL::UnregisterShredWaiting(Chuck_VM_Shred *shred)
 {
 	m_WaitingShreds.erase(shred);
 }
 
-
-Chuck_DL_Api::Object CGL::GetShredUpdateEvent(Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM) { 
+Chuck_DL_Api::Object CGL::GetShredUpdateEvent(Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM)
+{
 	// log size
 	// std::cerr << "shred event map size: " + std::to_string(m_ShredEventMap.size()) << std::endl;
 	// lookup
-	if (s_UpdateEvent == nullptr) {
+	if (s_UpdateEvent == nullptr)
+	{
 		Chuck_DL_Api::Type type = API->type->lookup(VM, "NextFrameEvent");
 		Chuck_DL_Api::Object obj = API->object->create_without_shred(VM, type, true);
 
 		// for now constructor will add chuck event to the eventQueue
 		// as long as there is only one, and it's created in first call to nextFrame BEFORE renderer wakes up then this is threadsafe
 		// TODO to support multiple windows, chugl event queue read/write will need to be lock protected
-		cgl_update_ctor( (Chuck_Object*)obj, NULL, VM, shred, API );
-		
+		cgl_update_ctor((Chuck_Object *)obj, NULL, VM, shred, API);
+
 		s_UpdateEvent = obj;
 	}
 	return s_UpdateEvent;
 }
 
 Chuck_DL_Api::Object CGL::GetMainCamera(
-	Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM
-) {
-	if (CGL::mainCameraInitialized) {
+	Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM)
+{
+	if (CGL::mainCameraInitialized)
+	{
 		return CGL::DL_mainCamera;
-	} else {
+	}
+	else
+	{
 		Chuck_DL_Api::Type type = API->type->lookup(VM, "GCamera");
 		// note: for creation shred is just passed in for the VM reference
 		Chuck_DL_Api::Object obj = API->object->create_with_shred(shred, type, true);
-		cgl_cam_ctor( (Chuck_Object*)obj, NULL, VM, shred, API );
+		cgl_cam_ctor((Chuck_Object *)obj, NULL, VM, shred, API);
 		CGL::DL_mainCamera = obj;
 		return obj;
 	}
@@ -2979,13 +3120,16 @@ Chuck_DL_Api::Object CGL::GetMainCamera(
 
 Chuck_DL_Api::Object CGL::GetMainScene(Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM)
 {
-	if (CGL::mainSceneInitialized) {
+	if (CGL::mainSceneInitialized)
+	{
 		return CGL::DL_mainScene;
-	} else {
+	}
+	else
+	{
 		Chuck_DL_Api::Type type = API->type->lookup(VM, "GScene");
 		// note: for creation shred is just passed in for the VM reference
 		Chuck_DL_Api::Object obj = API->object->create_with_shred(shred, type, true);
-		cgl_scene_ctor( (Chuck_Object*)obj, NULL, VM, shred, API );
+		cgl_scene_ctor((Chuck_Object *)obj, NULL, VM, shred, API);
 		CGL::DL_mainScene = obj;
 		return obj;
 	}
@@ -2996,44 +3140,48 @@ void CGL::UpdateSceneGraph(Scene &scene, CK_DL_API API, Chuck_VM *VM, Chuck_VM_S
 {
 	assert(CGL::our_update_vt_offset >= 0);
 
-
 	t_CKTIME chuckTimeNow = API->vm->now(VM);
 	t_CKTIME chuckTimeDiff = chuckTimeNow - CGL::chuglLastUpdateTime;
 	t_CKFLOAT ckdt = chuckTimeDiff / API->vm->srate(VM);
 	CGL::chuglLastUpdateTime = chuckTimeNow;
 
-    Chuck_DL_Arg theArg;
-    theArg.kind = kindof_FLOAT;
-	if (CGL::useChuckTime) {
+	Chuck_DL_Arg theArg;
+	theArg.kind = kindof_FLOAT;
+	if (CGL::useChuckTime)
+	{
 		theArg.value.v_float = ckdt;
-	} else {
-		theArg.value.v_float = std::min(1.0, CGL::GetTimeInfo().second);  // this dt should be the same the one gotten by chuck CGL.dt()
+	}
+	else
+	{
+		theArg.value.v_float = std::min(1.0, CGL::GetTimeInfo().second); // this dt should be the same the one gotten by chuck CGL.dt()
 	}
 
 	// theArg.value.v_float = ckdt;
 
-	std::queue<SceneGraphObject*> queue;
+	std::queue<SceneGraphObject *> queue;
 	queue.push(&scene);
 
-	// BFS through graph 
-	// TODO: scene and 
-	while (!queue.empty()) {
-		SceneGraphObject* obj = queue.front();
+	// BFS through graph
+	// TODO: scene and
+	while (!queue.empty())
+	{
+		SceneGraphObject *obj = queue.front();
 		queue.pop();
 
 		// call update
-		Chuck_Object * ggen = obj->m_ChuckObject;
-		if (ggen != nullptr && !obj->IsScene() && !obj->IsCamera()) {
-			API->vm->invoke_mfun_immediate_mode(ggen, CGL::our_update_vt_offset, VM, shred, &theArg, 1 );
+		Chuck_Object *ggen = obj->m_ChuckObject;
+		if (ggen != nullptr && !obj->IsScene() && !obj->IsCamera())
+		{
+			API->vm->invoke_mfun_immediate_mode(ggen, CGL::our_update_vt_offset, VM, shred, &theArg, 1);
 		}
 
 		// add children to stack
-		for (SceneGraphObject* child : obj->GetChildren()) {
+		for (SceneGraphObject *child : obj->GetChildren())
+		{
 			queue.push(child);
 		}
 	}
 }
-
 
 std::pair<double, double> CGL::GetMousePos()
 {
