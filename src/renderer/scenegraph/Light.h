@@ -62,9 +62,9 @@ public:
 		m_Intensity(1.0f), 
 		m_Linear(0.09f), 
 		m_Quadratic(0.032f),
-		m_Ambient(0.05f),
-		m_Diffuse(0.8f),
-		m_Specular(1.0f)
+		m_Ambient(0.3f),   
+		m_Diffuse(1.0f), 
+		m_Specular(.1f)
 	{}
 	
 	virtual LightType GetLightType() override { return LightType::Point; }
@@ -86,10 +86,10 @@ class DirLight : public Light
 {
 public:
 	DirLight() : 
-		m_Intensity(1.0f),
-		m_Ambient(0.05f),
-		m_Diffuse(0.8f),
-		m_Specular(1.0f)
+		m_Intensity(1.0f), // all ranges [0, 1]
+		m_Ambient(0.3f),   
+		m_Diffuse(1.0f), 
+		m_Specular(.1f)
 	{}
 
 	virtual LightType GetLightType() override { return LightType::Directional; }

@@ -47,6 +47,6 @@ for (int i; i < ggens.size(); i++) {
 while (true) {
     // GG.dt() => cube.rotX;
     Math.sin(now/second) => cube.posX;
-    GG.dt() => GG.scene().light().rotX;
+    // GG.dt() => GG.scene().light().rotX;
     GG.nextFrame() => now;
 }
