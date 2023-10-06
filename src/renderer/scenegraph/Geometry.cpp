@@ -265,6 +265,7 @@ void CircleGeometry::BuildGeometry()
 		// vertex
 		v.Position.x = m_Params.radius * glm::cos( segment );
 		v.Position.y = m_Params.radius * glm::sin( segment );
+		v.Position.z = 0;
 
 		// normal
 		v.Normal = glm::vec3( 0, 0, 1.0 );
@@ -338,6 +339,7 @@ void TorusGeometry::BuildGeometry()
 	m_Dirty = false;
 
 	glm::vec3 center;
+	center.z = 0;
 	Vertex vert;
 
 	auto tubularSegments = m_Params.tubularSegments;

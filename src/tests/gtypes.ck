@@ -28,11 +28,17 @@ GTorus torus --> GG.scene();
     lines,
     points,
     torus
-] @=> GGen ggens[];
+] @=> GMesh ggens[];
 
 for (int i; i < ggens.size(); i++) {
     -5 => ggens[i].posZ;
     i*2 => ggens[i].posX;
+
+    // todo add random color helper fn
+    Math.random2f(0.0, 1.0) => float r;
+    Math.random2f(0.0, 1.0) => float g;
+    Math.random2f(0.0, 1.0) => float b;
+    @(r, g, b) => ggens[i].mat().color;
 }
 
 

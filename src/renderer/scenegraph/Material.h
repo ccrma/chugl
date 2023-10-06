@@ -167,6 +167,7 @@ public:
 		// set default material uniforms
 		SetUniform(MaterialUniform::Create(POINT_SIZE_UNAME, 25.0f));
 		SetUniform(MaterialUniform::Create(LINE_WIDTH_UNAME, 1.0f));
+		SetUniform(MaterialUniform::Create(COLOR_UNAME, 1.0f, 0.0f, 1.0f, 1.0f));
 
 		std::cerr << "Material constructor called, ID = " << this->GetID() << std::endl;
 	};
@@ -205,13 +206,20 @@ public:
 	// float GetLineWidth() { return m_Options[MaterialOptionParam::LineWidth].f; }
 	float GetPointSize() { return m_Uniforms[POINT_SIZE_UNAME].f; } 
 	float GetLineWidth() { return m_Uniforms[LINE_WIDTH_UNAME].f; }
+	glm::vec4 GetColor() { 
+		auto& matUniform = m_Uniforms[COLOR_UNAME];
+		return glm::vec4(matUniform.f4[0], matUniform.f4[1], matUniform.f4[2], matUniform.f4[3]);
+	}
 
 	// option setters
 	void SetPolygonMode(MaterialPolygonMode mode) { m_Options[MaterialOptionParam::PolygonMode].polygonMode = mode; }
 	// virtual void SetLineWidth(float width) { m_Options[MaterialOptionParam::LineWidth].f = width; }
 	virtual void SetPointSize(float size) { m_Uniforms[POINT_SIZE_UNAME].f = size; }
 	void SetLineWidth(float width) { m_Uniforms[LINE_WIDTH_UNAME].f = width; }
-
+	void SetColor(float r, float g, float b, float a) { 
+		auto& uniform = m_Uniforms[COLOR_UNAME];
+		uniform.f4[0] = r; uniform.f4[1] = g; uniform.f4[2] = b; uniform.f4[3] = a;
+	}
 
 	inline void SetUniform(MaterialUniform uniform) {
 		m_Uniforms[uniform.name] = uniform;
@@ -241,9 +249,10 @@ public:  // static consts
 	static const MaterialPolygonMode POLYGON_LINE;
 	static const MaterialPolygonMode POLYGON_POINT;
 
-	// uniform names
+	// uniform names (TODO ShaderCode should be reading from here)
 	static const std::string POINT_SIZE_UNAME;
 	static const std::string LINE_WIDTH_UNAME;
+	static const std::string COLOR_UNAME;
 	// static const std::string AFFECTED_BY_FOG_UNAME;  // TODO
 
 public:  // static material type --> chuck type name map
@@ -283,13 +292,11 @@ public:
 	PhongMaterial(
 		size_t diffuseMapID = 0,
 		size_t specularMapID = 0,
-		glm::vec3 diffuseColor = glm::vec3(1.0f),
-		glm::vec3 specularColor = glm::vec3(1.0f),
+		glm::vec4 specularColor = glm::vec4(1.0f),
 		float logShininess = 5  // ==> 32 shininess
 	) {
 		SetUniform(MaterialUniform::Create(PhongMaterial::DIFFUSE_MAP_UNAME, diffuseMapID));
 		SetUniform(MaterialUniform::Create(PhongMaterial::SPECULAR_MAP_UNAME, specularMapID));
-		SetUniform(MaterialUniform::Create(PhongMaterial::DIFFUSE_COLOR_UNAME, diffuseColor));
 		SetUniform(MaterialUniform::Create(PhongMaterial::SPECULAR_COLOR_UNAME, specularColor));
 		SetUniform(MaterialUniform::Create(PhongMaterial::SHININESS_UNAME, logShininess));
 	}
@@ -304,10 +311,6 @@ public:
 	// uniform getters
 	size_t GetDiffuseMapID() { return m_Uniforms[PhongMaterial::DIFFUSE_MAP_UNAME].texID; }
 	size_t GetSpecularMapID() { return m_Uniforms[PhongMaterial::SPECULAR_MAP_UNAME].texID; }
-	glm::vec3 GetDiffuseColor() { 
-		auto& matUniform = m_Uniforms[PhongMaterial::DIFFUSE_COLOR_UNAME];
-		return glm::vec3(matUniform.f3[0], matUniform.f3[1], matUniform.f3[2]); 
-	}
 	glm::vec3 GetSpecularColor() { 
 		auto& matUniform = m_Uniforms[PhongMaterial::SPECULAR_COLOR_UNAME];
 		return glm::vec3(matUniform.f3[0], matUniform.f3[1], matUniform.f3[2]); 
@@ -317,10 +320,6 @@ public:
 	// uniform setters
 	void SetDiffuseMap(CGL_Texture* texture) { m_Uniforms[PhongMaterial::DIFFUSE_MAP_UNAME].texID = texture->GetID(); }
 	void SetSpecularMap(CGL_Texture* texture) { m_Uniforms[PhongMaterial::SPECULAR_COLOR_UNAME].texID = texture->GetID(); }
-	void SetDiffuseColor(float r, float g, float b) { 
-		auto& uniform = m_Uniforms[PhongMaterial::DIFFUSE_COLOR_UNAME];
-		uniform.f3[0] = r; uniform.f3[1] = g; uniform.f3[2] = b;
-	}
 	void SetSpecularColor(float r, float g, float b) {
 		auto& uniform = m_Uniforms[PhongMaterial::SPECULAR_COLOR_UNAME];
 		uniform.f3[0] = r; uniform.f3[1] = g; uniform.f3[2] = b;
@@ -332,7 +331,6 @@ public:
 	// static const
 	static const std::string DIFFUSE_MAP_UNAME;
 	static const std::string SPECULAR_MAP_UNAME;
-	static const std::string DIFFUSE_COLOR_UNAME;
 	static const std::string SPECULAR_COLOR_UNAME;
 	static const std::string SHININESS_UNAME;
 };
@@ -376,10 +374,6 @@ public:
 
 		// set point size attenuation option
 		SetUniform(MaterialUniform::Create(POINT_SIZE_ATTENUATION_UNAME, true));
-
-		// point color
-		SetUniform(MaterialUniform::Create(POINT_COLOR_UNAME, 1.0f, 1.0f, 1.0f));
-		
 		// point sprite texture
 		SetUniform(MaterialUniform::Create(POINT_SPRITE_TEXTURE_UNAME, (size_t)0));
 	}
@@ -394,23 +388,14 @@ public:
 	// uniform setters
 	void SetSizeAttenuation(bool b) { m_Uniforms[POINT_SIZE_ATTENUATION_UNAME].b = b; }
 	void SetSprite(CGL_Texture* texture) { m_Uniforms[POINT_SPRITE_TEXTURE_UNAME].texID = texture->GetID(); }
-	void SetColor(float r, float g, float b) { 
-		auto& uniform = m_Uniforms[POINT_COLOR_UNAME];
-		uniform.f3[0] = r; uniform.f3[1] = g; uniform.f3[2] = b;
-	}
 
 	// uniform getters
 	bool GetSizeAttenuation() { return m_Uniforms[POINT_SIZE_ATTENUATION_UNAME].b; }
 	size_t GetSpriteID() { return m_Uniforms[POINT_SPRITE_TEXTURE_UNAME].texID; }
-	glm::vec3 GetColor() { 
-		auto& matUniform = m_Uniforms[POINT_COLOR_UNAME];
-		return glm::vec3(matUniform.f3[0], matUniform.f3[1], matUniform.f3[2]); 
-	}
 
 
 public: // static const
 	static const std::string POINT_SIZE_ATTENUATION_UNAME;
-	static const std::string POINT_COLOR_UNAME;
 	static const std::string POINT_SPRITE_TEXTURE_UNAME;
 };
 
@@ -438,9 +423,6 @@ public:
 	LineMaterial() {
 		SetOption(MaterialOption::Create(MaterialOptionParam::PolygonMode, MaterialPolygonMode::Line));
 		SetOption(MaterialOption::Create(MaterialOptionParam::PrimitiveMode, MaterialPrimitiveMode::LineStrip));
-
-		// init line color to magenta (shows up on white and black backgrounds)
-		SetUniform(MaterialUniform::Create(LINE_COLOR_UNAME, 1.0f, 0.0f, 1.0f));
 	}
 
 	virtual MaterialType GetMaterialType() override { return MaterialType::Line; }
@@ -448,14 +430,6 @@ public:
 		auto* mat = new LineMaterial(*this);
 		mat->SetID(GetID());
 		return mat;
-	}
-	void SetColor(float r, float g, float b) { 
-		auto& uniform = m_Uniforms[LINE_COLOR_UNAME];
-		uniform.f3[0] = r; uniform.f3[1] = g; uniform.f3[2] = b;
-	}
-	glm::vec3 GetColor() { 
-		auto& matUniform = m_Uniforms[LINE_COLOR_UNAME];
-		return glm::vec3(matUniform.f3[0], matUniform.f3[1], matUniform.f3[2]); 
 	}
 
 	// primitive mode setters
@@ -465,7 +439,6 @@ public:
 	void SetLines() { SetLineMode(MaterialPrimitiveMode::Lines); }
 
 public:
-	static const std::string LINE_COLOR_UNAME;
 	static const unsigned int LINE_SEGMENTS_MODE;
 	static const unsigned int LINE_STRIP_MODE;
 	static const unsigned int LINE_LOOP_MODE;

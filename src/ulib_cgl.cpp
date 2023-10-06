@@ -252,6 +252,7 @@ CK_DLL_MFUN(cgl_mat_clone);
 // base material options
 CK_DLL_MFUN(cgl_mat_set_polygon_mode);
 CK_DLL_MFUN(cgl_mat_get_polygon_mode);
+CK_DLL_MFUN(cgl_mat_set_color);
 CK_DLL_MFUN(cgl_mat_set_point_size);
 // CK_DLL_MFUN(cgl_mat_set_line_width);
 // CK_DLL_MFUN(cgl_mat_set_cull_mode);  // TODO
@@ -277,7 +278,6 @@ CK_DLL_CTOR(cgl_mat_phong_ctor);
 // uniform setters
 CK_DLL_MFUN(cgl_mat_phong_set_diffuse_map);
 CK_DLL_MFUN(cgl_mat_phong_set_specular_map);
-CK_DLL_MFUN(cgl_mat_phong_set_diffuse_color);
 CK_DLL_MFUN(cgl_mat_phong_set_specular_color);
 CK_DLL_MFUN(cgl_mat_phong_set_log_shininess);
 // uniform getters TODO
@@ -293,7 +293,6 @@ CK_DLL_MFUN(cgl_mat_points_set_size_attenuation);
 CK_DLL_MFUN(cgl_mat_points_get_size_attenuation);
 
 CK_DLL_MFUN(cgl_mat_points_set_sprite);
-CK_DLL_MFUN(cgl_mat_points_set_color);
 
 // mango mat (for debugging UVs)
 CK_DLL_CTOR(cgl_mat_mango_ctor);
@@ -303,7 +302,6 @@ CK_DLL_CTOR(cgl_mat_mango_ctor);
 // "using the build-in OpenGL functionality for this task is very limited, if working at all."
 // for a better soln using texture-buffer line meshes, see: https://github.com/mhalber/Lines#texture-buffer-lines
 CK_DLL_CTOR(cgl_mat_line_ctor);
-CK_DLL_MFUN(cgl_mat_line_set_color);
 CK_DLL_MFUN(cgl_mat_line_set_width); // many platforms only support fixed width 1.0
 CK_DLL_MFUN(cgl_mat_line_set_mode);	 // many platforms only support fixed width 1.0
 
@@ -1308,6 +1306,10 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 
 	QUERY->add_mfun(QUERY, cgl_mat_set_point_size, "void", "pointSize");
 	QUERY->add_arg(QUERY, "float", "size");
+
+	QUERY->add_mfun(QUERY, cgl_mat_set_color, "vec3", "color");
+	QUERY->add_arg(QUERY, "vec3", "col");
+
 	// QUERY->add_mfun(QUERY, cgl_mat_set_line_width, "void", "lineWidth");
 	// QUERY->add_arg(QUERY, "float", "width");
 
@@ -1387,9 +1389,6 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 	QUERY->add_mfun(QUERY, cgl_mat_phong_set_specular_map, "void", "specularMap");
 	QUERY->add_arg(QUERY, "Texture", "tex");
 
-	QUERY->add_mfun(QUERY, cgl_mat_phong_set_diffuse_color, "vec3", "diffuseColor");
-	QUERY->add_arg(QUERY, "vec3", "color");
-
 	QUERY->add_mfun(QUERY, cgl_mat_phong_set_specular_color, "vec3", "specularColor");
 	QUERY->add_arg(QUERY, "vec3", "color");
 
@@ -1423,9 +1422,6 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 	QUERY->add_mfun(QUERY, cgl_mat_points_set_sprite, "Texture", "sprite");
 	QUERY->add_arg(QUERY, "Texture", "sprite");
 
-	QUERY->add_mfun(QUERY, cgl_mat_points_set_color, "vec3", "color");
-	QUERY->add_arg(QUERY, "vec3", "color");
-
 	QUERY->end_class(QUERY);
 
 	// mango material
@@ -1443,9 +1439,6 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 	QUERY->add_svar(QUERY, "int", "LINE_SEGMENTS", TRUE, (void *)&LineMaterial::LINE_SEGMENTS_MODE);
 	QUERY->add_svar(QUERY, "int", "LINE_STRIP", TRUE, (void *)&LineMaterial::LINE_STRIP_MODE);
 	QUERY->add_svar(QUERY, "int", "LINE_LOOP", TRUE, (void *)&LineMaterial::LINE_LOOP_MODE);
-
-	QUERY->add_mfun(QUERY, cgl_mat_line_set_color, "vec3", "color");
-	QUERY->add_arg(QUERY, "vec3", "color");
 
 	QUERY->add_mfun(QUERY, cgl_mat_line_set_width, "float", "width");
 	QUERY->add_arg(QUERY, "float", "width");
@@ -1510,15 +1503,17 @@ CK_DLL_MFUN(cgl_mat_set_point_size)
 	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, *mat->GetUniform(Material::POINT_SIZE_UNAME)));
 }
 
-// line width setter
-// CK_DLL_MFUN(cgl_mat_set_line_width)
-// {
-// 	Material* mat = (Material*) OBJ_MEMBER_INT (SELF, cglmat_data_offset);
-// 	auto width = GET_NEXT_FLOAT(ARGS);
-// 	mat->SetLineWidth(width);
+CK_DLL_MFUN(cgl_mat_set_color)
+{
+	Material *mat = (Material*)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
+	mat->SetColor(color.x, color.y, color.z, 1.0f);
 
-// 	CGL::PushCommand(new UpdateMaterialOptionCommand(mat, *mat->GetOption(MaterialOptionParam::LineWidth)));
-// }
+	RETURN->v_vec3 = color;
+
+	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, *mat->GetUniform(Material::COLOR_UNAME)));
+}
+
 
 // TODO: can refactor these uniform setters to call a shared function
 CK_DLL_MFUN(cgl_mat_set_uniform_float)
@@ -1726,18 +1721,6 @@ CK_DLL_MFUN(cgl_mat_phong_set_specular_map)
 		mat, *mat->GetUniform(PhongMaterial::SPECULAR_MAP_UNAME)));
 }
 
-CK_DLL_MFUN(cgl_mat_phong_set_diffuse_color)
-{
-	PhongMaterial *mat = (PhongMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
-	t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
-	mat->SetDiffuseColor(color.x, color.y, color.z);
-
-	RETURN->v_vec3 = color;
-
-	CGL::PushCommand(new UpdateMaterialUniformCommand(
-		mat, *mat->GetUniform(PhongMaterial::DIFFUSE_COLOR_UNAME)));
-}
-
 CK_DLL_MFUN(cgl_mat_phong_set_specular_color)
 {
 	PhongMaterial *mat = (PhongMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
@@ -1825,16 +1808,6 @@ CK_DLL_MFUN(cgl_mat_points_set_sprite)
 }
 
 // set point color
-CK_DLL_MFUN(cgl_mat_points_set_color)
-{
-	PointsMaterial *mat = (PointsMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
-	t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
-	mat->SetColor(color.x, color.y, color.z);
-
-	RETURN->v_vec3 = color;
-
-	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, *mat->GetUniform(PointsMaterial::POINT_COLOR_UNAME)));
-}
 
 // mango mat fns ---------------------------------
 CK_DLL_CTOR(cgl_mat_mango_ctor)
@@ -1858,16 +1831,6 @@ CK_DLL_CTOR(cgl_mat_line_ctor)
 	lineMat->m_ChuckObject = SELF;
 
 	CGL::PushCommand(new CreateMaterialCommand(lineMat));
-}
-
-CK_DLL_MFUN(cgl_mat_line_set_color)
-{
-	LineMaterial *mat = (LineMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
-	t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
-	mat->SetColor(color.x, color.y, color.z);
-
-	RETURN->v_vec3 = color;
-	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, *mat->GetUniform(LineMaterial::LINE_COLOR_UNAME)));
 }
 
 CK_DLL_MFUN(cgl_mat_line_set_width)

@@ -25,7 +25,7 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
         // attributes (must match vertex attrib array)
         layout (location = 0) in vec3 a_Pos;
         layout (location = 1) in vec3 a_Normal;
-        layout (location = 2) in vec3 a_Color;
+        layout (location = 2) in vec4 a_Color;
         layout (location = 3) in vec2 a_TexCoord;
     )"},
     {"TRANSFORM_UNIFORMS",
@@ -40,6 +40,8 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
         // camera
         uniform vec3 u_ViewPos;
 
+        // color
+        uniform vec4 u_Color;
     )"},
     {"LIGHTING_UNIFORMS",
      R"( 
@@ -118,6 +120,16 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
     R"(
             v_EyePos = u_View * u_Model * vec4(a_Pos, 1.0);  // eye space position
     )"},
+    {"BASIC_VERT_VARYINGS",
+     R"(
+        // varyings (interpolated and passed to frag shader)
+        out vec3 v_Pos;
+        out vec4 v_EyePos;
+        out vec3 v_Normal;		 // world space normal
+        out vec3 v_LocalNormal;  // local space normal
+        out vec4 v_Color;
+        out vec2 v_TexCoord;
+    )"},
     {"BASIC_FRAG_VARYINGS",
      R"(
         // varyings (interpolated and passed to frag shader)
@@ -125,21 +137,14 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
         in vec4 v_EyePos;
         in vec3 v_Normal;		 // world space normal
         in vec3 v_LocalNormal;  // local space normal
-        in vec3 v_Color;
+        in vec4 v_Color;
         in vec2 v_TexCoord;
     )"},
     {"BASIC_VERT",
      R"(
         #include TRANSFORM_UNIFORMS
         #include DEFAULT_ATTRIBUTES
-
-        // varyings (interpolated and passed to frag shader)
-        out vec3 v_Pos;
-        out vec4 v_EyePos;
-        out vec3 v_Normal;		 // world space normal
-        out vec3 v_LocalNormal;  // local space normal
-        out vec3 v_Color;
-        out vec2 v_TexCoord;
+        #include BASIC_VERT_VARYINGS
 
         void main()
         {
@@ -152,7 +157,7 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
             v_LocalNormal = a_Normal;  
             v_Normal = vec3(u_Normal * vec4(a_Normal, 0.0));
 
-            v_Color = a_Color;
+            v_Color = a_Color * u_Color;
         }
 
     )"},
@@ -180,8 +185,7 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
             sampler2D specularMap;
 
             // colors
-            vec3 diffuseColor;
-            vec3 specularColor;
+            vec4 specularColor;
 
             // specular highlights
             float shininess;  // range from (0, 2^n). must be > 0. logarithmic scale.
@@ -244,8 +248,8 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
             // material color properties (ignore alpha channel for now)
             vec4 diffuseTex = texture(u_Material.diffuseMap, v_TexCoord);
             vec4 specularTex = texture(u_Material.specularMap, v_TexCoord);
-            vec3 diffuse = diffuseTex.xyz * u_Material.diffuseColor;
-            vec3 specular = specularTex.xyz * u_Material.specularColor;
+            vec4 diffuse = diffuseTex * v_Color;
+            vec4 specular = specularTex * u_Material.specularColor;
 
             vec3 lighting = vec3(0.0);
 
@@ -253,7 +257,7 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
             for (int i = 0; i < u_NumPointLights; i++) {
                 PointLight light = u_PointLights[i];
                 lighting += CalcPointLight(
-                    light, norm, v_Pos, viewDir, u_Material.shininess, diffuse, specular
+                    light, norm, v_Pos, viewDir, u_Material.shininess, diffuse.xyz, specular.xyz
                 );
             }
 
@@ -261,13 +265,13 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
             for (int i = 0; i < u_NumDirLights; i++) {
                 DirLight light = u_DirLights[i];
                 lighting += CalcDirLight(
-                    light, norm, viewDir, u_Material.shininess, diffuse, specular
+                    light, norm, viewDir, u_Material.shininess, diffuse.xyz, specular.xyz
                 );
             }
 
             result = vec4(
                 lighting, 
-                max(diffuseTex.a, specularTex.a)         // TODO jank alpha blending for now
+                diffuse.a * specular.a
             );
     )"},
     {"POINTS_VERT",
@@ -282,18 +286,18 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
         uniform bool u_PointSizeAttenuation;
 
         // varyings (interpolated and passed to frag shader)
-        out vec3 v_Pos;
-        out vec4 v_EyePos;
-        out vec3 v_Color;
-        // out vec3 v_Normal;		 // world space normal
-        // out vec3 v_LocalNormal;  // local space normal
-        out vec2 v_TexCoord;
+        #include BASIC_VERT_VARYINGS
+
+        // out vec3 v_Pos;
+        // out vec4 v_EyePos;
+        // out vec4 v_Color;
+        // out vec2 v_TexCoord;
 
         void main()
         {
             v_Pos = vec3(u_Model * vec4(a_Pos, 1.0));  // world space position
             #include EYE_POS_BODY
-            v_Color = a_Color;
+            v_Color = a_Color * u_Color;
             v_TexCoord = a_TexCoord;
 
             gl_Position = u_Projection * u_View * vec4(v_Pos, 1.0);
@@ -302,22 +306,21 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
     )"},
     {"POINTS_FRAG",
      R"(
-        in vec3 v_Pos;
-        in vec4 v_EyePos;
-        in vec3 v_Color;
-        in vec2 v_TexCoord;
+        // in vec3 v_Pos;
+        // in vec4 v_EyePos;
+        // in vec4 v_Color;
+        // in vec2 v_TexCoord;
+        #include BASIC_FRAG_VARYINGS
 
         // output
 
         // uniforms
         uniform float u_PointSize;
-        uniform vec3 u_PointColor;
         uniform sampler2D u_PointTexture;
 
         void main()
         {
-            vec4 texColor = texture(u_PointTexture, gl_PointCoord);
-            result = vec4( u_PointColor * v_Color * texColor.rgb, texColor.a );
+            result = v_Color * texture(u_PointTexture, gl_PointCoord);
     )"},
     {"LINES_VERT",
      R"(
@@ -327,34 +330,36 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
         uniform float u_LineWidth;
 
         // varyings (interpolated and passed to frag shader)
-        out vec3 v_Pos;
-        out vec4 v_EyePos;
-        out vec3 v_Color;
+        #include BASIC_VERT_VARYINGS
+        // out vec3 v_Pos;
+        // out vec4 v_EyePos;
+        // out vec3 v_Color;
 
         void main()
         {
             v_Pos = vec3(u_Model * vec4(a_Pos, 1.0));  // world space position
             #include EYE_POS_BODY
-            v_Color = a_Color;
+            v_Color = a_Color * u_Color;
 
             gl_Position = u_Projection * u_View * vec4(v_Pos, 1.0);
         }
     )"},
     {"LINES_FRAG",
      R"(
-        in vec3 v_Pos;
-        in vec4 v_EyePos;
-        in vec3 v_Color;
-
+        // in vec3 v_Pos;
+        // in vec4 v_EyePos;
+        // in vec3 v_Color;
+        #include BASIC_FRAG_VARYINGS
         // output
 
         // uniforms
         uniform float u_LineWidth;
-        uniform vec3 u_LineColor;
+        // uniform vec3 u_LineColor;
 
         void main()
         {
-            result = vec4( u_LineColor * v_Color, 1.0 );
+            // result = vec4( u_LineColor * v_Color, 1.0 );
+            result = v_Color;
     )"},
     {
     "MANGO_FRAG",
