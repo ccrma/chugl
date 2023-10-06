@@ -269,8 +269,6 @@ public:
         SceneGraphObject* parent = dynamic_cast<SceneGraphObject*>(scene->GetNode(m_ParentID));
         SceneGraphObject* child = dynamic_cast<SceneGraphObject*>(scene->GetNode(m_ChildID));
 
-        if (!parent || !child) __debugbreak();
-
         assert(parent && child);
 
         CreateRelation(parent, child, rel);
