@@ -52,7 +52,6 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
             
             // range and dropoffs
             float intensity;
-            float constant;
             float linear;
             float quadratic;  
 

@@ -60,7 +60,6 @@ class PointLight : public Light
 public:
 	PointLight() : 
 		m_Intensity(1.0f), 
-		m_Constant(1.0f), 
 		m_Linear(0.09f), 
 		m_Quadratic(0.032f),
 		m_Ambient(0.05f),
@@ -74,7 +73,6 @@ public:
 	virtual Light* Clone() override { return new PointLight(*this); }
 
 	float m_Intensity;
-	float m_Constant;
 	float m_Linear;
 	float m_Quadratic;
 

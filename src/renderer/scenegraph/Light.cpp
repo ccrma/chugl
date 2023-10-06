@@ -24,7 +24,6 @@ void PointLight::SetShaderUniforms(Shader *shader, int index)
 
     // set range and dropoffs
     shader->setFloat(lightName + "intensity", m_Intensity);
-    shader->setFloat(lightName + "constant", m_Constant);
     shader->setFloat(lightName + "linear", m_Linear);
     shader->setFloat(lightName + "quadratic", m_Quadratic);
 

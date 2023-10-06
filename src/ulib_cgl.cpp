@@ -329,6 +329,17 @@ CK_DLL_MFUN(cgl_mesh_dup_all);
 CK_DLL_CTOR(cgl_gcube_ctor);
 // CK_DLL_DTOR(cgl_gcube_dtor);
 
+CK_DLL_CTOR(cgl_gsphere_ctor);
+CK_DLL_CTOR(cgl_gcircle_ctor);
+CK_DLL_CTOR(cgl_gplane_ctor);
+CK_DLL_CTOR(cgl_gtorus_ctor);
+
+CK_DLL_CTOR(cgl_glines_ctor);
+
+CK_DLL_CTOR(cgl_gpoints_ctor);
+
+
+
 //-----------------------------------------------------------------------------
 // Object -> Group
 //-----------------------------------------------------------------------------
@@ -2559,6 +2570,38 @@ t_CKBOOL init_chugl_mesh(Chuck_DL_Query *QUERY)
 	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
 	QUERY->end_class(QUERY);
 
+	QUERY->begin_class(QUERY, "GSphere", "GMesh");
+	QUERY->add_ctor(QUERY, cgl_gsphere_ctor);
+	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
+	QUERY->end_class(QUERY);
+
+	QUERY->begin_class(QUERY, "GCircle", "GMesh");
+	QUERY->add_ctor(QUERY, cgl_gcircle_ctor);
+	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
+	QUERY->end_class(QUERY);
+
+	QUERY->begin_class(QUERY, "GPlane", "GMesh");
+	QUERY->add_ctor(QUERY, cgl_gplane_ctor);
+	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
+	QUERY->end_class(QUERY);
+
+	QUERY->begin_class(QUERY, "GTorus", "GMesh");
+	QUERY->add_ctor(QUERY, cgl_gtorus_ctor);
+	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
+	QUERY->end_class(QUERY);
+
+	QUERY->begin_class(QUERY, "GLines", "GMesh");
+	QUERY->add_ctor(QUERY, cgl_glines_ctor);
+	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
+	QUERY->end_class(QUERY);
+
+	QUERY->begin_class(QUERY, "GPoints", "GMesh");
+	QUERY->add_ctor(QUERY, cgl_gpoints_ctor);
+	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
+	QUERY->end_class(QUERY);
+
+
+
 	return true;
 }
 // CGL Scene ==============================================
@@ -2677,10 +2720,7 @@ CK_DLL_MFUN(cgl_mesh_dup_all)
 CK_DLL_CTOR(cgl_gcube_ctor)
 {
     Mesh *mesh = (Mesh *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-    // note: don't need to set m_ChuckObject here because already set in preconstructor of parent "GMesh"
 
-	// create new mat and geo 
-	// Material* mat = new NormalMaterial;
 	Material* mat = new PhongMaterial;
 	CGL::CreateChuckObjFromMat(API, VM, mat, SHRED, true);
 	Geometry* geo = new BoxGeometry;
@@ -2689,9 +2729,95 @@ CK_DLL_CTOR(cgl_gcube_ctor)
     cglMeshSet(mesh, geo, mat);
 }
 
+CK_DLL_CTOR(cgl_gsphere_ctor)
+{
+    Mesh *mesh = (Mesh *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 
-	// QUERY->add_mfun(QUERY, cgl_mesh_dup_geo, Geometry::CKName(GeometryType::Base) , "dupGeo");
-	// QUERY->add_mfun(QUERY, cgl_mesh_dup_all, "GMesh", "dup");
+	Material* mat = new PhongMaterial;
+	CGL::CreateChuckObjFromMat(API, VM, mat, SHRED, true);
+	Geometry* geo = new SphereGeometry;
+	CGL::CreateChuckObjFromGeo(API, VM, geo, SHRED, true);
+
+    cglMeshSet(mesh, geo, mat);
+}
+
+CK_DLL_CTOR(cgl_gcircle_ctor)
+{
+    Mesh *mesh = (Mesh *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+
+	Material* mat = new PhongMaterial;
+	CGL::CreateChuckObjFromMat(API, VM, mat, SHRED, true);
+	Geometry* geo = new CircleGeometry;
+	CGL::CreateChuckObjFromGeo(API, VM, geo, SHRED, true);
+
+    cglMeshSet(mesh, geo, mat);
+}
+
+CK_DLL_CTOR(cgl_gplane_ctor)
+{
+    Mesh *mesh = (Mesh *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+
+	Material* mat = new PhongMaterial;
+	CGL::CreateChuckObjFromMat(API, VM, mat, SHRED, true);
+	Geometry* geo = new PlaneGeometry;
+	CGL::CreateChuckObjFromGeo(API, VM, geo, SHRED, true);
+
+    cglMeshSet(mesh, geo, mat);
+}
+
+CK_DLL_CTOR(cgl_gtorus_ctor)
+{
+    Mesh *mesh = (Mesh *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+
+	Material* mat = new PhongMaterial;
+	CGL::CreateChuckObjFromMat(API, VM, mat, SHRED, true);
+	Geometry* geo = new TorusGeometry;
+	CGL::CreateChuckObjFromGeo(API, VM, geo, SHRED, true);
+
+    cglMeshSet(mesh, geo, mat);
+}
+
+CK_DLL_CTOR(cgl_glines_ctor)
+{
+    Mesh *mesh = (Mesh *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+
+	Material* mat = new LineMaterial;
+	CGL::CreateChuckObjFromMat(API, VM, mat, SHRED, true);
+	Geometry* geo = new CustomGeometry;
+	CGL::CreateChuckObjFromGeo(API, VM, geo, SHRED, true);
+
+	std::vector<double> firstLine = {0, 0, 0, 1, 1, 1};
+
+	// initialize with single line
+	CGL::PushCommand(
+		new UpdateGeometryAttributeCommand(
+			geo, "position", Geometry::POSITION_ATTRIB_IDX, 3, firstLine, false
+		)
+	);
+
+    cglMeshSet(mesh, geo, mat);
+}
+
+CK_DLL_CTOR(cgl_gpoints_ctor)
+{
+    Mesh *mesh = (Mesh *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+
+	Material* mat = new PointsMaterial;
+	CGL::CreateChuckObjFromMat(API, VM, mat, SHRED, true);
+	Geometry* geo = new CustomGeometry;
+	CGL::CreateChuckObjFromGeo(API, VM, geo, SHRED, true);
+
+	std::vector<double> firstPoint = {0, 0, 0};
+
+	// initialize with single line
+	CGL::PushCommand(
+		new UpdateGeometryAttributeCommand(
+			geo, "position", Geometry::POSITION_ATTRIB_IDX, 3, firstPoint, false
+		)
+	);
+
+    cglMeshSet(mesh, geo, mat);
+}
 
 //-----------------------------------------------------------------------------
 // init_chugl_group()
