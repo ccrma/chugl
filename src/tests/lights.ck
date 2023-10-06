@@ -61,6 +61,8 @@ lightbulb.position( @(2, 0, 0) );
 lightbulb.scale( @(0.1, 0.1, 0.1) );
 light --> lightbulb --> group;
 
+light.falloff(0.14, .07);
+
 fun void AlternateTextures() {
     while (true) {
         // its faster to just create two textures and switch between them

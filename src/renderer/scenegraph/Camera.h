@@ -41,7 +41,10 @@ public:
 	void SetClipPlanes(float n, float f) { params.nearPlane = n; params.farPlane = f; }
 	void SetFOV(float fov) { params.fov = fov; }
 	void SetSize(float size) { params.size = size; }
-	glm::mat4 GetViewMatrix() { return GetInvModelMatrix(); }
+	glm::mat4 GetViewMatrix() { 
+		return glm::inverse(GetWorldMatrix());
+		// return GetInvModelMatrix(); 
+	}
 	CameraType GetMode() { return params.type;  }
 	glm::mat4 GetProjectionMatrix();  // mat to transform from view space --> clip space 
 	float GetClipNear() { return params.nearPlane; }

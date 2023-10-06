@@ -177,7 +177,7 @@ CK_DLL_MFUN(cgl_light_get_specular);
 
 // point light
 CK_DLL_CTOR(cgl_point_light_ctor);
-// CK_DLL_MFUN(cgl_light_point_set); // TODO: allow setting params
+CK_DLL_MFUN(cgl_points_light_set_falloff);
 
 // directional light
 CK_DLL_CTOR(cgl_dir_light_ctor);
@@ -2850,6 +2850,11 @@ t_CKBOOL init_chugl_light(Chuck_DL_Query *QUERY)
 	QUERY->begin_class(QUERY, Light::CKName(LightType::Point), Light::CKName(LightType::Base));
 	QUERY->add_ctor(QUERY, cgl_point_light_ctor);
 	QUERY->add_dtor(QUERY, cgl_light_dtor);
+
+	QUERY->add_mfun(QUERY, cgl_points_light_set_falloff, "void", "falloff");
+	QUERY->add_arg(QUERY, "float", "linear");
+	QUERY->add_arg(QUERY, "float", "quadratic");
+
 	// TODO add args
 	QUERY->end_class(QUERY);
 
@@ -2948,6 +2953,17 @@ CK_DLL_CTOR(cgl_point_light_ctor)
 	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT)light;
 
 	CGL::PushCommand(new CreateLightCommand(light, &CGL::mainScene, SELF));
+}
+
+CK_DLL_MFUN(cgl_points_light_set_falloff)
+{
+	PointLight *light = (PointLight *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKFLOAT linear = GET_NEXT_FLOAT(ARGS);
+	t_CKFLOAT quadratic = GET_NEXT_FLOAT(ARGS);
+	light->m_Params.linear = linear;
+	light->m_Params.quadratic = quadratic;
+
+	CGL::PushCommand(new UpdateLightCommand(light));
 }
 
 CK_DLL_CTOR(cgl_dir_light_ctor)
