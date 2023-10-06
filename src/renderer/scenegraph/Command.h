@@ -135,11 +135,10 @@ public:
     CreateLightCommand(
         Light* l, Scene* audioThreadScene, Chuck_Object* ckobj
         // TODO add data offset here too?
-    ) : light(nullptr) {
+    ) : light(l->Clone()) {
         audioThreadScene->RegisterLight(l);
         l->m_ChuckObject = ckobj;
 
-        light = l->Clone();
         light->SetID(l->GetID());
     };
     virtual void execute(Scene* renderThreadScene) override {
@@ -215,21 +214,21 @@ private:
 };
 
 // create Camera
-// class CreateCameraCommand : public SceneGraphCommand
-// {
-// public:
-//     CreateCameraCommand(Camera* camera) : m_Camera(camera) {};
-//     virtual void execute(Scene* scene) override {
-//         Camera* newCamera = m_Camera->Clone();
-//         newCamera->SetID(m_Camera->GetID());  // copy ID
-//         std::cout << "copied camera with id: " + std::to_string(newCamera->GetID())
-//             << std::endl;
+class CreateCameraCommand : public SceneGraphCommand
+{
+public:
+    CreateCameraCommand(
+        Camera* camera, Scene* audioThreadScene, Chuck_Object* ckobj,
+        t_CKUINT data_offset
+    );
 
-//         scene->RegisterNode(newCamera);
-//     }
-// private:
-//     Camera* m_Camera;
-// };
+    virtual void execute(Scene* renderThreadScene) override {
+        // dud for now until muliple cameras are supported
+        // renderThreadScene->RegisterCamera(m_Camera);
+    }
+private:
+    Camera* m_Camera;
+};
 
 // Create Scene
 class CreateSceneCommand : public SceneGraphCommand

@@ -101,8 +101,8 @@ while (true) {
     group.rotY( .85 * dt );
     dirLight.rotX( .75 * dt);
 
-    <<< "light pos", light.worldPos() >>>;
-    <<< "lightbulb pos", lightbulb.worldPos() >>>;
+    // <<< "light pos", light.worldPos() >>>;
+    // <<< "lightbulb pos", lightbulb.worldPos() >>>;
 
     // 
     shaderMat.uniformFloat("u_Time", now/second);

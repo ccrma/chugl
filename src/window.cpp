@@ -242,15 +242,13 @@ void Window::DisplayLoop()
 {
     // Scene setup ==========================================
     camera.params.aspect = (float(m_ViewWidth) / (float)m_ViewHeight);
-    camera.SetPosition(0.0f, 0.0f, 3.0f);
-
 
     // Copy from CGL scenegraph ====================================    
     // TODO should just clone these
     scene.SetID(CGL::mainScene.GetID());  // copy scene ID
     scene.RegisterNode(&scene);  // register itself
     camera.SetID(CGL::mainCamera.GetID());  // copy maincam ID
-    scene.RegisterNode(&camera);  // register camera
+    scene.RegisterCamera(&camera);  // register camera
 
     // Render Loop ===========================================
     float previousFPSTime = (float)glfwGetTime();

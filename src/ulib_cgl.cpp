@@ -654,8 +654,10 @@ CK_DLL_SFUN(cgl_window_set_size)
 
 CK_DLL_SFUN(cgl_get_main_camera)
 {
-	RETURN->v_object = (Chuck_Object *)CGL::GetMainCamera(
-		SHRED, API, VM);
+	// RETURN->v_object = (Chuck_Object *)CGL::GetMainCamera(
+	// 	SHRED, API, VM);
+	Scene *scene = (Scene *)OBJ_MEMBER_INT(CGL::GetMainScene(SHRED, API, VM), ggen_data_offset);
+	RETURN->v_object = scene->GetMainCamera()->m_ChuckObject;
 }
 
 CK_DLL_SFUN(cgl_get_main_scene)
@@ -2428,13 +2430,11 @@ t_CKBOOL init_chugl_cam(Chuck_DL_Query *QUERY)
 // CGL Camera =======================
 CK_DLL_CTOR(cgl_cam_ctor)
 {
-	// store reference to main camera
-	// NOT A BUG: camera inherits methods from cglobject, so it needs
-	// to use the same offset. wtf!!
-	// TODO: ask Ge is this is the right way to do inheritence in this DLL interface
-	// OBJ_MEMBER_INT(SELF, gcamera_data_offset) = (t_CKINT) &CGL::mainCamera;
-
-	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT)(&CGL::mainCamera);
+	// for now just return the main camera
+	// very important: have to access main scene through CGL::GetMainScene() because
+	// that's where the default camera construction happens
+	Scene *scene = (Scene *)OBJ_MEMBER_INT(CGL::GetMainScene(SHRED, API, VM), ggen_data_offset);
+	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT)(scene->GetMainCamera());
 }
 
 CK_DLL_DTOR(cgl_cam_dtor)
@@ -2839,10 +2839,6 @@ void CglEvent::Broadcast()
 {
 	// (should be) threadsafe
 	m_API->vm->queue_event(m_VM, m_Event, 1, s_SharedEventQueue);
-
-	// using non-thread-safe event buffer for now
-	// m_VM->queue_event(m_Event, 1, NULL);
-	// m_Event->queue_broadcast();
 }
 
 // broadcasts all events of type event_type
@@ -2861,11 +2857,8 @@ bool CGL::shouldRender = false;
 std::mutex CGL::GameLoopLock;
 std::condition_variable CGL::renderCondition;
 
-Camera CGL::mainCamera;
-bool CGL::mainCameraInitialized = false;
-Chuck_DL_Api::Object CGL::DL_mainCamera;
-
 Scene CGL::mainScene;
+Camera CGL::mainCamera;
 
 // initialize offset into vtable for update() function on GGens. if < 0, not a valid offset.
 t_CKINT CGL::our_update_vt_offset = -1;
@@ -2875,8 +2868,6 @@ std::unordered_map<Chuck_VM_Shred *, bool> CGL::m_RegisteredShreds;
 std::unordered_set<Chuck_VM_Shred *> CGL::m_WaitingShreds;
 
 Chuck_DL_Api::Object CGL::s_UpdateEvent = nullptr;
-
-// std::unordered_map<Chuck_VM_Shred*, Chuck_DL_Api::Object> CGL::m_ShredEventMap;  // map of shreds to CglUpdate Event
 
 // CGL static command queue initialization
 std::vector<SceneGraphCommand *> CGL::m_ThisCommandQueue;
@@ -3136,24 +3127,6 @@ Chuck_DL_Api::Object CGL::GetShredUpdateEvent(Chuck_VM_Shred *shred, CK_DL_API A
 	return s_UpdateEvent;
 }
 
-Chuck_DL_Api::Object CGL::GetMainCamera(
-	Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM)
-{
-	if (CGL::mainCameraInitialized)
-	{
-		return CGL::DL_mainCamera;
-	}
-	else
-	{
-		Chuck_DL_Api::Type type = API->type->lookup(VM, "GCamera");
-		// note: for creation shred is just passed in for the VM reference
-		Chuck_DL_Api::Object obj = API->object->create(shred, type, true);
-		cgl_cam_ctor( (Chuck_Object*)obj, NULL, VM, shred, API );
-		CGL::DL_mainCamera = obj;
-		return obj;
-	}
-}
-
 Chuck_DL_Api::Object CGL::GetMainScene(Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM)
 {
 	if (CGL::mainScene.m_ChuckObject == nullptr) {
@@ -3162,6 +3135,14 @@ Chuck_DL_Api::Object CGL::GetMainScene(Chuck_VM_Shred *shred, CK_DL_API API, Chu
 		Chuck_DL_Api::Object sceneObj = API->object->create(shred, type, true);
 		OBJ_MEMBER_INT(sceneObj, ggen_data_offset) = (t_CKINT)&CGL::mainScene;
 		CGL::mainScene.m_ChuckObject = sceneObj;
+
+		// create default camera
+		Chuck_DL_Api::Type camCKType = API->type->lookup(VM, "GCamera");
+		Chuck_DL_Api::Object camObj = API->object->create(shred, type, true);
+		// no creation command b/c window already has static copy
+		CGL::PushCommand(new CreateCameraCommand(&mainCamera, &mainScene, camObj, ggen_data_offset));
+		// add to scene command
+		CGL::PushCommand(new RelationshipCommand(&CGL::mainScene, &mainCamera, RelationshipCommand::Relation::AddChild));
 
 		// create default light
 		// TODO create generic create-chuck-obj method

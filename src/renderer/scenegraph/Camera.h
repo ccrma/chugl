@@ -21,6 +21,8 @@ struct CameraParams {
 // for now compressing both types into a single object (bc can only have 1 camera anyways)
 class Camera : public SceneGraphObject
 {
+public: // member vars
+	CameraParams params;
 public:
 	Camera(
 		// default perspective params
@@ -47,7 +49,13 @@ public:
 	float GetFOV() { return params.fov; }
 	float GetSize() { return params.size; }
 
-	CameraParams params;
+	Camera* Clone() {
+		Camera* c = new Camera();
+		c->SetID(this->GetID());
+		c->params = this->params;
+		return c;
+	}
+
 
 	static const unsigned int MODE_PERSPECTIVE;
 	static const unsigned int MODE_ORTHO;

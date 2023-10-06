@@ -4,6 +4,7 @@
 
 class Light;
 class DirLight;
+class Camera;
 
 
 enum FogType : unsigned int {
@@ -49,6 +50,7 @@ public:
 	}
 
 	void RegisterLight(Light* light);
+	void RegisterCamera(Camera* camera);
 
 	bool CheckNode(size_t id) {
 		return m_SceneGraphMap.find(id) != m_SceneGraphMap.end();
@@ -77,6 +79,10 @@ public: // lightin
 	std::vector<Light*> m_Lights;  // list of all lights in scene
 	// Light* m_DefaultLight;  // default directional light
 	// Light* GetDefaultLight() { return m_DefaultLight; }
+
+public: // camera
+	std::vector<Camera*> m_Cameras;  // list of all cameras in scene
+	Camera* GetMainCamera() { return m_Cameras.size() > 0 ? m_Cameras[0] : nullptr; }
 
 public: // fog
 	FogUniforms m_FogUniforms;

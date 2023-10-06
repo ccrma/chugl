@@ -71,13 +71,7 @@ public:
 	static std::condition_variable renderCondition;
 
 	static Scene mainScene;
-
 	static Camera mainCamera;
-	static bool mainCameraInitialized;
-	static Chuck_DL_Api::Object DL_mainCamera;
-	// static PerspectiveCamera mainCamera;
-
-	// static Chuck_Event s_UpdateChuckEvent;  // event used for waiting on update()
 
 public: // command queue methods
 	static void SwapCommandQueues();
@@ -117,9 +111,9 @@ public:
 	);
 
 public:  // default GGens
-	static Chuck_DL_Api::Object GetMainCamera(
-		Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM
-	);
+	// static Chuck_DL_Api::Object GetMainCamera(
+	// 	Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM
+	// );
 	static Chuck_DL_Api::Object GetMainScene(
 		Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM
 	);

@@ -5,7 +5,8 @@ MouseManager MM;
 spork ~ MM.start(0);
 
 FlyCam flycam;
-flycam.init(IM, MM);
+GCamera cam;
+flycam.init(IM, MM, cam);
 spork ~ flycam.selfUpdate();
 
 // ===============================
@@ -14,6 +15,8 @@ GCube cube;
 
 cube --> GG.scene();
 -5 => cube.posZ;
+
+<<< "num lights: ", GG.scene().numLights() >>>;
 
 while (true) {
     // GG.dt() => cube.rotX;

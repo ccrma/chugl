@@ -1,5 +1,6 @@
 #include "Scene.h"
 #include "Light.h"
+#include "Camera.h"
 // static render state (options passed from chuck to configure glfw)
 
 // mouse modes
@@ -39,4 +40,10 @@ void Scene::RegisterLight(Light* light)
 {
     RegisterNode(light);
     m_Lights.push_back(light);
+}
+
+void Scene::RegisterCamera(Camera *camera)
+{
+    RegisterNode(camera);
+    m_Cameras.push_back(camera);
 }
