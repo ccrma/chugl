@@ -18,14 +18,14 @@ void PointLight::SetShaderUniforms(Shader *shader, int index)
 {
     std::string lightName = "u_PointLights[" + std::to_string(index) + "].";
     // set color properties
-    shader->setFloat3(lightName + "ambient", m_Ambient);
-    shader->setFloat3(lightName + "diffuse", m_Diffuse);
-    shader->setFloat3(lightName + "specular", m_Specular);
+    shader->setFloat3(lightName + "ambient", m_Params.ambient);
+    shader->setFloat3(lightName + "diffuse", m_Params.diffuse);
+    shader->setFloat3(lightName + "specular", m_Params.specular);
 
     // set range and dropoffs
-    shader->setFloat(lightName + "intensity", m_Intensity);
-    shader->setFloat(lightName + "linear", m_Linear);
-    shader->setFloat(lightName + "quadratic", m_Quadratic);
+    shader->setFloat(lightName + "intensity", m_Params.intensity);
+    shader->setFloat(lightName + "linear", m_Params.linear);
+    shader->setFloat(lightName + "quadratic", m_Params.quadratic);
 
     // set position
     shader->setFloat3(lightName + "position", GetWorldPosition());
@@ -37,12 +37,12 @@ void DirLight::SetShaderUniforms(Shader *shader, int index)
 {
     std::string lightName = "u_DirLights[" + std::to_string(index) + "].";
     // set color properties
-    shader->setFloat3(lightName + "ambient", m_Ambient);
-    shader->setFloat3(lightName + "diffuse", m_Diffuse);
-    shader->setFloat3(lightName + "specular", m_Specular);
+    shader->setFloat3(lightName + "ambient", m_Params.ambient);
+    shader->setFloat3(lightName + "diffuse", m_Params.diffuse);
+    shader->setFloat3(lightName + "specular", m_Params.specular);
 
     // set range and dropoffs
-    shader->setFloat(lightName + "intensity", m_Intensity);
+    shader->setFloat(lightName + "intensity", m_Params.intensity);
 
     // set direcion
     shader->setFloat3(lightName + "direction", GetForward());

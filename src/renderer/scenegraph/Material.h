@@ -167,7 +167,7 @@ public:
 		// set default material uniforms
 		SetUniform(MaterialUniform::Create(POINT_SIZE_UNAME, 25.0f));
 		SetUniform(MaterialUniform::Create(LINE_WIDTH_UNAME, 1.0f));
-		SetUniform(MaterialUniform::Create(COLOR_UNAME, 1.0f, 0.0f, 1.0f, 1.0f));
+		SetUniform(MaterialUniform::Create(COLOR_UNAME, 1.0f, 1.0f, 1.0f, 1.0f));
 
 		std::cerr << "Material constructor called, ID = " << this->GetID() << std::endl;
 	};

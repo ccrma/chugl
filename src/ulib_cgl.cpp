@@ -164,6 +164,17 @@ CK_DLL_MFUN(cgl_scene_get_fog_type);
 CK_DLL_CTOR(cgl_light_ctor); // abstract base class, no constructor
 CK_DLL_DTOR(cgl_light_dtor);
 
+CK_DLL_MFUN(cgl_light_set_intensity);
+CK_DLL_MFUN(cgl_light_set_ambient);
+CK_DLL_MFUN(cgl_light_set_diffuse);
+CK_DLL_MFUN(cgl_light_set_specular);
+
+CK_DLL_MFUN(cgl_light_get_intensity);
+CK_DLL_MFUN(cgl_light_get_ambient);
+CK_DLL_MFUN(cgl_light_get_diffuse);
+CK_DLL_MFUN(cgl_light_get_specular);
+
+
 // point light
 CK_DLL_CTOR(cgl_point_light_ctor);
 // CK_DLL_MFUN(cgl_light_point_set); // TODO: allow setting params
@@ -253,8 +264,9 @@ CK_DLL_MFUN(cgl_mat_clone);
 CK_DLL_MFUN(cgl_mat_set_polygon_mode);
 CK_DLL_MFUN(cgl_mat_get_polygon_mode);
 CK_DLL_MFUN(cgl_mat_set_color);
+CK_DLL_MFUN(cgl_mat_get_color);
 CK_DLL_MFUN(cgl_mat_set_point_size);
-// CK_DLL_MFUN(cgl_mat_set_line_width);
+CK_DLL_MFUN(cgl_mat_set_line_width);
 // CK_DLL_MFUN(cgl_mat_set_cull_mode);  // TODO
 
 // uniform setters
@@ -302,7 +314,6 @@ CK_DLL_CTOR(cgl_mat_mango_ctor);
 // "using the build-in OpenGL functionality for this task is very limited, if working at all."
 // for a better soln using texture-buffer line meshes, see: https://github.com/mhalber/Lines#texture-buffer-lines
 CK_DLL_CTOR(cgl_mat_line_ctor);
-CK_DLL_MFUN(cgl_mat_line_set_width); // many platforms only support fixed width 1.0
 CK_DLL_MFUN(cgl_mat_line_set_mode);	 // many platforms only support fixed width 1.0
 
 //-----------------------------------------------------------------------------
@@ -1310,8 +1321,8 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 	QUERY->add_mfun(QUERY, cgl_mat_set_color, "vec3", "color");
 	QUERY->add_arg(QUERY, "vec3", "col");
 
-	// QUERY->add_mfun(QUERY, cgl_mat_set_line_width, "void", "lineWidth");
-	// QUERY->add_arg(QUERY, "float", "width");
+	QUERY->add_mfun(QUERY, cgl_mat_set_line_width, "void", "lineWidth");
+	QUERY->add_arg(QUERY, "float", "width");
 
 	// uniform setters
 	QUERY->add_mfun(QUERY, cgl_mat_set_uniform_float, "void", "uniformFloat");
@@ -1440,9 +1451,6 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 	QUERY->add_svar(QUERY, "int", "LINE_STRIP", TRUE, (void *)&LineMaterial::LINE_STRIP_MODE);
 	QUERY->add_svar(QUERY, "int", "LINE_LOOP", TRUE, (void *)&LineMaterial::LINE_LOOP_MODE);
 
-	QUERY->add_mfun(QUERY, cgl_mat_line_set_width, "float", "width");
-	QUERY->add_arg(QUERY, "float", "width");
-
 	QUERY->add_mfun(QUERY, cgl_mat_line_set_mode, "int", "mode");
 	QUERY->add_arg(QUERY, "int", "mode");
 
@@ -1503,6 +1511,16 @@ CK_DLL_MFUN(cgl_mat_set_point_size)
 	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, *mat->GetUniform(Material::POINT_SIZE_UNAME)));
 }
 
+CK_DLL_MFUN(cgl_mat_set_line_width)
+{
+	Material* mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	t_CKFLOAT width = GET_NEXT_FLOAT(ARGS);
+	mat->SetLineWidth(width);
+
+	RETURN->v_float = width;
+	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, *mat->GetUniform(Material::LINE_WIDTH_UNAME)));
+}
+
 CK_DLL_MFUN(cgl_mat_set_color)
 {
 	Material *mat = (Material*)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
@@ -1515,7 +1533,6 @@ CK_DLL_MFUN(cgl_mat_set_color)
 }
 
 
-// TODO: can refactor these uniform setters to call a shared function
 CK_DLL_MFUN(cgl_mat_set_uniform_float)
 {
 	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
@@ -1679,7 +1696,6 @@ CK_DLL_MFUN(cgl_set_use_local_normals)
 		mat->UseLocalNormals();
 	else
 		mat->UseWorldNormals();
-	// TODO: add command for this
 
 	CGL::PushCommand(new UpdateMaterialUniformCommand(
 		mat, *(mat->GetUniform(NormalMaterial::USE_LOCAL_NORMALS_UNAME))));
@@ -1833,15 +1849,6 @@ CK_DLL_CTOR(cgl_mat_line_ctor)
 	CGL::PushCommand(new CreateMaterialCommand(lineMat));
 }
 
-CK_DLL_MFUN(cgl_mat_line_set_width)
-{
-	LineMaterial *mat = (LineMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
-	t_CKFLOAT width = GET_NEXT_FLOAT(ARGS);
-	mat->SetLineWidth(width);
-
-	RETURN->v_float = width;
-	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, *mat->GetUniform(Material::LINE_WIDTH_UNAME)));
-}
 
 CK_DLL_MFUN(cgl_mat_line_set_mode)
 {
@@ -2823,7 +2830,21 @@ t_CKBOOL init_chugl_light(Chuck_DL_Query *QUERY)
 	QUERY->begin_class(QUERY, Light::CKName(LightType::Base), "GGen");
 	QUERY->add_ctor(QUERY, cgl_light_ctor);
 	QUERY->add_dtor(QUERY, cgl_light_dtor);
-	// TODO: add args
+
+	QUERY->add_mfun(QUERY, cgl_light_set_intensity, "float", "intensity");  // 0 -- 1
+	QUERY->add_arg(QUERY, "float", "i");
+	QUERY->add_mfun(QUERY, cgl_light_set_ambient, "vec3", "ambient"); 
+	QUERY->add_arg(QUERY, "vec3", "a");
+	QUERY->add_mfun(QUERY, cgl_light_set_diffuse, "vec3", "diffuse");
+	QUERY->add_arg(QUERY, "vec3", "d");
+	QUERY->add_mfun(QUERY, cgl_light_set_specular, "vec3", "specular");
+	QUERY->add_arg(QUERY, "vec3", "s");
+
+	QUERY->add_mfun(QUERY, cgl_light_get_intensity, "float", "intensity");
+	QUERY->add_mfun(QUERY, cgl_light_get_ambient, "vec3", "ambient");
+	QUERY->add_mfun(QUERY, cgl_light_get_diffuse, "vec3", "diffuse");
+	QUERY->add_mfun(QUERY, cgl_light_get_specular, "vec3", "specular");
+
 	QUERY->end_class(QUERY);
 
 	QUERY->begin_class(QUERY, Light::CKName(LightType::Point), Light::CKName(LightType::Base));
@@ -2855,6 +2876,70 @@ CK_DLL_DTOR(cgl_light_dtor)
 	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0; // zero out the memory
 
 	// TODO: need to remove from scenegraph with a destroy command
+}
+
+CK_DLL_MFUN(cgl_light_set_intensity)
+{
+	Light *light = (Light *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKFLOAT i = GET_NEXT_FLOAT(ARGS);
+	light->m_Params.intensity = i;
+	RETURN->v_float = i;
+
+	CGL::PushCommand(new UpdateLightCommand(light));
+}
+
+CK_DLL_MFUN(cgl_light_set_ambient)
+{
+	Light *light = (Light *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	auto amb = GET_NEXT_VEC3(ARGS);
+	light->m_Params.ambient = {amb.x, amb.y, amb.z};
+	RETURN->v_vec3 = amb;
+
+	CGL::PushCommand(new UpdateLightCommand(light));
+}
+
+CK_DLL_MFUN(cgl_light_set_diffuse)
+{
+	Light *light = (Light *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	auto diff = GET_NEXT_VEC3(ARGS);
+	light->m_Params.diffuse = {diff.x, diff.y, diff.z};
+	RETURN->v_vec3 = diff;
+
+	CGL::PushCommand(new UpdateLightCommand(light));
+}
+
+CK_DLL_MFUN(cgl_light_set_specular)
+{
+	Light *light = (Light *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	auto spec = GET_NEXT_VEC3(ARGS);
+	light->m_Params.specular = {spec.x, spec.y, spec.z};
+	RETURN->v_vec3 = spec;
+
+	CGL::PushCommand(new UpdateLightCommand(light));
+}
+
+CK_DLL_MFUN(cgl_light_get_intensity)
+{
+	Light *light = (Light *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	RETURN->v_float = light->m_Params.intensity;
+}
+
+CK_DLL_MFUN(cgl_light_get_ambient)
+{
+	Light *light = (Light *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	RETURN->v_vec3 = {light->m_Params.ambient.x, light->m_Params.ambient.y, light->m_Params.ambient.z};
+}
+
+CK_DLL_MFUN(cgl_light_get_diffuse)
+{
+	Light *light = (Light *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	RETURN->v_vec3 = {light->m_Params.diffuse.x, light->m_Params.diffuse.y, light->m_Params.diffuse.z};
+}
+
+CK_DLL_MFUN(cgl_light_get_specular)
+{
+	Light *light = (Light *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	RETURN->v_vec3 = {light->m_Params.specular.x, light->m_Params.specular.y, light->m_Params.specular.z};
 }
 
 CK_DLL_CTOR(cgl_point_light_ctor)

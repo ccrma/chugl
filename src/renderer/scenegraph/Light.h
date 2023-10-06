@@ -38,10 +38,31 @@ enum class LightType {  // must match include/Lighting.glsl setup!!
 	Spot
 };
 
+struct LightParams {
+	float intensity;
+	// color info
+	glm::vec3 ambient;
+	glm::vec3 diffuse;
+	glm::vec3 specular;
+
+	// falloff for point lights
+	float linear;
+	float quadratic;
+};
+
 class Light : public SceneGraphObject
 {
 public:
-	Light() {};
+	Light() {
+		m_Params = {
+		    1.0, 			   // intensity
+			glm::vec3(0.3f),   // amb
+			glm::vec3(0.8f),   // diff
+			glm::vec3(0.4f),   // spec
+			0.09f,  		   // linear
+			0.032f			   // quadratic
+		};
+	};
 	virtual ~Light() {};
 
 	virtual bool IsLight() override { return true;  }
@@ -53,53 +74,38 @@ public: // ck name
 	static CkTypeMap s_CkTypeMap;
 	static const char * CKName(LightType type) { return s_CkTypeMap[type].c_str(); }
 	virtual const char * myCkName() { return CKName(GetLightType()); }
+
+public: // shared params
+	LightParams m_Params;
 };
 
 class PointLight : public Light
 {
 public:
-	PointLight() : 
-		m_Intensity(1.0f), 
-		m_Linear(0.09f), 
-		m_Quadratic(0.032f),
-		m_Ambient(0.3f),   
-		m_Diffuse(1.0f), 
-		m_Specular(.1f)
-	{}
+	PointLight() {}
 	
 	virtual LightType GetLightType() override { return LightType::Point; }
 	// TODO: decouple from shader implementation
 	virtual void SetShaderUniforms(Shader* shader, int index) override;
-	virtual Light* Clone() override { return new PointLight(*this); }
+	virtual Light* Clone() override { 
+		auto* light = new PointLight(*this); 
+		light->SetID(GetID());
+		return light;
+	}
 
-	float m_Intensity;
-	float m_Linear;
-	float m_Quadratic;
 
-	// color info
-	glm::vec3 m_Ambient;
-	glm::vec3 m_Diffuse;
-	glm::vec3 m_Specular;
 };
 
 class DirLight : public Light
 {
 public:
-	DirLight() : 
-		m_Intensity(1.0f), // all ranges [0, 1]
-		m_Ambient(0.3f),   
-		m_Diffuse(1.0f), 
-		m_Specular(.1f)
-	{}
+	DirLight() {}
 
 	virtual LightType GetLightType() override { return LightType::Directional; }
 	virtual void SetShaderUniforms(Shader* shader, int index) override;
-	virtual Light* Clone() override { return new DirLight(*this); }
-
-	float m_Intensity;
-
-	// color info
-	glm::vec3 m_Ambient;
-	glm::vec3 m_Diffuse;
-	glm::vec3 m_Specular;
+	virtual Light* Clone() override { 
+		auto* light = new DirLight(*this); 
+		light->SetID(GetID());
+		return light;
+	}
 };

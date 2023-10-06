@@ -642,3 +642,24 @@ public:
 private:
     glm::vec3 color;
 };
+
+
+// TODO: just copying the entire light for now, eventually want to just update individual
+// params, like how material and geo does it
+class UpdateLightCommand : public SceneGraphCommand
+{
+public:
+    UpdateLightCommand(Light* light) : 
+        params(light->m_Params), m_LightID(light->GetID())
+    {};
+    
+    virtual void execute(Scene* scene) override {
+        Light* light = dynamic_cast<Light*>(scene->GetNode(m_LightID));
+        assert(light);
+        light->m_Params = params;
+    }
+
+private:
+    size_t m_LightID;
+    LightParams params;
+};
