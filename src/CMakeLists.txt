@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 3.15)
 # force universal binary on osx (must go BEFORE project call)
 set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "" FORCE)
 project(
-    chugl
-    VERSION 0.0.1
+    ChuGL
+    VERSION 0.1.0
     LANGUAGES CXX C
 )
 
