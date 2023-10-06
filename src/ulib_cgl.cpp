@@ -405,8 +405,10 @@ t_CKBOOL create_chugl_default_objs(Chuck_DL_Query* QUERY)
 	QUERY->register_shreds_watcher(QUERY, cgl_shred_on_destroy_listener, CKVM_SHREDS_WATCH_REMOVE, NULL);
 
 	// update() vt offset
-	// find the offset for update 
-    CGL::our_update_vt_offset = QUERY->api()->object->get_vtable_offset(QUERY->vm(), "GGen", "update");
+    // get the GGen type
+    Chuck_Type * t_ggen = QUERY->api()->type->lookup(QUERY->vm(), "GGen");
+    // find the offset for update
+    CGL::our_update_vt_offset = QUERY->api()->type->get_vtable_offset(QUERY->vm(), t_ggen, "update");
 	
 	return true;
 }
@@ -2970,7 +2972,7 @@ Chuck_DL_Api::Object CGL::GetMainCamera(
 	} else {
 		Chuck_DL_Api::Type type = API->type->lookup(VM, "GCamera");
 		// note: for creation shred is just passed in for the VM reference
-		Chuck_DL_Api::Object obj = API->object->create_with_shred(shred, type, true);
+		Chuck_DL_Api::Object obj = API->object->create(shred, type, true);
 		cgl_cam_ctor( (Chuck_Object*)obj, NULL, VM, shred, API );
 		CGL::DL_mainCamera = obj;
 		return obj;
@@ -2984,7 +2986,7 @@ Chuck_DL_Api::Object CGL::GetMainScene(Chuck_VM_Shred *shred, CK_DL_API API, Chu
 	} else {
 		Chuck_DL_Api::Type type = API->type->lookup(VM, "GScene");
 		// note: for creation shred is just passed in for the VM reference
-		Chuck_DL_Api::Object obj = API->object->create_with_shred(shred, type, true);
+		Chuck_DL_Api::Object obj = API->object->create(shred, type, true);
 		cgl_scene_ctor( (Chuck_Object*)obj, NULL, VM, shred, API );
 		CGL::DL_mainScene = obj;
 		return obj;
