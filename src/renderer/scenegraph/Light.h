@@ -58,7 +58,7 @@ public:
 		    1.0, 			   // intensity
 			glm::vec3(0.3f),   // amb
 			glm::vec3(0.8f),   // diff
-			glm::vec3(0.4f),   // spec
+			glm::vec3(0.25f),   // spec
 			0.09f,  		   // linear
 			0.032f			   // quadratic
 		};
