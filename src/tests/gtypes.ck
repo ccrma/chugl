@@ -24,7 +24,7 @@ GCircle circle --> GG.scene();
 GPlane plane --> GG.scene();
 GLines lines --> GG.scene();  lines.mat().lineWidth(5.0);
 GPoints points --> GG.scene();  points.mat().pointSize(55.0);
-GTorus torus --> GG.scene();
+GTorus torus --> GG.scene();  torus.mat().shine(0);
 
 [
     cube,

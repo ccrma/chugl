@@ -10,7 +10,7 @@ spork ~ flycam.selfUpdate();
 
 // ===============================
 
-GScene scene;
+// GScene scene;
 GMesh meshes[3];
 SphereGeometry  SphereGeometry ;
 BoxGeometry boxGeo;
@@ -21,7 +21,8 @@ meshes[1].set(boxGeo, mangoMat);
 meshes[2].set(SphereGeometry , mangoMat);
 
 for (auto mesh : meshes) {
-    mesh --> scene;
+    mesh --> GG.scene();
+    // mesh --> scene;
 }
 
 meshes[0].position(@(-2, 0, -5));

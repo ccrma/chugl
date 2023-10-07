@@ -2312,6 +2312,10 @@ t_CKBOOL init_chugl_scene(Chuck_DL_Query *QUERY)
 // CGL Scene ==============================================
 CK_DLL_CTOR(cgl_scene_ctor)
 {
+	// temporary fix until a default pre-constructor is provided for chugins
+	//
+	Scene *scene = (Scene *)OBJ_MEMBER_INT(CGL::GetMainScene(SHRED, API, VM), ggen_data_offset);
+	// OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT)scene;
 	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT)&CGL::mainScene;
 }
 CK_DLL_DTOR(cgl_scene_dtor)
@@ -2474,7 +2478,9 @@ CK_DLL_DTOR(cgl_cam_dtor)
 
 CK_DLL_MFUN(cgl_cam_set_mode_persp)
 {
-	Camera *cam = (Camera *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	Scene *scene = (Scene *)OBJ_MEMBER_INT(CGL::GetMainScene(SHRED, API, VM), ggen_data_offset);
+	// Camera *cam = (Camera *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	Camera * cam = scene->GetMainCamera();
 	cam->SetPerspective();
 
 	CGL::PushCommand(new UpdateCameraCommand(cam));
@@ -3364,14 +3370,14 @@ Chuck_DL_Api::Object CGL::GetMainScene(Chuck_VM_Shred *shred, CK_DL_API API, Chu
 {
 	if (CGL::mainScene.m_ChuckObject == nullptr) {
 		// TODO implement CreateSceneCommand
-		Chuck_DL_Api::Type type = API->type->lookup(VM, "GScene");
-		Chuck_DL_Api::Object sceneObj = API->object->create(shred, type, true);
+		Chuck_DL_Api::Type sceneCKType = API->type->lookup(VM, "GScene");
+		Chuck_DL_Api::Object sceneObj = API->object->create(shred, sceneCKType, true);
 		OBJ_MEMBER_INT(sceneObj, ggen_data_offset) = (t_CKINT)&CGL::mainScene;
 		CGL::mainScene.m_ChuckObject = sceneObj;
 
 		// create default camera
 		Chuck_DL_Api::Type camCKType = API->type->lookup(VM, "GCamera");
-		Chuck_DL_Api::Object camObj = API->object->create(shred, type, true);
+		Chuck_DL_Api::Object camObj = API->object->create(shred, camCKType, true);
 		// no creation command b/c window already has static copy
 		CGL::PushCommand(new CreateCameraCommand(&mainCamera, &mainScene, camObj, ggen_data_offset));
 		// add to scene command
