@@ -1994,9 +1994,16 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query *QUERY)
 // CGLObject DLL ==============================================
 CK_DLL_CTOR(cgl_obj_ctor)
 {
-	std::cerr << "cgl_obj_ctor" << std::endl;
+	// std::cerr << "cgl_obj_ctor" << std::endl;
 	Chuck_DL_Api::Type type = API->type->lookup(VM, "GGen");
-	if (API->type->is_equal(type, API->object->get_type(SELF)))
+	auto thisType = API->object->get_type(SELF);
+	if (
+		API->type->is_equal(type, thisType)  // this type is a GGen
+		||
+		thisType->originHint == te_originUserDefined  // this type is defined .ck file
+		|| 
+		thisType->originHint == te_originImport       // .ck file included in search path
+	)
 	{
 		SceneGraphObject *cglObj = new SceneGraphObject;
 		OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT)cglObj;

@@ -1,5 +1,7 @@
-GG.fullscreen(); // gotta go fastral
-GG.useChuckTime(true); 
+// GG.fullscreen(); // gotta go fastral
+// GG.useChuckTime(true); 
+
+5 => GG.camera().posZ;
 
 BoxGeometry geo;
 NormMat mat;
@@ -33,7 +35,6 @@ class covfefe extends GGen {
 }
 
 // covfefe c; 
-0 => int connected;
 covfefe c --> GG.scene(); 
 
 while (true) {
@@ -47,8 +48,4 @@ while (true) {
     // }
 
     GG.nextFrame() => now;
-    if (!connected) {
-        1::second => now;
-        1 => connected;
-    }
 }
