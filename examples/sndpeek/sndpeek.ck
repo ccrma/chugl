@@ -11,8 +11,12 @@
 1024 => int WINDOW_SIZE;
 // y position of waveform
 2 => float WAVEFORM_Y;
+// y position of spectrum
+-2.5 => float SPECTRUM_Y;
 // width of waveform and spectrum display
 10 => float DISPLAY_WIDTH;
+// waterfall depth
+64 => int WATERFALL_DEPTH;
 
 // uncomment to fullscreen
 GG.fullscreen();
@@ -20,27 +24,30 @@ GG.fullscreen();
 GG.camera() --> GGen dolly --> GG.scene();
 // position
 GG.camera().posZ( 10 );
+// set clipping plane
+GG.camera().clip( .05, WATERFALL_DEPTH * 10 );
 // set bg color
 GG.scene().backgroundColor( @(0,0,0) );
 
 // waveform renderer
 GLines waveform --> GG.scene(); waveform.mat().lineWidth(1.0);
 // translate up
-waveform.posY(WAVEFORM_Y);
+waveform.posY( WAVEFORM_Y );
 // color0
-waveform.mat().color( @(.4, .4, 1) );
+waveform.mat().color( @(.4, .4, 1)*1.5 );
 
-// spectrum renderer
-GLines spectrum --> GG.scene(); spectrum.mat().lineWidth(1.0);
+// make a waterfall
+Waterfall waterfall --> GG.scene();
 // translate down
-spectrum.posY(-WAVEFORM_Y);
-// color0
-spectrum.mat().color( @(.4, 1, .4) );
+waterfall.posY( SPECTRUM_Y );
 
+// which input?
+adc => Gain input;
+// SinOsc sine => Gain input => dac; .25 => sine.gain;
 // accumulate samples from mic
-adc => Flip accum => blackhole;
+input => Flip accum => blackhole;
 // take the FFT
-adc => PoleZero dcbloke => FFT fft => blackhole;
+input => PoleZero dcbloke => FFT fft => blackhole;
 // set DC blocker
 .95 => dcbloke.blockZero;
 // set size of flip
@@ -59,6 +66,64 @@ complex response[0];
 vec3 vertices[WINDOW_SIZE];
 float positions[WINDOW_SIZE*3];
 
+// custom GGen to render waterfall
+class Waterfall extends GGen
+{
+    // waterfall playhead
+    0 => int playhead;
+    // lines
+    GLines wfl[WATERFALL_DEPTH];
+    // color
+    @(.4, 1, .4) => vec3 color;
+
+    // iterate over line GGens
+    for( GLines w : wfl )
+    {
+        // aww yea, connect as a child of this GGen
+        w --> this;
+        // color
+        w.mat().color( @(.4, 1, .4) );
+    }
+
+    // copy
+    fun void latest( float positions[] )
+    {
+        // set into
+        positions => (wfl[playhead].geo() $ CustomGeometry).positions;
+        // advance playhead
+        playhead++;
+        // wrap it
+        WATERFALL_DEPTH %=> playhead;
+    }
+
+    // update
+    fun void update( float dt )
+    {
+        // position
+        playhead => int pos;
+        // for color
+        WATERFALL_DEPTH/2.5 => float thresh;
+        // depth
+        WATERFALL_DEPTH - thresh => float fadeChunk;
+        // so good
+        for( int i; i < wfl.size(); i++ )
+        {
+            // start with playhead-1 and go backwards
+            pos--; if( pos < 0 ) WATERFALL_DEPTH-1 => pos;
+            // offset Z
+            wfl[pos].posZ( -i );
+            if( i > thresh )
+            {
+                wfl[pos].mat().color( ((fadeChunk-(i-thresh))/fadeChunk) * color );
+            }
+            else
+            {
+                wfl[pos].mat().color( color );
+            }
+        }
+    }
+}
+
 // map audio buffer to 3D positions
 fun void map2waveform( float in[], float out[] )
 {
@@ -75,6 +140,7 @@ fun void map2waveform( float in[], float out[] )
     {
         // map
         -width/2 + width/WINDOW_SIZE*i => out[i*3];
+        // map y, using window function to taper the ends
         s*6 * window[i] => out[i*3+1];
         0 => out[i*3+2];
         // increment
@@ -103,6 +169,8 @@ fun void map2spectrum( complex in[], float out[] )
         // increment
         i++;
     }
+
+    waterfall.latest( out );
 }
 
 // do audio stuff
@@ -124,6 +192,16 @@ fun void doAudio()
 }
 spork ~ doAudio();
 
+fun void controlSine( Osc s )
+{
+    while( true )
+    {
+        100 + (Math.sin(now/second*2)+1)/2*20000 => s.freq;
+        10::ms => now;
+    }
+}
+// spork ~ controlSine( sine );
+
 // graphics render loop
 while( true )
 {
@@ -133,8 +211,6 @@ while( true )
     (waveform.geo() $ CustomGeometry).positions( positions );
     // map to spectrum display
     map2spectrum( response, positions );
-    // set the mesh position
-    (spectrum.geo() $ CustomGeometry).positions( positions );
     // next graphics frame
     GG.nextFrame() => now;
 }
