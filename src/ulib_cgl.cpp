@@ -2315,8 +2315,8 @@ CK_DLL_CTOR(cgl_scene_ctor)
 	// temporary fix until a default pre-constructor is provided for chugins
 	//
 	Scene *scene = (Scene *)OBJ_MEMBER_INT(CGL::GetMainScene(SHRED, API, VM), ggen_data_offset);
-	// OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT)scene;
-	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT)&CGL::mainScene;
+	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT)scene;
+	// OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT)&CGL::mainScene;
 }
 CK_DLL_DTOR(cgl_scene_dtor)
 {
