@@ -469,7 +469,7 @@ public:
         std::string attribName,
         unsigned int location,
         unsigned int numComponents,
-        std::vector<double>& attribData,
+        std::vector<t_CKFLOAT>& attribData,
         bool normalize = false
     ) : m_GeoID(geo->GetID()), m_Attrib() {
         // copy data into m_attrib

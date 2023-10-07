@@ -14,13 +14,23 @@ spork ~ flycam.selfUpdate();
 // GG.lockCursor();
 
 CustomGeometry lineGeo;
-// construct line segment
-float positions[50000];
 
-float colors[positions.size()];
+// construct line segment
+10000 => int NUM_VERTICES;
+float positions[NUM_VERTICES * 3];
+float colors[NUM_VERTICES * 4];
+
 // randomly assign colors
-for (0 => int i; i < colors.size(); i++) {
-    Math.random2f(0.0, 1.0) => colors[i];
+for (0 => int i; i < NUM_VERTICES; i++) {
+    Math.random2f(-1.0, 1.0) => positions[3*i + 0];
+    Math.random2f(-1.0, 1.0) => positions[3*i + 1];
+    Math.random2f(-1.0, 1.0) => positions[3*i + 2];
+
+    1 => colors[4*i + 0];
+    1 => colors[4*i + 1];
+    1 => colors[4*i + 2];
+    1 => colors[4*i + 3];  // alpha always 1
+    // Math.random2f(0.0, 1.0) => colors[i];
 }
 
 lineGeo.positions(positions);
@@ -48,23 +58,23 @@ fun void cycleLineMode(LineMat @ mat) {
 
 fun void lerpLineWidth(LineMat @ mat) {
     while (true) {
-        1.0 => mat.width;
+        1.0 => mat.lineWidth;
         2::second => now;
-        5.0 => mat.width;
+        5.0 => mat.lineWidth;
         2::second => now;
-        10.0 => mat.width;
+        10.0 => mat.lineWidth;
         2::second => now;
     }
 } spork ~ lerpLineWidth(lineMat);
 
 fun void cycleLineColor(LineMat @ mat) {
     while (true) {
-        @(1.0, 0.0, 0.0) => mat.color;
-        2::second => now;
         @(0.0, 1.0, 0.0) => mat.color;
-        2::second => now;
+        .2::second => now;
+        @(1.0, 0.0, 0.0) => mat.color;
+        .2::second => now;
         @(0.0, 0.0, 1.0) => mat.color;
-        2::second => now;
+        .2::second => now;
     }
 
 } spork ~ cycleLineColor(lineMat);
@@ -80,7 +90,7 @@ fun void randomizePositions(CustomGeometry @ geo)
         GG.nextFrame() => now;
     }
 }
-spork ~ randomizePositions(lineGeo);
+// spork ~ randomizePositions(lineGeo);
 
 
 // Game loop =====================

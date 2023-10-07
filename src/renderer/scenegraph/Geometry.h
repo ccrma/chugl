@@ -94,7 +94,7 @@ public:
 		// reset attribute map
 		m_Attributes[POSITION_ATTRIB_IDX] = CGL_GeoAttribute("position", POSITION_ATTRIB_IDX, 3);
 		m_Attributes[NORMAL_ATTRIB_IDX] = CGL_GeoAttribute("normal", NORMAL_ATTRIB_IDX, 3);
-		m_Attributes[COLOR_ATTRIB_IDX] = CGL_GeoAttribute("color", COLOR_ATTRIB_IDX, 3);
+		m_Attributes[COLOR_ATTRIB_IDX] = CGL_GeoAttribute("color", COLOR_ATTRIB_IDX, 4);
 		m_Attributes[UV0_ATTRIB_IDX] = CGL_GeoAttribute("uv", UV0_ATTRIB_IDX, 2);
 	}
 	void AddVertex(Vertex v);

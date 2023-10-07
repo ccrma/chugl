@@ -2,7 +2,7 @@ InputManager IM;
 spork ~ IM.start(0);
 
 MouseManager MM;
-spork ~ MM.start(2);
+spork ~ MM.start(0);
 
 FlyCam flycam;
 flycam.init(IM, MM);

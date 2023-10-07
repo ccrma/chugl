@@ -219,6 +219,7 @@ CK_DLL_MFUN(cgl_geo_lathe_set_no_points);
 CK_DLL_CTOR(cgl_geo_custom_ctor);
 CK_DLL_MFUN(cgl_geo_set_attribute); // general case for any kind of vertex data
 CK_DLL_MFUN(cgl_geo_set_positions);
+CK_DLL_MFUN(cgl_geo_set_positions_vec3);
 CK_DLL_MFUN(cgl_geo_set_colors);
 CK_DLL_MFUN(cgl_geo_set_normals);
 CK_DLL_MFUN(cgl_geo_set_uvs);
@@ -261,6 +262,7 @@ CK_DLL_DTOR(cgl_mat_dtor);
 CK_DLL_MFUN(cgl_mat_clone);
 
 // base material options
+// TODO: move all material options down into base class?
 CK_DLL_MFUN(cgl_mat_set_polygon_mode);
 CK_DLL_MFUN(cgl_mat_get_polygon_mode);
 CK_DLL_MFUN(cgl_mat_set_color);
@@ -284,6 +286,9 @@ CK_DLL_MFUN(cgl_mat_set_uniform_texID);
 // normal mat
 CK_DLL_CTOR(cgl_mat_norm_ctor);
 CK_DLL_MFUN(cgl_set_use_local_normals);
+
+// flat shade mat
+// CK_DLL_CTOR(cgl_mat_flat_ctor);
 
 // phong specular mat
 CK_DLL_CTOR(cgl_mat_phong_ctor);
@@ -814,6 +819,9 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 	QUERY->add_mfun(QUERY, cgl_geo_set_positions, "void", "positions");
 	QUERY->add_arg(QUERY, "float[]", "positions");
 
+	QUERY->add_mfun(QUERY, cgl_geo_set_positions_vec3, "void", "positions");
+	QUERY->add_arg(QUERY, "vec3[]", "positions");
+
 	QUERY->add_mfun(QUERY, cgl_geo_set_colors, "void", "colors");
 	QUERY->add_arg(QUERY, "float[]", "colors");
 
@@ -1063,6 +1071,27 @@ CK_DLL_MFUN(cgl_geo_set_positions)
 			geo, "position", Geometry::POSITION_ATTRIB_IDX, 3, data->m_vector, false));
 }
 
+CK_DLL_MFUN(cgl_geo_set_positions_vec3)
+{
+	CustomGeometry *geo = (CustomGeometry *)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+	auto* data = (Chuck_Array24*)GET_NEXT_OBJECT(ARGS);
+
+	// TODO extra round of copying here, can avoid if it matters
+	std::vector<t_CKFLOAT> vec3s;
+	vec3s.reserve(3 * data->m_vector.size());
+	for (auto& val : data->m_vector) {
+		vec3s.emplace_back(val.x);
+		vec3s.emplace_back(val.y);
+		vec3s.emplace_back(val.z);
+	}
+
+	CGL::PushCommand(
+		new UpdateGeometryAttributeCommand(
+			geo, "position", Geometry::POSITION_ATTRIB_IDX, 3, vec3s, false
+		)
+	);
+}
+
 // set colors
 CK_DLL_MFUN(cgl_geo_set_colors)
 {
@@ -1072,7 +1101,7 @@ CK_DLL_MFUN(cgl_geo_set_colors)
 
 	CGL::PushCommand(
 		new UpdateGeometryAttributeCommand(
-			geo, "color", Geometry::COLOR_ATTRIB_IDX, 3, data->m_vector, false));
+			geo, "color", Geometry::COLOR_ATTRIB_IDX, 4, data->m_vector, false));
 }
 
 // set normals
@@ -1392,6 +1421,14 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 	QUERY->add_arg(QUERY, "int", "useLocal");
 
 	QUERY->end_class(QUERY);
+
+	// flat material
+	// QUERY->begin_class(QUERY, Material::CKName(MaterialType::Normal), Material::CKName(MaterialType::Base));
+	// QUERY->add_ctor(QUERY, cgl_mat_flat_ctor);
+	// QUERY->add_dtor(QUERY, cgl_mat_dtor);
+	// QUERY->end_class(QUERY);
+
+
 
 	// phong specular material
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Phong), Material::CKName(MaterialType::Base));

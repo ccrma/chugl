@@ -41,7 +41,7 @@ void RenderGeometry::BuildGeometry() {
 	}
 
 	// quick hack to set default color
-	GLCall(glVertexAttrib3f(Geometry::COLOR_ATTRIB_IDX, 1.0f, 1.0f, 1.0f));
+	GLCall(glVertexAttrib4f(Geometry::COLOR_ATTRIB_IDX, 1.0f, 1.0f, 1.0f, 1.0f));
 
 	// set vbo size to # non-zero length attributes
 	// int numNonZeroLengthAttribs = 0;

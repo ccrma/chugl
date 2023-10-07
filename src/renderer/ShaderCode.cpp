@@ -354,11 +354,9 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
 
         // uniforms
         uniform float u_LineWidth;
-        // uniform vec3 u_LineColor;
 
         void main()
         {
-            // result = vec4( u_LineColor * v_Color, 1.0 );
             result = v_Color;
     )"},
     {

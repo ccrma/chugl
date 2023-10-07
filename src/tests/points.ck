@@ -23,8 +23,9 @@ GMesh pointMesh;
 // points stress test
 100 => int POINTS_PER_AXIS;
 CustomGeometry pointsGeo;
-float pointPos[POINTS_PER_AXIS * POINTS_PER_AXIS * POINTS_PER_AXIS * 3];
-float pointColor[pointPos.size()];
+POINTS_PER_AXIS * POINTS_PER_AXIS * POINTS_PER_AXIS => int numPoints;
+float pointPos[numPoints * 3];
+float pointColor[numPoints * 4];
 
 // populate a 1x1x1 cube
 for (int i; i < POINTS_PER_AXIS; i++) {
@@ -45,9 +46,10 @@ for (int k; k < POINTS_PER_AXIS; k++) {
     posScale * z => pointPos[3*index + 2];
     
     // set color (same as position)
-    x => pointColor[3*index + 0];
-    y => pointColor[3*index + 1];
-    z => pointColor[3*index + 2];
+    x => pointColor[4*index + 0];
+    y => pointColor[4*index + 1];
+    z => pointColor[4*index + 2];
+    1 => pointColor[4*index + 3];  // alpha always 1
 }}}
 
 <<< "Rendering ", pointPos.size()/3, " points!" >>>;
