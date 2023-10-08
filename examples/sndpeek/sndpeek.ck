@@ -16,7 +16,7 @@
 // width of waveform and spectrum display
 10 => float DISPLAY_WIDTH;
 // waterfall depth
-64 => int WATERFALL_DEPTH;
+128 => int WATERFALL_DEPTH;
 
 // uncomment to fullscreen
 GG.fullscreen();
@@ -43,7 +43,7 @@ waterfall.posY( SPECTRUM_Y );
 
 // which input?
 adc => Gain input;
-// SinOsc sine => Gain input => dac; .25 => sine.gain;
+// SinOsc sine => Gain input => dac; .15 => sine.gain;
 // accumulate samples from mic
 input => Flip accum => blackhole;
 // take the FFT
@@ -196,7 +196,7 @@ fun void controlSine( Osc s )
 {
     while( true )
     {
-        100 + (Math.sin(now/second*2)+1)/2*20000 => s.freq;
+        100 + (Math.sin(now/second*5)+1)/2*20000 => s.freq;
         10::ms => now;
     }
 }

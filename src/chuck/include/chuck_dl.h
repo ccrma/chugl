@@ -334,6 +334,8 @@ typedef t_CKBOOL (CK_DLL_CALL * f_mainthreadhook)( void * bindle );
 typedef t_CKBOOL (CK_DLL_CALL * f_mainthreadquit)( void * bindle );
 // shreds watcher callback
 typedef void (CK_DLL_CALL * f_shreds_watcher)( Chuck_VM_Shred * SHRED, t_CKINT CODE, t_CKINT PARAM, Chuck_VM * VM, void * BINDLE );
+// type instantiation callback
+typedef void (CK_DLL_CALL * f_callback_on_instantiate)( Chuck_Type * typeInstantiated, Chuck_VM_Shred * originShred, Chuck_VM * VM );
 }
 
 
@@ -793,6 +795,8 @@ public:
 
 
 
+// instantiating a chuck string
+Chuck_String * ck_create_string( Chuck_VM * vm, const char * cstr, t_CKBOOL addRef );
 //-----------------------------------------------------------------------------
 // invoking chuck functions from c++
 //-----------------------------------------------------------------------------
@@ -846,6 +850,8 @@ public:
         void (CK_DLL_CALL * const throw_exception)( const char * exception, const char * desc, Chuck_VM_Shred * shred );
         // log a message in the chuck logging system
         void (CK_DLL_CALL * const em_log)( t_CKINT level, const char * text );
+        // system function: remove all shreds in VM; use with care
+        void (CK_DLL_CALL * const remove_all_shreds)( Chuck_VM * vm );
     } * const vm;
 
     // api to access host-side ChucK objects
@@ -896,14 +902,16 @@ public:
     struct TypeApi
     {
         TypeApi();
-        // function pointer get_type()
+        // look up type by name
         Type (CK_DLL_CALL * const lookup)( Chuck_VM *, const char * name );
-        // function pointer for get_vtable_offset(); returns < 0 if not found
-        t_CKINT (CK_DLL_CALL * const get_vtable_offset)( Chuck_VM *, Type type, const char * value );
+        // get vtable offset for named function (if overloaded, returns first one); returns < 0 if not found
+        t_CKINT (CK_DLL_CALL * const get_vtable_offset)( Chuck_VM *, Type type, const char * funcName );
         // test if two chuck types are equal
         t_CKBOOL (CK_DLL_CALL * const is_equal)(Type lhs, Type rhs);
         // test if lhs is a type of rhs (e.g., SinOsc is a type of UGen)
         t_CKBOOL (CK_DLL_CALL * const isa)(Type lhs, Type rhs);
+        // register a callback to be invoked whenever a base-type (or its subclass) is instantiated, with option for type system to auto-set shred origin if available
+        void (CK_DLL_CALL * const callback_on_instantiate)( f_callback_on_instantiate callback, Type base_type, Chuck_VM * vm, t_CKBOOL shouldSetShredOrigin );
     } * const type;
 
     // constructor
