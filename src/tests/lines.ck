@@ -68,13 +68,14 @@ fun void lerpLineWidth(LineMat @ mat) {
 } spork ~ lerpLineWidth(lineMat);
 
 fun void cycleLineColor(LineMat @ mat) {
+    1::second => dur waitTime;
     while (true) {
         @(0.0, 1.0, 0.0) => mat.color;
-        .2::second => now;
+        waitTime => now;
         @(1.0, 0.0, 0.0) => mat.color;
-        .2::second => now;
+        waitTime => now;
         @(0.0, 0.0, 1.0) => mat.color;
-        .2::second => now;
+        waitTime => now;
     }
 
 } spork ~ cycleLineColor(lineMat);
@@ -82,15 +83,18 @@ fun void cycleLineColor(LineMat @ mat) {
 fun void randomizePositions(CustomGeometry @ geo)
 {
     while (true) {
+    // while (.1::second => now) {
         // 1::second => now;
-        for (0 => int i; i < positions.size(); i++) {
-            Math.random2f(-1.0, 1.0) => positions[i];
+        for (0 => int i; i < NUM_VERTICES; i++) {
+            // Math.random2f(-1.0, 1.0) => positions[3*i + 0];
+            // Math.random2f(-1.0, 1.0) => positions[3*i + 1];
+            // Math.random2f(-1.0, 1.0) => positions[3*i + 2];
         }
         geo.positions(positions);
         GG.nextFrame() => now;
     }
 }
-// spork ~ randomizePositions(lineGeo);
+spork ~ randomizePositions(lineGeo);
 
 
 // Game loop =====================

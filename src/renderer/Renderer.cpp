@@ -69,6 +69,10 @@ void RenderGeometry::BuildGeometry() {
 				attrib.SizeInBytes(),
 				attrib.NumVertices(),
 				GL_STATIC_DRAW  // TODO test GL_DYNAMIC and GL_STREAM
+				// GL_DYNAMIC_DRAW  // doesn't seem to make a difference
+				// GL_STREAM_DRAW   // doesn't seem to make a difference
+				// with all 3 modes, sndpeek with 1024 waterfall depth is 54 fps on andrew's macbook
+
 			);
 		} else {
 			auto* vb = m_VBs[attrib.location];

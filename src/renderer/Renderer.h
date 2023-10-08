@@ -193,7 +193,7 @@ public:
 		RenderGeometry* renderGeo = GetOrCreateRenderGeo(geo);
 		// check dirty TODO should prob move this elsewhere
 		if (renderGeo->IsDirty()) {
-			std::cout << "rendergeo dirty, rebuilding\n";
+			// std::cout << "rendergeo dirty, rebuilding\n";
 			renderGeo->BuildGeometry();
 		}
 
