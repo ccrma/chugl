@@ -8,10 +8,10 @@ SphereGeometry  SphereGeometry ;
 BoxGeometry boxGeo;
 // init materials
 NormMat normMat;
-normMat.useLocal(1);
+normMat.localNormals();
 
 NormMat worldspaceNormMat;
-worldspaceNormMat.useLocal(0);
+worldspaceNormMat.worldNormals();
 
 // scene setup
 GScene scene;

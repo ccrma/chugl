@@ -320,7 +320,9 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
 
         void main()
         {
-            result = v_Color * texture(u_PointTexture, gl_PointCoord);
+            // result = v_Color * texture(u_PointTexture, gl_PointCoord);
+            result = vec4(gl_PointCoord, 0.0, 1.0);
+            // result = vec4(1.0, 0.0, 0.0, 1.0);
     )"},
     {"LINES_VERT",
      R"(

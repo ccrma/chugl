@@ -116,7 +116,7 @@ enum MaterialOptionType : unsigned int {
 	Float = 0,
 	Int,
 	UnsignedInt,
-	Bool
+	Bool,
 };
 
 struct MaterialOption {
@@ -127,6 +127,7 @@ struct MaterialOption {
 		int i;
 		unsigned int ui;
 		bool b;
+		char * str;
 		MaterialPolygonMode polygonMode;
 		MaterialPrimitiveMode primitiveMode;
 	};
@@ -229,6 +230,7 @@ public:
 		return (m_Uniforms.find(s) != m_Uniforms.end()) ? &m_Uniforms[s] : nullptr;
 	}
 
+public: // material options and uniforms settings
 	// material options (affect rendering state, not directly passed to shader)
 	// need to pass hash function, enum keys not supported until c++14 :(
 	std::unordered_map<MaterialOptionParam, MaterialOption, std::hash<unsigned int>> m_Options;
@@ -237,23 +239,82 @@ public:
 	typedef std::unordered_map<std::string, MaterialUniform> LocalUniformCache;
 	LocalUniformCache m_Uniforms;
 
-public:  // static consts
+public: // custom shaders, only used by ShaderMaterial
+	std::string m_VertShaderPath, m_FragShaderPath;	
 
-	// static material options, for passing into chuck as svars if ever needed
-	// static const MaterialOptionParam POLYGON_MODE;
-	// static const MaterialOptionParam LINE_WIDTH;
-	// static const MaterialOptionParam POINT_SIZE;
+
+public:  // static consts
+	// putting all unames here to facilitate being able to set all material options
+	// and uniforms from base chuck Material class (so you don't have to cast e.g. mesh.mat() $ PhongMat)
 
 	// supported polygon modes
 	static const MaterialPolygonMode POLYGON_FILL;
 	static const MaterialPolygonMode POLYGON_LINE;
 	static const MaterialPolygonMode POLYGON_POINT;
 
+	// line rendering modes
+	static const unsigned int LINE_SEGMENTS_MODE;
+	static const unsigned int LINE_STRIP_MODE;
+	static const unsigned int LINE_LOOP_MODE;
+
 	// uniform names (TODO ShaderCode should be reading from here)
 	static const std::string POINT_SIZE_UNAME;
 	static const std::string LINE_WIDTH_UNAME;
 	static const std::string COLOR_UNAME;
 	// static const std::string AFFECTED_BY_FOG_UNAME;  // TODO
+
+	// normal material
+	static const std::string USE_LOCAL_NORMALS_UNAME;
+	
+	// phong mats
+	static const std::string DIFFUSE_MAP_UNAME;
+	static const std::string SPECULAR_MAP_UNAME;
+	static const std::string SPECULAR_COLOR_UNAME;
+	static const std::string SHININESS_UNAME;
+
+	// point mats
+	static const std::string POINT_SIZE_ATTENUATION_UNAME;
+	static const std::string POINT_SPRITE_TEXTURE_UNAME;
+
+
+public:  // uniform getters and setters
+	// uniform getters
+	size_t GetDiffuseMapID() { return m_Uniforms[Material::DIFFUSE_MAP_UNAME].texID; }
+	size_t GetSpecularMapID() { return m_Uniforms[Material::SPECULAR_MAP_UNAME].texID; }
+	glm::vec3 GetSpecularColor() { 
+		auto& matUniform = m_Uniforms[Material::SPECULAR_COLOR_UNAME];
+		return glm::vec3(matUniform.f3[0], matUniform.f3[1], matUniform.f3[2]); 
+	}
+	float GetLogShininess() { return m_Uniforms[Material::SHININESS_UNAME].f; }
+	bool GetUseLocalNormals() { return m_Uniforms[USE_LOCAL_NORMALS_UNAME].b; }
+	// point uniform getters
+	bool GetSizeAttenuation() { return m_Uniforms[POINT_SIZE_ATTENUATION_UNAME].b; }
+	size_t GetSpriteID() { return m_Uniforms[POINT_SPRITE_TEXTURE_UNAME].texID; }
+
+	// uniform setters
+	void SetDiffuseMap(CGL_Texture* texture) { m_Uniforms[Material::DIFFUSE_MAP_UNAME].texID = texture->GetID(); }
+	void SetSpecularMap(CGL_Texture* texture) { m_Uniforms[Material::SPECULAR_COLOR_UNAME].texID = texture->GetID(); }
+	void SetSpecularColor(float r, float g, float b) {
+		auto& uniform = m_Uniforms[Material::SPECULAR_COLOR_UNAME];
+		uniform.f3[0] = r; uniform.f3[1] = g; uniform.f3[2] = b;
+	}
+	void SetLogShininess(float logShininess) { 
+		m_Uniforms[Material::SHININESS_UNAME].f = std::pow(2.0f, logShininess);
+	}
+	void UseLocalNormals() { m_Uniforms[USE_LOCAL_NORMALS_UNAME].b = true; }
+	void UseWorldNormals() { m_Uniforms[USE_LOCAL_NORMALS_UNAME].b = false; }
+	virtual void SetShaderPaths(std::string vertexShaderPath, std::string fragmentShaderPath) {
+		m_VertShaderPath = vertexShaderPath;
+		m_FragShaderPath = fragmentShaderPath;
+	}
+	// primitive mode setters
+	void SetLineMode(MaterialPrimitiveMode mode) { SetOption(MaterialOption::Create(MaterialOptionParam::PrimitiveMode, mode)); }
+	void SetLineStrip() { SetLineMode(MaterialPrimitiveMode::LineStrip); }
+	void SetLineLoop() { SetLineMode(MaterialPrimitiveMode::LineLoop); }
+	void SetLines() { SetLineMode(MaterialPrimitiveMode::Lines); }
+	// point uniform setters
+	void SetSizeAttenuation(bool b) { m_Uniforms[POINT_SIZE_ATTENUATION_UNAME].b = b; }
+	void SetSprite(CGL_Texture* texture) { m_Uniforms[POINT_SPRITE_TEXTURE_UNAME].texID = texture->GetID(); }
 
 public:  // static material type --> chuck type name map
 	typedef std::unordered_map<MaterialType, const std::string, EnumClassHash> CkTypeMap;
@@ -276,13 +337,6 @@ public:
 		mat->SetID(GetID());
 		return mat;
 	}
-
-	void UseLocalNormals() { m_Uniforms[USE_LOCAL_NORMALS_UNAME].b = true; }
-	void UseWorldNormals() { m_Uniforms[USE_LOCAL_NORMALS_UNAME].b = false; }
-	bool GetUseLocalNormals() { return m_Uniforms[USE_LOCAL_NORMALS_UNAME].b; }
-
-// statics
-	static const std::string USE_LOCAL_NORMALS_UNAME;
 };
 
 // phong lighting (ambient + diffuse + specular)
@@ -295,10 +349,10 @@ public:
 		glm::vec4 specularColor = glm::vec4(1.0f),
 		float logShininess = 5  // ==> 32 shininess
 	) {
-		SetUniform(MaterialUniform::Create(PhongMaterial::DIFFUSE_MAP_UNAME, diffuseMapID));
-		SetUniform(MaterialUniform::Create(PhongMaterial::SPECULAR_MAP_UNAME, specularMapID));
-		SetUniform(MaterialUniform::Create(PhongMaterial::SPECULAR_COLOR_UNAME, specularColor));
-		SetUniform(MaterialUniform::Create(PhongMaterial::SHININESS_UNAME, logShininess));
+		SetUniform(MaterialUniform::Create(Material::DIFFUSE_MAP_UNAME, diffuseMapID));
+		SetUniform(MaterialUniform::Create(Material::SPECULAR_MAP_UNAME, specularMapID));
+		SetUniform(MaterialUniform::Create(Material::SPECULAR_COLOR_UNAME, specularColor));
+		SetUniform(MaterialUniform::Create(Material::SHININESS_UNAME, logShininess));
 	}
 
 	virtual MaterialType GetMaterialType() override { return MaterialType::Phong; }
@@ -307,32 +361,6 @@ public:
 		mat->SetID(GetID());
 		return mat;
 	}
-
-	// uniform getters
-	size_t GetDiffuseMapID() { return m_Uniforms[PhongMaterial::DIFFUSE_MAP_UNAME].texID; }
-	size_t GetSpecularMapID() { return m_Uniforms[PhongMaterial::SPECULAR_MAP_UNAME].texID; }
-	glm::vec3 GetSpecularColor() { 
-		auto& matUniform = m_Uniforms[PhongMaterial::SPECULAR_COLOR_UNAME];
-		return glm::vec3(matUniform.f3[0], matUniform.f3[1], matUniform.f3[2]); 
-	}
-	float GetLogShininess() { return m_Uniforms[PhongMaterial::SHININESS_UNAME].f; }
-
-	// uniform setters
-	void SetDiffuseMap(CGL_Texture* texture) { m_Uniforms[PhongMaterial::DIFFUSE_MAP_UNAME].texID = texture->GetID(); }
-	void SetSpecularMap(CGL_Texture* texture) { m_Uniforms[PhongMaterial::SPECULAR_COLOR_UNAME].texID = texture->GetID(); }
-	void SetSpecularColor(float r, float g, float b) {
-		auto& uniform = m_Uniforms[PhongMaterial::SPECULAR_COLOR_UNAME];
-		uniform.f3[0] = r; uniform.f3[1] = g; uniform.f3[2] = b;
-	}
-	void SetLogShininess(float logShininess) { 
-		m_Uniforms[PhongMaterial::SHININESS_UNAME].f = std::pow(2.0f, logShininess);
-	}
-
-	// static const
-	static const std::string DIFFUSE_MAP_UNAME;
-	static const std::string SPECULAR_MAP_UNAME;
-	static const std::string SPECULAR_COLOR_UNAME;
-	static const std::string SHININESS_UNAME;
 };
 
 // Custom shader material
@@ -341,8 +369,9 @@ class ShaderMaterial : public Material
 public:
 	ShaderMaterial (
 		std::string vertexShaderPath, std::string fragmentShaderPath
-	) : m_FragShaderPath(fragmentShaderPath), m_VertShaderPath(vertexShaderPath)
-	{
+	) {
+		m_FragShaderPath = fragmentShaderPath;
+		m_VertShaderPath = vertexShaderPath;
 	}
 
 	virtual MaterialType GetMaterialType() override { return MaterialType::CustomShader; }
@@ -351,17 +380,6 @@ public:
 		mat->SetID(GetID());
 		return mat;
 	};
-
-	virtual void SetShaderPaths(std::string vertexShaderPath, std::string fragmentShaderPath) {
-		m_VertShaderPath = vertexShaderPath;
-		m_FragShaderPath = fragmentShaderPath;
-	}
-
-	// commands for telling a material how to update itself
-	// virtual std::vector<MaterialUniform>* GenUpdate() { return new std::vector<MaterialUniform>(m_Uniforms); }
-	// virtual void ApplyUpdate(std::vector<MaterialUniform>* uniform_data) { m_Uniforms = *uniform_data; }
-
-	std::string m_VertShaderPath, m_FragShaderPath;	
 };
 
 // Points material
@@ -384,19 +402,6 @@ public:
 		mat->SetID(GetID());
 		return mat;
 	};
-
-	// uniform setters
-	void SetSizeAttenuation(bool b) { m_Uniforms[POINT_SIZE_ATTENUATION_UNAME].b = b; }
-	void SetSprite(CGL_Texture* texture) { m_Uniforms[POINT_SPRITE_TEXTURE_UNAME].texID = texture->GetID(); }
-
-	// uniform getters
-	bool GetSizeAttenuation() { return m_Uniforms[POINT_SIZE_ATTENUATION_UNAME].b; }
-	size_t GetSpriteID() { return m_Uniforms[POINT_SPRITE_TEXTURE_UNAME].texID; }
-
-
-public: // static const
-	static const std::string POINT_SIZE_ATTENUATION_UNAME;
-	static const std::string POINT_SPRITE_TEXTURE_UNAME;
 };
 
 
@@ -413,7 +418,6 @@ public:
 		mat->SetID(GetID());
 		return mat;
 	}
-
 };
 
 // Line mat
@@ -431,16 +435,4 @@ public:
 		mat->SetID(GetID());
 		return mat;
 	}
-
-	// primitive mode setters
-	void SetLineMode(MaterialPrimitiveMode mode) { SetOption(MaterialOption::Create(MaterialOptionParam::PrimitiveMode, mode)); }
-	void SetLineStrip() { SetLineMode(MaterialPrimitiveMode::LineStrip); }
-	void SetLineLoop() { SetLineMode(MaterialPrimitiveMode::LineLoop); }
-	void SetLines() { SetLineMode(MaterialPrimitiveMode::Lines); }
-
-public:
-	static const unsigned int LINE_SEGMENTS_MODE;
-	static const unsigned int LINE_STRIP_MODE;
-	static const unsigned int LINE_LOOP_MODE;
-
 };

@@ -45,7 +45,7 @@ BoxGeometry boxGeo;
 // init materials
 NormMat normMat;  
 NormMat headNormMat;
-normMat.useLocal(true);  // use local space normals (so we can tell orientation)
+normMat.localNormals();  // use local space normals (so we can tell orientation)
 headNormMat.polygonMode(CglMat.POLYGON_LINE);  // wireframe mode
 // headNormMat.wireframe(true);
 

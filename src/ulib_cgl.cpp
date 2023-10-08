@@ -286,6 +286,8 @@ CK_DLL_MFUN(cgl_mat_set_uniform_texID);
 // normal mat
 CK_DLL_CTOR(cgl_mat_norm_ctor);
 CK_DLL_MFUN(cgl_set_use_local_normals);
+CK_DLL_MFUN(cgl_set_use_world_normals);
+
 
 // flat shade mat
 // CK_DLL_CTOR(cgl_mat_flat_ctor);
@@ -715,8 +717,40 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 	geometry_data_offset = QUERY->add_mvar(QUERY, "int", "@geometry_data", false); // TODO: still bugged?
 
+	// attribute locations
+	QUERY->add_svar(QUERY, "int", "POS_ATTRIB_LOC", TRUE, (void *)&Geometry::POSITION_ATTRIB_IDX);
+	QUERY->add_svar(QUERY, "int", "NORM_ATTRIB_LOC", TRUE, (void *)&Geometry::NORMAL_ATTRIB_IDX);
+	QUERY->add_svar(QUERY, "int", "COL_ATTRIB_LOC", TRUE, (void *)&Geometry::COLOR_ATTRIB_IDX);
+	QUERY->add_svar(QUERY, "int", "UV0_ATTRIB_LOC", TRUE, (void *)&Geometry::UV0_ATTRIB_IDX);
+
 	// clone
 	QUERY->add_mfun(QUERY, cgl_geo_clone, Geometry::CKName(GeometryType::Base), "clone");
+
+	// attribute setters
+	QUERY->add_mfun(QUERY, cgl_geo_set_attribute, "void", "setAttribute");
+	QUERY->add_arg(QUERY, "string", "name");
+	QUERY->add_arg(QUERY, "int", "location");
+	QUERY->add_arg(QUERY, "int", "numComponents");
+	// QUERY->add_arg(QUERY, "int", "normalize");
+	QUERY->add_arg(QUERY, "float[]", "data");
+
+	QUERY->add_mfun(QUERY, cgl_geo_set_positions, "void", "positions");
+	QUERY->add_arg(QUERY, "float[]", "positions");
+
+	QUERY->add_mfun(QUERY, cgl_geo_set_positions_vec3, "void", "positions");
+	QUERY->add_arg(QUERY, "vec3[]", "positions");
+
+	QUERY->add_mfun(QUERY, cgl_geo_set_colors, "void", "colors");
+	QUERY->add_arg(QUERY, "float[]", "colors");
+
+	QUERY->add_mfun(QUERY, cgl_geo_set_normals, "void", "normals");
+	QUERY->add_arg(QUERY, "float[]", "normals");
+
+	QUERY->add_mfun(QUERY, cgl_geo_set_uvs, "void", "uvs");
+	QUERY->add_arg(QUERY, "float[]", "uvs");
+
+	QUERY->add_mfun(QUERY, cgl_geo_set_indices, "void", "indices");
+	QUERY->add_arg(QUERY, "int[]", "uvs");
 
 	// TODO: add svars for attribute locations
 	QUERY->end_class(QUERY);
@@ -809,30 +843,6 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 	QUERY->add_ctor(QUERY, cgl_geo_custom_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 
-	QUERY->add_mfun(QUERY, cgl_geo_set_attribute, "void", "setAttribute");
-	QUERY->add_arg(QUERY, "string", "name");
-	QUERY->add_arg(QUERY, "int", "location");
-	QUERY->add_arg(QUERY, "int", "numComponents");
-	// QUERY->add_arg(QUERY, "int", "normalize");
-	QUERY->add_arg(QUERY, "float[]", "data");
-
-	QUERY->add_mfun(QUERY, cgl_geo_set_positions, "void", "positions");
-	QUERY->add_arg(QUERY, "float[]", "positions");
-
-	QUERY->add_mfun(QUERY, cgl_geo_set_positions_vec3, "void", "positions");
-	QUERY->add_arg(QUERY, "vec3[]", "positions");
-
-	QUERY->add_mfun(QUERY, cgl_geo_set_colors, "void", "colors");
-	QUERY->add_arg(QUERY, "float[]", "colors");
-
-	QUERY->add_mfun(QUERY, cgl_geo_set_normals, "void", "normals");
-	QUERY->add_arg(QUERY, "float[]", "normals");
-
-	QUERY->add_mfun(QUERY, cgl_geo_set_uvs, "void", "uvs");
-	QUERY->add_arg(QUERY, "float[]", "uvs");
-
-	QUERY->add_mfun(QUERY, cgl_geo_set_indices, "void", "indices");
-	QUERY->add_arg(QUERY, "int[]", "uvs");
 
 	QUERY->end_class(QUERY);
 
@@ -1339,6 +1349,10 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 	QUERY->add_svar(QUERY, "int", "POLYGON_FILL", TRUE, (void *)&Material::POLYGON_FILL);
 	QUERY->add_svar(QUERY, "int", "POLYGON_LINE", TRUE, (void *)&Material::POLYGON_LINE);
 	QUERY->add_svar(QUERY, "int", "POLYGON_POINT", TRUE, (void *)&Material::POLYGON_POINT);
+	// line rendering static vars
+	QUERY->add_svar(QUERY, "int", "LINE_SEGMENTS", TRUE, (void *)&Material::LINE_SEGMENTS_MODE);
+	QUERY->add_svar(QUERY, "int", "LINE_STRIP", TRUE, (void *)&Material::LINE_STRIP_MODE);
+	QUERY->add_svar(QUERY, "int", "LINE_LOOP", TRUE, (void *)&Material::LINE_LOOP_MODE);
 
 	QUERY->add_mfun(QUERY, cgl_mat_set_polygon_mode, "int", "polygonMode");
 	QUERY->add_arg(QUERY, "int", "mode");
@@ -1353,9 +1367,41 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 	QUERY->add_mfun(QUERY, cgl_mat_set_line_width, "void", "lineWidth");
 	QUERY->add_arg(QUERY, "float", "width");
 
-	// phong mat
+	// norm mat fns
+	QUERY->add_mfun(QUERY, cgl_set_use_local_normals, "void", "localNormals");
+	QUERY->add_mfun(QUERY, cgl_set_use_world_normals, "void", "worldNormals");
+
+	// phong mat fns (TODO add getters, need to fix texture creation)
 	QUERY->add_mfun(QUERY, cgl_mat_phong_set_log_shininess, "float", "shine");
 	QUERY->add_arg(QUERY, "float", "shininess");
+
+	QUERY->add_mfun(QUERY, cgl_mat_phong_set_diffuse_map, "void", "diffuseMap");
+	QUERY->add_arg(QUERY, "Texture", "tex");
+
+	QUERY->add_mfun(QUERY, cgl_mat_phong_set_specular_map, "void", "specularMap");
+	QUERY->add_arg(QUERY, "Texture", "tex");
+
+	QUERY->add_mfun(QUERY, cgl_mat_phong_set_specular_color, "vec3", "specular");
+	QUERY->add_arg(QUERY, "vec3", "color");
+
+	// shader mat fns  (TODO allow setting vert and frag separately)
+	QUERY->add_mfun(QUERY, cgl_mat_custom_shader_set_shaders, "void", "shaderPaths");
+	QUERY->add_arg(QUERY, "string", "vert");
+	QUERY->add_arg(QUERY, "string", "frag");
+
+	// points mat fns
+	QUERY->add_mfun(QUERY, cgl_mat_points_set_size_attenuation, "int", "attenuatePoints");
+	QUERY->add_arg(QUERY, "int", "attenuation");
+	QUERY->add_mfun(QUERY, cgl_mat_points_get_size_attenuation, "int", "attenuatePoints");
+
+	QUERY->add_mfun(QUERY, cgl_mat_points_set_sprite, "Texture", "pointSprite");
+	QUERY->add_arg(QUERY, "Texture", "sprite");
+	// TODO add getter
+
+	// line mat fns
+	QUERY->add_mfun(QUERY, cgl_mat_line_set_mode, "int", "lineMode");
+	QUERY->add_arg(QUERY, "int", "mode");
+
 
 	// uniform setters
 	QUERY->add_mfun(QUERY, cgl_mat_set_uniform_float, "void", "uniformFloat");
@@ -1416,10 +1462,6 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Normal), Material::CKName(MaterialType::Base));
 	QUERY->add_ctor(QUERY, cgl_mat_norm_ctor);
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
-
-	QUERY->add_mfun(QUERY, cgl_set_use_local_normals, "void", "useLocal");
-	QUERY->add_arg(QUERY, "int", "useLocal");
-
 	QUERY->end_class(QUERY);
 
 	// flat material
@@ -1428,49 +1470,22 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 	// QUERY->add_dtor(QUERY, cgl_mat_dtor);
 	// QUERY->end_class(QUERY);
 
-
-
 	// phong specular material
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Phong), Material::CKName(MaterialType::Base));
 	QUERY->add_ctor(QUERY, cgl_mat_phong_ctor);
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
-
-	QUERY->add_mfun(QUERY, cgl_mat_phong_set_diffuse_map, "void", "diffuseMap");
-	QUERY->add_arg(QUERY, "Texture", "tex");
-
-	QUERY->add_mfun(QUERY, cgl_mat_phong_set_specular_map, "void", "specularMap");
-	QUERY->add_arg(QUERY, "Texture", "tex");
-
-	QUERY->add_mfun(QUERY, cgl_mat_phong_set_specular_color, "vec3", "specularColor");
-	QUERY->add_arg(QUERY, "vec3", "color");
-
-	// TODO: add getters
-
 	QUERY->end_class(QUERY);
 
 	// custom shader material
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::CustomShader), Material::CKName(MaterialType::Base));
 	QUERY->add_ctor(QUERY, cgl_mat_custom_shader_ctor);
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
-
-	QUERY->add_mfun(QUERY, cgl_mat_custom_shader_set_shaders, "void", "shaderPaths");
-	QUERY->add_arg(QUERY, "string", "vert");
-	QUERY->add_arg(QUERY, "string", "frag");
-
 	QUERY->end_class(QUERY);
 
 	// points material
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Points), Material::CKName(MaterialType::Base));
 	QUERY->add_ctor(QUERY, cgl_mat_points_ctor);
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
-
-	QUERY->add_mfun(QUERY, cgl_mat_points_set_size_attenuation, "int", "attenuate");
-	QUERY->add_arg(QUERY, "int", "attenuation");
-	QUERY->add_mfun(QUERY, cgl_mat_points_get_size_attenuation, "int", "attenuate");
-
-	QUERY->add_mfun(QUERY, cgl_mat_points_set_sprite, "Texture", "sprite");
-	QUERY->add_arg(QUERY, "Texture", "sprite");
-
 	QUERY->end_class(QUERY);
 
 	// mango material
@@ -1483,15 +1498,6 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Line), Material::CKName(MaterialType::Base));
 	QUERY->add_ctor(QUERY, cgl_mat_line_ctor);
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
-
-	// static vars
-	QUERY->add_svar(QUERY, "int", "LINE_SEGMENTS", TRUE, (void *)&LineMaterial::LINE_SEGMENTS_MODE);
-	QUERY->add_svar(QUERY, "int", "LINE_STRIP", TRUE, (void *)&LineMaterial::LINE_STRIP_MODE);
-	QUERY->add_svar(QUERY, "int", "LINE_LOOP", TRUE, (void *)&LineMaterial::LINE_LOOP_MODE);
-
-	QUERY->add_mfun(QUERY, cgl_mat_line_set_mode, "int", "mode");
-	QUERY->add_arg(QUERY, "int", "mode");
-
 	QUERY->end_class(QUERY);
 
 	return true;
@@ -1728,16 +1734,23 @@ CK_DLL_CTOR(cgl_mat_norm_ctor)
 
 CK_DLL_MFUN(cgl_set_use_local_normals)
 {
-	NormalMaterial *mat = (NormalMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
-	t_CKINT use_local = GET_NEXT_INT(ARGS);
-	if (use_local)
-		mat->UseLocalNormals();
-	else
-		mat->UseWorldNormals();
+	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	mat->UseLocalNormals();
 
 	CGL::PushCommand(new UpdateMaterialUniformCommand(
-		mat, *(mat->GetUniform(NormalMaterial::USE_LOCAL_NORMALS_UNAME))));
+		mat, *(mat->GetUniform(Material::USE_LOCAL_NORMALS_UNAME))));
 }
+
+CK_DLL_MFUN(cgl_set_use_world_normals)
+{
+	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	mat->UseWorldNormals();
+
+	CGL::PushCommand(new UpdateMaterialUniformCommand(
+		mat, *(mat->GetUniform(Material::USE_LOCAL_NORMALS_UNAME))));
+}
+
+
 
 // phong mat fns
 CK_DLL_CTOR(cgl_mat_phong_ctor)
@@ -1753,7 +1766,7 @@ CK_DLL_CTOR(cgl_mat_phong_ctor)
 
 CK_DLL_MFUN(cgl_mat_phong_set_diffuse_map)
 {
-	PhongMaterial *mat = (PhongMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
 	CGL_Texture *tex = (CGL_Texture *)OBJ_MEMBER_INT(GET_NEXT_OBJECT(ARGS), texture_data_offset);
 	mat->SetDiffuseMap(tex);
 
@@ -1762,12 +1775,12 @@ CK_DLL_MFUN(cgl_mat_phong_set_diffuse_map)
 
 	// a lot of redundant work (entire uniform vector is copied). can optimize later
 	CGL::PushCommand(new UpdateMaterialUniformCommand(
-		mat, *mat->GetUniform(PhongMaterial::DIFFUSE_MAP_UNAME)));
+		mat, *mat->GetUniform(Material::DIFFUSE_MAP_UNAME)));
 }
 
 CK_DLL_MFUN(cgl_mat_phong_set_specular_map)
 {
-	PhongMaterial *mat = (PhongMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
 	CGL_Texture *tex = (CGL_Texture *)OBJ_MEMBER_INT(GET_NEXT_OBJECT(ARGS), texture_data_offset);
 	mat->SetSpecularMap(tex);
 
@@ -1777,7 +1790,7 @@ CK_DLL_MFUN(cgl_mat_phong_set_specular_map)
 
 CK_DLL_MFUN(cgl_mat_phong_set_specular_color)
 {
-	PhongMaterial *mat = (PhongMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
 	t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
 	mat->SetSpecularColor(color.x, color.y, color.z);
 
@@ -1789,14 +1802,14 @@ CK_DLL_MFUN(cgl_mat_phong_set_specular_color)
 
 CK_DLL_MFUN(cgl_mat_phong_set_log_shininess)
 {
-	PhongMaterial *mat = (PhongMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
 	t_CKFLOAT shininess = GET_NEXT_FLOAT(ARGS);
 	mat->SetLogShininess(shininess);
 
 	RETURN->v_float = shininess;
 
 	CGL::PushCommand(new UpdateMaterialUniformCommand(
-		mat, *mat->GetUniform(PhongMaterial::SHININESS_UNAME)));
+		mat, *mat->GetUniform(Material::SHININESS_UNAME)));
 }
 
 // custom shader mat fns ---------------------------------
@@ -1813,13 +1826,19 @@ CK_DLL_CTOR(cgl_mat_custom_shader_ctor)
 
 CK_DLL_MFUN(cgl_mat_custom_shader_set_shaders)
 {
-	ShaderMaterial *mat = (ShaderMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	if (mat->GetMaterialType() != MaterialType::CustomShader)
+	{
+		std::cerr << "ERROR: material is not a custom shader material, cannot set custom shaders" << std::endl;
+		return;
+	}
+
 	Chuck_String *vertPath = GET_NEXT_STRING(ARGS);
 	Chuck_String *fragPath = GET_NEXT_STRING(ARGS);
 
 	mat->SetShaderPaths(vertPath->str(), fragPath->str());
 
-	CGL::PushCommand(new UpdateMaterialShadersCommand(mat));
+	CGL::PushCommand(new UpdateMaterialShadersCommand((ShaderMaterial *)mat));
 }
 
 // points mat fns ---------------------------------
@@ -1836,7 +1855,7 @@ CK_DLL_CTOR(cgl_mat_points_ctor)
 
 CK_DLL_MFUN(cgl_mat_points_set_size_attenuation)
 {
-	PointsMaterial *mat = (PointsMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
 	t_CKINT attenuation = GET_NEXT_INT(ARGS);
 	mat->SetSizeAttenuation(attenuation);
 
@@ -1847,14 +1866,14 @@ CK_DLL_MFUN(cgl_mat_points_set_size_attenuation)
 
 CK_DLL_MFUN(cgl_mat_points_get_size_attenuation)
 {
-	PointsMaterial *mat = (PointsMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
 
 	RETURN->v_int = mat->GetSizeAttenuation() ? 1 : 0;
 }
 
 CK_DLL_MFUN(cgl_mat_points_set_sprite)
 {
-	PointsMaterial *mat = (PointsMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
 	CGL_Texture *tex = (CGL_Texture *)OBJ_MEMBER_INT(GET_NEXT_OBJECT(ARGS), texture_data_offset);
 	mat->SetSprite(tex);
 
@@ -1890,7 +1909,7 @@ CK_DLL_CTOR(cgl_mat_line_ctor)
 
 CK_DLL_MFUN(cgl_mat_line_set_mode)
 {
-	LineMaterial *mat = (LineMaterial *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
 	t_CKINT mode = GET_NEXT_INT(ARGS);
 	mat->SetLineMode((MaterialPrimitiveMode)mode);
 

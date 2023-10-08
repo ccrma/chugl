@@ -63,7 +63,7 @@ pointMesh --> scene;
 // toggle size attentuation
 fun void toggleAttenuation() {
     while (1::second => now)
-        1 - pointsMat.attenuate() => pointsMat.attenuate;
+        1 - pointsMat.attenuatePoints() => pointsMat.attenuatePoints;
 } // spork ~ toggleAttenuation();
 
 

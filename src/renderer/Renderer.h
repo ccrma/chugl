@@ -199,6 +199,7 @@ public:
 
 		// lookup or create render material
 		RenderMaterial* renderMat = GetOrCreateRenderMat(mat);
+		// TODO add a dirty check?
 
 		// update shader program if changed
 		renderMat->UpdateShader();

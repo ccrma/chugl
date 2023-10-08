@@ -196,6 +196,8 @@ void RenderMaterial::UpdateShader()
 	if (m_Mat->GetMaterialType() != MaterialType::CustomShader) return;
 
 	// TODO: add hot reloading
+	// TODO: fix this so that only changing either frag or vert will still work 
+	// (right now) will try to load empty string for the other shader
 	ShaderMaterial* mat = dynamic_cast<ShaderMaterial*>(m_Mat);
 	if ( mat->m_VertShaderPath != m_Shader->GetVertPath() ||
 		mat->m_FragShaderPath != m_Shader->GetFragPath()) {
