@@ -15,7 +15,7 @@ worldspaceNormMat.worldNormals();
 
 // scene setup
 GScene scene;
-CglGroup sunSystem, earthSystem, moonSystem;
+GGen sunSystem, earthSystem, moonSystem;
 GMesh  sun, earth, moon;
 
 sun.set(boxGeo, normMat); 

@@ -22,7 +22,10 @@ public:
 
 	inline void SetGeometry(Geometry* geo) { m_Geometry = geo; }
 	inline void SetMaterial(Material* mat) { m_Material = mat; }
-	
+
+	size_t GetMaterialID();
+	size_t GetGeometryID();
+
 	// to get around lack of chuck constructors for now
 	
 

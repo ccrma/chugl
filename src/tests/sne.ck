@@ -46,11 +46,11 @@ BoxGeometry boxGeo;
 NormMat normMat;  
 NormMat headNormMat;
 normMat.localNormals();  // use local space normals (so we can tell orientation)
-headNormMat.polygonMode(CglMat.POLYGON_LINE);  // wireframe mode
+headNormMat.polygonMode(Material.POLYGON_LINE);  // wireframe mode
 // headNormMat.wireframe(true);
 
 NormMat wireframeNormMat;
-wireframeNormMat.polygonMode(CglMat.POLYGON_LINE);
+wireframeNormMat.polygonMode(Material.POLYGON_LINE);
 // wireframeNormMat.wireframe(true);
 
 // ECS classes ==================================================
@@ -70,7 +70,7 @@ class Segment {
 
 	GMesh mesh;
 
-	fun void Constructor(Geometry @ geo, CglMat @ mat) {
+	fun void Constructor(Geometry @ geo, Material @ mat) {
 		// create mesh
 		mesh.set(geo, mat);
 	}
@@ -81,7 +81,7 @@ class Segment {
 
 	fun static Segment @ Create(
 		Geometry @ geo, 
-		CglMat @ mat,
+		Material @ mat,
 		vec3 pos
 	) {
 		Segment seg;
@@ -148,7 +148,7 @@ class Grid {
 	BoxGeometry gridGeo;
 
 	NormMat gridMat;
-	gridMat.polygonMode(CglMat.POLYGON_LINE);
+	gridMat.polygonMode(Material.POLYGON_LINE);
 	// gridMat.wireframe(true);
 
 	// hashset of each grid cell
@@ -225,9 +225,9 @@ class Grid {
 class Snake {
 	GScene @ scene;
     Geometry @ geo;  // snake segment shape 
-    CglMat @ mat;  // snake material
+    Material @ mat;  // snake material
 
-    CglGroup snakeObj;  // parent group for all segments
+    GGen snakeObj;  // parent group for all segments
     // Segment @ segments[];  // list of individual segments. Tail is first element, head is last
 
 	null @=> Segment @ head;
@@ -264,7 +264,7 @@ class Snake {
 
     // constructor. call this first!
     fun void Constructor(
-		Geometry @ snakeGeo, CglMat @ snakeMat,
+		Geometry @ snakeGeo, Material @ snakeMat,
 		GScene @ scene
 	) {
         snakeGeo @=> this.geo;

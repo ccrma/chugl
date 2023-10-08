@@ -28,7 +28,7 @@ shaderMat.shaders(
     "renderer/shaders/mangoFrag.glsl"
 );
 // shaderMat.wireframe(1);
-CglGroup group;
+GGen group;
 
 // Lighting
 PointLight light;

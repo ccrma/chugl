@@ -101,8 +101,8 @@ private:
 class CreateTextureCommand : public SceneGraphCommand
 {
 public:
-    CreateTextureCommand(CGL_Texture* tex) : texture(nullptr) {
-        texture = tex->Clone();  // for when chuck eventually has constructors
+    CreateTextureCommand(CGL_Texture* tex, Scene* audioThreadScene) : texture(tex->Clone()) {
+        audioThreadScene->RegisterNode(tex);  // register to audio thread scene
         std::cout << "created texture with id: " + std::to_string(tex->GetID()) << std::endl;
     }
 
@@ -151,23 +151,6 @@ private:
     Light* light;  // DON"T DELETE passed to renderer scenegraph
 };
 
-// create Group
-class CreateGroupCommand : public SceneGraphCommand
-{
-public:
-    CreateGroupCommand(Group* group) : group(group) {};
-    virtual void execute(Scene* scene) override {  // TODO: just add virtual clone() interface to scenegraph node
-        Group* newGroup = new Group();
-        newGroup->SetID(group->GetID());  // copy ID
-        std::cout << "copied group with id: " + std::to_string(newGroup->GetID())
-            << std::endl;
-
-        scene->RegisterNode(newGroup);
-    }
-private:
-    Group* group;
-};
-
 // create base GGen (semantically same as empty group)
 class CreateSceneGraphObjectCommand : public SceneGraphCommand
 {
@@ -186,31 +169,25 @@ private:
 class CreateMeshCommand : public SceneGraphCommand
 {
 public:
-    CreateMeshCommand(Mesh* mesh) : mesh(mesh) {
-        // TODO: clone this instead. follow light model. 
-        std::cerr << "creating mesh with id: " << mesh->GetID() << std::endl;
-
-    };
+    CreateMeshCommand(Mesh* mesh) : 
+        mesh_ID(mesh->GetID()), 
+        mat_ID(mesh->GetMaterialID()),
+        geo_ID(mesh->GetGeometryID())
+    {};
     virtual void execute(Scene* scene) override {
         // Get the cloned material and geometry
-        Material* clonedMat = nullptr;
-        Geometry* clonedGeo = nullptr;
-
-        if (mesh->GetMaterial())
-            clonedMat = dynamic_cast<Material*>(scene->GetNode(mesh->GetMaterial()->GetID()));
-        if (mesh->GetGeometry())
-            clonedGeo = dynamic_cast<Geometry*>(scene->GetNode(mesh->GetGeometry()->GetID()));
-
+        Material* clonedMat = dynamic_cast<Material*>(scene->GetNode(mat_ID));
+        Geometry* clonedGeo = dynamic_cast<Geometry*>(scene->GetNode(geo_ID));
         Mesh* newMesh = new Mesh(clonedGeo, clonedMat);
-        newMesh->SetID(mesh->GetID());  // copy ID
-        std::cout << "copied mesh with id: " + std::to_string(newMesh->GetID())
-            << std::endl;
+        newMesh->SetID(mesh_ID);
 
         scene->RegisterNode(newMesh);
     }
 
 private:
-    Mesh* mesh;
+    size_t mesh_ID;
+    size_t mat_ID;
+    size_t geo_ID;
 };
 
 // create Camera
@@ -230,24 +207,24 @@ private:
     Camera* m_Camera;
 };
 
-// Create Scene
-class CreateSceneCommand : public SceneGraphCommand
-{
-public:
-    CreateSceneCommand(Scene* scene) : m_Scene(scene) {};
+// Create Scene (not done, need to impl scene.Clone())
+// class CreateSceneCommand : public SceneGraphCommand
+// {
+// public:
+//     CreateSceneCommand(Scene* scene) : m_Scene() {};
 
-    // TODO: this is weird, we have to pass in a scene pointer to create a scene...
-    // basically the only point is to copy the ID and register itself in its node map
-    virtual void execute(Scene* scene) override {
-        scene->SetID(m_Scene->GetID());  // copy ID
-        std::cout << "copied scene with id: " + std::to_string(m_Scene->GetID())
-            << std::endl;
+//     // TODO: this is weird, we have to pass in a scene pointer to create a scene...
+//     // basically the only point is to copy the ID and register itself in its node map
+//     virtual void execute(Scene* scene) override {
+//         scene->SetID(m_Scene->GetID());  // copy ID
+//         std::cout << "copied scene with id: " + std::to_string(m_Scene->GetID())
+//             << std::endl;
 
-        scene->RegisterNode(scene);  // register itself so it shows up in node lookups
-    }
-private:
-    Scene* m_Scene;
-};
+//         scene->RegisterNode(scene);  // register itself so it shows up in node lookups
+//     }
+// private:
+//     Scene* m_Scene;
+// };
 
 //==================== SceneGraph Relationship Commands =======================//
 
@@ -336,14 +313,7 @@ public:
         mesh->SetGeometry(geo);
         mesh->SetMaterial(mat);
     }
-
-
 private:  
-    // store IDs, not pointers, because we want to point to the renderer's copy
-    // not the original.
-    // Also not safe to read from the original during command queue flush
-    // because it may be being written to by chuck side
-    // TODO: need to do this for all the other commands .... :(
     size_t m_MeshID, m_MatID, m_GeoID;
 };
 
@@ -365,10 +335,12 @@ class UpdateMaterialCommand : public SceneGraphCommand
 {
 public:
     UpdateMaterialCommand(Material* mat) 
-        : m_MatData(mat->GenUpdate()), m_MatID(mat->GetID()) {
+        : m_MatData(mat->GenUpdate()), m_MatID(mat->GetID()),
+        m_Mat(nullptr)
+    {
         assert(mat->GetMaterialType() != MaterialType::Base);
     };
-    ~UpdateMaterialCommand() { m_Mat->FreeUpdate(m_MatData); }
+    ~UpdateMaterialCommand() { if (m_Mat) m_Mat->FreeUpdate(m_MatData); }
     virtual void execute(Scene* scene) override {
         m_Mat = dynamic_cast<Material*>(scene->GetNode(m_MatID));
         assert(m_Mat);  
@@ -441,19 +413,16 @@ class UpdateGeometryCommand : public SceneGraphCommand
 {
 public:
     UpdateGeometryCommand(Geometry* geo)
-        : m_Geo(geo), m_GeoData(geo->GenUpdate()), m_GeoID(geo->GetID()) {};
+        : m_Geo(nullptr), m_GeoData(geo->GenUpdate()), m_GeoID(geo->GetID()) {};
     ~UpdateGeometryCommand() {
-        if (m_GeoData) {
+        if (m_GeoData && m_Geo) {
             m_Geo->FreeUpdate(m_GeoData);
         }
     }
     virtual void execute(Scene* scene) override {
-        Geometry* geo = dynamic_cast<Geometry*>(scene->GetNode(m_GeoID));
-        assert(geo);
-        geo->ApplyUpdate(m_GeoData);
-
-        std::cout << "updated geometry with id: " + std::to_string(geo->GetID())
-            << std::endl;
+        m_Geo = dynamic_cast<Geometry*>(scene->GetNode(m_GeoID));
+        assert(m_Geo);
+        m_Geo->ApplyUpdate(m_GeoData);
     }
 private:
     Geometry* m_Geo;

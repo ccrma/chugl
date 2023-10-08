@@ -358,11 +358,6 @@ CK_DLL_CTOR(cgl_gpoints_ctor);
 
 
 
-//-----------------------------------------------------------------------------
-// Object -> Group
-//-----------------------------------------------------------------------------
-CK_DLL_CTOR(cgl_group_ctor);
-CK_DLL_DTOR(cgl_group_dtor);
 
 // exports =========================================
 
@@ -374,7 +369,6 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_obj(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_cam(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_scene(Chuck_DL_Query *QUERY);
-t_CKBOOL init_chugl_group(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_mesh(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_light(Chuck_DL_Query *QUERY);
 t_CKBOOL create_chugl_default_objs(Chuck_DL_Query *QUERY);
@@ -396,7 +390,6 @@ t_CKBOOL init_chugl(Chuck_DL_Query *QUERY)
 	init_chugl_mat(QUERY);
 	init_chugl_obj(QUERY);
 	init_chugl_cam(QUERY);
-	init_chugl_group(QUERY);
 	init_chugl_mesh(QUERY);
 	init_chugl_light(QUERY);
 	init_chugl_scene(QUERY);
@@ -1285,7 +1278,7 @@ CK_DLL_CTOR(cgl_texture_file_ctor)
 	texture->m_ChuckObject = SELF;
 
 	// Creation command
-	CGL::PushCommand(new CreateTextureCommand(texture));
+	CGL::PushCommand(new CreateTextureCommand(texture, &CGL::mainScene));
 }
 
 CK_DLL_MFUN(cgl_texture_file_set_filepath)
@@ -1316,7 +1309,7 @@ CK_DLL_CTOR(cgl_texture_rawdata_ctor)
 	texture->m_ChuckObject = SELF;
 
 	// Creation command
-	CGL::PushCommand(new CreateTextureCommand(texture));
+	CGL::PushCommand(new CreateTextureCommand(texture, &CGL::mainScene));
 }
 
 CK_DLL_MFUN(cgl_texture_rawdata_set_data)
@@ -1403,7 +1396,6 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 
 	QUERY->add_mfun(QUERY, cgl_mat_points_set_sprite, "Texture", "pointSprite");
 	QUERY->add_arg(QUERY, "Texture", "sprite");
-	// TODO add getter
 
 	// line mat fns
 	QUERY->add_mfun(QUERY, cgl_mat_line_set_mode, "int", "lineMode");
@@ -2896,39 +2888,6 @@ CK_DLL_CTOR(cgl_gpoints_ctor)
 	);
 
     cglMeshSet(mesh, geo, mat);
-}
-
-//-----------------------------------------------------------------------------
-// init_chugl_group()
-//-----------------------------------------------------------------------------
-t_CKBOOL init_chugl_group(Chuck_DL_Query *QUERY)
-{
-	// EM_log(CK_LOG_INFO, "ChuGL group");
-
-	// CGL Group
-	QUERY->begin_class(QUERY, "CglGroup", "GGen");
-	QUERY->add_ctor(QUERY, cgl_group_ctor);
-	QUERY->add_dtor(QUERY, cgl_group_dtor);
-	QUERY->end_class(QUERY);
-
-	return true;
-}
-// CGL Group
-CK_DLL_CTOR(cgl_group_ctor)
-{
-	Group *group = new Group;
-	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT)group;
-	group->m_ChuckObject = SELF;
-	CGL::PushCommand(new CreateGroupCommand(group));
-}
-
-CK_DLL_DTOR(cgl_group_dtor)
-{
-	Group *group = (Group *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	CK_SAFE_DELETE(group);
-	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0; // zero out the memory
-
-	// TODO: need to remove from scenegraph
 }
 
 //-----------------------------------------------------------------------------

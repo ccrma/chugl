@@ -13,7 +13,7 @@ SphereGeometry  SphereGeometry ;
 GScene scene;
 GMesh mesh;
 GMesh lightbulb;
-CglGroup group;
+GGen group;
 
 // Lighting
 PointLight light;
