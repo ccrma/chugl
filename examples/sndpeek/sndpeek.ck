@@ -129,7 +129,7 @@ fun void map2waveform( float in[], float out[] )
 {
     if( in.size()*3 != out.size() )
     {
-        <<< "size mismatch in flatten()", "" >>>;
+        <<< "size mismatch in map2waveform()", "" >>>;
         return;
     }
     
@@ -153,7 +153,7 @@ fun void map2spectrum( complex in[], float out[] )
 {
     if( in.size()*3 != out.size() )
     {
-        <<< "size mismatch in flatten()", "" >>>;
+        <<< "size mismatch in map2spectrum()", "" >>>;
         return;
     }
     

@@ -19,6 +19,10 @@
 #include <iostream>
 #include <cmath>
 
+// references to VM and API
+static Chuck_VM * g_chuglVM = NULL;
+static CK_DL_API g_chuglAPI = NULL;
+
 t_CKBOOL chugl_main_loop_hook(void* bindle)
 {
     Window window;
@@ -28,6 +32,10 @@ t_CKBOOL chugl_main_loop_hook(void* bindle)
 
     std::cerr << "==exiting chugl window==" << std::endl;
     CGL::DeactivateHook();
+
+    // remove all shreds (should trigger shutdown, unless running in --loop mode)
+    if( g_chuglVM && g_chuglAPI )
+        g_chuglAPI->vm->remove_all_shreds( g_chuglVM );
 
     return TRUE;
 }
@@ -45,6 +53,11 @@ CK_DLL_QUERY(ChuGL)
     QUERY->setname(QUERY, "ChuGL");
     CGL::hook = QUERY->create_main_thread_hook(QUERY, chugl_main_loop_hook, chugl_main_loop_quit, NULL);
     init_chugl(QUERY);
+
+    // remember
+    g_chuglVM = QUERY->vm();
+    g_chuglAPI = QUERY->api();
+
     // wasn't that a breeze?
     return TRUE;
 }
