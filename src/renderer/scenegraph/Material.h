@@ -16,7 +16,8 @@ enum class MaterialType : unsigned int {
 	CustomShader,
 	Points,
 	Mango,
-	Line
+	Line,
+	Flat
 };
 
 enum class UniformType {
@@ -358,6 +359,23 @@ public:
 	virtual MaterialType GetMaterialType() override { return MaterialType::Phong; }
 	virtual Material* Clone() override { 
 		auto* mat = new PhongMaterial(*this);
+		mat->SetID(GetID());
+		return mat;
+	}
+};
+
+class FlatMaterial : public Material
+{
+public:
+	FlatMaterial(
+		size_t diffuseMapID = 0
+	) {
+		SetUniform(MaterialUniform::Create(Material::DIFFUSE_MAP_UNAME, diffuseMapID));
+	}
+
+	virtual MaterialType GetMaterialType() override { return MaterialType::Flat; }
+	virtual Material* Clone() override { 
+		auto* mat = new FlatMaterial(*this);
 		mat->SetID(GetID());
 		return mat;
 	}

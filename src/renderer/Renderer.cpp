@@ -147,6 +147,10 @@ RenderMaterial::RenderMaterial(Material *mat, Renderer *renderer) : m_Mat(mat), 
 			vert = ShaderCode::GenShaderSource(ShaderCode::BASIC_VERT, ShaderType::Vertex);
 			frag = ShaderCode::GenShaderSource(ShaderCode::NORMAL_FRAG, ShaderType::Fragment);
 			break;
+		case MaterialType::Flat:
+			vert = ShaderCode::GenShaderSource(ShaderCode::BASIC_VERT, ShaderType::Vertex);
+			frag = ShaderCode::GenShaderSource(ShaderCode::FLAT_FRAG, ShaderType::Fragment);
+			break;
 		case MaterialType::Phong:
 			vert = ShaderCode::GenShaderSource(ShaderCode::BASIC_VERT, ShaderType::Vertex);
 			frag = ShaderCode::GenShaderSource("PHONG_FRAG", ShaderType::Fragment);

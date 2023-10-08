@@ -16,8 +16,8 @@ const std::string Material::COLOR_UNAME = "u_Color";
 const std::string Material::USE_LOCAL_NORMALS_UNAME = "u_UseLocalNormal";
 
 // phont mat uniforms (TODO move out of material struct?)
-const std::string Material::DIFFUSE_MAP_UNAME = "u_Material.diffuseMap";
-const std::string Material::SPECULAR_MAP_UNAME = "u_Material.specularMap";
+const std::string Material::DIFFUSE_MAP_UNAME = "u_DiffuseMap";
+const std::string Material::SPECULAR_MAP_UNAME = "u_SpecularMap";
 const std::string Material::SPECULAR_COLOR_UNAME = "u_Material.specularColor";
 const std::string Material::SHININESS_UNAME = "u_Material.shininess";
 
@@ -37,6 +37,7 @@ Material::CkTypeMap Material::s_CkTypeMap = {
     {MaterialType::Line, "LineMat"},
     {MaterialType::CustomShader, "ShaderMat"},
     {MaterialType::Mango, "MangoMat"},
+    {MaterialType::Flat, "FlatMat"},
 };
 
 

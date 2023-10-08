@@ -290,7 +290,7 @@ CK_DLL_MFUN(cgl_set_use_world_normals);
 
 
 // flat shade mat
-// CK_DLL_CTOR(cgl_mat_flat_ctor);
+CK_DLL_CTOR(cgl_mat_flat_ctor);
 
 // phong specular mat
 CK_DLL_CTOR(cgl_mat_phong_ctor);
@@ -1464,10 +1464,10 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 	QUERY->end_class(QUERY);
 
 	// flat material
-	// QUERY->begin_class(QUERY, Material::CKName(MaterialType::Normal), Material::CKName(MaterialType::Base));
-	// QUERY->add_ctor(QUERY, cgl_mat_flat_ctor);
-	// QUERY->add_dtor(QUERY, cgl_mat_dtor);
-	// QUERY->end_class(QUERY);
+	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Flat), Material::CKName(MaterialType::Base));
+	QUERY->add_ctor(QUERY, cgl_mat_flat_ctor);
+	QUERY->add_dtor(QUERY, cgl_mat_dtor);
+	QUERY->end_class(QUERY);
 
 	// phong specular material
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Phong), Material::CKName(MaterialType::Base));
@@ -1749,6 +1749,18 @@ CK_DLL_MFUN(cgl_set_use_world_normals)
 		mat, *(mat->GetUniform(Material::USE_LOCAL_NORMALS_UNAME))));
 }
 
+
+// flat mat fns
+CK_DLL_CTOR(cgl_mat_flat_ctor)
+{
+	FlatMaterial *flatMat = new FlatMaterial;
+	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT)flatMat;
+
+	flatMat->m_ChuckObject = SELF;
+
+	// Creation command
+	CGL::PushCommand(new CreateMaterialCommand(flatMat));
+}
 
 
 // phong mat fns

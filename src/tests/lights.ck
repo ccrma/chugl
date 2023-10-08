@@ -15,6 +15,9 @@ flycam.init(IM, MM);
 spork ~ flycam.selfUpdate();
 
 NormMat normMat;
+GCube flatCube;
+FlatMat flatMat; flatMat.color(@(1, 0, 0));
+flatCube.mat(flatMat);
 BoxGeometry boxGeo;
 SphereGeometry  SphereGeometry ;
 
@@ -43,6 +46,7 @@ phongMat.diffuseMap(dataTex);
 
 PhongMat filePhongMat;
 filePhongMat.diffuseMap(tex);
+flatMat.diffuseMap(tex);
 
 mesh.set( boxGeo, phongMat );
 fileMesh.set(boxGeo, filePhongMat);
@@ -54,9 +58,11 @@ fileMesh --> scene;
 group --> scene;
 // dirLight --> scene;
 shaderMesh --> scene;
+flatCube --> scene;
 
 fileMesh.position(@(0, 1.5, 0));
 shaderMesh.position(@(0, -1.5, 0));
+flatCube.position(@(0, -3, 0));
 lightbulb.position( @(2, 0, 0) );
 lightbulb.scale( @(0.1, 0.1, 0.1) );
 light --> lightbulb --> group;

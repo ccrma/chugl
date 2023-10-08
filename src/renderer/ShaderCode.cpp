@@ -14,6 +14,7 @@
 
 const std::string ShaderCode::BASIC_VERT = "GG_BASIC_VERT";
 const std::string ShaderCode::NORMAL_FRAG = "GG_NORMAL_FRAG";
+const std::string ShaderCode::FLAT_FRAG = "GG_FLAT_FRAG";
 
 ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
     {"SHADER_VERSION", "#version 330 core\n"},
@@ -80,6 +81,13 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
         uniform int u_NumDirLights = 0;
         uniform PointLight u_PointLights[MAX_LIGHTS];
         uniform DirLight u_DirLights[MAX_LIGHTS];
+    )"},
+    {"TEXTURE_UNIFORMS",
+    R"(
+        // textures
+        uniform sampler2D u_DiffuseMap;
+        uniform sampler2D u_SpecularMap;
+        // TODO add others
     )"},
     {
     "FOG_UNIFORMS",
@@ -176,17 +184,24 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
             result = (1 - u_UseLocalNormal) * vec4(normalize(v_Normal), 1.0) + 
                         (u_UseLocalNormal) * vec4(normalize(v_LocalNormal), 1.0);
     )"},
+    {FLAT_FRAG,
+    R"(
+        #include BASIC_FRAG_VARYINGS
+        #include TEXTURE_UNIFORMS
+
+        void main()
+        {
+            vec4 diffuseTex = texture(u_DiffuseMap, v_TexCoord);
+            result = v_Color * diffuseTex;
+    )"},
     {"PHONG_FRAG",
      R"(
         #include TRANSFORM_UNIFORMS
         #include LIGHTING_UNIFORMS
         #include BASIC_FRAG_VARYINGS
+        #include TEXTURE_UNIFORMS
 
         struct Material {
-            // textures
-            sampler2D diffuseMap;
-            sampler2D specularMap;
-
             // colors
             vec4 specularColor;
 
@@ -249,8 +264,8 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
             vec3 viewDir = normalize(u_ViewPos - v_Pos);  // direction from camera to this frag
 
             // material color properties (ignore alpha channel for now)
-            vec4 diffuseTex = texture(u_Material.diffuseMap, v_TexCoord);
-            vec4 specularTex = texture(u_Material.specularMap, v_TexCoord);
+            vec4 diffuseTex = texture(u_DiffuseMap, v_TexCoord);
+            vec4 specularTex = texture(u_SpecularMap, v_TexCoord);
             vec4 diffuse = diffuseTex * v_Color;
             vec4 specular = specularTex * u_Material.specularColor;
 

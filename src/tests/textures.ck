@@ -47,8 +47,6 @@ now => time lastTime;
 NextFrameEvent UpdateEvent;
 
 while (true) {
-    GG.Render();
-    UpdateEvent => now;
 
     // compute timing
     frameCounter++;
@@ -56,7 +54,7 @@ while (true) {
     now => lastTime;
     deltaTime/second => float dt;
 
-    // rotate light
+    GG.nextFrame() => now;
 }
 
 
