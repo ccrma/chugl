@@ -67,6 +67,9 @@ CK_DLL_SFUN(cgl_get_num_registered_waiting_shreds);
 // chugl toggle whether to use system time or chuck time
 CK_DLL_SFUN(cgl_use_chuck_time);
 
+// get FPS
+CK_DLL_SFUN(cgl_get_fps);
+
 //-----------------------------------------------------------------------------
 // ChuGL Object
 //-----------------------------------------------------------------------------
@@ -470,12 +473,19 @@ CK_DLL_CTOR(cgl_update_ctor)
 	OBJ_MEMBER_INT(SELF, cgl_next_frame_event_data_offset) = (t_CKINT) new CglEvent(
 		(Chuck_Event *)SELF, SHRED->vm_ref, API, CglEventType::CGL_UPDATE);
 }
+
 CK_DLL_DTOR(cgl_update_dtor)
 {
 	CglEvent *cglEvent = (CglEvent *)OBJ_MEMBER_INT(SELF, cgl_next_frame_event_data_offset);
 	CK_SAFE_DELETE(cglEvent);
 	OBJ_MEMBER_INT(SELF, cgl_next_frame_event_data_offset) = 0;
 }
+
+//-----------------------------------------------------------------------------
+// this is called by chuck VM at the earliest point when a shred begins to wait on an Event
+// used to catch GG.nextFrame() => now; on one or more shreds
+// once all expected shreds are waiting on GG.nextFrame(), this function signals the graphics-side
+//-----------------------------------------------------------------------------
 CK_DLL_MFUN(cgl_update_event_waiting_on)
 {
 	// THIS IS A VERY IMPORTANT FUNCTION. See
@@ -491,9 +501,6 @@ CK_DLL_MFUN(cgl_update_event_waiting_on)
 	// activate chugl main thread hook (no-op if already activated)
 	CGL::ActivateHook();
 
-	// Add shred (no-op if already added)
-	// CGL::RegisterShred(SHRED);
-
 	// flips the boolean flag for this shred to true, meaning it has successfully
 	CGL::MarkShredWaited(SHRED);
 
@@ -504,16 +511,13 @@ CK_DLL_MFUN(cgl_update_event_waiting_on)
 	// if #waiting == #registered, all CGL shreds have finished work, and we are safe to wakeup the renderer
 	if (CGL::GetNumShredsWaiting() >= CGL::GetNumRegisteredShreds())
 	{
-
-		// if this is very first time calling, set initial dt
-		// this allows chuck time and window dt to be totally synced!!
-		// TODO: ask ge how to we get now and dt through dl API?
-
 		// traverse scenegraph and call chuck-defined update() on all GGens
 		CGL::UpdateSceneGraph(CGL::mainScene, API, VM, SHRED);
-
-		CGL::ClearShredWaiting(); // clear thread waitlist
-		CGL::Render();
+        // clear thread waitlist; all expected shreds are now waiting on GG.nextFrame()
+        CGL::ClearShredWaiting();
+        // signal the graphics-side that audio-side is done processing for this frame
+        // see CGL::WaitOnUpdateDone()
+        CGL::Render();
 	}
 }
 
@@ -590,6 +594,9 @@ t_CKBOOL init_chugl_static_fns(Chuck_DL_Query *QUERY)
 	// chugl chuck time for auto update(dt)
 	QUERY->add_sfun(QUERY, cgl_use_chuck_time, "void", "useChuckTime");
 	QUERY->add_arg(QUERY, "int", "use");
+
+    // fps()
+    QUERY->add_sfun(QUERY, cgl_get_fps, "int", "fps");
 
 	QUERY->end_class(QUERY);
 
@@ -700,6 +707,11 @@ CK_DLL_SFUN(cgl_get_num_registered_waiting_shreds)
 CK_DLL_SFUN(cgl_use_chuck_time)
 {
 	CGL::useChuckTime = GET_NEXT_INT(ARGS) != 0;
+}
+
+CK_DLL_SFUN(cgl_get_fps)
+{
+    RETURN->v_int = CGL::GetFPS();
 }
 
 //-----------------------------------------------------------------------------
@@ -3144,14 +3156,8 @@ bool CGL::m_CQReadTarget = false; // false = this, true = that
 std::mutex CGL::m_CQLock;		  // only held when 1: adding new command and 2: swapping the read/write queues
 
 // CGL window state initialization
-
 std::mutex CGL::s_WindowStateLock;
-CGL::WindowState CGL::s_WindowState = {
-	1, 1,	  // window width and height (in screen coordinates)
-	1, 1,	  // frame buffer width and height (in pixels)
-	0.0, 0.0, // mouse X, mouse Y
-	0.0, 0.0  // glfw time, delta time
-};
+CGL::WindowState CGL::s_WindowState;
 
 // mouse modes
 const unsigned int CGL::MOUSE_NORMAL = 0;
@@ -3159,7 +3165,6 @@ const unsigned int CGL::MOUSE_HIDDEN = 1;
 const unsigned int CGL::MOUSE_LOCKED = 2;
 
 // window modes
-
 const unsigned int CGL::WINDOW_WINDOWED = 0;
 const unsigned int CGL::WINDOW_FULLSCREEN = 1;
 const unsigned int CGL::WINDOW_MAXIMIZED = 2;
@@ -3524,4 +3529,16 @@ void CGL::SetTimeInfo(double glfwTime, double deltaTime)
 	std::unique_lock<std::mutex> lock(s_WindowStateLock);
 	s_WindowState.glfwTime = glfwTime;
 	s_WindowState.deltaTime = deltaTime;
+}
+
+void CGL::SetFPS( int fps )
+{
+    std::unique_lock<std::mutex> lock(s_WindowStateLock);
+    s_WindowState.fps = fps;
+}
+
+int CGL::GetFPS()
+{
+    std::unique_lock<std::mutex> lock(s_WindowStateLock);
+    return s_WindowState.fps;
 }

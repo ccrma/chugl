@@ -128,13 +128,28 @@ public: // scenegraph update traversal
 	static t_CKINT our_update_vt_offset;
 
 public: // global, lock-protected state for sending info from GLFW --> Chuck
-	struct WindowState {  // TODO: will need to be non-static if we support multiple windows
-		int windowWidth, windowHeight;
-		int framebufferWidth, framebufferHeight;
-		double mouseX, mouseY;
+    
+    // struct to hold a state for one window
+	struct WindowState {
+        // window width and height (in screen coordinates)
+        t_CKINT windowWidth, windowHeight;
+        // frame buffer width and height (in pixels)
+        t_CKINT framebufferWidth, framebufferHeight;
+        // mouse X, mouse Y
+        double mouseX, mouseY;
+        // glfw time, delta time
 		double glfwTime, deltaTime;
+        // frames per second
+        t_CKINT fps;
+
+        // constructor
+        WindowState() : windowWidth(1), windowHeight(1),
+            framebufferWidth(1), framebufferHeight(1), mouseX(0), mouseY(0),
+            glfwTime(0), deltaTime(0), fps(0) { }
 	};
-	static WindowState s_WindowState;
+
+    // TODO: will need to be non-static if we support multiple windows
+    static WindowState s_WindowState;
 	static std::mutex s_WindowStateLock;
 	// making these doubles to reduce lock frequency
 	static std::pair<double, double> GetMousePos();
@@ -145,6 +160,8 @@ public: // global, lock-protected state for sending info from GLFW --> Chuck
 	static void SetWindowSize(int width, int height);
 	static void SetFramebufferSize(int width, int height);
 	static void SetTimeInfo(double glfwTime, double deltaTime);
+    static void SetFPS( int fps );
+    static int  GetFPS();
 
 public:
 	static double chuglChuckStartTime;  // value of chuck `now` when chugl is first initialized

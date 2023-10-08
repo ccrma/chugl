@@ -192,6 +192,17 @@ fun void doAudio()
 }
 spork ~ doAudio();
 
+// fps printer
+fun void printFPS( dur howOften )
+{
+    while( true )
+    {
+        <<< "fps:", GG.fps() >>>;
+        howOften => now;
+    }
+}
+spork ~ printFPS(.25::second);
+
 fun void controlSine( Osc s )
 {
     while( true )

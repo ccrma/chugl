@@ -247,76 +247,96 @@ void Window::DisplayLoop()
     camera.SetID(CGL::mainCamera.GetID());  // copy maincam ID
     scene.RegisterCamera(&camera);  // register camera
 
+    // size of moving average circular buffer
+    const t_CKUINT N = 30;
+    double deltaTimes[N];
+    double deltaSum = 0;
+    memset( deltaTimes, 0, sizeof(deltaTimes) );
+    t_CKUINT dtWrite = 0;
+    t_CKUINT dtInitFrames = 0;
+
     // Render Loop ===========================================
-    float previousFPSTime = (float)glfwGetTime();
-    float prevTickTime = previousFPSTime;
-    int frameCount = 0;
+    double prevTickTime = glfwGetTime();
     while (!glfwWindowShouldClose(m_Window))
     {
-        CGL::WaitOnUpdateDone();  
-        // TODO: why does putting this AFTER time calculation cause everything to be so choppy at high FPS?
+        // ======================
+        // enter critical section
+        // ======================
+        // waiting for audio synchronization (see cgl_update_event_waiting_on)
+        // (i.e., when all registered GG.nextFrame() are called on their respective shreds)
+        CGL::WaitOnUpdateDone();
+
+        // question: why does putting this AFTER time calculation cause everything to be so choppy at high FPS?
         // hypothesis: puts time calculation into the critical region
         // time is updated only when all chuck shreds are on wait queue
         // guaranteeing that when they awake, they'll be using fresh dt data
 
-        // FPS counter
-		++frameCount;
-        float currentTime = (float)glfwGetTime();
-        // deltaTime
+        // get current window uptime
+        double currentTime = glfwGetTime();
+        // time since last frame
         m_DeltaTime = currentTime - prevTickTime;
+        // update for next frame
         prevTickTime = currentTime;
-        if (currentTime - previousFPSTime >= 1.0f) {
-            std::cerr << "FPS: " << frameCount << std::endl;
-            // Util::println(std::to_string(frameCount));
-            frameCount = 0;
-            previousFPSTime = currentTime;
-        }
-        CGL::SetTimeInfo(currentTime, m_DeltaTime);
 
-        /*
-        Note: this sync mechanism also gets rid of the problem where chuck runs away
+        // increment frame counter
+        if( dtInitFrames < N ) dtInitFrames++;
+        // ensure minimum delta time to avoid potential divide by zero
+        double deltaTime = m_DeltaTime >= .000001 ? m_DeltaTime : .000001;
+        // subtract from accumulator
+        deltaSum -= deltaTimes[dtWrite];
+        // add the new value
+        deltaSum += deltaTime;
+        // remember
+        deltaTimes[dtWrite] = deltaTime;
+        // increment and modulo
+        dtWrite = (dtWrite+1)%N;
+        // update FPS
+        if( deltaSum > 0.000001 ) CGL::SetFPS( ck_min(dtInitFrames,N) / deltaSum );
+        // set time time
+        CGL::SetTimeInfo( currentTime, m_DeltaTime );
+
+        /* Note: this sync mechanism also gets rid of the problem where chuck runs away
         e.g. if the time it takes the renderer flush the queue is greater than
         the time it takes chuck to write, ie write rate > flush rate,
         each command queue will get longer and longer, continually worsening performance
         shouldn't happen because chuck runs in vm and the flushing happens natively but 
-        you never know
-        */
-        /*
-        two locks here:
+        you never know */
+
+        /* two locks here:
         1 for writing/swapping the command queues
             - this lock is grabbed by chuck every time we do a CGL call
             - supports writing CGL commands whenever, even outside game loop
         1 for the condition_var used to synchronize audio and graphics each frame
             - combined with the chuck-side update_event, allows for writing frame-accurate cgl commands
             - exposes a gameloop to chuck, gauranteed to be executed once per frame
+        deadlock shouldn't happen because both locks are never held at the same time */
 
-        deadlock shouldn't happen because both locks are never held at the same time
-        */
-        { // critical section: swap command queus
-            CGL::SwapCommandQueues();
-        }
+        // swap command queues
+        CGL::SwapCommandQueues();
 
         // done swapping the double buffer, let chuck know it's good to continue pushing commands
-        // TODO: does this need to be lock protected?
-        // scenario: another shred is spawned which is NOT blocked and initializes a new shred, writing to event queue  
-        // at the same time render thread is reading from event queue and broadcasting
-        // temp workaround: create all your shreds and Chugl events BEFORE calling first .Render()
+        // this wakes all shreds currently waiting on GG.nextFrame()
         CglEvent::Broadcast(CglEventType::CGL_UPDATE);
+        // ====================
+        // end critical section
+        // ====================
 
-        // now apply changes from the command queue chuck is NO Longer writing to 
+        // now apply changes from the command queue chuck is NO Longer writing to
+        // this executes all commands on the command queue, performs actions from CK code
+        // essentially applying a diff to bring graphics state up to date with what is done in CK code
         CGL::FlushCommandQueue(scene, false);
         
         // process any glfw options passed from chuck
         UpdateState();
 
-        // now renderer can work on drawing the copied scenegraph 
+        // now renderer can work on drawing the copied scenegraph
         renderer.Clear(scene.GetBackgroundColor());
         renderer.RenderScene(&scene, &camera);
 
         // Handle Events, Draw framebuffer
         glfwPollEvents();
-        //glfwWaitEvents();  // blocking version of PollEvents. How does blocking work? "puts the calling thread to sleep until at least one event is available in the event queue" https://www.glfw.org/docs/latest/group__window.html#ga15a5a1ee5b3c2ca6b15ca209a12efd14
-        glfwSwapBuffers(m_Window);  // blocks until glfwSwapInterval screen updates have occured
+        // swap double buffer
+        // blocks until glfwSwapInterval screen updates have occured, accounting for vsync
+        glfwSwapBuffers(m_Window);
     }
 }
-
