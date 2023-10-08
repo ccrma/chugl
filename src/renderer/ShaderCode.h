@@ -24,9 +24,14 @@ static std::string GenShaderSource(
     bool fog = true
 );
 
+// code component names
+static const std::string BASIC_VERT;
+static const std::string NORMAL_FRAG;
+
 // map of names to shader code components
 typedef std::unordered_map<std::string, const std::string> ShaderMap;
 static ShaderMap s_CodeMap;
+
 
 private:
     ShaderCode();

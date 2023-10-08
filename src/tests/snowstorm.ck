@@ -10,6 +10,8 @@ spork ~ flycam.selfUpdate();
 
 // ===============================
 
+GG.scene().backgroundColor(@(0, 0, 0));
+
 GScene scene;
 FileTexture tex;
 tex.path("./tests/textures/snowflake1.png");

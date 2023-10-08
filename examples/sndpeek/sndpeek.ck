@@ -89,7 +89,7 @@ class Waterfall extends GGen
     fun void latest( float positions[] )
     {
         // set into
-        positions => (wfl[playhead].geo() $ CustomGeometry).positions;
+        positions => wfl[playhead].geo().positions;
         // advance playhead
         playhead++;
         // wrap it
@@ -208,7 +208,7 @@ while( true )
     // map to interleaved format
     map2waveform( samples, positions );
     // set the mesh position
-    (waveform.geo() $ CustomGeometry).positions( positions );
+    waveform.geo().positions( positions );
     // map to spectrum display
     map2spectrum( response, positions );
     // next graphics frame

@@ -12,6 +12,9 @@
 //  ShaderCode strings
 // ====================================================================================================
 
+const std::string ShaderCode::BASIC_VERT = "GG_BASIC_VERT";
+const std::string ShaderCode::NORMAL_FRAG = "GG_NORMAL_FRAG";
+
 ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
     {"SHADER_VERSION", "#version 330 core\n"},
     {"FRAG_OUT_COLOR_DEF", 
@@ -140,7 +143,7 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
         in vec4 v_Color;
         in vec2 v_TexCoord;
     )"},
-    {"BASIC_VERT",
+    {BASIC_VERT,
      R"(
         #include TRANSFORM_UNIFORMS
         #include DEFAULT_ATTRIBUTES
@@ -161,7 +164,7 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
         }
 
     )"},
-    {"NORMAL_FRAG",
+    {NORMAL_FRAG,
      R"(
         #include BASIC_FRAG_VARYINGS
 
@@ -320,9 +323,7 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
 
         void main()
         {
-            // result = v_Color * texture(u_PointTexture, gl_PointCoord);
-            result = vec4(gl_PointCoord, 0.0, 1.0);
-            // result = vec4(1.0, 0.0, 0.0, 1.0);
+            result = v_Color * texture(u_PointTexture, gl_PointCoord);
     )"},
     {"LINES_VERT",
      R"(

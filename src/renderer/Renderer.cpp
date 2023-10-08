@@ -144,11 +144,11 @@ RenderMaterial::RenderMaterial(Material *mat, Renderer *renderer) : m_Mat(mat), 
 	switch(mat->GetMaterialType()) {
 		case MaterialType::Normal:
 			// TODO: really should abstract this to a shader resource locator class
-			vert = ShaderCode::GenShaderSource("BASIC_VERT", ShaderType::Vertex);
-			frag = ShaderCode::GenShaderSource("NORMAL_FRAG", ShaderType::Fragment);
+			vert = ShaderCode::GenShaderSource(ShaderCode::BASIC_VERT, ShaderType::Vertex);
+			frag = ShaderCode::GenShaderSource(ShaderCode::NORMAL_FRAG, ShaderType::Fragment);
 			break;
 		case MaterialType::Phong:
-			vert = ShaderCode::GenShaderSource("BASIC_VERT", ShaderType::Vertex);
+			vert = ShaderCode::GenShaderSource(ShaderCode::BASIC_VERT, ShaderType::Vertex);
 			frag = ShaderCode::GenShaderSource("PHONG_FRAG", ShaderType::Fragment);
 			break;
 		case MaterialType::CustomShader:
@@ -156,14 +156,14 @@ RenderMaterial::RenderMaterial(Material *mat, Renderer *renderer) : m_Mat(mat), 
 			vertPath = ((ShaderMaterial*)mat)->m_VertShaderPath;
 			fragPath = ((ShaderMaterial*)mat)->m_FragShaderPath;
 			if (vertPath == "") {
-				vert = ShaderCode::GenShaderSource("BASIC_VERT", ShaderType::Vertex);
+				vert = ShaderCode::GenShaderSource(ShaderCode::BASIC_VERT, ShaderType::Vertex);
 				vertIsPath = false;
 			} else {
 				vert = vertPath;
 				vertIsPath = true;
 			}
 			if (fragPath == "") {
-				frag = ShaderCode::GenShaderSource("NORMAL_FRAG", ShaderType::Fragment);
+				frag = ShaderCode::GenShaderSource(ShaderCode::NORMAL_FRAG, ShaderType::Fragment);
 				fragIsPath = false;
 			} else {
 				frag = fragPath;
@@ -175,7 +175,7 @@ RenderMaterial::RenderMaterial(Material *mat, Renderer *renderer) : m_Mat(mat), 
 			frag = ShaderCode::GenShaderSource("POINTS_FRAG", ShaderType::Fragment);
 			break;
 		case MaterialType::Mango:
-			vert = ShaderCode::GenShaderSource("BASIC_VERT", ShaderType::Vertex);
+			vert = ShaderCode::GenShaderSource(ShaderCode::BASIC_VERT, ShaderType::Vertex);
 			frag = ShaderCode::GenShaderSource("MANGO_FRAG", ShaderType::Fragment);
 			break;
 		case MaterialType::Line:  // TODO: implement
@@ -183,8 +183,8 @@ RenderMaterial::RenderMaterial(Material *mat, Renderer *renderer) : m_Mat(mat), 
 			frag = ShaderCode::GenShaderSource("LINES_FRAG", ShaderType::Fragment);
 			break;
 		default:  // default material (normal mat for now)
-			vert = ShaderCode::GenShaderSource("BASIC_VERT", ShaderType::Vertex);
-			frag = ShaderCode::GenShaderSource("NORMAL_FRAG", ShaderType::Fragment);
+			vert = ShaderCode::GenShaderSource(ShaderCode::BASIC_VERT, ShaderType::Vertex);
+			frag = ShaderCode::GenShaderSource(ShaderCode::NORMAL_FRAG, ShaderType::Fragment);
 	}
 
 	m_Shader = new Shader(vert, frag, vertIsPath, fragIsPath);
@@ -199,17 +199,37 @@ void RenderMaterial::UpdateShader()
 	// TODO: fix this so that only changing either frag or vert will still work 
 	// (right now) will try to load empty string for the other shader
 	ShaderMaterial* mat = dynamic_cast<ShaderMaterial*>(m_Mat);
-	if ( mat->m_VertShaderPath != m_Shader->GetVertPath() ||
-		mat->m_FragShaderPath != m_Shader->GetFragPath()) {
-		// Note: we DON'T delete the previous shader program because it may be in use by other render materials
-		// Yes might leak, but you shouldn't be creating that many shaders anyways
-		// long term fix: add ref counting, delete the shader if its linked to 0 render materials
-		// actually deleting shouldn't be a problem now but still gotta figure 
-		// out how to do it correctly
-		// delete m_Shader;  // TODO
+	bool hasShaderPathChanged = (
+		mat->m_VertShaderPath != m_Shader->GetVertPath() ||
+		mat->m_FragShaderPath != m_Shader->GetFragPath()
+	);
+	if (!hasShaderPathChanged) return;
 
-		m_Shader = new Shader(mat->m_VertShaderPath, mat->m_FragShaderPath, true, true);
+	// set up shader paths or codegen
+	std::string vert, frag;
+	bool vertIsPath = false, fragIsPath = false;
+	if (mat->m_VertShaderPath == "") {
+		vert = ShaderCode::GenShaderSource(ShaderCode::BASIC_VERT, ShaderType::Vertex);
+		vertIsPath = false;
+	} else {
+		vert = mat->m_VertShaderPath;
+		vertIsPath = true;
 	}
+	if (mat->m_FragShaderPath == "") {
+		frag = ShaderCode::GenShaderSource(ShaderCode::NORMAL_FRAG, ShaderType::Fragment);
+		fragIsPath = false;
+	} else {
+		frag = mat->m_FragShaderPath;
+		fragIsPath = true;
+	}
+
+	// Note: we DON'T delete the previous shader program because it may be in use by other render materials
+	// Yes might leak, but you shouldn't be creating that many shaders anyways
+	// long term fix: add ref counting, delete the shader if its linked to 0 render materials
+	// actually deleting shouldn't be a problem now but still gotta figure 
+	// out how to do it correctly
+	// delete m_Shader;  // TODO
+	m_Shader = new Shader(vert, frag, vertIsPath, fragIsPath);
 }
 
 RenderMaterial* RenderMaterial::GetDefaultMaterial(Renderer* renderer) {

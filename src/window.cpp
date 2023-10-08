@@ -152,13 +152,6 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
-    // #ifdef __APPLE__
-    // /* We need to explicitly ask for a 3.2 context on OS X */
-    // glfwWindowHint (GLFW_CONTEXT_VERSION_MAJOR, 3);
-    // glfwWindowHint (GLFW_CONTEXT_VERSION_MINOR, 2);
-    // glfwWindowHint (GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    // glfwWindowHint (GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    // #endif
 
     // window hints =============================================
     glfwWindowHint(GLFW_SAMPLES, 4);  // MSAA

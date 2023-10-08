@@ -23,7 +23,7 @@ GMesh mesh;
 GMesh fileMesh;
 GMesh lightbulb;
 GMesh shaderMesh; ShaderMat shaderMat; 
-shaderMat.shaderPaths(
+shaderMat.shaders(
     "renderer/shaders/BasicLightingVert.glsl",
     "renderer/shaders/mangoFrag.glsl"
 );

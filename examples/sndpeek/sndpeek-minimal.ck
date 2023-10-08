@@ -130,11 +130,11 @@ while( true )
     // map to interleaved format
     map2waveform( samples, positions );
     // set the mesh position
-    (waveform.geo() $ CustomGeometry).positions( positions );
+    waveform.geo().positions( positions );
     // map to spectrum display
     map2spectrum( response, positions );
     // set the mesh position
-    (spectrum.geo() $ CustomGeometry).positions( positions );
+    spectrum.geo().positions( positions );
     // next graphics frame
     GG.nextFrame() => now;
 }
