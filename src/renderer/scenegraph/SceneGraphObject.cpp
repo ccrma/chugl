@@ -1,5 +1,6 @@
 #include "SceneGraphObject.h"
 #include "../Util.h"
+#include "chuck_dl.h"
 #include "glm/gtx/matrix_decompose.hpp"
 #include "glm/gtx/quaternion.hpp"
 
@@ -186,7 +187,6 @@ void SceneGraphObject::AssignTransform(const glm::mat4& mat)
 
 /*==========================Relationship Methods=================================*/
 
-
 void SceneGraphObject::AddChild(SceneGraphObject* child)
 {
 	// Object cannot be added as child of itself
@@ -212,21 +212,33 @@ void SceneGraphObject::AddChild(SceneGraphObject* child)
 
 	// assign to new parent
 	child->m_Parent = this;
-    // TODO: replace with/test code below
-    // CK_SAFE_REF_ASSIGN( child->m_Parent, this );
+    // reference count
+    // CK_SAFE_ADD_REF( this->m_ChuckObject );
 
 	// add to list of children
 	m_Children.push_back(child);
+    // add ref to kid
+    // CK_SAFE_ADD_REF( child->m_ChuckObject );
 }
 
-void SceneGraphObject::RemoveChild(SceneGraphObject* child)
+void SceneGraphObject::RemoveChild( SceneGraphObject * child )
 {
-	auto it = std::find(m_Children.begin(), m_Children.end(), child);
-	if (it != m_Children.end()) {
-		m_Children.erase(it);  // remove from children list
-		child->m_Parent = nullptr;  // delete child's parent
-        // TODO: replace with/test code below
-        // CK_SAFE_RELEASE( child->m_Parent );
+    // look for
+    auto it = std::find(m_Children.begin(), m_Children.end(), child);
+	if (it != m_Children.end())
+    {
+        // ensure
+        assert( child->m_Parent == this );
+
+        // release ref count on child's chuck object; one less reference to it from us (parent)
+        // CK_SAFE_RELEASE( child->m_ChuckObject );
+        // remove from children list
+        m_Children.erase(it);
+
+        // release ref count on our (parent's) chuck object; one less reference to it from child
+        // CK_SAFE_RELEASE( this->m_ChuckObject );
+        // set parent to null
+        child->m_Parent = NULL;
     }
 }
 
@@ -248,15 +260,9 @@ bool SceneGraphObject::BelongsToSceneObject(SceneGraphObject *sgo)
     return false;
 }
 
+// disconnect from both parent and children
 void SceneGraphObject::Disconnect( bool sendChildrenToGrandparent )
 {
-    // if we have a parent
-    if( m_Parent )
-    {
-        // remove child from parent
-        m_Parent->RemoveChild( this );
-    }
-
     // for each kid
     for( auto * kid : m_Children )
     {
@@ -268,11 +274,15 @@ void SceneGraphObject::Disconnect( bool sendChildrenToGrandparent )
         }
         else
         {
-            // set parent to null
-            kid->m_Parent = NULL;
-            // TODO: replace with/test code below
-            // CK_SAFE_RELEASE( kid->m_Parent );
+            this->RemoveChild( kid );
         }
+    }
+
+    // if we have a parent
+    if( m_Parent )
+    {
+        // remove child from parent
+        m_Parent->RemoveChild( this );
     }
 }
 
