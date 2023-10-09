@@ -50,7 +50,7 @@ fun void cycleLineMode(LineMat @ mat) {
     [LineMat.LINE_SEGMENTS, LineMat.LINE_LOOP, LineMat.LINE_STRIP] @=> int line_modes[];
     while (true) {
         for (0 => int i; i < line_modes.size(); i++) {
-            line_modes[i] => mat.mode;
+            line_modes[i] => mat.lineMode;
             2::second => now;
         }
     }
@@ -85,10 +85,11 @@ fun void randomizePositions(CustomGeometry @ geo)
     while (true) {
     // while (.1::second => now) {
         // 1::second => now;
+        // fine on windows, borked on mac
         for (0 => int i; i < NUM_VERTICES; i++) {
-            // Math.random2f(-1.0, 1.0) => positions[3*i + 0];
-            // Math.random2f(-1.0, 1.0) => positions[3*i + 1];
-            // Math.random2f(-1.0, 1.0) => positions[3*i + 2];
+            Math.random2f(-1.0, 1.0) => positions[3*i + 0];
+            Math.random2f(-1.0, 1.0) => positions[3*i + 1];
+            Math.random2f(-1.0, 1.0) => positions[3*i + 2];
         }
         geo.positions(positions);
         GG.nextFrame() => now;

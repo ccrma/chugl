@@ -16,7 +16,7 @@ GG.camera().clip(0.1, 1000);
 
 GG.scene() @=> GScene @ scene;
 
-40 => int AXIS_LENGTH;
+20 => int AXIS_LENGTH;
 
 GMesh meshes[AXIS_LENGTH * AXIS_LENGTH];
 NormMat normMat;
