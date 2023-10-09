@@ -52,6 +52,7 @@ ipch
 # CMake
 src/build
 src/build-debug
+src/build-release
 
 # vim
 *~
