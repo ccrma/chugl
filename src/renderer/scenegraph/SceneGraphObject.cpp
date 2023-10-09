@@ -5,6 +5,10 @@
 
 #include <algorithm>
 
+#include "chuck_dl.h"
+
+
+
 /*==========================Static constants=================================*/
 const glm::vec3 SceneGraphObject::UP	   = glm::vec3(0.0f, 1.0f, 0.0f);
 const glm::vec3 SceneGraphObject::DOWN	   = glm::vec3(0.0f, -1.0f, 0.0f);

@@ -1,7 +1,9 @@
 #pragma once
 #include <iostream>
 #include <string>
-#include "chuck_dl.h"
+
+struct Chuck_Object;
+struct Chuck_DL_Api;
 
 /*
 * Base class for all possible scenegraph entities -- objects, meshes, geometries, and materials (eventually add textures?)
@@ -41,11 +43,11 @@ public:
     Chuck_Object * m_ChuckObject;
 
     // access the chugin runtime API
-    static void SetCKAPI( CK_DL_API api ) { s_CKAPI = api; }
+    static void SetCKAPI( const Chuck_DL_Api* api ) { s_CKAPI = api; }
     // access the chugin runtime API
-    static CK_DL_API CKAPI() { return s_CKAPI; }
+    static const Chuck_DL_Api* CKAPI() { return s_CKAPI; }
 
 protected:
     // reference to chugins runtime API
-    static CK_DL_API s_CKAPI;
+    static const Chuck_DL_Api* s_CKAPI;
 };
