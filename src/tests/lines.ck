@@ -37,7 +37,7 @@ lineGeo.positions(positions);
 lineGeo.colors(colors);
 
 GScene scene;
-LineMat lineMat;
+LineMaterial lineMat;
 GMesh mesh;
 mesh.set(lineGeo, lineMat);
 
@@ -46,8 +46,8 @@ mesh --> scene;
 
 // testers =====================
 
-fun void cycleLineMode(LineMat @ mat) {
-    [LineMat.LINE_SEGMENTS, LineMat.LINE_LOOP, LineMat.LINE_STRIP] @=> int line_modes[];
+fun void cycleLineMode(LineMaterial @ mat) {
+    [LineMaterial.LINE_SEGMENTS, LineMaterial.LINE_LOOP, LineMaterial.LINE_STRIP] @=> int line_modes[];
     while (true) {
         for (0 => int i; i < line_modes.size(); i++) {
             line_modes[i] => mat.lineMode;
@@ -56,7 +56,7 @@ fun void cycleLineMode(LineMat @ mat) {
     }
 } spork ~ cycleLineMode(lineMat);
 
-fun void lerpLineWidth(LineMat @ mat) {
+fun void lerpLineWidth(LineMaterial @ mat) {
     while (true) {
         1.0 => mat.lineWidth;
         2::second => now;
@@ -67,7 +67,7 @@ fun void lerpLineWidth(LineMat @ mat) {
     }
 } spork ~ lerpLineWidth(lineMat);
 
-fun void cycleLineColor(LineMat @ mat) {
+fun void cycleLineColor(LineMaterial @ mat) {
     1::second => dur waitTime;
     while (true) {
         @(0.0, 1.0, 0.0) => mat.color;

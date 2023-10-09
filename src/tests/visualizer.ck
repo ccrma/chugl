@@ -77,7 +77,7 @@ GScene scene;
 
 BoxGeometry boxGeo;
 SphereGeometry  SphereGeometry ;
-NormMat normMat;  
+NormalsMaterial normMat;  
 
 GMesh waveformBoxMeshes[WAVEFORM_LENGTH];
 GMesh spectrumBoxMeshes[WAVEFORM_LENGTH];

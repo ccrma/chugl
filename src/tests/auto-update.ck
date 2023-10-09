@@ -4,7 +4,7 @@
 5 => GG.camera().posZ;
 
 BoxGeometry geo;
-NormMat mat;
+NormalsMaterial mat;
 
 now => time lastTime;
 dur deltaTime;

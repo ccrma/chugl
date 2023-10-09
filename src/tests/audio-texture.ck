@@ -84,7 +84,7 @@ GScene scene;
 BoxGeometry boxGeo;
 1000 => int NUM_MESHES;
 GMesh meshes[NUM_MESHES];
-ShaderMat shaderMat; // custom shader material
+ShaderMaterial shaderMat; // custom shader material
 shaderMat.shaders(
     "renderer/shaders/BasicLightingVert.glsl",
     "renderer/shaders/AudioFrag.glsl"

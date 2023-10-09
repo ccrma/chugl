@@ -14,7 +14,7 @@ GScene scene;
 GMesh meshes[3];
 SphereGeometry  SphereGeometry ;
 BoxGeometry boxGeo;
-MangoMat mangoMat;
+MangoUVMaterial mangoMat;
 
 meshes[0].set(SphereGeometry , mangoMat);
 meshes[1].set(boxGeo, mangoMat);

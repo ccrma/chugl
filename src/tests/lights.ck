@@ -14,9 +14,9 @@ FlyCam flycam;
 flycam.init(IM, MM);
 spork ~ flycam.selfUpdate();
 
-NormMat normMat;
+NormalsMaterial normMat;
 GCube flatCube;
-FlatMat flatMat; flatMat.color(@(1, 0, 0));
+FlatMaterial flatMat; flatMat.color(@(1, 0, 0));
 flatCube.mat(flatMat);
 BoxGeometry boxGeo;
 SphereGeometry  SphereGeometry ;
@@ -25,7 +25,7 @@ GScene scene;
 GMesh mesh;
 GMesh fileMesh;
 GMesh lightbulb;
-GMesh shaderMesh; ShaderMat shaderMat; 
+GMesh shaderMesh; ShaderMaterial shaderMat; 
 shaderMat.shaders(
     "renderer/shaders/BasicLightingVert.glsl",
     "renderer/shaders/mangoFrag.glsl"
@@ -34,22 +34,22 @@ shaderMat.shaders(
 GGen group;
 
 // Lighting
-PointLight light;
-DirLight dirLight;
+GPointLight light;
+GDirLight dirLight;
 FileTexture tex;
 DataTexture dataTex;
 dataTex.data([1.0, 0.0, 1.0, 1.0], 1, 1);
 dataTex.filter(Texture.FILTER_NEAREST, Texture.FILTER_NEAREST);
 tex.path("./tests/textures/awesomeface.png");
-PhongMat phongMat;
+PhongMaterial phongMat;
 phongMat.diffuseMap(dataTex);
 
-PhongMat filePhongMat;
-filePhongMat.diffuseMap(tex);
+PhongMaterial filePhongMaterial;
+filePhongMaterial.diffuseMap(tex);
 flatMat.diffuseMap(tex);
 
 mesh.set( boxGeo, phongMat );
-fileMesh.set(boxGeo, filePhongMat);
+fileMesh.set(boxGeo, filePhongMaterial);
 shaderMesh.set( boxGeo, shaderMat );
 lightbulb.set( SphereGeometry , normMat );
 

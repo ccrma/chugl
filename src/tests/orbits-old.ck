@@ -7,11 +7,11 @@ tests scenegraph parent/child relations + local vs global transforms + rotation
 SphereGeometry  SphereGeometry ;
 BoxGeometry boxGeo;
 // init materials
-NormMat normMat;
+NormalsMaterial normMat;
 normMat.localNormals();
 
-NormMat worldspaceNormMat;
-worldspaceNormMat.worldNormals();
+NormalsMaterial worldspaceNormalsMaterial;
+worldspaceNormalsMaterial.worldNormals();
 
 // scene setup
 GScene scene;
@@ -19,7 +19,7 @@ GGen sunSystem, earthSystem, moonSystem;
 GMesh  sun, earth, moon;
 
 sun.set(boxGeo, normMat); 
-earth.set(boxGeo, worldspaceNormMat);
+earth.set(boxGeo, worldspaceNormalsMaterial);
 moon.set(boxGeo, normMat);
 
 earthSystem.position(@(2.2, 0.0, 0.0));

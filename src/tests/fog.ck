@@ -19,7 +19,7 @@ GG.scene() @=> GScene @ scene;
 20 => int AXIS_LENGTH;
 
 GMesh meshes[AXIS_LENGTH * AXIS_LENGTH];
-NormMat normMat;
+NormalsMaterial normMat;
 SphereGeometry  SphereGeometry ;
 
 for (0 => int i; i < AXIS_LENGTH; i++) {

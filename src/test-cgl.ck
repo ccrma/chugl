@@ -6,7 +6,7 @@ now => time lastTime;
 NextFrameEvent UpdateEvent;
 
 
-NormMat normMat;
+NormalsMaterial normMat;
 BoxGeometry boxGeo;
 SphereGeometry  SphereGeometry ;
 
@@ -16,8 +16,8 @@ GMesh lightbulb;
 GGen group;
 
 // Lighting
-PointLight light;
-PhongMat phongMat;
+GPointLight light;
+PhongMaterial phongMat;
 
 mesh.set( boxGeo, phongMat );
 lightbulb.set( SphereGeometry , normMat );

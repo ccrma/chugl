@@ -97,8 +97,8 @@ fun void latheSetter() {
 spork ~ latheSetter();
 
 GScene scene;
-MangoMat fillMat, wireMat, pointMat;
-NormMat normMat;
+MangoUVMaterial fillMat, wireMat, pointMat;
+NormalsMaterial normMat;
 fillMat.polygonMode(Material.POLYGON_FILL);
 wireMat.polygonMode(Material.POLYGON_LINE);
 pointMat.polygonMode(Material.POLYGON_POINT);

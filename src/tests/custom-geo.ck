@@ -65,8 +65,8 @@ CustomGeometry.indices(
 
 
 GScene scene;
-NormMat normMat;
-MangoMat mangoMat;
+NormalsMaterial normMat;
+MangoUVMaterial mangoMat;
 GMesh mesh;
 
 mesh.set(CustomGeometry, mangoMat);

@@ -13,7 +13,7 @@ class Body extends GGen {
 	}
 }
 
-NormMat planetMat;
+NormalsMaterial planetMat;
 GGSphere sun, earth, moon;
 [sun, earth, moon] @=> GGSphere @ planets[];
 

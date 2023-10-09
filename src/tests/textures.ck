@@ -23,7 +23,7 @@ tex.path("./tests/textures/chuck-logo.png");
 // <<< "tex.path() = ", tex.path() >>>;
 
 // attach to material
-PhongMat phong;
+PhongMaterial phong;
 phong.diffuseMap(tex);
 
 // attach material to mesh

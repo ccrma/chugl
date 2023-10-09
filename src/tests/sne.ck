@@ -43,15 +43,15 @@ fun int VecEquals(vec3 a, vec3 b) {
 SphereGeometry  SphereGeometry ;
 BoxGeometry boxGeo;
 // init materials
-NormMat normMat;  
-NormMat headNormMat;
+NormalsMaterial normMat;  
+NormalsMaterial headNormalsMaterial;
 normMat.localNormals();  // use local space normals (so we can tell orientation)
-headNormMat.polygonMode(Material.POLYGON_LINE);  // wireframe mode
-// headNormMat.wireframe(true);
+headNormalsMaterial.polygonMode(Material.POLYGON_LINE);  // wireframe mode
+// headNormalsMaterial.wireframe(true);
 
-NormMat wireframeNormMat;
-wireframeNormMat.polygonMode(Material.POLYGON_LINE);
-// wireframeNormMat.wireframe(true);
+NormalsMaterial wireframeNormalsMaterial;
+wireframeNormalsMaterial.polygonMode(Material.POLYGON_LINE);
+// wireframeNormalsMaterial.wireframe(true);
 
 // ECS classes ==================================================
 
@@ -147,7 +147,7 @@ class Grid {
 	GMesh gridMesh;
 	BoxGeometry gridGeo;
 
-	NormMat gridMat;
+	NormalsMaterial gridMat;
 	gridMat.polygonMode(Material.POLYGON_LINE);
 	// gridMat.wireframe(true);
 
@@ -248,7 +248,7 @@ class Snake {
 			this.head.mesh.set(geo, mat);  // reset head material
 
 		seg @=> this.head;
-		// seg.mesh.set(geo, headNormMat);  // set new head for debugging
+		// seg.mesh.set(geo, headNormalsMaterial);  // set new head for debugging
 		seg.mesh.set(geo, mat);  // set new head for debugging
 	}
 

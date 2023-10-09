@@ -5,8 +5,8 @@
 // lightbulb class that renders pointlight with a colored sphere to visualize its position
 class LightBulb extends GGen {
     // GGen network. a light + sphere at the same position
-    FlatMat mat;
-    PointLight light --> GSphere bulb --> this;
+    FlatMaterial mat;
+    GPointLight light --> GSphere bulb --> this;
 
     // set up sphere to be a flat color
     bulb.mat(mat);

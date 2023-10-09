@@ -16,8 +16,8 @@ GG.lockCursor();
 // Scene setup ===================
 
 GScene scene;
-PointsMat pointsMat;  pointsMat.pointSize(55.0);
-NormMat normMat;
+PointMaterial pointsMat;  pointsMat.pointSize(55.0);
+NormalsMaterial normMat;
 GMesh pointMesh;
 
 // points stress test

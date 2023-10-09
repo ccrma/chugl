@@ -31,13 +31,13 @@ const std::string Material::POINT_SPRITE_TEXTURE_UNAME = "u_PointTexture";
 // ck type name map 
 Material::CkTypeMap Material::s_CkTypeMap = {
     {MaterialType::Base, "Material"},
-    {MaterialType::Normal, "NormMat"},
-    {MaterialType::Phong, "PhongMat"},
-    {MaterialType::Points, "PointsMat"},
-    {MaterialType::Line, "LineMat"},
-    {MaterialType::CustomShader, "ShaderMat"},
-    {MaterialType::Mango, "MangoMat"},
-    {MaterialType::Flat, "FlatMat"},
+    {MaterialType::Normal, "NormalsMaterial"},
+    {MaterialType::Phong, "PhongMaterial"},
+    {MaterialType::Points, "PointMaterial"},
+    {MaterialType::Line, "LineMaterial"},
+    {MaterialType::CustomShader, "ShaderMaterial"},
+    {MaterialType::Mango, "MangoUVMaterial"},
+    {MaterialType::Flat, "FlatMaterial"},
 };
 
 

@@ -1,6 +1,6 @@
 // GGen ggen;
 SphereGeometry sphereGeo;
-MangoMat mat;
+MangoUVMaterial mat;
 
 GMesh mesh;
 GMesh mesh2;

@@ -18,7 +18,7 @@ tex.path("./tests/textures/snowflake1.png");
 
 SphereGeometry  geo;
 GMesh mesh;
-PointsMat mat; // mat.pointSize(55.0);
+PointMaterial mat; // mat.pointSize(55.0);
 mat.pointSprite(tex);
 mat.attenuatePoints(false);
 mat.color(@(0.0, 1.0, 0.0));

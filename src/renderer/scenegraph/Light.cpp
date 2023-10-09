@@ -5,9 +5,9 @@
 // ckname 
 Light::CkTypeMap Light::s_CkTypeMap = {
 	{LightType::Base, "GLight"},
-	{LightType::Point, "PointLight"},
-	{LightType::Directional, "DirLight"},
-	{LightType::Spot, "SpotLight"}
+	{LightType::Point, "GPointLight"},
+	{LightType::Directional, "GDirLight"},
+	{LightType::Spot, "GSpotLight"}
 };
 
 // doesn't compile on mac
