@@ -26,14 +26,16 @@ struct Vertex {
     glm::vec3 Normal;
     glm::vec2 TexCoords;
 
-	static float& VecIndex(glm::vec3& vec, char c) {
+	static float & VecIndex(glm::vec3& vec, char c) {
 		if (c == 'x' || c == 'r')
 			return vec.x;
 		if (c == 'y' || c == 'g')
 			return vec.y;
 		if (c == 'z' || c == 'b')
 			return vec.z;
-		assert(false);
+        assert(false);
+        // return anything to get around compiler warning/error
+        return vec.x;
 	}
 
 	float& Pos(char c) { return VecIndex(Position, c); }
