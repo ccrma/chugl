@@ -389,8 +389,10 @@ static t_CKUINT cglmat_data_offset = 0;
 t_CKBOOL init_chugl(Chuck_DL_Query *QUERY)
 {
     // set VM and API refs
-    CGL::SetVMRef( QUERY->vm() );
-    CGL::SetAPIRef( QUERY->api() );
+    CGL::SetCKVM( QUERY->vm() );
+    CGL::SetCKAPI( QUERY->api() );
+    // set API in the scene graph node
+    SceneGraphNode::SetCKAPI( QUERY->api() );
 
     // initialize ChuGL API
     init_chugl_events(QUERY);
@@ -463,11 +465,11 @@ static void detach_ggens_from_shred( Chuck_VM_Shred * shred )
         }
 
         // get origin shred
-        Chuck_VM_Shred * originShred = CGL::api()->object->get_origin_shred( ggen );
+        Chuck_VM_Shred * originShred = CGL::CKAPI()->object->get_origin_shred( ggen );
         // make sure if ugen has an origin shred, it is this one
         assert( !originShred || originShred == shred );
         // also clear reference to this shred
-        CGL::api()->object->set_origin_shred( ggen, NULL );
+        CGL::CKAPI()->object->set_origin_shred( ggen, NULL );
     }
 
     // release ref count on all GGen; in theory this could be done in the loop above,
@@ -3265,14 +3267,14 @@ void CGL::DeactivateHook()
 Chuck_VM * CGL::s_vm = NULL;
 CK_DL_API CGL::s_api = NULL;
 
-void CGL::SetVMRef( Chuck_VM * theVM )
+void CGL::SetCKVM( Chuck_VM * theVM )
 {
     s_vm = theVM;
     // TODO: refcount?
     // CK_SAFE_ADD_REF( s_vm );
 }
 
-void CGL::SetAPIRef( CK_DL_API theAPI )
+void CGL::SetCKAPI( CK_DL_API theAPI )
 {
     s_api = theAPI;
 }

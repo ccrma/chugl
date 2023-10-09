@@ -1,12 +1,12 @@
 #pragma once
 #include <iostream>
 #include <string>
+#include "chuck_dl.h"
+
 /*
 * Base class for all possible scenegraph entities -- objects, meshes, geometries, and materials (eventually add textures?)
 * Calling "Node" instead of "entity" in case we ever switch to ECS system, where Entity means something different
 */
-
-struct Chuck_Object;
 
 
 struct EnumClassHash
@@ -21,11 +21,10 @@ struct EnumClassHash
 class SceneGraphNode
 {
 public:
-
-// data
+    // data
 	size_t m_ID;
 
-// methods
+    // methods
 	SceneGraphNode() : m_ID(SceneGraphNode::idCounter++), m_ChuckObject(nullptr) {
 		// std::cout << "created node with id: " + std::to_string(m_ID) << std::endl;
 	}
@@ -35,8 +34,18 @@ public:
 	inline void SetID(size_t id) { m_ID = id; }
 	void NewID() { m_ID = SceneGraphNode::idCounter++; }
 
-// static
+    // static
 	static size_t idCounter;
 
-	Chuck_Object* m_ChuckObject;
+    // reference to chuck object container
+    Chuck_Object * m_ChuckObject;
+
+    // access the chugin runtime API
+    static void SetCKAPI( CK_DL_API api ) { s_CKAPI = api; }
+    // access the chugin runtime API
+    static CK_DL_API CKAPI() { return s_CKAPI; }
+
+protected:
+    // reference to chugins runtime API
+    static CK_DL_API s_CKAPI;
 };

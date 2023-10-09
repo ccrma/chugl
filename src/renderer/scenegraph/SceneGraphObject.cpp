@@ -1,6 +1,5 @@
 #include "SceneGraphObject.h"
 #include "../Util.h"
-#include "chuck_dl.h"
 #include "glm/gtx/matrix_decompose.hpp"
 #include "glm/gtx/quaternion.hpp"
 
@@ -213,12 +212,12 @@ void SceneGraphObject::AddChild(SceneGraphObject* child)
 	// assign to new parent
 	child->m_Parent = this;
     // reference count
-    // CK_SAFE_ADD_REF( this->m_ChuckObject );
+    CKAPI()->object->add_ref( this->m_ChuckObject );
 
 	// add to list of children
 	m_Children.push_back(child);
     // add ref to kid
-    // CK_SAFE_ADD_REF( child->m_ChuckObject );
+    CKAPI()->object->add_ref( child->m_ChuckObject );
 }
 
 void SceneGraphObject::RemoveChild( SceneGraphObject * child )
@@ -231,12 +230,12 @@ void SceneGraphObject::RemoveChild( SceneGraphObject * child )
         assert( child->m_Parent == this );
 
         // release ref count on child's chuck object; one less reference to it from us (parent)
-        // CK_SAFE_RELEASE( child->m_ChuckObject );
+        CKAPI()->object->release( child->m_ChuckObject );
         // remove from children list
         m_Children.erase(it);
 
         // release ref count on our (parent's) chuck object; one less reference to it from child
-        // CK_SAFE_RELEASE( this->m_ChuckObject );
+        CKAPI()->object->release( this->m_ChuckObject );
         // set parent to null
         child->m_Parent = NULL;
     }

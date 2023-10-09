@@ -187,10 +187,10 @@ public: // global main thread hook
 	static void DeactivateHook();
 
 public: // VM and API references
-    static void SetVMRef( Chuck_VM * theVM );
-    static void SetAPIRef( CK_DL_API theAPI );
-    static Chuck_VM * vm() { return s_vm; }
-    static CK_DL_API api() { return s_api; }
+    static void SetCKVM( Chuck_VM * theVM );
+    static void SetCKAPI( CK_DL_API theAPI );
+    static Chuck_VM * CKVM() { return s_vm; }
+    static CK_DL_API CKAPI() { return s_api; }
 
 protected:
     static Chuck_VM * s_vm;
