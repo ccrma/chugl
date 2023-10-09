@@ -532,6 +532,7 @@ t_CKBOOL init_chugl_events(Chuck_DL_Query *QUERY)
 {
 	// Update event ================================
 	// triggered by main render thread after deepcopy is complete, and safe for chuck to begin updating the scene graph
+	// (intentionally left out of CKDocs)
 	QUERY->begin_class(QUERY, "NextFrameEvent", "Event");
 	QUERY->add_ctor(QUERY, cgl_update_ctor);
 	QUERY->add_dtor(QUERY, cgl_update_dtor);
@@ -542,6 +543,8 @@ t_CKBOOL init_chugl_events(Chuck_DL_Query *QUERY)
 
 	// Window resize event ================================
 	QUERY->begin_class(QUERY, "WindowResizeEvent", "Event");
+	QUERY->doc_class(QUERY, "Event triggered whenever the ChuGL window is resized, either by the user or programmatically.");
+	
 	QUERY->add_ctor(QUERY, cgl_window_resize_ctor);
 	QUERY->add_dtor(QUERY, cgl_window_resize_dtor);
 
@@ -627,60 +630,93 @@ t_CKBOOL init_chugl_static_fns(Chuck_DL_Query *QUERY)
 	QUERY->begin_class(QUERY, "GG", "Object"); // for global stuff
 											   // static vars
 											   // This will hide the cursor and lock it to the specified window.
+    QUERY->doc_class(QUERY, "Base ChuGL utility class");
+
 	QUERY->add_svar(QUERY, "int", "MOUSE_LOCKED", TRUE, (void *)&CGL::MOUSE_LOCKED);
+    QUERY->doc_var(QUERY, "When passed to GG.mouseMode(mode), hides and locks the cursor to the ChuGL window. Good for FPS cameras");
 	// the cursor to become hidden when it is over a window but still want it to behave normally
 	QUERY->add_svar(QUERY, "int", "MOUSE_HIDDEN", TRUE, (void *)&CGL::MOUSE_HIDDEN);
+    QUERY->doc_var(QUERY, "When passed to GG.mouseMode(mode), hides the cursor when focused on the ChuGL window");
 	// This mode puts no limit on the motion of the cursor.
 	QUERY->add_svar(QUERY, "int", "MOUSE_NORMAL", TRUE, (void *)&CGL::MOUSE_NORMAL);
+    QUERY->doc_var(QUERY, "When passed to GG.mouseMode(mode), neither hides the cursor nor locks it to the ChuGL window (this is the default behavior)");
 
 	QUERY->add_sfun(QUERY, cgl_next_frame, "NextFrameEvent", "nextFrame");
+    QUERY->doc_func(QUERY, 
+		"Registers the calling shred to be notified when the next frame is finished rendering. When all graphics shreds are finished calling."
+		"Note: this function returns an event that MUST be waited on for correct behavior, i.e. GG.nextFrame() => now;"
+		"See the ChuGL tutorial and examples for more information."
+	);
 
 	QUERY->add_sfun(QUERY, cgl_unregister, "void", "unregister");
+    QUERY->doc_func(QUERY, "For internal debug purposes, unregisters the calling shred from the ChuGL's list of graphics-related shreds.");
 	QUERY->add_sfun(QUERY, cgl_register, "void", "register");
+    QUERY->doc_func(QUERY, "For interal debug purposes, registers the calling shred to ChuGL's list of graphics-related shreds.");
 
 	// window state getters
 	QUERY->add_sfun(QUERY, cgl_window_get_width, "int", "windowWidth");
+    QUERY->doc_func(QUERY, "Returns screen-space width of the window");
 	QUERY->add_sfun(QUERY, cgl_window_get_height, "int", "windowHeight");
+    QUERY->doc_func(QUERY, "Returns screen-space height of the window");
 	QUERY->add_sfun(QUERY, cgl_framebuffer_get_width, "int", "frameWidth");
+    QUERY->doc_func(QUERY, "Returns width of the framebuffer in pixels. Used for settings the viewport dimensions and camera aspect ratio");
 	QUERY->add_sfun(QUERY, cgl_framebuffer_get_height, "int", "frameHeight");
+    QUERY->doc_func(QUERY, "Returns height of the framebuffer in pixels. Used for settings the viewport dimensions and camera aspect ratio");
 	QUERY->add_sfun(QUERY, cgl_window_get_time, "dur", "windowUptime");
+    QUERY->doc_func(QUERY, "Time in seconds since the grapics window was opened");
 	QUERY->add_sfun(QUERY, cgl_window_get_dt, "float", "dt");
+    QUERY->doc_func(QUERY, "Time in seconds since the last render frame"); 
 	QUERY->add_sfun(QUERY, cgl_mouse_get_pos_x, "float", "mouseX");
+    QUERY->doc_func(QUERY, "Mouse horizontal position in window screen-space");
 	QUERY->add_sfun(QUERY, cgl_mouse_get_pos_y, "float", "mouseY");
+    QUERY->doc_func(QUERY, "Mouse vertical position in window screen-space");
 	QUERY->add_sfun(QUERY, cgl_mouse_set_mode, "void", "mouseMode");
+    QUERY->doc_func(QUERY, "Set mouse mode. Options are GG.MOUSE_LOCKED, GG.MOUSE_HIDDEN, GG.MOUSE_NORMAL.");
 	QUERY->add_arg(QUERY, "int", "mode");
 
 	QUERY->add_sfun(QUERY, cgl_mouse_hide, "void", "hideCursor");
+    QUERY->doc_func(QUERY, "Hides mouse cursor when focused on window");
 	QUERY->add_sfun(QUERY, cgl_mouse_lock, "void", "lockCursor");
+    QUERY->doc_func(QUERY, "Hides and locks cursor to the window");
 	QUERY->add_sfun(QUERY, cgl_mouse_show, "void", "showCursor");
+    QUERY->doc_func(QUERY, "Default mouse behavior. Not hidden or locked");
 
 	QUERY->add_sfun(QUERY, cgl_window_fullscreen, "void", "fullscreen");
+    QUERY->doc_func(QUERY, "Fullscreen the window. This will significantly improve performance");
 	QUERY->add_sfun(QUERY, cgl_window_windowed, "void", "windowed");
 	QUERY->add_arg(QUERY, "int", "width");
 	QUERY->add_arg(QUERY, "int", "height");
+    QUERY->doc_func(QUERY, "Enter windowed mode and set the window size to the specified width and height");
 
 	// QUERY->add_sfun(QUERY, cgl_window_maximize, "void", "maximize");  // kind of bugged, not sure how this is different from fullscreen
 	QUERY->add_sfun(QUERY, cgl_window_set_size, "void", "resolution");
 	QUERY->add_arg(QUERY, "int", "width");
 	QUERY->add_arg(QUERY, "int", "height");
+    QUERY->doc_func(QUERY, "Change resolution of current window. Will NOT exit fullscreen mode");
 
 	// Main Camera
 	// TODO: is it possible to add an svar of type GCamera?
 	QUERY->add_sfun(QUERY, cgl_get_main_camera, "GCamera", "camera");
+    QUERY->doc_func(QUERY, "Gets the GCamera used for rendering the main scene");
 
 	// Main scene
 	QUERY->add_sfun(QUERY, cgl_get_main_scene, "GScene", "scene");
+    QUERY->doc_func(QUERY, "Gets the main scene, which is the root / parent of all GGens. Only the main scene and its connected GGens are rendered.");
 
 	// chugl shred debug
 	QUERY->add_sfun(QUERY, cgl_get_num_registered_shreds, "int", "numRegisteredShreds");
+    QUERY->doc_func(QUERY, "Internal debug. Get number of registered graphics shreds");
 	QUERY->add_sfun(QUERY, cgl_get_num_registered_waiting_shreds, "int", "numRegisteredWaitingShreds");
+    QUERY->doc_func(QUERY, "Internal debug. Get number of registered graphics shreds currently waiting on GG.nextFrame()");
 
 	// chugl chuck time for auto update(dt)
 	QUERY->add_sfun(QUERY, cgl_use_chuck_time, "void", "useChuckTime");
 	QUERY->add_arg(QUERY, "int", "use");
+    QUERY->doc_func(QUERY, "Internal debug. Switches between using Chuck VM time or GLFW window time for auto-updates");
 
     // fps()
     QUERY->add_sfun(QUERY, cgl_get_fps, "int", "fps");
+    QUERY->doc_func(QUERY, "FPS of current window, averaged over sliding window of 30 frames");
 
 	QUERY->end_class(QUERY);
 
@@ -804,6 +840,9 @@ CK_DLL_SFUN(cgl_get_fps)
 t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 {
 	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Base) , "Object");
+    QUERY->doc_class(QUERY, "Base geometry class, do not instantiate directly");
+	// QUERY->add_ex(QUERY, "custom-geo.ck");
+
 	QUERY->add_ctor(QUERY, cgl_geo_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 	geometry_data_offset = QUERY->add_mvar(QUERY, "int", "@geometry_data", false); // TODO: still bugged?
@@ -816,6 +855,7 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 
 	// clone
 	QUERY->add_mfun(QUERY, cgl_geo_clone, Geometry::CKName(GeometryType::Base), "clone");
+    QUERY->doc_func(QUERY, "clone the geometry, including all attributes");
 
 	// attribute setters
 	QUERY->add_mfun(QUERY, cgl_geo_set_attribute, "void", "setAttribute");
@@ -824,29 +864,37 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 	QUERY->add_arg(QUERY, "int", "numComponents");
 	// QUERY->add_arg(QUERY, "int", "normalize");
 	QUERY->add_arg(QUERY, "float[]", "data");
+    QUERY->doc_func(QUERY, "Set the attribute data for the given attribute location, to be passed into the vertex shader. Builtin attribute locations are POS_ATTRIB_LOC, NORM_ATTRIB_LOC, COL_ATTRIB_LOC, UV0_ATTRIB_LOC");
 
 	QUERY->add_mfun(QUERY, cgl_geo_set_positions, "void", "positions");
 	QUERY->add_arg(QUERY, "float[]", "positions");
+    QUERY->doc_func(QUERY, "Set position attribute data. Each vertex expects 3 floats for x,y,z");
 
 	QUERY->add_mfun(QUERY, cgl_geo_set_positions_vec3, "void", "positions");
 	QUERY->add_arg(QUERY, "vec3[]", "positions");
+    QUERY->doc_func(QUERY, "Set position attribute data with vec3s rather than floats");
 
 	QUERY->add_mfun(QUERY, cgl_geo_set_colors, "void", "colors");
 	QUERY->add_arg(QUERY, "float[]", "colors");
+    QUERY->doc_func(QUERY, "Set color attribute data. Each vertex expects 4 floats for r,g,b,a");
 
 	QUERY->add_mfun(QUERY, cgl_geo_set_normals, "void", "normals");
 	QUERY->add_arg(QUERY, "float[]", "normals");
+    QUERY->doc_func(QUERY, "Set normal attribute data. Each vertex expects 3 floats for x,y,z");
 
 	QUERY->add_mfun(QUERY, cgl_geo_set_uvs, "void", "uvs");
 	QUERY->add_arg(QUERY, "float[]", "uvs");
-
+    QUERY->doc_func(QUERY, "Set UV attribute data. Each vertex expects 2 floats for u,");
+ 
 	QUERY->add_mfun(QUERY, cgl_geo_set_indices, "void", "indices");
-	QUERY->add_arg(QUERY, "int[]", "uvs");
+	QUERY->add_arg(QUERY, "int[]", "indices");
+    QUERY->doc_func(QUERY, "sets vertex indices for indexed drawing. If not set, renderer will default to non-indexed drawing");
 
 	// TODO: add svars for attribute locations
 	QUERY->end_class(QUERY);
 
 	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Box), Geometry::CKName(GeometryType::Base) );
+    QUERY->doc_class(QUERY, "Geometry class for constructing vertex data for boxes aka cubes");
 	QUERY->add_ctor(QUERY, cgl_geo_box_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 
@@ -857,9 +905,12 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 	QUERY->add_arg(QUERY, "int", "widthSeg");
 	QUERY->add_arg(QUERY, "int", "heightSeg");
 	QUERY->add_arg(QUERY, "int", "depthSeg");
+    QUERY->doc_func(QUERY, "Set box dimensions and subdivisions");
+
 	QUERY->end_class(QUERY);
 
 	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Sphere), Geometry::CKName(GeometryType::Base) );
+    QUERY->doc_class(QUERY, "Geometry class for constructing vertex data for spheres");
 	QUERY->add_ctor(QUERY, cgl_geo_sphere_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 
@@ -871,11 +922,13 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 	QUERY->add_arg(QUERY, "float", "phiLength");
 	QUERY->add_arg(QUERY, "float", "thetaStart");
 	QUERY->add_arg(QUERY, "float", "thetaLength");
+    QUERY->doc_func(QUERY, "Set sphere dimensions and subdivisions");
 
 	QUERY->end_class(QUERY);
 
 	// circle geo
 	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Circle), Geometry::CKName(GeometryType::Base) );
+    QUERY->doc_class(QUERY, "Geometry class for constructing vertex data for circles");
 	QUERY->add_ctor(QUERY, cgl_geo_circle_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 
@@ -884,10 +937,13 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 	QUERY->add_arg(QUERY, "int", "segments");
 	QUERY->add_arg(QUERY, "float", "thetaStart");
 	QUERY->add_arg(QUERY, "float", "thetaLength");
+    QUERY->doc_func(QUERY, "Set cirle dimensions and subdivisions");
+
 	QUERY->end_class(QUERY);
 
 	// plane geo
 	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Plane), Geometry::CKName(GeometryType::Base) );
+    QUERY->doc_class(QUERY, "Geometry class for constructing vertex data for planes");
 	QUERY->add_ctor(QUERY, cgl_geo_plane_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 
@@ -896,10 +952,13 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 	QUERY->add_arg(QUERY, "float", "height");
 	QUERY->add_arg(QUERY, "int", "widthSegments");
 	QUERY->add_arg(QUERY, "int", "heightSegments");
+    QUERY->doc_func(QUERY, "Set plane dimensions and subdivisions");
+
 	QUERY->end_class(QUERY);
 
 	// Torus geo
 	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Torus), Geometry::CKName(GeometryType::Base) );
+    QUERY->doc_class(QUERY, "Geometry class for constructing vertex data for toruses");
 	QUERY->add_ctor(QUERY, cgl_geo_torus_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 
@@ -909,28 +968,34 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 	QUERY->add_arg(QUERY, "int", "radialSegments");
 	QUERY->add_arg(QUERY, "int", "tubularSegments");
 	QUERY->add_arg(QUERY, "float", "arcLength");
+    QUERY->doc_func(QUERY, "Set torus dimensions and subdivisions");
+
 	QUERY->end_class(QUERY);
 
 	// lathe geo
 	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Lathe), Geometry::CKName(GeometryType::Base) );
+    QUERY->doc_class(QUERY, "Geometry class for constructing vertex data for lathes (i.e. rotated curves)");
 	QUERY->add_ctor(QUERY, cgl_geo_lathe_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 
 	QUERY->add_mfun(QUERY, cgl_geo_lathe_set, "void", "set");
-	QUERY->add_arg(QUERY, "float[]", "points"); // these are converted to vec2s
+	QUERY->add_arg(QUERY, "float[]", "path"); // these are converted to vec2s
 	QUERY->add_arg(QUERY, "int", "segments");
 	QUERY->add_arg(QUERY, "float", "phiStart");
 	QUERY->add_arg(QUERY, "float", "phiLength");
+    QUERY->doc_func(QUERY, "Set lathe dimensions and subdivisions, path is rotated phiLength to form a curved surface");
 
 	QUERY->add_mfun(QUERY, cgl_geo_lathe_set_no_points, "void", "set");
 	QUERY->add_arg(QUERY, "int", "segments");
 	QUERY->add_arg(QUERY, "float", "phiStart");
 	QUERY->add_arg(QUERY, "float", "phiLength");
+    QUERY->doc_func(QUERY, "Set lathe dimensions and subdivisions while maintaining the previously set curve");
 
 	QUERY->end_class(QUERY);
 
 	// custom geo
 	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Custom), Geometry::CKName(GeometryType::Base) );
+    QUERY->doc_class(QUERY, "Geometry class for providing your own vertex data. Used implicitly by GLines and GPoints");
 	QUERY->add_ctor(QUERY, cgl_geo_custom_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 
@@ -1242,46 +1307,68 @@ CK_DLL_MFUN(cgl_geo_set_indices)
 t_CKBOOL init_chugl_texture(Chuck_DL_Query *QUERY)
 {
 	QUERY->begin_class(QUERY, "Texture", "Object");
+    QUERY->doc_class(QUERY, "Base texture class, do not instantiate directly");
 	QUERY->add_ctor(QUERY, cgl_texture_ctor);
 	QUERY->add_dtor(QUERY, cgl_texture_dtor);
-	texture_data_offset = QUERY->add_mvar(QUERY, "int", "@texture_dat", false);
+	texture_data_offset = QUERY->add_mvar(QUERY, "int", "@texture_data", false);
 
 	// texture options (static constants) ---------------------------------
 	QUERY->add_svar(QUERY, "int", "WRAP_REPEAT", TRUE, (void *)&CGL_Texture::Repeat);
+    QUERY->doc_var(QUERY, "When passed into Texture.wrap(), sets the texture to repeat for UVs outside of [0,1]");
 	QUERY->add_svar(QUERY, "int", "WRAP_MIRRORED", TRUE, (void *)&CGL_Texture::MirroredRepeat);
+    QUERY->doc_var(QUERY, "When passed into Texture.wrap(), sets the texture to repeat and mirror for UVs outside of [0,1]");
 	QUERY->add_svar(QUERY, "int", "WRAP_CLAMP", TRUE, (void *)&CGL_Texture::ClampToEdge);
+    QUERY->doc_var(QUERY, "When passed into Texture.wrap(), sets the texture to clamp to the border pixel color for UVs outside of [0,1]");
 
 	// not exposing mipmap filter options for simplicity
 	QUERY->add_svar(QUERY, "int", "FILTER_NEAREST", TRUE, (void *)&CGL_Texture::Nearest);
+    QUERY->doc_var(QUERY, "When passed into Texture.filter(), sets texture sampler to use nearest-neighbor filtering");
 	QUERY->add_svar(QUERY, "int", "FILTER_LINEAR", TRUE, (void *)&CGL_Texture::Linear);
+    QUERY->doc_var(QUERY, "When passed into Texture.filter(), sets texture sampler to use bilinear filtering");
 
 	// member fns -----------------------------------------------------------
 	QUERY->add_mfun(QUERY, cgl_texture_set_wrap, "void", "wrap");
 	QUERY->add_arg(QUERY, "int", "s");
 	QUERY->add_arg(QUERY, "int", "t");
+    QUERY->doc_func(QUERY, "Set texture wrap modes along s and t dimensions");
 
 	QUERY->add_mfun(QUERY, cgl_texture_get_wrap_s, "int", "wrapS");
+    QUERY->doc_func(QUERY, "Set texture wrap modes along s dimensions");
 	QUERY->add_mfun(QUERY, cgl_texture_get_wrap_t, "int", "wrapT");
+    QUERY->doc_func(QUERY, "Set texture wrap modes along t dimensions");
 
 	QUERY->add_mfun(QUERY, cgl_texture_set_filter, "void", "filter");
 	QUERY->add_arg(QUERY, "int", "min");
 	QUERY->add_arg(QUERY, "int", "mag");
+    QUERY->doc_func(QUERY, "Set texture sampler min and mag filter modes Texture.FILTER_NEAREST or Texture.FILTER_LINEAR");
+
 	QUERY->add_mfun(QUERY, cgl_texture_get_filter_min, "int", "filterMin");
+    QUERY->doc_func(QUERY, "Set texture sampler minification filter. Default FILTER_LINEAR");
 	QUERY->add_mfun(QUERY, cgl_texture_get_filter_mag, "int", "filterMag");
+    QUERY->doc_func(QUERY, "Set texture sampler magnification filter. Default FILTER_LINEAR");
+
 	QUERY->end_class(QUERY);
 
 	// FileTexture -----------------------------------------------------------
 	QUERY->begin_class(QUERY, "FileTexture", "Texture");
+    QUERY->doc_class(QUERY, "Class for loading textures from external files");
+
 	QUERY->add_ctor(QUERY, cgl_texture_file_ctor);
 	QUERY->add_dtor(QUERY, cgl_texture_dtor);
 
 	QUERY->add_mfun(QUERY, cgl_texture_file_set_filepath, "string", "path");
 	QUERY->add_arg(QUERY, "string", "path");
+    QUERY->doc_func(QUERY, "loads texture data from path");
+
 	QUERY->add_mfun(QUERY, cgl_texture_file_get_filepath, "string", "path");
+    QUERY->doc_func(QUERY, "Get the filepath for the currently-loaded texture");
+
 	QUERY->end_class(QUERY);
 
 	// DataTexture -----------------------------------------------------------
 	QUERY->begin_class(QUERY, "DataTexture", "Texture");
+    QUERY->doc_class(QUERY, "Class for dynamically creating textures from chuck arrays");
+
 	QUERY->add_ctor(QUERY, cgl_texture_rawdata_ctor);
 	QUERY->add_dtor(QUERY, cgl_texture_dtor);
 
@@ -1289,6 +1376,11 @@ t_CKBOOL init_chugl_texture(Chuck_DL_Query *QUERY)
 	QUERY->add_arg(QUERY, "float[]", "data");
 	QUERY->add_arg(QUERY, "int", "width");
 	QUERY->add_arg(QUERY, "int", "height");
+    QUERY->doc_func(QUERY, 
+		"Set the data for this texture. Data is expected to be a float array of length width*height*4, "
+		"where each pixel is represented by 4 floats for r,g,b,a."
+		"Currently only supports unsigned bytes, so each float must be in range [0,255]"
+	);
 	QUERY->end_class(QUERY);
 
 	return true;
@@ -1420,73 +1512,106 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 	// EM_log(CK_LOG_INFO, "ChuGL materials");
 
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Base), "Object");
+	QUERY->doc_class(QUERY, "Base material class, do not instantiate directly");
+
 	QUERY->add_ctor(QUERY, cgl_mat_ctor);
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 	cglmat_data_offset = QUERY->add_mvar(QUERY, "int", "@cglmat_data", false);
 
 	// clone
 	QUERY->add_mfun(QUERY, cgl_mat_clone, Material::CKName(MaterialType::Base), "clone");
+	QUERY->doc_func(QUERY, "Clones this material");
 
 	// Material params (static constants) ---------------------------------
 	QUERY->add_svar(QUERY, "int", "POLYGON_FILL", TRUE, (void *)&Material::POLYGON_FILL);
+	QUERY->doc_var(QUERY, "pass into Material.polygonMode() to set polygon rendering to filled triangles, default");
 	QUERY->add_svar(QUERY, "int", "POLYGON_LINE", TRUE, (void *)&Material::POLYGON_LINE);
+	QUERY->doc_var(QUERY, "pass into Material.polygonMode() to render geometry as a line mesh");
 	QUERY->add_svar(QUERY, "int", "POLYGON_POINT", TRUE, (void *)&Material::POLYGON_POINT);
+	QUERY->doc_var(QUERY, "pass into Material.polygonMode() to render geometry as a point mesh (points drawn at each vertex position)");
+
 	// line rendering static vars
 	QUERY->add_svar(QUERY, "int", "LINE_SEGMENTS", TRUE, (void *)&Material::LINE_SEGMENTS_MODE);
+	QUERY->doc_var(QUERY, "used by LineMaterial to render lines as a series of segments, where every 2 vertices is a line");
 	QUERY->add_svar(QUERY, "int", "LINE_STRIP", TRUE, (void *)&Material::LINE_STRIP_MODE);
+	QUERY->doc_var(QUERY, "used by LineMaterial to render lines as a continuous strip, connecting each vertex to the next");
 	QUERY->add_svar(QUERY, "int", "LINE_LOOP", TRUE, (void *)&Material::LINE_LOOP_MODE);
+	QUERY->doc_var(QUERY, "used by LineMaterial to render lines as a loop, connecting each vertex to the next, and also the last to the first");
 
 	QUERY->add_mfun(QUERY, cgl_mat_set_polygon_mode, "int", "polygonMode");
 	QUERY->add_arg(QUERY, "int", "mode");
+	QUERY->doc_func(QUERY, "set the rendering mode for this material, can be Material.POLYGON_FILL, Material.POLYGON_LINE, or Material.POLYGON_POINT");
+
 	QUERY->add_mfun(QUERY, cgl_mat_get_polygon_mode, "int", "polygonMode");
+	QUERY->doc_func(QUERY, "get the rendering mode for this material, can be Material.POLYGON_FILL, Material.POLYGON_LINE, or Material.POLYGON_POINT");
 
 	QUERY->add_mfun(QUERY, cgl_mat_set_point_size, "void", "pointSize");
 	QUERY->add_arg(QUERY, "float", "size");
+	QUERY->doc_func(QUERY, "set point size if rendering with Material.POLYGON_POINT. NOTE: unsupported on macOS");
 
 	QUERY->add_mfun(QUERY, cgl_mat_set_color, "vec3", "color");
 	QUERY->add_arg(QUERY, "vec3", "col");
+	QUERY->doc_func(QUERY, "set material color uniform");
 
 	QUERY->add_mfun(QUERY, cgl_mat_set_line_width, "void", "lineWidth");
 	QUERY->add_arg(QUERY, "float", "width");
+	QUERY->doc_func(QUERY, "set line width if rendering with Material.POLYGON_LINE. NOTE: unsupported on macOS");
 
 	// norm mat fns
 	QUERY->add_mfun(QUERY, cgl_set_use_local_normals, "void", "localNormals");
+	QUERY->doc_func(QUERY, "For NormalsMaterial: color surface using local-space normals");
+	
 	QUERY->add_mfun(QUERY, cgl_set_use_world_normals, "void", "worldNormals");
+	QUERY->doc_func(QUERY, "For NormalsMaterial: color surface using world-space normals");
 
 	// phong mat fns (TODO add getters, need to fix texture creation)
 	QUERY->add_mfun(QUERY, cgl_mat_phong_set_log_shininess, "float", "shine");
 	QUERY->add_arg(QUERY, "float", "shininess");
+	QUERY->doc_func(QUERY, "For PhongMaterial: set shininess exponent, default 5");
 
 	QUERY->add_mfun(QUERY, cgl_mat_phong_set_diffuse_map, "void", "diffuseMap");
 	QUERY->add_arg(QUERY, "Texture", "tex");
+	QUERY->doc_func(QUERY, "Set diffuse map texture");
 
 	QUERY->add_mfun(QUERY, cgl_mat_phong_set_specular_map, "void", "specularMap");
 	QUERY->add_arg(QUERY, "Texture", "tex");
+	QUERY->doc_func(QUERY, "Set specular map texture");
 
 	QUERY->add_mfun(QUERY, cgl_mat_phong_set_specular_color, "vec3", "specular");
 	QUERY->add_arg(QUERY, "vec3", "color");
+	QUERY->doc_func(QUERY, "For PhongMat: set specular color");
 
 	// shader mat fns  (TODO allow setting vert and frag separately)
 	QUERY->add_mfun(QUERY, cgl_mat_custom_shader_set_shaders, "void", "shaders");
 	QUERY->add_arg(QUERY, "string", "vert");
 	QUERY->add_arg(QUERY, "string", "frag");
+	QUERY->doc_func(QUERY, "For ShaderMaterial: set vertex and fragment shaders");
+
 	QUERY->add_mfun(QUERY, cgl_mat_custom_shader_set_vert_shader, "void", "vertShader");
 	QUERY->add_arg(QUERY, "string", "vert");
+	QUERY->doc_func(QUERY, "For ShaderMaterial: set vertex shader");
+
 	QUERY->add_mfun(QUERY, cgl_mat_custom_shader_set_frag_shader, "void", "fragShader");
 	QUERY->add_arg(QUERY, "string", "frag");
+	QUERY->doc_func(QUERY, "For ShaderMaterial: set fragment shader");
 
 
 	// points mat fns
 	QUERY->add_mfun(QUERY, cgl_mat_points_set_size_attenuation, "int", "attenuatePoints");
 	QUERY->add_arg(QUERY, "int", "attenuation");
+	QUERY->doc_func(QUERY, "For PointMaterial: set if point size should be scaled by distance from camera");
+
 	QUERY->add_mfun(QUERY, cgl_mat_points_get_size_attenuation, "int", "attenuatePoints");
+	QUERY->doc_func(QUERY, "For PointMaterial: returns 1 if point size is being scaled by distance from camera, else 0");
 
 	QUERY->add_mfun(QUERY, cgl_mat_points_set_sprite, "Texture", "pointSprite");
 	QUERY->add_arg(QUERY, "Texture", "sprite");
+	QUERY->doc_func(QUERY, "For PointMaterial: set sprite texture for point sprite rendering");
 
 	// line mat fns
 	QUERY->add_mfun(QUERY, cgl_mat_line_set_mode, "int", "lineMode");
 	QUERY->add_arg(QUERY, "int", "mode");
+	QUERY->doc_func(QUERY, "For LineMaterial: set line mode. Can be Material.LINE_SEGMENTS, Material.LINE_STRIP, or Material.LINE_LOOP");
 
 
 	// uniform setters
@@ -1546,42 +1671,50 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 
 	// normal material
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Normal), Material::CKName(MaterialType::Base));
+	QUERY->doc_class(QUERY, "Color each pixel using the surface normal at that point");
 	QUERY->add_ctor(QUERY, cgl_mat_norm_ctor);
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 	QUERY->end_class(QUERY);
 
 	// flat material
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Flat), Material::CKName(MaterialType::Base));
+	QUERY->doc_class(QUERY, "Color each pixel using a flat color");
 	QUERY->add_ctor(QUERY, cgl_mat_flat_ctor);
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 	QUERY->end_class(QUERY);
 
 	// phong specular material
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Phong), Material::CKName(MaterialType::Base));
+	QUERY->doc_class(QUERY, "Color each pixel using a phong specular shading");
 	QUERY->add_ctor(QUERY, cgl_mat_phong_ctor);
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 	QUERY->end_class(QUERY);
 
 	// custom shader material
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::CustomShader), Material::CKName(MaterialType::Base));
+	QUERY->doc_class(QUERY, "Color each pixel using the custom glsl shaders you provide via Material.shaders()");
 	QUERY->add_ctor(QUERY, cgl_mat_custom_shader_ctor);
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 	QUERY->end_class(QUERY);
 
 	// points material
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Points), Material::CKName(MaterialType::Base));
+	QUERY->doc_class(QUERY, "Used by GPoints");
+	QUERY->add_ctor(QUERY, cgl_mat_custom_shader_ctor);
 	QUERY->add_ctor(QUERY, cgl_mat_points_ctor);
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 	QUERY->end_class(QUERY);
 
 	// mango material
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Mango), Material::CKName(MaterialType::Base));
+	QUERY->doc_class(QUERY, "Color each pixel using its UV coordinates. Looks like a mango, yum.");
 	QUERY->add_ctor(QUERY, cgl_mat_mango_ctor);
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 	QUERY->end_class(QUERY);
 
 	// line material
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Line), Material::CKName(MaterialType::Base));
+	QUERY->doc_class(QUERY, "Used by GLines");
 	QUERY->add_ctor(QUERY, cgl_mat_line_ctor);
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 	QUERY->end_class(QUERY);
@@ -2053,76 +2186,103 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query *QUERY)
 
 	// GGen =========================================
 	QUERY->begin_class(QUERY, "GGen", "Object");
+	QUERY->doc_class(QUERY, "Base class for all Gens. Can be extended to create your own, or initialized as an empty group container");
+
 	QUERY->add_ctor(QUERY, cgl_obj_ctor);
 	QUERY->add_dtor(QUERY, cgl_obj_dtor);
 	ggen_data_offset = QUERY->add_mvar(QUERY, "int", "@ggen_data", false);
 
 	QUERY->add_mfun(QUERY, cgl_obj_get_id, "int", "id");
+	QUERY->doc_func(QUERY, "Internal debug. Get the unique ChuGL ID of this GGen");
 
 	QUERY->add_mfun(QUERY, cgl_obj_update, "void", "update");
 	QUERY->add_arg(QUERY, "float", "dt");
+	QUERY->doc_func(QUERY, "Internal. Used for automatic updates feature");
 
 	// transform getters ===========
 	// get obj direction vectors in world space
 	QUERY->add_mfun(QUERY, cgl_obj_get_right, "vec3", "right");
+	QUERY->doc_func(QUERY, "Get the right vector of this GGen in world space");
+
 	QUERY->add_mfun(QUERY, cgl_obj_get_forward, "vec3", "forward");
+	QUERY->doc_func(QUERY, "Get the forward vector of this GGen in world space");
+
 	QUERY->add_mfun(QUERY, cgl_obj_get_up, "vec3", "up");
+	QUERY->doc_func(QUERY, "Get the up vector of this GGen in world space");
 
 	QUERY->add_mfun(QUERY, cgl_obj_get_pos, "vec3", "pos");
+	QUERY->doc_func(QUERY, "Get object position in local space");
+
 	QUERY->add_mfun(QUERY, cgl_obj_get_rot, "vec3", "rot");
+	QUERY->doc_func(QUERY, "Get object rotation in local space as euler angles");
+
 	QUERY->add_mfun(QUERY, cgl_obj_get_scale, "vec3", "sca");
+	QUERY->doc_func(QUERY, "Get object scale in local space");
 
 	QUERY->add_mfun(QUERY, cgl_obj_get_world_pos, "vec3", "worldPos");
+	QUERY->doc_func(QUERY, "Get object position in world space");
 
 	// transform setters ===========
 	QUERY->add_mfun(QUERY, cgl_obj_translate_by, "GGen", "translate");
 	QUERY->add_arg(QUERY, "vec3", "trans_vec");
+	QUERY->doc_func(QUERY, "Translate this GGen by the given vector");
 
 	QUERY->add_mfun(QUERY, cgl_obj_rot_on_local_axis, "GGen", "rotateOnLocalAxis");
 	QUERY->add_arg(QUERY, "vec3", "axis");
 	QUERY->add_arg(QUERY, "float", "deg");
+	QUERY->doc_func(QUERY, "Rotate this GGen by the given degrees on the given axis in local space");
 
 	QUERY->add_mfun(QUERY, cgl_obj_rot_on_world_axis, "GGen", "rotateOnWorldAxis");
 	QUERY->add_arg(QUERY, "vec3", "axis");
 	QUERY->add_arg(QUERY, "float", "deg");
+	QUERY->doc_func(QUERY, "Rotate this GGen by the given degrees on the given axis in world space");
 
 	QUERY->add_mfun(QUERY, cgl_obj_rot_x, "GGen", "rotX");
 	QUERY->add_arg(QUERY, "float", "deg");
+	QUERY->doc_func(QUERY, "Rotate this GGen by the given degrees on the X axis in local space");
 
 	QUERY->add_mfun(QUERY, cgl_obj_rot_y, "GGen", "rotY");
 	QUERY->add_arg(QUERY, "float", "deg");
+	QUERY->doc_func(QUERY, "Rotate this GGen by the given degrees on the Y axis in local space");
 
 	QUERY->add_mfun(QUERY, cgl_obj_rot_z, "GGen", "rotZ");
 	QUERY->add_arg(QUERY, "float", "deg");
+	QUERY->doc_func(QUERY, "Rotate this GGen by the given degrees on the Z axis in local space");
 
 	QUERY->add_mfun(QUERY, cgl_obj_pos_x, "GGen", "posX");
 	QUERY->add_arg(QUERY, "float", "pos");
+	QUERY->doc_func(QUERY, "Set X position of this GGen in local space");
+
 
 	QUERY->add_mfun(QUERY, cgl_obj_pos_y, "GGen", "posY");
 	QUERY->add_arg(QUERY, "float", "pos");
+	QUERY->doc_func(QUERY, "Set Y position of this GGen in local space");
 
 	QUERY->add_mfun(QUERY, cgl_obj_pos_z, "GGen", "posZ");
 	QUERY->add_arg(QUERY, "float", "pos");
+	QUERY->doc_func(QUERY, "Set Z position of this GGen in local space");
 
-	// TODO: add scale setters in each dimension
-
-	// TODO: add option to pass UP vector to lookat
 	QUERY->add_mfun(QUERY, cgl_obj_lookat_vec3, "GGen", "lookAt");
 	QUERY->add_arg(QUERY, "vec3", "pos");
+	QUERY->doc_func(QUERY, "Look at the given position in world space");
 
 	QUERY->add_mfun(QUERY, cgl_obj_lookat_float, "GGen", "lookAt");
 	QUERY->add_arg(QUERY, "float", "x");
 	QUERY->add_arg(QUERY, "float", "y");
 	QUERY->add_arg(QUERY, "float", "z");
+	QUERY->doc_func(QUERY, "Look at the given position in world space");
 
 	QUERY->add_mfun(QUERY, cgl_obj_set_pos, "GGen", "position");
 	QUERY->add_arg(QUERY, "vec3", "pos_vec");
+	QUERY->doc_func(QUERY, "Set position of this GGen in local space");
 
 	QUERY->add_mfun(QUERY, cgl_obj_set_rot, "GGen", "rotation"); // sets from eulers
 	QUERY->add_arg(QUERY, "vec3", "eulers");
+	QUERY->doc_func(QUERY, "Set rotation of this GGen in local space as euler angles");
 
 	QUERY->add_mfun(QUERY, cgl_obj_set_scale, "GGen", "scale");
 	QUERY->add_arg(QUERY, "vec3", "scale");
+	QUERY->doc_func(QUERY, "Set scale of this GGen in local space");
 
 	// scenegraph relationship methods ===========
 	// overload GGen --> GGen
@@ -2415,39 +2575,63 @@ t_CKBOOL init_chugl_scene(Chuck_DL_Query *QUERY)
 	// EM_log(CK_LOG_INFO, "ChuGL scene");
 	// CGL scene
 	QUERY->begin_class(QUERY, "GScene", "GGen");
+	QUERY->doc_class(QUERY, "Scene class. Static--all instances point to the same underlying ChuGL main scene. GGens must be added to a scene to be rendered");
+	
 	QUERY->add_ctor(QUERY, cgl_scene_ctor);
 	QUERY->add_dtor(QUERY, cgl_scene_dtor);
 
 	// static constants
 	// TODO: add linear fog? but doesn't even look as good
 	QUERY->add_svar(QUERY, "int", "FOG_EXP", true, (void *)&Scene::FOG_EXP);
+	QUERY->doc_var(QUERY, "Fog type: exponential");
+
 	QUERY->add_svar(QUERY, "int", "FOG_EXP2", true, (void *)&Scene::FOG_EXP2);
+	QUERY->doc_var(QUERY, "Fog type: exponential-squared. more aggressive");
 
 	// background color
 	QUERY->add_mfun(QUERY, cgl_scene_set_background_color, "vec3", "backgroundColor");
 	QUERY->add_arg(QUERY, "vec3", "color");
+	QUERY->doc_func(QUERY, "Set the background color of the scene");
+
+
 	QUERY->add_mfun(QUERY, cgl_scene_get_background_color, "vec3", "backgroundColor");
+	QUERY->doc_func(QUERY, "Get the background color of the scene");
 
 	// light
 	QUERY->add_mfun(QUERY, cgl_scene_get_default_light, Light::CKName(LightType::Base), "light");
+	QUERY->doc_func(QUERY, "Get the default directional light of the scene");
+
 	QUERY->add_mfun(QUERY, cgl_scene_get_num_lights, "int", "numLights");
+	QUERY->doc_func(QUERY, "Get the number of instantiated lights");
 
 
 	// fog member vars
 	QUERY->add_mfun(QUERY, cgl_scene_set_fog_color, "vec3", "fogColor");
 	QUERY->add_arg(QUERY, "vec3", "color");
+	QUERY->doc_func(QUERY, "Set the fog color of the scene");
+
 	QUERY->add_mfun(QUERY, cgl_scene_get_fog_color, "vec3", "fogColor");
+	QUERY->doc_func(QUERY, "Get the fog color of the scene");
 
 	QUERY->add_mfun(QUERY, cgl_scene_set_fog_density, "float", "fogDensity");
 	QUERY->add_arg(QUERY, "float", "density");
+	QUERY->doc_func(QUERY, "Set fog density. typically between 0.0 and 0.1");
+
 	QUERY->add_mfun(QUERY, cgl_scene_get_fog_density, "float", "fogDensity");
+	QUERY->doc_func(QUERY, "Get fog density");
 
 	QUERY->add_mfun(QUERY, cgl_scene_set_fog_type, "int", "fogType");
 	QUERY->add_arg(QUERY, "int", "type");
+	QUERY->doc_func(QUERY, "Set fog type. Use one of the static constants: FOG_EXP or FOG_EXP2");
+
 	QUERY->add_mfun(QUERY, cgl_scene_get_fog_type, "int", "fogType");
+	QUERY->doc_func(QUERY, "Get fog type. Can be FOG_EXP or FOG_EXP2");
 
 	QUERY->add_mfun(QUERY, cgl_scene_set_fog_enabled, "void", "enableFog");
+	QUERY->doc_func(QUERY, "enable fog for the scene");
+
 	QUERY->add_mfun(QUERY, cgl_scene_set_fog_disabled, "void", "disableFog");
+	QUERY->doc_func(QUERY, "disable fog for the scene");
 
 	QUERY->end_class(QUERY);
 
@@ -2567,6 +2751,8 @@ t_CKBOOL init_chugl_cam(Chuck_DL_Query *QUERY)
 	// EM_log(CK_LOG_INFO, "ChuGL Camera");
 	// CGL camera
 	QUERY->begin_class(QUERY, "GCamera", "GGen");
+	QUERY->doc_class(QUERY, "Camera class. Static--all instances point to the same underlying ChuGL main camera");
+
 	QUERY->add_ctor(QUERY, cgl_cam_ctor);
 	QUERY->add_dtor(QUERY, cgl_cam_dtor);
 
@@ -2576,25 +2762,44 @@ t_CKBOOL init_chugl_cam(Chuck_DL_Query *QUERY)
 	QUERY->add_svar(QUERY, "int", "MODE_ORTHO", true, (void *)&Camera::MODE_ORTHO);
 
 	QUERY->add_mfun(QUERY, cgl_cam_set_mode_persp, "void", "perspective");
+	QUERY->doc_func(QUERY, "Set camera to perspective mode");
+
 	QUERY->add_mfun(QUERY, cgl_cam_set_mode_ortho, "void", "orthographic");
+	QUERY->doc_func(QUERY, "Set camera to orthographic mode");
+
 	QUERY->add_mfun(QUERY, cgl_cam_get_mode, "int", "mode");
+	QUERY->doc_func(QUERY, "Get camera mode. Can be GCamera.MODE_PERSP or GCamera.MODE_ORTHO");
+
 
 	// clipping planes
 	QUERY->add_mfun(QUERY, cgl_cam_set_clip, "void", "clip");
 	QUERY->add_arg(QUERY, "float", "near");
 	QUERY->add_arg(QUERY, "float", "far");
+	QUERY->doc_func(QUERY, "Set camera clipping planes");
+
 	QUERY->add_mfun(QUERY, cgl_cam_get_clip_near, "float", "clipNear");
+	QUERY->doc_func(QUERY, "get near clipping plane");
+
+
 	QUERY->add_mfun(QUERY, cgl_cam_get_clip_far, "float", "clipFar");
+	QUERY->doc_func(QUERY, "get far clipping plane");
 
 	// fov (in degrees)
 	QUERY->add_mfun(QUERY, cgl_cam_set_pers_fov, "float", "fov");
 	QUERY->add_arg(QUERY, "float", "f");
+	QUERY->doc_func(QUERY, "(perspective mode) set the field of view in degrees");
+
 	QUERY->add_mfun(QUERY, cgl_cam_get_pers_fov, "float", "fov");
+	QUERY->doc_func(QUERY, "(perspective mode) get the field of view in degrees");
+
 
 	// ortho view size
 	QUERY->add_mfun(QUERY, cgl_cam_set_ortho_size, "float", "viewSize");
 	QUERY->add_arg(QUERY, "float", "s");
+	QUERY->doc_func(QUERY, "(orthographic mode) set the height of the view in pixels. Width is automatically calculated based on aspect ratio");
+
 	QUERY->add_mfun(QUERY, cgl_cam_get_ortho_size, "float", "viewSize");
+	QUERY->doc_func(QUERY, "(orthographic mode) get the height of the view in pixels");
 
 	QUERY->end_class(QUERY);
 
@@ -2708,59 +2913,82 @@ t_CKBOOL init_chugl_mesh(Chuck_DL_Query *QUERY)
 	// EM_log(CK_LOG_INFO, "ChuGL scene");
 
 	QUERY->begin_class(QUERY, "GMesh", "GGen");
+	QUERY->doc_class(QUERY, "Mesh class. A mesh is a geometry and a material. It can be added to a scene to be rendered. Parent class of GCube, GSphere, GCircle, etc");
+
 	QUERY->add_ctor(QUERY, cgl_mesh_ctor);
 	QUERY->add_dtor(QUERY, cgl_mesh_dtor);
 
 	QUERY->add_mfun(QUERY, cgl_mesh_set, "void", "set");
 	QUERY->add_arg(QUERY, Geometry::CKName(GeometryType::Base) , "geo");
 	QUERY->add_arg(QUERY, Material::CKName(MaterialType::Base), "mat");
+	QUERY->doc_func(QUERY, "Set the geometry and material of the mesh");
 
 	QUERY->add_mfun(QUERY, cgl_mesh_set_geo, Geometry::CKName(GeometryType::Base) , "geo");
 	QUERY->add_arg(QUERY, Geometry::CKName(GeometryType::Base) , "geo");
+	QUERY->doc_func(QUERY, "Set the mesh geometry");
+
 
 	QUERY->add_mfun(QUERY, cgl_mesh_set_mat, Material::CKName(MaterialType::Base), "mat");
 	QUERY->add_arg(QUERY, Material::CKName(MaterialType::Base), "mat");
+	QUERY->doc_func(QUERY, "Set the mesh material");
 
 	QUERY->add_mfun(QUERY, cgl_mesh_get_geo, Geometry::CKName(GeometryType::Base) , "geo");
+	QUERY->doc_func(QUERY, "Get the mesh geometry");
+
 	QUERY->add_mfun(QUERY, cgl_mesh_get_mat, Material::CKName(MaterialType::Base), "mat");
+	QUERY->doc_func(QUERY, "Get the mesh material");
 
 	QUERY->add_mfun(QUERY, cgl_mesh_dup_mat, Material::CKName(MaterialType::Base), "dupMat");
+	QUERY->doc_func(QUERY, "Clone the mesh material and set it to this mesh");
+
 	QUERY->add_mfun(QUERY, cgl_mesh_dup_geo, Geometry::CKName(GeometryType::Base) , "dupGeo");
+	QUERY->doc_func(QUERY, "Clone the mesh geometry and set it to this mesh");
+
 	QUERY->add_mfun(QUERY, cgl_mesh_dup_all, "GMesh", "dup");
+	QUERY->doc_func(QUERY, "Clone both the mesh geometry and material and set it to this mesh");
 
 	QUERY->end_class(QUERY);
 
 	QUERY->begin_class(QUERY, "GCube", "GMesh");
+	QUERY->doc_class(QUERY, "Creates a Mesh that uses BoxGeometry and PhongMaterial");
+
 	QUERY->add_ctor(QUERY, cgl_gcube_ctor);
 	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
 	QUERY->end_class(QUERY);
 
 	QUERY->begin_class(QUERY, "GSphere", "GMesh");
+	QUERY->doc_class(QUERY, "Creates a Mesh that uses SphereGeometry and PhongMaterial");
 	QUERY->add_ctor(QUERY, cgl_gsphere_ctor);
 	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
 	QUERY->end_class(QUERY);
 
 	QUERY->begin_class(QUERY, "GCircle", "GMesh");
+	QUERY->doc_class(QUERY, "Creates a Mesh that uses CircleGeometry and PhongMaterial");
 	QUERY->add_ctor(QUERY, cgl_gcircle_ctor);
 	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
 	QUERY->end_class(QUERY);
 
 	QUERY->begin_class(QUERY, "GPlane", "GMesh");
+	QUERY->doc_class(QUERY, "Creates a Mesh that uses PlaneGeometry and PhongMaterial");
 	QUERY->add_ctor(QUERY, cgl_gplane_ctor);
 	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
 	QUERY->end_class(QUERY);
 
 	QUERY->begin_class(QUERY, "GTorus", "GMesh");
+	QUERY->doc_class(QUERY, "Creates a Mesh that uses TorusGeometry and PhongMaterial");
+
 	QUERY->add_ctor(QUERY, cgl_gtorus_ctor);
 	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
 	QUERY->end_class(QUERY);
 
 	QUERY->begin_class(QUERY, "GLines", "GMesh");
+	QUERY->doc_class(QUERY, "Creates a Mesh that uses CustomGeometry and LineMaterial");
 	QUERY->add_ctor(QUERY, cgl_glines_ctor);
 	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
 	QUERY->end_class(QUERY);
 
 	QUERY->begin_class(QUERY, "GPoints", "GMesh");
+	QUERY->doc_class(QUERY, "Creates a Mesh that uses CustomGeometry and PointMaterial");
 	QUERY->add_ctor(QUERY, cgl_gpoints_ctor);
 	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
 	QUERY->end_class(QUERY);
@@ -2987,36 +3215,57 @@ CK_DLL_CTOR(cgl_gpoints_ctor)
 t_CKBOOL init_chugl_light(Chuck_DL_Query *QUERY)
 {
 	QUERY->begin_class(QUERY, Light::CKName(LightType::Base), "GGen");
+	QUERY->doc_class(QUERY, "Light class. Parent class of GPointLight and GDirectionalLight. Don't instantiate this class directly.");
+
+
 	QUERY->add_ctor(QUERY, cgl_light_ctor);
 	QUERY->add_dtor(QUERY, cgl_light_dtor);
 
 	QUERY->add_mfun(QUERY, cgl_light_set_intensity, "float", "intensity");  // 0 -- 1
 	QUERY->add_arg(QUERY, "float", "i");
+	QUERY->doc_func(QUERY, "Set intensity from 0-1. 0 is off, 1 is full intensity");
+
 	QUERY->add_mfun(QUERY, cgl_light_set_ambient, "vec3", "ambient"); 
 	QUERY->add_arg(QUERY, "vec3", "a");
+	QUERY->doc_func(QUERY, "Set ambient color. Ambient color is multiplied by the material ambient color, and will be visible even when no light is directly shining on the object");
+
 	QUERY->add_mfun(QUERY, cgl_light_set_diffuse, "vec3", "diffuse");
 	QUERY->add_arg(QUERY, "vec3", "d");
+	QUERY->doc_func(QUERY, "Set diffuse color. Diffuse color is multiplied by the material diffuse color");
+
+
 	QUERY->add_mfun(QUERY, cgl_light_set_specular, "vec3", "specular");
 	QUERY->add_arg(QUERY, "vec3", "s");
+	QUERY->doc_func(QUERY, "Set specular color. Specular color is multiplied by the material specular color");
 
 	QUERY->add_mfun(QUERY, cgl_light_get_intensity, "float", "intensity");
+	QUERY->doc_func(QUERY, "Get light intensity");
+
 	QUERY->add_mfun(QUERY, cgl_light_get_ambient, "vec3", "ambient");
+	QUERY->doc_func(QUERY, "Get the light ambient color");
+
 	QUERY->add_mfun(QUERY, cgl_light_get_diffuse, "vec3", "diffuse");
+	QUERY->doc_func(QUERY, "Get the light diffuse color");
+
 	QUERY->add_mfun(QUERY, cgl_light_get_specular, "vec3", "specular");
+	QUERY->doc_func(QUERY, "Get the light specular color");
 
 	QUERY->end_class(QUERY);
 
 	QUERY->begin_class(QUERY, Light::CKName(LightType::Point), Light::CKName(LightType::Base));
+	QUERY->doc_class(QUERY, "Point light class");
 	QUERY->add_ctor(QUERY, cgl_point_light_ctor);
 	QUERY->add_dtor(QUERY, cgl_light_dtor);
 
 	QUERY->add_mfun(QUERY, cgl_points_light_set_falloff, "void", "falloff");
 	QUERY->add_arg(QUERY, "float", "linear");
 	QUERY->add_arg(QUERY, "float", "quadratic");
+	QUERY->doc_func(QUERY, "Set point light falloff. See https://learnopengl.com/Lighting/Light-casters for a falloff chart");
 
 	QUERY->end_class(QUERY);
 
 	QUERY->begin_class(QUERY, Light::CKName(LightType::Directional), Light::CKName(LightType::Base));
+	QUERY->doc_class(QUERY, "Directional class. Position of this light has no affect, only rotation");
 	QUERY->add_ctor(QUERY, cgl_dir_light_ctor);
 	QUERY->add_dtor(QUERY, cgl_light_dtor);
 	QUERY->end_class(QUERY);
