@@ -186,6 +186,16 @@ public: // global main thread hook
 	static void ActivateHook();
 	static void DeactivateHook();
 
+public: // VM and API references
+    static void SetVMRef( Chuck_VM * theVM );
+    static void SetAPIRef( CK_DL_API theAPI );
+    static Chuck_VM * vm() { return s_vm; }
+    static CK_DL_API api() { return s_api; }
+
+protected:
+    static Chuck_VM * s_vm;
+    static CK_DL_API s_api;
+
 private: // attributes
 	// command queues 
 	// the commands need to be executed before renderering...putting here for now

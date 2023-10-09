@@ -79,6 +79,7 @@ public:
 	void SetName(const std::string& name) { m_Name = name; }
 	const std::vector<SceneGraphObject*>& GetChildren() { return m_Children; }
 	bool BelongsToSceneObject(SceneGraphObject* sgo);
+    void Disconnect( bool sendChildrenToGrandparent = false );
 
 
 	// type methods ========================================

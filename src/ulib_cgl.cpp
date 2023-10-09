@@ -16,6 +16,7 @@
 // ChuGL Event Listeners
 //-----------------------------------------------------------------------------
 CK_DLL_SHREDS_WATCHER(cgl_shred_on_destroy_listener);
+CK_DLL_TYPE_ON_INSTANTIATE(cgl_ggen_on_instantiate_listener);
 
 //-----------------------------------------------------------------------------
 // ChuGL Events
@@ -387,7 +388,12 @@ static t_CKUINT cglmat_data_offset = 0;
 
 t_CKBOOL init_chugl(Chuck_DL_Query *QUERY)
 {
-	init_chugl_events(QUERY);
+    // set VM and API refs
+    CGL::SetVMRef( QUERY->vm() );
+    CGL::SetAPIRef( QUERY->api() );
+
+    // initialize ChuGL API
+    init_chugl_events(QUERY);
 	init_chugl_geo(QUERY);
 	init_chugl_texture(QUERY);
 	init_chugl_mat(QUERY);
@@ -424,14 +430,65 @@ t_CKBOOL create_chugl_default_objs(Chuck_DL_Query *QUERY)
     Chuck_Type * t_ggen = QUERY->api()->type->lookup(QUERY->vm(), "GGen");
     // find the offset for update
     CGL::our_update_vt_offset = QUERY->api()->type->get_vtable_offset(QUERY->vm(), t_ggen, "update");
+    
+    // GGen instantiation listener
+    QUERY->api()->type->callback_on_instantiate( cgl_ggen_on_instantiate_listener, t_ggen, QUERY->vm(), TRUE );
 	
 	return true;
 }
 
+// mapping shred to GGens created on that shred
+static std::map<Chuck_VM_Shred *, std::list<Chuck_Object *> > g_shred2ggen;
+
+static void detach_ggens_from_shred( Chuck_VM_Shred * shred )
+{
+    if( g_shred2ggen.find( shred ) == g_shred2ggen.end() )
+        return;
+
+    // get list of GGens
+    std::list<Chuck_Object *> & ggens = g_shred2ggen[shred];
+    
+    for( auto * ggen : ggens )
+    {
+        // verify
+        assert( ggen != NULL );
+        
+        // get scenegraph within the GGen
+        SceneGraphObject * cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(ggen, ggen_data_offset);
+        // if null, it is possible shred was removed between GGen instantiate and its pre-constructor
+        if( cglObj )
+        {
+            // disconnect
+            cglObj->Disconnect( false );
+        }
+
+        // get origin shred
+        Chuck_VM_Shred * originShred = CGL::api()->object->get_origin_shred( ggen );
+        // make sure if ugen has an origin shred, it is this one
+        assert( !originShred || originShred == shred );
+        // also clear reference to this shred
+        CGL::api()->object->set_origin_shred( ggen, NULL );
+    }
+
+    // release ref count on all GGen; in theory this could be done in the loop above,
+    // assuming all refcounts properly handled; in practice this is a bit "safer" in case
+    // of inconstencies / bugs elsewhere
+    for( auto * ggen : ggens )
+    {
+        // release it
+        // NOTE this could be bad until we ref count GGen/AddChild etc.
+        CK_SAFE_RELEASE( ggen );
+    }
+
+    // erase entry
+    g_shred2ggen.erase( shred );
+}
+
+// called when shred is taken out of circulation for any reason
+// e.g. reached end, removed, VM cleared, etc.
 CK_DLL_SHREDS_WATCHER(cgl_shred_on_destroy_listener)
 {
-	// called when shred is taken out of circulation for any reason
-	// e.g. reached end, removed, VM cleared, etc.
+    // double check
 	assert(CODE == CKVM_SHREDS_WATCH_REMOVE);
 
 	// remove from registered list
@@ -439,7 +496,23 @@ CK_DLL_SHREDS_WATCHER(cgl_shred_on_destroy_listener)
 
 	// remove from waiting list
 	CGL::UnregisterShredWaiting(SHRED);
+
+    // detach all GGens on shred
+    detach_ggens_from_shred( SHRED );
+    
+    // TODO: take care of case where there are no more shreds
 }
+
+CK_DLL_TYPE_ON_INSTANTIATE(cgl_ggen_on_instantiate_listener)
+{
+    // this should never be called by VM with a NULL object
+    assert( OBJECT != NULL );
+    // add mapping from SHRED->GGen
+    g_shred2ggen[SHRED].push_back( OBJECT );
+    // add ref
+    CK_SAFE_ADD_REF( OBJECT );
+}
+
 
 //-----------------------------------------------------------------------------
 // init_chugl_events()
@@ -2090,7 +2163,7 @@ CK_DLL_CTOR(cgl_obj_ctor)
 
 CK_DLL_DTOR(cgl_obj_dtor)
 {
-	std::cerr << "cgl_obj_dtor" << std::endl;
+	// std::cerr << "cgl_obj_dtor" << std::endl;
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	// CK_SAFE_DELETE(cglObj);  // TODO: the bandit ship of ref count memory managemnet
 	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;
@@ -3194,6 +3267,22 @@ void CGL::DeactivateHook()
 		return;
 	hook->deactivate(hook);
 	// hookActivated = false;  // don't set to false to prevent window from reactivating and reopening after escape
+}
+
+// VM and API references
+Chuck_VM * CGL::s_vm = NULL;
+CK_DL_API CGL::s_api = NULL;
+
+void CGL::SetVMRef( Chuck_VM * theVM )
+{
+    s_vm = theVM;
+    // TODO: refcount?
+    // CK_SAFE_ADD_REF( s_vm );
+}
+
+void CGL::SetAPIRef( CK_DL_API theAPI )
+{
+    s_api = theAPI;
 }
 
 // can pick a better name maybe...calling this wakes up renderer thread

@@ -212,6 +212,8 @@ void SceneGraphObject::AddChild(SceneGraphObject* child)
 
 	// assign to new parent
 	child->m_Parent = this;
+    // TODO: replace with/test code below
+    // CK_SAFE_REF_ASSIGN( child->m_Parent, this );
 
 	// add to list of children
 	m_Children.push_back(child);
@@ -223,7 +225,9 @@ void SceneGraphObject::RemoveChild(SceneGraphObject* child)
 	if (it != m_Children.end()) {
 		m_Children.erase(it);  // remove from children list
 		child->m_Parent = nullptr;  // delete child's parent
-	}
+        // TODO: replace with/test code below
+        // CK_SAFE_RELEASE( child->m_Parent );
+    }
 }
 
 bool SceneGraphObject::HasChild(SceneGraphObject* child)
@@ -243,3 +247,32 @@ bool SceneGraphObject::BelongsToSceneObject(SceneGraphObject *sgo)
 	}
     return false;
 }
+
+void SceneGraphObject::Disconnect( bool sendChildrenToGrandparent )
+{
+    // if we have a parent
+    if( m_Parent )
+    {
+        // remove child from parent
+        m_Parent->RemoveChild( this );
+    }
+
+    // for each kid
+    for( auto * kid : m_Children )
+    {
+        // re-parent
+        if( sendChildrenToGrandparent && m_Parent )
+        {
+            // thanks
+            m_Parent->AddChild( kid );
+        }
+        else
+        {
+            // set parent to null
+            kid->m_Parent = NULL;
+            // TODO: replace with/test code below
+            // CK_SAFE_RELEASE( kid->m_Parent );
+        }
+    }
+}
+
