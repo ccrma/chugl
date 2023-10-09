@@ -7,12 +7,14 @@
 Version 0.1.0  [alpha]
 <a href="https://ccrma.stanford.edu/~azaday/"> Andrew Zhu Aday </a> and <a href="https://ccrma.stanford.edu/~ge/">Ge Wang</a> 
 
+
 ## ChuGL == ChucK Graphics
 
 </div> <!-- end center -->
 
+<p align="justify">
 ChuGL is a unified audiovisual programming tool built into the ChucK language. It combines ChucK's **strongly-timed, concurrent programming model** and **real-time audio synthesis** capabilities with a **hardware-accelerated 3D graphics engine and API**. At its core is a scenegraph architecture that provides **low-latency, high performance audiovisual synchronization at frame-level accuracy**.
-
+</p>
 
 ___
 
