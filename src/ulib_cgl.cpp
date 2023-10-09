@@ -2948,14 +2948,14 @@ CK_DLL_CTOR(cgl_glines_ctor)
 	Geometry* geo = new CustomGeometry;
 	CGL::CreateChuckObjFromGeo(API, VM, geo, SHRED, true);
 
-	// std::vector<double> firstLine = {0, 0, 0, 1, 1, 1};
+	std::vector<double> firstLine = {0, 0, 0, 0, 0, 0};
 
 	// initialize with single line
-	// CGL::PushCommand(
-	// 	new UpdateGeometryAttributeCommand(
-	// 		geo, "position", Geometry::POSITION_ATTRIB_IDX, 3, firstLine, false
-	// 	)
-	// );
+	CGL::PushCommand(
+		new UpdateGeometryAttributeCommand(
+			geo, "position", Geometry::POSITION_ATTRIB_IDX, 3, firstLine, false
+		)
+	);
 
     cglMeshSet(mesh, geo, mat);
 }

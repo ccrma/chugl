@@ -22,8 +22,6 @@ GTorus torus --> scene; torus.mat().shine(0);
 // 2D primitives
 GPlane plane --> scene;
 GCircle circle --> scene;
-// lines primitive
-GLines lines --> scene; lines.mat().lineWidth(5.0);
 // points primitive
 GPoints points --> scene; points.mat().pointSize(55.0);
 
@@ -32,7 +30,6 @@ GPoints points --> scene; points.mat().pointSize(55.0);
   sphere,
   circle,
   plane,
-  lines,
   points,
   torus
 ] @=> GMesh ggens[];
