@@ -86,5 +86,5 @@ install: $(CHUG)
 	chmod 755 $(CHUGIN_PATH)/$(CHUG)
 
 clean: 
-	rm -rf $(C_OBJECTS) $(CXX_OBJECTS) $(CHUG) Release Debug
+	rm -rf $(C_OBJECTS) $(CXX_OBJECTS) $(CHUG) Release Debug build-release
 
