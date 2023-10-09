@@ -1,0 +1,182 @@
+<html>
+<link rel="stylesheet" type="text/css" href="ckdoc.css" />
+<link rel="stylesheet" type="text/css" href="class.css" />
+<title>ChuGL Geometries</title>
+<body>
+<a name="top"/>
+<div id="title">
+<div class="titleL">
+<div style="display: flex; align-items: center;"><div class="inline titlelogo"><a href="https://chuck.stanford.edu/" target="_blank"><img src="https://chuck.stanford.edu/doc/images/chuck-logo2023w.png" /> </div><div class="inline"><h1><a href="./">ChucK Class Library Reference</a></h1></div>
+<div class="inline gray"><h1>&nbsp;&nbsp;<span style="color:black">/</span>&nbsp;&nbsp;ChuGL Geometries</h1></div>
+</div>
+</div>
+</div>
+<div id="body">
+<div class="toc"><a id="toc"/>
+<p class="toc_class"><a href="#Geometry" class="ckdoc_typename ckdoc_type_object">Geometry</a></p>
+<p class="toc_class"><a href="#BoxGeometry" class="ckdoc_typename ckdoc_type_object">BoxGeometry</a></p>
+<p class="toc_class"><a href="#SphereGeometry" class="ckdoc_typename ckdoc_type_object">SphereGeometry</a></p>
+<p class="toc_class"><a href="#CircleGeometry" class="ckdoc_typename ckdoc_type_object">CircleGeometry</a></p>
+<p class="toc_class"><a href="#LatheGeometry" class="ckdoc_typename ckdoc_type_object">LatheGeometry</a></p>
+<p class="toc_class"><a href="#PlaneGeometry" class="ckdoc_typename ckdoc_type_object">PlaneGeometry</a></p>
+<p class="toc_class"><a href="#TorusGeometry" class="ckdoc_typename ckdoc_type_object">TorusGeometry</a></p>
+<p class="toc_class"><a href="#CustomGeometry" class="ckdoc_typename ckdoc_type_object">CustomGeometry</a></p>
+</div>
+<div class="classes">
+<p class="group_desc">ChuGL geometries contain vertex data such as positions, normals, and UV coordinates.</p>
+<a name="Geometry" /><div class="class">
+<h2 class="class_title" name="Geometry">Geometry</h2>
+<h4><span class="class_inherits">inherits</span> : <a href="" class="ckdoc_typename ckdoc_type_object">Object</a> </h4>
+<p class="class_description">Base geometry class, do not instantiate directly<p>
+<h3 class="class_section_header">member functions</h3>
+<div class="members">
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_object">Geometry</span> <span class="membername">clone</span>()</p>
+<p class="member_description">Clone the geometry, including all attributes</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">colors</span>(<span class="ckdoc_typename ckdoc_type_primitive">float</span><span class="typename">[]</span> colors)</p>
+<p class="member_description">Set color attribute data. Each vertex expects 4 floats for r,g,b,a</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">indices</span>(<span class="ckdoc_typename ckdoc_type_primitive">int</span><span class="typename">[]</span> indices)</p>
+<p class="member_description">Sets vertex indices for indexed drawing. If not set, renderer will default to non-indexed drawing</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">normals</span>(<span class="ckdoc_typename ckdoc_type_primitive">float</span><span class="typename">[]</span> normals)</p>
+<p class="member_description">Set normal attribute data. Each vertex expects 3 floats for x,y,z</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">positions</span>(<span class="ckdoc_typename ckdoc_type_primitive">float</span><span class="typename">[]</span> positions)</p>
+<p class="member_description">Set position attribute data. Each vertex expects 3 floats for x,y,z</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">positions</span>(<span class="ckdoc_typename ckdoc_type_primitive">vec3</span><span class="typename">[]</span> positions)</p>
+<p class="member_description">Set position attribute data with vec3s rather than floats</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">setAttribute</span>(<span class="ckdoc_typename ckdoc_type_object">string</span> name, <span class="ckdoc_typename ckdoc_type_primitive">int</span> location, <span class="ckdoc_typename ckdoc_type_primitive">int</span> numComponents, <span class="ckdoc_typename ckdoc_type_primitive">float</span><span class="typename">[]</span> data)</p>
+<p class="member_description">Set the attribute data for the given attribute location, to be passed into the vertex shader. Builtin attribute locations are POS_ATTRIB_LOC, NORM_ATTRIB_LOC, COL_ATTRIB_LOC, UV0_ATTRIB_LOC</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">uvs</span>(<span class="ckdoc_typename ckdoc_type_primitive">float</span><span class="typename">[]</span> uvs)</p>
+<p class="member_description">Set UV attribute data. Each vertex expects 2 floats for u,</p>
+</div>
+</div>
+<h3 class="class_section_header">static member variables</h3>
+<div class="members">
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">int</span> <span class="membername">COL_ATTRIB_LOC</span></p><p class="empty_member_description">No description available</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">int</span> <span class="membername">NORM_ATTRIB_LOC</span></p><p class="empty_member_description">No description available</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">int</span> <span class="membername">POS_ATTRIB_LOC</span></p><p class="empty_member_description">No description available</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">int</span> <span class="membername">UV0_ATTRIB_LOC</span></p><p class="empty_member_description">No description available</p>
+</div>
+</div>
+<p class="top_link">[ <a href="#top">top</a> ]</p>
+</div>
+<hr />
+<a name="BoxGeometry" /><div class="class">
+<h2 class="class_title" name="BoxGeometry">BoxGeometry</h2>
+<h4><span class="class_inherits">inherits</span> : <a href="chugl-geo.html#Geometry" class="ckdoc_typename ckdoc_type_object">Geometry</a> : <a href="" class="ckdoc_typename ckdoc_type_object">Object</a> </h4>
+<p class="class_description">Geometry class for constructing vertex data for boxes aka cubes<p>
+<h3 class="class_section_header">member functions</h3>
+<div class="members">
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">set</span>(<span class="ckdoc_typename ckdoc_type_primitive">float</span> width, <span class="ckdoc_typename ckdoc_type_primitive">float</span> height, <span class="ckdoc_typename ckdoc_type_primitive">float</span> depth, <span class="ckdoc_typename ckdoc_type_primitive">int</span> widthSeg, <span class="ckdoc_typename ckdoc_type_primitive">int</span> heightSeg, <span class="ckdoc_typename ckdoc_type_primitive">int</span> depthSeg)</p>
+<p class="member_description">Set box dimensions and subdivisions</p>
+</div>
+</div>
+<p class="top_link">[ <a href="#top">top</a> ]</p>
+</div>
+<hr />
+<a name="SphereGeometry" /><div class="class">
+<h2 class="class_title" name="SphereGeometry">SphereGeometry</h2>
+<h4><span class="class_inherits">inherits</span> : <a href="chugl-geo.html#Geometry" class="ckdoc_typename ckdoc_type_object">Geometry</a> : <a href="" class="ckdoc_typename ckdoc_type_object">Object</a> </h4>
+<p class="class_description">Geometry class for constructing vertex data for spheres<p>
+<h3 class="class_section_header">member functions</h3>
+<div class="members">
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">set</span>(<span class="ckdoc_typename ckdoc_type_primitive">float</span> radius, <span class="ckdoc_typename ckdoc_type_primitive">int</span> widthSeg, <span class="ckdoc_typename ckdoc_type_primitive">int</span> heightSeg, <span class="ckdoc_typename ckdoc_type_primitive">float</span> phiStart, <span class="ckdoc_typename ckdoc_type_primitive">float</span> phiLength, <span class="ckdoc_typename ckdoc_type_primitive">float</span> thetaStart, <span class="ckdoc_typename ckdoc_type_primitive">float</span> thetaLength)</p>
+<p class="member_description">Set sphere dimensions and subdivisions</p>
+</div>
+</div>
+<p class="top_link">[ <a href="#top">top</a> ]</p>
+</div>
+<hr />
+<a name="CircleGeometry" /><div class="class">
+<h2 class="class_title" name="CircleGeometry">CircleGeometry</h2>
+<h4><span class="class_inherits">inherits</span> : <a href="chugl-geo.html#Geometry" class="ckdoc_typename ckdoc_type_object">Geometry</a> : <a href="" class="ckdoc_typename ckdoc_type_object">Object</a> </h4>
+<p class="class_description">Geometry class for constructing vertex data for circles<p>
+<h3 class="class_section_header">member functions</h3>
+<div class="members">
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">set</span>(<span class="ckdoc_typename ckdoc_type_primitive">float</span> radius, <span class="ckdoc_typename ckdoc_type_primitive">int</span> segments, <span class="ckdoc_typename ckdoc_type_primitive">float</span> thetaStart, <span class="ckdoc_typename ckdoc_type_primitive">float</span> thetaLength)</p>
+<p class="member_description">Set cirle dimensions and subdivisions</p>
+</div>
+</div>
+<p class="top_link">[ <a href="#top">top</a> ]</p>
+</div>
+<hr />
+<a name="LatheGeometry" /><div class="class">
+<h2 class="class_title" name="LatheGeometry">LatheGeometry</h2>
+<h4><span class="class_inherits">inherits</span> : <a href="chugl-geo.html#Geometry" class="ckdoc_typename ckdoc_type_object">Geometry</a> : <a href="" class="ckdoc_typename ckdoc_type_object">Object</a> </h4>
+<p class="class_description">Geometry class for constructing vertex data for lathes (i.e. rotated curves)<p>
+<h3 class="class_section_header">member functions</h3>
+<div class="members">
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">set</span>(<span class="ckdoc_typename ckdoc_type_primitive">float</span><span class="typename">[]</span> path, <span class="ckdoc_typename ckdoc_type_primitive">int</span> segments, <span class="ckdoc_typename ckdoc_type_primitive">float</span> phiStart, <span class="ckdoc_typename ckdoc_type_primitive">float</span> phiLength)</p>
+<p class="member_description">Set lathe dimensions and subdivisions, path is rotated phiLength to form a curved surface</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">set</span>(<span class="ckdoc_typename ckdoc_type_primitive">int</span> segments, <span class="ckdoc_typename ckdoc_type_primitive">float</span> phiStart, <span class="ckdoc_typename ckdoc_type_primitive">float</span> phiLength)</p>
+<p class="member_description">Set lathe dimensions and subdivisions while maintaining the previously set curve</p>
+</div>
+</div>
+<p class="top_link">[ <a href="#top">top</a> ]</p>
+</div>
+<hr />
+<a name="PlaneGeometry" /><div class="class">
+<h2 class="class_title" name="PlaneGeometry">PlaneGeometry</h2>
+<h4><span class="class_inherits">inherits</span> : <a href="chugl-geo.html#Geometry" class="ckdoc_typename ckdoc_type_object">Geometry</a> : <a href="" class="ckdoc_typename ckdoc_type_object">Object</a> </h4>
+<p class="class_description">Geometry class for constructing vertex data for planes<p>
+<h3 class="class_section_header">member functions</h3>
+<div class="members">
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">set</span>(<span class="ckdoc_typename ckdoc_type_primitive">float</span> width, <span class="ckdoc_typename ckdoc_type_primitive">float</span> height, <span class="ckdoc_typename ckdoc_type_primitive">int</span> widthSegments, <span class="ckdoc_typename ckdoc_type_primitive">int</span> heightSegments)</p>
+<p class="member_description">Set plane dimensions and subdivisions</p>
+</div>
+</div>
+<p class="top_link">[ <a href="#top">top</a> ]</p>
+</div>
+<hr />
+<a name="TorusGeometry" /><div class="class">
+<h2 class="class_title" name="TorusGeometry">TorusGeometry</h2>
+<h4><span class="class_inherits">inherits</span> : <a href="chugl-geo.html#Geometry" class="ckdoc_typename ckdoc_type_object">Geometry</a> : <a href="" class="ckdoc_typename ckdoc_type_object">Object</a> </h4>
+<p class="class_description">Geometry class for constructing vertex data for toruses<p>
+<h3 class="class_section_header">member functions</h3>
+<div class="members">
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">set</span>(<span class="ckdoc_typename ckdoc_type_primitive">float</span> radius, <span class="ckdoc_typename ckdoc_type_primitive">float</span> tubeRadius, <span class="ckdoc_typename ckdoc_type_primitive">int</span> radialSegments, <span class="ckdoc_typename ckdoc_type_primitive">int</span> tubularSegments, <span class="ckdoc_typename ckdoc_type_primitive">float</span> arcLength)</p>
+<p class="member_description">Set torus dimensions and subdivisions</p>
+</div>
+</div>
+<p class="top_link">[ <a href="#top">top</a> ]</p>
+</div>
+<hr />
+<a name="CustomGeometry" /><div class="class">
+<h2 class="class_title" name="CustomGeometry">CustomGeometry</h2>
+<h4><span class="class_inherits">inherits</span> : <a href="chugl-geo.html#Geometry" class="ckdoc_typename ckdoc_type_object">Geometry</a> : <a href="" class="ckdoc_typename ckdoc_type_object">Object</a> </h4>
+<p class="class_description">Geometry class for providing your own vertex data. Used implicitly by GLines and GPoints<p>
+<p class="top_link">[ <a href="#top">top</a> ]</p>
+</div>
+<hr />
+</div>
+</div>
+</body>
+</html>

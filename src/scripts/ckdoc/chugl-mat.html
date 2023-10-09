@@ -1,0 +1,226 @@
+<html>
+<link rel="stylesheet" type="text/css" href="ckdoc.css" />
+<link rel="stylesheet" type="text/css" href="class.css" />
+<title>ChuGL Materials</title>
+<body>
+<a name="top"/>
+<div id="title">
+<div class="titleL">
+<div style="display: flex; align-items: center;"><div class="inline titlelogo"><a href="https://chuck.stanford.edu/" target="_blank"><img src="https://chuck.stanford.edu/doc/images/chuck-logo2023w.png" /> </div><div class="inline"><h1><a href="./">ChucK Class Library Reference</a></h1></div>
+<div class="inline gray"><h1>&nbsp;&nbsp;<span style="color:black">/</span>&nbsp;&nbsp;ChuGL Materials</h1></div>
+</div>
+</div>
+</div>
+<div id="body">
+<div class="toc"><a id="toc"/>
+<p class="toc_class"><a href="#Material" class="ckdoc_typename ckdoc_type_object">Material</a></p>
+<p class="toc_class"><a href="#NormalsMaterial" class="ckdoc_typename ckdoc_type_object">NormalsMaterial</a></p>
+<p class="toc_class"><a href="#FlatMaterial" class="ckdoc_typename ckdoc_type_object">FlatMaterial</a></p>
+<p class="toc_class"><a href="#PhongMaterial" class="ckdoc_typename ckdoc_type_object">PhongMaterial</a></p>
+<p class="toc_class"><a href="#PointMaterial" class="ckdoc_typename ckdoc_type_object">PointMaterial</a></p>
+<p class="toc_class"><a href="#LineMaterial" class="ckdoc_typename ckdoc_type_object">LineMaterial</a></p>
+<p class="toc_class"><a href="#MangoUVMaterial" class="ckdoc_typename ckdoc_type_object">MangoUVMaterial</a></p>
+<p class="toc_class"><a href="#ShaderMaterial" class="ckdoc_typename ckdoc_type_object">ShaderMaterial</a></p>
+</div>
+<div class="classes">
+<p class="group_desc">ChuGL materials describe appearance of geometries, including color and shading properties.</p>
+<a name="Material" /><div class="class">
+<h2 class="class_title" name="Material">Material</h2>
+<h4><span class="class_inherits">inherits</span> : <a href="" class="ckdoc_typename ckdoc_type_object">Object</a> </h4>
+<p class="class_description">Base material class, do not instantiate directly<p>
+<h3 class="class_section_header">member functions</h3>
+<div class="members">
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">int</span> <span class="membername">attenuatePoints</span>(<span class="ckdoc_typename ckdoc_type_primitive">int</span> attenuation)</p>
+<p class="member_description">For PointMaterial: set if point size should be scaled by distance from camera</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">int</span> <span class="membername">attenuatePoints</span>()</p>
+<p class="member_description">For PointMaterial: returns 1 if point size is being scaled by distance from camera, else 0</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_object">Material</span> <span class="membername">clone</span>()</p>
+<p class="member_description">Clones this material</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">vec3</span> <span class="membername">color</span>(<span class="ckdoc_typename ckdoc_type_primitive">vec3</span> col)</p>
+<p class="member_description">Set material color uniform</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">diffuseMap</span>(<span class="ckdoc_typename ckdoc_type_object">Texture</span> tex)</p>
+<p class="member_description">Set diffuse map texture</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">fragShader</span>(<span class="ckdoc_typename ckdoc_type_object">string</span> frag)</p>
+<p class="member_description">For ShaderMaterial: set fragment shader</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">int</span> <span class="membername">lineMode</span>(<span class="ckdoc_typename ckdoc_type_primitive">int</span> mode)</p>
+<p class="member_description">For LineMaterial: set line mode. Can be Material.LINE_SEGMENTS, Material.LINE_STRIP, or Material.LINE_LOOP</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">lineWidth</span>(<span class="ckdoc_typename ckdoc_type_primitive">float</span> width)</p>
+<p class="member_description">Set line width if rendering with Material.POLYGON_LINE. NOTE: unsupported on macOS</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">localNormals</span>()</p>
+<p class="member_description">For NormalsMaterial: color surface using local-space normals</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">pointSize</span>(<span class="ckdoc_typename ckdoc_type_primitive">float</span> size)</p>
+<p class="member_description">Set point size if rendering with Material.POLYGON_POINT. NOTE: unsupported on macOS</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_object">Texture</span> <span class="membername">pointSprite</span>(<span class="ckdoc_typename ckdoc_type_object">Texture</span> sprite)</p>
+<p class="member_description">For PointMaterial: set sprite texture for point sprite rendering</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">int</span> <span class="membername">polygonMode</span>(<span class="ckdoc_typename ckdoc_type_primitive">int</span> mode)</p>
+<p class="member_description">Set the rendering mode for this material, can be Material.POLYGON_FILL, Material.POLYGON_LINE, or Material.POLYGON_POINT</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">int</span> <span class="membername">polygonMode</span>()</p>
+<p class="member_description">Get the rendering mode for this material, can be Material.POLYGON_FILL, Material.POLYGON_LINE, or Material.POLYGON_POINT</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">shaders</span>(<span class="ckdoc_typename ckdoc_type_object">string</span> vert, <span class="ckdoc_typename ckdoc_type_object">string</span> frag)</p>
+<p class="member_description">For ShaderMaterial: set vertex and fragment shaders</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">float</span> <span class="membername">shine</span>(<span class="ckdoc_typename ckdoc_type_primitive">float</span> shininess)</p>
+<p class="member_description">For PhongMaterial: set shininess exponent, default 5</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">vec3</span> <span class="membername">specular</span>(<span class="ckdoc_typename ckdoc_type_primitive">vec3</span> color)</p>
+<p class="member_description">For PhongMat: set specular color</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">specularMap</span>(<span class="ckdoc_typename ckdoc_type_object">Texture</span> tex)</p>
+<p class="member_description">Set specular map texture</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">uniformBool</span>(<span class="ckdoc_typename ckdoc_type_object">string</span> name, <span class="ckdoc_typename ckdoc_type_primitive">int</span> b0)</p>
+<p class="empty_member_description">No description available</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">uniformFloat2</span>(<span class="ckdoc_typename ckdoc_type_object">string</span> name, <span class="ckdoc_typename ckdoc_type_primitive">float</span> f0, <span class="ckdoc_typename ckdoc_type_primitive">float</span> f1)</p>
+<p class="empty_member_description">No description available</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">uniformFloat3</span>(<span class="ckdoc_typename ckdoc_type_object">string</span> name, <span class="ckdoc_typename ckdoc_type_primitive">float</span> f0, <span class="ckdoc_typename ckdoc_type_primitive">float</span> f1, <span class="ckdoc_typename ckdoc_type_primitive">float</span> f2)</p>
+<p class="empty_member_description">No description available</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">uniformFloat4</span>(<span class="ckdoc_typename ckdoc_type_object">string</span> name, <span class="ckdoc_typename ckdoc_type_primitive">float</span> f0, <span class="ckdoc_typename ckdoc_type_primitive">float</span> f1, <span class="ckdoc_typename ckdoc_type_primitive">float</span> f2, <span class="ckdoc_typename ckdoc_type_primitive">float</span> f3)</p>
+<p class="empty_member_description">No description available</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">uniformFloat</span>(<span class="ckdoc_typename ckdoc_type_object">string</span> name, <span class="ckdoc_typename ckdoc_type_primitive">float</span> f0)</p>
+<p class="empty_member_description">No description available</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">uniformInt2</span>(<span class="ckdoc_typename ckdoc_type_object">string</span> name, <span class="ckdoc_typename ckdoc_type_primitive">int</span> i0, <span class="ckdoc_typename ckdoc_type_primitive">int</span> i1)</p>
+<p class="empty_member_description">No description available</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">uniformInt3</span>(<span class="ckdoc_typename ckdoc_type_object">string</span> name, <span class="ckdoc_typename ckdoc_type_primitive">int</span> i0, <span class="ckdoc_typename ckdoc_type_primitive">int</span> i1, <span class="ckdoc_typename ckdoc_type_primitive">int</span> i2)</p>
+<p class="empty_member_description">No description available</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">uniformInt4</span>(<span class="ckdoc_typename ckdoc_type_object">string</span> name, <span class="ckdoc_typename ckdoc_type_primitive">int</span> i0, <span class="ckdoc_typename ckdoc_type_primitive">int</span> i1, <span class="ckdoc_typename ckdoc_type_primitive">int</span> i2, <span class="ckdoc_typename ckdoc_type_primitive">int</span> i3)</p>
+<p class="empty_member_description">No description available</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">uniformInt</span>(<span class="ckdoc_typename ckdoc_type_object">string</span> name, <span class="ckdoc_typename ckdoc_type_primitive">int</span> i0)</p>
+<p class="empty_member_description">No description available</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">uniformTexture</span>(<span class="ckdoc_typename ckdoc_type_object">string</span> name, <span class="ckdoc_typename ckdoc_type_object">Texture</span> texture)</p>
+<p class="empty_member_description">No description available</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">vertShader</span>(<span class="ckdoc_typename ckdoc_type_object">string</span> vert)</p>
+<p class="member_description">For ShaderMaterial: set vertex shader</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">void</span> <span class="membername">worldNormals</span>()</p>
+<p class="member_description">For NormalsMaterial: color surface using world-space normals</p>
+</div>
+</div>
+<h3 class="class_section_header">static member variables</h3>
+<div class="members">
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">int</span> <span class="membername">LINE_LOOP</span></p><p class="member_description">Used by LineMaterial to render lines as a loop, connecting each vertex to the next, and also the last to the first</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">int</span> <span class="membername">LINE_SEGMENTS</span></p><p class="member_description">Used by LineMaterial to render lines as a series of segments, where every 2 vertices is a line</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">int</span> <span class="membername">LINE_STRIP</span></p><p class="member_description">Used by LineMaterial to render lines as a continuous strip, connecting each vertex to the next</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">int</span> <span class="membername">POLYGON_FILL</span></p><p class="member_description">Pass into Material.polygonMode() to set polygon rendering to filled triangles, default</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">int</span> <span class="membername">POLYGON_LINE</span></p><p class="member_description">Pass into Material.polygonMode() to render geometry as a line mesh</p>
+</div>
+<div class="member">
+<p class="member_declaration"><span class="ckdoc_typename ckdoc_type_primitive">int</span> <span class="membername">POLYGON_POINT</span></p><p class="member_description">Pass into Material.polygonMode() to render geometry as a point mesh (points drawn at each vertex position)</p>
+</div>
+</div>
+<p class="top_link">[ <a href="#top">top</a> ]</p>
+</div>
+<hr />
+<a name="NormalsMaterial" /><div class="class">
+<h2 class="class_title" name="NormalsMaterial">NormalsMaterial</h2>
+<h4><span class="class_inherits">inherits</span> : <a href="chugl-mat.html#Material" class="ckdoc_typename ckdoc_type_object">Material</a> : <a href="" class="ckdoc_typename ckdoc_type_object">Object</a> </h4>
+<p class="class_description">Color each pixel using the surface normal at that point<p>
+<p class="top_link">[ <a href="#top">top</a> ]</p>
+</div>
+<hr />
+<a name="FlatMaterial" /><div class="class">
+<h2 class="class_title" name="FlatMaterial">FlatMaterial</h2>
+<h4><span class="class_inherits">inherits</span> : <a href="chugl-mat.html#Material" class="ckdoc_typename ckdoc_type_object">Material</a> : <a href="" class="ckdoc_typename ckdoc_type_object">Object</a> </h4>
+<p class="class_description">Color each pixel using a flat color<p>
+<p class="top_link">[ <a href="#top">top</a> ]</p>
+</div>
+<hr />
+<a name="PhongMaterial" /><div class="class">
+<h2 class="class_title" name="PhongMaterial">PhongMaterial</h2>
+<h4><span class="class_inherits">inherits</span> : <a href="chugl-mat.html#Material" class="ckdoc_typename ckdoc_type_object">Material</a> : <a href="" class="ckdoc_typename ckdoc_type_object">Object</a> </h4>
+<p class="class_description">Color each pixel using a phong specular shading<p>
+<p class="top_link">[ <a href="#top">top</a> ]</p>
+</div>
+<hr />
+<a name="PointMaterial" /><div class="class">
+<h2 class="class_title" name="PointMaterial">PointMaterial</h2>
+<h4><span class="class_inherits">inherits</span> : <a href="chugl-mat.html#Material" class="ckdoc_typename ckdoc_type_object">Material</a> : <a href="" class="ckdoc_typename ckdoc_type_object">Object</a> </h4>
+<p class="class_description">Used by GPoints<p>
+<p class="top_link">[ <a href="#top">top</a> ]</p>
+</div>
+<hr />
+<a name="LineMaterial" /><div class="class">
+<h2 class="class_title" name="LineMaterial">LineMaterial</h2>
+<h4><span class="class_inherits">inherits</span> : <a href="chugl-mat.html#Material" class="ckdoc_typename ckdoc_type_object">Material</a> : <a href="" class="ckdoc_typename ckdoc_type_object">Object</a> </h4>
+<p class="class_description">Used by GLines<p>
+<p class="top_link">[ <a href="#top">top</a> ]</p>
+</div>
+<hr />
+<a name="MangoUVMaterial" /><div class="class">
+<h2 class="class_title" name="MangoUVMaterial">MangoUVMaterial</h2>
+<h4><span class="class_inherits">inherits</span> : <a href="chugl-mat.html#Material" class="ckdoc_typename ckdoc_type_object">Material</a> : <a href="" class="ckdoc_typename ckdoc_type_object">Object</a> </h4>
+<p class="class_description">Color each pixel using its UV coordinates. Looks like a mango, yum.<p>
+<p class="top_link">[ <a href="#top">top</a> ]</p>
+</div>
+<hr />
+<a name="ShaderMaterial" /><div class="class">
+<h2 class="class_title" name="ShaderMaterial">ShaderMaterial</h2>
+<h4><span class="class_inherits">inherits</span> : <a href="chugl-mat.html#Material" class="ckdoc_typename ckdoc_type_object">Material</a> : <a href="" class="ckdoc_typename ckdoc_type_object">Object</a> </h4>
+<p class="class_description">Color each pixel using the custom glsl shaders you provide via Material.shaders()<p>
+<p class="top_link">[ <a href="#top">top</a> ]</p>
+</div>
+<hr />
+</div>
+</div>
+</body>
+</html>

@@ -77,4 +77,4 @@ doc.addGroup(
 );
 
 // generate
-doc.outputToDir( ".", "ChuGL [beta] API Reference (v0.1.0)" );
+doc.outputToDir( ".", "ChuGL [alpha] API Reference (v0.1.0)" );
