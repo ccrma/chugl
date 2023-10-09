@@ -21,7 +21,7 @@ VertexBuffer::~VertexBuffer()
 {
 	// https://docs.gl/gl3/glDeleteBuffers
 	GLCall(glDeleteBuffers(1, &m_RendererID));
-	std::cout << "destroying vertex buffer" << std::endl;
+	// std::cout << "destroying vertex buffer" << std::endl;
 }
 
 void VertexBuffer::SetBuffer(const void* data, unsigned int size, unsigned int count, unsigned int usage)

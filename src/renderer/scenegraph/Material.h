@@ -171,7 +171,7 @@ public:
 		SetUniform(MaterialUniform::Create(LINE_WIDTH_UNAME, 1.0f));
 		SetUniform(MaterialUniform::Create(COLOR_UNAME, 1.0f, 1.0f, 1.0f, 1.0f));
 
-		std::cerr << "Material constructor called, ID = " << this->GetID() << std::endl;
+		// std::cerr << "Material constructor called, ID = " << this->GetID() << std::endl;
 	};
 	virtual ~Material() {}
 

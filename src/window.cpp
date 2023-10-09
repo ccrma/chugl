@@ -137,6 +137,11 @@ void Window::UpdateState()
             glfwSetWindowSize(m_Window, Scene::windowedWidth, Scene::windowedHeight);
         }
     }
+
+    // window close command
+    if (Scene::windowShouldClose)
+        glfwSetWindowShouldClose(m_Window, GLFW_TRUE);
+
 }
 
 Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHeight(viewHeight), m_DeltaTime(0.0f)
@@ -206,7 +211,7 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
     // OpenGL Metadata =======================================
     int nrAttributes;
     glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &nrAttributes);
-    std::cout << "Maximum number of 4-component vertex attributes: " << nrAttributes << std::endl;
+    // std::cout << "Maximum number of 4-component vertex attributes: " << nrAttributes << std::endl;
     
     // GLEnables ===============================================
     // Blending (TODO) should this be part of renderer? 
@@ -229,7 +234,6 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
 
 Window::~Window()
 {   
-    std::cout << "calling window destructor, terminating glfw window" << std::endl;
     glfwDestroyWindow(m_Window);
 	glfwTerminate();
 }

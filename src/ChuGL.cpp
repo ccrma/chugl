@@ -26,11 +26,11 @@ static CK_DL_API g_chuglAPI = NULL;
 t_CKBOOL chugl_main_loop_hook(void* bindle)
 {
     Window window;
-    std::cerr << "INSIDE chugl main loop hook!" << std::endl;
+    // std::cerr << "INSIDE chugl main loop hook!" << std::endl;
 
     window.DisplayLoop();
 
-    std::cerr << "==exiting chugl window==" << std::endl;
+    // std::cerr << "==exiting chugl window==" << std::endl;
     CGL::DeactivateHook();
 
     // remove all shreds (should trigger shutdown, unless running in --loop mode)
@@ -42,7 +42,7 @@ t_CKBOOL chugl_main_loop_hook(void* bindle)
 
 t_CKBOOL chugl_main_loop_quit(void* bindle)
 {
-    std::cerr << "LEAVING chugl main loop hook" << std::endl;
+    // std::cerr << "LEAVING chugl main loop hook" << std::endl;
     // window.Terminate();
     return true;
 }

@@ -459,7 +459,7 @@ static void detach_ggens_from_shred( Chuck_VM_Shred * shred )
         if( cglObj )
         {
             // disconnect
-            cglObj->Disconnect( false );
+			CGL::PushCommand(new DisconnectCommand(cglObj));
         }
 
         // get origin shred
@@ -479,9 +479,6 @@ static void detach_ggens_from_shred( Chuck_VM_Shred * shred )
         // NOTE this could be bad until we ref count GGen/AddChild etc.
         CK_SAFE_RELEASE( ggen );
     }
-
-    // erase entry
-    g_shred2ggen.erase( shred );
 }
 
 // called when shred is taken out of circulation for any reason
@@ -500,7 +497,19 @@ CK_DLL_SHREDS_WATCHER(cgl_shred_on_destroy_listener)
     // detach all GGens on shred
     detach_ggens_from_shred( SHRED );
     
-    // TODO: take care of case where there are no more shreds
+	// we tell the window to close when the last running
+	// graphics shred is removed. 
+	// this avoids the bug where window is closed 
+	// when a non-graphics shred exits before 
+	// any  graphics shreds have even been created
+    if( g_shred2ggen.find( SHRED ) != g_shred2ggen.end() ) {
+		g_shred2ggen.erase( SHRED );
+		if (g_shred2ggen.empty()) {
+			CGL::PushCommand(new CloseWindowCommand());
+			CGL::Render();  // wake up render thread one last time to process the close window command
+		}
+	}
+
 }
 
 CK_DLL_TYPE_ON_INSTANTIATE(cgl_ggen_on_instantiate_listener)
@@ -950,10 +959,10 @@ CK_DLL_MFUN(cgl_geo_clone)
 // box geo
 CK_DLL_CTOR(cgl_geo_box_ctor)
 {
-	std::cerr << "cgl_box_ctor\n";
+	// std::cerr << "cgl_box_ctor\n";
 	BoxGeometry *boxGeometry = new BoxGeometry;
 	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT)boxGeometry;
-	std::cerr << "finished initializing boxgeometry\n";
+	// std::cerr << "finished initializing boxgeometry\n";
 
 	// set chuck object pointer
 	boxGeometry->m_ChuckObject = SELF;
@@ -979,10 +988,10 @@ CK_DLL_MFUN(cgl_geo_box_set)
 // sphere geo
 CK_DLL_CTOR(cgl_geo_sphere_ctor)
 {
-	std::cerr << "cgl_sphere_ctor\n";
+	// std::cerr << "cgl_sphere_ctor\n";
 	SphereGeometry *sphereGeometry = new SphereGeometry;
 	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT)sphereGeometry;
-	std::cerr << "finished initializing spheregeometry\n";
+	// std::cerr << "finished initializing spheregeometry\n";
 
 	sphereGeometry->m_ChuckObject = SELF;
 
@@ -1010,7 +1019,7 @@ CK_DLL_CTOR(cgl_geo_circle_ctor)
 {
 	CircleGeometry *circleGeometry = new CircleGeometry;
 	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT)circleGeometry;
-	std::cerr << "finished initializing circlegeometry\n";
+	// std::cerr << "finished initializing circlegeometry\n";
 
 	circleGeometry->m_ChuckObject = SELF;
 
@@ -1035,7 +1044,6 @@ CK_DLL_CTOR(cgl_geo_plane_ctor)
 {
 	PlaneGeometry *planeGeometry = new PlaneGeometry;
 	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT)planeGeometry;
-	std::cerr << "finished initializing planegeometry\n";
 
 	planeGeometry->m_ChuckObject = SELF;
 
@@ -1060,7 +1068,6 @@ CK_DLL_CTOR(cgl_geo_torus_ctor)
 {
 	TorusGeometry *torusGeometry = new TorusGeometry;
 	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT)torusGeometry;
-	std::cerr << "finished initializing torusgeometry\n";
 
 	torusGeometry->m_ChuckObject = SELF;
 
@@ -1086,7 +1093,6 @@ CK_DLL_CTOR(cgl_geo_lathe_ctor)
 {
 	LatheGeometry *lathe = new LatheGeometry;
 	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT)lathe;
-	std::cerr << "finished initializing lathegeometry\n";
 
 	lathe->m_ChuckObject = SELF;
 
@@ -1122,10 +1128,8 @@ CK_DLL_MFUN(cgl_geo_lathe_set_no_points)
 // Custom geo ---------
 CK_DLL_CTOR(cgl_geo_custom_ctor)
 {
-	std::cerr << "cgl_custom_ctor\n";
 	CustomGeometry *customGeometry = new CustomGeometry;
 	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT)customGeometry;
-	std::cerr << "finished initializing customgeometry\n";
 
 	customGeometry->m_ChuckObject = SELF;
 
@@ -1355,8 +1359,6 @@ CK_DLL_MFUN(cgl_texture_get_filter_mag)
 // FileTexture API impl =====================================================
 CK_DLL_CTOR(cgl_texture_file_ctor)
 {
-	std::cerr << "cgl_texture_file_ctor" << std::endl;
-
 	CGL_Texture *texture = new CGL_Texture(CGL_TextureType::File2D);
 	OBJ_MEMBER_INT(SELF, texture_data_offset) = (t_CKINT)texture;
 
@@ -1386,8 +1388,6 @@ CK_DLL_MFUN(cgl_texture_file_get_filepath)
 // DataTexture API impl =====================================================
 CK_DLL_CTOR(cgl_texture_rawdata_ctor)
 {
-	std::cerr << "cgl_texture_rawdata_ctor" << std::endl;
-
 	CGL_Texture *texture = new CGL_Texture(CGL_TextureType::RawData);
 	OBJ_MEMBER_INT(SELF, texture_data_offset) = (t_CKINT)texture;
 
@@ -1589,7 +1589,6 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 // CGL Materials ===================================================
 CK_DLL_CTOR(cgl_mat_ctor)
 {
-	std::cerr << "cgl_mat_ctor\n";
 	// dud, do nothing for now
 }
 
@@ -1805,10 +1804,8 @@ CK_DLL_MFUN(cgl_mat_set_uniform_texID)
 
 CK_DLL_CTOR(cgl_mat_norm_ctor)
 {
-	std::cerr << "cgl_mat_norm_ctor";
 	NormalMaterial *normMat = new NormalMaterial;
 	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT)normMat;
-	std::cerr << "finished initializing norm material\n";
 
 	normMat->m_ChuckObject = SELF;
 
@@ -2141,7 +2138,6 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query *QUERY)
 // CGLObject DLL ==============================================
 CK_DLL_CTOR(cgl_obj_ctor)
 {
-	// std::cerr << "cgl_obj_ctor" << std::endl;
 	Chuck_DL_Api::Type type = API->type->lookup(VM, "GGen");
 	auto thisType = API->object->get_type(SELF);
 	if (
@@ -2163,7 +2159,6 @@ CK_DLL_CTOR(cgl_obj_ctor)
 
 CK_DLL_DTOR(cgl_obj_dtor)
 {
-	// std::cerr << "cgl_obj_dtor" << std::endl;
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	// CK_SAFE_DELETE(cglObj);  // TODO: the bandit ship of ref count memory managemnet
 	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;
@@ -2789,7 +2784,6 @@ CK_DLL_CTOR(cgl_mesh_ctor)
 
 CK_DLL_DTOR(cgl_mesh_dtor)
 {
-	std::cerr << "cgl_mesh_dtor" << std::endl;
 	Mesh *mesh = (Mesh *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	CK_SAFE_DELETE(mesh);
 	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0; // zero out the memory
@@ -2830,7 +2824,6 @@ CK_DLL_MFUN(cgl_mesh_set_geo)
 
 	RETURN->v_object = geo_obj;
 
-	std::cerr << "cgl_mesh_set_geo" << std::endl;
 
 	CGL::PushCommand(new SetMeshCommand(mesh));
 }
@@ -2845,7 +2838,6 @@ CK_DLL_MFUN(cgl_mesh_set_mat)
 
 	RETURN->v_object = mat_obj;
 
-	std::cerr << "cgl_mesh_set_mat" << std::endl;
 
 	CGL::PushCommand(new SetMeshCommand(mesh));
 }

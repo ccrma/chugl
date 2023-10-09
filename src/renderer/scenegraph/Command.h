@@ -59,6 +59,16 @@ private:
     int m_Width, m_Height;
 };
 
+
+class CloseWindowCommand : public SceneGraphCommand
+{
+public:
+    CloseWindowCommand() {};
+    virtual void execute(Scene* scene) override {
+        Scene::windowShouldClose = true;
+    }
+};
+
 //==================== Creation Commands =====a==================//
 // TODO: all this creation command logic can be moved into the classes themselves
 // add a virtual Clone() = 0 to base class SceneGraphNode
@@ -74,8 +84,8 @@ public:
         assert(mat->GetMaterialType() != MaterialType::Base);  // must be a concrete material
     };
     virtual void execute(Scene* scene) override {
-        std::cout << "copied material with id: " + std::to_string(newMat->GetID()) 
-                  << std::endl;
+        // std::cout << "copied material with id: " + std::to_string(newMat->GetID()) 
+        //           << std::endl;
 
         scene->RegisterNode(newMat);
     }
@@ -103,7 +113,7 @@ class CreateTextureCommand : public SceneGraphCommand
 public:
     CreateTextureCommand(CGL_Texture* tex, Scene* audioThreadScene) : texture(tex->Clone()) {
         audioThreadScene->RegisterNode(tex);  // register to audio thread scene
-        std::cout << "created texture with id: " + std::to_string(tex->GetID()) << std::endl;
+        // std::cout << "created texture with id: " + std::to_string(tex->GetID()) << std::endl;
     }
 
     virtual void execute(Scene* scene) override {
@@ -142,8 +152,8 @@ public:
         light->SetID(l->GetID());
     };
     virtual void execute(Scene* renderThreadScene) override {
-        std::cout << "copied light with id: " + std::to_string(light->GetID())
-            << std::endl;
+        // std::cout << "copied light with id: " + std::to_string(light->GetID())
+        //     << std::endl;
 
         renderThreadScene->RegisterLight(light);
     }
@@ -264,6 +274,21 @@ private:
             break;
         }
     }
+};
+
+class DisconnectCommand : public SceneGraphCommand
+{
+public: 
+    DisconnectCommand(SceneGraphObject* obj) : m_ID(obj->GetID()) {
+        obj->Disconnect();
+    };
+    virtual void execute(Scene* scene) override {
+        SceneGraphObject* obj = dynamic_cast<SceneGraphObject*>(scene->GetNode(m_ID));
+        assert(obj);
+        obj->Disconnect();
+    }
+private:
+    size_t m_ID;
 };
 
 
@@ -522,7 +547,7 @@ public:
 
         // if no change, do nothing
         if (tex->m_FilePath == filePath) return;
-        std::cout << " changing path to " << filePath << std::endl;
+        // std::cout << " changing path to " << filePath << std::endl;
 
         tex->m_FilePath = filePath;
         tex->SetNewFilePath();

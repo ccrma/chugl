@@ -117,6 +117,7 @@ public: // major hack, for now because there's only 1 scene, storing render stat
 	static unsigned int windowMode;  // which mode, fullscreen or windowed
 	static bool updateWindowMode;  // whether to update window mode
 	static int windowedWidth, windowedHeight;  // last user-set window size
+	static bool windowShouldClose;
 
 
 };
