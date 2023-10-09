@@ -13,7 +13,7 @@ Version 0.1.0  [alpha]
 </div> <!-- end center -->
 
 <p align="justify">
-ChuGL is a unified audiovisual programming tool built into the ChucK language. It combines ChucK's **strongly-timed, concurrent programming model** and **real-time audio synthesis** capabilities with a **hardware-accelerated 3D graphics engine and API**. At its core is a scenegraph architecture that provides **low-latency, high performance audiovisual synchronization at frame-level accuracy**.
+ChuGL is a unified audiovisual programming tool built into the ChucK language. It combines ChucK's <b>strongly-timed, concurrent programming model</b> and <b>real-time audio synthesis</b> capabilities with a <b>hardware-accelerated 3D graphics engine and API</b>. At its core is a scenegraph architecture that provides <b>low-latency, high performance audiovisual synchronization at frame-level accuracy</b>.
 </p>
 
 ___
