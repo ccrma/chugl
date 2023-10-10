@@ -14,8 +14,7 @@
 
 public class Mouse
 {
-
-// state to track cumulative mouse motion
+    // state to track cumulative mouse motion
     // x: mouse delta x
     // y: mouse delta y
     // z: scrollwheel delta
