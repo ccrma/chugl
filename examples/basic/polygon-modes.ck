@@ -81,21 +81,28 @@ spork ~ torusSetter();
 // lathe animator
 fun void latheSetter() {
     20 => int pathCount;
-    1.0 / pathCount => float invPathCount;
     float points[0];
+    // construct a 2D path, which when rotated around the Y axis, will form a Sphere
     for ( int i; i < pathCount; i ++ ) {
-        points <<  .5 * Math.sin( Math.PI * invPathCount * i );  // x
-        points << ( .1 * i - .5 );        // y
+        i * Math.PI / pathCount => float theta;
+        Math.sin(theta) => float x;
+        Math.cos(theta) => float y;
+        points << x;
+        points << y;
     }
+    // other lathe params
     12 => int segments;
-    0 => float phiStart;
+    Math.PI/2 => float phiStart;
     Math.PI * 2 => float phiLength;
+
+    // set geometry
     latheGeo.set(points, segments, phiStart, phiLength);
     while (true) {
         now / second => float ftime;
         (Math.sin(.2 * ftime) * 6 + 12) $ int => segments;
         Math.sin(.3 * ftime) * Math.PI + Math.PI => phiLength;
 
+        // when setting without a point path, will use the previously set one
         latheGeo.set(segments, phiStart, phiLength);
 
         GG.nextFrame() => now;
