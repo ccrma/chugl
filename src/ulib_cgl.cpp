@@ -471,6 +471,13 @@ static void detach_ggens_from_shred( Chuck_VM_Shred * shred )
         
         // get scenegraph within the GGen
         SceneGraphObject * cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(ggen, ggen_data_offset);
+
+		// edge case: if it's the main scene or camera, don't disconnect, because these static instances are shared across all shreds!
+		// also don't remove if its the default dir light
+		// TODO: why do we still need this check even though I create_without_shred ???
+		if (cglObj == &CGL::mainScene || cglObj == &CGL::mainCamera || cglObj == CGL::mainScene.GetDefaultLight())
+			goto reset_origin_shred;
+
         // if null, it is possible shred was removed between GGen instantiate and its pre-constructor
         if( cglObj )
         {
@@ -478,9 +485,10 @@ static void detach_ggens_from_shred( Chuck_VM_Shred * shred )
 			CGL::PushCommand(new DisconnectCommand(cglObj));
         }
 
+reset_origin_shred:
         // get origin shred
         Chuck_VM_Shred * originShred = CGL::CKAPI()->object->get_origin_shred( ggen );
-        // make sure if ugen has an origin shred, it is this one
+        // make sure if ggen has an origin shred, it is this one
         assert( !originShred || originShred == shred );
         // also clear reference to this shred
         CGL::CKAPI()->object->set_origin_shred( ggen, NULL );
@@ -989,6 +997,8 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 	// lathe geo
 	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Lathe), Geometry::CKName(GeometryType::Base) );
     QUERY->doc_class(QUERY, "Geometry class for constructing vertex data for lathes (i.e. rotated curves)");
+	QUERY->add_ex(QUERY, "basic/polygon-modes.ck");
+
 	QUERY->add_ctor(QUERY, cgl_geo_lathe_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 
@@ -997,7 +1007,11 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 	QUERY->add_arg(QUERY, "int", "segments");
 	QUERY->add_arg(QUERY, "float", "phiStart");
 	QUERY->add_arg(QUERY, "float", "phiLength");
-    QUERY->doc_func(QUERY, "Set lathe dimensions and subdivisions, path is rotated phiLength to form a curved surface");
+    QUERY->doc_func(QUERY, 
+		"Set lathe curve, dimensions and subdivisions. Path is rotated phiLength to form a curved surface"
+		"NOTE: path takes a float[] of alternating x,y values, describing a 2D curve in the x,y plane"
+		"These values are rotated around the y-axis to form a 3D surface"
+	);
 
 	QUERY->add_mfun(QUERY, cgl_geo_lathe_set_no_points, "void", "set");
 	QUERY->add_arg(QUERY, "int", "segments");
@@ -3558,7 +3572,7 @@ void CGL::DeactivateHook()
 	if (!hookActivated || !hook)
 		return;
 	hook->deactivate(hook);
-	// hookActivated = false;  // don't set to false to prevent window from reactivating and reopening after escape
+	hookActivated = false;  // don't set to false to prevent window from reactivating and reopening after escape
 }
 
 // VM and API references
@@ -3783,16 +3797,19 @@ Chuck_DL_Api::Object CGL::GetShredUpdateEvent(Chuck_VM_Shred *shred, CK_DL_API A
 
 Chuck_DL_Api::Object CGL::GetMainScene(Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM)
 {
+	// instantiate scene + default camera and light if not already
 	if (CGL::mainScene.m_ChuckObject == nullptr) {
 		// TODO implement CreateSceneCommand
 		Chuck_DL_Api::Type sceneCKType = API->type->lookup(VM, "GScene");
 		Chuck_DL_Api::Object sceneObj = API->object->create(shred, sceneCKType, true);
+		// Chuck_DL_Api::Object sceneObj = API->object->create_without_shred(VM, sceneCKType, true);
 		OBJ_MEMBER_INT(sceneObj, ggen_data_offset) = (t_CKINT)&CGL::mainScene;
 		CGL::mainScene.m_ChuckObject = sceneObj;
 
 		// create default camera
 		Chuck_DL_Api::Type camCKType = API->type->lookup(VM, "GCamera");
 		Chuck_DL_Api::Object camObj = API->object->create(shred, camCKType, true);
+		// Chuck_DL_Api::Object camObj = API->object->create_without_shred(VM, camCKType, true);
 		// no creation command b/c window already has static copy
 		CGL::PushCommand(new CreateCameraCommand(&mainCamera, &mainScene, camObj, ggen_data_offset));
 		// add to scene command
@@ -3803,6 +3820,7 @@ Chuck_DL_Api::Object CGL::GetMainScene(Chuck_VM_Shred *shred, CK_DL_API API, Chu
 		Light* defaultLight = new DirLight;
 		Chuck_DL_Api::Type lightType = API->type->lookup(VM, defaultLight->myCkName());
 		Chuck_Object* lightObj = API->object->create(shred, lightType, true);  // refcount for scene
+		// Chuck_Object* lightObj = API->object->create_without_shred(VM, lightType, true);  // refcount for scene
 		OBJ_MEMBER_INT(lightObj, ggen_data_offset) = (t_CKINT)defaultLight;  // chuck obj points to sgo
 		// creation command
 		CGL::PushCommand(new CreateLightCommand(defaultLight, &CGL::mainScene, lightObj));

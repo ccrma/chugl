@@ -77,8 +77,8 @@ public: // lightin
 		// no parent/child relationships, except for 1 scene and all its children 
 	// lights and nodes should be stored separate from scene, store inside render state
 	std::vector<Light*> m_Lights;  // list of all lights in scene
-	// Light* m_DefaultLight;  // default directional light
-	// Light* GetDefaultLight() { return m_DefaultLight; }
+	Light* GetDefaultLight() { return m_Lights.size() > 0 ? m_Lights[0] : nullptr; }
+
 
 public: // camera
 	std::vector<Camera*> m_Cameras;  // list of all cameras in scene
