@@ -266,6 +266,8 @@ bool SceneGraphObject::BelongsToSceneObject(SceneGraphObject *sgo)
 // disconnect from both parent and children
 void SceneGraphObject::Disconnect( bool sendChildrenToGrandparent )
 {
+    std::vector<SceneGraphObject *> toRemove;
+
     // for each kid
     for( auto * kid : m_Children )
     {
@@ -277,9 +279,13 @@ void SceneGraphObject::Disconnect( bool sendChildrenToGrandparent )
         }
         else
         {
-            this->RemoveChild( kid );
+            // bye
+            toRemove.push_back( kid );
         }
     }
+
+    // remove
+    for( auto * kid : toRemove ) this->RemoveChild( kid );
 
     // if we have a parent
     if( m_Parent )

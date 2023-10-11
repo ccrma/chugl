@@ -7,17 +7,20 @@
 //         Ge Wang (https://ccrma.stanford.edu/~ge/)
 // date: Fall 2023
 //-----------------------------------------------------------------------------
-NormalsMaterial normMat;
-normMat.worldNormals();
+GG.scene().backgroundColor( @(0,0,0) );
 
 // scene setup
 GScene scene;
 GGen sunSystem, earthSystem, moonSystem;
-GCube sun, earth, moon;
+GSphere sun, earth, moon;
 
-sun.mat(normMat); 
-earth.mat(normMat);
-moon.mat(normMat);
+// set to wireframe
+for( auto x : [ sun, earth, moon ] )
+    x.mat().polygonMode( Material.POLYGON_LINE );
+
+sun.mat().color( @(1,1,.25) );
+earth.mat().color( @(.25,.25,1) );
+moon.mat().color( @(.5,.5,.5) );
 
 earthSystem.position(@(2.2, 0.0, 0.0));
 moonSystem.position(@(.55, 0.0, 0.0));
@@ -44,7 +47,7 @@ while (true) {
 	earthSystem.rotY(.7 * dt);
 
 	// rotate planets
-	sun.rotY(.1 * dt);
+	sun.rotY(-1 * dt);
 	earth.rotY(.4 * dt);
 	moon.rotY(.9 * dt);
 
