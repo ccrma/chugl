@@ -202,6 +202,9 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
     glViewport(0, 0, frameBufferWidth, frameBufferHeight);
 
     glfwSetFramebufferSizeCallback(m_Window, framebuffer_size_callback);
+    // call the callback to first initialize 
+    framebuffer_size_callback(m_Window, frameBufferWidth, frameBufferHeight);
+
     glfwSetKeyCallback(m_Window, keyCallback);
 
     // mouse settings =====================================
@@ -241,9 +244,6 @@ Window::~Window()
 
 void Window::DisplayLoop()
 {
-    // Scene setup ==========================================
-    camera.params.aspect = (float(m_ViewWidth) / (float)m_ViewHeight);
-
     // Copy from CGL scenegraph ====================================    
     // TODO should just clone these
     scene.SetID(CGL::mainScene.GetID());  // copy scene ID
