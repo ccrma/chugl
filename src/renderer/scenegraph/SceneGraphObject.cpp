@@ -139,27 +139,15 @@ void SceneGraphObject::RotateZ(float deg)
 // rotates object to point towards position, updates 
 void SceneGraphObject::LookAt(const glm::vec3& pos)
 {
-	glm::vec3 direction = glm::normalize(pos - GetWorldPosition());
-	glm::quat rotation = IDENTITY_QUAT;
+	auto abs_rotation = glm::conjugate(glm::toQuat(glm::lookAt(GetWorldPosition(), pos, UP)));
+	auto local_rotation = abs_rotation;
 
-
-	float dot = glm::dot(direction, GetForward());
-	bool exactlyBehind = glm::abs(dot - (-1.0f)) < 0.0001f;
-	bool exactlyInFront = glm::abs(dot - (1.0f)) < 0.0001f;
-		
-	if (exactlyBehind) {
-		rotation = glm::angleAxis(glm::radians(180.0f), GetUp());
+	// convert into relative local rotation based on parent transforms
+	if (m_Parent != nullptr) {
+		local_rotation = glm::inverse(m_Parent->GetWorldRotation()) * abs_rotation;
 	}
-	else if (exactlyInFront) {
-		// do nothing
-	}
-	else {
-		float angle = glm::acos(dot);
-		glm::vec3 axis = glm::normalize(glm::cross(GetForward(), direction));
-		rotation = glm::angleAxis(angle, axis);
-	}
-
-	Rotate(rotation);
+	m_Rotation = local_rotation;
+	return;
 }
 
 // applies the input transform to the existing transform
