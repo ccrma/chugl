@@ -2758,8 +2758,8 @@ t_CKBOOL init_chugl_cam(Chuck_DL_Query *QUERY)
 
 	// static vars
 	// perspective mode
-	QUERY->add_svar(QUERY, "int", "MODE_PERSP", true, (void *)&Camera::MODE_PERSPECTIVE);
-	QUERY->add_svar(QUERY, "int", "MODE_ORTHO", true, (void *)&Camera::MODE_ORTHO);
+	QUERY->add_svar(QUERY, "int", "PERSPECTIVE", true, (void *)&Camera::MODE_PERSPECTIVE);
+	QUERY->add_svar(QUERY, "int", "ORTHO", true, (void *)&Camera::MODE_ORTHO);
 
 	QUERY->add_mfun(QUERY, cgl_cam_set_mode_persp, "void", "perspective");
 	QUERY->doc_func(QUERY, "Set camera to perspective mode");
