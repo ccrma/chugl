@@ -104,6 +104,8 @@
         "**/.DS_Store": true,
         "**/Thumbs.db": true,
         "build/": true,
+        "build-debug/": true,
+        "build-release/": true,
     },
     "dotnet.defaultSolution": "build/chugl.sln"
 }
