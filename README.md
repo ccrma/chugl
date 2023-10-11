@@ -20,7 +20,7 @@ prototypes of ChuGL and GLucK by Spencer Salazar and Philip Davidson.
 
 ___
 
-## Installation
+## Installing ChuGL
 
 1. **Get the latest ChucK (requires 1.5.1.5 or higher)**
 https://chuck.stanford.edu/release/
@@ -37,14 +37,34 @@ Download the `ChuGL.chug` binary from the installation links above and move it t
 
 ### Linux
 
-We are working on it! Let us know if you get it working (or would like to help us to get it 
-working)!
+We are working on it! Let us know if you get it working (or would like to help us to get it working)!
 
-### Source
+## Building ChuGL
+To build the latest ChuGL from source, clone the `chugl` repo from github:
+```
+git clone https://github.com/ccrma/chugl.git
+```
+Compatibility note: ChuGL requires ChucK 1.5.1.5 or higher. See the <a href="https://github.com/ccrma/chuck/">chuck</a> repo for more details regarding installing/building ChucK.
 
-ChuGL source can be found <a target="_blank" href="https://github.com/ccrma/chugl/">here</a>.
+### macOS
+navigate to the `chugl/src` directory, and run `make mac`:
+```
+cd chugl/src
+make mac
+```
+This should build a `ChuGL.chug` executable in `build-release`, which is also copied to the `chugl/src` directory. This file can be installed/used as any other chugin (e.g., install ChuGL.chug by copying it into `~/.chuck/lib`.)
 
-## Running
+### Windows
+To build chuck using Visual Studio (2019 or later recommended), navigate to `chugl\src\`, and run `make build-release`:
+```
+cd chugl/src
+make build-release
+```
+This creates a CMake compatible `build-release` directory with Visual Studio 2019 project files. Navigate into this directory and open `ChuGL.sln`. Building this project should create `ChuGL.chug`. This file can be installed/used as any other chugin (e.g., install ChuGL.chug by copying it into `C:\Users\<usename>\Documents\ChucK\chugins\`.)
+### Linux
+We are working on it!
+
+## Running ChuGL
 
 **Note:** Currently ChuGL only supports command-line chuck. MiniAudicle support to come soon. 
 
