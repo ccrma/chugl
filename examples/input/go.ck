@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // name: go.ck
-// desc: top-level program to run for kb-test
+// desc: top-level program to run for kb-test and mouse-test
 //
 // NOTE: this is an example of running a ChuGL project,
 //       from a single file and with dependencies
@@ -13,3 +13,4 @@ Machine.add( "FlyCam.ck" );
 
 // add your program here
 Machine.add( "kb-test.ck" );
+Machine.add( "mouse-test.ck" );
