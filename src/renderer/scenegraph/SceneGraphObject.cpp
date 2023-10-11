@@ -90,6 +90,38 @@ glm::vec3 SceneGraphObject::GetWorldPosition()
 	//return worldPos;
 }
 
+glm::vec3 SceneGraphObject::GetWorldScale()
+{
+	auto scale = m_Scale;
+    auto* obj = m_Parent;
+	while( obj )
+	{
+		scale *= obj->m_Scale;
+		obj = obj->m_Parent;
+	}
+	return scale;
+}
+
+glm::vec3 SceneGraphObject::SetWorldPosition(const glm::vec3 &pos)
+{
+	if (!m_Parent) {
+		m_Position = pos;
+		return m_Position;
+	}
+	// inverse matrix maps from world space --> local space
+	m_Position = glm::inverse(m_Parent->GetWorldMatrix()) * glm::vec4(pos, 1.0);
+	return m_Position;
+}
+
+glm::vec3 SceneGraphObject::SetWorldScale(const glm::vec3 &scale)
+{
+	if (!m_Parent) {
+		m_Scale = scale;
+		return m_Scale;
+	}
+	m_Scale = scale / m_Parent->GetWorldScale();
+}
+
 // get the forward direction in world space
 glm::vec3 SceneGraphObject::GetForward()
 {

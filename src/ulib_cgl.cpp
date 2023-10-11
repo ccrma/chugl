@@ -85,25 +85,39 @@ CK_DLL_MFUN(cgl_obj_update);
 CK_DLL_MFUN(cgl_obj_get_right);
 CK_DLL_MFUN(cgl_obj_get_forward);
 CK_DLL_MFUN(cgl_obj_get_up);
+
 CK_DLL_MFUN(cgl_obj_translate_by);
 CK_DLL_MFUN(cgl_obj_scale_by);
+// CK_DLL_MFUN(cgl_obj_rotate_by);  // no rotate by design because converting from euler angles to quat is ambiguous
+
 CK_DLL_MFUN(cgl_obj_rot_on_local_axis);
 CK_DLL_MFUN(cgl_obj_rot_on_world_axis);
-CK_DLL_MFUN(cgl_obj_rot_x);
-CK_DLL_MFUN(cgl_obj_rot_y);
-CK_DLL_MFUN(cgl_obj_rot_z);
-CK_DLL_MFUN(cgl_obj_pos_x);
-CK_DLL_MFUN(cgl_obj_pos_y);
-CK_DLL_MFUN(cgl_obj_pos_z);
+
+CK_DLL_MFUN(cgl_obj_set_rot_x);
+CK_DLL_MFUN(cgl_obj_set_rot_y);
+CK_DLL_MFUN(cgl_obj_set_rot_z);
+CK_DLL_MFUN(cgl_obj_set_rot);
+CK_DLL_MFUN(cgl_obj_get_rot);
+
+// CK_DLL_MFUN(cgl_obj_get_pos_x);
+// CK_DLL_MFUN(cgl_obj_get_pos_y);
+// CK_DLL_MFUN(cgl_obj_get_pos_z);
+CK_DLL_MFUN(cgl_obj_set_pos_x);
+CK_DLL_MFUN(cgl_obj_set_pos_y);
+CK_DLL_MFUN(cgl_obj_set_pos_z);
+CK_DLL_MFUN(cgl_obj_set_pos);
+CK_DLL_MFUN(cgl_obj_get_pos);
+CK_DLL_MFUN(cgl_obj_get_world_pos);
+CK_DLL_MFUN(cgl_obj_set_world_pos);
+
+CK_DLL_MFUN(cgl_obj_set_scale);
+CK_DLL_MFUN(cgl_obj_get_scale);
+CK_DLL_MFUN(cgl_obj_get_world_scale);
+CK_DLL_MFUN(cgl_obj_set_world_scale);
+
 CK_DLL_MFUN(cgl_obj_lookat_vec3);
 CK_DLL_MFUN(cgl_obj_lookat_float);
-CK_DLL_MFUN(cgl_obj_set_pos);
-CK_DLL_MFUN(cgl_obj_set_rot);
-CK_DLL_MFUN(cgl_obj_set_scale);
-CK_DLL_MFUN(cgl_obj_get_pos);
-CK_DLL_MFUN(cgl_obj_get_rot);
-CK_DLL_MFUN(cgl_obj_get_scale);
-CK_DLL_MFUN(cgl_obj_get_world_pos);
+
 
 // parent-child scenegraph API
 // CK_DLL_MFUN(cgl_obj_disconnect);
@@ -2222,6 +2236,17 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query *QUERY)
 	QUERY->add_mfun(QUERY, cgl_obj_get_world_pos, "vec3", "worldPos");
 	QUERY->doc_func(QUERY, "Get object position in world space");
 
+	QUERY->add_mfun(QUERY, cgl_obj_set_world_pos, "GGen", "worldPosition");
+	QUERY->add_arg(QUERY, "vec3", "pos");
+	QUERY->doc_func(QUERY, "Set object position in world space");
+
+	QUERY->add_mfun(QUERY, cgl_obj_get_world_scale, "vec3", "worldSca");
+	QUERY->doc_func(QUERY, "Get object scale in world space");
+
+	QUERY->add_mfun(QUERY, cgl_obj_set_world_scale, "GGen", "worldScale");
+	QUERY->add_arg(QUERY, "vec3", "scale");
+	QUERY->doc_func(QUERY, "Set object scale in world space");
+
 	// transform setters ===========
 	QUERY->add_mfun(QUERY, cgl_obj_translate_by, "GGen", "translate");
 	QUERY->add_arg(QUERY, "vec3", "trans_vec");
@@ -2237,28 +2262,27 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query *QUERY)
 	QUERY->add_arg(QUERY, "float", "deg");
 	QUERY->doc_func(QUERY, "Rotate this GGen by the given degrees on the given axis in world space");
 
-	QUERY->add_mfun(QUERY, cgl_obj_rot_x, "GGen", "rotX");
+	QUERY->add_mfun(QUERY, cgl_obj_set_rot_x, "GGen", "rotX");
 	QUERY->add_arg(QUERY, "float", "deg");
 	QUERY->doc_func(QUERY, "Rotate this GGen by the given degrees on the X axis in local space");
 
-	QUERY->add_mfun(QUERY, cgl_obj_rot_y, "GGen", "rotY");
+	QUERY->add_mfun(QUERY, cgl_obj_set_rot_y, "GGen", "rotY");
 	QUERY->add_arg(QUERY, "float", "deg");
 	QUERY->doc_func(QUERY, "Rotate this GGen by the given degrees on the Y axis in local space");
 
-	QUERY->add_mfun(QUERY, cgl_obj_rot_z, "GGen", "rotZ");
+	QUERY->add_mfun(QUERY, cgl_obj_set_rot_z, "GGen", "rotZ");
 	QUERY->add_arg(QUERY, "float", "deg");
 	QUERY->doc_func(QUERY, "Rotate this GGen by the given degrees on the Z axis in local space");
 
-	QUERY->add_mfun(QUERY, cgl_obj_pos_x, "GGen", "posX");
+	QUERY->add_mfun(QUERY, cgl_obj_set_pos_x, "GGen", "posX");
 	QUERY->add_arg(QUERY, "float", "pos");
 	QUERY->doc_func(QUERY, "Set X position of this GGen in local space");
 
-
-	QUERY->add_mfun(QUERY, cgl_obj_pos_y, "GGen", "posY");
+	QUERY->add_mfun(QUERY, cgl_obj_set_pos_y, "GGen", "posY");
 	QUERY->add_arg(QUERY, "float", "pos");
 	QUERY->doc_func(QUERY, "Set Y position of this GGen in local space");
 
-	QUERY->add_mfun(QUERY, cgl_obj_pos_z, "GGen", "posZ");
+	QUERY->add_mfun(QUERY, cgl_obj_set_pos_z, "GGen", "posZ");
 	QUERY->add_arg(QUERY, "float", "pos");
 	QUERY->doc_func(QUERY, "Set Z position of this GGen in local space");
 
@@ -2399,7 +2423,7 @@ CK_DLL_MFUN(cgl_obj_rot_on_world_axis)
 	RETURN->v_object = SELF;
 }
 
-CK_DLL_MFUN(cgl_obj_rot_x)
+CK_DLL_MFUN(cgl_obj_set_rot_x)
 {
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKFLOAT deg = GET_NEXT_FLOAT(ARGS);
@@ -2408,7 +2432,7 @@ CK_DLL_MFUN(cgl_obj_rot_x)
 	CGL::PushCommand(new TransformCommand(cglObj));
 }
 
-CK_DLL_MFUN(cgl_obj_rot_y)
+CK_DLL_MFUN(cgl_obj_set_rot_y)
 {
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKFLOAT deg = GET_NEXT_FLOAT(ARGS);
@@ -2417,7 +2441,7 @@ CK_DLL_MFUN(cgl_obj_rot_y)
 	CGL::PushCommand(new TransformCommand(cglObj));
 }
 
-CK_DLL_MFUN(cgl_obj_rot_z)
+CK_DLL_MFUN(cgl_obj_set_rot_z)
 {
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKFLOAT deg = GET_NEXT_FLOAT(ARGS);
@@ -2426,7 +2450,7 @@ CK_DLL_MFUN(cgl_obj_rot_z)
 	CGL::PushCommand(new TransformCommand(cglObj));
 }
 
-CK_DLL_MFUN(cgl_obj_pos_x)
+CK_DLL_MFUN(cgl_obj_set_pos_x)
 {
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKFLOAT posX = GET_NEXT_FLOAT(ARGS);
@@ -2437,7 +2461,7 @@ CK_DLL_MFUN(cgl_obj_pos_x)
 	CGL::PushCommand(new TransformCommand(cglObj));
 }
 
-CK_DLL_MFUN(cgl_obj_pos_y)
+CK_DLL_MFUN(cgl_obj_set_pos_y)
 {
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKFLOAT posY = GET_NEXT_FLOAT(ARGS);
@@ -2448,7 +2472,7 @@ CK_DLL_MFUN(cgl_obj_pos_y)
 	CGL::PushCommand(new TransformCommand(cglObj));
 }
 
-CK_DLL_MFUN(cgl_obj_pos_z)
+CK_DLL_MFUN(cgl_obj_set_pos_z)
 {
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKFLOAT posZ = GET_NEXT_FLOAT(ARGS);
@@ -2518,6 +2542,31 @@ CK_DLL_MFUN(cgl_obj_get_world_pos)
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	const auto &vec = cglObj->GetWorldPosition();
 	RETURN->v_vec3 = {vec.x, vec.y, vec.z};
+}
+
+CK_DLL_MFUN(cgl_obj_set_world_pos)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
+	cglObj->SetWorldPosition(glm::vec3(vec.x, vec.y, vec.z));
+	RETURN->v_object = SELF;
+	CGL::PushCommand(new TransformCommand(cglObj));
+}
+
+CK_DLL_MFUN(cgl_obj_get_world_scale)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	const auto &vec = cglObj->GetWorldScale();
+	RETURN->v_vec3 = {vec.x, vec.y, vec.z};
+}
+
+CK_DLL_MFUN(cgl_obj_set_world_scale)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
+	cglObj->SetWorldScale(glm::vec3(vec.x, vec.y, vec.z));
+	RETURN->v_object = SELF;
+	CGL::PushCommand(new TransformCommand(cglObj));
 }
 
 CK_DLL_MFUN(cgl_obj_get_rot)
