@@ -7,7 +7,7 @@
 //         Ge Wang (https://ccrma.stanford.edu/~ge/)
 // date: Fall 2023
 //-----------------------------------------------------------------------------
-
+GG.fullscreen();
 // position camera
 GG.camera().position( @(0, 0, 12) );
 
@@ -115,7 +115,7 @@ NormalsMaterial normalMat;
 normalMat.polygonMode(Material.POLYGON_FILL);  // this is the default
 wireMat.polygonMode(Material.POLYGON_LINE);
 pointMat.polygonMode(Material.POLYGON_POINT);
-pointMat.pointSize(25.0);    // note: mac m1 doesn't support glPointSize, only Windows does. this becomes a no-op on mac.
+pointMat.pointSize(25.0);    // note: mac doesn't support glPointSize, only Windows does. this becomes a no-op on mac.
 
 // create a mesh for each possible (geometry, material) pairing
 GMesh meshes[geos.size()*4];
