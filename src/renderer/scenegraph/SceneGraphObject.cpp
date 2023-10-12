@@ -120,6 +120,7 @@ glm::vec3 SceneGraphObject::SetWorldScale(const glm::vec3 &scale)
 		return m_Scale;
 	}
 	m_Scale = scale / m_Parent->GetWorldScale();
+    return m_Scale;
 }
 
 // get the forward direction in world space
