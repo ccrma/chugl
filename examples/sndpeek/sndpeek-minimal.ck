@@ -56,13 +56,12 @@ Windowing.hann(WINDOW_SIZE) @=> float window[];
 float samples[0];
 // FFT response
 complex response[0];
-vec3 vertices[WINDOW_SIZE];
-float positions[WINDOW_SIZE*3];
+vec3 positions[WINDOW_SIZE];
 
 // map audio buffer to 3D positions
-fun void map2waveform( float in[], float out[] )
+fun void map2waveform( float in[], vec3 out[] )
 {
-    if( in.size()*3 != out.size() )
+    if( in.size() != out.size() )
     {
         <<< "size mismatch in flatten()", "" >>>;
         return;
@@ -73,19 +72,21 @@ fun void map2waveform( float in[], float out[] )
     DISPLAY_WIDTH => float width;
     for( auto s : in )
     {
-        // map
-        -width/2 + width/WINDOW_SIZE*i => out[i*3];
-        s*6 * window[i] => out[i*3+1];
-        0 => out[i*3+2];
+        // space evenly in X
+        -width/2 + width/WINDOW_SIZE*i => out[i].x;
+        // map y, using window function to taper the ends
+        s*6 * window[i] => out[i].y;
+        // a constant Z of 0
+        0 => out[i].z;
         // increment
         i++;
     }
 }
 
 // map FFT output to 3D positions
-fun void map2spectrum( complex in[], float out[] )
+fun void map2spectrum( complex in[], vec3 out[] )
 {
-    if( in.size()*3 != out.size() )
+    if( in.size() != out.size() )
     {
         <<< "size mismatch in flatten()", "" >>>;
         return;
@@ -96,10 +97,12 @@ fun void map2spectrum( complex in[], float out[] )
     DISPLAY_WIDTH => float width;
     for( auto s : in )
     {
-        // map
-        -width/2 + width/WINDOW_SIZE*i => out[i*3];
-        5 * Math.sqrt( (s$polar).mag * 25 ) => out[i*3+1];
-        0 => out[i*3+2];
+        // space evenly in X
+        -width/2 + width/WINDOW_SIZE*i => out[i].x;
+        // map frequency bin magnitide in Y
+        5 * Math.sqrt( (s$polar).mag * 25 ) => out[i].y;
+        // constant 0 for Z here
+        0 => out[i].z;
         // increment
         i++;
     }
