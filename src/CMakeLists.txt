@@ -18,6 +18,10 @@ project(
     LANGUAGES CXX C
 )
 
+if(LINUX)
+    add_compile_options(-fPIC)
+endif()
+
 # global compiler flags interface
 # specify the C++ standard
 add_library(chugl_compiler_flags INTERFACE)
