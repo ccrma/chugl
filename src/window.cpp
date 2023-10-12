@@ -139,8 +139,10 @@ void Window::UpdateState()
     }
 
     // window close command
-    if (Scene::windowShouldClose)
+    if (Scene::windowShouldClose) {
         glfwSetWindowShouldClose(m_Window, GLFW_TRUE);
+        Scene::windowShouldClose = false;  // reset flag
+    }
 
 }
 

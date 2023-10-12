@@ -56,6 +56,11 @@ public:
 	glm::mat4 GetWorldMatrix();
 	glm::quat GetWorldRotation();
 	glm::vec3 GetWorldPosition();
+	glm::vec3 GetWorldScale();
+	glm::vec3 SetWorldPosition(const glm::vec3& pos);
+	glm::vec3 SetWorldScale(const glm::vec3& scale);
+
+
 	glm::vec3 GetRight(); 
 	glm::vec3 GetForward();
 	glm::vec3 GetUp();  // cross forward and right

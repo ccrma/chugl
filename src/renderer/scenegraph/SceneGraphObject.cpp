@@ -90,6 +90,38 @@ glm::vec3 SceneGraphObject::GetWorldPosition()
 	//return worldPos;
 }
 
+glm::vec3 SceneGraphObject::GetWorldScale()
+{
+	auto scale = m_Scale;
+    auto* obj = m_Parent;
+	while( obj )
+	{
+		scale *= obj->m_Scale;
+		obj = obj->m_Parent;
+	}
+	return scale;
+}
+
+glm::vec3 SceneGraphObject::SetWorldPosition(const glm::vec3 &pos)
+{
+	if (!m_Parent) {
+		m_Position = pos;
+		return m_Position;
+	}
+	// inverse matrix maps from world space --> local space
+	m_Position = glm::inverse(m_Parent->GetWorldMatrix()) * glm::vec4(pos, 1.0);
+	return m_Position;
+}
+
+glm::vec3 SceneGraphObject::SetWorldScale(const glm::vec3 &scale)
+{
+	if (!m_Parent) {
+		m_Scale = scale;
+		return m_Scale;
+	}
+	m_Scale = scale / m_Parent->GetWorldScale();
+}
+
 // get the forward direction in world space
 glm::vec3 SceneGraphObject::GetForward()
 {
@@ -139,27 +171,15 @@ void SceneGraphObject::RotateZ(float deg)
 // rotates object to point towards position, updates 
 void SceneGraphObject::LookAt(const glm::vec3& pos)
 {
-	glm::vec3 direction = glm::normalize(pos - GetWorldPosition());
-	glm::quat rotation = IDENTITY_QUAT;
+	auto abs_rotation = glm::conjugate(glm::toQuat(glm::lookAt(GetWorldPosition(), pos, UP)));
+	auto local_rotation = abs_rotation;
 
-
-	float dot = glm::dot(direction, GetForward());
-	bool exactlyBehind = glm::abs(dot - (-1.0f)) < 0.0001f;
-	bool exactlyInFront = glm::abs(dot - (1.0f)) < 0.0001f;
-		
-	if (exactlyBehind) {
-		rotation = glm::angleAxis(glm::radians(180.0f), GetUp());
+	// convert into relative local rotation based on parent transforms
+	if (m_Parent != nullptr) {
+		local_rotation = glm::inverse(m_Parent->GetWorldRotation()) * abs_rotation;
 	}
-	else if (exactlyInFront) {
-		// do nothing
-	}
-	else {
-		float angle = glm::acos(dot);
-		glm::vec3 axis = glm::normalize(glm::cross(GetForward(), direction));
-		rotation = glm::angleAxis(angle, axis);
-	}
-
-	Rotate(rotation);
+	m_Rotation = local_rotation;
+	return;
 }
 
 // applies the input transform to the existing transform

@@ -85,25 +85,39 @@ CK_DLL_MFUN(cgl_obj_update);
 CK_DLL_MFUN(cgl_obj_get_right);
 CK_DLL_MFUN(cgl_obj_get_forward);
 CK_DLL_MFUN(cgl_obj_get_up);
+
 CK_DLL_MFUN(cgl_obj_translate_by);
 CK_DLL_MFUN(cgl_obj_scale_by);
+// CK_DLL_MFUN(cgl_obj_rotate_by);  // no rotate by design because converting from euler angles to quat is ambiguous
+
 CK_DLL_MFUN(cgl_obj_rot_on_local_axis);
 CK_DLL_MFUN(cgl_obj_rot_on_world_axis);
-CK_DLL_MFUN(cgl_obj_rot_x);
-CK_DLL_MFUN(cgl_obj_rot_y);
-CK_DLL_MFUN(cgl_obj_rot_z);
-CK_DLL_MFUN(cgl_obj_pos_x);
-CK_DLL_MFUN(cgl_obj_pos_y);
-CK_DLL_MFUN(cgl_obj_pos_z);
+
+CK_DLL_MFUN(cgl_obj_set_rot_x);
+CK_DLL_MFUN(cgl_obj_set_rot_y);
+CK_DLL_MFUN(cgl_obj_set_rot_z);
+CK_DLL_MFUN(cgl_obj_set_rot);
+CK_DLL_MFUN(cgl_obj_get_rot);
+
+// CK_DLL_MFUN(cgl_obj_get_pos_x);
+// CK_DLL_MFUN(cgl_obj_get_pos_y);
+// CK_DLL_MFUN(cgl_obj_get_pos_z);
+CK_DLL_MFUN(cgl_obj_set_pos_x);
+CK_DLL_MFUN(cgl_obj_set_pos_y);
+CK_DLL_MFUN(cgl_obj_set_pos_z);
+CK_DLL_MFUN(cgl_obj_set_pos);
+CK_DLL_MFUN(cgl_obj_get_pos);
+CK_DLL_MFUN(cgl_obj_get_world_pos);
+CK_DLL_MFUN(cgl_obj_set_world_pos);
+
+CK_DLL_MFUN(cgl_obj_set_scale);
+CK_DLL_MFUN(cgl_obj_get_scale);
+CK_DLL_MFUN(cgl_obj_get_world_scale);
+CK_DLL_MFUN(cgl_obj_set_world_scale);
+
 CK_DLL_MFUN(cgl_obj_lookat_vec3);
 CK_DLL_MFUN(cgl_obj_lookat_float);
-CK_DLL_MFUN(cgl_obj_set_pos);
-CK_DLL_MFUN(cgl_obj_set_rot);
-CK_DLL_MFUN(cgl_obj_set_scale);
-CK_DLL_MFUN(cgl_obj_get_pos);
-CK_DLL_MFUN(cgl_obj_get_rot);
-CK_DLL_MFUN(cgl_obj_get_scale);
-CK_DLL_MFUN(cgl_obj_get_world_pos);
+
 
 // parent-child scenegraph API
 // CK_DLL_MFUN(cgl_obj_disconnect);
@@ -457,6 +471,13 @@ static void detach_ggens_from_shred( Chuck_VM_Shred * shred )
         
         // get scenegraph within the GGen
         SceneGraphObject * cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(ggen, ggen_data_offset);
+
+		// edge case: if it's the main scene or camera, don't disconnect, because these static instances are shared across all shreds!
+		// also don't remove if its the default dir light
+		// TODO: why do we still need this check even though I create_without_shred ???
+		if (cglObj == &CGL::mainScene || cglObj == &CGL::mainCamera || cglObj == CGL::mainScene.GetDefaultLight())
+			goto reset_origin_shred;
+
         // if null, it is possible shred was removed between GGen instantiate and its pre-constructor
         if( cglObj )
         {
@@ -464,9 +485,10 @@ static void detach_ggens_from_shred( Chuck_VM_Shred * shred )
 			CGL::PushCommand(new DisconnectCommand(cglObj));
         }
 
+reset_origin_shred:
         // get origin shred
         Chuck_VM_Shred * originShred = CGL::CKAPI()->object->get_origin_shred( ggen );
-        // make sure if ugen has an origin shred, it is this one
+        // make sure if ggen has an origin shred, it is this one
         assert( !originShred || originShred == shred );
         // also clear reference to this shred
         CGL::CKAPI()->object->set_origin_shred( ggen, NULL );
@@ -975,6 +997,8 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 	// lathe geo
 	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Lathe), Geometry::CKName(GeometryType::Base) );
     QUERY->doc_class(QUERY, "Geometry class for constructing vertex data for lathes (i.e. rotated curves)");
+	QUERY->add_ex(QUERY, "basic/polygon-modes.ck");
+
 	QUERY->add_ctor(QUERY, cgl_geo_lathe_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 
@@ -983,7 +1007,11 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 	QUERY->add_arg(QUERY, "int", "segments");
 	QUERY->add_arg(QUERY, "float", "phiStart");
 	QUERY->add_arg(QUERY, "float", "phiLength");
-    QUERY->doc_func(QUERY, "Set lathe dimensions and subdivisions, path is rotated phiLength to form a curved surface");
+    QUERY->doc_func(QUERY, 
+		"Set lathe curve, dimensions and subdivisions. Path is rotated phiLength to form a curved surface"
+		"NOTE: path takes a float[] of alternating x,y values, describing a 2D curve in the x,y plane"
+		"These values are rotated around the y-axis to form a 3D surface"
+	);
 
 	QUERY->add_mfun(QUERY, cgl_geo_lathe_set_no_points, "void", "set");
 	QUERY->add_arg(QUERY, "int", "segments");
@@ -2222,6 +2250,17 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query *QUERY)
 	QUERY->add_mfun(QUERY, cgl_obj_get_world_pos, "vec3", "worldPos");
 	QUERY->doc_func(QUERY, "Get object position in world space");
 
+	QUERY->add_mfun(QUERY, cgl_obj_set_world_pos, "GGen", "worldPosition");
+	QUERY->add_arg(QUERY, "vec3", "pos");
+	QUERY->doc_func(QUERY, "Set object position in world space");
+
+	QUERY->add_mfun(QUERY, cgl_obj_get_world_scale, "vec3", "worldSca");
+	QUERY->doc_func(QUERY, "Get object scale in world space");
+
+	QUERY->add_mfun(QUERY, cgl_obj_set_world_scale, "GGen", "worldScale");
+	QUERY->add_arg(QUERY, "vec3", "scale");
+	QUERY->doc_func(QUERY, "Set object scale in world space");
+
 	// transform setters ===========
 	QUERY->add_mfun(QUERY, cgl_obj_translate_by, "GGen", "translate");
 	QUERY->add_arg(QUERY, "vec3", "trans_vec");
@@ -2237,28 +2276,27 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query *QUERY)
 	QUERY->add_arg(QUERY, "float", "deg");
 	QUERY->doc_func(QUERY, "Rotate this GGen by the given degrees on the given axis in world space");
 
-	QUERY->add_mfun(QUERY, cgl_obj_rot_x, "GGen", "rotX");
+	QUERY->add_mfun(QUERY, cgl_obj_set_rot_x, "GGen", "rotX");
 	QUERY->add_arg(QUERY, "float", "deg");
 	QUERY->doc_func(QUERY, "Rotate this GGen by the given degrees on the X axis in local space");
 
-	QUERY->add_mfun(QUERY, cgl_obj_rot_y, "GGen", "rotY");
+	QUERY->add_mfun(QUERY, cgl_obj_set_rot_y, "GGen", "rotY");
 	QUERY->add_arg(QUERY, "float", "deg");
 	QUERY->doc_func(QUERY, "Rotate this GGen by the given degrees on the Y axis in local space");
 
-	QUERY->add_mfun(QUERY, cgl_obj_rot_z, "GGen", "rotZ");
+	QUERY->add_mfun(QUERY, cgl_obj_set_rot_z, "GGen", "rotZ");
 	QUERY->add_arg(QUERY, "float", "deg");
 	QUERY->doc_func(QUERY, "Rotate this GGen by the given degrees on the Z axis in local space");
 
-	QUERY->add_mfun(QUERY, cgl_obj_pos_x, "GGen", "posX");
+	QUERY->add_mfun(QUERY, cgl_obj_set_pos_x, "GGen", "posX");
 	QUERY->add_arg(QUERY, "float", "pos");
 	QUERY->doc_func(QUERY, "Set X position of this GGen in local space");
 
-
-	QUERY->add_mfun(QUERY, cgl_obj_pos_y, "GGen", "posY");
+	QUERY->add_mfun(QUERY, cgl_obj_set_pos_y, "GGen", "posY");
 	QUERY->add_arg(QUERY, "float", "pos");
 	QUERY->doc_func(QUERY, "Set Y position of this GGen in local space");
 
-	QUERY->add_mfun(QUERY, cgl_obj_pos_z, "GGen", "posZ");
+	QUERY->add_mfun(QUERY, cgl_obj_set_pos_z, "GGen", "posZ");
 	QUERY->add_arg(QUERY, "float", "pos");
 	QUERY->doc_func(QUERY, "Set Z position of this GGen in local space");
 
@@ -2399,7 +2437,7 @@ CK_DLL_MFUN(cgl_obj_rot_on_world_axis)
 	RETURN->v_object = SELF;
 }
 
-CK_DLL_MFUN(cgl_obj_rot_x)
+CK_DLL_MFUN(cgl_obj_set_rot_x)
 {
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKFLOAT deg = GET_NEXT_FLOAT(ARGS);
@@ -2408,7 +2446,7 @@ CK_DLL_MFUN(cgl_obj_rot_x)
 	CGL::PushCommand(new TransformCommand(cglObj));
 }
 
-CK_DLL_MFUN(cgl_obj_rot_y)
+CK_DLL_MFUN(cgl_obj_set_rot_y)
 {
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKFLOAT deg = GET_NEXT_FLOAT(ARGS);
@@ -2417,7 +2455,7 @@ CK_DLL_MFUN(cgl_obj_rot_y)
 	CGL::PushCommand(new TransformCommand(cglObj));
 }
 
-CK_DLL_MFUN(cgl_obj_rot_z)
+CK_DLL_MFUN(cgl_obj_set_rot_z)
 {
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKFLOAT deg = GET_NEXT_FLOAT(ARGS);
@@ -2426,7 +2464,7 @@ CK_DLL_MFUN(cgl_obj_rot_z)
 	CGL::PushCommand(new TransformCommand(cglObj));
 }
 
-CK_DLL_MFUN(cgl_obj_pos_x)
+CK_DLL_MFUN(cgl_obj_set_pos_x)
 {
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKFLOAT posX = GET_NEXT_FLOAT(ARGS);
@@ -2437,7 +2475,7 @@ CK_DLL_MFUN(cgl_obj_pos_x)
 	CGL::PushCommand(new TransformCommand(cglObj));
 }
 
-CK_DLL_MFUN(cgl_obj_pos_y)
+CK_DLL_MFUN(cgl_obj_set_pos_y)
 {
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKFLOAT posY = GET_NEXT_FLOAT(ARGS);
@@ -2448,7 +2486,7 @@ CK_DLL_MFUN(cgl_obj_pos_y)
 	CGL::PushCommand(new TransformCommand(cglObj));
 }
 
-CK_DLL_MFUN(cgl_obj_pos_z)
+CK_DLL_MFUN(cgl_obj_set_pos_z)
 {
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKFLOAT posZ = GET_NEXT_FLOAT(ARGS);
@@ -2518,6 +2556,31 @@ CK_DLL_MFUN(cgl_obj_get_world_pos)
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	const auto &vec = cglObj->GetWorldPosition();
 	RETURN->v_vec3 = {vec.x, vec.y, vec.z};
+}
+
+CK_DLL_MFUN(cgl_obj_set_world_pos)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
+	cglObj->SetWorldPosition(glm::vec3(vec.x, vec.y, vec.z));
+	RETURN->v_object = SELF;
+	CGL::PushCommand(new TransformCommand(cglObj));
+}
+
+CK_DLL_MFUN(cgl_obj_get_world_scale)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	const auto &vec = cglObj->GetWorldScale();
+	RETURN->v_vec3 = {vec.x, vec.y, vec.z};
+}
+
+CK_DLL_MFUN(cgl_obj_set_world_scale)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
+	cglObj->SetWorldScale(glm::vec3(vec.x, vec.y, vec.z));
+	RETURN->v_object = SELF;
+	CGL::PushCommand(new TransformCommand(cglObj));
 }
 
 CK_DLL_MFUN(cgl_obj_get_rot)
@@ -3509,7 +3572,7 @@ void CGL::DeactivateHook()
 	if (!hookActivated || !hook)
 		return;
 	hook->deactivate(hook);
-	// hookActivated = false;  // don't set to false to prevent window from reactivating and reopening after escape
+	hookActivated = false;  // don't set to false to prevent window from reactivating and reopening after escape
 }
 
 // VM and API references
@@ -3734,16 +3797,19 @@ Chuck_DL_Api::Object CGL::GetShredUpdateEvent(Chuck_VM_Shred *shred, CK_DL_API A
 
 Chuck_DL_Api::Object CGL::GetMainScene(Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM)
 {
+	// instantiate scene + default camera and light if not already
 	if (CGL::mainScene.m_ChuckObject == nullptr) {
 		// TODO implement CreateSceneCommand
 		Chuck_DL_Api::Type sceneCKType = API->type->lookup(VM, "GScene");
 		Chuck_DL_Api::Object sceneObj = API->object->create(shred, sceneCKType, true);
+		// Chuck_DL_Api::Object sceneObj = API->object->create_without_shred(VM, sceneCKType, true);
 		OBJ_MEMBER_INT(sceneObj, ggen_data_offset) = (t_CKINT)&CGL::mainScene;
 		CGL::mainScene.m_ChuckObject = sceneObj;
 
 		// create default camera
 		Chuck_DL_Api::Type camCKType = API->type->lookup(VM, "GCamera");
 		Chuck_DL_Api::Object camObj = API->object->create(shred, camCKType, true);
+		// Chuck_DL_Api::Object camObj = API->object->create_without_shred(VM, camCKType, true);
 		// no creation command b/c window already has static copy
 		CGL::PushCommand(new CreateCameraCommand(&mainCamera, &mainScene, camObj, ggen_data_offset));
 		// add to scene command
@@ -3754,6 +3820,7 @@ Chuck_DL_Api::Object CGL::GetMainScene(Chuck_VM_Shred *shred, CK_DL_API API, Chu
 		Light* defaultLight = new DirLight;
 		Chuck_DL_Api::Type lightType = API->type->lookup(VM, defaultLight->myCkName());
 		Chuck_Object* lightObj = API->object->create(shred, lightType, true);  // refcount for scene
+		// Chuck_Object* lightObj = API->object->create_without_shred(VM, lightType, true);  // refcount for scene
 		OBJ_MEMBER_INT(lightObj, ggen_data_offset) = (t_CKINT)defaultLight;  // chuck obj points to sgo
 		// creation command
 		CGL::PushCommand(new CreateLightCommand(defaultLight, &CGL::mainScene, lightObj));
