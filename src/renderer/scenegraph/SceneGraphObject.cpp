@@ -119,7 +119,7 @@ glm::vec3 SceneGraphObject::SetWorldScale(const glm::vec3 &scale)
 		m_Scale = scale;
 		return m_Scale;
 	}
-	m_Scale = scale / m_Parent->GetWorldScale();l
+	m_Scale = scale / m_Parent->GetWorldScale();
     return m_Scale;
 }
 
