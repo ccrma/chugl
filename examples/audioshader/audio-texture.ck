@@ -75,7 +75,7 @@ NUM_MESHES_X * NUM_MESHES_Y => int NUM_MESHES;
 
 // setup geometry and materials
 BoxGeometry boxGeo;
-ShaderMat shaderMat; // custom shader material
+ShaderMaterial shaderMat; // custom shader material
 shaderMat.fragShader(
     "./AudioFrag.glsl"  // path to fragment shader
 );
