@@ -1,11 +1,13 @@
 # chugin name
 CHUGIN_NAME=ChuGL
+# suffice
+CHUGIN_SUFFIX=.chug
 
 # ---------------------------------------------------------------------------- #
 # you won't generally need to change anything below this line for a new chugin #
 # ---------------------------------------------------------------------------- #
 
-CHUG=$(addsuffix $(SUFFIX),$(CHUGIN_NAME))
+CHUG=$(addsuffix $(CHUGIN_SUFFIX),$(CHUGIN_NAME))
 
 .PHONY: mac osx linux linux-oss linux-jack linux-alsa linux-all
 mac osx linux linux-oss linux-jack linux-alsa linux-all: all
