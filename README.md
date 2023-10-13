@@ -9,7 +9,7 @@
 </div> <!-- end center -->
 
 <p align="justify">
-ChuGL (rhymes with "chuckle" and "juggle") is a unified audiovisual programming framework built into the <a target="_blank" href="https://chuck.stanford.edu/">ChucK programming language</a>. It combines ChucK's <b>strongly-timed, concurrent programming model</b> and <b>real-time audio synthesis</b> capabilities with a <b>hardware-accelerated 3D graphics engine and API</b>. At its core is a scenegraph architecture that provides <b>low-latency, high performance audiovisual synchronization at frame-level accuracy</b>.
+ChuGL (sounds like "chuckle"; rhymes with "juggle") is a unified audiovisual programming framework built into the <a target="_blank" href="https://chuck.stanford.edu/">ChucK programming language</a>. It combines ChucK's <b>strongly-timed, concurrent programming model</b> and <b>real-time audio synthesis</b> capabilities with a <b>hardware-accelerated 3D graphics engine and API</b>. At its core is a scenegraph architecture that provides <b>low-latency, high performance audiovisual synchronization at frame-level accuracy</b>.
 
 ChuGL was created by <a href="https://ccrma.stanford.edu/~azaday/">Andrew Zhu Aday</a> and <a href="https://ccrma.stanford.edu/~ge/">Ge Wang</a>, with support from the <a  href="https://chuck.stanford.edu/doc/authors.html">ChucK Team</a>, and benefitted from prior prototypes of ChuGL and GLucK, respectively by Spencer Salazar and Philip Davidson.
 </p>
