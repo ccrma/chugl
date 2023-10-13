@@ -4,47 +4,34 @@
 
 ![logo](images/chugl-glogo2023g.png)
 
-## ChuGL =&gt; ChucK Graphics
-Version 0.1.0 [alpha]
+## ChuGL =&gt; ChucK Graphics Library
 
 </div> <!-- end center -->
 
 <p align="justify">
-ChuGL is a unified audiovisual programming framework built into the ChucK programming language. It combines ChucK's <b>strongly-timed, concurrent programming model</b> and <b>real-time audio synthesis</b> capabilities with a <b>hardware-accelerated 3D graphics engine and API</b>. At its core is a scenegraph architecture that provides <b>low-latency, high performance audiovisual synchronization at frame-level accuracy</b>.
+ChuGL (rhymes with "chuckle" and "juggle") is a unified audiovisual programming framework built into the <a target="_blank" href="https://chuck.stanford.edu/">ChucK programming language</a>. It combines ChucK's <b>strongly-timed, concurrent programming model</b> and <b>real-time audio synthesis</b> capabilities with a <b>hardware-accelerated 3D graphics engine and API</b>. At its core is a scenegraph architecture that provides <b>low-latency, high performance audiovisual synchronization at frame-level accuracy</b>.
 
-ChuGL was created by <a href="https://ccrma.stanford.edu/~azaday/">Andrew Zhu Aday</a> and
-<a href="https://ccrma.stanford.edu/~ge/">Ge Wang</a>, with support from the <a 
-href="https://chuck.stanford.edu/doc/authors.html">ChucK Team</a>, and benefitted from prior 
-prototypes of ChuGL and GLucK by Spencer Salazar and Philip Davidson.
+ChuGL was created by <a href="https://ccrma.stanford.edu/~azaday/">Andrew Zhu Aday</a> and <a href="https://ccrma.stanford.edu/~ge/">Ge Wang</a>, with support from the <a  href="https://chuck.stanford.edu/doc/authors.html">ChucK Team</a>, and benefitted from prior prototypes of ChuGL and GLucK, respectively by Spencer Salazar and Philip Davidson.
 </p>
 
 ___
 
+**ChuGL v0.1.0** (alpha) — [**ChuGL API 
+Reference**](https://chuck.stanford.edu/chugl/api/)
+• [**ChuGL Examples**](https://chuck.stanford.edu/chugl/examples/)
+• [**ChuGL Tutorial**](https://chuck.stanford.edu/chugl/doc/tutorial.html)
+
+___
+
 ## Installing ChuGL
-
-1. **Get the latest ChucK (requires 1.5.1.5 or higher)**
-https://chuck.stanford.edu/release/
-2. **Get the latest ChuGL chugin**
-https://chuck.stanford.edu/release/alpha/chugl/
-
-### MacOS
-
-Run the .pkg file, which will install the ChuGL chugin in the appropriate location
-
-### Windows
-
-Download the `ChuGL.chug` binary from the installation links above and move it to `C:\Users\<usename>\Documents\ChucK\chugins\`
-
-### Linux
-
-See below to build ChuGL from source.
+To install ChuGL as a pre-built chugin (ChuGL.chug), visit the [ChuGL homepage](https://chuck.stanford.edu/chugl/) for download and installation instructions.
 
 ## Building ChuGL
 To build the latest ChuGL from source, clone the `chugl` repo from github:
 ```
 git clone https://github.com/ccrma/chugl.git
 ```
-Compatibility note: ChuGL requires ChucK 1.5.1.5 or higher. See the <a href="https://github.com/ccrma/chuck/">chuck</a> repo for more details regarding installing/building ChucK.
+Compatibility note: ChuGL requires ChucK 1.5.1.5 or higher. See the <a href="https://github.com/ccrma/chuck/">chuck</a> repo for more details regarding building ChucK.
 
 ### macOS
 navigate to the `chugl/src` directory, and run `make mac`:
