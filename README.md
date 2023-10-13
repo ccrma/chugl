@@ -37,7 +37,7 @@ Download the `ChuGL.chug` binary from the installation links above and move it t
 
 ### Linux
 
-See below to build ChuGL from source on Linux.
+See below to build ChuGL from source.
 
 ## Building ChuGL
 To build the latest ChuGL from source, clone the `chugl` repo from github:
@@ -54,14 +54,6 @@ make mac
 ```
 This should build a `ChuGL.chug` executable in `build-release`, which is also copied to the `chugl/src` directory. This file can be installed/used as any other chugin (e.g., install ChuGL.chug by copying it into `~/.chuck/lib`.)
 
-### Linux
-navigate to the `chugl/src` directory, and run `make linux`:
-```
-cd chugl/src
-make linux
-```
-This should build a `ChuGL.chug` executable in `build-release`, which is also copied to the `chugl/src` directory. This file can be installed/used as any other chugin (e.g., install ChuGL.chug by copying it into `~/.chuck/lib`.)
-
 ### Windows
 To build chuck using Visual Studio (2019 or later recommended), navigate to `chugl\src\`, and run `make build-release`:
 ```
@@ -69,6 +61,14 @@ cd chugl/src
 make build-release
 ```
 This creates a CMake compatible `build-release` directory with Visual Studio project files. Navigate into this directory and open `ChuGL.sln`. Building this project should create `ChuGL.chug`. This file can be installed/used as any other chugin (e.g., install ChuGL.chug by copying it into `C:\Users\<usename>\Documents\ChucK\chugins\`.)
+
+### Linux
+navigate to the `chugl/src` directory, and run `make linux`:
+```
+cd chugl/src
+make linux
+```
+This should build a `ChuGL.chug` executable in `build-release`, which is also copied to the `chugl/src` directory. This file can be installed/used as any other chugin (e.g., install ChuGL.chug by copying it into `~/.chuck/lib`.)
 
 ## Running ChuGL
 
