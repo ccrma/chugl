@@ -43,7 +43,13 @@ if (NOT CHUCK_EXECUTABLE)
 endif()
 
 # chugl library
-add_library(${PROJECT_NAME} SHARED ChuGL.cpp ulib_cgl.cpp window.cpp)
+add_library(
+    ${PROJECT_NAME} SHARED 
+    ChuGL.cpp 
+    ulib_cgl.cpp 
+    window.cpp
+    ulib_colors.cpp
+)
 set_target_properties(${PROJECT_NAME} PROPERTIES 
     PREFIX ""
     OUTPUT_NAME ${PROJECT_NAME}

@@ -3,6 +3,8 @@
 #include <stdexcept>
 
 #include "ulib_cgl.h"
+#include "ulib_colors.h"
+
 #include "renderer/scenegraph/Camera.h"
 #include "renderer/scenegraph/Command.h"
 #include "renderer/scenegraph/Scene.h"
@@ -375,8 +377,6 @@ CK_DLL_CTOR(cgl_glines_ctor);
 CK_DLL_CTOR(cgl_gpoints_ctor);
 
 
-
-
 // exports =========================================
 
 t_CKBOOL init_chugl_events(Chuck_DL_Query *QUERY);
@@ -409,6 +409,7 @@ t_CKBOOL init_chugl(Chuck_DL_Query *QUERY)
     SceneGraphNode::SetCKAPI( QUERY->api() );
 
     // initialize ChuGL API
+	init_chugl_colors(QUERY);
     init_chugl_events(QUERY);
 	init_chugl_geo(QUERY);
 	init_chugl_texture(QUERY);
@@ -906,7 +907,7 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 
 	QUERY->add_mfun(QUERY, cgl_geo_set_uvs, "void", "uvs");
 	QUERY->add_arg(QUERY, "float[]", "uvs");
-    QUERY->doc_func(QUERY, "Set UV attribute data. Each vertex expects 2 floats for u,");
+    QUERY->doc_func(QUERY, "Set UV attribute data. Each vertex expects 2 floats for u,v values (used for texture sampling)");
  
 	QUERY->add_mfun(QUERY, cgl_geo_set_indices, "void", "indices");
 	QUERY->add_arg(QUERY, "int[]", "indices");
