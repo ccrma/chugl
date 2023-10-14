@@ -49,6 +49,7 @@ add_library(
     ulib_cgl.cpp 
     window.cpp
     ulib_colors.cpp
+    ulib_gui.cpp
 )
 set_target_properties(${PROJECT_NAME} PROPERTIES 
     PREFIX ""
