@@ -118,7 +118,7 @@ extern "C" {
 ** included as <GL/glcorearb.h>.
 **
 ** glcorearb.h includes only APIs in the latest OpenGL core profile
-** implementation together with APIs in newer ARB extensions which
+** implementation together with APIs in newer ARB extensions which 
 ** can be supported by the core profile. It does not, and never will
 ** include functionality removed from the core profile, such as
 ** fixed-function vertex and fragment processing.
@@ -154,6 +154,8 @@ typedef khronos_uint8_t GLubyte;
 #define GL_ONE                            1
 #define GL_SRC_ALPHA                      0x0302
 #define GL_ONE_MINUS_SRC_ALPHA            0x0303
+#define GL_FRONT                          0x0404
+#define GL_BACK                           0x0405
 #define GL_FRONT_AND_BACK                 0x0408
 #define GL_POLYGON_MODE                   0x0B40
 #define GL_CULL_FACE                      0x0B44
@@ -373,6 +375,8 @@ GLAPI void APIENTRY glGenVertexArrays (GLsizei n, GLuint *arrays);
 typedef struct __GLsync *GLsync;
 typedef khronos_uint64_t GLuint64;
 typedef khronos_int64_t GLint64;
+#define GL_CONTEXT_COMPATIBILITY_PROFILE_BIT 0x00000002
+#define GL_CONTEXT_PROFILE_MASK           0x9126
 typedef void (APIENTRYP PFNGLDRAWELEMENTSBASEVERTEXPROC) (GLenum mode, GLsizei count, GLenum type, const void *indices, GLint basevertex);
 typedef void (APIENTRYP PFNGLGETINTEGER64I_VPROC) (GLenum target, GLuint index, GLint64 *data);
 #ifdef GL_GLEXT_PROTOTYPES
@@ -463,7 +467,7 @@ GL3W_API int imgl3wIsSupported(int major, int minor);
 GL3W_API GL3WglProc imgl3wGetProcAddress(const char *proc);
 
 /* gl3w internal state */
-union GL3WProcs {
+union ImGL3WProcs {
     GL3WglProc ptr[59];
     struct {
         PFNGLACTIVETEXTUREPROC            ActiveTexture;
@@ -528,7 +532,7 @@ union GL3WProcs {
     } gl;
 };
 
-GL3W_API extern union GL3WProcs imgl3wProcs;
+GL3W_API extern union ImGL3WProcs imgl3wProcs;
 
 /* OpenGL functions */
 #define glActiveTexture                   imgl3wProcs.gl.ActiveTexture
@@ -790,7 +794,7 @@ static const char *proc_names[] = {
     "glViewport",
 };
 
-GL3W_API union GL3WProcs imgl3wProcs;
+GL3W_API union ImGL3WProcs imgl3wProcs;
 
 static void load_procs(GL3WGetProcAddressProc proc)
 {

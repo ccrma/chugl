@@ -62,3 +62,6 @@ chuck-1.5.1.4
 src/chuck.exe
 src/chuck-debug.exe
 src/chuck-release.exe
+
+# imgui
+src/imgui.ini
