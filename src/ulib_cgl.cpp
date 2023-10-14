@@ -153,6 +153,11 @@ CK_DLL_MFUN(cgl_cam_get_pers_fov); //
 CK_DLL_MFUN(cgl_cam_set_ortho_size); // size of view volume (preserves screen aspect ratio)
 CK_DLL_MFUN(cgl_cam_get_ortho_size); //
 
+// mouse cast from camera
+CK_DLL_MFUN(chugl_cam_screen_coord_to_world_ray);
+CK_DLL_MFUN(chugl_cam_world_pos_to_screen_coord);
+
+
 //-----------------------------------------------------------------------------
 // Object -> Scene
 //-----------------------------------------------------------------------------
@@ -2865,6 +2870,29 @@ t_CKBOOL init_chugl_cam(Chuck_DL_Query *QUERY)
 	QUERY->add_mfun(QUERY, cgl_cam_get_ortho_size, "float", "viewSize");
 	QUERY->doc_func(QUERY, "(orthographic mode) get the height of the view in pixels");
 
+	// raycast from mousepos
+	QUERY->add_mfun(QUERY, chugl_cam_screen_coord_to_world_ray, "vec3", "screenCoordToWorldRay");
+	QUERY->add_arg(QUERY, "float", "screenX");
+	QUERY->add_arg(QUERY, "float", "screenY");
+	QUERY->doc_func(QUERY, 
+		"Get a ray in world space representing the normalized directional vector from camera world position to screen coordinate"
+		"screenX and screenY are screen coordinates, which you can get from GG.mouseX() and GG.mouseY() or you can pass coordinates directly"
+		"useful if you want to do mouse picking or raycasting"
+	);
+
+
+	QUERY->add_mfun(QUERY, chugl_cam_world_pos_to_screen_coord, "vec3", "worldPosToScreenCoord");
+	QUERY->add_arg(QUERY, "vec3", "worldPos");
+	QUERY->doc_func(QUERY, 
+		"Get a screen coordinate from a world position by casting a ray from worldPos back to the camera and finding the intersection with the near clipping plane"
+		"worldPos is a vec3 representing a world position"
+		"returns a vec3. X and Y are screen coordinates, Z is the depth-value of the worldPos"
+		"Remember, screen coordinates have origin at the top-left corner of the window"
+	);
+
+
+
+
 	QUERY->end_class(QUERY);
 
 	return true;
@@ -2967,6 +2995,50 @@ CK_DLL_MFUN(cgl_cam_get_ortho_size)
 {
 	Camera *cam = (Camera *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	RETURN->v_float = cam->GetSize();
+}
+
+CK_DLL_MFUN(chugl_cam_screen_coord_to_world_ray)
+{
+	Camera *cam = (Camera *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKFLOAT screenX = GET_NEXT_FLOAT(ARGS);
+	t_CKFLOAT screenY = GET_NEXT_FLOAT(ARGS);
+
+	// first convert to normalized device coordinates in range [-1, 1]
+	auto windowSize = CGL::GetWindowSize();
+	float x = ( (2.0f * screenX) / windowSize.first ) - 1.0f;
+	float y = 1.0f - ( (2.0f * screenY) / windowSize.second );
+	float z = 1.0f;
+	glm::vec4 ray_clip = glm::vec4(x, y, -1.0, 1.0);
+	// convert to eye space
+	glm::mat4 proj = cam->GetProjectionMatrix();
+	glm::vec4 ray_eye = glm::inverse(proj) * ray_clip;
+	// convert to world space
+	ray_eye = glm::vec4(ray_eye.x, ray_eye.y, -1.0, 0.0);
+	glm::mat4 view = cam->GetViewMatrix();
+	glm::vec3 ray_wor = glm::inverse(view) * ray_eye;
+	// normalize
+	ray_wor = glm::normalize(ray_wor);
+	RETURN->v_vec3 = {ray_wor.x, ray_wor.y, ray_wor.z};
+}
+
+CK_DLL_MFUN(chugl_cam_world_pos_to_screen_coord)
+{
+	Camera *cam = (Camera *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKVEC3 worldPos = GET_NEXT_VEC3(ARGS);
+
+	// first convert to clip space
+	glm::mat4 view = cam->GetViewMatrix();
+	glm::mat4 proj = cam->GetProjectionMatrix();
+	glm::vec4 clipPos = proj * view * glm::vec4(worldPos.x, worldPos.y, worldPos.z, 1.0f);
+
+	// convert to normalized device coordinates in range [-1, 1]
+	auto windowSize = CGL::GetWindowSize();
+	float x = (clipPos.x / clipPos.w + 1.0f) / 2.0f * windowSize.first;
+	// need to invert y because screen coordinates are top-left origin
+	float y = (1.0f - clipPos.y / clipPos.w) / 2.0f * windowSize.second;
+	// z is depth value
+	float z = clipPos.z / clipPos.w;
+	RETURN->v_vec3 = {x, y, z};
 }
 
 //-----------------------------------------------------------------------------

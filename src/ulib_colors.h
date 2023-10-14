@@ -13,6 +13,7 @@ t_CKBOOL init_chugl_colors(Chuck_DL_Query *QUERY);
 CK_DLL_SFUN(chugl_color_hsv_to_rgb);
 CK_DLL_SFUN(chugl_color_rgb_to_hsv);
 CK_DLL_SFUN(chugl_color_grayscale_accurate);
+CK_DLL_SFUN(chugl_color_random_rgb);
 // CK_DLL_SFUN(chugl_color_grayscale_fast);
 
 

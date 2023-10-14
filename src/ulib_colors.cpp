@@ -2,7 +2,6 @@
 #include "glm/gtc/epsilon.hpp"
 
 
-
 t_CKBOOL init_chugl_colors(Chuck_DL_Query *QUERY)
 {
 	QUERY->begin_class(QUERY, "Color", "Object");
@@ -98,9 +97,15 @@ t_CKBOOL init_chugl_colors(Chuck_DL_Query *QUERY)
         "value takes on a value between 0 and 1, and represents the brightness of the color"
     );
 
-	QUERY->add_sfun(QUERY, chugl_color_grayscale_accurate, "vec3", "grayscale()");
+	QUERY->add_sfun(QUERY, chugl_color_grayscale_accurate, "vec3", "grayscale");
 	QUERY->add_arg(QUERY, "vec3", "rgb");
     QUERY->doc_func(QUERY, "convert an rgb value to grayscale, scaled according to NTSC formula based on human perception");
+
+    QUERY->add_sfun(QUERY, chugl_color_random_rgb, "vec3", "random");
+    QUERY->doc_func(QUERY, "generate a random rgb color");
+
+
+
 
 	QUERY->end_class(QUERY);
 
@@ -130,6 +135,14 @@ CK_DLL_SFUN(chugl_color_grayscale_accurate)
         glm::vec3(color.x, color.y, color.z)
     );
     RETURN->v_vec3 = {gsc, gsc, gsc};
+}
+
+CK_DLL_SFUN(chugl_color_random_rgb)
+{
+    float r = (float)rand() / RAND_MAX;
+    float g = (float)rand() / RAND_MAX;
+    float b = (float)rand() / RAND_MAX;
+    RETURN->v_vec3 = {r, g, b};
 }
 
 // COLOR class implementation =================================================

@@ -246,6 +246,9 @@ Window::~Window()
 
 void Window::DisplayLoop()
 {
+    // seed random number generator ===========================
+    srand((unsigned int)time(0));
+    
     // Copy from CGL scenegraph ====================================    
     // TODO should just clone these
     scene.SetID(CGL::mainScene.GetID());  // copy scene ID
