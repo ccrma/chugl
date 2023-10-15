@@ -8,7 +8,7 @@ class Material;
 class Mesh : public SceneGraphObject
 {
 public:
-	Mesh(Geometry *geo, Material* mat) {
+	Mesh(Geometry *geo, Material* mat) : m_Geometry(nullptr), m_Material(nullptr) {
 		// fprintf(stderr, "Mesh(%zu) with geo mat\n", m_ID);
 		SetGeometry(geo);
 		SetMaterial(mat);
