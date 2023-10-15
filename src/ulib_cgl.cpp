@@ -509,6 +509,7 @@ reset_origin_shred:
     {
         // release it
         // NOTE this could be bad until we ref count GGen/AddChild etc.
+		// TODO: is CK_SAFE_RELEASE accessible from chugin?
         CK_SAFE_RELEASE( ggen );
     }
 }
@@ -757,6 +758,9 @@ CK_DLL_SFUN(cgl_next_frame)
 	// extract CglEvent from obj
 	// TODO: workaround bug where create() object API is not calling preconstructors
 	// https://trello.com/c/JwhVQEpv/48-cglnextframe-now-not-calling-preconstructor-of-cglupdate
+
+	// initialize ckobj for mainScene
+	CGL::GetMainScene(SHRED, API, VM);
 
 	if (!CGL::HasShredWaited(SHRED))
 	{
@@ -2327,6 +2331,13 @@ CK_DLL_DTOR(cgl_obj_dtor)
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;
 
+	if (cglObj->IsMaterial() || cglObj->IsGeometry()) {
+		std::cerr << "calling mat or geo destructor" << std::endl;
+	}
+	else if (cglObj->IsMesh()) {
+		std::cerr << "calling mat or geo destructor" << std::endl;
+	}
+
 	CGL::PushCommand(new DestroySceneGraphNodeCommand(cglObj, &CGL::mainScene));
 }
 
@@ -3092,11 +3103,8 @@ CK_DLL_CTOR(cgl_mesh_ctor)
 	// 	std::cerr << "GMesh instantiated" << std::endl;
 	// }
 
-	Mesh *mesh = new Mesh();
-	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT)mesh;
-
-	mesh->m_ChuckObject = SELF;
-	CGL::PushCommand(new CreateMeshCommand(mesh));
+	Mesh *mesh = new Mesh;
+	CGL::PushCommand(new CreateMeshCommand(mesh, &CGL::mainScene, SELF, ggen_data_offset));
 }
 
 // CK_DLL_DTOR(cgl_mesh_dtor)
@@ -3198,9 +3206,11 @@ CK_DLL_CTOR(cgl_gcube_ctor)
     Mesh *mesh = (Mesh *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 
 	Material* mat = new PhongMaterial;
-	CGL::CreateChuckObjFromMat(API, VM, mat, SHRED, true);
+	// don't refcount here because will be refcounted when we assign to mat
+	CGL::CreateChuckObjFromMat(API, VM, mat, SHRED, false);  
 	Geometry* geo = new BoxGeometry;
-	CGL::CreateChuckObjFromGeo(API, VM, geo, SHRED, true);
+	// don't refcount here because will be refcounted when we assign to mat
+	CGL::CreateChuckObjFromGeo(API, VM, geo, SHRED, false);
 
     cglMeshSet(mesh, geo, mat);
 }

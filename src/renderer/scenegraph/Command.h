@@ -94,20 +94,13 @@ private:
 class CreateMeshCommand : public SceneGraphCommand
 {
 public:
-    CreateMeshCommand(Mesh* mesh) : 
-        mesh_ID(mesh->GetID()), 
-        mat_ID(mesh->GetMaterialID()),
-        geo_ID(mesh->GetGeometryID())
-    {};
-    virtual void execute(Scene* scene) override {
-        // Get the cloned material and geometry
-        Material* clonedMat = dynamic_cast<Material*>(scene->GetNode(mat_ID));
-        Geometry* clonedGeo = dynamic_cast<Geometry*>(scene->GetNode(geo_ID));
-        Mesh* newMesh = new Mesh(clonedGeo, clonedMat);
-        newMesh->SetID(mesh_ID);
-
-        scene->RegisterNode(newMesh);
-    }
+    CreateMeshCommand(
+        Mesh* mesh,
+        Scene* audioThreadScene,
+        Chuck_Object* ckobj,
+        t_CKUINT data_offset
+    );
+    virtual void execute(Scene* scene) override;
 
 private:
     size_t mesh_ID;
