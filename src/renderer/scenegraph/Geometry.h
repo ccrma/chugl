@@ -74,7 +74,13 @@ public:
 	Geometry() : m_Dirty(true) {
 		// fprintf(stderr, "Geometry constructor (%zu)\n", m_ID);
 	}
-	virtual ~Geometry() {}
+	virtual ~Geometry() {
+		// fprintf(stderr, "Geometry destructor (%zu)\n", m_ID);
+		// all the data is in stl containers, so no need to do anything here nice
+	}
+
+	virtual bool IsGeometry() override { return true; }
+
 	virtual void BuildGeometry() = 0;  // given data, builds cpu-side index and vertex buffs
 	virtual GeometryType GetGeoType() = 0;
 	virtual Geometry* Clone() = 0;  // deepcopy the geometry data

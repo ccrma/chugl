@@ -281,6 +281,7 @@ void RenderMaterial::SetLocalUniforms()
 				break;
 			case UniformType::Texture:
 				// bind texture first
+				// TODO: do we need to do any texture refcounting here?
 				rendererTexture = m_Renderer->GetOrCreateTexture(uniform.texID);
 				rendererTexture->Bind(textureCounter);
 				// update GPU params if CGL_shader has been modified
@@ -294,7 +295,7 @@ void RenderMaterial::SetLocalUniforms()
 	}
 }
 
-void RenderMaterial::SetLightingUniforms(Scene *scene, const std::vector<Light *> &lights)
+void RenderMaterial::SetLightingUniforms(Scene *scene, const std::vector<size_t>& lights)
 {
     // accumulators
     int numPointLights = 0;
@@ -306,7 +307,7 @@ void RenderMaterial::SetLightingUniforms(Scene *scene, const std::vector<Light *
     // loop over lights
     for (int i = 0; i < lights.size(); i++)
     {
-        Light *light = lights[i];
+        Light *light = (Light *)scene->GetNode(lights[i]);
 
         // skip if not a child of current scene
         if (!light || !light->BelongsToSceneObject(scene))
@@ -439,21 +440,45 @@ void Renderer::Draw(RenderGeometry *renderGeo, RenderMaterial *renderMat)
 	}
 }
 
-// deprecating this function for now, bc we want different materials of the 
-// same type to actually use different shaders
-Shader *Renderer::GetOrCreateShader(
-	const std::string &vert, const std::string &frag,
-	bool vertIsPath, bool fragIsPath
-)
+void Renderer::ProcessDeletionQueue(Scene *scene)
 {
-	ShaderKey key = std::make_pair(vert, frag);
-	if (m_Shaders.find(key) != m_Shaders.end()) {
-		return m_Shaders[key];
+	auto& deletionQueue = scene->GetDeletionQueue();
+
+	// loop over IDs
+	for (auto& id : deletionQueue) {
+
+		// delete render geometry
+		if (DeleteRenderGeometry(id)) continue;
+
+		// delete render material
+		if (DeleteRenderMaterial(id)) continue;
+
+		// delete texture
+		if (DeleteTexture(id)) continue;
 	}
 
-	// not found, create it
-	Shader* shader = new Shader(vert, frag, vertIsPath, fragIsPath);
-	// cache it
-	m_Shaders[key] = shader;
-	return shader;
+	// clear queue
+	scene->ClearDeletionQueue();
 }
+
+// deprecating this function for now, bc we want different materials of the 
+// same type to actually use different shaders
+// this has to do with different materials of the same type having different uniforms and attributes
+// if they all use the same shader program, the shader will keep the same uniforms and attributes from past calls
+// Shader *Renderer::GetOrCreateShader(
+// 	const std::string &vert, const std::string &frag,
+// 	bool vertIsPath, bool fragIsPath
+// )
+// {
+// 	assert(false);
+// 	ShaderKey key = std::make_pair(vert, frag);
+// 	if (m_Shaders.find(key) != m_Shaders.end()) {
+// 		return m_Shaders[key];
+// 	}
+
+// 	// not found, create it
+// 	Shader* shader = new Shader(vert, frag, vertIsPath, fragIsPath);
+// 	// cache it
+// 	m_Shaders[key] = shader;
+// 	return shader;
+// }

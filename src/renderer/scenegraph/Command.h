@@ -657,3 +657,29 @@ private:
     size_t m_LightID;
     LightParams params;
 };
+
+//========================= Scenegraph Node Deletion Commands =========================//
+
+class DestroySceneGraphNodeCommand : public SceneGraphCommand
+{
+public:
+    DestroySceneGraphNodeCommand(SceneGraphNode* node, Scene* audioThreadScene) : m_ID(node->GetID()) {
+        // remove from audio thread scene
+        audioThreadScene->UnregisterNode(m_ID);
+        CK_SAFE_DELETE(node);
+    };
+
+
+    virtual void execute(Scene* renderThreadScene) override {
+        SceneGraphNode* node = renderThreadScene->GetNode(m_ID);
+        // remove from scenegraph
+        renderThreadScene->UnregisterNode(m_ID);
+        // add ID to deletion queue, so that renderer may destroy its GPU-side data
+        renderThreadScene->AddToDeletionQueue(m_ID);
+        // call destructor
+        CK_SAFE_DELETE(node);
+    }
+
+private:
+    size_t m_ID;
+};

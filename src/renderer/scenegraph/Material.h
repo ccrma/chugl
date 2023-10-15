@@ -48,6 +48,7 @@ struct MaterialUniform {
 		int i4[4];
 		bool b;
 		size_t texID;  // needs to be the ID so that when material is cloned into the renderer scenegraph it doesn't hold a chuck-side pointer reference
+		
 		// TODO: don't need to support Mat4 until matrices added to chuck
 		// also at that point might want to stop using a union to be more space efficient
 		// but that also would make memory access less efficient
@@ -128,7 +129,6 @@ struct MaterialOption {
 		int i;
 		unsigned int ui;
 		bool b;
-		char * str;
 		MaterialPolygonMode polygonMode;
 		MaterialPrimitiveMode primitiveMode;
 	};
@@ -173,7 +173,11 @@ public:
 
 		// std::cerr << "Material constructor called, ID = " << this->GetID() << std::endl;
 	};
-	virtual ~Material() {}
+	virtual ~Material() {
+		// all state stored in stl containers, no need to free anything
+	}
+
+	virtual bool IsMaterial() override { return true; }
 
 	virtual MaterialType GetMaterialType() { return MaterialType::Base; }
 	virtual std::unordered_map<std::string, MaterialUniform>& GetLocalUniforms() { return m_Uniforms;  }  // for setting properties specific to the material, e.g. color
@@ -224,6 +228,9 @@ public:
 	}
 
 	inline void SetUniform(MaterialUniform uniform) {
+		// can't do this here because texture refcounting won't happen
+		// assert(uniform.type != UniformType::Texture);
+		
 		m_Uniforms[uniform.name] = uniform;
 	}
 
@@ -232,12 +239,12 @@ public:
 	}
 
 public: // material options and uniforms settings
+	typedef std::unordered_map<std::string, MaterialUniform> LocalUniformCache;
 	// material options (affect rendering state, not directly passed to shader)
 	// need to pass hash function, enum keys not supported until c++14 :(
 	std::unordered_map<MaterialOptionParam, MaterialOption, std::hash<unsigned int>> m_Options;
 
 	// uniform cache (copied to shader on render)
-	typedef std::unordered_map<std::string, MaterialUniform> LocalUniformCache;
 	LocalUniformCache m_Uniforms;
 
 public: // custom shaders, only used by ShaderMaterial
@@ -293,8 +300,16 @@ public:  // uniform getters and setters
 	size_t GetSpriteID() { return m_Uniforms[POINT_SPRITE_TEXTURE_UNAME].texID; }
 
 	// uniform setters
-	void SetDiffuseMap(CGL_Texture* texture) { m_Uniforms[Material::DIFFUSE_MAP_UNAME].texID = texture->GetID(); }
-	void SetSpecularMap(CGL_Texture* texture) { m_Uniforms[Material::SPECULAR_COLOR_UNAME].texID = texture->GetID(); }
+	// void SetTexture(CGL_Texture* )
+	
+	void SetDiffuseMap(CGL_Texture* texture) { 
+		m_Uniforms[Material::DIFFUSE_MAP_UNAME].texID = texture->GetID(); 
+	}
+
+	void SetSpecularMap(CGL_Texture* texture) { 
+		m_Uniforms[Material::SPECULAR_COLOR_UNAME].texID = texture->GetID(); 
+	}
+
 	void SetSpecularColor(float r, float g, float b) {
 		auto& uniform = m_Uniforms[Material::SPECULAR_COLOR_UNAME];
 		uniform.f3[0] = r; uniform.f3[1] = g; uniform.f3[2] = b;

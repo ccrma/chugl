@@ -41,7 +41,14 @@ public:
 	RenderGeometry(Geometry* geo) : m_Geo(geo) {
 		BuildGeometry();
 	}
-	~RenderGeometry() {}
+	~RenderGeometry() {
+		// at this point m_Geo should already be deleted
+
+		// clear the buffer cache
+		for (auto it = m_VBs.begin(); it != m_VBs.end(); ++it) {
+			delete it->second;
+		}
+	}
 
     inline void Bind() { m_VA.Bind(); }  // bind the underlying geometry
 	inline bool IsDirty() { return m_Geo->IsDirty(); }
@@ -84,7 +91,10 @@ class RenderMaterial {
 public:
 	RenderMaterial(Material* mat, Renderer* renderer);
 
-	~RenderMaterial() {}
+	~RenderMaterial() {
+		// at this point m_Mat should already be deleted
+		delete m_Shader;
+	}
 
 	// CPU side data
 	std::string GetVertPath() { return m_Shader->GetVertPath(); }
@@ -105,7 +115,7 @@ public:
 		m_Shader->setFloat3("u_ViewPos", globals.u_ViewPos);
 	}
 
-	void SetLightingUniforms(Scene* scene, const std::vector<Light*>& lights); 
+	void SetLightingUniforms(Scene* scene, const std::vector<size_t>& lights); 
 	void SetFogUniforms(Scene* scene);
 
 
@@ -117,7 +127,6 @@ private:
 	Material* m_Mat;
 	Shader* m_Shader;
 	Renderer* m_Renderer;
-
 };
 
 
@@ -271,10 +280,44 @@ public:
 		return texture;
 	}
 
-	Shader* GetOrCreateShader(
-		const std::string& vertPath, const std::string& fragPath,
-		bool vertIsPath, bool fragIsPath
-	);
+	// deprecating for now
+	// sharing shaders between materials requires Materials to know how to unset uniforms/attributes
+	// TODO: come back to this when trying to implement batching, how to accomodate uniforms...
+	// Shader* GetOrCreateShader(
+	// 	const std::string& vertPath, const std::string& fragPath,
+	// 	bool vertIsPath, bool fragIsPath
+	// );
+
+public:  // memory management
+	bool DeleteRenderGeometry(size_t ID) {
+		if (m_RenderGeometries.find(ID) != m_RenderGeometries.end()) {
+			delete m_RenderGeometries[ID];
+			m_RenderGeometries.erase(ID);
+			return true;
+		}
+		return false;
+	}
+
+	bool DeleteRenderMaterial(size_t ID) {
+		if (m_RenderMaterials.find(ID) != m_RenderMaterials.end()) {
+			delete m_RenderMaterials[ID];
+			m_RenderMaterials.erase(ID);
+			return true;
+		}
+		return false;
+	}
+
+	bool DeleteTexture(size_t ID) {
+		if (m_Textures.find(ID) != m_Textures.end()) {
+			delete m_Textures[ID];
+			m_Textures.erase(ID);
+			return true;
+		}
+		return false;
+	}
+
+	void ProcessDeletionQueue(Scene* scene);
+
 
 private:  // private member vars
 	RendererState m_RenderState;
@@ -284,10 +327,10 @@ private:  // private member vars
 	std::unordered_map<size_t, RenderGeometry*> m_RenderGeometries;
 	std::unordered_map<size_t, RenderMaterial*> m_RenderMaterials;
 	std::unordered_map<size_t, Texture*> m_Textures;
+
+
 	// shader cache
-	typedef std::pair<std::string, std::string> ShaderKey;
-	std::unordered_map<ShaderKey, Shader*, Util::hash_pair> m_Shaders;
-
-
+	// typedef std::pair<std::string, std::string> ShaderKey;
+	// std::unordered_map<ShaderKey, Shader*, Util::hash_pair> m_Shaders;
 };
 

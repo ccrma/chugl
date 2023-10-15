@@ -274,6 +274,7 @@ bool SceneGraphObject::HasChild(SceneGraphObject* child)
 	return false;
 }
 
+// rewturns true if sgo is a parent, grandparent, etc of this object
 bool SceneGraphObject::BelongsToSceneObject(SceneGraphObject *sgo)
 {
 	SceneGraphObject* parent = this;

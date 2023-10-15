@@ -338,6 +338,9 @@ void Window::DisplayLoop()
         // process any glfw options passed from chuck
         UpdateState();
 
+        // garbage collection! delete GPU-side data for any scenegraph objects that were deleted in chuck
+        renderer.ProcessDeletionQueue(&scene); // IMPORTANT: should happen after flushing command queue
+
         // now renderer can work on drawing the copied scenegraph
         renderer.Clear(scene.GetBackgroundColor());
         renderer.RenderScene(&scene, &camera);

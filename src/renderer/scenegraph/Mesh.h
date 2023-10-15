@@ -8,20 +8,25 @@ class Material;
 class Mesh : public SceneGraphObject
 {
 public:
-	Mesh(Geometry *geo, Material* mat) : m_Geometry(geo), m_Material(mat) {
+	Mesh(Geometry *geo, Material* mat) {
 		// fprintf(stderr, "Mesh(%zu) with geo mat\n", m_ID);
+		SetGeometry(geo);
+		SetMaterial(mat);
 	}
+
 	Mesh() : m_Geometry(nullptr), m_Material(nullptr) {
 		// fprintf(stderr, "Mesh(%zu) default ctor \n", m_ID);
 	}
+
+	virtual ~Mesh();
 	
 	virtual bool IsMesh() override { return true; }
 
 	inline Geometry* GetGeometry() { return m_Geometry; }
 	inline Material* GetMaterial() { return m_Material; }
 
-	inline void SetGeometry(Geometry* geo) { m_Geometry = geo; }
-	inline void SetMaterial(Material* mat) { m_Material = mat; }
+	void SetGeometry(Geometry* geo);
+	void SetMaterial(Material* mat);
 
 	size_t GetMaterialID();
 	size_t GetGeometryID();
@@ -30,6 +35,7 @@ public:
 	
 
 private:
+// TODO: should these be IDs instead?
 	Geometry* m_Geometry;
 	Material* m_Material;
 };

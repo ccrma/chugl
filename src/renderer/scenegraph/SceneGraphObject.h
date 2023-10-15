@@ -22,7 +22,10 @@ public:
 		m_Parent(nullptr)
 	{
 	}
-	virtual ~SceneGraphObject() {}
+
+	virtual ~SceneGraphObject() {
+		Disconnect();  // disconnect already handles refcounting
+	}
 
 	
 	// Useful Constants (move to separate constants file?)
@@ -84,14 +87,9 @@ public:
 	void SetName(const std::string& name) { m_Name = name; }
 	const std::vector<SceneGraphObject*>& GetChildren() { return m_Children; }
 	bool BelongsToSceneObject(SceneGraphObject* sgo);
+
     // disconnect from both parent and children
     void Disconnect( bool sendChildrenToGrandparent = false );
-
-	// type methods ========================================
-	virtual bool IsLight() { return false; }
-	virtual bool IsCamera() { return false; }
-	virtual bool IsMesh() { return false; }
-	virtual bool IsScene() { return false; }
 
 	// transform  (making public for now for easier debug)
 	glm::vec3 m_Position;

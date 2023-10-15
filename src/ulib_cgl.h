@@ -45,6 +45,7 @@ public:
 	void Broadcast();
 	static void Broadcast(CglEventType event_type);
 	static std::vector<CglEvent*>& GetEventQueue(CglEventType event_type);
+	Chuck_Event* GetEvent() { return m_Event; }
 
 	static CBufferSimple* s_SharedEventQueue;
 
@@ -84,7 +85,7 @@ private:
 	static std::unordered_map<Chuck_VM_Shred*, bool> m_RegisteredShreds;
 	static std::unordered_set<Chuck_VM_Shred*> m_WaitingShreds;  // shreds for other others to finish their update logic
 
-	static Chuck_DL_Api::Object s_UpdateEvent;
+	static CglEvent* s_UpdateEvent;
 
 	// static std::unordered_map<Chuck_VM_Shred*, Chuck_DL_Api::Object> m_ShredEventMap;  // map of shreds to CglUpdate Event 
 public:  // creating chuck object helpers
@@ -106,7 +107,7 @@ public:
 	static size_t GetNumShredsWaiting();
 
 	// shred event map helper fns
-	static Chuck_DL_Api::Object GetShredUpdateEvent(
+	static CglEvent* GetShredUpdateEvent(
 		Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM
 	);
 

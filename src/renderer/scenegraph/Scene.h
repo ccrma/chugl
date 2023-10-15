@@ -49,6 +49,35 @@ public:
 		m_SceneGraphMap[node->GetID()] = node;
 	}
 
+	// remove any scene pointers to this node
+	void UnregisterNode(size_t id) {
+		if (!CheckNode(id)) return;
+
+		SceneGraphNode* node = GetNode(id);
+
+		// remove from map
+		m_SceneGraphMap.erase(id);
+
+		if (node->IsLight()) {
+			for (auto it = m_Lights.begin(); it != m_Lights.end(); ++it) {
+				if (*it == id) {
+					m_Lights.erase(it);
+					return;
+				}
+			}
+		}
+
+		// remove from cameras list
+		if (node->IsCamera()) {
+			for (auto it = m_Cameras.begin(); it != m_Cameras.end(); ++it) {
+				if (*it == id) {
+					m_Cameras.erase(it);
+					return;
+				}
+			}
+		}
+	}
+
 	void RegisterLight(Light* light);
 	void RegisterCamera(Camera* camera);
 
@@ -76,13 +105,35 @@ public: // lightin
 		// all scenegraphobjects are instead stored as a flightlist, each with a pointer to 1 parent scene
 		// no parent/child relationships, except for 1 scene and all its children 
 	// lights and nodes should be stored separate from scene, store inside render state
-	std::vector<Light*> m_Lights;  // list of all lights in scene
-	Light* GetDefaultLight() { return m_Lights.size() > 0 ? m_Lights[0] : nullptr; }
+	// std::vector<Light*> m_Lights;  // list of all lights in scene
+	std::vector<size_t> m_Lights;  // list of all lights in scene
+	Light* GetDefaultLight() { 
+		if (m_Lights.size() == 0) return nullptr;
+
+		// delete light if its not registered
+		while (!CheckNode(m_Lights[0])) {
+			m_Lights.erase(m_Lights.begin());
+			if (m_Lights.size() == 0) return nullptr;
+		}
+
+		return (Light*)GetNode(m_Lights[0]);
+	}
 
 
 public: // camera
-	std::vector<Camera*> m_Cameras;  // list of all cameras in scene
-	Camera* GetMainCamera() { return m_Cameras.size() > 0 ? m_Cameras[0] : nullptr; }
+	// std::vector<Camera*> m_Cameras;  // list of all cameras in scene
+	std::vector<size_t> m_Cameras;  // list of all cameras in scene
+	Camera* GetMainCamera() { 
+		if (m_Cameras.size() == 0) return nullptr;
+
+		// delete camera if its not registered
+		while (!CheckNode(m_Cameras[0])) {
+			m_Cameras.erase(m_Cameras.begin());
+			if (m_Cameras.size() == 0) return nullptr;
+		}
+
+		return (Camera*)GetNode(m_Cameras[0]);
+	}
 
 public: // fog
 	FogUniforms m_FogUniforms;
@@ -106,11 +157,21 @@ public: // background color ie clear color
 	}
 	glm::vec3 GetBackgroundColor() { return m_BackgroundColor; }
 
+private:  // for propogating deletion to the renderer
+	std::vector<size_t> m_DeletionQueue;
+public:
+	void AddToDeletionQueue(size_t id) { m_DeletionQueue.push_back(id); }
+	void ClearDeletionQueue() { m_DeletionQueue.clear(); }
+	std::vector<size_t> GetDeletionQueue() { return m_DeletionQueue; }
+
 public: // major hack, for now because there's only 1 scene, storing render state options here
 	// THESE ARE NOT THREADSAFE, ONLY WRITE/READ FROM RENDER THREAD
 	// set indirectly via scenegraph commands
 	// all this in order to maintain strict decoupling between scenegraph and any specific renderer impl
 	// but maybe these modes can be stored in CGL class? or create a "window" scenegraph type that stores per-window metadata and settings
+
+	// TODO: can actually make these non-static and store twice, once the chuck-thread scene in command constructor, and once on render-thread scene in command execute
+	// this will allow read access, if needed
 	static unsigned int mouseMode;
 	static bool updateMouseMode; 
 

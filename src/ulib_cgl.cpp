@@ -357,7 +357,7 @@ CK_DLL_MFUN(cgl_mat_line_set_mode);	 // many platforms only support fixed width 
 // Object -> Mesh
 //-----------------------------------------------------------------------------
 CK_DLL_CTOR(cgl_mesh_ctor);
-CK_DLL_DTOR(cgl_mesh_dtor);
+// CK_DLL_DTOR(cgl_mesh_dtor);
 CK_DLL_MFUN(cgl_mesh_set);
 CK_DLL_MFUN(cgl_mesh_get_mat);
 CK_DLL_MFUN(cgl_mesh_get_geo);
@@ -373,7 +373,6 @@ CK_DLL_MFUN(cgl_mesh_dup_all);
 // Object -> Mesh -> Gxxxxx
 //-----------------------------------------------------------------------------
 CK_DLL_CTOR(cgl_gcube_ctor);
-// CK_DLL_DTOR(cgl_gcube_dtor);
 
 CK_DLL_CTOR(cgl_gsphere_ctor);
 CK_DLL_CTOR(cgl_gcircle_ctor);
@@ -566,7 +565,7 @@ t_CKBOOL init_chugl_events(Chuck_DL_Query *QUERY)
 	// (intentionally left out of CKDocs)
 	QUERY->begin_class(QUERY, "NextFrameEvent", "Event");
 	QUERY->add_ctor(QUERY, cgl_update_ctor);
-	QUERY->add_dtor(QUERY, cgl_update_dtor);
+	// QUERY->add_dtor(QUERY, cgl_update_dtor);
 	cgl_next_frame_event_data_offset = QUERY->add_mvar(QUERY, "int", "@cgl_next_frame_event_data", false);
 
 	QUERY->add_mfun(QUERY, cgl_update_event_waiting_on, "void", "waiting_on");
@@ -577,7 +576,7 @@ t_CKBOOL init_chugl_events(Chuck_DL_Query *QUERY)
 	QUERY->doc_class(QUERY, "Event triggered whenever the ChuGL window is resized, either by the user or programmatically.");
 	
 	QUERY->add_ctor(QUERY, cgl_window_resize_ctor);
-	QUERY->add_dtor(QUERY, cgl_window_resize_dtor);
+	// QUERY->add_dtor(QUERY, cgl_window_resize_dtor);
 
 	window_resize_event_data_offset = QUERY->add_mvar(QUERY, "int", "@cgl_window_resize_event_data", false);
 	QUERY->end_class(QUERY);
@@ -588,14 +587,11 @@ t_CKBOOL init_chugl_events(Chuck_DL_Query *QUERY)
 CK_DLL_CTOR(cgl_update_ctor)
 {
 	// store reference to our new class
-	OBJ_MEMBER_INT(SELF, cgl_next_frame_event_data_offset) = (t_CKINT) new CglEvent(
-		(Chuck_Event *)SELF, SHRED->vm_ref, API, CglEventType::CGL_UPDATE);
+	OBJ_MEMBER_INT(SELF, cgl_next_frame_event_data_offset) = (t_CKINT) CGL::GetShredUpdateEvent(SHRED, API, VM);
 }
 
 CK_DLL_DTOR(cgl_update_dtor)
 {
-	CglEvent *cglEvent = (CglEvent *)OBJ_MEMBER_INT(SELF, cgl_next_frame_event_data_offset);
-	CK_SAFE_DELETE(cglEvent);
 	OBJ_MEMBER_INT(SELF, cgl_next_frame_event_data_offset) = 0;
 }
 
@@ -648,6 +644,7 @@ CK_DLL_CTOR(cgl_window_resize_ctor)
 }
 CK_DLL_DTOR(cgl_window_resize_dtor)
 {
+	// TODO need to make this threadsafe (either make static or add a lock)
 	CglEvent *cglEvent = (CglEvent *)OBJ_MEMBER_INT(SELF, window_resize_event_data_offset);
 	CK_SAFE_DELETE(cglEvent);
 	OBJ_MEMBER_INT(SELF, window_resize_event_data_offset) = 0;
@@ -770,8 +767,7 @@ CK_DLL_SFUN(cgl_next_frame)
 			SHRED);
 	}
 
-	RETURN->v_object = (Chuck_Object *)CGL::GetShredUpdateEvent(
-		SHRED, API, VM);
+	RETURN->v_object = (Chuck_Object *)CGL::GetShredUpdateEvent(SHRED, API, VM)->GetEvent();
 
 	// register shred and set has-waited flag to false
 	CGL::RegisterShred(SHRED);
@@ -939,7 +935,6 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Box), Geometry::CKName(GeometryType::Base) );
     QUERY->doc_class(QUERY, "Geometry class for constructing vertex data for boxes aka cubes");
 	QUERY->add_ctor(QUERY, cgl_geo_box_ctor);
-	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 
 	QUERY->add_mfun(QUERY, cgl_geo_box_set, "void", "set");
 	QUERY->add_arg(QUERY, "float", "width");
@@ -955,7 +950,6 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Sphere), Geometry::CKName(GeometryType::Base) );
     QUERY->doc_class(QUERY, "Geometry class for constructing vertex data for spheres");
 	QUERY->add_ctor(QUERY, cgl_geo_sphere_ctor);
-	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 
 	QUERY->add_mfun(QUERY, cgl_geo_sphere_set, "void", "set");
 	QUERY->add_arg(QUERY, "float", "radius");
@@ -973,7 +967,6 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Circle), Geometry::CKName(GeometryType::Base) );
     QUERY->doc_class(QUERY, "Geometry class for constructing vertex data for circles");
 	QUERY->add_ctor(QUERY, cgl_geo_circle_ctor);
-	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 
 	QUERY->add_mfun(QUERY, cgl_geo_circle_set, "void", "set");
 	QUERY->add_arg(QUERY, "float", "radius");
@@ -988,7 +981,6 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Plane), Geometry::CKName(GeometryType::Base) );
     QUERY->doc_class(QUERY, "Geometry class for constructing vertex data for planes");
 	QUERY->add_ctor(QUERY, cgl_geo_plane_ctor);
-	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 
 	QUERY->add_mfun(QUERY, cgl_geo_plane_set, "void", "set");
 	QUERY->add_arg(QUERY, "float", "width");
@@ -1003,7 +995,6 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Torus), Geometry::CKName(GeometryType::Base) );
     QUERY->doc_class(QUERY, "Geometry class for constructing vertex data for toruses");
 	QUERY->add_ctor(QUERY, cgl_geo_torus_ctor);
-	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 
 	QUERY->add_mfun(QUERY, cgl_geo_torus_set, "void", "set");
 	QUERY->add_arg(QUERY, "float", "radius");
@@ -1021,7 +1012,6 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 	QUERY->add_ex(QUERY, "basic/polygon-modes.ck");
 
 	QUERY->add_ctor(QUERY, cgl_geo_lathe_ctor);
-	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 
 	QUERY->add_mfun(QUERY, cgl_geo_lathe_set, "void", "set");
 	QUERY->add_arg(QUERY, "float[]", "path"); // these are converted to vec2s
@@ -1046,7 +1036,6 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Custom), Geometry::CKName(GeometryType::Base) );
     QUERY->doc_class(QUERY, "Geometry class for providing your own vertex data. Used implicitly by GLines and GPoints");
 	QUERY->add_ctor(QUERY, cgl_geo_custom_ctor);
-	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 
 
 	QUERY->end_class(QUERY);
@@ -1059,15 +1048,17 @@ CK_DLL_CTOR(cgl_geo_ctor) {}
 CK_DLL_DTOR(cgl_geo_dtor) // all geos can share this base destructor
 {
 	Geometry *geo = (Geometry *)OBJ_MEMBER_INT(SELF, geometry_data_offset);
-	CK_SAFE_DELETE(geo);
 	OBJ_MEMBER_INT(SELF, geometry_data_offset) = 0; // zero out the memory
 
-	// TODO: trigger destruction callback and scenegraph removal command
+	CGL::PushCommand(new DestroySceneGraphNodeCommand(geo, &CGL::mainScene));
 }
 
 CK_DLL_MFUN(cgl_geo_clone)
 {
 	Geometry *geo = (Geometry *)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+	// Note: we are NOT refcounting here because we're returning a reference to the new cloned object
+	// If this returned reference is assigned to a chuck variable, chuck should handle the refcounting
+	// bumping the refcount here would cause a memory leak, as the refcount would never be decremented
 	RETURN->v_object = CGL::CreateChuckObjFromGeo(API, VM, geo->Clone(), SHRED, false)->m_ChuckObject;
 }
 
@@ -1470,7 +1461,6 @@ t_CKBOOL init_chugl_texture(Chuck_DL_Query *QUERY)
     QUERY->doc_class(QUERY, "Class for loading textures from external files");
 
 	QUERY->add_ctor(QUERY, cgl_texture_file_ctor);
-	QUERY->add_dtor(QUERY, cgl_texture_dtor);
 
 	QUERY->add_mfun(QUERY, cgl_texture_file_set_filepath, "string", "path");
 	QUERY->add_arg(QUERY, "string", "path");
@@ -1486,7 +1476,6 @@ t_CKBOOL init_chugl_texture(Chuck_DL_Query *QUERY)
     QUERY->doc_class(QUERY, "Class for dynamically creating textures from chuck arrays");
 
 	QUERY->add_ctor(QUERY, cgl_texture_rawdata_ctor);
-	QUERY->add_dtor(QUERY, cgl_texture_dtor);
 
 	QUERY->add_mfun(QUERY, cgl_texture_rawdata_set_data, "void", "data");
 	QUERY->add_arg(QUERY, "float[]", "data");
@@ -1512,14 +1501,9 @@ CK_DLL_CTOR(cgl_texture_ctor)
 CK_DLL_DTOR(cgl_texture_dtor)
 {
 	CGL_Texture *texture = (CGL_Texture *)OBJ_MEMBER_INT(SELF, texture_data_offset);
-	CK_SAFE_DELETE(texture);
 	OBJ_MEMBER_INT(SELF, texture_data_offset) = 0;
 
-	// TODO: send destroy command to CGL command queue
-	//       - remove texture from scenegraph
-	// 	     - callback hook for renderer to remove TextureMat from cache
-	// idea: .dispose() of THREEjs. need to deliberately invoke freeing GPU resources from chuck side,
-	// chuck destructor does NOT implicitly free GPU resources (probably safer this way)
+	CGL::PushCommand(new DestroySceneGraphNodeCommand(texture, &CGL::mainScene));
 }
 
 CK_DLL_MFUN(cgl_texture_set_wrap)
@@ -1789,50 +1773,42 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Normal), Material::CKName(MaterialType::Base));
 	QUERY->doc_class(QUERY, "Color each pixel using the surface normal at that point");
 	QUERY->add_ctor(QUERY, cgl_mat_norm_ctor);
-	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 	QUERY->end_class(QUERY);
 
 	// flat material
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Flat), Material::CKName(MaterialType::Base));
 	QUERY->doc_class(QUERY, "Color each pixel using a flat color");
 	QUERY->add_ctor(QUERY, cgl_mat_flat_ctor);
-	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 	QUERY->end_class(QUERY);
 
 	// phong specular material
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Phong), Material::CKName(MaterialType::Base));
 	QUERY->doc_class(QUERY, "Color each pixel using a phong specular shading");
 	QUERY->add_ctor(QUERY, cgl_mat_phong_ctor);
-	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 	QUERY->end_class(QUERY);
 
 	// custom shader material
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::CustomShader), Material::CKName(MaterialType::Base));
 	QUERY->doc_class(QUERY, "Color each pixel using the custom glsl shaders you provide via Material.shaders()");
 	QUERY->add_ctor(QUERY, cgl_mat_custom_shader_ctor);
-	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 	QUERY->end_class(QUERY);
 
 	// points material
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Points), Material::CKName(MaterialType::Base));
 	QUERY->doc_class(QUERY, "Used by GPoints");
-	QUERY->add_ctor(QUERY, cgl_mat_custom_shader_ctor);
 	QUERY->add_ctor(QUERY, cgl_mat_points_ctor);
-	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 	QUERY->end_class(QUERY);
 
 	// mango material
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Mango), Material::CKName(MaterialType::Base));
 	QUERY->doc_class(QUERY, "Color each pixel using its UV coordinates. Looks like a mango, yum.");
 	QUERY->add_ctor(QUERY, cgl_mat_mango_ctor);
-	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 	QUERY->end_class(QUERY);
 
 	// line material
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Line), Material::CKName(MaterialType::Base));
 	QUERY->doc_class(QUERY, "Used by GLines");
 	QUERY->add_ctor(QUERY, cgl_mat_line_ctor);
-	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 	QUERY->end_class(QUERY);
 
 	return true;
@@ -1846,12 +1822,9 @@ CK_DLL_CTOR(cgl_mat_ctor)
 CK_DLL_DTOR(cgl_mat_dtor) // all geos can share this base destructor
 {
 	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
-	CK_SAFE_DELETE(mat);
 	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = 0; // zero out the memory
 
-	// TODO: send destroy command to CGL command queue
-	//       - remove material from scenegraph
-	// 	     - callback hook for renderer to remove RenderMat from cache
+	CGL::PushCommand(new DestroySceneGraphNodeCommand(mat, &CGL::mainScene));
 }
 
 
@@ -2426,7 +2399,7 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query *QUERY)
 // CGLObject DLL ==============================================
 CK_DLL_CTOR(cgl_obj_ctor)
 {
-	Chuck_DL_Api::Type type = API->type->lookup(VM, "GGen");
+	Chuck_DL_Api::Type type = API->type->lookup(VM, "GGen");  // TODO cache this
 	auto thisType = API->object->get_type(SELF);
 	if (
 		API->type->is_equal(type, thisType)  // this type is a GGen
@@ -2448,8 +2421,9 @@ CK_DLL_CTOR(cgl_obj_ctor)
 CK_DLL_DTOR(cgl_obj_dtor)
 {
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	// CK_SAFE_DELETE(cglObj);  // TODO: the bandit ship of ref count memory managemnet
 	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;
+
+	CGL::PushCommand(new DestroySceneGraphNodeCommand(cglObj, &CGL::mainScene));
 }
 
 CK_DLL_MFUN(cgl_obj_get_id)
@@ -2729,7 +2703,6 @@ t_CKBOOL init_chugl_scene(Chuck_DL_Query *QUERY)
 	QUERY->doc_class(QUERY, "Scene class. Static--all instances point to the same underlying ChuGL main scene. GGens must be added to a scene to be rendered");
 	
 	QUERY->add_ctor(QUERY, cgl_scene_ctor);
-	QUERY->add_dtor(QUERY, cgl_scene_dtor);
 
 	// static constants
 	// TODO: add linear fog? but doesn't even look as good
@@ -2825,7 +2798,8 @@ CK_DLL_MFUN(cgl_scene_get_background_color)
 CK_DLL_MFUN(cgl_scene_get_default_light)
 {
 	Scene *scene = (Scene *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	RETURN->v_object = scene->m_Lights.size() > 0 ? scene->m_Lights[0]->m_ChuckObject : nullptr;
+	Light* defaultLight = scene->GetDefaultLight();
+	RETURN->v_object = defaultLight ? defaultLight->m_ChuckObject : nullptr;
 }
 
 CK_DLL_MFUN(cgl_scene_get_num_lights)
@@ -2905,7 +2879,6 @@ t_CKBOOL init_chugl_cam(Chuck_DL_Query *QUERY)
 	QUERY->doc_class(QUERY, "Camera class. Static--all instances point to the same underlying ChuGL main camera");
 
 	QUERY->add_ctor(QUERY, cgl_cam_ctor);
-	QUERY->add_dtor(QUERY, cgl_cam_dtor);
 
 	// static vars
 	// perspective mode
@@ -3134,7 +3107,6 @@ t_CKBOOL init_chugl_mesh(Chuck_DL_Query *QUERY)
 	QUERY->doc_class(QUERY, "Mesh class. A mesh is a geometry and a material. It can be added to a scene to be rendered. Parent class of GCube, GSphere, GCircle, etc");
 
 	QUERY->add_ctor(QUERY, cgl_mesh_ctor);
-	QUERY->add_dtor(QUERY, cgl_mesh_dtor);
 
 	QUERY->add_mfun(QUERY, cgl_mesh_set, "void", "set");
 	QUERY->add_arg(QUERY, Geometry::CKName(GeometryType::Base) , "geo");
@@ -3171,44 +3143,37 @@ t_CKBOOL init_chugl_mesh(Chuck_DL_Query *QUERY)
 	QUERY->doc_class(QUERY, "Creates a Mesh that uses BoxGeometry and PhongMaterial");
 
 	QUERY->add_ctor(QUERY, cgl_gcube_ctor);
-	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
 	QUERY->end_class(QUERY);
 
 	QUERY->begin_class(QUERY, "GSphere", "GMesh");
 	QUERY->doc_class(QUERY, "Creates a Mesh that uses SphereGeometry and PhongMaterial");
 	QUERY->add_ctor(QUERY, cgl_gsphere_ctor);
-	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
 	QUERY->end_class(QUERY);
 
 	QUERY->begin_class(QUERY, "GCircle", "GMesh");
 	QUERY->doc_class(QUERY, "Creates a Mesh that uses CircleGeometry and PhongMaterial");
 	QUERY->add_ctor(QUERY, cgl_gcircle_ctor);
-	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
 	QUERY->end_class(QUERY);
 
 	QUERY->begin_class(QUERY, "GPlane", "GMesh");
 	QUERY->doc_class(QUERY, "Creates a Mesh that uses PlaneGeometry and PhongMaterial");
 	QUERY->add_ctor(QUERY, cgl_gplane_ctor);
-	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
 	QUERY->end_class(QUERY);
 
 	QUERY->begin_class(QUERY, "GTorus", "GMesh");
 	QUERY->doc_class(QUERY, "Creates a Mesh that uses TorusGeometry and PhongMaterial");
 
 	QUERY->add_ctor(QUERY, cgl_gtorus_ctor);
-	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
 	QUERY->end_class(QUERY);
 
 	QUERY->begin_class(QUERY, "GLines", "GMesh");
 	QUERY->doc_class(QUERY, "Creates a Mesh that uses CustomGeometry and LineMaterial");
 	QUERY->add_ctor(QUERY, cgl_glines_ctor);
-	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
 	QUERY->end_class(QUERY);
 
 	QUERY->begin_class(QUERY, "GPoints", "GMesh");
 	QUERY->doc_class(QUERY, "Creates a Mesh that uses CustomGeometry and PointMaterial");
 	QUERY->add_ctor(QUERY, cgl_gpoints_ctor);
-	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
 	QUERY->end_class(QUERY);
 
 
@@ -3230,14 +3195,13 @@ CK_DLL_CTOR(cgl_mesh_ctor)
 	CGL::PushCommand(new CreateMeshCommand(mesh));
 }
 
-CK_DLL_DTOR(cgl_mesh_dtor)
-{
-	Mesh *mesh = (Mesh *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	CK_SAFE_DELETE(mesh);
-	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0; // zero out the memory
+// CK_DLL_DTOR(cgl_mesh_dtor)
+// {
+// 	Mesh *mesh = (Mesh *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+// 	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0; // zero out the memory
 
-	// TODO: need to remove from scenegraph
-}
+// 	CGL::PushCommand(new DestroySceneGraphNodeCommand(mesh));
+// }
 
 static void cglMeshSet(Mesh *mesh, Geometry *geo, Material *mat)
 {
@@ -3681,7 +3645,7 @@ t_CKINT CGL::our_update_vt_offset = -1;
 std::unordered_map<Chuck_VM_Shred *, bool> CGL::m_RegisteredShreds;
 std::unordered_set<Chuck_VM_Shred *> CGL::m_WaitingShreds;
 
-Chuck_DL_Api::Object CGL::s_UpdateEvent = nullptr;
+CglEvent* CGL::s_UpdateEvent = nullptr;
 
 // CGL static command queue initialization
 std::vector<SceneGraphCommand *> CGL::m_ThisCommandQueue;
@@ -3852,7 +3816,9 @@ Material* CGL::DupMeshMat(CK_DL_API API, Chuck_VM *VM, Mesh *mesh, Chuck_VM_Shre
 		std::cerr << "cannot duplicate a null material" << std::endl;
 		return nullptr;
 	}
-	Material* newMat = CGL::CreateChuckObjFromMat(API, VM, mesh->GetMaterial()->Dup(), SHRED, true);
+
+	// again, we don't bump the refcount here because it's already bumped in SetMaterial()
+	Material* newMat = CGL::CreateChuckObjFromMat(API, VM, mesh->GetMaterial()->Dup(), SHRED, false);
 	// set new mat on this mesh!
 	mesh->SetMaterial(newMat);
 	// tell renderer to set new mat on this mesh
@@ -3867,7 +3833,8 @@ Geometry* CGL::DupMeshGeo(CK_DL_API API, Chuck_VM *VM, Mesh *mesh, Chuck_VM_Shre
 		return nullptr;
 	}
 
-	Geometry* newGeo = CGL::CreateChuckObjFromGeo(API, VM, mesh->GetGeometry()->Dup(), SHRED, true);
+	// we don't bump the refcount here because it's already bumped in SetGeometry()
+	Geometry* newGeo = CGL::CreateChuckObjFromGeo(API, VM, mesh->GetGeometry()->Dup(), SHRED, false);
 	// set new geo on this mesh!
 	mesh->SetGeometry(newGeo);
 	// tell renderer to set new geo on this mesh
@@ -3930,12 +3897,12 @@ void CGL::UnregisterShredWaiting(Chuck_VM_Shred *shred)
 	m_WaitingShreds.erase(shred);
 }
 
-Chuck_DL_Api::Object CGL::GetShredUpdateEvent(Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM)
+CglEvent* CGL::GetShredUpdateEvent(Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM)
 {
 	// log size
 	// std::cerr << "shred event map size: " + std::to_string(m_ShredEventMap.size()) << std::endl;
 	// lookup
-	if (s_UpdateEvent == nullptr)
+	if (CGL::s_UpdateEvent == nullptr)
 	{
 		Chuck_DL_Api::Type type = API->type->lookup(VM, "NextFrameEvent");
 		Chuck_DL_Api::Object obj = API->object->create_without_shred(VM, type, true);
@@ -3943,11 +3910,12 @@ Chuck_DL_Api::Object CGL::GetShredUpdateEvent(Chuck_VM_Shred *shred, CK_DL_API A
 		// for now constructor will add chuck event to the eventQueue
 		// as long as there is only one, and it's created in first call to nextFrame BEFORE renderer wakes up then this is threadsafe
 		// TODO to support multiple windows, chugl event queue read/write will need to be lock protected
-		cgl_update_ctor((Chuck_Object *)obj, NULL, VM, shred, API);
+		// cgl_update_ctor((Chuck_Object *)obj, NULL, VM, shred, API);
+		CGL::s_UpdateEvent = new CglEvent((Chuck_Event *)obj, VM, API, CglEventType::CGL_UPDATE);
 
-		s_UpdateEvent = obj;
+		OBJ_MEMBER_INT(obj, cgl_next_frame_event_data_offset) = (t_CKINT)CGL::s_UpdateEvent;
 	}
-	return s_UpdateEvent;
+	return CGL::s_UpdateEvent;
 }
 
 Chuck_DL_Api::Object CGL::GetMainScene(Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM)

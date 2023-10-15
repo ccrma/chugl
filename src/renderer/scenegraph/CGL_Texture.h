@@ -82,6 +82,13 @@ public:
         m_FilePath(""),
         m_Width(0), m_Height(0)
         {}
+    
+    // destructor
+    virtual ~CGL_Texture() {
+        // all state stored in structs and vectors, no need to do anything
+    }
+
+	virtual bool IsTexture() { return true; }
 
     CGL_Texture * Clone() {
         CGL_Texture * tex = new CGL_Texture(*this);

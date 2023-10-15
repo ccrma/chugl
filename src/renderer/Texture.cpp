@@ -122,6 +122,8 @@ Texture::Texture(CGL_Texture *cglTexture)
 
 Texture::~Texture()
 {
+	// don't need to free m_localBuffer, already freed by stbi_image_free after loading
+	// don't need to free m_CGL_Texture, already freed by deletion command
 	GLCall(glDeleteTextures(1, &m_RendererID));
 }
 

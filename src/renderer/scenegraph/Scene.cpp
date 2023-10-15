@@ -39,12 +39,14 @@ Scene::~Scene()
 
 void Scene::RegisterLight(Light* light)
 {
+    assert(light);
     RegisterNode(light);
-    m_Lights.push_back(light);
+    m_Lights.push_back(light->GetID());
 }
 
 void Scene::RegisterCamera(Camera *camera)
 {
+    assert(camera);
     RegisterNode(camera);
-    m_Cameras.push_back(camera);
+    m_Cameras.push_back(camera->GetID());
 }
