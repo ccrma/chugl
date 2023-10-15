@@ -246,8 +246,12 @@ CK_DLL_MFUN(cgl_geo_set_attribute); // general case for any kind of vertex data
 CK_DLL_MFUN(cgl_geo_set_positions);
 CK_DLL_MFUN(cgl_geo_set_positions_vec3);
 CK_DLL_MFUN(cgl_geo_set_colors);
+CK_DLL_MFUN(cgl_geo_set_colors_vec3);
+CK_DLL_MFUN(cgl_geo_set_colors_vec4);
 CK_DLL_MFUN(cgl_geo_set_normals);
+CK_DLL_MFUN(cgl_geo_set_normals_vec3);
 CK_DLL_MFUN(cgl_geo_set_uvs);
+CK_DLL_MFUN(cgl_geo_set_uvs_vec2);
 CK_DLL_MFUN(cgl_geo_set_indices);
 
 //-----------------------------------------------------------------------------
@@ -896,24 +900,40 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 
 	QUERY->add_mfun(QUERY, cgl_geo_set_positions, "void", "positions");
 	QUERY->add_arg(QUERY, "float[]", "positions");
-    QUERY->doc_func(QUERY, "Set position attribute data. Each vertex expects 3 floats for x,y,z");
+    QUERY->doc_func(QUERY, "Set position attribute data from an array of floats; every 3 floats correspond to (x, y, z) values of a vertex position");
 
 	QUERY->add_mfun(QUERY, cgl_geo_set_positions_vec3, "void", "positions");
 	QUERY->add_arg(QUERY, "vec3[]", "positions");
-    QUERY->doc_func(QUERY, "Set position attribute data with vec3s rather than floats");
+    QUERY->doc_func(QUERY, "Set position attribute data from an array of vec3 (x, y, z)");
 
 	QUERY->add_mfun(QUERY, cgl_geo_set_colors, "void", "colors");
 	QUERY->add_arg(QUERY, "float[]", "colors");
-    QUERY->doc_func(QUERY, "Set color attribute data. Each vertex expects 4 floats for r,g,b,a");
+    QUERY->doc_func(QUERY, "Set color attribute data from an array of floats; every 4 floats corresdpond to (r, g, b, a) values of a vertex color);" );
+
+    QUERY->add_mfun(QUERY, cgl_geo_set_colors_vec3, "void", "colors");
+    QUERY->add_arg(QUERY, "vec3[]", "colors");
+    QUERY->doc_func(QUERY, "Set color attribute data from an array of vec3 (r, g, b); alpha is assumed to be 1.0" );
+
+    QUERY->add_mfun(QUERY, cgl_geo_set_colors_vec4, "void", "colors");
+    QUERY->add_arg(QUERY, "vec4[]", "colors");
+    QUERY->doc_func(QUERY, "Set color attribute data from an array of vec4 (r, g, b, a)" );
 
 	QUERY->add_mfun(QUERY, cgl_geo_set_normals, "void", "normals");
 	QUERY->add_arg(QUERY, "float[]", "normals");
-    QUERY->doc_func(QUERY, "Set normal attribute data. Each vertex expects 3 floats for x,y,z");
+    QUERY->doc_func(QUERY, "Set normal attribute data from an array of floats; every 3 floats corresdpond to (x, y, z) values of a vertex normal");
+
+    QUERY->add_mfun(QUERY, cgl_geo_set_normals_vec3, "void", "normals");
+    QUERY->add_arg(QUERY, "vec3[]", "normals");
+    QUERY->doc_func(QUERY, "Set normal attribute data from an array of vec3 (x, y, z)");
 
 	QUERY->add_mfun(QUERY, cgl_geo_set_uvs, "void", "uvs");
 	QUERY->add_arg(QUERY, "float[]", "uvs");
-    QUERY->doc_func(QUERY, "Set UV attribute data. Each vertex expects 2 floats for u,v values (used for texture sampling)");
- 
+    QUERY->doc_func(QUERY, "Set UV attribute data from an array of floats; every pair of floats corresponds to (u, v) values (used for texture mapping)");
+
+    QUERY->add_mfun(QUERY, cgl_geo_set_uvs_vec2, "void", "uvs");
+    QUERY->add_arg(QUERY, "vec2[]", "uvs");
+    QUERY->doc_func(QUERY, "Set UV attribute data from an array of vec2 (u,v) or (s,t)");
+
 	QUERY->add_mfun(QUERY, cgl_geo_set_indices, "void", "indices");
 	QUERY->add_arg(QUERY, "int[]", "indices");
     QUERY->doc_func(QUERY, "sets vertex indices for indexed drawing. If not set, renderer will default to non-indexed drawing");
@@ -1299,6 +1319,50 @@ CK_DLL_MFUN(cgl_geo_set_colors)
 			geo, "color", Geometry::COLOR_ATTRIB_IDX, 4, data->m_vector, false));
 }
 
+CK_DLL_MFUN(cgl_geo_set_colors_vec3)
+{
+    CustomGeometry *geo = (CustomGeometry *)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+    auto* data = (Chuck_Array24*)GET_NEXT_OBJECT(ARGS);
+
+    // TODO extra round of copying here, can avoid if it matters
+    std::vector<t_CKFLOAT> vec4s;
+    vec4s.reserve(4 * data->m_vector.size());
+    for (auto& val : data->m_vector) {
+        vec4s.emplace_back(val.x);
+        vec4s.emplace_back(val.y);
+        vec4s.emplace_back(val.z);
+        vec4s.emplace_back(1.0);
+    }
+
+    CGL::PushCommand(
+        new UpdateGeometryAttributeCommand(
+            geo, "color", Geometry::COLOR_ATTRIB_IDX, 4, vec4s, false
+        )
+    );
+}
+
+CK_DLL_MFUN(cgl_geo_set_colors_vec4)
+{
+    CustomGeometry *geo = (CustomGeometry *)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+    auto* data = (Chuck_Array32*)GET_NEXT_OBJECT(ARGS);
+
+    // TODO extra round of copying here, can avoid if it matters
+    std::vector<t_CKFLOAT> vec4s;
+    vec4s.reserve(4 * data->m_vector.size());
+    for (auto& val : data->m_vector) {
+        vec4s.emplace_back(val.x);
+        vec4s.emplace_back(val.y);
+        vec4s.emplace_back(val.z);
+        vec4s.emplace_back(val.w);
+    }
+
+    CGL::PushCommand(
+        new UpdateGeometryAttributeCommand(
+            geo, "color", Geometry::COLOR_ATTRIB_IDX, 4, vec4s, false
+        )
+    );
+}
+
 // set normals
 CK_DLL_MFUN(cgl_geo_set_normals)
 {
@@ -1308,7 +1372,30 @@ CK_DLL_MFUN(cgl_geo_set_normals)
 
 	CGL::PushCommand(
 		new UpdateGeometryAttributeCommand(
-			geo, "normal", Geometry::NORMAL_ATTRIB_IDX, 3, data->m_vector, false));
+			geo, "normal", Geometry::NORMAL_ATTRIB_IDX, 3, data->m_vector, false)
+    );
+}
+
+// set normals
+CK_DLL_MFUN(cgl_geo_set_normals_vec3)
+{
+    CustomGeometry *geo = (CustomGeometry *)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+
+    auto * data = (Chuck_Array24*)GET_NEXT_OBJECT(ARGS);
+
+    // TODO extra round of copying here, can avoid if it matters
+    std::vector<t_CKFLOAT> vec3s;
+    vec3s.reserve(3 * data->m_vector.size());
+    for (auto& val : data->m_vector) {
+        vec3s.emplace_back(val.x);
+        vec3s.emplace_back(val.y);
+        vec3s.emplace_back(val.z);
+    }
+
+    CGL::PushCommand(
+        new UpdateGeometryAttributeCommand(
+            geo, "normal", Geometry::NORMAL_ATTRIB_IDX, 3, vec3s, false)
+    );
 }
 
 // set uvs
@@ -1321,6 +1408,26 @@ CK_DLL_MFUN(cgl_geo_set_uvs)
 	CGL::PushCommand(
 		new UpdateGeometryAttributeCommand(
 			geo, "uv", Geometry::UV0_ATTRIB_IDX, 2, data->m_vector, false));
+}
+
+// set uvs
+CK_DLL_MFUN(cgl_geo_set_uvs_vec2)
+{
+    CustomGeometry *geo = (CustomGeometry *)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+
+    auto* data = (Chuck_Array16*)GET_NEXT_OBJECT(ARGS);
+
+    // TODO extra round of copying here, can avoid if it matters
+    std::vector<t_CKFLOAT> vec2s;
+    vec2s.reserve(2 * data->m_vector.size());
+    for( auto & val : data->m_vector) {
+        vec2s.emplace_back(val.x);
+        vec2s.emplace_back(val.y);
+    }
+
+    CGL::PushCommand(
+        new UpdateGeometryAttributeCommand(
+            geo, "uv", Geometry::UV0_ATTRIB_IDX, 2, vec2s, false));
 }
 
 // set indices
