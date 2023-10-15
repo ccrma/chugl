@@ -27,6 +27,13 @@ public:
 		Disconnect();  // disconnect already handles refcounting
 	}
 
+	// clone
+	virtual SceneGraphNode* Clone() override {
+		SceneGraphObject* sgo = new SceneGraphObject();
+		sgo->SetID(this->GetID());
+		return sgo;
+	}
+
 	
 	// Useful Constants (move to separate constants file?)
 	static const glm::vec3 UP, FORWARD, RIGHT, LEFT, DOWN, BACKWARD;

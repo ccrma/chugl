@@ -1068,14 +1068,12 @@ CK_DLL_CTOR(cgl_geo_box_ctor)
 {
 	// std::cerr << "cgl_box_ctor\n";
 	BoxGeometry *boxGeometry = new BoxGeometry;
-	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT)boxGeometry;
-	// std::cerr << "finished initializing boxgeometry\n";
 
-	// set chuck object pointer
-	boxGeometry->m_ChuckObject = SELF;
+	// OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT)boxGeometry;
+	// boxGeometry->m_ChuckObject = SELF;
+	// CGL::PushCommand(new CreateGeometryCommand(boxGeometry));
 
-	// Creation command
-	CGL::PushCommand(new CreateGeometryCommand(boxGeometry));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(boxGeometry, &CGL::mainScene, SELF, geometry_data_offset));
 }
 
 CK_DLL_MFUN(cgl_geo_box_set)
@@ -1097,13 +1095,12 @@ CK_DLL_CTOR(cgl_geo_sphere_ctor)
 {
 	// std::cerr << "cgl_sphere_ctor\n";
 	SphereGeometry *sphereGeometry = new SphereGeometry;
-	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT)sphereGeometry;
-	// std::cerr << "finished initializing spheregeometry\n";
 
-	sphereGeometry->m_ChuckObject = SELF;
+	// OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT)sphereGeometry;
+	// sphereGeometry->m_ChuckObject = SELF;
+	// CGL::PushCommand(new CreateGeometryCommand(sphereGeometry));
 
-	// Creation command
-	CGL::PushCommand(new CreateGeometryCommand(sphereGeometry));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(sphereGeometry, &CGL::mainScene, SELF, geometry_data_offset));
 }
 
 CK_DLL_MFUN(cgl_geo_sphere_set)
@@ -1125,13 +1122,12 @@ CK_DLL_MFUN(cgl_geo_sphere_set)
 CK_DLL_CTOR(cgl_geo_circle_ctor)
 {
 	CircleGeometry *circleGeometry = new CircleGeometry;
-	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT)circleGeometry;
-	// std::cerr << "finished initializing circlegeometry\n";
 
-	circleGeometry->m_ChuckObject = SELF;
+	// OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT)circleGeometry;
+	// circleGeometry->m_ChuckObject = SELF;
+	// CGL::PushCommand(new CreateGeometryCommand(circleGeometry));
 
-	// Creation command
-	CGL::PushCommand(new CreateGeometryCommand(circleGeometry));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(circleGeometry, &CGL::mainScene, SELF, geometry_data_offset));
 }
 
 CK_DLL_MFUN(cgl_geo_circle_set)
@@ -1150,12 +1146,12 @@ CK_DLL_MFUN(cgl_geo_circle_set)
 CK_DLL_CTOR(cgl_geo_plane_ctor)
 {
 	PlaneGeometry *planeGeometry = new PlaneGeometry;
-	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT)planeGeometry;
 
-	planeGeometry->m_ChuckObject = SELF;
+	// OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT)planeGeometry;
+	// planeGeometry->m_ChuckObject = SELF;
+	// CGL::PushCommand(new CreateGeometryCommand(planeGeometry));
 
-	// Creation command
-	CGL::PushCommand(new CreateGeometryCommand(planeGeometry));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(planeGeometry, &CGL::mainScene, SELF, geometry_data_offset));
 }
 
 CK_DLL_MFUN(cgl_geo_plane_set)
@@ -1174,12 +1170,12 @@ CK_DLL_MFUN(cgl_geo_plane_set)
 CK_DLL_CTOR(cgl_geo_torus_ctor)
 {
 	TorusGeometry *torusGeometry = new TorusGeometry;
-	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT)torusGeometry;
 
-	torusGeometry->m_ChuckObject = SELF;
+	// OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT)torusGeometry;
+	// torusGeometry->m_ChuckObject = SELF;
+	// CGL::PushCommand(new CreateGeometryCommand(torusGeometry));
 
-	// Creation command
-	CGL::PushCommand(new CreateGeometryCommand(torusGeometry));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(torusGeometry, &CGL::mainScene, SELF, geometry_data_offset));
 }
 
 CK_DLL_MFUN(cgl_geo_torus_set)
@@ -1199,12 +1195,12 @@ CK_DLL_MFUN(cgl_geo_torus_set)
 CK_DLL_CTOR(cgl_geo_lathe_ctor)
 {
 	LatheGeometry *lathe = new LatheGeometry;
-	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT)lathe;
 
-	lathe->m_ChuckObject = SELF;
+	// OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT)lathe;
+	// lathe->m_ChuckObject = SELF;
+	// CGL::PushCommand(new CreateGeometryCommand(lathe));
 
-	// Creation command
-	CGL::PushCommand(new CreateGeometryCommand(lathe));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(lathe, &CGL::mainScene, SELF, geometry_data_offset));
 }
 
 CK_DLL_MFUN(cgl_geo_lathe_set)
@@ -1236,12 +1232,12 @@ CK_DLL_MFUN(cgl_geo_lathe_set_no_points)
 CK_DLL_CTOR(cgl_geo_custom_ctor)
 {
 	CustomGeometry *customGeometry = new CustomGeometry;
-	OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT)customGeometry;
 
-	customGeometry->m_ChuckObject = SELF;
+	// OBJ_MEMBER_INT(SELF, geometry_data_offset) = (t_CKINT)customGeometry;
+	// customGeometry->m_ChuckObject = SELF;
+	// CGL::PushCommand(new CreateGeometryCommand(customGeometry));
 
-	// Creation command
-	CGL::PushCommand(new CreateGeometryCommand(customGeometry));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(customGeometry, &CGL::mainScene, SELF, geometry_data_offset));
 }
 
 CK_DLL_MFUN(cgl_geo_set_attribute)
@@ -1554,12 +1550,12 @@ CK_DLL_MFUN(cgl_texture_get_filter_mag)
 CK_DLL_CTOR(cgl_texture_file_ctor)
 {
 	CGL_Texture *texture = new CGL_Texture(CGL_TextureType::File2D);
-	OBJ_MEMBER_INT(SELF, texture_data_offset) = (t_CKINT)texture;
 
-	texture->m_ChuckObject = SELF;
+	// OBJ_MEMBER_INT(SELF, texture_data_offset) = (t_CKINT)texture;
+	// texture->m_ChuckObject = SELF;
+	// CGL::PushCommand(new CreateTextureCommand(texture, &CGL::mainScene));
 
-	// Creation command
-	CGL::PushCommand(new CreateTextureCommand(texture, &CGL::mainScene));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(texture, &CGL::mainScene, SELF, texture_data_offset));
 }
 
 CK_DLL_MFUN(cgl_texture_file_set_filepath)
@@ -1583,12 +1579,12 @@ CK_DLL_MFUN(cgl_texture_file_get_filepath)
 CK_DLL_CTOR(cgl_texture_rawdata_ctor)
 {
 	CGL_Texture *texture = new CGL_Texture(CGL_TextureType::RawData);
-	OBJ_MEMBER_INT(SELF, texture_data_offset) = (t_CKINT)texture;
 
-	texture->m_ChuckObject = SELF;
+	// OBJ_MEMBER_INT(SELF, texture_data_offset) = (t_CKINT)texture;
+	// texture->m_ChuckObject = SELF;
+	// CGL::PushCommand(new CreateTextureCommand(texture, &CGL::mainScene));
 
-	// Creation command
-	CGL::PushCommand(new CreateTextureCommand(texture, &CGL::mainScene));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(texture, &CGL::mainScene, SELF, texture_data_offset));
 }
 
 CK_DLL_MFUN(cgl_texture_rawdata_set_data)
@@ -2029,12 +2025,12 @@ CK_DLL_MFUN(cgl_mat_set_uniform_texID)
 CK_DLL_CTOR(cgl_mat_norm_ctor)
 {
 	NormalMaterial *normMat = new NormalMaterial;
-	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT)normMat;
 
-	normMat->m_ChuckObject = SELF;
+	// OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT)normMat;
+	// normMat->m_ChuckObject = SELF;
+	// CGL::PushCommand(new CreateMaterialCommand(normMat));
 
-	// Creation command
-	CGL::PushCommand(new CreateMaterialCommand(normMat));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(normMat, &CGL::mainScene, SELF, cglmat_data_offset));
 }
 
 CK_DLL_MFUN(cgl_set_use_local_normals)
@@ -2060,12 +2056,12 @@ CK_DLL_MFUN(cgl_set_use_world_normals)
 CK_DLL_CTOR(cgl_mat_flat_ctor)
 {
 	FlatMaterial *flatMat = new FlatMaterial;
-	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT)flatMat;
 
-	flatMat->m_ChuckObject = SELF;
+	// OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT)flatMat;
+	// flatMat->m_ChuckObject = SELF;
+	// CGL::PushCommand(new CreateMaterialCommand(flatMat));
 
-	// Creation command
-	CGL::PushCommand(new CreateMaterialCommand(flatMat));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(flatMat, &CGL::mainScene, SELF, cglmat_data_offset));
 }
 
 
@@ -2073,12 +2069,12 @@ CK_DLL_CTOR(cgl_mat_flat_ctor)
 CK_DLL_CTOR(cgl_mat_phong_ctor)
 {
 	PhongMaterial *phongMat = new PhongMaterial;
-	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT)phongMat;
 
-	phongMat->m_ChuckObject = SELF;
+	// OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT)phongMat;
+	// phongMat->m_ChuckObject = SELF;
+	// CGL::PushCommand(new CreateMaterialCommand(phongMat));
 
-	// Creation command
-	CGL::PushCommand(new CreateMaterialCommand(phongMat));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(phongMat, &CGL::mainScene, SELF, cglmat_data_offset));
 }
 
 CK_DLL_MFUN(cgl_mat_phong_set_diffuse_map)
@@ -2133,12 +2129,12 @@ CK_DLL_MFUN(cgl_mat_phong_set_log_shininess)
 CK_DLL_CTOR(cgl_mat_custom_shader_ctor)
 {
 	ShaderMaterial *shaderMat = new ShaderMaterial("", "");
-	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT)shaderMat;
 
-	shaderMat->m_ChuckObject = SELF;
+	// OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT)shaderMat;
+	// shaderMat->m_ChuckObject = SELF;
+	// CGL::PushCommand(new CreateMaterialCommand(shaderMat));
 
-	// Creation command
-	CGL::PushCommand(new CreateMaterialCommand(shaderMat));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(shaderMat, &CGL::mainScene, SELF, cglmat_data_offset));
 }
 
 CK_DLL_MFUN(cgl_mat_custom_shader_set_shaders)
@@ -2194,12 +2190,12 @@ CK_DLL_MFUN(cgl_mat_custom_shader_set_frag_shader)
 CK_DLL_CTOR(cgl_mat_points_ctor)
 {
 	PointsMaterial *pointsMat = new PointsMaterial;
-	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT)pointsMat;
 
-	pointsMat->m_ChuckObject = SELF;
+	// OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT)pointsMat;
+	// pointsMat->m_ChuckObject = SELF;
+	// CGL::PushCommand(new CreateMaterialCommand(pointsMat));
 
-	// Creation command
-	CGL::PushCommand(new CreateMaterialCommand(pointsMat));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(pointsMat, &CGL::mainScene, SELF, cglmat_data_offset));
 }
 
 CK_DLL_MFUN(cgl_mat_points_set_size_attenuation)
@@ -2235,12 +2231,12 @@ CK_DLL_MFUN(cgl_mat_points_set_sprite)
 CK_DLL_CTOR(cgl_mat_mango_ctor)
 {
 	MangoMaterial *mangoMat = new MangoMaterial;
-	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT)mangoMat;
 
-	mangoMat->m_ChuckObject = SELF;
+	// OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT)mangoMat;
+	// mangoMat->m_ChuckObject = SELF;
+	// CGL::PushCommand(new CreateMaterialCommand(mangoMat));
 
-	// Creation command
-	CGL::PushCommand(new CreateMaterialCommand(mangoMat));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(mangoMat, &CGL::mainScene, SELF, cglmat_data_offset));
 }
 
 // line mat fns ---------------------------------
@@ -2248,11 +2244,12 @@ CK_DLL_CTOR(cgl_mat_mango_ctor)
 CK_DLL_CTOR(cgl_mat_line_ctor)
 {
 	LineMaterial *lineMat = new LineMaterial;
-	OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT)lineMat;
-	
-	lineMat->m_ChuckObject = SELF;
 
-	CGL::PushCommand(new CreateMaterialCommand(lineMat));
+	// OBJ_MEMBER_INT(SELF, cglmat_data_offset) = (t_CKINT)lineMat;
+	// lineMat->m_ChuckObject = SELF;
+	// CGL::PushCommand(new CreateMaterialCommand(lineMat));
+
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(lineMat, &CGL::mainScene, SELF, cglmat_data_offset));
 }
 
 
@@ -2410,11 +2407,12 @@ CK_DLL_CTOR(cgl_obj_ctor)
 	)
 	{
 		SceneGraphObject *cglObj = new SceneGraphObject;
-		OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT)cglObj;
 
-		cglObj->m_ChuckObject = SELF;
+		// OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT)cglObj;
+		// cglObj->m_ChuckObject = SELF;
+		// CGL::PushCommand(new CreateSceneGraphObjectCommand(cglObj));
 
-		CGL::PushCommand(new CreateSceneGraphObjectCommand(cglObj));
+		CGL::PushCommand(new CreateSceneGraphNodeCommand(cglObj, &CGL::mainScene, SELF, ggen_data_offset));
 	}
 }
 
@@ -3538,9 +3536,11 @@ CK_DLL_MFUN(cgl_light_get_specular)
 CK_DLL_CTOR(cgl_point_light_ctor)
 {
 	PointLight *light = new PointLight;
-	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT)light;
 
-	CGL::PushCommand(new CreateLightCommand(light, &CGL::mainScene, SELF));
+	// OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT)light;
+	// CGL::PushCommand(new CreateLightCommand(light, &CGL::mainScene, SELF));
+
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(light, &CGL::mainScene, SELF, ggen_data_offset));
 }
 
 CK_DLL_MFUN(cgl_points_light_set_falloff)
@@ -3557,9 +3557,11 @@ CK_DLL_MFUN(cgl_points_light_set_falloff)
 CK_DLL_CTOR(cgl_dir_light_ctor)
 {
 	DirLight *light = new DirLight;
-	OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT)light;
 
-	CGL::PushCommand(new CreateLightCommand(light, &CGL::mainScene, SELF));
+	// OBJ_MEMBER_INT(SELF, ggen_data_offset) = (t_CKINT)light;
+	// CGL::PushCommand(new CreateLightCommand(light, &CGL::mainScene, SELF));
+
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(light, &CGL::mainScene, SELF, ggen_data_offset));
 }
 
 //-----------------------------------------------------------------------------
@@ -3783,14 +3785,12 @@ Material* CGL::CreateChuckObjFromMat(
 {
 	// create chuck obj
 	Chuck_DL_Api::Type type = API->type->lookup(VM, mat->myCkName());
-	Chuck_DL_Api::Object obj = API->object->create(SHRED, type, refcount);
-	mat->m_ChuckObject = obj;
-
-	// set address in chuck obj
-	OBJ_MEMBER_INT(obj, cglmat_data_offset) = (t_CKINT)mat;
+	Chuck_DL_Api::Object ckobj = API->object->create(SHRED, type, refcount);
 
 	// tell renderer to create a copy
-	CGL::PushCommand(new CreateMaterialCommand(mat));
+	// CGL::PushCommand(new CreateMaterialCommand(mat));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(mat, &CGL::mainScene, ckobj, cglmat_data_offset));
+
 	return mat;
 }
 
@@ -3799,14 +3799,12 @@ Geometry* CGL::CreateChuckObjFromGeo(CK_DL_API API, Chuck_VM *VM, Geometry *geo,
 {
 	// create chuck obj
 	Chuck_DL_Api::Type type = API->type->lookup(VM, geo->myCkName());
-	Chuck_DL_Api::Object obj = API->object->create(SHRED, type, refcount);
-	geo->m_ChuckObject = obj;
-
-	// set address in chuck obj
-	OBJ_MEMBER_INT(obj, geometry_data_offset) = (t_CKINT)geo;
+	Chuck_DL_Api::Object ckobj = API->object->create(SHRED, type, refcount);
 
 	// tell renderer to create a copy
-	CGL::PushCommand(new CreateGeometryCommand(geo));
+	// CGL::PushCommand(new CreateGeometryCommand(geo));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(geo, &CGL::mainScene, ckobj, geometry_data_offset));
+
 	return geo;
 }
 
@@ -3934,7 +3932,8 @@ Chuck_DL_Api::Object CGL::GetMainScene(Chuck_VM_Shred *shred, CK_DL_API API, Chu
 		Chuck_DL_Api::Object camObj = API->object->create(shred, camCKType, true);
 		// Chuck_DL_Api::Object camObj = API->object->create_without_shred(VM, camCKType, true);
 		// no creation command b/c window already has static copy
-		CGL::PushCommand(new CreateCameraCommand(&mainCamera, &mainScene, camObj, ggen_data_offset));
+		CGL::PushCommand(new CreateSceneGraphNodeCommand(&mainCamera, &mainScene, camObj, ggen_data_offset));
+		// CGL::PushCommand(new CreateCameraCommand(&mainCamera, &mainScene, camObj, ggen_data_offset));
 		// add to scene command
 		CGL::PushCommand(new RelationshipCommand(&CGL::mainScene, &mainCamera, RelationshipCommand::Relation::AddChild));
 
@@ -3944,9 +3943,10 @@ Chuck_DL_Api::Object CGL::GetMainScene(Chuck_VM_Shred *shred, CK_DL_API API, Chu
 		Chuck_DL_Api::Type lightType = API->type->lookup(VM, defaultLight->myCkName());
 		Chuck_Object* lightObj = API->object->create(shred, lightType, true);  // refcount for scene
 		// Chuck_Object* lightObj = API->object->create_without_shred(VM, lightType, true);  // refcount for scene
-		OBJ_MEMBER_INT(lightObj, ggen_data_offset) = (t_CKINT)defaultLight;  // chuck obj points to sgo
+		// OBJ_MEMBER_INT(lightObj, ggen_data_offset) = (t_CKINT)defaultLight;  // chuck obj points to sgo
 		// creation command
-		CGL::PushCommand(new CreateLightCommand(defaultLight, &CGL::mainScene, lightObj));
+		// CGL::PushCommand(new CreateLightCommand(defaultLight, &CGL::mainScene, lightObj));
+		CGL::PushCommand(new CreateSceneGraphNodeCommand(defaultLight, &CGL::mainScene, lightObj, ggen_data_offset));
 		// add to scene command
 		CGL::PushCommand(new RelationshipCommand(&CGL::mainScene, defaultLight, RelationshipCommand::Relation::AddChild));
 	}

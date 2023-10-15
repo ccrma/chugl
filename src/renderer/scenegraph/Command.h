@@ -77,103 +77,103 @@ public:
 // creation commands that the renderer can listen to in order to
 // setup GPU-side data 
 
-class CreateMaterialCommand : public SceneGraphCommand
+class CreateSceneGraphNodeCommand : public SceneGraphCommand
 {
 public:
-    CreateMaterialCommand(Material* mat) : newMat(mat->Clone()) {
-        assert(mat->GetMaterialType() != MaterialType::Base);  // must be a concrete material
-    };
-    virtual void execute(Scene* scene) override {
-        // std::cout << "copied material with id: " + std::to_string(newMat->GetID()) 
-        //           << std::endl;
-
-        scene->RegisterNode(newMat);
-    }
+    CreateSceneGraphNodeCommand(
+        SceneGraphNode* node,
+        Scene* audioThreadScene,
+        Chuck_Object* ckobj,
+        t_CKUINT data_offset
+    );
+    virtual void execute(Scene* scene) override;
 private:
-    Material* newMat;
+    SceneGraphNode* m_Clone;
 };
+
+// class CreateMaterialCommand : public SceneGraphCommand
+// {
+// public:
+//     CreateMaterialCommand(Material* mat) : newMat(mat->Clone()) {
+//         assert(mat->GetMaterialType() != MaterialType::Base);  // must be a concrete material
+//     };
+//     virtual void execute(Scene* scene) override {
+//         // std::cout << "copied material with id: " + std::to_string(newMat->GetID()) 
+//         //           << std::endl;
+
+//         scene->RegisterNode(newMat);
+//     }
+// private:
+//     Material* newMat;
+// };
 
 // create geometry
-class CreateGeometryCommand : public SceneGraphCommand
-{
-public:
-    CreateGeometryCommand(Geometry* g) : geo(g->Clone()) {};
-    virtual void execute(Scene* scene) override {
-        // std::cout << "copied geometry with id: " + std::to_string(geo->GetID())
-        //     << std::endl;
-        scene->RegisterNode(geo);
-    }
+// class CreateGeometryCommand : public SceneGraphCommand
+// {
+// public:
+//     CreateGeometryCommand(Geometry* g) : geo(g->Clone()) {};
+//     virtual void execute(Scene* scene) override {
+//         // std::cout << "copied geometry with id: " + std::to_string(geo->GetID())
+//         //     << std::endl;
+//         scene->RegisterNode(geo);
+//     }
 
-private:
-    Geometry* geo;
-};
+// private:
+//     Geometry* geo;
+// };
 
-class CreateTextureCommand : public SceneGraphCommand
-{
-public:
-    CreateTextureCommand(CGL_Texture* tex, Scene* audioThreadScene) : texture(tex->Clone()) {
-        audioThreadScene->RegisterNode(tex);  // register to audio thread scene
-        // std::cout << "created texture with id: " + std::to_string(tex->GetID()) << std::endl;
-    }
+// class CreateTextureCommand : public SceneGraphCommand
+// {
+// public:
+//     CreateTextureCommand(CGL_Texture* tex, Scene* audioThreadScene) : texture(tex->Clone()) {
+//         audioThreadScene->RegisterNode(tex);  // register to audio thread scene
+//         // std::cout << "created texture with id: " + std::to_string(tex->GetID()) << std::endl;
+//     }
 
-    virtual void execute(Scene* scene) override {
-        scene->RegisterNode(texture);
-        // TODO register to texture resource list
-
-        // create the texture on the gpu
-        /*
-        TODO: 
-        - should be registering texture in rendererState,
-        because a texture could belong to multiple scenes
-
-        - BUT, command right now is decoupled from the renderer, if we pass
-        RendererState as a param to Creation Commands, that couples
-            - is that ok?
-            - way to remain decoupled: allow passing in a callback function to the Command class somehow...
-        
-        Also need to the memory for passing data buffers from client code
-        */
-    }
-private:
-    CGL_Texture* texture;
-};
+//     virtual void execute(Scene* scene) override {
+//         scene->RegisterNode(texture);
+//         // TODO register to texture resource list
+//     }
+// private:
+//     CGL_Texture* texture;
+// };
 
 
-class CreateLightCommand : public SceneGraphCommand
-{
-public:
-    CreateLightCommand(
-        Light* l, Scene* audioThreadScene, Chuck_Object* ckobj
-        // TODO add data offset here too?
-    ) : light(l->Clone()) {
-        audioThreadScene->RegisterLight(l);
-        l->m_ChuckObject = ckobj;
+// class CreateLightCommand : public SceneGraphCommand
+// {
+// public:
+//     CreateLightCommand(
+//         Light* l, Scene* audioThreadScene, Chuck_Object* ckobj
+//         // TODO add data offset here too?
+//     ) : light(l->Clone()) {
+//         audioThreadScene->RegisterLight(l);
+//         l->m_ChuckObject = ckobj;
 
-        light->SetID(l->GetID());
-    };
-    virtual void execute(Scene* renderThreadScene) override {
-        // std::cout << "copied light with id: " + std::to_string(light->GetID())
-        //     << std::endl;
+//         light->SetID(l->GetID());
+//     };
+//     virtual void execute(Scene* renderThreadScene) override {
+//         // std::cout << "copied light with id: " + std::to_string(light->GetID())
+//         //     << std::endl;
 
-        renderThreadScene->RegisterLight(light);
-    }
-private:
-    Light* light;  // DON"T DELETE passed to renderer scenegraph
-};
+//         renderThreadScene->RegisterLight(light);
+//     }
+// private:
+//     Light* light;  // DON"T DELETE passed to renderer scenegraph
+// };
 
 // create base GGen (semantically same as empty group)
-class CreateSceneGraphObjectCommand : public SceneGraphCommand
-{
-public:
-    CreateSceneGraphObjectCommand(SceneGraphObject* obj) : m_ID(obj->GetID()) {}
-    virtual void execute(Scene* scene) override {
-        SceneGraphObject* obj = new SceneGraphObject;
-        obj->SetID(m_ID);  // copy ID
-        scene->RegisterNode(obj);
-    }
-private:
-    size_t m_ID;
-};
+// class CreateSceneGraphObjectCommand : public SceneGraphCommand
+// {
+// public:
+//     CreateSceneGraphObjectCommand(SceneGraphObject* obj) : m_ID(obj->GetID()) {}
+//     virtual void execute(Scene* scene) override {
+//         SceneGraphObject* obj = new SceneGraphObject;
+//         obj->SetID(m_ID);  // copy ID
+//         scene->RegisterNode(obj);
+//     }
+// private:
+//     size_t m_ID;
+// };
 
 // create Mesh
 class CreateMeshCommand : public SceneGraphCommand
@@ -201,21 +201,21 @@ private:
 };
 
 // create Camera
-class CreateCameraCommand : public SceneGraphCommand
-{
-public:
-    CreateCameraCommand(
-        Camera* camera, Scene* audioThreadScene, Chuck_Object* ckobj,
-        t_CKUINT data_offset
-    );
+// class CreateCameraCommand : public SceneGraphCommand
+// {
+// public:
+//     CreateCameraCommand(
+//         Camera* camera, Scene* audioThreadScene, Chuck_Object* ckobj,
+//         t_CKUINT data_offset
+//     );
 
-    virtual void execute(Scene* renderThreadScene) override {
-        // dud for now until muliple cameras are supported
-        // renderThreadScene->RegisterCamera(m_Camera);
-    }
-private:
-    Camera* m_Camera;
-};
+//     virtual void execute(Scene* renderThreadScene) override {
+//         // dud for now until muliple cameras are supported
+//         // renderThreadScene->RegisterCamera(m_Camera);
+//     }
+// private:
+//     Camera* m_Camera;
+// };
 
 // Create Scene (not done, need to impl scene.Clone())
 // class CreateSceneCommand : public SceneGraphCommand

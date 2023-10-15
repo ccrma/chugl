@@ -27,7 +27,9 @@ public:
 	size_t m_ID;
 
     // methods
-	SceneGraphNode() : m_ID(SceneGraphNode::idCounter++), m_ChuckObject(nullptr) {
+	SceneGraphNode() 
+	: m_ID(SceneGraphNode::idCounter++), m_ChuckObject(nullptr), m_IsAudioThreadObject(true)
+	{
 		// std::cout << "created node with id: " + std::to_string(m_ID) << std::endl;
 	}
 
@@ -35,9 +37,13 @@ public:
 		m_ChuckObject = nullptr;  // always null out chuck object upon destruction
 	}
 
+	// ID fns
 	inline size_t GetID() { return m_ID; }
 	inline void SetID(size_t id) { m_ID = id; }
 	void NewID() { m_ID = SceneGraphNode::idCounter++; }
+
+	// Creation fns
+	virtual SceneGraphNode* Clone() = 0;
 
     // static
 	static size_t idCounter;
@@ -64,4 +70,12 @@ public:
 protected:
     // reference to chugins runtime API
     static const Chuck_DL_Api* s_CKAPI;
+
+
+private:  // sets which thread the object is owned by
+	// currently used to track which SceneGraphNodes need to do chuck refcounting
+	bool m_IsAudioThreadObject;  // if true, owned by chuck audio thread, else owned by main thread
+public:
+	inline bool IsAudioThreadObject() { return m_IsAudioThreadObject; }
+	inline void SetIsAudioThreadObject(bool isAudioThreadObject) { m_IsAudioThreadObject = isAudioThreadObject; }
 };

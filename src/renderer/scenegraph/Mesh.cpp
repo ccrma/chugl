@@ -21,8 +21,6 @@ Mesh::~Mesh()
 
 void Mesh::SetGeometry(Geometry *geo)
 {
-    assert(geo);
-
     // mesh has a pointer to geo, so bump geo refcount
     // CKAPI()->object->add_ref( geo->m_ChuckObject );
 
@@ -38,8 +36,6 @@ void Mesh::SetGeometry(Geometry *geo)
 
 void Mesh::SetMaterial(Material *mat)
 {
-    assert(mat);
-
     // mesh has a pointer to material, so bump material refcount
     // CKAPI()->object->add_ref( mat->m_ChuckObject );
 

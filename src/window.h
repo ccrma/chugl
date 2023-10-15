@@ -3,7 +3,6 @@
 #include <unordered_map>
 
 class Scene;
-class Camera;
 class Renderer;
 
 class Window
@@ -38,6 +37,5 @@ public: // statics
 
 public:  // default GGens
     static Renderer renderer;
-	static Camera camera;
     static Scene scene;
 };

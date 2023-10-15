@@ -28,7 +28,6 @@
 						    * Static init *	
 ===============================================================================*/
 Renderer Window::renderer;
-Camera Window::camera;
 Scene Window::scene;
 
 
@@ -52,7 +51,9 @@ static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 
     // auto-update camera aspect
     if (height > 0) {  // don't change aspect if screen minimizes, otherwises causes div by 0 crash
-        Window::camera.params.aspect = (float)width / (float)height;
+        if (Window::scene.GetMainCamera()) {
+            Window::scene.GetMainCamera()->params.aspect = (float)width / (float)height;
+        }
     }
 
     CglEvent::Broadcast(CglEventType::CGL_WINDOW_RESIZE);  // doesn't matter if we brodcast this in frambuffer callback or window size callback
@@ -253,8 +254,6 @@ void Window::DisplayLoop()
     // TODO should just clone these
     scene.SetID(CGL::mainScene.GetID());  // copy scene ID
     scene.RegisterNode(&scene);  // register itself
-    camera.SetID(CGL::mainCamera.GetID());  // copy maincam ID
-    scene.RegisterCamera(&camera);  // register camera
 
     // size of moving average circular buffer
     const t_CKUINT N = 30;
@@ -343,7 +342,8 @@ void Window::DisplayLoop()
 
         // now renderer can work on drawing the copied scenegraph
         renderer.Clear(scene.GetBackgroundColor());
-        renderer.RenderScene(&scene, &camera);
+        // renderer.RenderScene(&scene, &camera);
+        renderer.RenderScene(&scene, scene.GetMainCamera());
 
         // Handle Events, Draw framebuffer
         glfwPollEvents();

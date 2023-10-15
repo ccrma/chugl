@@ -18,35 +18,62 @@ bool Scene::windowShouldClose = false;
 const unsigned int Scene::FOG_EXP = FogType::Exponential;
 const unsigned int Scene::FOG_EXP2 = FogType::ExponentialSquared;
 
-Scene::Scene() : m_BackgroundColor(glm::vec3(0.9f))
-{
-    // actually, going to create default light in ulib chugl for now
-    // so changes can be propagated to renderer thread
-    // Give every scene default dirlight
-    // m_DefaultLight = new DirLight;
-    // m_DefaultLight->SetRotation(glm::vec3(-45.0f, 0.0f, 0.0f));
-    // AddChild(m_DefaultLight);
-    // RegisterLight(m_DefaultLight);
-    // RegisterNode(m_DefaultLight);
 
-    // remember to create chuck object for this light in ulib_cgl
+void Scene::RegisterNode(SceneGraphNode *node)
+{
+    m_SceneGraphMap[node->GetID()] = node;
+
+    // register light
+    if (node->IsLight()) {
+        RegisterLight((Light*)node);
+        return;
+    }
+
+    // register camera
+    if (node->IsCamera()) {
+        RegisterCamera((Camera*)node);
+        return;
+    }
 }
 
-Scene::~Scene()
+// remove node from all resource maps
+void Scene::UnregisterNode(size_t id)
 {
-    // not deleting m_DefaultLight here in case there are other chuck-side references
+    if (!CheckNode(id)) return;
+
+    SceneGraphNode* node = GetNode(id);
+
+    // remove from map
+    m_SceneGraphMap.erase(id);
+
+    if (node->IsLight()) {
+        for (auto it = m_Lights.begin(); it != m_Lights.end(); ++it) {
+            if (*it == id) {
+                m_Lights.erase(it);
+                return;
+            }
+        }
+    }
+
+    // remove from cameras list
+    if (node->IsCamera()) {
+        for (auto it = m_Cameras.begin(); it != m_Cameras.end(); ++it) {
+            if (*it == id) {
+                m_Cameras.erase(it);
+                return;
+            }
+        }
+    }
 }
 
 void Scene::RegisterLight(Light* light)
 {
     assert(light);
-    RegisterNode(light);
     m_Lights.push_back(light->GetID());
 }
 
 void Scene::RegisterCamera(Camera *camera)
 {
     assert(camera);
-    RegisterNode(camera);
     m_Cameras.push_back(camera->GetID());
 }

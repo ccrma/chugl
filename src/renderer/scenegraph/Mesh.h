@@ -19,6 +19,12 @@ public:
 	}
 
 	virtual ~Mesh();
+
+	virtual SceneGraphNode* Clone() override { 
+		assert(false);
+		return nullptr;
+		// TODO implement this after refactoring material and geo to be IDs
+	}
 	
 	virtual bool IsMesh() override { return true; }
 

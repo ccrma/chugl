@@ -25,71 +25,33 @@ struct FogUniforms {
 class Scene : public SceneGraphObject
 {
 public:
-	Scene();
-	virtual ~Scene();
+	Scene() : m_BackgroundColor(glm::vec3(0.9f)) {}
+	virtual ~Scene() {}
 	virtual bool IsScene() override { return true; }
 
-	Scene * Clone() {
+	virtual SceneGraphNode* Clone() override {
+		assert(false);
+		return nullptr;
 
-		Scene * scene = new Scene();
+		// Scene * scene = new Scene();
 
-		// copy ID
-		scene->SetID(this->GetID());
+		// // copy ID
+		// scene->SetID(this->GetID());
 		
-		// TODO: clone all nodes
-		// for (auto it = m_SceneGraphMap.begin(); it != m_SceneGraphMap.end(); ++it) {
-		// 	scene->RegisterNode(it->second->Clone());
-		// }
+		// // TODO: clone all nodes
+		// // for (auto it = m_SceneGraphMap.begin(); it != m_SceneGraphMap.end(); ++it) {
+		// // 	scene->RegisterNode(it->second->Clone());
+		// // }
 
-		return scene;
+		// return scene;
 	}
 
 	// register new SceneGraphNode
-	inline void RegisterNode(SceneGraphNode* node) {
-		m_SceneGraphMap[node->GetID()] = node;
-	}
-
+	void RegisterNode(SceneGraphNode* node);
 	// remove any scene pointers to this node
-	void UnregisterNode(size_t id) {
-		if (!CheckNode(id)) return;
-
-		SceneGraphNode* node = GetNode(id);
-
-		// remove from map
-		m_SceneGraphMap.erase(id);
-
-		if (node->IsLight()) {
-			for (auto it = m_Lights.begin(); it != m_Lights.end(); ++it) {
-				if (*it == id) {
-					m_Lights.erase(it);
-					return;
-				}
-			}
-		}
-
-		// remove from cameras list
-		if (node->IsCamera()) {
-			for (auto it = m_Cameras.begin(); it != m_Cameras.end(); ++it) {
-				if (*it == id) {
-					m_Cameras.erase(it);
-					return;
-				}
-			}
-		}
-	}
-
-	void RegisterLight(Light* light);
-	void RegisterCamera(Camera* camera);
-
-	bool CheckNode(size_t id) {
-		return m_SceneGraphMap.find(id) != m_SceneGraphMap.end();
-	}
-
-	SceneGraphNode * GetNode(size_t id) { 
-		if (CheckNode(id))
-			return m_SceneGraphMap[id]; 
-		return nullptr;
-	}
+	void UnregisterNode(size_t id);
+	bool CheckNode(size_t id) { return m_SceneGraphMap.find(id) != m_SceneGraphMap.end(); }
+	SceneGraphNode * GetNode(size_t id) { return CheckNode(id) ? m_SceneGraphMap[id] : nullptr; }
 
 
 	
@@ -97,6 +59,8 @@ private:  // attributes
 	// this lives in scene obj for now because we want to decouple from the renderer
 	// to support multiple scenes in the future, can make this map static
 	std::unordered_map<size_t, SceneGraphNode*> m_SceneGraphMap;  // map of all scene graph objects
+	void RegisterLight(Light* light);
+	void RegisterCamera(Camera* camera);
 
 public: // lightin
 	// problem: don't render lights if they are deparented from scene
