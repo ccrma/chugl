@@ -251,6 +251,7 @@ CK_DLL_MFUN(cgl_geo_set_colors_vec4);
 CK_DLL_MFUN(cgl_geo_set_normals);
 CK_DLL_MFUN(cgl_geo_set_normals_vec3);
 CK_DLL_MFUN(cgl_geo_set_uvs);
+CK_DLL_MFUN(cgl_geo_set_uvs_vec2);
 CK_DLL_MFUN(cgl_geo_set_indices);
 
 //-----------------------------------------------------------------------------
@@ -928,7 +929,11 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 	QUERY->add_mfun(QUERY, cgl_geo_set_uvs, "void", "uvs");
 	QUERY->add_arg(QUERY, "float[]", "uvs");
     QUERY->doc_func(QUERY, "Set UV attribute data from an array of floats; every pair of floats corresponds to (u, v) values (used for texture mapping)");
- 
+
+    QUERY->add_mfun(QUERY, cgl_geo_set_uvs_vec2, "void", "uvs");
+    QUERY->add_arg(QUERY, "vec2[]", "uvs");
+    QUERY->doc_func(QUERY, "Set UV attribute data from an array of vec2 (u,v) or (s,t)");
+
 	QUERY->add_mfun(QUERY, cgl_geo_set_indices, "void", "indices");
 	QUERY->add_arg(QUERY, "int[]", "indices");
     QUERY->doc_func(QUERY, "sets vertex indices for indexed drawing. If not set, renderer will default to non-indexed drawing");
@@ -1323,7 +1328,7 @@ CK_DLL_MFUN(cgl_geo_set_normals_vec3)
 {
     CustomGeometry *geo = (CustomGeometry *)OBJ_MEMBER_INT(SELF, geometry_data_offset);
 
-    auto* data = (Chuck_Array24*)GET_NEXT_OBJECT(ARGS);
+    auto * data = (Chuck_Array24*)GET_NEXT_OBJECT(ARGS);
 
     // TODO extra round of copying here, can avoid if it matters
     std::vector<t_CKFLOAT> vec3s;
@@ -1350,6 +1355,26 @@ CK_DLL_MFUN(cgl_geo_set_uvs)
 	CGL::PushCommand(
 		new UpdateGeometryAttributeCommand(
 			geo, "uv", Geometry::UV0_ATTRIB_IDX, 2, data->m_vector, false));
+}
+
+// set uvs
+CK_DLL_MFUN(cgl_geo_set_uvs_vec2)
+{
+    CustomGeometry *geo = (CustomGeometry *)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+
+    auto* data = (Chuck_Array16*)GET_NEXT_OBJECT(ARGS);
+
+    // TODO extra round of copying here, can avoid if it matters
+    std::vector<t_CKFLOAT> vec2s;
+    vec2s.reserve(2 * data->m_vector.size());
+    for( auto & val : data->m_vector) {
+        vec2s.emplace_back(val.x);
+        vec2s.emplace_back(val.y);
+    }
+
+    CGL::PushCommand(
+        new UpdateGeometryAttributeCommand(
+            geo, "uv", Geometry::UV0_ATTRIB_IDX, 2, vec2s, false));
 }
 
 // set indices
