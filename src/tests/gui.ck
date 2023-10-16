@@ -57,6 +57,7 @@ fun void SliderListener(GUI_Slider @ slider) {
 spork ~ SliderListener(slider);
 
 fun void ColorListener(GUI_Color3 @ color) {
+    GG.scene().backgroundColor(color.val());
     while (true) {
         color => now;
         GG.scene().backgroundColor(color.val());
