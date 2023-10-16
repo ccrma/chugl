@@ -130,7 +130,7 @@ public:
     Window(Chuck_Object* event) 
         : Element(event), m_Open(true) {}
 
-    virtual Type GetType() { return Type::Window; }
+    virtual Type GetType() override { return Type::Window; }
 
     virtual void Draw() override {
         if (!m_Open) return;  // window closed
@@ -171,7 +171,7 @@ public:
         const ImVec2& size = ImVec2(0,0)
     ) :  Element(event), m_Size(size) {}
 
-    virtual Type GetType() { return Type::Button; }
+    virtual Type GetType() override { return Type::Button; }
 
     virtual void Draw() override {
         if (ImGui::Button(m_Label.c_str(), m_Size)) {
@@ -191,7 +191,7 @@ public:
         Chuck_Object* event
     ) : Element(event), m_ReadData(false), m_WriteData(false) {}
 
-    virtual Type GetType() { return Type::Checkbox; }
+    virtual Type GetType() override { return Type::Checkbox; }
 
     virtual void Draw() override {
         if (ImGui::Checkbox(m_Label.c_str(), &m_WriteData)) {
@@ -229,7 +229,7 @@ public:
     ) : Element(event), m_Min(min), m_Max(max), m_Power(power), m_ReadData(min), m_WriteData(min) {
     }
 
-    virtual Type GetType() { return Type::Slider; }
+    virtual Type GetType() override { return Type::Slider; }
 
     virtual void Draw() override {
         if (ImGui::SliderFloat(m_Label.c_str(), &m_WriteData, m_Min, m_Max, "%.3f", m_Power)) {
@@ -282,7 +282,7 @@ public:
         m_WriteData[2] = 0.0f;
     }
 
-    virtual Type GetType() { return Type::Color3; }
+    virtual Type GetType() override { return Type::Color3; }
 
     virtual void Draw() override {
         if (ImGui::ColorEdit3(m_Label.c_str(), &m_WriteData[0])) {
