@@ -11,6 +11,7 @@
 
 // chuck CORE includes
 #include "ulib_cgl.h" // TODO: need to expose graphics entry point in chuck.h
+#include "ulib_gui.h"
 
 // system includes
 #include <iostream>
@@ -301,14 +302,17 @@ static void draw_imgui() {
     ImGui::NewFrame();
 
 
-    bool show_demo_window = true;
-    ImGui::ShowDemoWindow(&show_demo_window);
+    // ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
+    // ImGui::Text("Hello from another window!");
+    // if (ImGui::Button("Close Me"))
+    //     show_another_window = false;
+    // ImGui::End();
+    ImGui::ShowDemoWindow();
 
-    ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-    ImGui::Text("Hello from another window!");
-    if (ImGui::Button("Close Me"))
-        show_another_window = false;
-    ImGui::End();
+
+    // Draw the GUI
+    GUI::Manager::DrawGUI();
+
 
 
     // Rendering

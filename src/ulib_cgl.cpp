@@ -4,6 +4,7 @@
 
 #include "ulib_cgl.h"
 #include "ulib_colors.h"
+#include "ulib_gui.h"
 
 #include "renderer/scenegraph/Camera.h"
 #include "renderer/scenegraph/Command.h"
@@ -416,6 +417,9 @@ t_CKBOOL init_chugl(Chuck_DL_Query *QUERY)
     CGL::SetCKAPI( QUERY->api() );
     // set API in the scene graph node
     SceneGraphNode::SetCKAPI( QUERY->api() );
+
+	// init GUI
+	if (!init_chugl_gui(QUERY)) return FALSE;
 
     // initialize ChuGL API
 	init_chugl_colors(QUERY);
