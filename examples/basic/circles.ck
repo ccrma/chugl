@@ -27,6 +27,8 @@ class Circle extends GGen
     GLines circle --> this;
     // randomize rate
     Math.random2f(2,3) => float rate;
+    // default color
+    color( @(.5, 1, .5) );
 
     // initialize a circle
     fun void init( int resolution, float radius )
@@ -52,8 +54,6 @@ class Circle extends GGen
         
         // set positions
         circle.geo().positions( pos );
-        // color
-        color( @(.5, 1, .5) );
     }
     
     fun void color( vec3 c )
@@ -81,7 +81,9 @@ for( auto circ : circles )
     // connect it
     circ --> GG.scene();
     // randomize location in XY
-    @( Math.random2f(-1.5,1.5), Math.random2f(-1,1), Math.random2f(-1,1) ) => circ.position;
+    @( Math.random2f(-1.5,1.5),
+       Math.random2f(-1,1),
+       Math.random2f(-1,1) ) => circ.position;
 }
 
 vec3 color;
@@ -91,7 +93,9 @@ fun void cycleColors( float dt )
     for( auto ggen : circles )
     {
         // cycle RGB
-        @( (1+Math.sin(now/second*.7))/2, (1+Math.sin(now/second*.8))/2, (1+Math.sin(now/second*.9))/2 ) => ggen.color;
+        @( (1+Math.sin(now/second*.7))/2,
+           (1+Math.sin(now/second*.8))/2,
+           (1+Math.sin(now/second*.9))/2 ) => ggen.color;
     }
 }
 
