@@ -46,9 +46,19 @@ for (int k; k < POINTS_PER_AXIS; k++) {
     posScale * z => pointPos[3*index + 2];
     
     // set color (same as position)
-    x => pointColor[4*index + 0];
-    y => pointColor[4*index + 1];
-    z => pointColor[4*index + 2];
+    // setting color in hsv
+    x * 360.0 => float hue;
+    y => float sat;
+    z => float val;
+
+    // convert to rgb
+    Color.hsv2rgb(@(hue, sat, val)) => vec3 rgb;
+    @(x, y, z) => rgb;
+    
+    rgb.x => pointColor[4*index + 0];
+    rgb.y => pointColor[4*index + 1];
+    rgb.z => pointColor[4*index + 2];
+
     1 => pointColor[4*index + 3];  // alpha always 1
 }}}
 

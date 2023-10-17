@@ -3,6 +3,8 @@
 #include <stdexcept>
 
 #include "ulib_cgl.h"
+#include "ulib_colors.h"
+
 #include "renderer/scenegraph/Camera.h"
 #include "renderer/scenegraph/Command.h"
 #include "renderer/scenegraph/Scene.h"
@@ -151,6 +153,11 @@ CK_DLL_MFUN(cgl_cam_get_pers_fov); //
 CK_DLL_MFUN(cgl_cam_set_ortho_size); // size of view volume (preserves screen aspect ratio)
 CK_DLL_MFUN(cgl_cam_get_ortho_size); //
 
+// mouse cast from camera
+CK_DLL_MFUN(chugl_cam_screen_coord_to_world_ray);
+CK_DLL_MFUN(chugl_cam_world_pos_to_screen_coord);
+
+
 //-----------------------------------------------------------------------------
 // Object -> Scene
 //-----------------------------------------------------------------------------
@@ -239,8 +246,12 @@ CK_DLL_MFUN(cgl_geo_set_attribute); // general case for any kind of vertex data
 CK_DLL_MFUN(cgl_geo_set_positions);
 CK_DLL_MFUN(cgl_geo_set_positions_vec3);
 CK_DLL_MFUN(cgl_geo_set_colors);
+CK_DLL_MFUN(cgl_geo_set_colors_vec3);
+CK_DLL_MFUN(cgl_geo_set_colors_vec4);
 CK_DLL_MFUN(cgl_geo_set_normals);
+CK_DLL_MFUN(cgl_geo_set_normals_vec3);
 CK_DLL_MFUN(cgl_geo_set_uvs);
+CK_DLL_MFUN(cgl_geo_set_uvs_vec2);
 CK_DLL_MFUN(cgl_geo_set_indices);
 
 //-----------------------------------------------------------------------------
@@ -375,8 +386,6 @@ CK_DLL_CTOR(cgl_glines_ctor);
 CK_DLL_CTOR(cgl_gpoints_ctor);
 
 
-
-
 // exports =========================================
 
 t_CKBOOL init_chugl_events(Chuck_DL_Query *QUERY);
@@ -409,6 +418,7 @@ t_CKBOOL init_chugl(Chuck_DL_Query *QUERY)
     SceneGraphNode::SetCKAPI( QUERY->api() );
 
     // initialize ChuGL API
+	init_chugl_colors(QUERY);
     init_chugl_events(QUERY);
 	init_chugl_geo(QUERY);
 	init_chugl_texture(QUERY);
@@ -890,24 +900,40 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 
 	QUERY->add_mfun(QUERY, cgl_geo_set_positions, "void", "positions");
 	QUERY->add_arg(QUERY, "float[]", "positions");
-    QUERY->doc_func(QUERY, "Set position attribute data. Each vertex expects 3 floats for x,y,z");
+    QUERY->doc_func(QUERY, "Set position attribute data from an array of floats; every 3 floats correspond to (x, y, z) values of a vertex position");
 
 	QUERY->add_mfun(QUERY, cgl_geo_set_positions_vec3, "void", "positions");
 	QUERY->add_arg(QUERY, "vec3[]", "positions");
-    QUERY->doc_func(QUERY, "Set position attribute data with vec3s rather than floats");
+    QUERY->doc_func(QUERY, "Set position attribute data from an array of vec3 (x, y, z)");
 
 	QUERY->add_mfun(QUERY, cgl_geo_set_colors, "void", "colors");
 	QUERY->add_arg(QUERY, "float[]", "colors");
-    QUERY->doc_func(QUERY, "Set color attribute data. Each vertex expects 4 floats for r,g,b,a");
+    QUERY->doc_func(QUERY, "Set color attribute data from an array of floats; every 4 floats corresdpond to (r, g, b, a) values of a vertex color);" );
+
+    QUERY->add_mfun(QUERY, cgl_geo_set_colors_vec3, "void", "colors");
+    QUERY->add_arg(QUERY, "vec3[]", "colors");
+    QUERY->doc_func(QUERY, "Set color attribute data from an array of vec3 (r, g, b); alpha is assumed to be 1.0" );
+
+    QUERY->add_mfun(QUERY, cgl_geo_set_colors_vec4, "void", "colors");
+    QUERY->add_arg(QUERY, "vec4[]", "colors");
+    QUERY->doc_func(QUERY, "Set color attribute data from an array of vec4 (r, g, b, a)" );
 
 	QUERY->add_mfun(QUERY, cgl_geo_set_normals, "void", "normals");
 	QUERY->add_arg(QUERY, "float[]", "normals");
-    QUERY->doc_func(QUERY, "Set normal attribute data. Each vertex expects 3 floats for x,y,z");
+    QUERY->doc_func(QUERY, "Set normal attribute data from an array of floats; every 3 floats corresdpond to (x, y, z) values of a vertex normal");
+
+    QUERY->add_mfun(QUERY, cgl_geo_set_normals_vec3, "void", "normals");
+    QUERY->add_arg(QUERY, "vec3[]", "normals");
+    QUERY->doc_func(QUERY, "Set normal attribute data from an array of vec3 (x, y, z)");
 
 	QUERY->add_mfun(QUERY, cgl_geo_set_uvs, "void", "uvs");
 	QUERY->add_arg(QUERY, "float[]", "uvs");
-    QUERY->doc_func(QUERY, "Set UV attribute data. Each vertex expects 2 floats for u,");
- 
+    QUERY->doc_func(QUERY, "Set UV attribute data from an array of floats; every pair of floats corresponds to (u, v) values (used for texture mapping)");
+
+    QUERY->add_mfun(QUERY, cgl_geo_set_uvs_vec2, "void", "uvs");
+    QUERY->add_arg(QUERY, "vec2[]", "uvs");
+    QUERY->doc_func(QUERY, "Set UV attribute data from an array of vec2 (u,v) or (s,t)");
+
 	QUERY->add_mfun(QUERY, cgl_geo_set_indices, "void", "indices");
 	QUERY->add_arg(QUERY, "int[]", "indices");
     QUERY->doc_func(QUERY, "sets vertex indices for indexed drawing. If not set, renderer will default to non-indexed drawing");
@@ -1293,6 +1319,50 @@ CK_DLL_MFUN(cgl_geo_set_colors)
 			geo, "color", Geometry::COLOR_ATTRIB_IDX, 4, data->m_vector, false));
 }
 
+CK_DLL_MFUN(cgl_geo_set_colors_vec3)
+{
+    CustomGeometry *geo = (CustomGeometry *)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+    auto* data = (Chuck_Array24*)GET_NEXT_OBJECT(ARGS);
+
+    // TODO extra round of copying here, can avoid if it matters
+    std::vector<t_CKFLOAT> vec4s;
+    vec4s.reserve(4 * data->m_vector.size());
+    for (auto& val : data->m_vector) {
+        vec4s.emplace_back(val.x);
+        vec4s.emplace_back(val.y);
+        vec4s.emplace_back(val.z);
+        vec4s.emplace_back(1.0);
+    }
+
+    CGL::PushCommand(
+        new UpdateGeometryAttributeCommand(
+            geo, "color", Geometry::COLOR_ATTRIB_IDX, 4, vec4s, false
+        )
+    );
+}
+
+CK_DLL_MFUN(cgl_geo_set_colors_vec4)
+{
+    CustomGeometry *geo = (CustomGeometry *)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+    auto* data = (Chuck_Array32*)GET_NEXT_OBJECT(ARGS);
+
+    // TODO extra round of copying here, can avoid if it matters
+    std::vector<t_CKFLOAT> vec4s;
+    vec4s.reserve(4 * data->m_vector.size());
+    for (auto& val : data->m_vector) {
+        vec4s.emplace_back(val.x);
+        vec4s.emplace_back(val.y);
+        vec4s.emplace_back(val.z);
+        vec4s.emplace_back(val.w);
+    }
+
+    CGL::PushCommand(
+        new UpdateGeometryAttributeCommand(
+            geo, "color", Geometry::COLOR_ATTRIB_IDX, 4, vec4s, false
+        )
+    );
+}
+
 // set normals
 CK_DLL_MFUN(cgl_geo_set_normals)
 {
@@ -1302,7 +1372,30 @@ CK_DLL_MFUN(cgl_geo_set_normals)
 
 	CGL::PushCommand(
 		new UpdateGeometryAttributeCommand(
-			geo, "normal", Geometry::NORMAL_ATTRIB_IDX, 3, data->m_vector, false));
+			geo, "normal", Geometry::NORMAL_ATTRIB_IDX, 3, data->m_vector, false)
+    );
+}
+
+// set normals
+CK_DLL_MFUN(cgl_geo_set_normals_vec3)
+{
+    CustomGeometry *geo = (CustomGeometry *)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+
+    auto * data = (Chuck_Array24*)GET_NEXT_OBJECT(ARGS);
+
+    // TODO extra round of copying here, can avoid if it matters
+    std::vector<t_CKFLOAT> vec3s;
+    vec3s.reserve(3 * data->m_vector.size());
+    for (auto& val : data->m_vector) {
+        vec3s.emplace_back(val.x);
+        vec3s.emplace_back(val.y);
+        vec3s.emplace_back(val.z);
+    }
+
+    CGL::PushCommand(
+        new UpdateGeometryAttributeCommand(
+            geo, "normal", Geometry::NORMAL_ATTRIB_IDX, 3, vec3s, false)
+    );
 }
 
 // set uvs
@@ -1315,6 +1408,26 @@ CK_DLL_MFUN(cgl_geo_set_uvs)
 	CGL::PushCommand(
 		new UpdateGeometryAttributeCommand(
 			geo, "uv", Geometry::UV0_ATTRIB_IDX, 2, data->m_vector, false));
+}
+
+// set uvs
+CK_DLL_MFUN(cgl_geo_set_uvs_vec2)
+{
+    CustomGeometry *geo = (CustomGeometry *)OBJ_MEMBER_INT(SELF, geometry_data_offset);
+
+    auto* data = (Chuck_Array16*)GET_NEXT_OBJECT(ARGS);
+
+    // TODO extra round of copying here, can avoid if it matters
+    std::vector<t_CKFLOAT> vec2s;
+    vec2s.reserve(2 * data->m_vector.size());
+    for( auto & val : data->m_vector) {
+        vec2s.emplace_back(val.x);
+        vec2s.emplace_back(val.y);
+    }
+
+    CGL::PushCommand(
+        new UpdateGeometryAttributeCommand(
+            geo, "uv", Geometry::UV0_ATTRIB_IDX, 2, vec2s, false));
 }
 
 // set indices
@@ -2268,25 +2381,25 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query *QUERY)
 
 	QUERY->add_mfun(QUERY, cgl_obj_rot_on_local_axis, "GGen", "rotateOnLocalAxis");
 	QUERY->add_arg(QUERY, "vec3", "axis");
-	QUERY->add_arg(QUERY, "float", "deg");
-	QUERY->doc_func(QUERY, "Rotate this GGen by the given degrees on the given axis in local space");
+	QUERY->add_arg(QUERY, "float", "radians");
+	QUERY->doc_func(QUERY, "Rotate this GGen by the given radians on the given axis in local space");
 
 	QUERY->add_mfun(QUERY, cgl_obj_rot_on_world_axis, "GGen", "rotateOnWorldAxis");
 	QUERY->add_arg(QUERY, "vec3", "axis");
-	QUERY->add_arg(QUERY, "float", "deg");
-	QUERY->doc_func(QUERY, "Rotate this GGen by the given degrees on the given axis in world space");
+	QUERY->add_arg(QUERY, "float", "radians");
+	QUERY->doc_func(QUERY, "Rotate this GGen by the given radians on the given axis in world space");
 
 	QUERY->add_mfun(QUERY, cgl_obj_set_rot_x, "GGen", "rotX");
-	QUERY->add_arg(QUERY, "float", "deg");
-	QUERY->doc_func(QUERY, "Rotate this GGen by the given degrees on the X axis in local space");
+	QUERY->add_arg(QUERY, "float", "radians");
+	QUERY->doc_func(QUERY, "Rotate this GGen by the given radians on the X axis in local space");
 
 	QUERY->add_mfun(QUERY, cgl_obj_set_rot_y, "GGen", "rotY");
-	QUERY->add_arg(QUERY, "float", "deg");
-	QUERY->doc_func(QUERY, "Rotate this GGen by the given degrees on the Y axis in local space");
+	QUERY->add_arg(QUERY, "float", "radians");
+	QUERY->doc_func(QUERY, "Rotate this GGen by the given radians on the Y axis in local space");
 
 	QUERY->add_mfun(QUERY, cgl_obj_set_rot_z, "GGen", "rotZ");
-	QUERY->add_arg(QUERY, "float", "deg");
-	QUERY->doc_func(QUERY, "Rotate this GGen by the given degrees on the Z axis in local space");
+	QUERY->add_arg(QUERY, "float", "radians");
+	QUERY->doc_func(QUERY, "Rotate this GGen by the given radians on the Z axis in local space");
 
 	QUERY->add_mfun(QUERY, cgl_obj_set_pos_x, "GGen", "posX");
 	QUERY->add_arg(QUERY, "float", "pos");
@@ -2864,6 +2977,29 @@ t_CKBOOL init_chugl_cam(Chuck_DL_Query *QUERY)
 	QUERY->add_mfun(QUERY, cgl_cam_get_ortho_size, "float", "viewSize");
 	QUERY->doc_func(QUERY, "(orthographic mode) get the height of the view in pixels");
 
+	// raycast from mousepos
+	QUERY->add_mfun(QUERY, chugl_cam_screen_coord_to_world_ray, "vec3", "screenCoordToWorldRay");
+	QUERY->add_arg(QUERY, "float", "screenX");
+	QUERY->add_arg(QUERY, "float", "screenY");
+	QUERY->doc_func(QUERY, 
+		"Get a ray in world space representing the normalized directional vector from camera world position to screen coordinate"
+		"screenX and screenY are screen coordinates, which you can get from GG.mouseX() and GG.mouseY() or you can pass coordinates directly"
+		"useful if you want to do mouse picking or raycasting"
+	);
+
+
+	QUERY->add_mfun(QUERY, chugl_cam_world_pos_to_screen_coord, "vec3", "worldPosToScreenCoord");
+	QUERY->add_arg(QUERY, "vec3", "worldPos");
+	QUERY->doc_func(QUERY, 
+		"Get a screen coordinate from a world position by casting a ray from worldPos back to the camera and finding the intersection with the near clipping plane"
+		"worldPos is a vec3 representing a world position"
+		"returns a vec3. X and Y are screen coordinates, Z is the depth-value of the worldPos"
+		"Remember, screen coordinates have origin at the top-left corner of the window"
+	);
+
+
+
+
 	QUERY->end_class(QUERY);
 
 	return true;
@@ -2966,6 +3102,50 @@ CK_DLL_MFUN(cgl_cam_get_ortho_size)
 {
 	Camera *cam = (Camera *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	RETURN->v_float = cam->GetSize();
+}
+
+CK_DLL_MFUN(chugl_cam_screen_coord_to_world_ray)
+{
+	Camera *cam = (Camera *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKFLOAT screenX = GET_NEXT_FLOAT(ARGS);
+	t_CKFLOAT screenY = GET_NEXT_FLOAT(ARGS);
+
+	// first convert to normalized device coordinates in range [-1, 1]
+	auto windowSize = CGL::GetWindowSize();
+	float x = ( (2.0f * screenX) / windowSize.first ) - 1.0f;
+	float y = 1.0f - ( (2.0f * screenY) / windowSize.second );
+	float z = 1.0f;
+	glm::vec4 ray_clip = glm::vec4(x, y, -1.0, 1.0);
+	// convert to eye space
+	glm::mat4 proj = cam->GetProjectionMatrix();
+	glm::vec4 ray_eye = glm::inverse(proj) * ray_clip;
+	// convert to world space
+	ray_eye = glm::vec4(ray_eye.x, ray_eye.y, -1.0, 0.0);
+	glm::mat4 view = cam->GetViewMatrix();
+	glm::vec3 ray_wor = glm::inverse(view) * ray_eye;
+	// normalize
+	ray_wor = glm::normalize(ray_wor);
+	RETURN->v_vec3 = {ray_wor.x, ray_wor.y, ray_wor.z};
+}
+
+CK_DLL_MFUN(chugl_cam_world_pos_to_screen_coord)
+{
+	Camera *cam = (Camera *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKVEC3 worldPos = GET_NEXT_VEC3(ARGS);
+
+	// first convert to clip space
+	glm::mat4 view = cam->GetViewMatrix();
+	glm::mat4 proj = cam->GetProjectionMatrix();
+	glm::vec4 clipPos = proj * view * glm::vec4(worldPos.x, worldPos.y, worldPos.z, 1.0f);
+
+	// convert to normalized device coordinates in range [-1, 1]
+	auto windowSize = CGL::GetWindowSize();
+	float x = (clipPos.x / clipPos.w + 1.0f) / 2.0f * windowSize.first;
+	// need to invert y because screen coordinates are top-left origin
+	float y = (1.0f - clipPos.y / clipPos.w) / 2.0f * windowSize.second;
+	// z is depth value
+	float z = clipPos.z / clipPos.w;
+	RETURN->v_vec3 = {x, y, z};
 }
 
 //-----------------------------------------------------------------------------

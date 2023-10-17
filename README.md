@@ -4,47 +4,34 @@
 
 ![logo](images/chugl-glogo2023g.png)
 
-## ChuGL =&gt; ChucK Graphics
-Version 0.1.0 [alpha]
+## ChuGL =&gt; ChucK Graphics Library
 
 </div> <!-- end center -->
 
 <p align="justify">
-ChuGL is a unified audiovisual programming framework built into the ChucK programming language. It combines ChucK's <b>strongly-timed, concurrent programming model</b> and <b>real-time audio synthesis</b> capabilities with a <b>hardware-accelerated 3D graphics engine and API</b>. At its core is a scenegraph architecture that provides <b>low-latency, high performance audiovisual synchronization at frame-level accuracy</b>.
+ChuGL (sounds like "chuckle"; rhymes with "juggle") is a unified audiovisual programming framework built into the <a target="_blank" href="https://chuck.stanford.edu/">ChucK programming language</a>. It combines ChucK's <b>strongly-timed, concurrent programming model</b> and <b>real-time audio synthesis</b> capabilities with a <b>hardware-accelerated 3D graphics engine and API</b>. At its core is a scenegraph architecture that provides <b>low-latency, high performance audiovisual synchronization at frame-level accuracy</b>.
 
-ChuGL was created by <a href="https://ccrma.stanford.edu/~azaday/">Andrew Zhu Aday</a> and
-<a href="https://ccrma.stanford.edu/~ge/">Ge Wang</a>, with support from the <a 
-href="https://chuck.stanford.edu/doc/authors.html">ChucK Team</a>, and benefitted from prior 
-prototypes of ChuGL and GLucK by Spencer Salazar and Philip Davidson.
+ChuGL was created by <a href="https://ccrma.stanford.edu/~azaday/">Andrew Zhu Aday</a> and <a href="https://ccrma.stanford.edu/~ge/">Ge Wang</a>, with support from the <a  href="https://chuck.stanford.edu/doc/authors.html">ChucK Team</a>, and benefitted from prior prototypes of ChuGL and GLucK, respectively by Spencer Salazar and Philip Davidson.
 </p>
 
 ___
 
+**ChuGL v0.1.0** (alpha) — [**ChuGL API 
+Reference**](https://chuck.stanford.edu/chugl/api/)
+• [**ChuGL Examples**](https://chuck.stanford.edu/chugl/examples/)
+• [**ChuGL Tutorial**](https://chuck.stanford.edu/chugl/doc/tutorial.html)
+
+___
+
 ## Installing ChuGL
-
-1. **Get the latest ChucK (requires 1.5.1.5 or higher)**
-https://chuck.stanford.edu/release/
-2. **Get the latest ChuGL chugin**
-https://chuck.stanford.edu/release/alpha/chugl/
-
-### MacOS
-
-Run the .pkg file, which will install the ChuGL chugin in the appropriate location
-
-### Windows
-
-Download the `ChuGL.chug` binary from the installation links above and move it to `C:\Users\<usename>\Documents\ChucK\chugins\`
-
-### Linux
-
-We are working on it! Let us know if you get it working (or would like to help us to get it working)!
+To install ChuGL as a pre-built chugin (ChuGL.chug), visit the [ChuGL homepage](https://chuck.stanford.edu/chugl/) for download and installation instructions.
 
 ## Building ChuGL
 To build the latest ChuGL from source, clone the `chugl` repo from github:
 ```
 git clone https://github.com/ccrma/chugl.git
 ```
-Compatibility note: ChuGL requires ChucK 1.5.1.5 or higher. See the <a href="https://github.com/ccrma/chuck/">chuck</a> repo for more details regarding installing/building ChucK.
+Compatibility note: ChuGL requires ChucK 1.5.1.5 or higher. See the <a href="https://github.com/ccrma/chuck/">chuck</a> repo for more details regarding building ChucK.
 
 ### macOS
 navigate to the `chugl/src` directory, and run `make mac`:
@@ -60,9 +47,15 @@ To build chuck using Visual Studio (2019 or later recommended), navigate to `chu
 cd chugl/src
 make build-release
 ```
-This creates a CMake compatible `build-release` directory with Visual Studio 2019 project files. Navigate into this directory and open `ChuGL.sln`. Building this project should create `ChuGL.chug`. This file can be installed/used as any other chugin (e.g., install ChuGL.chug by copying it into `C:\Users\<usename>\Documents\ChucK\chugins\`.)
+This creates a CMake compatible `build-release` directory with Visual Studio project files. Navigate into this directory and open `ChuGL.sln`. Building this project should create `ChuGL.chug`. This file can be installed/used as any other chugin (e.g., install ChuGL.chug by copying it into `C:\Users\<usename>\Documents\ChucK\chugins\`.)
+
 ### Linux
-We are working on it!
+navigate to the `chugl/src` directory, and run `make linux`:
+```
+cd chugl/src
+make linux
+```
+This should build a `ChuGL.chug` executable in `build-release`, which is also copied to the `chugl/src` directory. This file can be installed/used as any other chugin (e.g., install ChuGL.chug by copying it into `~/.chuck/lib`.)
 
 ## Running ChuGL
 
