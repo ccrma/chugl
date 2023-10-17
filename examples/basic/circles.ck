@@ -72,7 +72,6 @@ class Circle extends GGen
 
 // an array of our custom circles
 Circle circles[NUM_CIRCLES];
-
 // iterate over circles array
 for( auto circ : circles )
 {
@@ -86,20 +85,21 @@ for( auto circ : circles )
        Math.random2f(-1,1) ) => circ.position;
 }
 
-vec3 color;
+// function to cycle colors
 fun void cycleColors( float dt )
 {
     // iterate over circles array
-    for( auto ggen : circles )
+    for( auto circ : circles )
     {
         // cycle RGB
         @( (1+Math.sin(now/second*.7))/2,
            (1+Math.sin(now/second*.8))/2,
-           (1+Math.sin(now/second*.9))/2 ) => ggen.color;
+           (1+Math.sin(now/second*.9))/2 ) => circ.color;
     }
 }
 
-// hook up camera
+// connect camera to a dolly
+// (in case we want to easily rotate camera around scene)
 GG.camera() --> GGen dolly --> GG.scene();
 
 // time loop
