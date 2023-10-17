@@ -126,7 +126,7 @@ private:  // for propogating deletion to the renderer
 public:
 	void AddToDeletionQueue(size_t id) { m_DeletionQueue.push_back(id); }
 	void ClearDeletionQueue() { m_DeletionQueue.clear(); }
-	std::vector<size_t> GetDeletionQueue() { return m_DeletionQueue; }
+	std::vector<size_t>& GetDeletionQueue() { return m_DeletionQueue; }
 
 public: // major hack, for now because there's only 1 scene, storing render state options here
 	// THESE ARE NOT THREADSAFE, ONLY WRITE/READ FROM RENDER THREAD

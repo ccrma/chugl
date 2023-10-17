@@ -52,7 +52,7 @@ public:
 	float GetFOV() { return params.fov; }
 	float GetSize() { return params.size; }
 
-	Camera* Clone() {
+	Camera* Clone() override {
 		Camera* c = new Camera();
 		c->SetID(this->GetID());
 		c->params = this->params;

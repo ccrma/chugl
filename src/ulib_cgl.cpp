@@ -1068,7 +1068,7 @@ CK_DLL_MFUN(cgl_geo_clone)
 	// Note: we are NOT refcounting here because we're returning a reference to the new cloned object
 	// If this returned reference is assigned to a chuck variable, chuck should handle the refcounting
 	// bumping the refcount here would cause a memory leak, as the refcount would never be decremented
-	RETURN->v_object = CGL::CreateChuckObjFromGeo(API, VM, geo->Clone(), SHRED, false)->m_ChuckObject;
+	RETURN->v_object = CGL::CreateChuckObjFromGeo(API, VM, (Geometry *)geo->Clone(), SHRED, false)->m_ChuckObject;
 }
 
 
@@ -1802,7 +1802,7 @@ CK_DLL_DTOR(cgl_mat_dtor) // all geos can share this base destructor
 CK_DLL_MFUN(cgl_mat_clone)
 {
 	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
-	RETURN->v_object = CGL::CreateChuckObjFromMat(API, VM, mat->Clone(), SHRED, false)->m_ChuckObject;
+	RETURN->v_object = CGL::CreateChuckObjFromMat(API, VM, (Material*) mat->Clone(), SHRED, false)->m_ChuckObject;
 }
 
 CK_DLL_MFUN(cgl_mat_set_polygon_mode)

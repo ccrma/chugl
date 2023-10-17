@@ -182,9 +182,8 @@ public:
 	virtual MaterialType GetMaterialType() { return MaterialType::Base; }
 	virtual std::unordered_map<std::string, MaterialUniform>& GetLocalUniforms() { return m_Uniforms;  }  // for setting properties specific to the material, e.g. color
 
-	virtual Material* Clone() = 0;
 	virtual Material* Dup() {  // clone but get new ID 
-		auto* mat = Clone();
+		Material* mat = (Material*)Clone();
 		mat->NewID();
 		return mat;
 	}

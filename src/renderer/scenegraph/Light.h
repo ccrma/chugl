@@ -68,7 +68,6 @@ public:
 	virtual bool IsLight() override { return true;  }
 	virtual LightType GetLightType() = 0;
 	virtual void SetShaderUniforms(Shader* shader, int index) = 0;
-	virtual Light* Clone() = 0;
 public: // ck name
 	typedef std::unordered_map<LightType, const std::string, EnumClassHash> CkTypeMap;
 	static CkTypeMap s_CkTypeMap;
