@@ -16,7 +16,8 @@ Manager::CkTypeMap Manager::s_CkTypeMap = {
     {Type::Element, "GUI_Element"},
     {Type::Window, "GUI_Window"},
     {Type::Button, "GUI_Button"},
-    {Type::Slider, "GUI_Slider"},
+    {Type::FloatSlider, "GUI_FloatSlider"},
+    {Type::IntSlider, "GUI_IntSlider"},
     {Type::Checkbox, "GUI_Checkbox"},
     {Type::Color3, "GUI_Color3"}
 };
@@ -67,13 +68,19 @@ CK_DLL_CTOR( chugl_gui_checkbox_ctor );
 CK_DLL_MFUN( chugl_gui_checkbox_val_get );
 
 //-----------------------------------------------------------------------------
-// Slider
+// FloatSlider
 //-----------------------------------------------------------------------------
-CK_DLL_CTOR( chugl_gui_slider_ctor );
-CK_DLL_MFUN( chugl_gui_slider_val_get );
-CK_DLL_MFUN( chugl_gui_slider_range_set );
-CK_DLL_MFUN( chugl_gui_slider_power_set );
+CK_DLL_CTOR( chugl_gui_slider_float_ctor );
+CK_DLL_MFUN( chugl_gui_slider_float_val_get );
+CK_DLL_MFUN( chugl_gui_slider_float_range_set );
+CK_DLL_MFUN( chugl_gui_slider_float_power_set );
 
+//-----------------------------------------------------------------------------
+// IntSlider
+//-----------------------------------------------------------------------------
+CK_DLL_CTOR( chugl_gui_slider_int_ctor );
+CK_DLL_MFUN( chugl_gui_slider_int_val_get );
+CK_DLL_MFUN( chugl_gui_slider_int_range_set );
 
 //-----------------------------------------------------------------------------
 // Color3
@@ -86,7 +93,8 @@ t_CKBOOL init_chugl_gui_element(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_gui_window(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_gui_button(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_gui_checkbox(Chuck_DL_Query *QUERY);
-t_CKBOOL init_chugl_gui_slider(Chuck_DL_Query *QUERY);
+t_CKBOOL init_chugl_gui_slider_float(Chuck_DL_Query *QUERY);
+t_CKBOOL init_chugl_gui_slider_int(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_gui_color3(Chuck_DL_Query *QUERY);
 
 
@@ -103,7 +111,8 @@ t_CKBOOL init_chugl_gui(Chuck_DL_Query *QUERY)
     if (!init_chugl_gui_window(QUERY)) return FALSE;
     if (!init_chugl_gui_button(QUERY)) return FALSE;
     if (!init_chugl_gui_checkbox(QUERY)) return FALSE;
-    if (!init_chugl_gui_slider(QUERY)) return FALSE;
+    if (!init_chugl_gui_slider_float(QUERY)) return FALSE;
+    if (!init_chugl_gui_slider_int(QUERY)) return FALSE;
     if (!init_chugl_gui_color3(QUERY)) return FALSE;
 
     return TRUE;
@@ -317,21 +326,21 @@ CK_DLL_MFUN( chugl_gui_checkbox_val_get ) {
 
 
 //-----------------------------------------------------------------------------
-// name: init_chugl_gui_slider()
+// name: init_chugl_gui_slider_float()
 // desc: ...
 //-----------------------------------------------------------------------------
-t_CKBOOL init_chugl_gui_slider(Chuck_DL_Query *QUERY)
+t_CKBOOL init_chugl_gui_slider_float(Chuck_DL_Query *QUERY)
 {
-    QUERY->begin_class(QUERY, Manager::GetCkName(Type::Slider), Manager::GetCkName(Type::Element));
-    QUERY->add_ctor(QUERY, chugl_gui_slider_ctor);
+    QUERY->begin_class(QUERY, Manager::GetCkName(Type::FloatSlider), Manager::GetCkName(Type::Element));
+    QUERY->add_ctor(QUERY, chugl_gui_slider_float_ctor);
 
-    QUERY->add_mfun(QUERY, chugl_gui_slider_val_get, "float", "val");
+    QUERY->add_mfun(QUERY, chugl_gui_slider_float_val_get, "float", "val");
 
-    QUERY->add_mfun(QUERY, chugl_gui_slider_range_set, "void", "range");
+    QUERY->add_mfun(QUERY, chugl_gui_slider_float_range_set, "void", "range");
     QUERY->add_arg( QUERY, "float", "min" );
     QUERY->add_arg( QUERY, "float", "max" );
 
-    QUERY->add_mfun(QUERY, chugl_gui_slider_power_set, "void", "power");
+    QUERY->add_mfun(QUERY, chugl_gui_slider_float_power_set, "void", "power");
     QUERY->add_arg( QUERY, "float", "power" );
 
     QUERY->end_class(QUERY);
@@ -339,28 +348,67 @@ t_CKBOOL init_chugl_gui_slider(Chuck_DL_Query *QUERY)
     return TRUE;
 }
 
-CK_DLL_CTOR( chugl_gui_slider_ctor )
+CK_DLL_CTOR( chugl_gui_slider_float_ctor )
 {
-    OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data) = (t_CKINT) new Slider(SELF);
+    OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data) = (t_CKINT) new FloatSlider(SELF);
 }
 
-CK_DLL_MFUN( chugl_gui_slider_val_get )
+CK_DLL_MFUN( chugl_gui_slider_float_val_get )
 {
-    Slider* slider = (Slider *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    FloatSlider* slider = (FloatSlider *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
     RETURN->v_float = slider->GetData();
 }
 
-CK_DLL_MFUN( chugl_gui_slider_range_set )
+CK_DLL_MFUN( chugl_gui_slider_float_range_set )
 {
-    Slider* slider = (Slider *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    FloatSlider* slider = (FloatSlider *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
     slider->SetMin( GET_NEXT_FLOAT(ARGS) ); 
     slider->SetMax( GET_NEXT_FLOAT(ARGS) ); 
 }
 
-CK_DLL_MFUN( chugl_gui_slider_power_set )
+CK_DLL_MFUN( chugl_gui_slider_float_power_set )
 {
-    Slider* slider = (Slider *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    FloatSlider* slider = (FloatSlider *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
     slider->SetPower( GET_NEXT_FLOAT(ARGS) ); 
+}
+
+
+//-----------------------------------------------------------------------------
+// name: init_chugl_gui_slider_int()
+// desc: ...
+//-----------------------------------------------------------------------------
+t_CKBOOL init_chugl_gui_slider_int(Chuck_DL_Query *QUERY)
+{
+    QUERY->begin_class(QUERY, Manager::GetCkName(Type::IntSlider), Manager::GetCkName(Type::Element));
+    QUERY->add_ctor(QUERY, chugl_gui_slider_int_ctor);
+
+    QUERY->add_mfun(QUERY, chugl_gui_slider_int_val_get, "int", "val");
+
+    QUERY->add_mfun(QUERY, chugl_gui_slider_int_range_set, "void", "range");
+    QUERY->add_arg( QUERY, "int", "min" );
+    QUERY->add_arg( QUERY, "int", "max" );
+
+    QUERY->end_class(QUERY);
+
+    return TRUE;
+}
+
+CK_DLL_CTOR( chugl_gui_slider_int_ctor )
+{
+    OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data) = (t_CKINT) new IntSlider(SELF);
+}
+
+CK_DLL_MFUN( chugl_gui_slider_int_val_get )
+{
+    IntSlider* slider = (IntSlider *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    RETURN->v_int= slider->GetData();
+}
+
+CK_DLL_MFUN( chugl_gui_slider_int_range_set )
+{
+    IntSlider* slider = (IntSlider *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    slider->SetMin( GET_NEXT_INT(ARGS) ); 
+    slider->SetMax( GET_NEXT_INT(ARGS) ); 
 }
 
 //-----------------------------------------------------------------------------
