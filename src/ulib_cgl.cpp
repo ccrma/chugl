@@ -2360,13 +2360,6 @@ CK_DLL_DTOR(cgl_obj_dtor)
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0;
 
-	if (cglObj->IsMaterial() || cglObj->IsGeometry()) {
-		std::cerr << "calling mat or geo destructor" << std::endl;
-	}
-	else if (cglObj->IsMesh()) {
-		std::cerr << "calling mesh destructor" << std::endl;
-	}
-
 	CGL::PushCommand(new DestroySceneGraphNodeCommand(cglObj, &CGL::mainScene));
 }
 
