@@ -1,4 +1,10 @@
 // "circles, in numbers, are cool" -- Ge
+//
+// this example demonstrates:
+//   1) creating a custom GGen class
+//   2) plotting our circle with #math
+//   3) many instances: local independence + global organization
+//      -- design principle from artful design chapter 3
 
 // fullscreen
 GG.fullscreen();
@@ -9,29 +15,28 @@ GG.scene().backgroundColor( @(0,0,0) );
 
 // how many circles?
 512 => int NUM_CIRCLES;
+// how many vertices per circle? (more == smoother)
+720 => int N;
+// normalized radius
+1 => float RADIUS;
 
 // creating a custom GGen class for a 2D circle
 class Circle extends GGen
 {
-    // many vertices (more == smoother)
-    720 => int N;
-    // normalized radius
-    1 => float RADIUS;
-    // a cirle of lines
+    // for drawing our circle 
     GLines circle --> this;
-    // incremental angle from 0 to 2pi in N steps
-    2*pi / N => float theta;    
     // randomize rate
     Math.random2f(2,3) => float rate;
-    // initialize
-    init();
 
-    // initialize an circle
-    fun void init()
+    // initialize a circle
+    fun void init( int resolution, float radius )
     {
-        vec3 pos[N];
+        // incremental angle from 0 to 2pi in N steps
+        2*pi / resolution => float theta;    
+        // positions of our circle
+        vec3 pos[resolution];
         // previous, init to 1 zero
-        @(RADIUS,0) => vec3 prev;
+        @(radius,0) => vec3 prev;
         // loop over vertices
         for( int i; i < pos.size(); i++ )
         {
@@ -69,12 +74,14 @@ class Circle extends GGen
 Circle circles[NUM_CIRCLES];
 
 // iterate over circles array
-for( auto ggen : circles )
+for( auto circ : circles )
 {
+    // initialize each 
+    circ.init( N, RADIUS );
     // connect it
-    ggen --> GG.scene();
+    circ --> GG.scene();
     // randomize location in XY
-    @( Math.random2f(-1.5,1.5), Math.random2f(-1,1), Math.random2f(-1,1) ) => ggen.position;
+    @( Math.random2f(-1.5,1.5), Math.random2f(-1,1), Math.random2f(-1,1) ) => circ.position;
 }
 
 vec3 color;
