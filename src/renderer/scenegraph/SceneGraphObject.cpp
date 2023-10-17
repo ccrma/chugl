@@ -215,12 +215,17 @@ void SceneGraphObject::AddChild(SceneGraphObject* child)
 {
 	// Object cannot be added as child of itself
 	if (child == this) {
-		Util::printErr("SceneGraphObject cannot be added as child of itself");
+		Util::printErr("GGen cannot be added as child of itself");
 		return;
 	}
 
 	if (child == nullptr) {
-		Util::printErr("cannot add nullptr as child of SceneGraphObject");
+		Util::printErr("cannot add nullptr as child of GGen ");
+		return;
+	}
+
+	if (child->IsScene()) {  // necessary to prevent cycles
+		Util::printErr("cannot add make GScene a child of another GGen");
 		return;
 	}
 
@@ -233,6 +238,7 @@ void SceneGraphObject::AddChild(SceneGraphObject* child)
 	if (child->GetParent() != nullptr) {
 		child->GetParent()->RemoveChild(child);
 	}
+
 
 	// assign to new parent
 	child->m_Parent = this;
