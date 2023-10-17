@@ -508,10 +508,14 @@ reset_origin_shred:
     // of inconstencies / bugs elsewhere
     for( auto * ggen : ggens )
     {
+		// TODO: need to come up with a new ggen refcount logic that makes the following code not leak:
+		/*
+		while (true) {
+			GCube c;
+		}
+		*/
         // release it
-        // NOTE this could be bad until we ref count GGen/AddChild etc.
-		// TODO: is CK_SAFE_RELEASE accessible from chugin?
-        CK_SAFE_RELEASE( ggen );
+		CGL::CKAPI()->object->release(ggen);
     }
 }
 
@@ -553,7 +557,7 @@ CK_DLL_TYPE_ON_INSTANTIATE(cgl_ggen_on_instantiate_listener)
     // add mapping from SHRED->GGen
     g_shred2ggen[SHRED].push_back( OBJECT );
     // add ref
-    CK_SAFE_ADD_REF( OBJECT );
+	CGL::CKAPI()->object->add_ref(OBJECT);
 }
 
 
@@ -2360,7 +2364,7 @@ CK_DLL_DTOR(cgl_obj_dtor)
 		std::cerr << "calling mat or geo destructor" << std::endl;
 	}
 	else if (cglObj->IsMesh()) {
-		std::cerr << "calling mat or geo destructor" << std::endl;
+		std::cerr << "calling mesh destructor" << std::endl;
 	}
 
 	CGL::PushCommand(new DestroySceneGraphNodeCommand(cglObj, &CGL::mainScene));
@@ -3634,8 +3638,6 @@ CK_DL_API CGL::s_api = NULL;
 void CGL::SetCKVM( Chuck_VM * theVM )
 {
     s_vm = theVM;
-    // TODO: refcount?
-    // CK_SAFE_ADD_REF( s_vm );
 }
 
 void CGL::SetCKAPI( CK_DL_API theAPI )
