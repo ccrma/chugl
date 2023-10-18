@@ -59,6 +59,7 @@ add_library(
     ulib_cgl.cpp 
     window.cpp
     ulib_colors.cpp
+    ulib_gui.cpp
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES 
@@ -83,8 +84,11 @@ add_subdirectory(./vendor/glfw)  # TODO prob create a top-level CMakeLists.txt t
 add_subdirectory(./vendor/glad)
 add_subdirectory(./vendor/glm)
 add_subdirectory(./renderer)
+add_subdirectory(./vendor/imgui)
+
+
 target_link_libraries(${PROJECT_NAME} 
-    PRIVATE glfw glad glm
+    PRIVATE glfw glad glm imgui
     PRIVATE chugl_compiler_flags
     PRIVATE renderer
 )
@@ -95,6 +99,7 @@ target_include_directories(${PROJECT_NAME}
     PRIVATE ./vendor
     PRIVATE ./vendor/glad/include
     PRIVATE ./vendor/glfw/include
+    PRIVATE ./vendor/imgui
 )
 
 # set install destination by platform
