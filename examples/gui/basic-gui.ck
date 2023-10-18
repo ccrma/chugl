@@ -1,5 +1,15 @@
-// basic scene setup ================================================
+//-----------------------------------------------------------------------------
+// name: basic-gui.ck
+// desc: demos the use of basic GUI widgets including buttons, sliders, 
+//       checkboxes, and color pickers
+// requires: ChuGL + chuck-1.5.1.5 or higher
+//
+// author: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
+//         Ge Wang (https://ccrma.stanford.edu/~ge/)
+// date: Fall 2023
+//-----------------------------------------------------------------------------
 
+// basic scene setup ================================================
 GCube cube --> GG.scene();
 cube.mat().color(Color.DARKBLUE);
 GG.camera().posZ(5);
@@ -115,7 +125,7 @@ fun void ColorListener(GUI_Color3 @ color) {
 } spork ~ ColorListener(color);
 
 
-
+// Game loop =========================================================
 while (true) { 
     // rotate center cube
     GG.dt() => cube.rotZ;

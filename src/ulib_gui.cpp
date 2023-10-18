@@ -126,7 +126,11 @@ static t_CKINT chugl_gui_element_offset_data = 0;
 t_CKBOOL init_chugl_gui_element(Chuck_DL_Query *QUERY)
 {   
     QUERY->begin_class(QUERY, Manager::GetCkName(Type::Element), "Event");
-	QUERY->doc_class(QUERY, "Base class for all GUI elements. Do not instantiate directly");
+	QUERY->doc_class(QUERY, 
+        "Base class for all GUI elements. Do not instantiate directly"
+        "All GUI elements are Chuck Events, and can be used as such."
+    );
+    QUERY->add_ex(QUERY, "gui/basic-gui.ck");
 
     QUERY->add_ctor(QUERY, chugl_gui_element_ctor);
     QUERY->add_dtor(QUERY, chugl_gui_element_dtor);
@@ -137,9 +141,11 @@ t_CKBOOL init_chugl_gui_element(Chuck_DL_Query *QUERY)
     // add label()
     QUERY->add_mfun(QUERY, chugl_gui_element_label_set, "string", "label");
     QUERY->add_arg( QUERY,"string", "l" );
+    QUERY->doc_func(QUERY, "set the text label of this element");
 
     // add label()
     QUERY->add_mfun(QUERY, chugl_gui_element_label_get, "string", "label");
+    QUERY->doc_func(QUERY, "get the text label of this element");
 
     
     // QUERY->add_mfun(QUERY, mauielement_display, "void", "display");
@@ -231,11 +237,17 @@ t_CKBOOL init_chugl_gui_window( Chuck_DL_Query * QUERY )
 {
     // import
     QUERY->begin_class(QUERY, Manager::GetCkName(Type::Window), Manager::GetCkName(Type::Element));
+	QUERY->doc_class(QUERY, 
+        "Window element. Each instance will create a separate GUI window."
+        "Add elements to the window via .add() to display them."
+    );
+   
 
     QUERY->add_ctor( QUERY, chugl_gui_window_ctor );
     
     QUERY->add_mfun(QUERY, chugl_gui_window_add_element, "void", "add");
     QUERY->add_arg( QUERY, Manager::GetCkName(Type::Element), "element" );
+    QUERY->doc_func(QUERY, "Adds an element to this window, will be displayed in the order they are added.");
     
     // wrap up
     QUERY->end_class(QUERY);
@@ -265,6 +277,8 @@ CK_DLL_MFUN( chugl_gui_window_add_element )
 t_CKBOOL init_chugl_gui_button(Chuck_DL_Query *QUERY)
 {
     QUERY->begin_class(QUERY, Manager::GetCkName(Type::Button), Manager::GetCkName(Type::Element));
+	QUERY->doc_class(QUERY, "Button widget, clicking will trigger the button instance, which itself is a Chuck Event");
+
     QUERY->add_ctor(QUERY, chugl_gui_button_ctor);
     // no destructor, let Element handle
     
@@ -306,9 +320,12 @@ CK_DLL_CTOR( chugl_gui_button_ctor ) {
 t_CKBOOL init_chugl_gui_checkbox(Chuck_DL_Query *QUERY)
 {
     QUERY->begin_class(QUERY, Manager::GetCkName(Type::Checkbox), Manager::GetCkName(Type::Element));
+	QUERY->doc_class(QUERY, "Checkbox widget");
+    
     QUERY->add_ctor(QUERY, chugl_gui_checkbox_ctor);
 
     QUERY->add_mfun(QUERY, chugl_gui_checkbox_val_get, "int", "val");
+    QUERY->doc_func(QUERY, "Get the current state of the checkbox, 1 for checked, 0 for unchecked");
 
     QUERY->end_class(QUERY);
 
@@ -332,16 +349,24 @@ CK_DLL_MFUN( chugl_gui_checkbox_val_get ) {
 t_CKBOOL init_chugl_gui_slider_float(Chuck_DL_Query *QUERY)
 {
     QUERY->begin_class(QUERY, Manager::GetCkName(Type::FloatSlider), Manager::GetCkName(Type::Element));
+	QUERY->doc_class(QUERY, 
+        "Float slider widget"
+        "CTRL+Click on any slider to turn them into an input box. Manually input values aren't clamped and can go off-bounds."
+    );
+
     QUERY->add_ctor(QUERY, chugl_gui_slider_float_ctor);
 
     QUERY->add_mfun(QUERY, chugl_gui_slider_float_val_get, "float", "val");
+    QUERY->doc_func(QUERY, "Get the current value of the slider");
 
     QUERY->add_mfun(QUERY, chugl_gui_slider_float_range_set, "void", "range");
     QUERY->add_arg( QUERY, "float", "min" );
     QUERY->add_arg( QUERY, "float", "max" );
+    QUERY->doc_func(QUERY, "Set the range of the slider");
 
     QUERY->add_mfun(QUERY, chugl_gui_slider_float_power_set, "void", "power");
     QUERY->add_arg( QUERY, "float", "power" );
+    QUERY->doc_func(QUERY, "Set the power of the slider, e.g. 2.0 for an exponential domain");
 
     QUERY->end_class(QUERY);
 
@@ -380,13 +405,20 @@ CK_DLL_MFUN( chugl_gui_slider_float_power_set )
 t_CKBOOL init_chugl_gui_slider_int(Chuck_DL_Query *QUERY)
 {
     QUERY->begin_class(QUERY, Manager::GetCkName(Type::IntSlider), Manager::GetCkName(Type::Element));
+	QUERY->doc_class(QUERY, 
+        "Int slider widget"
+        "CTRL+Click on any slider to turn them into an input box. Manually input values aren't clamped and can go off-bounds."
+    );
+
     QUERY->add_ctor(QUERY, chugl_gui_slider_int_ctor);
 
     QUERY->add_mfun(QUERY, chugl_gui_slider_int_val_get, "int", "val");
+    QUERY->doc_func(QUERY, "Get the current value of the slider");
 
     QUERY->add_mfun(QUERY, chugl_gui_slider_int_range_set, "void", "range");
     QUERY->add_arg( QUERY, "int", "min" );
     QUERY->add_arg( QUERY, "int", "max" );
+    QUERY->doc_func(QUERY, "Set the range of the slider");
 
     QUERY->end_class(QUERY);
 
@@ -418,9 +450,16 @@ CK_DLL_MFUN( chugl_gui_slider_int_range_set )
 t_CKBOOL init_chugl_gui_color3(Chuck_DL_Query *QUERY)
 {
     QUERY->begin_class(QUERY, Manager::GetCkName(Type::Color3), Manager::GetCkName(Type::Element));
+	QUERY->doc_class(QUERY, 
+        "Color picker widget"
+        "Ttip: the ColorEdit* functions have a little colored preview square that can be left-clicked to open a picker, and right-clicked to open an option menu."
+
+    );
+
     QUERY->add_ctor(QUERY, chugl_gui_color3_ctor);
 
     QUERY->add_mfun(QUERY, chugl_gui_color3_val_get, "vec3", "val");
+    QUERY->doc_func(QUERY, "Get the current value of the color picker");
 
     QUERY->end_class(QUERY);
 

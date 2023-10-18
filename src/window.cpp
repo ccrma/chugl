@@ -307,7 +307,8 @@ static void draw_imgui() {
     // if (ImGui::Button("Close Me"))
     //     show_another_window = false;
     // ImGui::End();
-    ImGui::ShowDemoWindow();
+    
+    // ImGui::ShowDemoWindow();
 
 
     // Draw the GUI
