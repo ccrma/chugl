@@ -5,7 +5,7 @@ GG.camera().posZ(5);
 
 // ui setup ==========================================================
 GUI_Window window;
-window.label("");
+// window.label("");
 
 GUI_FloatSlider alphaslider;
 alphaslider.label("Float Slider! Sets cube alpha");
