@@ -212,6 +212,10 @@ public:
 		auto& matUniform = m_Uniforms[COLOR_UNAME];
 		return glm::vec4(matUniform.f4[0], matUniform.f4[1], matUniform.f4[2], matUniform.f4[3]);
 	}
+	float GetAlpha() {
+		auto& matUniform = m_Uniforms[COLOR_UNAME];
+		return matUniform.f4[3];
+	}
 
 	// option setters
 	void SetPolygonMode(MaterialPolygonMode mode) { m_Options[MaterialOptionParam::PolygonMode].polygonMode = mode; }
@@ -221,6 +225,10 @@ public:
 	void SetColor(float r, float g, float b, float a) { 
 		auto& uniform = m_Uniforms[COLOR_UNAME];
 		uniform.f4[0] = r; uniform.f4[1] = g; uniform.f4[2] = b; uniform.f4[3] = a;
+	}
+	void SetAlpha(float a) { 
+		auto& uniform = m_Uniforms[COLOR_UNAME];
+		uniform.f4[3] = a;
 	}
 
 	inline void SetUniform(MaterialUniform uniform) {

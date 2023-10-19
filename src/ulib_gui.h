@@ -96,7 +96,7 @@ public:
 class Element
 {
 public:
-    Element(Chuck_Object* event, const std::string& label = "") 
+    Element(Chuck_Object* event, const std::string& label = " ") 
     : m_Event((Chuck_Event*)event), m_ReadDataLock(), m_Label(label) {}
     virtual ~Element() {}
     virtual void Draw() = 0;
@@ -106,7 +106,7 @@ public:
     void Broadcast() { Manager::Broadcast( m_Event ); }
 
     std::string& GetLabel() { return m_Label; }
-    void SetLabel(const std::string& label) { m_Label = label; }
+    void SetLabel(const std::string& label);
 
 protected:
     // void* m_ReadData;   // read by chuck thread, written to by render thread on widget update.

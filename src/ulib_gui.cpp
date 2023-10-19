@@ -40,6 +40,17 @@ void Manager::AddWindow(Window *window)
     s_Windows.push_back(window);
 }
 
+void GUI::Element::SetLabel(const std::string & label)
+{
+    // using the shared-window level lock
+    // can be written to by chuck audio thread via GUI API
+    // will be read every frame by render thread while drawing GUI
+    // threadsafe now because render thread grabs this same lock when drawing
+    std::lock_guard<std::mutex> lock(Manager::GetWindowLock());
+    // dear imgui does NOT support empty string, so we use a space instead
+    m_Label = label.empty() ? " " : label;
+}
+
 // Chuck API =================================================================
 
 //-----------------------------------------------------------------------------
