@@ -15,7 +15,11 @@ CKDoc doc; // documentation orchestra
 // add group
 doc.addGroup(
     // class names
-    ["GG", "WindowResizeEvent" ],
+    [
+        "GG", 
+        "WindowResizeEvent",
+        "Color",
+    ],
     // group name
     "ChuGL Basic Classes",
     // file name
@@ -27,8 +31,21 @@ doc.addGroup(
 // add group
 doc.addGroup(
     // class names
-    ["GGen", "GScene", "GPoints", "GLines", "GMesh", "GCircle", "GPlane", "GCube", "GSphere", "GTorus",
-     "GLight", "GPointLight", "GDirLight", "GCamera",
+    [
+        "GGen", 
+        "GScene", 
+        "GPoints", 
+        "GLines", 
+        "GMesh", 
+        "GCircle", 
+        "GPlane", 
+        "GCube", 
+        "GSphere", 
+        "GTorus",
+        "GLight", 
+        "GPointLight", 
+        "GDirLight", 
+        "GCamera",
     ],
     // group name
     "Graphics Generators",
@@ -41,8 +58,16 @@ doc.addGroup(
 // add group
 doc.addGroup(
     // class names
-    ["Geometry", "BoxGeometry", "SphereGeometry", "CircleGeometry", "LatheGeometry", "PlaneGeometry", "TorusGeometry", "CustomGeometry",
-     ],
+    [
+        "Geometry", 
+        "BoxGeometry", 
+        "SphereGeometry", 
+        "CircleGeometry", 
+        "LatheGeometry", 
+        "PlaneGeometry", 
+        "TorusGeometry", 
+        "CustomGeometry",
+    ],
     // group name
     "ChuGL Geometries",
     // file name
@@ -54,8 +79,16 @@ doc.addGroup(
 // add group
 doc.addGroup(
     // class names
-    [ "Material", "NormalsMaterial", "FlatMaterial", "PhongMaterial", "PointMaterial", "LineMaterial", "MangoUVMaterial", "ShaderMaterial",
-     ],
+    [ 
+        "Material", 
+        "NormalsMaterial", 
+        "FlatMaterial", 
+        "PhongMaterial", 
+        "PointMaterial", 
+        "LineMaterial", 
+        "MangoUVMaterial", 
+        "ShaderMaterial",
+    ],
     // group name
     "ChuGL Materials",
     // file name
