@@ -94,10 +94,10 @@ doc.addGroup(
     // file name
     "chugl-gui", 
     // group description
-    "ChuGL GUI. Includes API methods for creating widgets such as buttons, sliders, dropdowns, etc.
-    Use widgets to control parameter values during runtime. Great for experimentation and fine-tuning values.
-    Also usable for building application user-interfaces."
+    "API methods for creating widgets such as buttons, sliders, dropdowns, etc.
+    Use widgets to control parameter values during runtime. Great for experimentation
+    and fine-tuning values. Also usable for building application user-interfaces."
 );
 
 // generate
-doc.outputToDir( ".", "ChuGL [alpha] API Reference (v0.1.0)" );
+doc.outputToDir( ".", "ChuGL [alpha] API Reference (v0.1.1)" );
