@@ -697,6 +697,7 @@ t_CKBOOL init_chugl_static_fns(Chuck_DL_Query *QUERY)
 											   // static vars
 											   // This will hide the cursor and lock it to the specified window.
     QUERY->doc_class(QUERY, "Base ChuGL utility class");
+    QUERY->add_ex(QUERY, "basic/gameloop.ck");
 
 	QUERY->add_svar(QUERY, "int", "MOUSE_LOCKED", TRUE, (void *)&CGL::MOUSE_LOCKED);
     QUERY->doc_var(QUERY, "When passed to GG.mouseMode(mode), hides and locks the cursor to the ChuGL window. Good for FPS cameras");
@@ -907,7 +908,7 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 {
 	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Base) , "Object");
     QUERY->doc_class(QUERY, "Base geometry class, do not instantiate directly");
-	// QUERY->add_ex(QUERY, "custom-geo.ck");
+    QUERY->add_ex(QUERY, "basic/polygon-modes.ck");
 
 	QUERY->add_ctor(QUERY, cgl_geo_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
@@ -977,6 +978,7 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 
 	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Box), Geometry::CKName(GeometryType::Base) );
     QUERY->doc_class(QUERY, "Geometry class for constructing vertex data for boxes aka cubes");
+
 	QUERY->add_ctor(QUERY, cgl_geo_box_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 
@@ -1084,6 +1086,9 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 	// custom geo
 	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Custom), Geometry::CKName(GeometryType::Base) );
     QUERY->doc_class(QUERY, "Geometry class for providing your own vertex data. Used implicitly by GLines and GPoints");
+    QUERY->add_ex(QUERY, "basic/custom-geo.ck");
+    QUERY->add_ex(QUERY, "basic/obj-loader.ck");
+
 	QUERY->add_ctor(QUERY, cgl_geo_custom_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
 
@@ -1483,6 +1488,7 @@ t_CKBOOL init_chugl_texture(Chuck_DL_Query *QUERY)
 {
 	QUERY->begin_class(QUERY, "Texture", "Object");
     QUERY->doc_class(QUERY, "Base texture class, do not instantiate directly");
+
 	QUERY->add_ctor(QUERY, cgl_texture_ctor);
 	QUERY->add_dtor(QUERY, cgl_texture_dtor);
 	texture_data_offset = QUERY->add_mvar(QUERY, "int", "@texture_data", false);
@@ -1527,6 +1533,7 @@ t_CKBOOL init_chugl_texture(Chuck_DL_Query *QUERY)
 	// FileTexture -----------------------------------------------------------
 	QUERY->begin_class(QUERY, "FileTexture", "Texture");
     QUERY->doc_class(QUERY, "Class for loading textures from external files");
+    QUERY->add_ex(QUERY, "textures/textures-1.ck");
 
 	QUERY->add_ctor(QUERY, cgl_texture_file_ctor);
 	QUERY->add_dtor(QUERY, cgl_texture_dtor);
@@ -1543,6 +1550,7 @@ t_CKBOOL init_chugl_texture(Chuck_DL_Query *QUERY)
 	// DataTexture -----------------------------------------------------------
 	QUERY->begin_class(QUERY, "DataTexture", "Texture");
     QUERY->doc_class(QUERY, "Class for dynamically creating textures from chuck arrays");
+    QUERY->add_ex(QUERY, "audioshader/audio-texture.ck");
 
 	QUERY->add_ctor(QUERY, cgl_texture_rawdata_ctor);
 	QUERY->add_dtor(QUERY, cgl_texture_dtor);
@@ -1688,6 +1696,7 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Base), "Object");
 	QUERY->doc_class(QUERY, "Base material class, do not instantiate directly");
+    QUERY->add_ex(QUERY, "basic/polygon-modes.ck");
 
 	QUERY->add_ctor(QUERY, cgl_mat_ctor);
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
@@ -1875,6 +1884,9 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 	// custom shader material
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::CustomShader), Material::CKName(MaterialType::Base));
 	QUERY->doc_class(QUERY, "Color each pixel using the custom glsl shaders you provide via Material.shaders()");
+    QUERY->add_ex(QUERY, "audioshader/audio-texture.ck");
+
+
 	QUERY->add_ctor(QUERY, cgl_mat_custom_shader_ctor);
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 	QUERY->end_class(QUERY);
@@ -1882,9 +1894,12 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 	// points material
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Points), Material::CKName(MaterialType::Base));
 	QUERY->doc_class(QUERY, "Used by GPoints");
+    QUERY->add_ex(QUERY, "basic/points.ck");
+
 	QUERY->add_ctor(QUERY, cgl_mat_custom_shader_ctor);
 	QUERY->add_ctor(QUERY, cgl_mat_points_ctor);
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
+
 	QUERY->end_class(QUERY);
 
 	// mango material
@@ -1897,6 +1912,9 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 	// line material
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Line), Material::CKName(MaterialType::Base));
 	QUERY->doc_class(QUERY, "Used by GLines");
+    QUERY->add_ex(QUERY, "sndpeek/sndpeek-minimal.ck");
+    QUERY->add_ex(QUERY, "sndpeek/sndpeek.ck");
+
 	QUERY->add_ctor(QUERY, cgl_mat_line_ctor);
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
 	QUERY->end_class(QUERY);
@@ -2385,6 +2403,8 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query *QUERY)
 	// GGen =========================================
 	QUERY->begin_class(QUERY, "GGen", "Object");
 	QUERY->doc_class(QUERY, "Base class for all Gens. Can be extended to create your own, or initialized as an empty group container");
+	QUERY->add_ex(QUERY, "basic/orbits.ck");
+	QUERY->add_ex(QUERY, "basic/circles.ck");
 
 	QUERY->add_ctor(QUERY, cgl_obj_ctor);
 	QUERY->add_dtor(QUERY, cgl_obj_dtor);
@@ -3085,6 +3105,7 @@ t_CKBOOL init_chugl_scene(Chuck_DL_Query *QUERY)
 	// CGL scene
 	QUERY->begin_class(QUERY, "GScene", "GGen");
 	QUERY->doc_class(QUERY, "Scene class. Static--all instances point to the same underlying ChuGL main scene. GGens must be added to a scene to be rendered");
+    QUERY->add_ex(QUERY, "basic/fog.ck");
 	
 	QUERY->add_ctor(QUERY, cgl_scene_ctor);
 	QUERY->add_dtor(QUERY, cgl_scene_dtor);
@@ -3261,6 +3282,7 @@ t_CKBOOL init_chugl_cam(Chuck_DL_Query *QUERY)
 	// CGL camera
 	QUERY->begin_class(QUERY, "GCamera", "GGen");
 	QUERY->doc_class(QUERY, "Camera class. Static--all instances point to the same underlying ChuGL main camera");
+    QUERY->add_ex(QUERY, "basic/mousecast.ck");
 
 	QUERY->add_ctor(QUERY, cgl_cam_ctor);
 	QUERY->add_dtor(QUERY, cgl_cam_dtor);
@@ -3529,44 +3551,42 @@ t_CKBOOL init_chugl_mesh(Chuck_DL_Query *QUERY)
 	QUERY->doc_class(QUERY, "Creates a Mesh that uses BoxGeometry and PhongMaterial");
 
 	QUERY->add_ctor(QUERY, cgl_gcube_ctor);
-	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
 	QUERY->end_class(QUERY);
 
 	QUERY->begin_class(QUERY, "GSphere", "GMesh");
 	QUERY->doc_class(QUERY, "Creates a Mesh that uses SphereGeometry and PhongMaterial");
 	QUERY->add_ctor(QUERY, cgl_gsphere_ctor);
-	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
 	QUERY->end_class(QUERY);
 
 	QUERY->begin_class(QUERY, "GCircle", "GMesh");
 	QUERY->doc_class(QUERY, "Creates a Mesh that uses CircleGeometry and PhongMaterial");
 	QUERY->add_ctor(QUERY, cgl_gcircle_ctor);
-	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
 	QUERY->end_class(QUERY);
 
 	QUERY->begin_class(QUERY, "GPlane", "GMesh");
 	QUERY->doc_class(QUERY, "Creates a Mesh that uses PlaneGeometry and PhongMaterial");
 	QUERY->add_ctor(QUERY, cgl_gplane_ctor);
-	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
 	QUERY->end_class(QUERY);
 
 	QUERY->begin_class(QUERY, "GTorus", "GMesh");
 	QUERY->doc_class(QUERY, "Creates a Mesh that uses TorusGeometry and PhongMaterial");
 
 	QUERY->add_ctor(QUERY, cgl_gtorus_ctor);
-	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
 	QUERY->end_class(QUERY);
 
 	QUERY->begin_class(QUERY, "GLines", "GMesh");
 	QUERY->doc_class(QUERY, "Creates a Mesh that uses CustomGeometry and LineMaterial");
+	QUERY->add_ex(QUERY, "basic/circles.ck");
+    QUERY->add_ex(QUERY, "sndpeek/sndpeek-minimal.ck");
+    QUERY->add_ex(QUERY, "sndpeek/sndpeek.ck");
+
 	QUERY->add_ctor(QUERY, cgl_glines_ctor);
-	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
+
 	QUERY->end_class(QUERY);
 
 	QUERY->begin_class(QUERY, "GPoints", "GMesh");
 	QUERY->doc_class(QUERY, "Creates a Mesh that uses CustomGeometry and PointMaterial");
 	QUERY->add_ctor(QUERY, cgl_gpoints_ctor);
-	// QUERY->add_dtor(QUERY, cgl_gcube_dtor);
 	QUERY->end_class(QUERY);
 
 
@@ -3830,6 +3850,8 @@ t_CKBOOL init_chugl_light(Chuck_DL_Query *QUERY)
 
 	QUERY->begin_class(QUERY, Light::CKName(LightType::Point), Light::CKName(LightType::Base));
 	QUERY->doc_class(QUERY, "Point light class");
+    QUERY->add_ex(QUERY, "basic/light.ck");
+
 	QUERY->add_ctor(QUERY, cgl_point_light_ctor);
 	QUERY->add_dtor(QUERY, cgl_light_dtor);
 

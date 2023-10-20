@@ -153,7 +153,7 @@ t_CKBOOL init_chugl_gui_element(Chuck_DL_Query *QUERY)
         "Base class for all GUI elements. Do not instantiate directly"
         "All GUI elements are Chuck Events, and can be used as such."
     );
-    QUERY->add_ex(QUERY, "gui/basic-gui.ck");
+    QUERY->add_ex(QUERY, "ui/basic-ui.ck");
 
     QUERY->add_ctor(QUERY, chugl_gui_element_ctor);
     QUERY->add_dtor(QUERY, chugl_gui_element_dtor);
