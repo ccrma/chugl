@@ -64,9 +64,9 @@ class Circle extends GGen
     fun void update( float dt )
     {
         .35 + .25*Math.sin(now/second*rate) => float s;
-        circle.scale( @(s,s,s ) );
+        circle.sca( s );
         // uncomment for xtra weirdness
-        // circle.rotY(dt*rate/3);
+        // circle.rotateY(dt*rate/3);
     }
 }
 
@@ -82,7 +82,7 @@ for( auto circ : circles )
     // randomize location in XY
     @( Math.random2f(-1.5,1.5),
        Math.random2f(-1,1),
-       Math.random2f(-1,1) ) => circ.position;
+       Math.random2f(-1,1) ) => circ.pos;
 }
 
 // function to cycle colors
@@ -108,7 +108,7 @@ while( true )
     // cycle colors
     cycleColors( GG.dt() );
     // uncomment to rotate camera around scene, for reasons unknown
-    // dolly.rotY(GG.dt()*.5);
+    // dolly.rotateY(GG.dt()*.5);
     // next frame
     GG.nextFrame() => now;
 }

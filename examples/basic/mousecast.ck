@@ -80,7 +80,7 @@ fun void clickListener() {
         distance * ray + GG.camera().pos() => vec3 spawnPos;
         // spawn sphere at spawnPos
         GSphere s --> GG.scene();
-        s.position(spawnPos);
+        s.pos(spawnPos);
         // set random color
         s.mat().color(Color.random());
 

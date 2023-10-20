@@ -62,9 +62,9 @@ mesh --> GG.scene();
 mesh2 --> GG.scene();
 mesh3 --> GG.scene();
 
-@(2.0, 0.0, -4.0) => mesh.position;
-@(-2.0, 0.0, -4.0) => mesh2.position;
-@(0.0, 0.0, -4.0) => mesh3.position;
+@(2.0, 0.0, -4.0) => mesh.pos;
+@(-2.0, 0.0, -4.0) => mesh2.pos;
+@(0.0, 0.0, -4.0) => mesh3.pos;
 
 while (true) {
 

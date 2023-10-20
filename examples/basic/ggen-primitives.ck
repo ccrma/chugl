@@ -58,7 +58,7 @@ GG.camera().posZ( 10 );
 fun void update()
 {
     // rotate camera by rotating the dolly
-    dolly.rotY( GG.dt() );
+    dolly.rotateY( GG.dt() );
     // look at
     GG.camera().lookAt( GG.scene().pos() );
     // raise the cube to a constant height

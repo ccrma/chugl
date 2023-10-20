@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
-// name: basic-gui.ck
-// desc: demos the use of basic GUI widgets including buttons, sliders, 
+// name: basic-UI.ck
+// desc: demos the use of basic UI widgets including buttons, sliders, 
 //       checkboxes, and color pickers
 // requires: ChuGL + chuck-1.5.1.5 or higher
 //
@@ -17,28 +17,28 @@ GG.camera().posZ(5);
 GCube childCubes[0];
 
 // ui setup ==========================================================
-GUI_Window window;
-window.label("ChuGL GUI Window");
+UI_Window window;
+window.text("ChuGL UI Window");
 
-GUI_Button button;
-button.label("Click me! To change color of cube");
+UI_Button button;
+button.text("Click me! To change color of cube");
 
-GUI_FloatSlider fslider;
-fslider.label("Float Slider! Rotates center cube");
+UI_SliderFloat fslider;
+fslider.text("Float Slider! Rotates center cube");
 fslider.range(0, Math.PI * 2);
 
-GUI_IntSlider islider;
-islider.label("Int Slider! Changes number of children");
+UI_SliderInt islider;
+islider.text("Int Slider! Changes number of children");
 islider.range(0, 10);
 
-GUI_Checkbox checkbox;
-checkbox.label("Check box! to connect / disconnect children");
+UI_Checkbox checkbox;
+checkbox.text("Check box! to connect / disconnect children");
 
-GUI_Color3 color;
-color.label("Color! Changes background color");
+UI_Color3 color;
+color.text("Color! Changes background color");
 
-GUI_Dropdown dropdown;
-dropdown.label("Dropdown! Select polygon mode");
+UI_Dropdown dropdown;
+dropdown.text("Dropdown! Select polygon mode");
 dropdown.options(["FILL", "LINE", "POINT"]);
 
 window.add(button);
@@ -49,7 +49,7 @@ window.add(color);
 window.add(dropdown);
 
 
-fun void ButtonListener(GUI_Button @ button) {
+fun void ButtonListener(UI_Button @ button) {
     while (true) {
         button => now;
         cube.mat().color(Color.random());
@@ -57,16 +57,16 @@ fun void ButtonListener(GUI_Button @ button) {
 } spork ~ ButtonListener(button);
 
 
-fun void FSliderListener(GUI_FloatSlider @ fslider) {
+fun void FSliderListener(UI_SliderFloat @ fslider) {
     while (true) {
         fslider => now;
         <<< "fslider: " + fslider.val() >>>;
-        cube.rotation(@(fslider.val(), 0, 0));
+        cube.rot(@(fslider.val(), 0, 0));
     }
 } 
 spork ~ FSliderListener(fslider);
 
-fun void ISliderListener(GUI_IntSlider @ islider) {
+fun void ISliderListener(UI_SliderInt @ islider) {
     while (true) {
         islider => now;
         <<< "islider: " + islider.val() >>>;
@@ -76,7 +76,7 @@ fun void ISliderListener(GUI_IntSlider @ islider) {
         // case where we need to add children
         while (childCubes.size() < numChildren) {
             GCube childCube;
-            childCube.scale(@(0.25, 0.25, 0.25));
+            childCube.sca(0.25);
             childCube.mat().color(Color.random());
             childCubes << childCube;  // append
             if (checkbox.val()) {
@@ -98,13 +98,13 @@ fun void ISliderListener(GUI_IntSlider @ islider) {
         // set positions around circumference
         for (0 => int i; i < childCubes.size(); i++) {
             ( i$float / childCubes.size() ) * Math.PI * 2.0 => float angle;
-            childCubes[i].position(@(Math.cos(angle) * 2, Math.sin(angle) * 2, 0));
+            childCubes[i].pos(@(Math.cos(angle) * 2, Math.sin(angle) * 2, 0));
         }
         
     }
 } spork ~ ISliderListener(islider);
 
-fun void CheckboxListener(GUI_Checkbox @ checkbox) {
+fun void CheckboxListener(UI_Checkbox @ checkbox) {
     while (true) {
         checkbox => now;
         // connect all children
@@ -121,7 +121,7 @@ fun void CheckboxListener(GUI_Checkbox @ checkbox) {
     }
 } spork ~ CheckboxListener(checkbox);
 
-fun void ColorListener(GUI_Color3 @ color) {
+fun void ColorListener(UI_Color3 @ color) {
     GG.scene().backgroundColor(color.val());
     while (true) {
         color => now;
@@ -129,7 +129,7 @@ fun void ColorListener(GUI_Color3 @ color) {
     }
 } spork ~ ColorListener(color);
 
-fun void DropdownListener(GUI_Dropdown @ dropdown) {
+fun void DropdownListener(UI_Dropdown @ dropdown) {
     while (true) {
         dropdown => now;
         dropdown.val() => int val;
@@ -148,11 +148,11 @@ fun void DropdownListener(GUI_Dropdown @ dropdown) {
 // Game loop =========================================================
 while (true) { 
     // rotate center cube
-    GG.dt() => cube.rotZ;
+    GG.dt() => cube.rotateZ;
 
     // rotate children
     for (auto c : childCubes) {
-        -3 * GG.dt() => c.rotZ;
+    -3 * GG.dt() => c.rotateZ;
     }
 
     GG.nextFrame() => now; 

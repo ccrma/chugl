@@ -25,9 +25,9 @@ for (auto mesh : meshes) {
     mesh --> scene;
 }
 
-meshes[0].position(@(-2, 0, -5));
-meshes[1].position(@(0, 0, -5));
-meshes[2].position(@(2, 0, -5));
+meshes[0].pos(@(-2, 0, -5));
+meshes[1].pos(@(0, 0, -5));
+meshes[2].pos(@(2, 0, -5));
 
 // camera setup ==================
 

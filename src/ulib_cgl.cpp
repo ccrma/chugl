@@ -89,45 +89,74 @@ CK_DLL_MFUN(cgl_obj_get_right);
 CK_DLL_MFUN(cgl_obj_get_forward);
 CK_DLL_MFUN(cgl_obj_get_up);
 
-CK_DLL_MFUN(cgl_obj_translate_by);
-CK_DLL_MFUN(cgl_obj_scale_by);
-// CK_DLL_MFUN(cgl_obj_rotate_by);  // no rotate by design because converting from euler angles to quat is ambiguous
+	// Position 
+	CK_DLL_MFUN(cgl_obj_get_pos_x);
+	CK_DLL_MFUN(cgl_obj_set_pos_x);
 
-CK_DLL_MFUN(cgl_obj_rot_on_local_axis);
-CK_DLL_MFUN(cgl_obj_rot_on_world_axis);
+	CK_DLL_MFUN(cgl_obj_get_pos_y);
+	CK_DLL_MFUN(cgl_obj_set_pos_y);
 
-CK_DLL_MFUN(cgl_obj_set_rot_x);
-CK_DLL_MFUN(cgl_obj_set_rot_y);
-CK_DLL_MFUN(cgl_obj_set_rot_z);
-CK_DLL_MFUN(cgl_obj_set_rot);
-CK_DLL_MFUN(cgl_obj_get_rot);
+	CK_DLL_MFUN(cgl_obj_get_pos_z);
+	CK_DLL_MFUN(cgl_obj_set_pos_z);
 
-// CK_DLL_MFUN(cgl_obj_get_pos_x);
-// CK_DLL_MFUN(cgl_obj_get_pos_y);
-// CK_DLL_MFUN(cgl_obj_get_pos_z);
-CK_DLL_MFUN(cgl_obj_set_pos_x);
-CK_DLL_MFUN(cgl_obj_set_pos_y);
-CK_DLL_MFUN(cgl_obj_set_pos_z);
-CK_DLL_MFUN(cgl_obj_set_pos);
-CK_DLL_MFUN(cgl_obj_get_pos);
-CK_DLL_MFUN(cgl_obj_get_world_pos);
-CK_DLL_MFUN(cgl_obj_set_world_pos);
+	CK_DLL_MFUN(cgl_obj_set_pos);
+	CK_DLL_MFUN(cgl_obj_get_pos);
 
-CK_DLL_MFUN(cgl_obj_set_scale);
-CK_DLL_MFUN(cgl_obj_get_scale);
-CK_DLL_MFUN(cgl_obj_get_world_scale);
-CK_DLL_MFUN(cgl_obj_set_world_scale);
+	CK_DLL_MFUN(cgl_obj_get_pos_world);
+	CK_DLL_MFUN(cgl_obj_set_pos_world);
 
-CK_DLL_MFUN(cgl_obj_lookat_vec3);
-CK_DLL_MFUN(cgl_obj_lookat_float);
+	CK_DLL_MFUN(cgl_obj_translate);
+	CK_DLL_MFUN(cgl_obj_translate_x);
+	CK_DLL_MFUN(cgl_obj_translate_y);
+	CK_DLL_MFUN(cgl_obj_translate_z);
 
+	// Rotation
+	CK_DLL_MFUN(cgl_obj_get_rot_x);
+	CK_DLL_MFUN(cgl_obj_set_rot_x);
+
+	CK_DLL_MFUN(cgl_obj_get_rot_y);
+	CK_DLL_MFUN(cgl_obj_set_rot_y);
+
+	CK_DLL_MFUN(cgl_obj_get_rot_z);
+	CK_DLL_MFUN(cgl_obj_set_rot_z);
+
+	CK_DLL_MFUN(cgl_obj_set_rot);
+	CK_DLL_MFUN(cgl_obj_get_rot);
+
+	CK_DLL_MFUN(cgl_obj_rotate);
+	CK_DLL_MFUN(cgl_obj_rotate_x);
+	CK_DLL_MFUN(cgl_obj_rotate_y);
+	CK_DLL_MFUN(cgl_obj_rotate_z);
+
+	CK_DLL_MFUN(cgl_obj_rot_on_local_axis);
+	CK_DLL_MFUN(cgl_obj_rot_on_world_axis);
+
+	CK_DLL_MFUN(cgl_obj_lookat_vec3);
+	CK_DLL_MFUN(cgl_obj_lookat_dir);
+	// CK_DLL_MFUN(cgl_obj_rotate_by);  // no rotate by design because converting from euler angles to quat is ambiguous
+
+	// Scale
+	CK_DLL_MFUN(cgl_obj_get_scale_x);
+	CK_DLL_MFUN(cgl_obj_set_scale_x);
+
+	CK_DLL_MFUN(cgl_obj_get_scale_y);
+	CK_DLL_MFUN(cgl_obj_set_scale_y);
+
+	CK_DLL_MFUN(cgl_obj_get_scale_z);
+	CK_DLL_MFUN(cgl_obj_set_scale_z);
+
+	CK_DLL_MFUN(cgl_obj_set_scale);
+	CK_DLL_MFUN(cgl_obj_set_scale_uniform);
+	CK_DLL_MFUN(cgl_obj_get_scale);
+	
+	CK_DLL_MFUN(cgl_obj_get_scale_world);
+	CK_DLL_MFUN(cgl_obj_set_scale_world);
 
 // parent-child scenegraph API
 // CK_DLL_MFUN(cgl_obj_disconnect);
 // CK_DLL_MFUN(cgl_obj_get_parent);
 // CK_DLL_MFUN(cgl_obj_get_children);
 
-// TODO: these need reference counting
 CK_DLL_GFUN(ggen_op_gruck);	  // add child
 CK_DLL_GFUN(ggen_op_ungruck); // remove child
 
@@ -188,7 +217,6 @@ CK_DLL_MFUN(cgl_scene_get_fog_type);
 // Object -> Light
 //-----------------------------------------------------------------------------
 CK_DLL_CTOR(cgl_light_ctor); // abstract base class, no constructor
-CK_DLL_DTOR(cgl_light_dtor);
 
 CK_DLL_MFUN(cgl_light_set_intensity);
 CK_DLL_MFUN(cgl_light_set_ambient);
@@ -360,7 +388,6 @@ CK_DLL_MFUN(cgl_mat_line_set_mode);	 // many platforms only support fixed width 
 // Object -> Mesh
 //-----------------------------------------------------------------------------
 CK_DLL_CTOR(cgl_mesh_ctor);
-// CK_DLL_DTOR(cgl_mesh_dtor);
 CK_DLL_MFUN(cgl_mesh_set);
 CK_DLL_MFUN(cgl_mesh_get_mat);
 CK_DLL_MFUN(cgl_mesh_get_geo);
@@ -670,6 +697,7 @@ t_CKBOOL init_chugl_static_fns(Chuck_DL_Query *QUERY)
 											   // static vars
 											   // This will hide the cursor and lock it to the specified window.
     QUERY->doc_class(QUERY, "Base ChuGL utility class");
+    QUERY->add_ex(QUERY, "basic/gameloop.ck");
 
 	QUERY->add_svar(QUERY, "int", "MOUSE_LOCKED", TRUE, (void *)&CGL::MOUSE_LOCKED);
     QUERY->doc_var(QUERY, "When passed to GG.mouseMode(mode), hides and locks the cursor to the ChuGL window. Good for FPS cameras");
@@ -882,7 +910,7 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 {
 	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Base) , "Object");
     QUERY->doc_class(QUERY, "Base geometry class, do not instantiate directly");
-	// QUERY->add_ex(QUERY, "custom-geo.ck");
+    QUERY->add_ex(QUERY, "basic/polygon-modes.ck");
 
 	QUERY->add_ctor(QUERY, cgl_geo_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
@@ -1053,6 +1081,9 @@ t_CKBOOL init_chugl_geo(Chuck_DL_Query *QUERY)
 	// custom geo
 	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Custom), Geometry::CKName(GeometryType::Base) );
     QUERY->doc_class(QUERY, "Geometry class for providing your own vertex data. Used implicitly by GLines and GPoints");
+    QUERY->add_ex(QUERY, "basic/custom-geo.ck");
+    QUERY->add_ex(QUERY, "basic/obj-loader.ck");
+
 	QUERY->add_ctor(QUERY, cgl_geo_custom_ctor);
 
 
@@ -1405,6 +1436,7 @@ t_CKBOOL init_chugl_texture(Chuck_DL_Query *QUERY)
 {
 	QUERY->begin_class(QUERY, "Texture", "Object");
     QUERY->doc_class(QUERY, "Base texture class, do not instantiate directly");
+
 	QUERY->add_ctor(QUERY, cgl_texture_ctor);
 	QUERY->add_dtor(QUERY, cgl_texture_dtor);
 	texture_data_offset = QUERY->add_mvar(QUERY, "int", "@texture_data", false);
@@ -1449,6 +1481,7 @@ t_CKBOOL init_chugl_texture(Chuck_DL_Query *QUERY)
 	// FileTexture -----------------------------------------------------------
 	QUERY->begin_class(QUERY, "FileTexture", "Texture");
     QUERY->doc_class(QUERY, "Class for loading textures from external files");
+    QUERY->add_ex(QUERY, "textures/textures-1.ck");
 
 	QUERY->add_ctor(QUERY, cgl_texture_file_ctor);
 
@@ -1464,6 +1497,7 @@ t_CKBOOL init_chugl_texture(Chuck_DL_Query *QUERY)
 	// DataTexture -----------------------------------------------------------
 	QUERY->begin_class(QUERY, "DataTexture", "Texture");
     QUERY->doc_class(QUERY, "Class for dynamically creating textures from chuck arrays");
+    QUERY->add_ex(QUERY, "audioshader/audio-texture.ck");
 
 	QUERY->add_ctor(QUERY, cgl_texture_rawdata_ctor);
 
@@ -1593,6 +1627,7 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Base), "Object");
 	QUERY->doc_class(QUERY, "Base material class, do not instantiate directly");
+    QUERY->add_ex(QUERY, "basic/polygon-modes.ck");
 
 	QUERY->add_ctor(QUERY, cgl_mat_ctor);
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
@@ -1777,12 +1812,16 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 	// custom shader material
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::CustomShader), Material::CKName(MaterialType::Base));
 	QUERY->doc_class(QUERY, "Color each pixel using the custom glsl shaders you provide via Material.shaders()");
+    QUERY->add_ex(QUERY, "audioshader/audio-texture.ck");
+
+
 	QUERY->add_ctor(QUERY, cgl_mat_custom_shader_ctor);
 	QUERY->end_class(QUERY);
 
 	// points material
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Points), Material::CKName(MaterialType::Base));
 	QUERY->doc_class(QUERY, "Used by GPoints");
+    QUERY->add_ex(QUERY, "basic/points.ck");
 	QUERY->add_ctor(QUERY, cgl_mat_points_ctor);
 	QUERY->end_class(QUERY);
 
@@ -1795,6 +1834,9 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 	// line material
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Line), Material::CKName(MaterialType::Base));
 	QUERY->doc_class(QUERY, "Used by GLines");
+    QUERY->add_ex(QUERY, "sndpeek/sndpeek-minimal.ck");
+    QUERY->add_ex(QUERY, "sndpeek/sndpeek.ck");
+
 	QUERY->add_ctor(QUERY, cgl_mat_line_ctor);
 	QUERY->end_class(QUERY);
 
@@ -2245,6 +2287,8 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query *QUERY)
 	// GGen =========================================
 	QUERY->begin_class(QUERY, "GGen", "Object");
 	QUERY->doc_class(QUERY, "Base class for all Gens. Can be extended to create your own, or initialized as an empty group container");
+	QUERY->add_ex(QUERY, "basic/orbits.ck");
+	QUERY->add_ex(QUERY, "basic/circles.ck");
 
 	QUERY->add_ctor(QUERY, cgl_obj_ctor);
 	QUERY->add_dtor(QUERY, cgl_obj_dtor);
@@ -2255,10 +2299,12 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query *QUERY)
 
 	QUERY->add_mfun(QUERY, cgl_obj_update, "void", "update");
 	QUERY->add_arg(QUERY, "float", "dt");
-	QUERY->doc_func(QUERY, "Internal. Used for automatic updates feature");
+	QUERY->doc_func(
+		QUERY, 
+		"This method is automatically invoked once per frame for all GGens connected to the scene graph."
+		"Override this method in custom GGen classes to implement your own update logic."
+	);
 
-	// transform getters ===========
-	// get obj direction vectors in world space
 	QUERY->add_mfun(QUERY, cgl_obj_get_right, "vec3", "right");
 	QUERY->doc_func(QUERY, "Get the right vector of this GGen in world space");
 
@@ -2268,95 +2314,211 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query *QUERY)
 	QUERY->add_mfun(QUERY, cgl_obj_get_up, "vec3", "up");
 	QUERY->doc_func(QUERY, "Get the up vector of this GGen in world space");
 
+	// Position ===============================================================
+
+	// float posX()
+	QUERY->add_mfun(QUERY, cgl_obj_get_pos_x, "float", "posX");
+	QUERY->doc_func(QUERY, "Get X position of this GGen in local space");
+
+	// float posX(float)
+	QUERY->add_mfun(QUERY, cgl_obj_set_pos_x, "float", "posX");
+	QUERY->add_arg(QUERY, "float", "pos");
+	QUERY->doc_func(QUERY, "Set X position of this GGen in local space");
+
+	// float posY()
+	QUERY->add_mfun(QUERY, cgl_obj_get_pos_y, "float", "posY");
+	QUERY->doc_func(QUERY, "Get Y position of this GGen in local space");
+
+	// float posY(float)
+	QUERY->add_mfun(QUERY, cgl_obj_set_pos_y, "float", "posY");
+	QUERY->add_arg(QUERY, "float", "pos");
+	QUERY->doc_func(QUERY, "Set Y position of this GGen in local space");
+
+	// float posZ()
+	QUERY->add_mfun(QUERY, cgl_obj_get_pos_z, "float", "posZ");
+	QUERY->doc_func(QUERY, "Get Z position of this GGen in local space");
+
+	// float posZ(float)
+	QUERY->add_mfun(QUERY, cgl_obj_set_pos_z, "float", "posZ");
+	QUERY->add_arg(QUERY, "float", "pos");
+	QUERY->doc_func(QUERY, "Set Z position of this GGen in local space");
+
+	// vec3 pos()
 	QUERY->add_mfun(QUERY, cgl_obj_get_pos, "vec3", "pos");
 	QUERY->doc_func(QUERY, "Get object position in local space");
 
-	QUERY->add_mfun(QUERY, cgl_obj_get_rot, "vec3", "rot");
-	QUERY->doc_func(QUERY, "Get object rotation in local space as euler angles");
+	// vec3 pos( vec3 )
+	QUERY->add_mfun(QUERY, cgl_obj_set_pos, "vec3", "pos");
+	QUERY->add_arg(QUERY, "vec3", "pos");
+	QUERY->doc_func(QUERY, "Set object position in local space");
 
-	QUERY->add_mfun(QUERY, cgl_obj_get_scale, "vec3", "sca");
-	QUERY->doc_func(QUERY, "Get object scale in local space");
-
-	QUERY->add_mfun(QUERY, cgl_obj_get_world_pos, "vec3", "worldPos");
+	// vec3 posWorld()
+	QUERY->add_mfun(QUERY, cgl_obj_get_pos_world, "vec3", "posWorld");
 	QUERY->doc_func(QUERY, "Get object position in world space");
 
-	QUERY->add_mfun(QUERY, cgl_obj_set_world_pos, "GGen", "worldPosition");
+	// vec3 posWorld( float )
+	QUERY->add_mfun(QUERY, cgl_obj_set_pos_world, "vec3", "posWorld");
 	QUERY->add_arg(QUERY, "vec3", "pos");
 	QUERY->doc_func(QUERY, "Set object position in world space");
 
-	QUERY->add_mfun(QUERY, cgl_obj_get_world_scale, "vec3", "worldSca");
-	QUERY->doc_func(QUERY, "Get object scale in world space");
-
-	QUERY->add_mfun(QUERY, cgl_obj_set_world_scale, "GGen", "worldScale");
-	QUERY->add_arg(QUERY, "vec3", "scale");
-	QUERY->doc_func(QUERY, "Set object scale in world space");
-
-	// transform setters ===========
-	QUERY->add_mfun(QUERY, cgl_obj_translate_by, "GGen", "translate");
-	QUERY->add_arg(QUERY, "vec3", "trans_vec");
+	// GGen translate( vec3 )
+	QUERY->add_mfun(QUERY, cgl_obj_translate, "GGen", "translate");
+	QUERY->add_arg(QUERY, "vec3", "translation");
 	QUERY->doc_func(QUERY, "Translate this GGen by the given vector");
 
+	// GGen translateX( float )
+	QUERY->add_mfun(QUERY, cgl_obj_translate_x, "GGen", "translateX");
+	QUERY->add_arg(QUERY, "float", "amt");
+	QUERY->doc_func(QUERY, "Translate this GGen by given amount on the X axis in local space");
+
+	// GGen translateY( float )
+	QUERY->add_mfun(QUERY, cgl_obj_translate_y, "GGen", "translateY");
+	QUERY->add_arg(QUERY, "float", "amt");
+	QUERY->doc_func(QUERY, "Translate this GGen by given amount on the Y axis in local space");
+
+	// GGen translateZ( float )
+	QUERY->add_mfun(QUERY, cgl_obj_translate_z, "GGen", "translateZ");
+	QUERY->add_arg(QUERY, "float", "amt");
+	QUERY->doc_func(QUERY, "Translate this GGen by given amount on the Z axis in local space");
+
+	// Rotation ===============================================================
+
+	// float rotX()
+	QUERY->add_mfun(QUERY, cgl_obj_get_rot_x, "vec3", "rotX");
+	QUERY->doc_func(QUERY, "Get the rotation of this GGen on the X axis in local space");
+
+	// float rotX( float )
+	QUERY->add_mfun(QUERY, cgl_obj_set_rot_x, "vec3", "rotX");
+	QUERY->add_arg(QUERY, "float", "radians");
+	QUERY->doc_func(QUERY, "Set the rotation of this GGen on the X axis in local space to the given radians");
+
+	// float rotY()
+	QUERY->add_mfun(QUERY, cgl_obj_get_rot_y, "vec3", "rotY");
+	QUERY->doc_func(QUERY, "Get the rotation of this GGen on the Y axis in local space");
+
+	// float rotY( float )
+	QUERY->add_mfun(QUERY, cgl_obj_set_rot_y, "vec3", "rotY");
+	QUERY->add_arg(QUERY, "float", "radians");
+	QUERY->doc_func(QUERY, "Set the rotation of this GGen on the Y axis in local space to the given radians");
+
+	// float rotZ()
+	QUERY->add_mfun(QUERY, cgl_obj_get_rot_z, "vec3", "rotZ");
+	QUERY->doc_func(QUERY, "Get the rotation of this GGen on the Z axis in local space");
+
+	// float rotZ( float )
+	QUERY->add_mfun(QUERY, cgl_obj_set_rot_z, "vec3", "rotZ");
+	QUERY->add_arg(QUERY, "float", "radians");
+	QUERY->doc_func(QUERY, "Set the rotation of this GGen on the Z axis in local space to the given radians");
+
+	// vec3 rot()
+	QUERY->add_mfun(QUERY, cgl_obj_get_rot, "vec3", "rot");
+	QUERY->doc_func(QUERY, "Get object rotation in local space as euler angles in radians");
+
+	// vec3 rot( vec3 )
+	QUERY->add_mfun(QUERY, cgl_obj_set_rot, "vec3", "rot");
+	QUERY->add_arg(QUERY, "vec3", "eulers");
+	QUERY->doc_func(QUERY, "Set rotation of this GGen in local space as euler angles");
+
+	// GGen rotate( vec3 )
+	QUERY->add_mfun(QUERY, cgl_obj_rotate, "GGen", "rotate");
+	QUERY->add_arg(QUERY, "vec3", "eulers");
+	QUERY->doc_func(QUERY, "Rotate this GGen by the given euler angles in local space");
+
+	// GGen rotateX( float )
+	QUERY->add_mfun(QUERY, cgl_obj_rotate_x, "GGen", "rotateX");
+	QUERY->add_arg(QUERY, "float", "radians");
+	QUERY->doc_func(QUERY, "Rotate this GGen by the given radians on the X axis in local space");
+
+	// GGen rotateY( float )
+	QUERY->add_mfun(QUERY, cgl_obj_rotate_y, "GGen", "rotateY");
+	QUERY->add_arg(QUERY, "float", "radians");
+	QUERY->doc_func(QUERY, "Rotate this GGen by the given radians on the Y axis in local space");
+
+	// GGen rotateZ( float )
+	QUERY->add_mfun(QUERY, cgl_obj_rotate_z, "GGen", "rotateZ");
+	QUERY->add_arg(QUERY, "float", "radians");
+	QUERY->doc_func(QUERY, "Rotate this GGen by the given radians on the Z axis in local space");
+
+	// GGen rotateOnLocalAxis( vec3, float )
 	QUERY->add_mfun(QUERY, cgl_obj_rot_on_local_axis, "GGen", "rotateOnLocalAxis");
 	QUERY->add_arg(QUERY, "vec3", "axis");
 	QUERY->add_arg(QUERY, "float", "radians");
 	QUERY->doc_func(QUERY, "Rotate this GGen by the given radians on the given axis in local space");
 
+	// GGen rotateOnWorldAxis( vec3, float )
 	QUERY->add_mfun(QUERY, cgl_obj_rot_on_world_axis, "GGen", "rotateOnWorldAxis");
 	QUERY->add_arg(QUERY, "vec3", "axis");
 	QUERY->add_arg(QUERY, "float", "radians");
 	QUERY->doc_func(QUERY, "Rotate this GGen by the given radians on the given axis in world space");
 
-	QUERY->add_mfun(QUERY, cgl_obj_set_rot_x, "GGen", "rotX");
-	QUERY->add_arg(QUERY, "float", "radians");
-	QUERY->doc_func(QUERY, "Rotate this GGen by the given radians on the X axis in local space");
-
-	QUERY->add_mfun(QUERY, cgl_obj_set_rot_y, "GGen", "rotY");
-	QUERY->add_arg(QUERY, "float", "radians");
-	QUERY->doc_func(QUERY, "Rotate this GGen by the given radians on the Y axis in local space");
-
-	QUERY->add_mfun(QUERY, cgl_obj_set_rot_z, "GGen", "rotZ");
-	QUERY->add_arg(QUERY, "float", "radians");
-	QUERY->doc_func(QUERY, "Rotate this GGen by the given radians on the Z axis in local space");
-
-	QUERY->add_mfun(QUERY, cgl_obj_set_pos_x, "GGen", "posX");
-	QUERY->add_arg(QUERY, "float", "pos");
-	QUERY->doc_func(QUERY, "Set X position of this GGen in local space");
-
-	QUERY->add_mfun(QUERY, cgl_obj_set_pos_y, "GGen", "posY");
-	QUERY->add_arg(QUERY, "float", "pos");
-	QUERY->doc_func(QUERY, "Set Y position of this GGen in local space");
-
-	QUERY->add_mfun(QUERY, cgl_obj_set_pos_z, "GGen", "posZ");
-	QUERY->add_arg(QUERY, "float", "pos");
-	QUERY->doc_func(QUERY, "Set Z position of this GGen in local space");
-
+	// GGen lookAt( vec3 )
 	QUERY->add_mfun(QUERY, cgl_obj_lookat_vec3, "GGen", "lookAt");
 	QUERY->add_arg(QUERY, "vec3", "pos");
 	QUERY->doc_func(QUERY, "Look at the given position in world space");
 
-	QUERY->add_mfun(QUERY, cgl_obj_lookat_float, "GGen", "lookAt");
-	QUERY->add_arg(QUERY, "float", "x");
-	QUERY->add_arg(QUERY, "float", "y");
-	QUERY->add_arg(QUERY, "float", "z");
-	QUERY->doc_func(QUERY, "Look at the given position in world space");
+	// vec3 lookAtDir()
+	QUERY->add_mfun(QUERY, cgl_obj_get_forward, "vec3", "lookAtDir");
+	QUERY->doc_func(QUERY, "Get the direction this GGen is looking, i.e. the forward vector of this GGen in world space");
 
-	QUERY->add_mfun(QUERY, cgl_obj_set_pos, "GGen", "position");
-	QUERY->add_arg(QUERY, "vec3", "pos_vec");
-	QUERY->doc_func(QUERY, "Set position of this GGen in local space");
+	// Scale ===============================================================
 
-	QUERY->add_mfun(QUERY, cgl_obj_set_rot, "GGen", "rotation"); // sets from eulers
-	QUERY->add_arg(QUERY, "vec3", "eulers");
-	QUERY->doc_func(QUERY, "Set rotation of this GGen in local space as euler angles");
+	// float scaX()
+	QUERY->add_mfun(QUERY, cgl_obj_get_scale_x, "float", "scaX");
+	QUERY->doc_func(QUERY, "Get X scale of this GGen in local space");
 
-	QUERY->add_mfun(QUERY, cgl_obj_set_scale, "GGen", "scale");
+	// float scaX( float )
+	QUERY->add_mfun(QUERY, cgl_obj_set_scale_x, "float", "scaX");
+	QUERY->add_arg(QUERY, "float", "scale");
+	QUERY->doc_func(QUERY, "Set X scale of this GGen in local space");
+
+	// float scaY()
+	QUERY->add_mfun(QUERY, cgl_obj_get_scale_y, "float", "scaY");
+	QUERY->doc_func(QUERY, "Get Y scale of this GGen in local space");
+
+	// float scaY( float )
+	QUERY->add_mfun(QUERY, cgl_obj_set_scale_y, "float", "scaY");
+	QUERY->add_arg(QUERY, "float", "scale");
+	QUERY->doc_func(QUERY, "Set Y scale of this GGen in local space");
+
+	// float scaZ()
+	QUERY->add_mfun(QUERY, cgl_obj_get_scale_z, "float", "scaZ");
+	QUERY->doc_func(QUERY, "Get Z scale of this GGen in local space");
+
+	// float scaZ( float )
+	QUERY->add_mfun(QUERY, cgl_obj_set_scale_z, "float", "scaZ");
+	QUERY->add_arg(QUERY, "float", "scale");
+	QUERY->doc_func(QUERY, "Set Z scale of this GGen in local space");
+
+	// vec3 sca()
+	QUERY->add_mfun(QUERY, cgl_obj_get_scale, "vec3", "sca");
+	QUERY->doc_func(QUERY, "Get object scale in local space");
+
+	// vec3 sca( vec3 )
+	QUERY->add_mfun(QUERY, cgl_obj_set_scale, "vec3", "sca");
 	QUERY->add_arg(QUERY, "vec3", "scale");
-	QUERY->doc_func(QUERY, "Set scale of this GGen in local space");
+	QUERY->doc_func(QUERY, "Set object scale in local space");
 
-	// scenegraph relationship methods ===========
+	// vec3 sca( float )
+	QUERY->add_mfun(QUERY, cgl_obj_set_scale_uniform, "vec3", "sca");
+	QUERY->add_arg(QUERY, "float", "scale");
+	QUERY->doc_func(QUERY, "Set object scale in local space uniformly across all axes");
+
+	// vec3 scaWorld()
+	QUERY->add_mfun(QUERY, cgl_obj_get_scale_world, "vec3", "scaWorld");
+	QUERY->doc_func(QUERY, "Get object scale in world space");
+
+	// vec3 scaWorld( vec3 )
+	QUERY->add_mfun(QUERY, cgl_obj_set_scale_world, "vec3", "scaWorld");
+	QUERY->add_arg(QUERY, "vec3", "scale");
+	QUERY->doc_func(QUERY, "Set object scale in world space");
+
+	// scenegraph relationship methods =======================================
+
 	// overload GGen --> GGen
 	QUERY->add_op_overload_binary(QUERY, ggen_op_gruck, "GGen", "-->",
 								  "GGen", "lhs", "GGen", "rhs");
 
+	// overload GGen --< GGen
 	QUERY->add_op_overload_binary(QUERY, ggen_op_ungruck, "GGen", "--<",
 								  "GGen", "lhs", "GGen", "rhs");
 
@@ -2419,25 +2581,237 @@ CK_DLL_MFUN(cgl_obj_get_up)
 	RETURN->v_vec3 = {vec.x, vec.y, vec.z};
 }
 
-CK_DLL_MFUN(cgl_obj_translate_by)
+// Position Impl ===============================================================
+
+CK_DLL_MFUN(cgl_obj_get_pos_x)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	RETURN->v_float = cglObj->GetPosition().x;
+}
+
+CK_DLL_MFUN(cgl_obj_set_pos_x)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKFLOAT posX = GET_NEXT_FLOAT(ARGS);
+	glm::vec3 pos = cglObj->GetPosition();
+	pos.x = posX;
+	cglObj->SetPosition(pos);
+	RETURN->v_float = posX;
+	CGL::PushCommand(new UpdatePositionCommand(cglObj));
+}
+
+CK_DLL_MFUN(cgl_obj_get_pos_y)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	RETURN->v_float = cglObj->GetPosition().y;
+}
+
+CK_DLL_MFUN(cgl_obj_set_pos_y)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKFLOAT posY = GET_NEXT_FLOAT(ARGS);
+	glm::vec3 pos = cglObj->GetPosition();
+	pos.y = posY;
+	cglObj->SetPosition(pos);
+	RETURN->v_float = posY;
+	CGL::PushCommand(new UpdatePositionCommand(cglObj));
+}
+
+CK_DLL_MFUN(cgl_obj_get_pos_z)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	RETURN->v_float = cglObj->GetPosition().z;
+}
+
+CK_DLL_MFUN(cgl_obj_set_pos_z)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKFLOAT posZ = GET_NEXT_FLOAT(ARGS);
+	glm::vec3 pos = cglObj->GetPosition();
+	pos.z = posZ;
+	cglObj->SetPosition(pos);
+	RETURN->v_float = posZ;
+	CGL::PushCommand(new UpdatePositionCommand(cglObj));
+}
+
+CK_DLL_MFUN(cgl_obj_get_pos)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	const auto &vec = cglObj->GetPosition();
+	RETURN->v_vec3 = {vec.x, vec.y, vec.z};
+}
+
+CK_DLL_MFUN(cgl_obj_set_pos)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
+	cglObj->SetPosition(glm::vec3(vec.x, vec.y, vec.z));
+	RETURN->v_vec3 = vec;
+	CGL::PushCommand(new UpdatePositionCommand(cglObj));
+}
+
+CK_DLL_MFUN(cgl_obj_get_pos_world)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	const auto &vec = cglObj->GetWorldPosition();
+	RETURN->v_vec3 = {vec.x, vec.y, vec.z};
+}
+
+CK_DLL_MFUN(cgl_obj_set_pos_world)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
+	cglObj->SetWorldPosition(glm::vec3(vec.x, vec.y, vec.z));
+	RETURN->v_object = SELF;
+	CGL::PushCommand(new UpdatePositionCommand(cglObj));
+}
+
+CK_DLL_MFUN(cgl_obj_translate)
 {
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKVEC3 trans = GET_NEXT_VEC3(ARGS);
 	cglObj->Translate(glm::vec3(trans.x, trans.y, trans.z));
 
 	// add to command queue
-	CGL::PushCommand(new TransformCommand(cglObj));
+	CGL::PushCommand(new UpdatePositionCommand(cglObj));
 
 	RETURN->v_object = SELF;
 }
 
-CK_DLL_MFUN(cgl_obj_scale_by)
+CK_DLL_MFUN(cgl_obj_translate_x)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKFLOAT amt = GET_NEXT_FLOAT(ARGS);
+	cglObj->Translate({amt, 0, 0});
+
+	// add to command queue
+	CGL::PushCommand(new UpdatePositionCommand(cglObj));
+
+	RETURN->v_object = SELF;
+}
+
+CK_DLL_MFUN(cgl_obj_translate_y)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKFLOAT amt = GET_NEXT_FLOAT(ARGS);
+	cglObj->Translate({0, amt, 0});
+
+	// add to command queue
+	CGL::PushCommand(new UpdatePositionCommand(cglObj));
+
+	RETURN->v_object = SELF;
+}
+
+CK_DLL_MFUN(cgl_obj_translate_z)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKFLOAT amt = GET_NEXT_FLOAT(ARGS);
+	cglObj->Translate({0, 0, amt});
+
+	// add to command queue
+	CGL::PushCommand(new UpdatePositionCommand(cglObj));
+
+	RETURN->v_object = SELF;
+}
+
+// Rotation Impl ===============================================================
+
+
+CK_DLL_MFUN(cgl_obj_get_rot_x)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	RETURN->v_float = cglObj->GetRotation().x;
+}
+
+CK_DLL_MFUN(cgl_obj_set_rot_x)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKFLOAT rad = GET_NEXT_FLOAT(ARGS);
+	cglObj->RotateX(rad);
+	RETURN->v_float = rad;
+	CGL::PushCommand(new UpdateRotationCommand(cglObj));
+}
+
+CK_DLL_MFUN(cgl_obj_get_rot_y)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	RETURN->v_float = cglObj->GetRotation().y;
+}
+
+CK_DLL_MFUN(cgl_obj_set_rot_y)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKFLOAT rad = GET_NEXT_FLOAT(ARGS);
+	cglObj->RotateY(rad);
+	RETURN->v_float = rad;
+	CGL::PushCommand(new UpdateRotationCommand(cglObj));
+}
+
+CK_DLL_MFUN(cgl_obj_get_rot_z)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	RETURN->v_float = cglObj->GetRotation().z;
+}
+
+CK_DLL_MFUN(cgl_obj_set_rot_z)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKFLOAT rad = GET_NEXT_FLOAT(ARGS);
+	cglObj->RotateZ(rad);
+	RETURN->v_float = rad;
+	CGL::PushCommand(new UpdateRotationCommand(cglObj));
+}
+
+CK_DLL_MFUN(cgl_obj_get_rot)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	const auto &vec = cglObj->GetEulerRotationRadians();
+	RETURN->v_vec3 = {vec.x, vec.y, vec.z};
+}
+
+CK_DLL_MFUN(cgl_obj_set_rot)
 {
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
-	cglObj->Scale(glm::vec3(vec.x, vec.y, vec.z));
+	cglObj->SetRotation(glm::vec3(vec.x, vec.y, vec.z));
+	RETURN->v_vec3 = vec;
+	CGL::PushCommand(new UpdateRotationCommand(cglObj));
+}
+
+CK_DLL_MFUN(cgl_obj_rotate)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
+	cglObj->Rotate(glm::vec3(vec.x, vec.y, vec.z));
 	RETURN->v_object = SELF;
-	CGL::PushCommand(new TransformCommand(cglObj));
+	CGL::PushCommand(new UpdateRotationCommand(cglObj));
+}
+
+CK_DLL_MFUN(cgl_obj_rotate_x)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKFLOAT rad = GET_NEXT_FLOAT(ARGS);
+	cglObj->RotateX(rad);
+	RETURN->v_object = SELF;
+	CGL::PushCommand(new UpdateRotationCommand(cglObj));
+}
+
+CK_DLL_MFUN(cgl_obj_rotate_y)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKFLOAT rad = GET_NEXT_FLOAT(ARGS);
+	cglObj->RotateY(rad);
+	RETURN->v_object = SELF;
+	CGL::PushCommand(new UpdateRotationCommand(cglObj));
+}
+
+CK_DLL_MFUN(cgl_obj_rotate_z)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKFLOAT rad = GET_NEXT_FLOAT(ARGS);
+	cglObj->RotateZ(rad);
+	RETURN->v_object = SELF;
+	CGL::PushCommand(new UpdateRotationCommand(cglObj));
 }
 
 CK_DLL_MFUN(cgl_obj_rot_on_local_axis)
@@ -2447,7 +2821,7 @@ CK_DLL_MFUN(cgl_obj_rot_on_local_axis)
 	t_CKFLOAT deg = GET_NEXT_FLOAT(ARGS);
 	cglObj->RotateOnLocalAxis(glm::vec3(vec.x, vec.y, vec.z), deg);
 
-	CGL::PushCommand(new TransformCommand(cglObj));
+	CGL::PushCommand(new UpdateRotationCommand(cglObj));
 
 	RETURN->v_object = SELF;
 }
@@ -2459,69 +2833,9 @@ CK_DLL_MFUN(cgl_obj_rot_on_world_axis)
 	t_CKFLOAT deg = GET_NEXT_FLOAT(ARGS);
 	cglObj->RotateOnWorldAxis(glm::vec3(vec.x, vec.y, vec.z), deg);
 
-	CGL::PushCommand(new TransformCommand(cglObj));
+	CGL::PushCommand(new UpdateRotationCommand(cglObj));
 
 	RETURN->v_object = SELF;
-}
-
-CK_DLL_MFUN(cgl_obj_set_rot_x)
-{
-	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	t_CKFLOAT deg = GET_NEXT_FLOAT(ARGS);
-	cglObj->RotateX(deg);
-	RETURN->v_object = SELF;
-	CGL::PushCommand(new TransformCommand(cglObj));
-}
-
-CK_DLL_MFUN(cgl_obj_set_rot_y)
-{
-	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	t_CKFLOAT deg = GET_NEXT_FLOAT(ARGS);
-	cglObj->RotateY(deg);
-	RETURN->v_object = SELF;
-	CGL::PushCommand(new TransformCommand(cglObj));
-}
-
-CK_DLL_MFUN(cgl_obj_set_rot_z)
-{
-	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	t_CKFLOAT deg = GET_NEXT_FLOAT(ARGS);
-	cglObj->RotateZ(deg);
-	RETURN->v_object = SELF;
-	CGL::PushCommand(new TransformCommand(cglObj));
-}
-
-CK_DLL_MFUN(cgl_obj_set_pos_x)
-{
-	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	t_CKFLOAT posX = GET_NEXT_FLOAT(ARGS);
-	glm::vec3 pos = cglObj->GetPosition();
-	pos.x = posX;
-	cglObj->SetPosition(pos);
-	RETURN->v_object = SELF;
-	CGL::PushCommand(new TransformCommand(cglObj));
-}
-
-CK_DLL_MFUN(cgl_obj_set_pos_y)
-{
-	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	t_CKFLOAT posY = GET_NEXT_FLOAT(ARGS);
-	glm::vec3 pos = cglObj->GetPosition();
-	pos.y = posY;
-	cglObj->SetPosition(pos);
-	RETURN->v_object = SELF;
-	CGL::PushCommand(new TransformCommand(cglObj));
-}
-
-CK_DLL_MFUN(cgl_obj_set_pos_z)
-{
-	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	t_CKFLOAT posZ = GET_NEXT_FLOAT(ARGS);
-	glm::vec3 pos = cglObj->GetPosition();
-	pos.z = posZ;
-	cglObj->SetPosition(pos);
-	RETURN->v_object = SELF;
-	CGL::PushCommand(new TransformCommand(cglObj));
 }
 
 CK_DLL_MFUN(cgl_obj_lookat_vec3)
@@ -2530,92 +2844,62 @@ CK_DLL_MFUN(cgl_obj_lookat_vec3)
 	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
 	cglObj->LookAt(glm::vec3(vec.x, vec.y, vec.z));
 	RETURN->v_object = SELF;
-	CGL::PushCommand(new TransformCommand(cglObj));
+	CGL::PushCommand(new UpdateRotationCommand(cglObj));
 }
 
-CK_DLL_MFUN(cgl_obj_lookat_float)
+// Scale impl ===============================================================
+
+CK_DLL_MFUN(cgl_obj_get_scale_x)
 {
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	t_CKFLOAT x = GET_NEXT_FLOAT(ARGS);
-	t_CKFLOAT y = GET_NEXT_FLOAT(ARGS);
-	t_CKFLOAT z = GET_NEXT_FLOAT(ARGS);
-	cglObj->LookAt(glm::vec3(x, y, z));
-	RETURN->v_object = SELF;
-	CGL::PushCommand(new TransformCommand(cglObj));
+	RETURN->v_float = cglObj->GetScale().x;
 }
 
-CK_DLL_MFUN(cgl_obj_set_pos)
+CK_DLL_MFUN(cgl_obj_set_scale_x)
 {
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
-	cglObj->SetPosition(glm::vec3(vec.x, vec.y, vec.z));
-	RETURN->v_object = SELF;
-	CGL::PushCommand(new TransformCommand(cglObj));
+	t_CKFLOAT scaleX = GET_NEXT_FLOAT(ARGS);
+	glm::vec3 scale = cglObj->GetScale();
+	scale.x = scaleX;
+	cglObj->SetScale(scale);
+	RETURN->v_float = scaleX;
+	CGL::PushCommand(new UpdateScaleCommand(cglObj));
 }
 
-CK_DLL_MFUN(cgl_obj_set_rot)
+CK_DLL_MFUN(cgl_obj_get_scale_y)
 {
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
-	cglObj->SetRotation(glm::vec3(vec.x, vec.y, vec.z));
-	RETURN->v_object = SELF;
-	CGL::PushCommand(new TransformCommand(cglObj));
+	RETURN->v_float = cglObj->GetScale().y;
 }
 
-CK_DLL_MFUN(cgl_obj_set_scale)
+CK_DLL_MFUN(cgl_obj_set_scale_y)
 {
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
-	cglObj->SetScale(glm::vec3(vec.x, vec.y, vec.z));
-	RETURN->v_object = SELF;
-	CGL::PushCommand(new TransformCommand(cglObj));
+	t_CKFLOAT scaleY = GET_NEXT_FLOAT(ARGS);
+	glm::vec3 scale = cglObj->GetScale();
+	scale.y = scaleY;
+	cglObj->SetScale(scale);
+	RETURN->v_float = scaleY;
+	CGL::PushCommand(new UpdateScaleCommand(cglObj));
 }
 
-CK_DLL_MFUN(cgl_obj_get_pos)
+CK_DLL_MFUN(cgl_obj_get_scale_z)
 {
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	const auto &vec = cglObj->GetPosition();
-	RETURN->v_vec3 = {vec.x, vec.y, vec.z};
+	RETURN->v_float = cglObj->GetScale().z;
 }
 
-CK_DLL_MFUN(cgl_obj_get_world_pos)
+CK_DLL_MFUN(cgl_obj_set_scale_z)
 {
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	const auto &vec = cglObj->GetWorldPosition();
-	RETURN->v_vec3 = {vec.x, vec.y, vec.z};
+	t_CKFLOAT scaleZ = GET_NEXT_FLOAT(ARGS);
+	glm::vec3 scale = cglObj->GetScale();
+	scale.z = scaleZ;
+	cglObj->SetScale(scale);
+	RETURN->v_float = scaleZ;
+	CGL::PushCommand(new UpdateScaleCommand(cglObj));
 }
 
-CK_DLL_MFUN(cgl_obj_set_world_pos)
-{
-	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
-	cglObj->SetWorldPosition(glm::vec3(vec.x, vec.y, vec.z));
-	RETURN->v_object = SELF;
-	CGL::PushCommand(new TransformCommand(cglObj));
-}
-
-CK_DLL_MFUN(cgl_obj_get_world_scale)
-{
-	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	const auto &vec = cglObj->GetWorldScale();
-	RETURN->v_vec3 = {vec.x, vec.y, vec.z};
-}
-
-CK_DLL_MFUN(cgl_obj_set_world_scale)
-{
-	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
-	cglObj->SetWorldScale(glm::vec3(vec.x, vec.y, vec.z));
-	RETURN->v_object = SELF;
-	CGL::PushCommand(new TransformCommand(cglObj));
-}
-
-CK_DLL_MFUN(cgl_obj_get_rot)
-{
-	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	const auto &vec = glm::degrees(glm::eulerAngles(cglObj->GetRotation()));
-	RETURN->v_vec3 = {vec.x, vec.y, vec.z};
-}
 
 CK_DLL_MFUN(cgl_obj_get_scale)
 {
@@ -2623,6 +2907,42 @@ CK_DLL_MFUN(cgl_obj_get_scale)
 	const auto &vec = cglObj->GetScale();
 	RETURN->v_vec3 = {vec.x, vec.y, vec.z};
 }
+
+CK_DLL_MFUN(cgl_obj_set_scale)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
+	cglObj->SetScale(glm::vec3(vec.x, vec.y, vec.z));
+	RETURN->v_vec3 = vec;
+	CGL::PushCommand(new UpdateScaleCommand(cglObj));
+}
+
+CK_DLL_MFUN(cgl_obj_set_scale_uniform)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKFLOAT s = GET_NEXT_FLOAT(ARGS);
+	cglObj->SetScale({s, s, s});
+	RETURN->v_vec3 = {s, s, s};
+	CGL::PushCommand(new UpdateScaleCommand(cglObj));
+}
+
+CK_DLL_MFUN(cgl_obj_get_scale_world)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	const auto &vec = cglObj->GetWorldScale();
+	RETURN->v_vec3 = {vec.x, vec.y, vec.z};
+}
+
+CK_DLL_MFUN(cgl_obj_set_scale_world)
+{
+	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
+	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
+	cglObj->SetWorldScale(glm::vec3(vec.x, vec.y, vec.z));
+	RETURN->v_vec3 = vec;
+	CGL::PushCommand(new UpdateScaleCommand(cglObj));
+}
+
+// Scenegraph Relationship Impl ===============================================================
 
 CK_DLL_GFUN(ggen_op_gruck)
 {
@@ -2666,6 +2986,7 @@ t_CKBOOL init_chugl_scene(Chuck_DL_Query *QUERY)
 	// CGL scene
 	QUERY->begin_class(QUERY, "GScene", "GGen");
 	QUERY->doc_class(QUERY, "Scene class. Static--all instances point to the same underlying ChuGL main scene. GGens must be added to a scene to be rendered");
+    QUERY->add_ex(QUERY, "basic/fog.ck");
 	
 	QUERY->add_ctor(QUERY, cgl_scene_ctor);
 
@@ -2842,6 +3163,7 @@ t_CKBOOL init_chugl_cam(Chuck_DL_Query *QUERY)
 	// CGL camera
 	QUERY->begin_class(QUERY, "GCamera", "GGen");
 	QUERY->doc_class(QUERY, "Camera class. Static--all instances point to the same underlying ChuGL main camera");
+    QUERY->add_ex(QUERY, "basic/mousecast.ck");
 
 	QUERY->add_ctor(QUERY, cgl_cam_ctor);
 
@@ -3133,6 +3455,10 @@ t_CKBOOL init_chugl_mesh(Chuck_DL_Query *QUERY)
 
 	QUERY->begin_class(QUERY, "GLines", "GMesh");
 	QUERY->doc_class(QUERY, "Creates a Mesh that uses CustomGeometry and LineMaterial");
+	QUERY->add_ex(QUERY, "basic/circles.ck");
+    QUERY->add_ex(QUERY, "sndpeek/sndpeek-minimal.ck");
+    QUERY->add_ex(QUERY, "sndpeek/sndpeek.ck");
+
 	QUERY->add_ctor(QUERY, cgl_glines_ctor);
 	QUERY->end_class(QUERY);
 
@@ -3156,14 +3482,6 @@ CK_DLL_CTOR(cgl_mesh_ctor)
 	Mesh *mesh = new Mesh;
 	CGL::PushCommand(new CreateMeshCommand(mesh, &CGL::mainScene, SELF, ggen_data_offset));
 }
-
-// CK_DLL_DTOR(cgl_mesh_dtor)
-// {
-// 	Mesh *mesh = (Mesh *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-// 	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0; // zero out the memory
-
-// 	CGL::PushCommand(new DestroySceneGraphNodeCommand(mesh));
-// }
 
 static void cglMeshSet(Mesh *mesh, Geometry *geo, Material *mat)
 {
@@ -3363,45 +3681,7 @@ t_CKBOOL init_chugl_light(Chuck_DL_Query *QUERY)
 	QUERY->begin_class(QUERY, Light::CKName(LightType::Base), "GGen");
 	QUERY->doc_class(QUERY, "Light class. Parent class of GPointLight and GDirectionalLight. Don't instantiate this class directly.");
 
-
 	QUERY->add_ctor(QUERY, cgl_light_ctor);
-	QUERY->add_dtor(QUERY, cgl_light_dtor);
-
-	QUERY->add_mfun(QUERY, cgl_light_set_intensity, "float", "intensity");  // 0 -- 1
-	QUERY->add_arg(QUERY, "float", "i");
-	QUERY->doc_func(QUERY, "Set intensity from 0-1. 0 is off, 1 is full intensity");
-
-	QUERY->add_mfun(QUERY, cgl_light_set_ambient, "vec3", "ambient"); 
-	QUERY->add_arg(QUERY, "vec3", "a");
-	QUERY->doc_func(QUERY, "Set ambient color. Ambient color is multiplied by the material ambient color, and will be visible even when no light is directly shining on the object");
-
-	QUERY->add_mfun(QUERY, cgl_light_set_diffuse, "vec3", "diffuse");
-	QUERY->add_arg(QUERY, "vec3", "d");
-	QUERY->doc_func(QUERY, "Set diffuse color. Diffuse color is multiplied by the material diffuse color");
-
-
-	QUERY->add_mfun(QUERY, cgl_light_set_specular, "vec3", "specular");
-	QUERY->add_arg(QUERY, "vec3", "s");
-	QUERY->doc_func(QUERY, "Set specular color. Specular color is multiplied by the material specular color");
-
-	QUERY->add_mfun(QUERY, cgl_light_get_intensity, "float", "intensity");
-	QUERY->doc_func(QUERY, "Get light intensity");
-
-	QUERY->add_mfun(QUERY, cgl_light_get_ambient, "vec3", "ambient");
-	QUERY->doc_func(QUERY, "Get the light ambient color");
-
-	QUERY->add_mfun(QUERY, cgl_light_get_diffuse, "vec3", "diffuse");
-	QUERY->doc_func(QUERY, "Get the light diffuse color");
-
-	QUERY->add_mfun(QUERY, cgl_light_get_specular, "vec3", "specular");
-	QUERY->doc_func(QUERY, "Get the light specular color");
-
-	QUERY->end_class(QUERY);
-
-	QUERY->begin_class(QUERY, Light::CKName(LightType::Point), Light::CKName(LightType::Base));
-	QUERY->doc_class(QUERY, "Point light class");
-	QUERY->add_ctor(QUERY, cgl_point_light_ctor);
-	QUERY->add_dtor(QUERY, cgl_light_dtor);
 
 	QUERY->add_mfun(QUERY, cgl_points_light_set_falloff, "void", "falloff");
 	QUERY->add_arg(QUERY, "float", "linear");
@@ -3413,7 +3693,6 @@ t_CKBOOL init_chugl_light(Chuck_DL_Query *QUERY)
 	QUERY->begin_class(QUERY, Light::CKName(LightType::Directional), Light::CKName(LightType::Base));
 	QUERY->doc_class(QUERY, "Directional class. Position of this light has no affect, only rotation");
 	QUERY->add_ctor(QUERY, cgl_dir_light_ctor);
-	QUERY->add_dtor(QUERY, cgl_light_dtor);
 	QUERY->end_class(QUERY);
 
 	return true;
@@ -3424,15 +3703,6 @@ t_CKBOOL init_chugl_light(Chuck_DL_Query *QUERY)
 CK_DLL_CTOR(cgl_light_ctor)
 {
 	// abstract class. nothing to do
-}
-
-CK_DLL_DTOR(cgl_light_dtor)
-{
-	Light *group = (Light *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
-	CK_SAFE_DELETE(group);
-	OBJ_MEMBER_INT(SELF, ggen_data_offset) = 0; // zero out the memory
-
-	// TODO: need to remove from scenegraph with a destroy command
 }
 
 CK_DLL_MFUN(cgl_light_set_intensity)

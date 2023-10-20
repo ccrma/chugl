@@ -9,7 +9,7 @@
 //-----------------------------------------------------------------------------
 GG.fullscreen();
 // position camera
-GG.camera().position( @(0, 0, 12) );
+GG.camera().pos( @(0, 0, 12) );
 
 // load geometries
 CircleGeometry circleGeo;
@@ -146,9 +146,9 @@ for (0 => int i; i < geos.size(); i++) {
 
     // set positions
     -(geos.size() / 2)=> float y_off;
-    normMesh.position(@(-4, 2*(i + y_off) + 1, 0));
-    wireMesh.position(@(0, 2*(i + y_off) + 1, 0));
-    pointMesh.position(@(4, 2*(i + y_off) + 1, 0));
+    normMesh.pos(@(-4, 2*(i + y_off) + 1, 0));
+    wireMesh.pos(@(0, 2*(i + y_off) + 1, 0));
+    pointMesh.pos(@(4, 2*(i + y_off) + 1, 0));
 }
 
 

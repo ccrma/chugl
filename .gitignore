@@ -64,4 +64,4 @@ src/chuck-debug.exe
 src/chuck-release.exe
 
 # imgui
-src/imgui.ini
+imgui.ini

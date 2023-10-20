@@ -2,7 +2,7 @@
 GG.scene().backgroundColor(@(0,0,0));
 GPoints points --> GG.scene();
 // GG.camera().lookAt(@(1, 1, 1));
-GG.camera().position(15 * @(0, 0, 1));
+GG.camera().pos(15 * @(0, 0, 1));
 GG.camera().lookAt(@(0, 0, 0));
 
 // points stress test

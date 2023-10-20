@@ -72,7 +72,7 @@ spork ~ SpectrumWriter();
 // Scene Setup =============================================================
 NextFrameEvent UpdateEvent;
 
-GCamera mainCamera; mainCamera.position(3 * BACK);
+GCamera mainCamera; mainCamera.pos(3 * BACK);
 GScene scene;
 
 BoxGeometry boxGeo;
@@ -87,12 +87,12 @@ GMesh spectrumBoxMeshes[WAVEFORM_LENGTH];
 for (0 => int i; i < WAVEFORM_LENGTH; i++) {
     waveformBoxMeshes[i].set(boxGeo, normMat);
     waveformBoxMeshes[i].scale(boxScale * UNIFORM);
-    waveformBoxMeshes[i].position(((-WAVEFORM_LENGTH/2) + i) * RIGHT * boxScale);
+    waveformBoxMeshes[i].pos(((-WAVEFORM_LENGTH/2) + i) * RIGHT * boxScale);
     waveformBoxMeshes[i] --> scene;
 
     spectrumBoxMeshes[i].set(SphereGeometry , normMat);  // TODO add different material for spectrum
     spectrumBoxMeshes[i].scale(boxScale * UNIFORM);
-    spectrumBoxMeshes[i].position(((-WAVEFORM_LENGTH/2) + i) * RIGHT * boxScale + FORWARD);
+    spectrumBoxMeshes[i].pos(((-WAVEFORM_LENGTH/2) + i) * RIGHT * boxScale + FORWARD);
     (spectrumBoxMeshes[i]) --> scene;
 }
 

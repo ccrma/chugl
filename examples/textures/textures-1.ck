@@ -28,7 +28,7 @@ mesh.posZ( -3 );
 while( true )
 {
     // rotate the thing
-    mesh.rotY( GG.dt() );
+    mesh.rotateY( GG.dt() );
     // wait until next frame
     GG.nextFrame() => now;
 }

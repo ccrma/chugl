@@ -82,7 +82,7 @@ GMesh mesh;
 // set geo and material
 mesh.set(customGeometry, mangoMat);
 // set position
-mesh.position(@(0.0, 0.0, -5.0));
+mesh.pos(@(0.0, 0.0, -5.0));
 // add to scene
 mesh --> scene;
 

@@ -165,28 +165,52 @@ private:
 
 
 //==================== Parameter Modification Commands =======================//
-
-// set transform
-class TransformCommand : public SceneGraphCommand
+class UpdatePositionCommand : public SceneGraphCommand
 {
 public:
-    TransformCommand(SceneGraphObject* obj) :
-        m_ID(obj->GetID()), m_Position(obj->GetPosition()), m_Rotation(obj->GetRotation()), m_Scale(obj->GetScale())
+    UpdatePositionCommand(SceneGraphObject* obj) :
+        m_ID(obj->GetID()), m_Position(obj->GetPosition())
     {}
     virtual void execute(Scene* scene) override {
         SceneGraphObject* obj = dynamic_cast<SceneGraphObject*>(scene->GetNode(m_ID));
         assert(obj);
         obj->SetPosition(m_Position);
-        obj->SetRotation(m_Rotation);
-        obj->SetScale(m_Scale);
     }
 
 private:
-    size_t m_ID; // which scenegraph object to modify
-
-    // transform  (making public for now for easier debug)
+    size_t m_ID;
     glm::vec3 m_Position;
+};
+
+class UpdateRotationCommand : public SceneGraphCommand
+{
+public:
+    UpdateRotationCommand(SceneGraphObject* obj) :
+        m_ID(obj->GetID()), m_Rotation(obj->GetRotation())
+    {}
+    virtual void execute(Scene* scene) override {
+        SceneGraphObject* obj = dynamic_cast<SceneGraphObject*>(scene->GetNode(m_ID));
+        assert(obj);
+        obj->SetRotation(m_Rotation);
+    }
+private:
+    size_t m_ID;
     glm::quat m_Rotation;
+};
+
+class UpdateScaleCommand : public SceneGraphCommand
+{
+public:
+    UpdateScaleCommand(SceneGraphObject* obj) :
+        m_ID(obj->GetID()), m_Scale(obj->GetScale())
+    {}
+    virtual void execute(Scene* scene) override {
+        SceneGraphObject* obj = dynamic_cast<SceneGraphObject*>(scene->GetNode(m_ID));
+        assert(obj);
+        obj->SetScale(m_Scale);
+    }
+private:
+    size_t m_ID;
     glm::vec3 m_Scale;
 };
 

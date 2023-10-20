@@ -10,7 +10,7 @@
 
 // scene setup ===================
 GG.scene() @=> GScene @ scene;   // scene reference
-GG.camera().position(@(0, 1, 0));
+GG.camera().pos(@(0, 1, 0));
 
 20 => int AXIS_LENGTH;
 
@@ -24,7 +24,7 @@ for (0 => int i; i < AXIS_LENGTH; i++) {
     for (0 => int j; j < AXIS_LENGTH; j++) {
         meshes[i * AXIS_LENGTH + j] @=> GMesh @ mesh;
         mesh.set(SphereGeometry , normMat);
-        mesh.position(2.0 * @(i, 0, -j));
+        mesh.pos(2.0 * @(i, 0, -j));
         mesh --> scene;
     }
 }

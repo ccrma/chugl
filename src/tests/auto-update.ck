@@ -19,8 +19,8 @@ class covfefe extends GGen {
     meshWindowTime --> this;
     meshChuckTime --> this;
 
-    @(-1.0, 0.0, 0.0) => meshWindowTime.position;
-    @(1, 0.0, 0.0) => meshChuckTime.position;
+    @(-1.0, 0.0, 0.0) => meshWindowTime.pos;
+    @(1, 0.0, 0.0) => meshChuckTime.pos;
 
     .8 => float rotSpeed;
 
@@ -29,8 +29,8 @@ class covfefe extends GGen {
         deltaTime / second => float chuck_dt;
         <<< "window dt: ", dt,  " | chuck dt:",  chuck_dt >>>;
         // <<< "ckdt: ", dt,  " | chuck-side chuck dt:",  chuck_dt >>>;
-        meshWindowTime.rotX( rotSpeed * dt );
-        meshChuckTime.rotX( rotSpeed * chuck_dt );
+        meshWindowTime.rotateX( rotSpeed * dt );
+        meshChuckTime.rotateX( rotSpeed * chuck_dt );
     }
 }
 

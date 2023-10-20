@@ -127,11 +127,11 @@ for (0 => int i; i < geos.size(); i++) {
     normMesh --> scene;
 
     // set positions
-    normMesh.position(@(-5, 2*i, -5));
-    fillMesh.position(@(-1, 2*i, -5));
+    normMesh.pos(@(-5, 2*i, -5));
+    fillMesh.pos(@(-1, 2*i, -5));
 
-    wireMesh.position(@(0, 2*i, -3));
-    pointMesh.position(@(1, 2*i, -1));
+    wireMesh.pos(@(0, 2*i, -3));
+    pointMesh.pos(@(1, 2*i, -1));
 }
 
 

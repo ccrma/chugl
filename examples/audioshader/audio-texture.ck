@@ -77,7 +77,7 @@ NUM_MESHES_X * NUM_MESHES_Y => int NUM_MESHES;
 BoxGeometry boxGeo;
 ShaderMaterial shaderMat; // custom shader material
 shaderMat.fragShader(
-    "./AudioFrag.glsl"  // path to fragment shader
+    me.dir() + "AudioFrag.glsl"  // path to fragment shader
 );
 DataTexture tex;
 
@@ -93,7 +93,7 @@ for ( 0 => int i; i < NUM_MESHES_X; i++) {
         mesh --> GG.scene();
         // center position
 
-        mesh.position(2.0 * @((i - NUM_MESHES_X / 2), (j - NUM_MESHES_Y / 2), 0));
+        mesh.pos(2.0 * @((i - NUM_MESHES_X / 2), (j - NUM_MESHES_Y / 2), 0));
     }
 }
 
@@ -130,8 +130,8 @@ while (true) {
     UpdateAudioTexture();
 
     for ( GMesh @ mesh : meshes ) {
-        mesh.rotX( .27 * dt );
-        mesh.rotY( .15 * dt );
+        mesh.rotateX( .27 * dt );
+        mesh.rotateY( .15 * dt );
     }
 
     // End update, begin render

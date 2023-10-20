@@ -104,7 +104,7 @@ class Segment {
 
 	fun void SetPos(vec3 pos) {
 		<<< "setpos", pos >>>;
-		mesh.position(pos);
+		mesh.pos(pos);
 	}
 
 	// returns whether point inside segment
@@ -494,7 +494,7 @@ fun void cameraUpdate(time t, dur dt)
 	// TODO: needs to be relative to the snake direction
 	// OR just have wasd control camera pivot
 	// OR use orbit camera controls
-	// mainCamera.position(snake.head.GetPos() + @(0.0, 3.0, 3.0));
+	// mainCamera.pos(snake.head.GetPos() + @(0.0, 3.0, 3.0));
 	// OR make grid, snake, everything child of one group
 	// and use mouse/keys to ROTATE the group itself, like spinning the whole world around
 

@@ -13,14 +13,14 @@ CBufferSimple* Manager::s_SharedEventQueue;
 const Chuck_DL_Api* Manager::s_CKAPI;
 Chuck_VM* Manager::s_CKVM;
 Manager::CkTypeMap Manager::s_CkTypeMap = {
-    {Type::Element, "GUI_Element"},
-    {Type::Window, "GUI_Window"},
-    {Type::Button, "GUI_Button"},
-    {Type::FloatSlider, "GUI_FloatSlider"},
-    {Type::IntSlider, "GUI_IntSlider"},
-    {Type::Checkbox, "GUI_Checkbox"},
-    {Type::Color3, "GUI_Color3"},
-    {Type::Dropdown, "GUI_Dropdown"}
+    {Type::Element, "UI_Element"},
+    {Type::Window, "UI_Window"},
+    {Type::Button, "UI_Button"},
+    {Type::FloatSlider, "UI_SliderFloat"},
+    {Type::IntSlider, "UI_SliderInt"},
+    {Type::Checkbox, "UI_Checkbox"},
+    {Type::Color3, "UI_Color3"},
+    {Type::Dropdown, "UI_Dropdown"}
 
 };
 
@@ -153,7 +153,7 @@ t_CKBOOL init_chugl_gui_element(Chuck_DL_Query *QUERY)
         "Base class for all GUI elements. Do not instantiate directly"
         "All GUI elements are Chuck Events, and can be used as such."
     );
-    QUERY->add_ex(QUERY, "gui/basic-gui.ck");
+    QUERY->add_ex(QUERY, "ui/basic-ui.ck");
 
     QUERY->add_ctor(QUERY, chugl_gui_element_ctor);
     QUERY->add_dtor(QUERY, chugl_gui_element_dtor);
@@ -162,12 +162,12 @@ t_CKBOOL init_chugl_gui_element(Chuck_DL_Query *QUERY)
     chugl_gui_element_offset_data = QUERY->add_mvar(QUERY, "int", "@data", FALSE);
 
     // add label()
-    QUERY->add_mfun(QUERY, chugl_gui_element_label_set, "string", "label");
-    QUERY->add_arg( QUERY,"string", "l" );
+    QUERY->add_mfun(QUERY, chugl_gui_element_label_set, "string", "text");
+    QUERY->add_arg( QUERY,"string", "text" );
     QUERY->doc_func(QUERY, "set the text label of this element");
 
     // add label()
-    QUERY->add_mfun(QUERY, chugl_gui_element_label_get, "string", "label");
+    QUERY->add_mfun(QUERY, chugl_gui_element_label_get, "string", "text");
     QUERY->doc_func(QUERY, "get the text label of this element");
 
     
@@ -389,7 +389,7 @@ t_CKBOOL init_chugl_gui_slider_float(Chuck_DL_Query *QUERY)
 
     QUERY->add_mfun(QUERY, chugl_gui_slider_float_power_set, "void", "power");
     QUERY->add_arg( QUERY, "float", "power" );
-    QUERY->doc_func(QUERY, "Set the power of the slider, e.g. 2.0 for an exponential domain");
+    QUERY->doc_func(QUERY, "Set the power of the slider, e.g. 2.0 for an exponential domain. Defaults to 1.0");
 
     QUERY->end_class(QUERY);
 
