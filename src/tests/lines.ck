@@ -33,7 +33,7 @@ for (0 => int i; i < NUM_VERTICES; i++) {
     // Math.random2f(0.0, 1.0) => colors[i];
 }
 
-lineGeo.positions(positions);
+lineGeo.poss(positions);
 lineGeo.colors(colors);
 
 GScene scene;
@@ -41,7 +41,7 @@ LineMaterial lineMat;
 GMesh mesh;
 mesh.set(lineGeo, lineMat);
 
-mesh.position(@(0.0, 0.0, -5.0));
+mesh.pos(@(0.0, 0.0, -5.0));
 mesh --> scene;
 
 // testers =====================
@@ -91,7 +91,7 @@ fun void randomizePositions(CustomGeometry @ geo)
             Math.random2f(-1.0, 1.0) => positions[3*i + 1];
             Math.random2f(-1.0, 1.0) => positions[3*i + 2];
         }
-        geo.positions(positions);
+        geo.poss(positions);
         GG.nextFrame() => now;
     }
 }

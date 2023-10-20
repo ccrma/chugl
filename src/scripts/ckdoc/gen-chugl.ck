@@ -76,5 +76,28 @@ doc.addGroup(
     "Textures can be loaded from file, created dynamically from data; they are passed into materials and mapped onto 2D and 3D surfaces."
 );
 
+// add GUI group
+doc.addGroup(
+    // class names
+    [
+        "UI_Element",
+        "UI_Window",
+        "UI_Button",
+        "UI_SliderFloat",
+        "UI_SliderInt",
+        "UI_Checkbox",
+        "UI_Color3",
+        "UI_Dropdown",
+    ],
+    // group name
+    "ChuGL GUI",
+    // file name
+    "chugl-gui", 
+    // group description
+    "ChuGL GUI. Includes API methods for creating widgets such as buttons, sliders, dropdowns, etc.
+    Use widgets to control parameter values during runtime. Great for experimentation and fine-tuning values.
+    Also usable for building application user-interfaces."
+);
+
 // generate
 doc.outputToDir( ".", "ChuGL [alpha] API Reference (v0.1.0)" );

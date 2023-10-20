@@ -34,7 +34,7 @@ public:
 	inline glm::vec3 GetPosition() const { return m_Position; }
 	inline glm::quat GetRotation() const { return m_Rotation; }
 	inline glm::vec3 GetEulerRotationRadians() const { return glm::eulerAngles(m_Rotation); }  // returns in radians
-	inline glm::vec3 GetScale() const { return m_Scale; }
+	const glm::vec3& GetScale() const { return m_Scale; }
 	inline void SetPosition(const glm::vec3& position) { m_Position = position; }
 	inline void SetPosition(float x, float y, float z) { m_Position = glm::vec3(x, y, z); }
 	inline void SetRotation(const glm::quat& rotation) { m_Rotation = rotation; }
@@ -70,6 +70,7 @@ public:
 	inline void Translate(const glm::vec3& t) { m_Position += t; }
 	// inline void Rotate(const glm::quat& q) { m_Rotation = glm::normalize(q * m_Rotation); };
 	inline void Rotate(const glm::quat& q) { m_Rotation = q * m_Rotation; };
+	void Rotate(const glm::vec3& eulers) { m_Rotation = glm::quat(eulers) * m_Rotation; };
 	inline void Scale(const glm::vec3& s) { m_Scale *= s; };
 	void ApplyTransform(const glm::mat4& mat);  // updates model matrix and decomposes into pos, rot, scale
 	void AssignTransform(const glm::mat4& mat);  // replaces existing transform

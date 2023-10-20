@@ -11,7 +11,7 @@ class LightBulb extends GGen {
     // set up sphere to be a flat color
     bulb.mat(mat);
     mat.color(@(1, 1, 1));
-    @(0.1, 0.1, 0.1) => bulb.scale;
+    @(0.1, 0.1, 0.1) => bulb.sca;
 
     // set light falloff
     light.falloff(0.14, 0.7);  // falloff chart: https://wiki.ogre3d.org/tiki-index.php?page=-Point+Light+Attenuation
@@ -37,7 +37,7 @@ class LightBulb extends GGen {
 
 // camera angle
 GG.camera() @=> GCamera @ cam;
-@(0, 10, 10) => cam.position;
+@(0, 10, 10) => cam.pos;
 cam.lookAt(@(0, 0, 0));
 
 // scene setup
@@ -47,8 +47,8 @@ scene.light().intensity(0);  // disable default directional light
 
 // ground for lights to cast on
 GPlane ground --> GG.scene();
-@(10, 10, 1) => ground.scale;
-@(-Math.PI/2, 0, 0) => ground.rotation;  // make the plane lay flat
+@(10, 10, 1) => ground.sca;
+@(-Math.PI/2, 0, 0) => ground.rot;  // make the plane lay flat
 
 // instantiate lightbulbs
 GGen lightGroup --> scene;

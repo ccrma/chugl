@@ -36,6 +36,7 @@ float rotZ();
 vec3 rot( vec3 )
 vec3 rot()
 
+GGen rotate( vec3 )
 GGen rotateX( float )
 GGen rotateY( float )
 GGen rotateZ( float )

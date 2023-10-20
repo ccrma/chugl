@@ -67,8 +67,8 @@ spork ~ lightLerper();
 <<< "num lights: ", GG.scene().numLights() >>>;
 
 while (true) {
-    // GG.dt() => cube.rotX;
+    // GG.dt() => cube.rotateX;
     Math.sin(now/second) => cube.posX;
-    GG.dt() => GG.scene().light().rotX;
+    GG.dt() => GG.scene().light().rotateX;
     GG.nextFrame() => now;
 }

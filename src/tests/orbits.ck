@@ -9,7 +9,7 @@ class Body extends GGen {
 	1.0 => float rotSpeed;
 
 	fun void update(float dt) {
-		rotSpeed * dt => body.rotY;
+		rotSpeed * dt => body.rotateY;
 	}
 }
 
@@ -33,9 +33,9 @@ for (auto planet : planets)
 @(2.2, 0.0, 0.0) => earthSystem.pos;
 @(.55, 0.0, 0.0) => moonSystem.pos;
 
-@(2.0, 2.0, 2.0) => sun.scale;
-@(0.4, 0.4, 0.4) => earth.scale;
-@(0.12, 0.12, 0.12) => moon.scale;
+@(2.0, 2.0, 2.0) => sun.sca;
+@(0.4, 0.4, 0.4) => earth.sca;
+@(0.12, 0.12, 0.12) => moon.sca;
 
 
 fun void Update(time t, dur dt) 

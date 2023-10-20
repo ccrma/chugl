@@ -16,7 +16,7 @@ NormalsMaterial mat;
 
 // load the obj file and assign it to the mesh geometry
 mesh.set( 
-    ObjLoader.load("../examples/models/assets/teapot.obj"),   // set obj geometry
+    ObjLoader.load(me.dir() + "assets/suzanne.obj"),   // set obj geometry
     mat                                                       // set material
 );
 

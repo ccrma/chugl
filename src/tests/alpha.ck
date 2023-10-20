@@ -4,11 +4,11 @@ cube.mat().color(Color.DARKBLUE);
 GG.camera().posZ(5);
 
 // ui setup ==========================================================
-GUI_Window window;
-// window.label("");
+UI_Window window;
+// window.text("");
 
-GUI_FloatSlider alphaslider;
-alphaslider.label("Float Slider! Sets cube alpha");
+UI_SliderFloat alphaslider;
+alphaslider.text("Float Slider! Sets cube alpha");
 alphaslider.range(0, 1.0);
 
 window.add(alphaslider);
@@ -25,6 +25,6 @@ spork ~ sliderListener();
 // Game loop =========================================================
 while (true) { 
     // rotate center cube
-    GG.dt() => cube.rotZ;
+    GG.dt() => cube.rotateZ;
     GG.nextFrame() => now; 
 }

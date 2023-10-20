@@ -98,7 +98,7 @@ for ( 0 => int i; i < NUM_MESHES/10; i++) {
         meshes[index] @=> GMesh @ mesh;
         mesh.set( boxGeo, shaderMat );
         mesh --> scene;
-        mesh.position(@(2*i, 2*j, 0));
+        mesh.pos(@(2*i, 2*j, 0));
     }
 }
 
@@ -144,8 +144,8 @@ fun void GameLoop(){
         UpdateAudioTexture();
 
         for ( GMesh @ mesh : meshes ) {
-            mesh.rotX( .27 * dt );
-            mesh.rotY( .15 * dt );
+            mesh.rotateX( .27 * dt );
+            mesh.rotateY( .15 * dt );
         }
 
 		// End update, begin render

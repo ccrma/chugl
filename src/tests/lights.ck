@@ -60,10 +60,10 @@ group --> scene;
 shaderMesh --> scene;
 flatCube --> scene;
 
-fileMesh.position(@(0, 1.5, 0));
-shaderMesh.position(@(0, -1.5, 0));
-flatCube.position(@(0, -3, 0));
-lightbulb.position( @(2, 0, 0) );
+fileMesh.pos(@(0, 1.5, 0));
+shaderMesh.pos(@(0, -1.5, 0));
+flatCube.pos(@(0, -3, 0));
+lightbulb.pos( @(2, 0, 0) );
 lightbulb.scale( @(0.1, 0.1, 0.1) );
 light --> lightbulb --> group;
 
@@ -106,11 +106,11 @@ while (true) {
     deltaTime/second => float dt;
 
     // rotate light
-    group.rotY( .85 * dt );
-    dirLight.rotX( .75 * dt);
+    group.rotateY( .85 * dt );
+    dirLight.rotateX( .75 * dt);
 
-    // <<< "light pos", light.worldPos() >>>;
-    // <<< "lightbulb pos", lightbulb.worldPos() >>>;
+    // <<< "light pos", light.posWorld() >>>;
+    // <<< "lightbulb pos", lightbulb.posWorld() >>>;
 
     // 
     shaderMat.uniformFloat("u_Time", now/second);

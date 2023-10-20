@@ -22,8 +22,8 @@ sun.set(boxGeo, normMat);
 earth.set(boxGeo, worldspaceNormalsMaterial);
 moon.set(boxGeo, normMat);
 
-earthSystem.position(@(2.2, 0.0, 0.0));
-moonSystem.position(@(.55, 0.0, 0.0));
+earthSystem.pos(@(2.2, 0.0, 0.0));
+moonSystem.pos(@(.55, 0.0, 0.0));
 
 sun.scale(@(2.0, 2.0, 2.0));
 earth.scale(@(0.4, 0.4, 0.4));
@@ -47,7 +47,7 @@ GCamera mainCamera;
 1 => int autoRender;
 now => time lastTime;
 
-mainCamera.position(@(0.0, 0.0, 3.0));
+mainCamera.pos(@(0.0, 0.0, 3.0));
 
 
 fun void grucker() {

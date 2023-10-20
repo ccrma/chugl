@@ -11,7 +11,7 @@ spork ~ flycam.selfUpdate();
 // ===============================
 
 CustomGeometry CustomGeometry;
-CustomGeometry.positions(
+CustomGeometry.poss(
     // vertex positions for a plane
     [
         // left triangle
@@ -70,7 +70,7 @@ MangoUVMaterial mangoMat;
 GMesh mesh;
 
 mesh.set(CustomGeometry, mangoMat);
-mesh.position(@(0.0, 0.0, -5.0));
+mesh.pos(@(0.0, 0.0, -5.0));
 
 mesh --> scene;
 
