@@ -3222,7 +3222,6 @@ t_CKBOOL init_chugl_cam(Chuck_DL_Query *QUERY)
 		"useful if you want to do mouse picking or raycasting"
 	);
 
-
 	QUERY->add_mfun(QUERY, chugl_cam_world_pos_to_screen_coord, "vec3", "worldPosToScreenCoord");
 	QUERY->add_arg(QUERY, "vec3", "worldPos");
 	QUERY->doc_func(QUERY, 
@@ -3231,9 +3230,6 @@ t_CKBOOL init_chugl_cam(Chuck_DL_Query *QUERY)
 		"returns a vec3. X and Y are screen coordinates, Z is the depth-value of the worldPos"
 		"Remember, screen coordinates have origin at the top-left corner of the window"
 	);
-
-
-
 
 	QUERY->end_class(QUERY);
 
@@ -3467,8 +3463,6 @@ t_CKBOOL init_chugl_mesh(Chuck_DL_Query *QUERY)
 	QUERY->add_ctor(QUERY, cgl_gpoints_ctor);
 	QUERY->end_class(QUERY);
 
-
-
 	return true;
 }
 // CGL Scene ==============================================
@@ -3678,10 +3672,48 @@ CK_DLL_CTOR(cgl_gpoints_ctor)
 //-----------------------------------------------------------------------------
 t_CKBOOL init_chugl_light(Chuck_DL_Query *QUERY)
 {
+	// GLight =================================
 	QUERY->begin_class(QUERY, Light::CKName(LightType::Base), "GGen");
 	QUERY->doc_class(QUERY, "Light class. Parent class of GPointLight and GDirectionalLight. Don't instantiate this class directly.");
 
 	QUERY->add_ctor(QUERY, cgl_light_ctor);
+
+	QUERY->add_mfun(QUERY, cgl_light_set_intensity, "float", "intensity");  // 0 -- 1
+	QUERY->add_arg(QUERY, "float", "i");
+	QUERY->doc_func(QUERY, "Set intensity from 0-1. 0 is off, 1 is full intensity");
+
+	QUERY->add_mfun(QUERY, cgl_light_set_ambient, "vec3", "ambient"); 
+	QUERY->add_arg(QUERY, "vec3", "a");
+	QUERY->doc_func(QUERY, "Set ambient color. Ambient color is multiplied by the material ambient color, and will be visible even when no light is directly shining on the object");
+
+	QUERY->add_mfun(QUERY, cgl_light_set_diffuse, "vec3", "diffuse");
+	QUERY->add_arg(QUERY, "vec3", "d");
+	QUERY->doc_func(QUERY, "Set diffuse color. Diffuse color is multiplied by the material diffuse color");
+
+	QUERY->add_mfun(QUERY, cgl_light_set_specular, "vec3", "specular");
+	QUERY->add_arg(QUERY, "vec3", "s");
+	QUERY->doc_func(QUERY, "Set specular color. Specular color is multiplied by the material specular color");
+
+	QUERY->add_mfun(QUERY, cgl_light_get_intensity, "float", "intensity");
+	QUERY->doc_func(QUERY, "Get light intensity");
+
+	QUERY->add_mfun(QUERY, cgl_light_get_ambient, "vec3", "ambient");
+	QUERY->doc_func(QUERY, "Get the light ambient color");
+
+	QUERY->add_mfun(QUERY, cgl_light_get_diffuse, "vec3", "diffuse");
+	QUERY->doc_func(QUERY, "Get the light diffuse color");
+
+	QUERY->add_mfun(QUERY, cgl_light_get_specular, "vec3", "specular");
+	QUERY->doc_func(QUERY, "Get the light specular color");
+
+	QUERY->end_class(QUERY);
+
+	// GPointLight =================================
+	QUERY->begin_class(QUERY, Light::CKName(LightType::Point), Light::CKName(LightType::Base));
+	QUERY->doc_class(QUERY, "Point light class");
+    QUERY->add_ex(QUERY, "basic/light.ck");
+
+	QUERY->add_ctor(QUERY, cgl_point_light_ctor);
 
 	QUERY->add_mfun(QUERY, cgl_points_light_set_falloff, "void", "falloff");
 	QUERY->add_arg(QUERY, "float", "linear");
@@ -3690,6 +3722,7 @@ t_CKBOOL init_chugl_light(Chuck_DL_Query *QUERY)
 
 	QUERY->end_class(QUERY);
 
+	// GDirLight =================================
 	QUERY->begin_class(QUERY, Light::CKName(LightType::Directional), Light::CKName(LightType::Base));
 	QUERY->doc_class(QUERY, "Directional class. Position of this light has no affect, only rotation");
 	QUERY->add_ctor(QUERY, cgl_dir_light_ctor);
