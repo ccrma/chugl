@@ -159,7 +159,9 @@ struct MaterialOption {
 class Material : public SceneGraphNode
 {
 public:
-	Material() {
+	Material() : m_VertIsPath(false), m_FragIsPath(false), m_VertShader(""), m_FragShader(""),
+				 m_RecompileShader(false)
+	{
 		// set default material options
 		SetOption(MaterialOption::Create(MaterialOptionParam::PolygonMode, MaterialPolygonMode::Fill));
 		// default to triangle primitives
@@ -254,8 +256,10 @@ public: // material options and uniforms settings
 	// uniform cache (copied to shader on render)
 	LocalUniformCache m_Uniforms;
 
-public: // custom shaders, only used by ShaderMaterial
-	std::string m_VertShaderPath, m_FragShaderPath;	
+private: // custom shaders, only used by ShaderMaterial
+	std::string m_VertShader, m_FragShader;	
+	bool m_VertIsPath, m_FragIsPath;
+	bool m_RecompileShader;
 
 
 public:  // static consts
@@ -305,6 +309,11 @@ public:  // uniform getters and setters
 	// point uniform getters
 	bool GetSizeAttenuation() { return m_Uniforms[POINT_SIZE_ATTENUATION_UNAME].b; }
 	size_t GetSpriteID() { return m_Uniforms[POINT_SPRITE_TEXTURE_UNAME].texID; }
+	const std::string& GetVertShader() { return m_VertShader; }
+	const std::string& GetFragShader() { return m_FragShader; }
+	bool GetVertIsPath() { return m_VertIsPath; }
+	bool GetFragIsPath() { return m_FragIsPath; }
+	bool RecompileShader() { return m_RecompileShader; }
 
 	// uniform setters
 	// void SetTexture(CGL_Texture* )
@@ -326,9 +335,18 @@ public:  // uniform getters and setters
 	}
 	void UseLocalNormals() { m_Uniforms[USE_LOCAL_NORMALS_UNAME].b = true; }
 	void UseWorldNormals() { m_Uniforms[USE_LOCAL_NORMALS_UNAME].b = false; }
-	virtual void SetShaderPaths(std::string vertexShaderPath, std::string fragmentShaderPath) {
-		m_VertShaderPath = vertexShaderPath;
-		m_FragShaderPath = fragmentShaderPath;
+	virtual void SetFragShader(const std::string& fragmentShader, bool isPath = true) {
+		m_FragShader = fragmentShader;
+		m_FragIsPath = isPath;
+		m_RecompileShader = true;
+	}
+	virtual void SetVertShader(const std::string& vertexShader, bool isPath = true) {
+		m_VertShader = vertexShader;
+		m_VertIsPath = isPath;
+		m_RecompileShader = true;
+	}
+	void SetRecompileFlag(bool flag) {
+		m_RecompileShader = flag;
 	}
 	// primitive mode setters
 	void SetLineMode(MaterialPrimitiveMode mode) { SetOption(MaterialOption::Create(MaterialOptionParam::PrimitiveMode, mode)); }
@@ -408,10 +426,11 @@ class ShaderMaterial : public Material
 {
 public:
 	ShaderMaterial (
-		std::string vertexShaderPath, std::string fragmentShaderPath
+		std::string vertexShader, std::string fragmentShader,
+		bool vertIsPath = true, bool fragIsPath = true
 	) {
-		m_FragShaderPath = fragmentShaderPath;
-		m_VertShaderPath = vertexShaderPath;
+		SetVertShader(vertexShader, vertIsPath);
+		SetFragShader(fragmentShader, fragIsPath);
 	}
 
 	virtual MaterialType GetMaterialType() override { return MaterialType::CustomShader; }

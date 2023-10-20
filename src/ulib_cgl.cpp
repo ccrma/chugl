@@ -365,6 +365,8 @@ CK_DLL_CTOR(cgl_mat_custom_shader_ctor);
 CK_DLL_MFUN(cgl_mat_custom_shader_set_shaders);
 CK_DLL_MFUN(cgl_mat_custom_shader_set_vert_shader);
 CK_DLL_MFUN(cgl_mat_custom_shader_set_frag_shader);
+CK_DLL_MFUN(cgl_mat_custom_shader_set_vert_string);
+CK_DLL_MFUN(cgl_mat_custom_shader_set_frag_string);
 
 // points mat
 CK_DLL_CTOR(cgl_mat_points_ctor);
@@ -1711,11 +1713,19 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 
 	QUERY->add_mfun(QUERY, cgl_mat_custom_shader_set_vert_shader, "void", "vertShader");
 	QUERY->add_arg(QUERY, "string", "vert");
-	QUERY->doc_func(QUERY, "For ShaderMaterial: set vertex shader");
+	QUERY->doc_func(QUERY, "For ShaderMaterial: set vertex shader path");
 
 	QUERY->add_mfun(QUERY, cgl_mat_custom_shader_set_frag_shader, "void", "fragShader");
 	QUERY->add_arg(QUERY, "string", "frag");
-	QUERY->doc_func(QUERY, "For ShaderMaterial: set fragment shader");
+	QUERY->doc_func(QUERY, "For ShaderMaterial: set fragment shader path");
+
+	QUERY->add_mfun(QUERY, cgl_mat_custom_shader_set_vert_string, "void", "vertString");
+	QUERY->add_arg(QUERY, "string", "vert");
+	QUERY->doc_func(QUERY, "For ShaderMaterial: set vertex shader string");
+
+	QUERY->add_mfun(QUERY, cgl_mat_custom_shader_set_frag_string, "void", "fragString");
+	QUERY->add_arg(QUERY, "string", "frag");
+	QUERY->doc_func(QUERY, "For ShaderMaterial: set fragment shader string");
 
 
 	// points mat fns
@@ -2178,7 +2188,8 @@ CK_DLL_MFUN(cgl_mat_custom_shader_set_shaders)
 	Chuck_String *vertPath = GET_NEXT_STRING(ARGS);
 	Chuck_String *fragPath = GET_NEXT_STRING(ARGS);
 
-	mat->SetShaderPaths(vertPath->str(), fragPath->str());
+	mat->SetFragShader(fragPath->str(), true);
+	mat->SetVertShader(vertPath->str(), true);
 
 	CGL::PushCommand(new UpdateMaterialShadersCommand((ShaderMaterial *)mat));
 }
@@ -2194,7 +2205,7 @@ CK_DLL_MFUN(cgl_mat_custom_shader_set_vert_shader)
 
 	Chuck_String *vertPath = GET_NEXT_STRING(ARGS);
 
-	mat->SetShaderPaths(vertPath->str(), mat->m_FragShaderPath);
+	mat->SetVertShader(vertPath->str(), true);
 
 	CGL::PushCommand(new UpdateMaterialShadersCommand((ShaderMaterial *)mat));
 }
@@ -2210,10 +2221,43 @@ CK_DLL_MFUN(cgl_mat_custom_shader_set_frag_shader)
 
 	Chuck_String *fragPath = GET_NEXT_STRING(ARGS);
 
-	mat->SetShaderPaths(mat->m_VertShaderPath, fragPath->str());
+	mat->SetFragShader(fragPath->str(), true);
 
 	CGL::PushCommand(new UpdateMaterialShadersCommand((ShaderMaterial *)mat));
 }
+
+CK_DLL_MFUN(cgl_mat_custom_shader_set_vert_string)
+{
+	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	if (mat->GetMaterialType() != MaterialType::CustomShader)
+	{
+		std::cerr << "ERROR: material is not a custom shader material, cannot set custom shaders" << std::endl;
+		return;
+	}
+
+	Chuck_String *vertString = GET_NEXT_STRING(ARGS);
+
+	mat->SetVertShader(vertString->str(), false);
+
+	CGL::PushCommand(new UpdateMaterialShadersCommand((ShaderMaterial *)mat));
+}
+
+CK_DLL_MFUN(cgl_mat_custom_shader_set_frag_string)
+{
+	Material *mat = (Material *)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	if (mat->GetMaterialType() != MaterialType::CustomShader)
+	{
+		std::cerr << "ERROR: material is not a custom shader material, cannot set custom shaders" << std::endl;
+		return;
+	}
+
+	Chuck_String *fragString = GET_NEXT_STRING(ARGS);
+
+	mat->SetFragShader(fragString->str(), false);
+
+	CGL::PushCommand(new UpdateMaterialShadersCommand((ShaderMaterial *)mat));
+}
+
 
 // points mat fns ---------------------------------
 CK_DLL_CTOR(cgl_mat_points_ctor)

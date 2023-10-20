@@ -138,7 +138,6 @@ RenderMaterial::RenderMaterial(Material *mat, Renderer *renderer) : m_Mat(mat), 
 {
 	std::string vert, frag;
 	bool vertIsPath = false, fragIsPath = false;
-	std::string vertPath, fragPath;
 	// factory method to create the correct shader based on the material type
 	// TODO just hardcode strings in cpp for builtin shaders
 	switch(mat->GetMaterialType()) {
@@ -157,21 +156,17 @@ RenderMaterial::RenderMaterial(Material *mat, Renderer *renderer) : m_Mat(mat), 
 			break;
 		case MaterialType::CustomShader:
 			// until ChucK gets destructors, we default to default shader
-			vertPath = ((ShaderMaterial*)mat)->m_VertShaderPath;
-			fragPath = ((ShaderMaterial*)mat)->m_FragShaderPath;
-			if (vertPath == "") {
+			vert = mat->GetVertShader();
+			frag = mat->GetFragShader();
+			vertIsPath = mat->GetVertIsPath();
+			fragIsPath = mat->GetFragIsPath();
+			if (vert == "") {
 				vert = ShaderCode::GenShaderSource(ShaderCode::BASIC_VERT, ShaderType::Vertex);
 				vertIsPath = false;
-			} else {
-				vert = vertPath;
-				vertIsPath = true;
 			}
-			if (fragPath == "") {
+			if (frag == "") {
 				frag = ShaderCode::GenShaderSource(ShaderCode::NORMAL_FRAG, ShaderType::Fragment);
 				fragIsPath = false;
-			} else {
-				frag = fragPath;
-				fragIsPath = true;
 			}
 			break;
 		case MaterialType::Points:
@@ -192,6 +187,8 @@ RenderMaterial::RenderMaterial(Material *mat, Renderer *renderer) : m_Mat(mat), 
 	}
 
 	m_Shader = new Shader(vert, frag, vertIsPath, fragIsPath);
+	mat->SetRecompileFlag(false);
+	
 }
 
 void RenderMaterial::UpdateShader()
@@ -203,28 +200,20 @@ void RenderMaterial::UpdateShader()
 	// TODO: fix this so that only changing either frag or vert will still work 
 	// (right now) will try to load empty string for the other shader
 	ShaderMaterial* mat = dynamic_cast<ShaderMaterial*>(m_Mat);
-	bool hasShaderPathChanged = (
-		mat->m_VertShaderPath != m_Shader->GetVertPath() ||
-		mat->m_FragShaderPath != m_Shader->GetFragPath()
-	);
-	if (!hasShaderPathChanged) return;
+	if (!mat->RecompileShader()) return;
 
 	// set up shader paths or codegen
-	std::string vert, frag;
-	bool vertIsPath = false, fragIsPath = false;
-	if (mat->m_VertShaderPath == "") {
+	std::string vert = mat->GetVertShader();
+	std::string frag = mat->GetFragShader();
+	bool vertIsPath = mat->GetVertIsPath();
+	bool fragIsPath = mat->GetFragIsPath();
+	if (vert == "") {
 		vert = ShaderCode::GenShaderSource(ShaderCode::BASIC_VERT, ShaderType::Vertex);
 		vertIsPath = false;
-	} else {
-		vert = mat->m_VertShaderPath;
-		vertIsPath = true;
 	}
-	if (mat->m_FragShaderPath == "") {
+	if (frag == "") {
 		frag = ShaderCode::GenShaderSource(ShaderCode::NORMAL_FRAG, ShaderType::Fragment);
 		fragIsPath = false;
-	} else {
-		frag = mat->m_FragShaderPath;
-		fragIsPath = true;
 	}
 
 	// Note: we DON'T delete the previous shader program because it may be in use by other render materials
@@ -233,7 +222,10 @@ void RenderMaterial::UpdateShader()
 	// actually deleting shouldn't be a problem now but still gotta figure 
 	// out how to do it correctly
 	// delete m_Shader;  // TODO
-	m_Shader = new Shader(vert, frag, vertIsPath, fragIsPath);
+	m_Shader = new Shader(
+		vert, frag, vertIsPath, fragIsPath
+	);
+	mat->SetRecompileFlag(false);
 }
 
 RenderMaterial* RenderMaterial::GetDefaultMaterial(Renderer* renderer) {

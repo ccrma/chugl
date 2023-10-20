@@ -313,21 +313,26 @@ class UpdateMaterialShadersCommand : public SceneGraphCommand
 public:
     UpdateMaterialShadersCommand(ShaderMaterial* mat) 
         : m_MatID(mat->GetID()),
-        m_VertexShaderPath(mat->m_VertShaderPath),
-        m_FragmentShaderPath(mat->m_FragShaderPath)
-    {};
+        m_VertexShader(mat->GetVertShader()),
+        m_FragmentShader(mat->GetFragShader()),
+        m_VertIsPath(mat->GetVertIsPath()),
+        m_FragIsPath(mat->GetFragIsPath())
+    {
+
+    };
 
     virtual void execute(Scene* scene) override {
         ShaderMaterial* mat = dynamic_cast<ShaderMaterial*>(scene->GetNode(m_MatID));
         assert(mat);  
 
-        mat->m_VertShaderPath = m_VertexShaderPath;
-        mat->m_FragShaderPath = m_FragmentShaderPath;
+        mat->SetVertShader(m_VertexShader, m_VertIsPath);
+        mat->SetFragShader(m_FragmentShader, m_FragIsPath);
     }
 
 private:
     size_t m_MatID;
-    std::string m_VertexShaderPath, m_FragmentShaderPath;
+    std::string m_VertexShader, m_FragmentShader;
+    bool m_VertIsPath, m_FragIsPath;
 };
 
 class UpdateGeometryCommand : public SceneGraphCommand
