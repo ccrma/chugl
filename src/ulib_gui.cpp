@@ -19,7 +19,9 @@ Manager::CkTypeMap Manager::s_CkTypeMap = {
     {Type::FloatSlider, "GUI_FloatSlider"},
     {Type::IntSlider, "GUI_IntSlider"},
     {Type::Checkbox, "GUI_Checkbox"},
-    {Type::Color3, "GUI_Color3"}
+    {Type::Color3, "GUI_Color3"},
+    {Type::Dropdown, "GUI_Dropdown"}
+
 };
 
 void Manager::DrawGUI()
@@ -99,6 +101,14 @@ CK_DLL_MFUN( chugl_gui_slider_int_range_set );
 CK_DLL_CTOR( chugl_gui_color3_ctor );
 CK_DLL_MFUN( chugl_gui_color3_val_get );
 
+//-----------------------------------------------------------------------------
+// Dropdown 
+//-----------------------------------------------------------------------------
+CK_DLL_CTOR( chugl_gui_dropdown_ctor );
+CK_DLL_MFUN( chugl_gui_dropdown_options_set );
+CK_DLL_MFUN( chugl_gui_dropdown_val_get );
+CK_DLL_MFUN( chugl_gui_dropdown_val_set );
+
 
 t_CKBOOL init_chugl_gui_element(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_gui_window(Chuck_DL_Query *QUERY);
@@ -107,6 +117,7 @@ t_CKBOOL init_chugl_gui_checkbox(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_gui_slider_float(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_gui_slider_int(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_gui_color3(Chuck_DL_Query *QUERY);
+t_CKBOOL init_chugl_gui_dropdown(Chuck_DL_Query *QUERY);
 
 
 t_CKBOOL init_chugl_gui(Chuck_DL_Query *QUERY)
@@ -125,6 +136,7 @@ t_CKBOOL init_chugl_gui(Chuck_DL_Query *QUERY)
     if (!init_chugl_gui_slider_float(QUERY)) return FALSE;
     if (!init_chugl_gui_slider_int(QUERY)) return FALSE;
     if (!init_chugl_gui_color3(QUERY)) return FALSE;
+    if (!init_chugl_gui_dropdown(QUERY)) return FALSE;
 
     return TRUE;
 }
@@ -487,4 +499,71 @@ CK_DLL_MFUN( chugl_gui_color3_val_get )
     Color3* color3 = (Color3 *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
     glm::vec3 color = color3->GetData();
     RETURN->v_vec3 = {color.r, color.g, color.b};
+}
+
+//-----------------------------------------------------------------------------
+// name: init_chugl_gui_dropdown()
+// desc: ...
+//-----------------------------------------------------------------------------
+t_CKBOOL init_chugl_gui_dropdown(Chuck_DL_Query *QUERY)
+{
+    QUERY->begin_class(QUERY, Manager::GetCkName(Type::Dropdown), Manager::GetCkName(Type::Element));
+	QUERY->doc_class(QUERY, 
+        "Dropdown widget"
+        "Create a dropdown menu with the given list of items"
+        "On select, the widget will store the selected items *index* and will trigger an event"
+    );
+
+    QUERY->add_ctor(QUERY, chugl_gui_dropdown_ctor);
+
+    QUERY->add_mfun(QUERY, chugl_gui_dropdown_val_get, "int", "val");
+    QUERY->doc_func(QUERY, "Get the integer index of the curerntly selected dropdown item");
+
+    QUERY->add_mfun(QUERY, chugl_gui_dropdown_val_set, "int", "val");
+    QUERY->add_arg( QUERY, "int", "idx");
+    QUERY->doc_func(QUERY, "Set the integer index of the selected dropdown item");
+
+
+    QUERY->add_mfun(QUERY, chugl_gui_dropdown_options_set, "void", "options");
+    QUERY->add_arg( QUERY, "string[]", "options");
+    QUERY->doc_func(QUERY, "Set the list of options for the dropdown menu");
+
+
+    QUERY->end_class(QUERY);
+
+    return TRUE;
+}
+
+CK_DLL_CTOR( chugl_gui_dropdown_ctor )
+{
+    OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data) = (t_CKINT) new Dropdown(SELF);
+}
+
+CK_DLL_MFUN( chugl_gui_dropdown_val_get )
+{
+    Dropdown* dropdown = (Dropdown *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    RETURN->v_int = dropdown->GetData();
+}
+
+CK_DLL_MFUN( chugl_gui_dropdown_val_set )
+{
+    Dropdown* dropdown = (Dropdown *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    t_CKINT idx = GET_NEXT_INT(ARGS);
+    dropdown->SetData( idx );
+    RETURN->v_int = idx;
+}
+
+CK_DLL_MFUN( chugl_gui_dropdown_options_set )
+{
+    Dropdown* dropdown = (Dropdown *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    Chuck_ArrayInt * options = (Chuck_ArrayInt *) GET_NEXT_OBJECT(ARGS);
+    std::vector<std::string> options_str;
+    // pull chuck_strings out of the array
+    for (auto& string_addr : options->m_vector)
+    {
+        Chuck_String * s = (Chuck_String *) string_addr;
+        options_str.push_back( s->str() );
+    }
+
+    dropdown->SetOptions( options_str );
 }

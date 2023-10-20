@@ -43,7 +43,8 @@ enum class Type : unsigned int
     FloatSlider,
     IntSlider,
     Checkbox,
-    Color3
+    Color3,
+    Dropdown
 };
 
 //-----------------------------------------------------------------------------
@@ -99,7 +100,7 @@ public:
     Element(Chuck_Object* event, const std::string& label = " ") 
     : m_Event((Chuck_Event*)event), m_ReadDataLock(), m_Label(label) {}
     virtual ~Element() {}
-    virtual void Draw() = 0;
+    virtual void Draw() = 0; // assume we are holding Manager::GetWindowLock() when this is called
     virtual Type GetType() { return Type::Element; }
 	virtual const char * GetCkName() { return Manager::GetCkName( GetType() ); }
 
@@ -355,6 +356,72 @@ public:
 private:
     float m_ReadData[3];
     float m_WriteData[3];
+};
+
+class Dropdown : public Element
+{
+public:
+    Dropdown(
+        Chuck_Object* event
+    ) : Element(event), m_WriteData(0), m_ReadData(0) {}
+
+    virtual Type GetType() override { return Type::Color3; }
+
+    virtual void Draw() override {
+        if (m_Options.empty()) return;  // no options to draw
+
+        if (ImGui::BeginCombo(m_Label.c_str(), m_Options[m_WriteData].c_str()))
+        {
+            for (int n = 0; n < m_Options.size(); n++)
+            {
+                const bool is_selected = (m_WriteData == n);
+                // item selected
+                if (ImGui::Selectable(m_Options[n].c_str(), is_selected)) {
+                    m_WriteData = n;
+                    // lock
+                    std::unique_lock<std::mutex> lock(m_ReadDataLock);
+                    // copy
+                    m_ReadData = m_WriteData;
+                    // unlock
+                    lock.unlock();
+                    // broadcast chuck event
+                    Broadcast();
+                }
+
+                // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+                if (is_selected)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+    }
+
+    int GetData() {
+        // lock
+        std::lock_guard<std::mutex> lock(m_ReadDataLock);
+        return m_ReadData;
+    }
+    int SetData(int data) {
+        // lock
+        std::lock_guard<std::mutex> lock(Manager::GetWindowLock());
+        // bounds check
+        if (data < 0) data = 0;
+        if (data >= m_Options.size()) data = m_Options.size() - 1;
+        m_WriteData = data;
+        return data;
+    }
+
+    void SetOptions(const std::vector<std::string>& options) { 
+        // lock
+        std::lock_guard<std::mutex> lock(Manager::GetWindowLock());
+        m_Options = options; 
+    }
+
+private:
+    // data is the index of the selected option
+    int m_ReadData;
+    int m_WriteData;
+    std::vector<std::string> m_Options;
 };
 
 

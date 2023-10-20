@@ -243,6 +243,10 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
 
     // point size
     GLCall(glEnable(GL_PROGRAM_POINT_SIZE));
+    
+    // face culling
+    // GLCall(glEnable(GL_CULL_FACE));
+    // GLCall(glCullFace(GL_BACK));
 
     // imgui setup =======================================
     IMGUI_CHECKVERSION();

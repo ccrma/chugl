@@ -37,11 +37,16 @@ checkbox.label("Check box! to connect / disconnect children");
 GUI_Color3 color;
 color.label("Color! Changes background color");
 
+GUI_Dropdown dropdown;
+dropdown.label("Dropdown! Select polygon mode");
+dropdown.options(["FILL", "LINE", "POINT"]);
+
 window.add(button);
 window.add(fslider);
 window.add(islider);
 window.add(checkbox);
 window.add(color);
+window.add(dropdown);
 
 
 fun void ButtonListener(GUI_Button @ button) {
@@ -123,6 +128,21 @@ fun void ColorListener(GUI_Color3 @ color) {
         GG.scene().backgroundColor(color.val());
     }
 } spork ~ ColorListener(color);
+
+fun void DropdownListener(GUI_Dropdown @ dropdown) {
+    while (true) {
+        dropdown => now;
+        dropdown.val() => int val;
+        <<< "dropdown: " + val >>>;
+        if (val == 0) {
+            cube.mat().polygonMode(Material.POLYGON_FILL);
+        } else if (val == 1) {
+            cube.mat().polygonMode(Material.POLYGON_LINE);
+        } else if (val == 2) {
+            cube.mat().polygonMode(Material.POLYGON_POINT);
+        }
+    }
+} spork ~ DropdownListener(dropdown);
 
 
 // Game loop =========================================================
