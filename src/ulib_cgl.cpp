@@ -4,6 +4,7 @@
 
 #include "ulib_cgl.h"
 #include "ulib_colors.h"
+#include "ulib_gui.h"
 
 #include "renderer/scenegraph/Camera.h"
 #include "renderer/scenegraph/Command.h"
@@ -295,7 +296,8 @@ CK_DLL_MFUN(cgl_mat_clone);
 CK_DLL_MFUN(cgl_mat_set_polygon_mode);
 CK_DLL_MFUN(cgl_mat_get_polygon_mode);
 CK_DLL_MFUN(cgl_mat_set_color);
-CK_DLL_MFUN(cgl_mat_get_color);
+CK_DLL_MFUN(cgl_mat_set_alpha);
+CK_DLL_MFUN(cgl_mat_get_alpha);
 CK_DLL_MFUN(cgl_mat_set_point_size);
 CK_DLL_MFUN(cgl_mat_set_line_width);
 // CK_DLL_MFUN(cgl_mat_set_cull_mode);  // TODO
@@ -415,6 +417,9 @@ t_CKBOOL init_chugl(Chuck_DL_Query *QUERY)
     CGL::SetCKAPI( QUERY->api() );
     // set API in the scene graph node
     SceneGraphNode::SetCKAPI( QUERY->api() );
+
+	// init GUI
+	if (!init_chugl_gui(QUERY)) return FALSE;
 
     // initialize ChuGL API
 	init_chugl_colors(QUERY);
@@ -1625,8 +1630,15 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 	QUERY->doc_func(QUERY, "set point size if rendering with Material.POLYGON_POINT. NOTE: unsupported on macOS");
 
 	QUERY->add_mfun(QUERY, cgl_mat_set_color, "vec3", "color");
-	QUERY->add_arg(QUERY, "vec3", "col");
-	QUERY->doc_func(QUERY, "set material color uniform");
+	QUERY->add_arg(QUERY, "vec3", "rgb");
+	QUERY->doc_func(QUERY, "set material color uniform as an rgb. Alpha set to 1.0");
+
+	QUERY->add_mfun(QUERY, cgl_mat_set_alpha, "float", "alpha");
+	QUERY->add_arg(QUERY, "float", "alpha");
+	QUERY->doc_func(QUERY, "set the alpha of the material color");
+
+	QUERY->add_mfun(QUERY, cgl_mat_get_alpha, "float", "alpha");
+	QUERY->doc_func(QUERY, "get the alpha of the material color");
 
 	QUERY->add_mfun(QUERY, cgl_mat_set_line_width, "void", "lineWidth");
 	QUERY->add_arg(QUERY, "float", "width");
@@ -1858,6 +1870,22 @@ CK_DLL_MFUN(cgl_mat_set_color)
 	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, *mat->GetUniform(Material::COLOR_UNAME)));
 }
 
+CK_DLL_MFUN(cgl_mat_set_alpha)
+{
+	Material *mat = (Material*)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	t_CKFLOAT alpha = GET_NEXT_FLOAT(ARGS);
+	mat->SetAlpha(alpha);
+
+	RETURN->v_float = alpha;
+
+	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, *mat->GetUniform(Material::COLOR_UNAME)));
+}
+
+CK_DLL_MFUN(cgl_mat_get_alpha)
+{
+	Material *mat = (Material*)OBJ_MEMBER_INT(SELF, cglmat_data_offset);
+	RETURN->v_float = mat->GetAlpha();
+}
 
 CK_DLL_MFUN(cgl_mat_set_uniform_float)
 {
@@ -2270,25 +2298,25 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query *QUERY)
 
 	QUERY->add_mfun(QUERY, cgl_obj_rot_on_local_axis, "GGen", "rotateOnLocalAxis");
 	QUERY->add_arg(QUERY, "vec3", "axis");
-	QUERY->add_arg(QUERY, "float", "deg");
-	QUERY->doc_func(QUERY, "Rotate this GGen by the given degrees on the given axis in local space");
+	QUERY->add_arg(QUERY, "float", "radians");
+	QUERY->doc_func(QUERY, "Rotate this GGen by the given radians on the given axis in local space");
 
 	QUERY->add_mfun(QUERY, cgl_obj_rot_on_world_axis, "GGen", "rotateOnWorldAxis");
 	QUERY->add_arg(QUERY, "vec3", "axis");
-	QUERY->add_arg(QUERY, "float", "deg");
-	QUERY->doc_func(QUERY, "Rotate this GGen by the given degrees on the given axis in world space");
+	QUERY->add_arg(QUERY, "float", "radians");
+	QUERY->doc_func(QUERY, "Rotate this GGen by the given radians on the given axis in world space");
 
 	QUERY->add_mfun(QUERY, cgl_obj_set_rot_x, "GGen", "rotX");
-	QUERY->add_arg(QUERY, "float", "deg");
-	QUERY->doc_func(QUERY, "Rotate this GGen by the given degrees on the X axis in local space");
+	QUERY->add_arg(QUERY, "float", "radians");
+	QUERY->doc_func(QUERY, "Rotate this GGen by the given radians on the X axis in local space");
 
 	QUERY->add_mfun(QUERY, cgl_obj_set_rot_y, "GGen", "rotY");
-	QUERY->add_arg(QUERY, "float", "deg");
-	QUERY->doc_func(QUERY, "Rotate this GGen by the given degrees on the Y axis in local space");
+	QUERY->add_arg(QUERY, "float", "radians");
+	QUERY->doc_func(QUERY, "Rotate this GGen by the given radians on the Y axis in local space");
 
 	QUERY->add_mfun(QUERY, cgl_obj_set_rot_z, "GGen", "rotZ");
-	QUERY->add_arg(QUERY, "float", "deg");
-	QUERY->doc_func(QUERY, "Rotate this GGen by the given degrees on the Z axis in local space");
+	QUERY->add_arg(QUERY, "float", "radians");
+	QUERY->doc_func(QUERY, "Rotate this GGen by the given radians on the Z axis in local space");
 
 	QUERY->add_mfun(QUERY, cgl_obj_set_pos_x, "GGen", "posX");
 	QUERY->add_arg(QUERY, "float", "pos");

@@ -114,6 +114,7 @@ public: // fog
 	void SetFogEnabled(bool enabled) { m_FogUniforms.enabled = enabled; }
 	bool GetFogEnabled() { return m_FogUniforms.enabled; }
 
+
 public: // background color ie clear color
 	glm::vec3 m_BackgroundColor;
 	void SetBackgroundColor(float r, float g, float b) {

@@ -11,6 +11,7 @@
 
 // chuck CORE includes
 #include "ulib_cgl.h" // TODO: need to expose graphics entry point in chuck.h
+#include "ulib_gui.h"
 
 // system includes
 #include <iostream>
@@ -22,6 +23,11 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+
+// imgui includes
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
 
 
 /* =============================================================================
@@ -153,6 +159,7 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
     glfwSetErrorCallback(glfwErrorCallback);
 
     // init and select openGL version ==========================
+    const char * glsl_version = "#version 330";
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -200,6 +207,7 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
 
     // OpenGL Viewport and Callbacks =========================
     // for high-DPI displays, framebuffer size is actually a multiple of window size
+    glfwPollEvents();  // call poll events first to get correct framebuffer size (glfw bug: https://github.com/glfw/glfw/issues/1968)
     int frameBufferWidth, frameBufferHeight;
     glfwGetFramebufferSize(m_Window, &frameBufferWidth, &frameBufferHeight);
     glViewport(0, 0, frameBufferWidth, frameBufferHeight);
@@ -236,12 +244,98 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
 
     // point size
     GLCall(glEnable(GL_PROGRAM_POINT_SIZE));
+    
+    // face culling
+    // GLCall(glEnable(GL_CULL_FACE));
+    // GLCall(glCullFace(GL_BACK));
+
+    // imgui setup =======================================
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; 
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; 
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+    //ImGui::StyleColorsLight();
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplGlfw_InitForOpenGL(m_Window, true);
+    ImGui_ImplOpenGL3_Init(glsl_version);
+
+    // Load Fonts
+    // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
+    // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
+    // - If the file cannot be loaded, the function will return a nullptr. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
+    // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
+    // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use Freetype for higher quality font rendering.
+    // - Read 'docs/FONTS.md' for more instructions and details.
+    // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
+    // - Our Emscripten build process allows embedding fonts to be accessible at runtime from the "fonts/" folder. See Makefile.emscripten for details.
+    //io.Fonts->AddFontDefault();
+    //io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 18.0f);
+    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
+    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
+    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
+    //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
+    //IM_ASSERT(font != nullptr);
+
+
 }
 
 Window::~Window()
 {   
+    // Cleanup imgui
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
+    // Cleanup glfw
     glfwDestroyWindow(m_Window);
 	glfwTerminate();
+}
+
+
+static bool show_another_window = true;
+static void draw_imgui() {
+    // Start the Dear ImGui frame
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+
+    // ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
+    // ImGui::Text("Hello from another window!");
+    // if (ImGui::Button("Close Me"))
+    //     show_another_window = false;
+    // ImGui::End();
+    
+    // ImGui::ShowDemoWindow();
+
+
+    // Draw the GUI
+    GUI::Manager::DrawGUI();
+
+
+
+    // Rendering
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+    // Update and Render additional Platform Windows
+    // (Platform functions may change the current OpenGL context, so we save/restore it to make it easier to paste this code elsewhere.
+    //  For this specific demo app we could also call glfwMakeContextCurrent(window) directly)
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        GLFWwindow* backup_current_context = glfwGetCurrentContext();
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindowsDefault();
+        glfwMakeContextCurrent(backup_current_context);
+    }
 }
 
 
@@ -249,7 +343,7 @@ void Window::DisplayLoop()
 {
     // seed random number generator ===========================
     srand((unsigned int)time(0));
-    
+
     // Copy from CGL scenegraph ====================================    
     // TODO should just clone these
     scene.SetID(CGL::mainScene.GetID());  // copy scene ID
@@ -346,7 +440,11 @@ void Window::DisplayLoop()
         renderer.RenderScene(&scene, scene.GetMainCamera());
 
         // Handle Events, Draw framebuffer
-        glfwPollEvents();
+        glfwPollEvents();  // TODO: maybe put event handling in a separate thread?
+
+        // imgui rendering
+        draw_imgui();
+
         // swap double buffer
         // blocks until glfwSwapInterval screen updates have occured, accounting for vsync
         glfwSwapBuffers(m_Window);

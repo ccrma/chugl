@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 
+set(CMAKE_VERBOSE_MAKEFILE on)
+
 # force universal binary on osx (must go BEFORE project call)
 set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "" FORCE)
 # specify minimum support macOS version
@@ -12,6 +14,7 @@ if(APPLE AND NOT CMAKE_OSX_DEPLOYMENT_TARGET)
         set(CMAKE_OSX_DEPLOYMENT_TARGET 10.10 CACHE STRING "macOS Deployment Target")
     endif()
 endif()
+
 project(
     ChuGL
     VERSION 0.1.0
@@ -20,6 +23,13 @@ project(
 
 if(LINUX)
     add_compile_options(-fPIC)
+    add_link_options(--no-undefined)
+    #set( CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined" )
+endif()
+
+if(APPLE)
+    add_link_options(-undefined error)
+    #set( CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-undefined,error" )
 endif()
 
 # global compiler flags interface
@@ -49,7 +59,9 @@ add_library(
     ulib_cgl.cpp 
     window.cpp
     ulib_colors.cpp
+    ulib_gui.cpp
 )
+
 set_target_properties(${PROJECT_NAME} PROPERTIES 
     PREFIX ""
     OUTPUT_NAME ${PROJECT_NAME}
@@ -72,8 +84,11 @@ add_subdirectory(./vendor/glfw)  # TODO prob create a top-level CMakeLists.txt t
 add_subdirectory(./vendor/glad)
 add_subdirectory(./vendor/glm)
 add_subdirectory(./renderer)
+add_subdirectory(./vendor/imgui)
+
+
 target_link_libraries(${PROJECT_NAME} 
-    PRIVATE glfw glad glm
+    PRIVATE glfw glad glm imgui
     PRIVATE chugl_compiler_flags
     PRIVATE renderer
 )
@@ -84,6 +99,7 @@ target_include_directories(${PROJECT_NAME}
     PRIVATE ./vendor
     PRIVATE ./vendor/glad/include
     PRIVATE ./vendor/glfw/include
+    PRIVATE ./vendor/imgui
 )
 
 # set install destination by platform
