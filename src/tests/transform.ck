@@ -6,6 +6,18 @@ GCube cube --> GG.scene();
 UI_Window window;
 window.text("Transform Test Suite");
 
+UI_SliderFloat rotation_x_slider;
+rotation_x_slider.text("Rotation X");
+rotation_x_slider.range(-Math.two_pi, Math.two_pi);
+
+UI_SliderFloat rotation_y_slider;
+rotation_y_slider.text("Rotation Y");
+rotation_y_slider.range(-Math.two_pi, Math.two_pi);
+
+UI_SliderFloat rotation_z_slider;
+rotation_z_slider.text("Rotation Z");
+rotation_z_slider.range(-Math.two_pi, Math.two_pi);
+
 UI_Button translate_x_right_button;
 translate_x_right_button.text("Translate X Right");
 
@@ -45,6 +57,9 @@ scale_z_down_button.text("Scale Z Down");
 UI_Checkbox lookat_checkbox;
 lookat_checkbox.text("Look At");
 
+window.add(rotation_x_slider);
+window.add(rotation_y_slider);
+window.add(rotation_z_slider);
 window.add(translate_x_right_button);
 window.add(translate_x_left_button);
 window.add(translate_y_up_button);
@@ -60,6 +75,27 @@ window.add(scale_z_down_button);
 window.add(lookat_checkbox);
 
 // UI event handlers ====================================================
+
+fun void RotationXListener(UI_SliderFloat @ slider) {
+    while (true) {
+        slider => now;
+        cube.rotX(slider.val());
+    }
+} spork ~ RotationXListener(rotation_x_slider);
+
+fun void RotationYListener(UI_SliderFloat @ slider) {
+    while (true) {
+        slider => now;
+        cube.rotY(slider.val());
+    }
+} spork ~ RotationYListener(rotation_y_slider);
+
+fun void RotationZListener(UI_SliderFloat @ slider) {
+    while (true) {
+        slider => now;
+        cube.rotZ(slider.val());
+    }
+} spork ~ RotationZListener(rotation_z_slider);
 
 fun void TranslateLeftListener(UI_Button @ button) {
     while (true) {
