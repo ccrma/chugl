@@ -82,6 +82,12 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
         uniform PointLight u_PointLights[MAX_LIGHTS];
         uniform DirLight u_DirLights[MAX_LIGHTS];
     )"},
+    {"POINT_UNIFORMS",
+    R"(
+        uniform float u_PointSize;
+        // whether or not to adjust size based on distance to camera
+        uniform bool u_PointSizeAttenuation;
+    )"},
     {"TEXTURE_UNIFORMS",
     R"(
         // textures
@@ -126,10 +132,13 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
             result = mix(result, vec4(u_FogParams.color, 1.0), getFogFactor(u_FogParams, fogCoordinate));
         }
     )"},
-    {
-    "EYE_POS_BODY",
+    {"EYE_POS_BODY",
     R"(
             v_EyePos = u_View * u_Model * vec4(a_Pos, 1.0);  // eye space position
+    )"},
+    {"POINTS_BODY",
+    R"(
+            gl_PointSize = mix(u_PointSize, u_PointSize / gl_Position.w, u_PointSizeAttenuation); // scale point size by distance to camera
     )"},
     {"BASIC_VERT_VARYINGS",
      R"(
@@ -154,6 +163,7 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
     {BASIC_VERT,
      R"(
         #include TRANSFORM_UNIFORMS
+        #include POINT_UNIFORMS
         #include DEFAULT_ATTRIBUTES
         #include BASIC_VERT_VARYINGS
 
@@ -169,6 +179,7 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
             v_Normal = vec3(u_Normal * vec4(a_Normal, 0.0));
 
             v_Color = a_Color * u_Color;
+            #include POINTS_BODY
         }
 
     )"},
@@ -295,13 +306,9 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
     {"POINTS_VERT",
      R"(
         #include TRANSFORM_UNIFORMS
+        #include POINT_UNIFORMS
         #include DEFAULT_ATTRIBUTES
 
-        // uniforms (passed in from program)
-        uniform float u_PointSize;
-
-        // whether or not to adjust size based on distance to camera
-        uniform bool u_PointSizeAttenuation;
 
         // varyings (interpolated and passed to frag shader)
         #include BASIC_VERT_VARYINGS
@@ -319,7 +326,7 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
             v_TexCoord = a_TexCoord;
 
             gl_Position = u_Projection * u_View * vec4(v_Pos, 1.0);
-            gl_PointSize = mix(u_PointSize, u_PointSize / gl_Position.w, u_PointSizeAttenuation); // scale point size by distance to camera
+            #include POINTS_BODY
         }
     )"},
     {"POINTS_FRAG",
@@ -333,7 +340,6 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
         // output
 
         // uniforms
-        uniform float u_PointSize;
         uniform sampler2D u_PointTexture;
 
         void main()

@@ -1664,7 +1664,9 @@ t_CKBOOL init_chugl_mat(Chuck_DL_Query *QUERY)
 
 	QUERY->add_mfun(QUERY, cgl_mat_set_point_size, "void", "pointSize");
 	QUERY->add_arg(QUERY, "float", "size");
-	QUERY->doc_func(QUERY, "set point size if rendering with Material.POLYGON_POINT. NOTE: unsupported on macOS");
+	QUERY->doc_func(QUERY, 
+		"Set point size of PointsMaterial. Also affects point size if rendering in mode Material.POLYGON_POINT"
+	);
 
 	QUERY->add_mfun(QUERY, cgl_mat_set_color, "vec3", "color");
 	QUERY->add_arg(QUERY, "vec3", "rgb");
