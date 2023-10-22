@@ -8,9 +8,14 @@
 #include "Scene.h"
 #include "Light.h"
 #include "CGL_Texture.h"
+#include "Camera.h"
 
+
+// Forward Declarations =========================================
 struct Chuck_Object;
 
+
+//==================== SceneGraph Commands =======================//
 
 class SceneGraphCommand
 {
@@ -498,14 +503,8 @@ private:
 class UpdateCameraCommand : public SceneGraphCommand
 {
 public:
-    UpdateCameraCommand(Camera* cam) : 
-        m_CamID(cam->GetID()), params(cam->params)
-    {};
-    virtual void execute(Scene* scene) override {
-        Camera* cam = dynamic_cast<Camera*>(scene->GetNode(m_CamID));
-        assert(cam);
-        cam->params = params;
-    }
+    UpdateCameraCommand(Camera* cam);
+    virtual void execute(Scene* scene) override;
 private:
     size_t m_CamID;
     CameraParams params;
@@ -564,22 +563,13 @@ private:
 class DestroySceneGraphNodeCommand : public SceneGraphCommand
 {
 public:
-    DestroySceneGraphNodeCommand(SceneGraphNode* node, Scene* audioThreadScene) : m_ID(node->GetID()) {
-        // remove from audio thread scene
-        audioThreadScene->UnregisterNode(m_ID);
-        CK_SAFE_DELETE(node);
-    };
+    DestroySceneGraphNodeCommand(
+        Chuck_Object* ckobj,
+        t_CKUINT data_offset,
+        Scene* audioThreadScene
+    );
 
-
-    virtual void execute(Scene* renderThreadScene) override {
-        SceneGraphNode* node = renderThreadScene->GetNode(m_ID);
-        // remove from scenegraph
-        renderThreadScene->UnregisterNode(m_ID);
-        // add ID to deletion queue, so that renderer may destroy its GPU-side data
-        renderThreadScene->AddToDeletionQueue(m_ID);
-        // call destructor
-        CK_SAFE_DELETE(node);
-    }
+    virtual void execute(Scene* renderThreadScene) override;
 
 private:
     size_t m_ID;

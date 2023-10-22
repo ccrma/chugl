@@ -105,7 +105,7 @@ public:
 		m_Attributes[UV0_ATTRIB_IDX] = CGL_GeoAttribute("uv", UV0_ATTRIB_IDX, 2);
 	}
 	void AddVertex(Vertex v);
-	void AddTriangleIndices(unsigned int i1, unsigned int i2, unsigned int i3);
+	void AddTriangleIndices(size_t i1, size_t i2, size_t i3);
 
 	// moves attribute into attributeMap. param attrib is unusable afterwards
 	// uses move semantics to prevent copying

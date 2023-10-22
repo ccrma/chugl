@@ -28,7 +28,7 @@ void Geometry::AddVertex(Vertex v)
 	uvAttrib.data.push_back(v.TexCoords.y);
 }
 
-void Geometry::AddTriangleIndices(unsigned int i1, unsigned int i2, unsigned int i3)
+void Geometry::AddTriangleIndices(size_t i1, size_t i2, size_t i3)
 {
 	m_Indices.push_back(i1);
 	m_Indices.push_back(i2);
@@ -522,15 +522,15 @@ void LatheGeometry::BuildGeometry()
 		}
 
 	// indices
-	for ( int i = 0; i < segments; i ++ ) {
-		for ( int j = 0; j < ( points.size() - 1 ); j ++ ) {
+	for ( size_t i = 0; i < segments; i ++ ) {
+		for ( size_t j = 0; j < ( points.size() - 1 ); j ++ ) {
 
-			const int base = j + i * points.size();
+			const size_t base = j + i * points.size();
 
-			const int a = base;
-			const int b = base + points.size();
-			const int c = base + points.size() + 1;
-			const int d = base + 1;
+			const size_t a = base;
+			const size_t b = base + points.size();
+			const size_t c = base + points.size() + 1;
+			const size_t d = base + 1;
 
 			// faces
 			AddTriangleIndices( a, b, d );

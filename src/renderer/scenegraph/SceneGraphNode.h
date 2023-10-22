@@ -26,6 +26,8 @@ struct EnumClassHash
 	}
 };
 
+// TODO create NodeType enum
+
 class SceneGraphNode
 {
 public:

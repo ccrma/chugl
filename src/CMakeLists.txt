@@ -58,6 +58,7 @@ add_library(
     ChuGL.cpp 
     ulib_cgl.cpp 
     window.cpp
+    ulib_geometry.cpp
     ulib_colors.cpp
     ulib_gui.cpp
 )
@@ -120,11 +121,18 @@ endif()
 # windows debugging setup
 if ( MSVC )
     set_property( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME} )
-    set(CHUCK_EXECUTABLE "${CMAKE_SOURCE_DIR}/chuck.exe")
-    message(STATUS "Setting chuck executable to ${CHUCK_EXECUTABLE}")
+    set(CHUCK_EXECUTABLE_DEBUG "${CMAKE_SOURCE_DIR}/chuck-debug.exe")
+    set(CHUCK_EXECUTABLE_RELEASE "${CMAKE_SOURCE_DIR}/chuck-release.exe")
+    set(CHUGIN_PATH_DEBUG "--chugin-path:${CMAKE_TARGET_DIR}./build/Debug")
+    set(CHUGIN_PATH_RELEASE "--chugin-path:${CMAKE_TARGET_DIR}./build/Release")
+    message(STATUS "Setting chuck debug executable to ${CHUCK_EXECUTABLE_DEBUG}")
+    message(STATUS "Setting chuck release executable to ${CHUCK_EXECUTABLE_RELEASE}")
+    message(STATUS "Setting chuck debug chugin path to ${CHUGIN_PATH_DEBUG}")
+    message(STATUS "Setting chuck release chugin path to ${CHUGIN_PATH_RELEASE}")
     set_target_properties( ${PROJECT_NAME} PROPERTIES
-        VS_DEBUGGER_COMMAND "${CHUCK_EXECUTABLE}"
-        VS_DEBUGGER_COMMAND_ARGUMENTS "--chugin-path:${CMAKE_TARGET_DIR}./build/Debug"
+        # VS_DEBUGGER_COMMAND "${CHUCK_EXECUTABLE_DEBUG}"
+        VS_DEBUGGER_COMMAND $<$<CONFIG:Debug>:${CHUCK_EXECUTABLE_DEBUG}>$<$<CONFIG:Release>:${CHUCK_EXECUTABLE_RELEASE}>
+        VS_DEBUGGER_COMMAND_ARGUMENTS $<$<CONFIG:Debug>:${CHUGIN_PATH_DEBUG}>$<$<CONFIG:Release>:${CHUGIN_PATH_RELEASE}>
         VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
     )
 endif()
