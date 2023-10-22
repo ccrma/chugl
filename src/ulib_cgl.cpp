@@ -2773,7 +2773,9 @@ CK_DLL_MFUN(cgl_obj_set_rot_x)
 {
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKFLOAT rad = GET_NEXT_FLOAT(ARGS);
-	cglObj->RotateX(rad);
+	auto eulers = cglObj->GetEulerRotationRadians();
+	eulers.x = rad;
+	cglObj->SetRotation(eulers);
 	RETURN->v_float = rad;
 	CGL::PushCommand(new UpdateRotationCommand(cglObj));
 }
@@ -2788,7 +2790,14 @@ CK_DLL_MFUN(cgl_obj_set_rot_y)
 {
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKFLOAT rad = GET_NEXT_FLOAT(ARGS);
-	cglObj->RotateY(rad);
+	auto eulers = cglObj->GetEulerRotationRadians();
+	// https://gamedev.stackexchange.com/questions/200292/applying-incremental-rotation-with-quaternions-flickering-or-hesitating
+	// For continuous rotation, wrap rad to be in range [-PI/2, PI/2]
+	// i.e. after exceeding PI/2, rad = rad - PI
+	// rad = glm::mod(rad + glm::half_pi<double>(), glm::pi<double>()) - glm::half_pi<double>();
+
+	eulers.y = rad;
+	cglObj->SetRotation(eulers);
 	RETURN->v_float = rad;
 	CGL::PushCommand(new UpdateRotationCommand(cglObj));
 }
@@ -2803,7 +2812,9 @@ CK_DLL_MFUN(cgl_obj_set_rot_z)
 {
 	SceneGraphObject *cglObj = (SceneGraphObject *)OBJ_MEMBER_INT(SELF, ggen_data_offset);
 	t_CKFLOAT rad = GET_NEXT_FLOAT(ARGS);
-	cglObj->RotateZ(rad);
+	auto eulers = cglObj->GetEulerRotationRadians();
+	eulers.z = rad;
+	cglObj->SetRotation(eulers);
 	RETURN->v_float = rad;
 	CGL::PushCommand(new UpdateRotationCommand(cglObj));
 }
