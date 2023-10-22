@@ -50,7 +50,7 @@ struct CGL_GeoAttribute {
 	bool normalize;
 	std::vector<float> data;  // data for this attribute
 
-	CGL_GeoAttribute() : name("") {}
+	CGL_GeoAttribute() : name(""), location(0), numComponents(0), normalize(false) {}
 
 	CGL_GeoAttribute(
 		const std::string& n, unsigned int loc, unsigned int numComp

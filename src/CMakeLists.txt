@@ -61,6 +61,7 @@ add_library(
     ulib_geometry.cpp
     ulib_colors.cpp
     ulib_gui.cpp
+    ulib_texture.cpp
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES 

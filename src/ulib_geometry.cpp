@@ -1,5 +1,4 @@
 #include "ulib_geometry.h"
-
 #include "ulib_cgl.h"
 #include "scenegraph/Command.h"
 #include "renderer/scenegraph/Geometry.h"

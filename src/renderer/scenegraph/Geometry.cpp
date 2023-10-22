@@ -283,7 +283,7 @@ void CircleGeometry::BuildGeometry()
 
 	// indices
 
-	for ( int i = 1; i <= m_Params.segments; i ++ )
+	for ( size_t i = 1; i <= m_Params.segments; i ++ )
 		AddTriangleIndices( i, i + 1, 0 );
 	
 };
@@ -293,8 +293,8 @@ void PlaneGeometry::BuildGeometry()
 	ResetVertexData();
 	m_Dirty = false;
 
-	const float width_half = m_Params.width / 2.0;
-	const float height_half = m_Params.height / 2.0;
+	const float width_half = m_Params.width / 2.0f;
+	const float height_half = m_Params.height / 2.0f;
 
 	const int gridX = m_Params.widthSegments;
 	const int gridY = m_Params.heightSegments;
@@ -416,15 +416,15 @@ void LatheGeometry::BuildGeometry()
 	float phiStart = m_Params.phiStart;
 
 
-	float phiLength = glm::clamp<float>( m_Params.phiLength, 0, glm::pi<float>() * 2.0 );
+	float phiLength = glm::clamp<float>( m_Params.phiLength, 0, glm::pi<float>() * 2.0f );
 
 		// buffers
 		std::vector<float> initNormals;
 
 		// helper variables
 
-		const float inverseSegments = 1.0 / segments;
-		auto  normal = glm::vec3(0.0);
+		const float inverseSegments = 1.0f / segments;
+		auto normal = glm::vec3(0.0);
 		auto curNormal = glm::vec3(0.0);
 		auto prevNormal = glm::vec3(0.0);
 		float dx = 0;
@@ -432,15 +432,15 @@ void LatheGeometry::BuildGeometry()
 
 		// pre-compute normals for initial "meridian"
 
-		for ( int j = 0; j <= ( points.size() - 1 ); j ++ ) {
+		for ( size_t j = 0; j <= ( points.size() - 1 ); j ++ ) {
 				if (j == 0) {				// special handling for 1st vertex on path
 
 					dx = points[ j + 1 ].x - points[ j ].x;
 					dy = points[ j + 1 ].y - points[ j ].y;
 
-					normal.x = dy * 1.0;
+					normal.x = dy * 1.0f;
 					normal.y = - dx;
-					normal.z = dy * 0.0;
+					normal.z = dy * 0.0f;
 
 					prevNormal = normal;
 
@@ -464,9 +464,9 @@ void LatheGeometry::BuildGeometry()
 					dx = points[ j + 1 ].x - points[ j ].x;
 					dy = points[ j + 1 ].y - points[ j ].y;
 
-					normal.x = dy * 1.0;
+					normal.x = dy * 1.0f;
 					normal.y = - dx;
-					normal.z = dy * 0.0;
+					normal.z = dy * 0.0f;
 
 					curNormal = normal;
 
@@ -495,7 +495,7 @@ void LatheGeometry::BuildGeometry()
 			const float sin = glm::sin( phi );
 			const float cos = glm::cos( phi );
 
-			for ( int j = 0; j <= ( points.size() - 1 ); j ++ ) {
+			for ( size_t j = 0; j <= ( points.size() - 1 ); j ++ ) {
 
 				// vertex
 

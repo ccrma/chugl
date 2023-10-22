@@ -149,7 +149,7 @@ cleanup:
     }
 
     // threadsafe add an element to the window. returns number of elements in window after add
-    int AddElement(Element* e) {
+    size_t AddElement(Element* e) {
         // grab the window lock (in case render thread is currently drawing this window)
         // NOTE: could prob improve performance by having a separate lock for each window
         // but prob won't matter for UI construction
