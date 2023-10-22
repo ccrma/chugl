@@ -2794,7 +2794,7 @@ CK_DLL_MFUN(cgl_obj_set_rot_y)
 	// https://gamedev.stackexchange.com/questions/200292/applying-incremental-rotation-with-quaternions-flickering-or-hesitating
 	// For continuous rotation, wrap rad to be in range [-PI/2, PI/2]
 	// i.e. after exceeding PI/2, rad = rad - PI
-	// rad = glm::mod(rad + glm::half_pi<double>(), glm::pi<double>()) - glm::half_pi<double>();
+	rad = glm::mod(rad + glm::half_pi<double>(), glm::pi<double>()) - glm::half_pi<double>();
 
 	eulers.y = rad;
 	cglObj->SetRotation(eulers);
