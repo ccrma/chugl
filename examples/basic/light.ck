@@ -71,7 +71,7 @@ whiteLight.color(1, 1, 1);
 // Gameloop ==================================
 while (true) {
     // rotate lights
-    GG.dt() => lightGroup.rotY;
+    GG.dt() => lightGroup.rotateY;
     // nextFrame
     GG.nextFrame() => now;
 }
