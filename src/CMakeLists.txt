@@ -23,7 +23,6 @@ project(
 
 if(LINUX)
     add_compile_options(-fPIC)
-    add_link_options(--no-undefined)
     #set( CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined" )
 endif()
 
