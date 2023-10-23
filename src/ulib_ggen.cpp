@@ -84,9 +84,10 @@ CK_DLL_MFUN(cgl_obj_get_up);
 
 // parent-child scenegraph API
 // CK_DLL_MFUN(cgl_obj_disconnect);
-// CK_DLL_MFUN(cgl_obj_get_parent);
-// CK_DLL_MFUN(cgl_obj_get_children);
-
+CK_DLL_MFUN(cgl_obj_get_parent);
+CK_DLL_MFUN(cgl_obj_get_child_default);
+CK_DLL_MFUN(cgl_obj_get_child);
+CK_DLL_MFUN(cgl_obj_get_num_children);
 CK_DLL_GFUN(ggen_op_gruck);	  // add child
 CK_DLL_GFUN(ggen_op_ungruck); // remove child
 
@@ -324,6 +325,19 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query *QUERY)
 	QUERY->doc_func(QUERY, "Set object scale in world space");
 
 	// scenegraph relationship methods =======================================
+	QUERY->add_mfun(QUERY, cgl_obj_get_parent, "GGen", "parent");
+    QUERY->doc_func(QUERY, "Get the parent of this GGen");
+
+    QUERY->add_mfun(QUERY, cgl_obj_get_child, "GGen", "child");
+    QUERY->add_arg(QUERY, "int", "n");
+    QUERY->doc_func(QUERY, "Get the n'th child of this GGen");
+
+    QUERY->add_mfun(QUERY, cgl_obj_get_child_default, "GGen", "child");
+    QUERY->doc_func(QUERY, "Get the 0th child of this GGen");
+
+    QUERY->add_mfun(QUERY, cgl_obj_get_num_children, "int", "numChildren");
+    QUERY->doc_func(QUERY, "Get the number of children for this GGen");
+
 
 	// overload GGen --> GGen
 	QUERY->add_op_overload_binary(QUERY, ggen_op_gruck, "GGen", "-->",
@@ -793,4 +807,44 @@ CK_DLL_GFUN(ggen_op_ungruck)
 
 	// return RHS
 	RETURN->v_object = rhs;
+}
+
+CK_DLL_MFUN(cgl_obj_get_parent)
+{
+    SceneGraphObject *cglObj = CGL::GetSGO(SELF);
+    auto* parent = cglObj->GetParent();
+    // TODO: shouldn't have to refcount here, right?
+    RETURN->v_object = parent ? parent->m_ChuckObject : nullptr;
+}
+
+CK_DLL_MFUN(cgl_obj_get_child_default)
+{
+    SceneGraphObject *cglObj = CGL::GetSGO(SELF);
+    auto& children = cglObj->GetChildren();
+    RETURN->v_object = children.empty() ? nullptr : children[0]->m_ChuckObject;
+}
+
+CK_DLL_MFUN(cgl_obj_get_child)
+{
+    SceneGraphObject *cglObj = CGL::GetSGO(SELF);
+    auto& children = cglObj->GetChildren();
+    int n = GET_NEXT_INT(ARGS);
+    if (n < 0 || n >= children.size())
+    {
+		API->vm->em_log(
+            1,
+			"Warning: GGen::child() index out of bounds!\n"
+		);
+        RETURN->v_object = nullptr;
+    }
+    else
+    {
+        RETURN->v_object = children[n]->m_ChuckObject;
+    }
+}
+
+CK_DLL_MFUN(cgl_obj_get_num_children)
+{
+    SceneGraphObject *cglObj = CGL::GetSGO(SELF);
+    RETURN->v_int = cglObj->GetChildren().size();
 }

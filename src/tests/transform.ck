@@ -1,5 +1,8 @@
 // Scene setup ===========================================================
 GCube cube --> GG.scene();
+GCube child --> cube;
+1 => child.posX;
+
 5 => GG.camera().posZ;
 
 // UI setup ==========================================================
@@ -193,9 +196,23 @@ fun void LookAtListener(UI_Checkbox @ checkbox) {
 
 
 
+// test parent / child accessors
+fun void GetChildGetParent() {
+    cube.child() @=> GGen @ c;
+    child.parent() @=> GGen @ p;
+    <<< "child world pos", c.posWorld(), " | refcount", c >>>;
+    <<< "parent world pos", p.posWorld(), " | refcount", p >>>;
+    <<< "num children", p.numChildren() >>>;
+} 
 
-
-
+// separate sporking function to test refcounting behavior
+// and make sure destructor is not called
+fun void ChildParentSporker() {
+    while (1::second => now) {
+        spork ~ GetChildGetParent();
+    }
+}
+spork ~ ChildParentSporker();
 
 
 

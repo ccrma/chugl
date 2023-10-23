@@ -94,7 +94,6 @@ t_CKUINT CGL::geometry_data_offset = 0;
 t_CKUINT CGL::material_data_offset = 0;
 t_CKUINT CGL::texture_data_offset = 0;
 t_CKUINT CGL::ggen_data_offset = 0;
-static t_CKUINT cglframe_data_offset = 0;
 static t_CKUINT cgl_next_frame_event_data_offset = 0;
 static t_CKUINT window_resize_event_data_offset = 0;
 
@@ -450,7 +449,7 @@ t_CKBOOL init_chugl_static_fns(Chuck_DL_Query *QUERY)
 
 	return true;
 }
-/*============CGL static fns============*/
+
 CK_DLL_SFUN(cgl_next_frame)
 {
 
@@ -503,27 +502,19 @@ CK_DLL_SFUN(cgl_mouse_set_mode)
 	CGL::PushCommand(new SetMouseModeCommand(mode));
 }
 
-// hide mouse
 CK_DLL_SFUN(cgl_mouse_hide) { CGL::PushCommand(new SetMouseModeCommand(CGL::MOUSE_HIDDEN)); }
-// lock mouse
 CK_DLL_SFUN(cgl_mouse_lock) { CGL::PushCommand(new SetMouseModeCommand(CGL::MOUSE_LOCKED)); }
-// show mouse
 CK_DLL_SFUN(cgl_mouse_show) { CGL::PushCommand(new SetMouseModeCommand(CGL::MOUSE_NORMAL)); }
 
-// set fullscreen
 CK_DLL_SFUN(cgl_window_fullscreen) { CGL::PushCommand(new SetWindowModeCommand(CGL::WINDOW_FULLSCREEN)); }
-// set windowed
+
 CK_DLL_SFUN(cgl_window_windowed)
 {
 	t_CKINT width = GET_NEXT_INT(ARGS);
 	t_CKINT height = GET_NEXT_INT(ARGS);
 	CGL::PushCommand(new SetWindowModeCommand(CGL::WINDOW_WINDOWED, width, height));
 }
-// set maximize
-// CK_DLL_SFUN(cgl_window_maximize) { CGL::PushCommand(new SetWindowModeCommand(CGL::WINDOW_MAXIMIZED)); }
 
-// QUERY->add_sfun(QUERY, cgl_window_windowed, "void", "windowed");
-// set windowsize
 CK_DLL_SFUN(cgl_window_set_size)
 {
 	t_CKINT width = GET_NEXT_INT(ARGS);
@@ -621,8 +612,6 @@ void CglEvent::Broadcast(CglEventType event_type)
 	for (auto &event : eventQueue)
 		event->Broadcast();
 }
-
-
 
 //-----------------------------------------------------------------------------
 // ChuGL synchronization impl (TODO refactor into separate file and probability split this class up)
@@ -771,6 +760,60 @@ void CGL::PushCommand(SceneGraphCommand *cmd)
 	writeQueue.push_back(cmd);
 }
 
+//-----------------------------------------------------------------------------
+// ChuGL Object Creation Helpers
+//-----------------------------------------------------------------------------
+
+CglEvent* CGL::GetShredUpdateEvent(Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM)
+{
+	// lookup
+	if (CGL::s_UpdateEvent == nullptr)
+	{
+		Chuck_DL_Api::Type type = API->type->lookup(VM, "NextFrameEvent");
+		Chuck_DL_Api::Object obj = API->object->create_without_shred(VM, type, true);
+
+		// for now constructor will add chuck event to the eventQueue
+		// as long as there is only one, and it's created in first call to nextFrame BEFORE renderer wakes up then this is threadsafe
+		// TODO to support multiple windows, chugl event queue read/write will need to be lock protected
+		// cgl_update_ctor((Chuck_Object *)obj, NULL, VM, shred, API);
+		CGL::s_UpdateEvent = new CglEvent((Chuck_Event *)obj, VM, API, CglEventType::CGL_UPDATE);
+
+		OBJ_MEMBER_INT(obj, cgl_next_frame_event_data_offset) = (t_CKINT)CGL::s_UpdateEvent;
+	}
+	return CGL::s_UpdateEvent;
+}
+
+Chuck_DL_Api::Object CGL::GetMainScene(Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM)
+{
+	// instantiate scene + default camera and light if not already
+	if (CGL::mainScene.m_ChuckObject == nullptr) {
+		// TODO implement CreateSceneCommand
+		Chuck_DL_Api::Type sceneCKType = API->type->lookup(VM, "GScene");
+		Chuck_DL_Api::Object sceneObj = API->object->create(shred, sceneCKType, true);
+		OBJ_MEMBER_INT(sceneObj, CGL::GetGGenDataOffset()) = (t_CKINT)&CGL::mainScene;
+		CGL::mainScene.m_ChuckObject = sceneObj;
+
+		// create default camera
+		Chuck_DL_Api::Type camCKType = API->type->lookup(VM, "GCamera");
+		Chuck_DL_Api::Object camObj = API->object->create(shred, camCKType, true);
+		// no creation command b/c window already has static copy
+		CGL::PushCommand(new CreateSceneGraphNodeCommand(&mainCamera, &mainScene, camObj, CGL::GetGGenDataOffset()));
+		// add to scene command
+		CGL::PushCommand(new RelationshipCommand(&CGL::mainScene, &mainCamera, RelationshipCommand::Relation::AddChild));
+
+		// create default light
+		// TODO create generic create-chuck-obj method
+		Light* defaultLight = new DirLight;
+		Chuck_DL_Api::Type lightType = API->type->lookup(VM, defaultLight->myCkName());
+		Chuck_Object* lightObj = API->object->create(shred, lightType, true);  // refcount for scene
+		// creation command
+		CGL::PushCommand(new CreateSceneGraphNodeCommand(defaultLight, &CGL::mainScene, lightObj, CGL::GetGGenDataOffset()));
+		// add to scene command
+		CGL::PushCommand(new RelationshipCommand(&CGL::mainScene, defaultLight, RelationshipCommand::Relation::AddChild));
+	}
+	return CGL::mainScene.m_ChuckObject;
+}
+
 // creates a chuck object for the passed-in mat. DOES NOT CLONE THE MATERIAL
 // DOES pass a creation command to create the material on render thread
 Material* CGL::CreateChuckObjFromMat(
@@ -832,7 +875,9 @@ Geometry* CGL::DupMeshGeo(CK_DL_API API, Chuck_VM *VM, Mesh *mesh, Chuck_VM_Shre
 	return newGeo;
 }
 
-
+//-----------------------------------------------------------------------------
+// ChuGL Graphics Shred Bookkeeping
+//-----------------------------------------------------------------------------
 void CGL::RegisterShred(Chuck_VM_Shred *shred)
 {
 	m_RegisteredShreds[shred] = false;
@@ -887,57 +932,10 @@ void CGL::UnregisterShredWaiting(Chuck_VM_Shred *shred)
 	m_WaitingShreds.erase(shred);
 }
 
-CglEvent* CGL::GetShredUpdateEvent(Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM)
-{
-	// log size
-	// std::cerr << "shred event map size: " + std::to_string(m_ShredEventMap.size()) << std::endl;
-	// lookup
-	if (CGL::s_UpdateEvent == nullptr)
-	{
-		Chuck_DL_Api::Type type = API->type->lookup(VM, "NextFrameEvent");
-		Chuck_DL_Api::Object obj = API->object->create_without_shred(VM, type, true);
 
-		// for now constructor will add chuck event to the eventQueue
-		// as long as there is only one, and it's created in first call to nextFrame BEFORE renderer wakes up then this is threadsafe
-		// TODO to support multiple windows, chugl event queue read/write will need to be lock protected
-		// cgl_update_ctor((Chuck_Object *)obj, NULL, VM, shred, API);
-		CGL::s_UpdateEvent = new CglEvent((Chuck_Event *)obj, VM, API, CglEventType::CGL_UPDATE);
-
-		OBJ_MEMBER_INT(obj, cgl_next_frame_event_data_offset) = (t_CKINT)CGL::s_UpdateEvent;
-	}
-	return CGL::s_UpdateEvent;
-}
-
-Chuck_DL_Api::Object CGL::GetMainScene(Chuck_VM_Shred *shred, CK_DL_API API, Chuck_VM *VM)
-{
-	// instantiate scene + default camera and light if not already
-	if (CGL::mainScene.m_ChuckObject == nullptr) {
-		// TODO implement CreateSceneCommand
-		Chuck_DL_Api::Type sceneCKType = API->type->lookup(VM, "GScene");
-		Chuck_DL_Api::Object sceneObj = API->object->create(shred, sceneCKType, true);
-		OBJ_MEMBER_INT(sceneObj, CGL::GetGGenDataOffset()) = (t_CKINT)&CGL::mainScene;
-		CGL::mainScene.m_ChuckObject = sceneObj;
-
-		// create default camera
-		Chuck_DL_Api::Type camCKType = API->type->lookup(VM, "GCamera");
-		Chuck_DL_Api::Object camObj = API->object->create(shred, camCKType, true);
-		// no creation command b/c window already has static copy
-		CGL::PushCommand(new CreateSceneGraphNodeCommand(&mainCamera, &mainScene, camObj, CGL::GetGGenDataOffset()));
-		// add to scene command
-		CGL::PushCommand(new RelationshipCommand(&CGL::mainScene, &mainCamera, RelationshipCommand::Relation::AddChild));
-
-		// create default light
-		// TODO create generic create-chuck-obj method
-		Light* defaultLight = new DirLight;
-		Chuck_DL_Api::Type lightType = API->type->lookup(VM, defaultLight->myCkName());
-		Chuck_Object* lightObj = API->object->create(shred, lightType, true);  // refcount for scene
-		// creation command
-		CGL::PushCommand(new CreateSceneGraphNodeCommand(defaultLight, &CGL::mainScene, lightObj, CGL::GetGGenDataOffset()));
-		// add to scene command
-		CGL::PushCommand(new RelationshipCommand(&CGL::mainScene, defaultLight, RelationshipCommand::Relation::AddChild));
-	}
-	return CGL::mainScene.m_ChuckObject;
-}
+//-----------------------------------------------------------------------------
+// ChuGL Auto Update (calls overriden update() on GGens)
+//-----------------------------------------------------------------------------
 
 // traverses chuck-side (audio thread) scenegraph and calls user-defined update() on GGens
 void CGL::UpdateSceneGraph(Scene &scene, CK_DL_API API, Chuck_VM *VM, Chuck_VM_Shred *shred)
@@ -987,6 +985,9 @@ void CGL::UpdateSceneGraph(Scene &scene, CK_DL_API API, Chuck_VM *VM, Chuck_VM_S
 	}
 }
 
+//-----------------------------------------------------------------------------
+// ChuGL Window State Setters / Getters (Render Thread --> Audio Thread communication)
+//-----------------------------------------------------------------------------
 std::pair<double, double> CGL::GetMousePos()
 {
 	std::unique_lock<std::mutex> lock(s_WindowStateLock);
