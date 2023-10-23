@@ -52,17 +52,16 @@ if (NOT CHUCK_EXECUTABLE)
     message(FATAL_ERROR "Could not find chuck executable")
 endif()
 
+# all ulib_*.cpp files
+file(GLOB ULIB_SOURCES "ulib_*.cpp")
+
 # chugl library
 add_library(
     ${PROJECT_NAME} SHARED 
     ChuGL.cpp 
     ulib_cgl.cpp 
     window.cpp
-    ulib_geometry.cpp
-    ulib_colors.cpp
-    ulib_gui.cpp
-    ulib_texture.cpp
-    ulib_material.cpp
+    ${ULIB_SOURCES}
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES 

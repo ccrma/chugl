@@ -116,6 +116,7 @@ private: // chuck object offsets
 	static t_CKUINT geometry_data_offset;
 	static t_CKUINT material_data_offset;
 	static t_CKUINT texture_data_offset;
+	static t_CKUINT ggen_data_offset;
 
 public:  // chuck object offset setters and getters
 	static void SetGeometryDataOffset(t_CKUINT offset) { geometry_data_offset = offset; }
@@ -124,11 +125,14 @@ public:  // chuck object offset setters and getters
 	static t_CKUINT GetMaterialDataOffset() { return material_data_offset; }
 	static void SetTextureDataOffset(t_CKUINT offset) { texture_data_offset = offset; }
 	static t_CKUINT GetTextureDataOffset() { return texture_data_offset; }
+	static void SetGGenDataOffset(t_CKUINT offset) { ggen_data_offset = offset; }
+	static t_CKUINT GetGGenDataOffset() { return ggen_data_offset; }
 
 public: // chuck obj getters
 	static Geometry* GetGeometry(Chuck_Object* ckobj) { return (Geometry *)OBJ_MEMBER_INT(ckobj, CGL::geometry_data_offset); }
 	static Material* GetMaterial(Chuck_Object* ckobj) { return (Material *)OBJ_MEMBER_INT(ckobj, CGL::material_data_offset); }
 	static CGL_Texture* GetTexture(Chuck_Object* ckobj) { return (CGL_Texture *)OBJ_MEMBER_INT(ckobj, CGL::texture_data_offset); }
+	static SceneGraphObject* GetSGO(Chuck_Object* ckobj) { return (SceneGraphObject *)OBJ_MEMBER_INT(ckobj, CGL::ggen_data_offset); }
 
 public:  // default GGens
 	// static Chuck_DL_Api::Object GetMainCamera(
