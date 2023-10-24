@@ -65,3 +65,7 @@ src/chuck-release.exe
 
 # imgui
 imgui.ini
+
+# Tracy profiler
+Tracy.exe
+
