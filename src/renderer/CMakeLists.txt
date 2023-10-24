@@ -23,6 +23,7 @@ add_library(renderer # TODO this whole structure is a mess I realize....can buil
 
 target_link_libraries(renderer
     PUBLIC glfw glad glm chugl_compiler_flags
+    PUBLIC TracyClient
 )
 
 target_include_directories(renderer 

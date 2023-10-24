@@ -88,10 +88,23 @@ add_subdirectory(./renderer)
 add_subdirectory(./vendor/imgui)
 
 
+# Tracy profiler
+include(FetchContent)
+set(TRACY_ENABLE OFF)  # default to off
+FetchContent_Declare (
+    tracy
+    GIT_REPOSITORY https://github.com/wolfpld/tracy.git
+    GIT_TAG v0.10  # must match the profiler server version
+    GIT_SHALLOW TRUE
+    GIT_PROGRESS TRUE
+)
+FetchContent_MakeAvailable (tracy)
+
 target_link_libraries(${PROJECT_NAME} 
     PRIVATE glfw glad glm imgui
     PRIVATE chugl_compiler_flags
     PRIVATE renderer
+    PUBLIC TracyClient
 )
 
 # header includes

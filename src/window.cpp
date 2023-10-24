@@ -29,6 +29,14 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 
+// tracy profiler
+#if defined( __clang__ ) || defined(__GNUC__)
+    # define TracyFunction __PRETTY_FUNCTION__
+#elif defined(_MSC_VER)
+    # define TracyFunction __FUNCSIG__
+#endif
+#include <tracy/Tracy.hpp>
+
 
 /* =============================================================================
 						    * Static init *	
@@ -448,5 +456,8 @@ void Window::DisplayLoop()
         // swap double buffer
         // blocks until glfwSwapInterval screen updates have occured, accounting for vsync
         glfwSwapBuffers(m_Window);
+
+        // Tracy Frame
+        FrameMark;
     }
 }
