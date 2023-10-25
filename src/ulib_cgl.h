@@ -1,13 +1,6 @@
 #pragma once
 
-#include "chuck_def.h"
-#include "chuck_dl.h"
-
-
-#include <condition_variable>
-#include <unordered_map>
-#include <unordered_set>
-#include <vector>
+#include "chugl_pch.h"
 
 t_CKBOOL init_chugl(Chuck_DL_Query * QUERY);
 

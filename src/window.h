@@ -1,7 +1,7 @@
 #pragma once
-#include "renderer/Includes.h"
 #include <unordered_map>
 
+struct GLFWwindow;
 class Scene;
 class Renderer;
 
@@ -13,8 +13,6 @@ public:
 	~Window();
 
 	void DisplayLoop();
-	
-	void Terminate() { glfwTerminate(); }
 
 	// set and get
 	inline GLFWwindow* GetWindow() { return m_Window; }

@@ -10,33 +10,22 @@
 #include "renderer/scenegraph/Scene.h"
 
 // chuck CORE includes
-#include "ulib_cgl.h" // TODO: need to expose graphics entry point in chuck.h
+#include "ulib_cgl.h"
 #include "ulib_gui.h"
-
-// system includes
-#include <iostream>
-#include <stdexcept>
-#include <condition_variable>
-
-// glm includes
-#include <glm/glm.hpp>
-#include <glm/gtc/quaternion.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
 
 // imgui includes
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 
-// tracy profiler
-#if defined( __clang__ ) || defined(__GNUC__)
-    # define TracyFunction __PRETTY_FUNCTION__
-#elif defined(_MSC_VER)
-    # define TracyFunction __FUNCSIG__
-#endif
-#include <tracy/Tracy.hpp>
+// glm includes =======================================
+#include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
+// pch
+#include "chugl_pch.h"
 
 /* =============================================================================
 						    * Static init *	
@@ -349,6 +338,9 @@ static void draw_imgui() {
 
 void Window::DisplayLoop()
 {
+    // Tracy startup ========================================
+    tracy::StartupProfiler();
+
     // seed random number generator ===========================
     srand((unsigned int)time(0));
 
@@ -460,4 +452,10 @@ void Window::DisplayLoop()
         // Tracy Frame
         FrameMark;
     }
+
+    // Tracy shutdown (must happen before chuck VM calls dlclose and unloads this chugl library)
+    // otherwise `FreeLibrary` hangs
+    // Note: this depends on TRACY_DELAYED_INIT and TRACY_MANUAL_LIFETIME being defined in the cmake configuration
+    // see: https://github.com/wolfpld/tracy/issues/245
+    tracy::ShutdownProfiler();
 }

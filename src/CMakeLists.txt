@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.16)
 
 set(CMAKE_VERBOSE_MAKEFILE on)
 
@@ -31,25 +31,6 @@ if(APPLE)
     #set( CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-undefined,error" )
 endif()
 
-# global compiler flags interface
-# specify the C++ standard
-add_library(chugl_compiler_flags INTERFACE)
-target_compile_features(chugl_compiler_flags INTERFACE cxx_std_11)
-
-# add compiler warning flags just when building this project via
-# the BUILD_INTERFACE genex
-set(gcc_like_cxx "$<COMPILE_LANG_AND_ID:CXX,ARMClang,AppleClang,Clang,GNU,LCC>")
-set(msvc_cxx "$<COMPILE_LANG_AND_ID:CXX,MSVC>")
-target_compile_options(chugl_compiler_flags INTERFACE
-  "$<${gcc_like_cxx}:$<BUILD_INTERFACE:-Werror;>>"
-  "$<${msvc_cxx}:$<BUILD_INTERFACE:-W3>>"
-)
-
-# find chuck program
-find_program(CHUCK_EXECUTABLE NAMES chuck)
-if (NOT CHUCK_EXECUTABLE)
-    message(FATAL_ERROR "Could not find chuck executable")
-endif()
 
 # all ulib_*.cpp files
 file(GLOB ULIB_SOURCES "ulib_*.cpp")
@@ -91,6 +72,9 @@ add_subdirectory(./vendor/imgui)
 # Tracy profiler
 include(FetchContent)
 set(TRACY_ENABLE OFF)  # default to off
+set(TRACY_DELAYED_INIT ON)    # on to enable tracy::StartupProfiler
+set(TRACY_MANUAL_LIFETIME ON) # on to enable tracy:ShutdownProfiler (which must be called before the main hook is destroyed to prevent hangs)
+#if defined(TRACY_DELAYED_INIT) && defined(TRACY_MANUAL_LIFETIME)
 FetchContent_Declare (
     tracy
     GIT_REPOSITORY https://github.com/wolfpld/tracy.git
@@ -100,11 +84,49 @@ FetchContent_Declare (
 )
 FetchContent_MakeAvailable (tracy)
 
+# =================================================================================
+# interface library for compiler flags
+# =================================================================================
+add_library(chugl_compiler_flags INTERFACE)
+
+# specify the C++ standard
+target_compile_features(chugl_compiler_flags INTERFACE cxx_std_11)
+
+# add compiler warning flags just when building this project via
+# the BUILD_INTERFACE genex
+set(gcc_like_cxx "$<COMPILE_LANG_AND_ID:CXX,ARMClang,AppleClang,Clang,GNU,LCC>")
+set(msvc_cxx "$<COMPILE_LANG_AND_ID:CXX,MSVC>")
+target_compile_options(chugl_compiler_flags INTERFACE
+  "$<${gcc_like_cxx}:$<BUILD_INTERFACE:-Werror;>>"
+  "$<${msvc_cxx}:$<BUILD_INTERFACE:-W3>>"
+)
+# =================================================================================
+
+# =================================================================================
+# interface library for precompiled headers
+# =================================================================================
+add_library(chugl_pch INTERFACE)
+
+# add precompiled headers to interface
+target_precompile_headers(chugl_pch INTERFACE chugl_pch.h)
+
+# add libraries to interface
+target_link_libraries(chugl_pch INTERFACE
+    TracyClient
+)
+
+# set interface include directories
+target_include_directories(chugl_pch INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/chuck/include
+)
+# =================================================================================
+
+
+# link libraries to chugl.chug
 target_link_libraries(${PROJECT_NAME} 
-    PRIVATE glfw glad glm imgui
-    PRIVATE chugl_compiler_flags
+    PRIVATE glfw glad imgui glm
+    PRIVATE chugl_compiler_flags chugl_pch
     PRIVATE renderer
-    PUBLIC TracyClient
 )
 
 # header includes

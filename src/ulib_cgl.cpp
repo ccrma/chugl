@@ -1,7 +1,3 @@
-#include <algorithm>
-#include <iostream>
-#include <stdexcept>
-
 #include "ulib_cgl.h"
 #include "ulib_colors.h"
 #include "ulib_gui.h"
@@ -18,9 +14,6 @@
 #include "renderer/scenegraph/Command.h"
 #include "renderer/scenegraph/Scene.h"
 #include "renderer/scenegraph/Light.h"
-
-#include "chuck_vm.h"
-#include "chuck_dl.h"
 
 //-----------------------------------------------------------------------------
 // ChuGL Event Listeners
