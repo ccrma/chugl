@@ -19,6 +19,7 @@ add_library(renderer # TODO this whole structure is a mess I realize....can buil
     scenegraph/SceneGraphNode.cpp
     scenegraph/SceneGraphObject.cpp
     scenegraph/CGL_Texture.cpp
+    scenegraph/Locator.cpp
 )
 
 target_link_libraries(renderer

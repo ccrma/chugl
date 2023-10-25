@@ -3,6 +3,7 @@
 #include "chugl_pch.h"
 
 #include "SceneGraphObject.h"
+#include "Locator.h"
 
 class Light;
 class DirLight;
@@ -52,15 +53,14 @@ public:
 	void RegisterNode(SceneGraphNode* node);
 	// remove any scene pointers to this node
 	void UnregisterNode(size_t id);
-	bool CheckNode(size_t id) { return m_SceneGraphMap.find(id) != m_SceneGraphMap.end(); }
-	SceneGraphNode * GetNode(size_t id) { return CheckNode(id) ? m_SceneGraphMap[id] : nullptr; }
+	bool CheckNode(size_t id) { return Locator::CheckNode(id, IsAudioThreadObject()); }
+	SceneGraphNode * GetNode(size_t id) { return Locator::GetNode(id, IsAudioThreadObject()); }
 
 
 	
 private:  // attributes
 	// this lives in scene obj for now because we want to decouple from the renderer
 	// to support multiple scenes in the future, can make this map static
-	std::unordered_map<size_t, SceneGraphNode*> m_SceneGraphMap;  // map of all scene graph objects
 	void RegisterLight(Light* light);
 	void RegisterCamera(Camera* camera);
 
