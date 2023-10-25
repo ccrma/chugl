@@ -339,7 +339,9 @@ static void draw_imgui() {
 void Window::DisplayLoop()
 {
     // Tracy startup ========================================
+#ifdef TRACY_ENABLE
     tracy::StartupProfiler();
+#endif
 
     // seed random number generator ===========================
     srand((unsigned int)time(0));
@@ -458,5 +460,8 @@ void Window::DisplayLoop()
     // Note: this depends on TRACY_DELAYED_INIT and TRACY_MANUAL_LIFETIME being defined in the cmake configuration
     // see: https://github.com/wolfpld/tracy/issues/245
     // By calling this here, exiting the chugl window allows the chuck VM to exit cleanly
+
+#ifdef TRACY_ENABLE
     tracy::ShutdownProfiler();
+#endif
 }

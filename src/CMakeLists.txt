@@ -71,10 +71,11 @@ add_subdirectory(./vendor/imgui)
 
 # Tracy profiler
 include(FetchContent)
-set(TRACY_ENABLE OFF)  # default to off
-set(TRACY_DELAYED_INIT ON)    # on to enable tracy::StartupProfiler
-set(TRACY_MANUAL_LIFETIME ON) # on to enable tracy:ShutdownProfiler (which must be called before the main hook is destroyed to prevent hangs)
-#if defined(TRACY_DELAYED_INIT) && defined(TRACY_MANUAL_LIFETIME)
+# set default tracy options
+set(TRACY_ENABLE OFF CACHE BOOL "")
+set(TRACY_DELAYED_INIT ON CACHE BOOL "" FORCE)
+set(TRACY_MANUAL_LIFETIME ON CACHE BOOL "" FORCE)
+# fetch tracy
 FetchContent_Declare (
     tracy
     GIT_REPOSITORY https://github.com/wolfpld/tracy.git
