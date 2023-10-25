@@ -1,7 +1,9 @@
 #include "window.h"
 
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
+
 // CGL includes
-#include "renderer/Includes.h"
 #include "renderer/Renderer.h"
 #include "renderer/Util.h"
 
@@ -17,12 +19,6 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
-
-// glm includes =======================================
-#include <glm/glm.hpp>
-#include <glm/gtc/quaternion.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
 
 // pch
 #include "chugl_pch.h"

@@ -1,6 +1,4 @@
 #include "ulib_colors.h"
-#include "glm/gtc/epsilon.hpp"
-
 
 t_CKBOOL init_chugl_colors(Chuck_DL_Query *QUERY)
 {

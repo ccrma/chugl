@@ -113,7 +113,7 @@ target_precompile_headers(chugl_pch INTERFACE chugl_pch.h)
 
 # add libraries to interface
 target_link_libraries(chugl_pch INTERFACE
-    TracyClient
+    TracyClient glm
 )
 
 # set interface include directories
@@ -125,7 +125,7 @@ target_include_directories(chugl_pch INTERFACE
 
 # link libraries to chugl.chug
 target_link_libraries(${PROJECT_NAME} 
-    PRIVATE glfw glad imgui glm
+    PRIVATE glfw glad imgui
     PRIVATE chugl_compiler_flags chugl_pch
     PRIVATE renderer
 )

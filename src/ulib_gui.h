@@ -1,16 +1,7 @@
 #pragma once
 
-#include "chuck_def.h"
-#include "chuck_dl.h"
-
-#include <mutex>
-#include <unordered_map>
-#include <vector>
-
-// TODO move into cpp
+#include "chugl_pch.h"
 #include "imgui.h"
-#include "glm/glm.hpp"
-
 
 t_CKBOOL init_chugl_gui(Chuck_DL_Query *QUERY);
 

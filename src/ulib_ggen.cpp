@@ -1,4 +1,3 @@
-#include "chuck_vm.h"
 #include "ulib_ggen.h"
 #include "ulib_cgl.h"
 #include "scenegraph/Command.h"
