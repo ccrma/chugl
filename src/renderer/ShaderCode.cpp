@@ -1,5 +1,4 @@
 #include "ShaderCode.h"
-#include <iostream>
 
 // #define REGISTER_CODE(var) \
 //     do { \

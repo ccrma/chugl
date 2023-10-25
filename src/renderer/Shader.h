@@ -1,14 +1,6 @@
 #pragma once
 
-#include <glad/glad.h>
-
-#include <unordered_map>
-#include <string>
-#include <fstream>
-#include <sstream>
-#include <iostream>
-
-#include <glm/glm.hpp>
+#include "chugl_pch.h"
 
 class Shader
 {

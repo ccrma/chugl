@@ -2,6 +2,8 @@
 
 // system includes =======================================
 #include <iostream>
+#include <sstream>
+#include <fstream>
 #include <cmath>
 #include <algorithm>
 #include <stdexcept>
@@ -21,10 +23,15 @@
 
 // glm includes =======================================
 #include <glm/glm.hpp>
+#include <glm/gtc/constants.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/epsilon.hpp>
+
+// Other Vendors =======================================
 
 // tracy profiler ========================================
 #if defined( __clang__ ) || defined(__GNUC__)
@@ -33,3 +40,5 @@
     # define TracyFunction __FUNCSIG__
 #endif
 #include <tracy/Tracy.hpp>
+
+// ChuGL Includes ========================================

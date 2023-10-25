@@ -1,6 +1,6 @@
 #pragma once
-#include <vector>
-#include "glm/glm.hpp"
+
+#include "chugl_pch.h"
 
 class Camera;
 class Light;

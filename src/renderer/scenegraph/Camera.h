@@ -1,7 +1,7 @@
 #pragma once
 
+#include "chugl_pch.h"
 #include "SceneGraphObject.h"
-#include "glm/glm.hpp"
 
 enum CameraType : unsigned int {
 	NONE = 0,

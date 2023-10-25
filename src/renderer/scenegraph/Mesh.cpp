@@ -1,9 +1,10 @@
+#include "chugl_pch.h"
+
 #include "Mesh.h"
 #include "Geometry.h"
 #include "Material.h"
 #include "SceneGraphNode.h"
 
-#include "chuck_dl.h"
 
 Mesh::~Mesh()
 {

@@ -1,13 +1,4 @@
 #include "SceneGraphObject.h"
-#include "../Util.h"
-#include "glm/gtx/matrix_decompose.hpp"
-#include "glm/gtx/quaternion.hpp"
-
-#include <algorithm>
-
-#include "chuck_dl.h"
-
-
 
 /*==========================Static constants=================================*/
 const glm::vec3 SceneGraphObject::UP	   = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -18,7 +9,6 @@ const glm::vec3 SceneGraphObject::FORWARD  = glm::vec3(0.0f, 0.0f, -1.0f);
 const glm::vec3 SceneGraphObject::BACKWARD = glm::vec3(0.0f, 0.0f, 1.0f);
 
 const glm::quat SceneGraphObject::IDENTITY_QUAT = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-
 
 /*==========================Transform Methods=================================*/
 glm::mat4 SceneGraphObject::GetModelMatrix()
@@ -215,17 +205,17 @@ void SceneGraphObject::AddChild(SceneGraphObject* child)
 {
 	// Object cannot be added as child of itself
 	if (child == this) {
-		Util::printErr("GGen cannot be added as child of itself");
+		std::cerr << "GGen cannot be added as child of itself" << std::endl;
 		return;
 	}
 
 	if (child == nullptr) {
-		Util::printErr("cannot add nullptr as child of GGen ");
+		std::cerr << "cannot add nullptr as child of GGen " << std::endl;
 		return;
 	}
 
 	if (child->IsScene()) {  // necessary to prevent cycles
-		Util::printErr("cannot add make GScene a child of another GGen");
+		std::cerr << "cannot add make GScene a child of another GGen" << std::endl;
 		return;
 	}
 

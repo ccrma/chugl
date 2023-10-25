@@ -1,6 +1,5 @@
 #include "RendererState.h"
 #include "scenegraph/Camera.h"
-#include <glm/glm.hpp>
 
 void RendererState::ComputeCameraUniforms(Camera* camera)
 {

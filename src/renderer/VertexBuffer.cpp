@@ -1,6 +1,5 @@
 #include "Util.h"
 #include "VertexBuffer.h"
-#include <iostream>
 
 VertexBuffer::VertexBuffer()
 	: m_Count(0), m_Size(0)

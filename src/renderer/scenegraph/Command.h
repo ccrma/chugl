@@ -2,7 +2,6 @@
 
 #include "Material.h"
 #include "Geometry.h"
-#include "Group.h"
 #include "Scene.h"
 #include "Mesh.h"
 #include "Scene.h"

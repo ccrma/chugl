@@ -1,6 +1,9 @@
 // Scenegraph texture class (separate from any GPU/renderer-specific impl)
 #pragma once
 
+#include "chugl_pch.h"
+#include "SceneGraphNode.h"
+
 /*
 Goals
 
@@ -28,14 +31,6 @@ Params:
             e.g. NEAREST_MIPMAP_LINEAR will linear interpolate between mipmaps, and use pixelated nearest filtering on that result
         - impl: glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 */
-
-#include "SceneGraphNode.h"
-
-#include "chuck_def.h"
-
-#include <string>
-#include <vector>
-
 
 enum CGL_TextureType : t_CKUINT {
     Base = 0,

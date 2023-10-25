@@ -2,9 +2,6 @@
 
 #include "CGL_Texture.h"
 
-#include <vector>
-#include <algorithm>
-
 // static initializers
 const CGL_TextureWrapMode CGL_Texture::Repeat = CGL_TextureWrapMode::Repeat;
 const CGL_TextureWrapMode CGL_Texture::MirroredRepeat = CGL_TextureWrapMode::MirroredRepeat;

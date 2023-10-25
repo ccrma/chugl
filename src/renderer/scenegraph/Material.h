@@ -1,12 +1,11 @@
 #pragma once
 
+#include "chugl_pch.h"
+
 #include "SceneGraphNode.h"
 #include "SceneGraphObject.h"
 #include "../Texture.h"
 #include "../Shader.h"
-#include <string>
-#include <unordered_map>
-// #include <cmath>
 
 // builtin material type struct
 enum class MaterialType : unsigned int {

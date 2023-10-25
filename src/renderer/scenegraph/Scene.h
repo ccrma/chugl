@@ -1,6 +1,8 @@
 #pragma once
+
+#include "chugl_pch.h"
+
 #include "SceneGraphObject.h"
-#include <unordered_map>
 
 class Light;
 class DirLight;

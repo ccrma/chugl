@@ -1,12 +1,7 @@
 #pragma once
-#include "SceneGraphNode.h"
-#include <vector>
-#include <string>
-#include "glm/glm.hpp"
-#include "glm/gtc/matrix_transform.hpp"
-#include "glm/gtc/quaternion.hpp"
-#include "glm/gtx/quaternion.hpp"
 
+#include "chugl_pch.h"
+#include "SceneGraphNode.h"
 
 class SceneGraphObject : public SceneGraphNode
 {

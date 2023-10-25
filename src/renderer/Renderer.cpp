@@ -1,11 +1,10 @@
 #include "Renderer.h"
-#include "Util.h"
 #include "Shader.h"
+#include "ShaderCode.h"
 #include "VertexArray.h"
+
 #include "scenegraph/Geometry.h"
 #include "scenegraph/Light.h"
-#include <glad/glad.h>
-#include "ShaderCode.h"
 
 
 /* =============================================================================
@@ -19,7 +18,7 @@ void RenderGeometry::BuildGeometry() {
 		m_Geo->BuildGeometry();
 		m_Geo->m_Dirty = false;
 	}
-
+	
 	VertexArray& va = GetArray();
 	va.Bind();
 

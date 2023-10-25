@@ -118,7 +118,9 @@ target_link_libraries(chugl_pch INTERFACE
 
 # set interface include directories
 target_include_directories(chugl_pch INTERFACE
-    ${CMAKE_CURRENT_SOURCE_DIR}/chuck/include
+    .
+    ./chuck/include
+    ./vendor
 )
 # =================================================================================
 

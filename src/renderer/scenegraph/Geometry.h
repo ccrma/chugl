@@ -1,10 +1,7 @@
 #pragma once
+
+#include "chugl_pch.h"
 #include "SceneGraphNode.h"
-#include "glm/glm.hpp"
-#include "glm/gtc/constants.hpp"
-#include "glm/gtc/epsilon.hpp"
-#include <vector>
-#include <unordered_map>
 
 enum class GeometryType {
 	Base = 0,

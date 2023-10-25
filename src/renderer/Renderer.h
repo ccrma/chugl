@@ -1,5 +1,7 @@
 #pragma once
 
+#include "chugl_pch.h"
+
 #include "RendererState.h"
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
@@ -12,10 +14,6 @@
 #include "scenegraph/Camera.h"
 #include "scenegraph/Material.h"
 #include "scenegraph/Command.h"
-
-#include <mutex>
-#include <vector>
-#include <unordered_map>
 
 class Shader;
 class Geometry;

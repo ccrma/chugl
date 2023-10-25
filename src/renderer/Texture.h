@@ -1,5 +1,6 @@
 #pragma once
-#include <string>
+
+#include "chugl_pch.h"
 #include "scenegraph/CGL_Texture.h"
 
 class Texture

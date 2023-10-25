@@ -1,12 +1,9 @@
 #include "Texture.h"
 #include "Util.h"
+
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_FAILURE_USERMSG
-#include "stb/stb_image.h"
-
-#include "glad/glad.h"
-
-#include <iostream>
+#include <stb/stb_image.h>
 
 /*
 * Abtraction layer for 2D textures

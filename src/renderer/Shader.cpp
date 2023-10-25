@@ -1,7 +1,5 @@
 #include "Shader.h"
 #include "Util.h"
-#include <glm/glm.hpp>
-#include <glm/gtc/type_ptr.hpp>
 #include <shadinclude/Shadinclude.hpp>
 
 // TODO: break this into read file, compile, link&validate separate functions

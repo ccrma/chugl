@@ -1,9 +1,8 @@
 #pragma once
 
+#include "chugl_pch.h"
 #include "SceneGraphObject.h"
 #include "SceneGraphNode.h"
-#include <glm/glm.hpp>
-#include <unordered_map>
 
 /*
 struct LightInfo {  // must match include/Lighting.glsl setup!!
