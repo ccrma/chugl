@@ -454,8 +454,9 @@ void Window::DisplayLoop()
     }
 
     // Tracy shutdown (must happen before chuck VM calls dlclose and unloads this chugl library)
-    // otherwise `FreeLibrary` hangs
+    // otherwise `FreeLibrary()` hangs in the chuck VM thread
     // Note: this depends on TRACY_DELAYED_INIT and TRACY_MANUAL_LIFETIME being defined in the cmake configuration
     // see: https://github.com/wolfpld/tracy/issues/245
+    // By calling this here, exiting the chugl window allows the chuck VM to exit cleanly
     tracy::ShutdownProfiler();
 }
