@@ -44,12 +44,14 @@ Scene Window::scene;
 // window size in pixels
 static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
-    // TODO: figure out how to get access to active window object
-    // Window::GetInstance().SetViewSize(width, height);
     glViewport(
         0, 0,  // index of lower left corner of viewport, in pixels
         width, height
     );
+
+    // update framebuffer texture size
+    Window::renderer.UpdateFramebufferSize(width, height);
+
     // update window state
     Window* w = Window::GetWindow(window);
     w->SetViewSize(width, height);
@@ -344,6 +346,11 @@ void Window::DisplayLoop()
     // seed random number generator ===========================
     srand((unsigned int)time(0));
 
+    // Render initialization ==================================
+    renderer.BuildFramebuffer(m_ViewWidth, m_ViewHeight);
+    std::cout << "framebuffer width " << m_ViewWidth << std::endl;
+    std::cout << "framebuffer height " << m_ViewHeight << std::endl; 
+
     // Copy from CGL scenegraph ====================================    
     // TODO should just clone these
     scene.SetID(CGL::mainScene.GetID());  // copy scene ID
@@ -435,9 +442,22 @@ void Window::DisplayLoop()
         renderer.ProcessDeletionQueue(&scene); // IMPORTANT: should happen after flushing command queue
 
         // now renderer can work on drawing the copied scenegraph
-        renderer.Clear(scene.GetBackgroundColor());
-        // renderer.RenderScene(&scene, &camera);
+        renderer.BindFramebuffer();
+        renderer.Clear(
+            scene.GetBackgroundColor(),
+            true,   // clear color buffer
+            true    // clear depth buffer
+        );
         renderer.RenderScene(&scene, scene.GetMainCamera());
+
+        // screen pass: copy contents from framebuffer to screen
+        renderer.UnbindFramebuffer();  // unbind framebuffer, bind default framebuffer
+        renderer.Clear(
+            scene.GetBackgroundColor(),
+            true,   // clear color buffer
+            false   // don't clear depth buffer
+        );
+        renderer.RenderScreen();
 
         // Handle Events, Draw framebuffer
         glfwPollEvents();  // TODO: maybe put event handling in a separate thread?

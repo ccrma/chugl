@@ -344,6 +344,93 @@ void RenderMaterial::SetFogUniforms(Scene *scene)
 								Renderer	
 ===============================================================================*/
 
+void Renderer::BuildFramebuffer(unsigned int width, unsigned int height) {
+	m_ScreenVA = new VertexArray();
+	m_ScreenPositionsVB = new VertexBuffer();
+	m_ScreenTexCoordsVB = new VertexBuffer();
+
+	GLCall(glGenFramebuffers(1, &m_FrameBufferID));
+	GLCall(glBindFramebuffer(GL_FRAMEBUFFER, m_FrameBufferID));    
+	
+	// generate texture
+	glGenTextures(1, &m_TextureColorbuffer);
+	glBindTexture(GL_TEXTURE_2D, m_TextureColorbuffer);
+	// TODO: pass texture size as param, update when window resizes
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	// attach it to currently bound framebuffer object
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_TextureColorbuffer, 0); 
+
+	// create and attach depth buffer (renderbuffer)
+	glGenRenderbuffers(1, &m_RenderBufferID);
+	glBindRenderbuffer(GL_RENDERBUFFER, m_RenderBufferID); 
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);  
+	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_RenderBufferID);
+
+	// check if framebuffer is complete
+	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+
+	// unbind framebuffer
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);  
+	std::cout << "FRAMEBUFFER loader done" << std::endl;
+
+	// setup screen quad (in ndc)
+	// TODO: put in a CGL geo attribute?
+	float positions[] = {
+		-1.0f,  1.0f,  0.0f,  // top left
+		-1.0f, -1.0f,  0.0f,  // bottom left
+			1.0f, -1.0f,  0.0f,  // bottom right
+		-1.0f,  1.0f,  0.0f,  // top left
+			1.0f, -1.0f,  0.0f,  // bottom right
+			1.0f,  1.0f,  0.0f,  // top right
+	};
+	float texCoords[] = {
+		0.0f, 1.0f,  // top left
+		0.0f, 0.0f,  // bottom left
+		1.0f, 0.0f,  // bottom right
+		0.0f, 1.0f,  // top left
+		1.0f, 0.0f,  // bottom right
+		1.0f, 1.0f,  // top right
+	};
+	m_ScreenPositionsVB->SetBuffer(
+		positions, 
+		sizeof(positions), 
+		6, 
+		GL_STATIC_DRAW
+	);
+	m_ScreenTexCoordsVB->SetBuffer(
+		texCoords, 
+		sizeof(texCoords), 
+		6, 
+		GL_STATIC_DRAW
+	);
+
+	m_ScreenVA->AddBufferAndLayout(
+		m_ScreenPositionsVB,
+		CGL_GeoAttribute("a_Position", 0, 3)
+	);
+
+	m_ScreenVA->AddBufferAndLayout(
+		m_ScreenTexCoordsVB,
+		CGL_GeoAttribute("a_TexCoord", 1, 2)
+	);
+
+	// setup screen shader
+	const std::string& screenShaderVert = ShaderCode::s_CodeMap[ShaderCode::SCREEN_VERT];
+	const std::string& screenShaderFrag = ShaderCode::s_CodeMap[ShaderCode::SCREEN_FRAG];
+
+	m_ScreenShader = new Shader(
+		screenShaderVert,
+		screenShaderFrag,
+		false, false
+	);
+}
+
 void Renderer::Clear(glm::vec3 bgCol, bool color, bool depth)
 {	
 	GLCall(glClearColor(bgCol.r, bgCol.g, bgCol.b, 1.0f));

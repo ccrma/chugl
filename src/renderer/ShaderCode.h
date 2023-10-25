@@ -29,6 +29,10 @@ static const std::string BASIC_VERT;
 static const std::string NORMAL_FRAG;
 static const std::string FLAT_FRAG;
 
+// screen shader components
+static const std::string SCREEN_VERT;
+static const std::string SCREEN_FRAG;
+
 // map of names to shader code components
 typedef std::unordered_map<std::string, const std::string> ShaderMap;
 static ShaderMap s_CodeMap;

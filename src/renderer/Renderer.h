@@ -130,21 +130,65 @@ private:
 };
 
 
-
-
 class Renderer
 {
+public:  // framebuffer setup
+	unsigned int m_FrameBufferID;
+	unsigned int m_TextureColorbuffer;
+	unsigned int m_RenderBufferID;
+	Shader *m_ScreenShader;
+	VertexArray* m_ScreenVA;
+	VertexBuffer* m_ScreenPositionsVB;
+	VertexBuffer* m_ScreenTexCoordsVB;
+
+
+	void BuildFramebuffer(unsigned int width, unsigned int height);
+
+	void UpdateFramebufferSize(unsigned int width, unsigned int height) {
+		// update texture dimensions 
+		glBindTexture(GL_TEXTURE_2D, m_TextureColorbuffer);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		// update renderbuffer dimensions
+		glBindRenderbuffer(GL_RENDERBUFFER, m_RenderBufferID); 
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);  
+		glBindRenderbuffer(GL_RENDERBUFFER, 0);
+	}
+
+	void BindFramebuffer() {
+		GLCall(glBindFramebuffer(GL_FRAMEBUFFER, m_FrameBufferID));
+	}
+
+	void UnbindFramebuffer() {
+		GLCall(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+	}
+
+	void RenderScreen() {
+		// disable depth test
+		GLCall(glDisable(GL_DEPTH_TEST));
+		// bind screen shader
+		m_ScreenShader->Bind();
+		// bind screen quad 
+		m_ScreenVA->Bind();
+		// bind texture
+		GLCall(glActiveTexture(GL_TEXTURE0));  // activate slot 0
+		GLCall(glBindTexture(GL_TEXTURE_2D, m_TextureColorbuffer));
+		// draw
+		// GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_LINE));
+		GLCall(glDrawArrays(GL_TRIANGLES, 0, 6));
+	}
+
 public:
 	void Clear(glm::vec3 bgCol, bool color = true, bool depth = true);
 	void Draw(RenderGeometry* renderGeo, RenderMaterial* renderMat);
-
-
-
 
 	// Rendering =======================================================================
 	// TODO add cacheing for world matrices
 	void RenderScene(Scene* scene, Camera* camera = nullptr) {
 		assert(scene->IsScene());
+
+		// enable depth testing
+		GLCall(glEnable(GL_DEPTH_TEST));	
 
 		// optionally change the camera to render from
 		if (camera) {
