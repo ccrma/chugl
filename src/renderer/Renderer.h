@@ -155,10 +155,39 @@ public:
 		// cache camera values
 		m_RenderState.ComputeCameraUniforms(m_MainCamera);
 
-		// cache current scene being rendered
-		m_RenderState.SetScene(scene);
+		// cache renderables from target scene
+		m_RenderState.PrepareScene(scene);
 
-		RenderNodeAndChildren(scene);
+		OpaquePass();
+		TransparentPass();
+
+		// OLD: render in DFS order
+		// now we process the scenegraph into a render queue
+		// RenderNodeAndChildren(scene);
+	}
+
+	// render opaque meshes
+	void OpaquePass() {
+		for (auto* mesh : m_RenderState.GetOpaqueMeshes()) {
+			// TODO: access cached world matrix here
+			RenderMesh(mesh, mesh->GetWorldMatrix());
+		}
+	}
+
+	void TransparentPass() {
+		// disable depth writes
+		glDepthMask(GL_FALSE);
+
+		// transparent meshes are already sorted during insertion
+		// don't need to sort here
+
+		// render transparent meshes
+		for (auto* mesh : m_RenderState.GetTransparentMeshes()) {
+			RenderMesh(mesh, mesh->GetWorldMatrix());
+		}
+
+		// reenable depth writes
+		glDepthMask(GL_TRUE);
 	}
 
 	void RenderNodeAndChildren(SceneGraphObject* sgo) {

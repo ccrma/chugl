@@ -19,6 +19,8 @@ CK_DLL_MFUN(cgl_mat_set_alpha);
 CK_DLL_MFUN(cgl_mat_get_alpha);
 CK_DLL_MFUN(cgl_mat_set_point_size);
 CK_DLL_MFUN(cgl_mat_set_line_width);
+CK_DLL_MFUN(cgl_mat_set_transparent);
+CK_DLL_MFUN(cgl_mat_get_transparent);
 // CK_DLL_MFUN(cgl_mat_set_cull_mode);  // TODO
 
 // uniform setters
@@ -137,6 +139,17 @@ t_CKBOOL init_chugl_material(Chuck_DL_Query *QUERY)
 	QUERY->add_mfun(QUERY, cgl_mat_set_line_width, "void", "lineWidth");
 	QUERY->add_arg(QUERY, "float", "width");
 	QUERY->doc_func(QUERY, "set line width if rendering with Material.POLYGON_LINE. NOTE: unsupported on macOS");
+
+	QUERY->add_mfun(QUERY, cgl_mat_set_transparent, "int", "transparent");
+	QUERY->add_arg(QUERY, "int", "transparent");
+	QUERY->doc_func(QUERY, 
+		"set if material should be rendered with transparency. 1 for true, 0 for false"
+	);
+
+	QUERY->add_mfun(QUERY, cgl_mat_get_transparent, "int", "transparent");
+	QUERY->doc_func(QUERY, 
+		"get if material is marked transparent. 1 for true, 0 for false"
+	);
 
 	// norm mat fns
 	QUERY->add_mfun(QUERY, cgl_set_use_local_normals, "void", "localNormals");
@@ -391,6 +404,23 @@ CK_DLL_MFUN(cgl_mat_get_alpha)
 {
 	Material *mat = CGL::GetMaterial(SELF);
 	RETURN->v_float = mat->GetAlpha();
+}
+
+CK_DLL_MFUN(cgl_mat_set_transparent)
+{
+	Material *mat = CGL::GetMaterial(SELF);
+	auto transparent = GET_NEXT_INT(ARGS);
+	mat->SetTransparent(transparent);
+
+	RETURN->v_int = transparent;
+
+	CGL::PushCommand(new UpdateMaterialOptionCommand(mat, *mat->GetOption(MaterialOptionParam::Transparent)));
+}
+
+CK_DLL_MFUN(cgl_mat_get_transparent)
+{
+	Material *mat = CGL::GetMaterial(SELF);
+	RETURN->v_int = mat->IsTransparent() ? 1 : 0;
 }
 
 CK_DLL_MFUN(cgl_mat_set_uniform_float)

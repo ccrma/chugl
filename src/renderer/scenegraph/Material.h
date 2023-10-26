@@ -96,7 +96,8 @@ struct MaterialUniform {
 
 enum MaterialOptionParam : unsigned int {
 	PolygonMode = 0,
-	PrimitiveMode
+	PrimitiveMode,
+	Transparent
 };
 
 enum MaterialPolygonMode : unsigned int {
@@ -166,6 +167,8 @@ public:
 		SetOption(MaterialOption::Create(MaterialOptionParam::PolygonMode, MaterialPolygonMode::Fill));
 		// default to triangle primitives
 		SetOption(MaterialOption::Create(MaterialOptionParam::PrimitiveMode, MaterialPrimitiveMode::Triangles));
+		// default to opaque
+		SetOption(MaterialOption::Create(MaterialOptionParam::Transparent, false));
 
 
 		// set default material uniforms
@@ -201,12 +204,14 @@ public:
 	}
 
 	MaterialOption* GetOption(MaterialOptionParam p) {
-		return (m_Options.find(p) != m_Options.end()) ? &m_Options[p] : nullptr;
+		MaterialOption* ret = (m_Options.find(p) != m_Options.end()) ? &m_Options[p] : nullptr;
+		return ret;
 	}
 
 	// Option getters
 	MaterialPolygonMode GetPolygonMode() { return m_Options[MaterialOptionParam::PolygonMode].polygonMode; }
-	MaterialPrimitiveMode GetPrimitiveMode() { return m_Options[MaterialOptionParam::PrimitiveMode].primitiveMode;}
+	MaterialPrimitiveMode GetPrimitiveMode() { return m_Options[MaterialOptionParam::PrimitiveMode].primitiveMode; }
+	bool IsTransparent() { return m_Options[MaterialOptionParam::Transparent].b; }
 
 	float GetPointSize() { 
 		auto* uniform = GetUniform(POINT_SIZE_UNAME);
@@ -232,6 +237,7 @@ public:
 
 	// option setters
 	void SetPolygonMode(MaterialPolygonMode mode) { m_Options[MaterialOptionParam::PolygonMode].polygonMode = mode; }
+	void SetTransparent(bool b) { m_Options[MaterialOptionParam::Transparent].b = b; }
 
 	// uniform setters
 	virtual void SetPointSize(float size) { 
@@ -256,14 +262,12 @@ public:
 		// if it's a texture, refcount it
 		if (uniform.type == UniformType::Texture) {
 			CGL_Texture* texture = (CGL_Texture* )Locator::GetNode(uniform.texID, IsAudioThreadObject());
-			assert(texture);
 			CHUGL_ADD_REF(texture);
 		}
 
 		// if old uniform was a texture, unrefcount it
 		if (it != m_Uniforms.end() && it->second.type == UniformType::Texture) {
 			CGL_Texture* oldTexture = (CGL_Texture* )Locator::GetNode(it->second.texID, IsAudioThreadObject());
-			assert(oldTexture);
 			CHUGL_RELEASE(oldTexture);
 		}
 		

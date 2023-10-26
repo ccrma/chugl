@@ -224,6 +224,7 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
     // GLEnables ===============================================
     // Blending (TODO) should this be part of renderer? 
     GLCall(glEnable(GL_BLEND));
+    // linear interpolation for alpha blending
     GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
     // depth testing
