@@ -144,11 +144,12 @@ t_CKBOOL init_chugl_material(Chuck_DL_Query *QUERY)
 	QUERY->add_arg(QUERY, "int", "transparent");
 	QUERY->doc_func(QUERY, 
 		"set if material should be rendered with transparency. 1 for true, 0 for false"
+		"Meshes using this material will then be rendered in the transparent pass with depth writing disabled"
 	);
 
 	QUERY->add_mfun(QUERY, cgl_mat_get_transparent, "int", "transparent");
 	QUERY->doc_func(QUERY, 
-		"get if material is marked transparent. 1 for true, 0 for false"
+		"returns whether material is marked transparent. 1 for true, 0 for false"
 	);
 
 	// norm mat fns
