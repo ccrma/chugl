@@ -27,7 +27,7 @@ struct FogUniforms {
 class Scene : public SceneGraphObject
 {
 public:
-	Scene() : m_BackgroundColor(glm::vec3(0.9f)) {}
+	Scene() : m_BackgroundColor(glm::vec3(0.0f)) {}
 	virtual ~Scene() {}
 	virtual bool IsScene() override { return true; }
 

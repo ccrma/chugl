@@ -789,10 +789,15 @@ Chuck_DL_Api::Object CGL::GetMainScene(Chuck_VM_Shred *shred, CK_DL_API API, Chu
 		// create default camera
 		Chuck_DL_Api::Type camCKType = API->type->lookup(VM, "GCamera");
 		Chuck_DL_Api::Object camObj = API->object->create(shred, camCKType, true);
-		// no creation command b/c window already has static copy
+        // initial main scene camera position
+        mainCamera.SetPosition( glm::vec3(0,0,5) );
+
+        // no creation command b/c window already has static copy
 		CGL::PushCommand(new CreateSceneGraphNodeCommand(&mainCamera, &mainScene, camObj, CGL::GetGGenDataOffset()));
 		// add to scene command
 		CGL::PushCommand(new RelationshipCommand(&CGL::mainScene, &mainCamera, RelationshipCommand::Relation::AddChild));
+        // update camera position command
+        CGL::PushCommand(new UpdatePositionCommand(&mainCamera));
 
 		// create default light
 		// TODO create generic create-chuck-obj method
