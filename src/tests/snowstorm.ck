@@ -1,15 +1,15 @@
 // Inspired and adapted from the following three.js example
 // https://github.com/mrdoob/three.js/blob/master/examples/webgl_points_sprites.html
 
-InputManager IM;
-spork ~ IM.start(0);
+// UI Params =============================================
+/*
+pointsize
+alpha
+color
+camera Z
+snowflake rotation
 
-MouseManager MM;
-spork ~ MM.start(0);
-
-FlyCam flycam;
-flycam.init(IM, MM);
-// spork ~ flycam.selfUpdate();
+*/
 
 // ====================================================
 GScene scene;
@@ -32,6 +32,7 @@ for (int i; i < snowflakeMats.size(); i++) {
     mat.pointSprite(sprites[i]);
     mat.attenuatePoints(true);
     mat.transparent(true);
+    mat.alpha(0.5);
 }
 
 // geometry =============================================
