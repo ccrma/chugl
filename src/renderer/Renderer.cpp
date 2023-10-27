@@ -237,7 +237,7 @@ RenderMaterial* RenderMaterial::GetDefaultMaterial(Renderer* renderer) {
 void RenderMaterial::SetLocalUniforms()
 {
 	size_t textureCounter = 0;
-	for (auto& it: m_Mat->m_Uniforms)
+	for (auto& it: m_Mat->GetLocalUniforms())
 	{
 		auto& uniform = it.second;
 		Texture* rendererTexture;

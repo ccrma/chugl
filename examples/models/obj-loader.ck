@@ -24,7 +24,7 @@ mesh --> GG.scene();
 mesh.posZ(-5);
 
 while (true) { 
-    GG.dt() => mesh.rotY;
+    GG.dt() => mesh.rotateY;
     GG.nextFrame() => now; 
 }
 

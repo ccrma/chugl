@@ -21,7 +21,10 @@ const unsigned int Scene::FOG_EXP2 = FogType::ExponentialSquared;
 
 void Scene::RegisterNode(SceneGraphNode *node)
 {
-    m_SceneGraphMap[node->GetID()] = node;
+    assert(node);
+    assert(node->IsAudioThreadObject() == IsAudioThreadObject());
+
+    Locator::RegisterNode(node);
 
     // register light
     if (node->IsLight()) {
@@ -41,10 +44,14 @@ void Scene::UnregisterNode(size_t id)
 {
     if (!CheckNode(id)) return;
 
-    SceneGraphNode* node = GetNode(id);
+    SceneGraphNode* node = Locator::GetNode(id, IsAudioThreadObject());
 
-    // remove from map
-    m_SceneGraphMap.erase(id);
+    // make sure they belong to the same thread as the scene
+    assert(node);
+    assert(node->IsAudioThreadObject() == IsAudioThreadObject());
+
+    // remove from locator 
+    Locator::UnregisterNode(id, IsAudioThreadObject());
 
     if (node->IsLight()) {
         for (auto it = m_Lights.begin(); it != m_Lights.end(); ++it) {

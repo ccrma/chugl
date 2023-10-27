@@ -3,6 +3,69 @@
 #include "chugl_pch.h"
 #include "imgui.h"
 
+/*=====================================================
+
+Architecture Overview: ----
+
+On the query side, all UI_XXX types extend the Chuck Event class.
+
+All UI widgets extend a base Element class, that contains 
+a pointer to their corresponding ChucK event.
+
+All UI widgets are added to a Window class, which represents
+a single ImGUI window and contains a list of child elements, which are
+renderered in the order they are added.
+
+The GUI manager class holds a list of all windows, and is responsible
+for providing threadsafe access to the list of windows, and for drawing.
+
+Thje GUI Manager exposes a draw() function that is called in the `draw_imgui()`
+function in `window.cpp`
+
+Data: ---- 
+
+Each widget stores 2 copies of its data, in fields called `m_ReadData` and `m_WriteData`.
+`m_ReadData` is read by the chuck thread, and written to by the render thread.
+`m_WriteData` is read by the render thread when the widget is drawn, and written to by the chuck thread.
+
+
+Thread Safety: ----
+
+There are 2 tiers of locks. 1 global lock, accessed via Manager::GetWindowLock(), which must
+be grabbed when:
+- renderer is drawing, ie walking the list of windows
+- chuck thread is adding a new window or adding an element to an existing window
+- chuck thread is writing to an element's data
+
+There is also a lock for each element, accessed via Element::m_ReadDataLock, which must be grabbed when:
+- audio thread wants to access a widget's m_ReadData
+- the widget has been modified in the UI, and the render thread is copying m_WriteData to m_ReadData
+
+On widget update: ----
+
+When a widget is updated via the user interacting with the UI, all widgets take the following steps:
+- grab the local m_ReadDataLock
+- copy m_WriteData to m_ReadData
+- unlock the local m_ReadDataLock
+- broadcast the corresponding chuck event
+
+Performance: ----
+
+The purpose of having these 2 tiers of locks is to reduce contention on the global lock.
+Reasoning: a UI window needs to be drawn every frame, but rarely needs to be modified / update data.
+Having the per-widget m_ReadDataLock allows the chuck audio thread to read a widget's data without
+having to grab the global lock, which is grabbed by the render thread every frame and will be held for a 
+duration that scales with the complexity of the UI.
+The m_ReadDataLock, in contrast, is only held for the duration it takes to read/copy a single widget's data field.
+
+Setting widget values in code: ----
+
+Lastly, the chuck thread may want to occasionally set widget values in code (e.g. to set a default value).
+Such cases should be rare, e.g. a default value will only need to be set once per widget before the UI is drawn.
+In this case, the chuck thread has to grab the global lock.
+
+======================================================*/
+
 t_CKBOOL init_chugl_gui(Chuck_DL_Query *QUERY);
 
 // GUI classes ================================================================
@@ -206,6 +269,15 @@ public:
         return m_ReadData;
     }
 
+    void SetData(bool data) {
+        // lock
+        std::lock_guard<std::mutex> lock(Manager::GetWindowLock());
+        // set
+        m_WriteData = data;
+        // copy to readData
+        m_ReadData = m_WriteData;
+    }
+
 private:
     bool m_ReadData;
     bool m_WriteData;
@@ -242,6 +314,15 @@ public:
         std::lock_guard<std::mutex> lock(m_ReadDataLock);
         // return
         return m_ReadData;
+    }
+
+    void SetData(float data) {
+        // lock
+        std::lock_guard<std::mutex> lock(Manager::GetWindowLock());
+        // set with bounds check
+        m_WriteData = glm::clamp(data, m_Min, m_Max);
+        // copy to read data
+        m_ReadData = m_WriteData;
     }
 
     float GetMin() { return m_Min; }
@@ -291,6 +372,15 @@ public:
         std::lock_guard<std::mutex> lock(m_ReadDataLock);
         // return
         return m_ReadData;
+    }
+
+    void SetData(int data) {
+        // lock
+        std::lock_guard<std::mutex> lock(Manager::GetWindowLock());
+        // set with bounds check
+        m_WriteData = glm::clamp(data, m_Min, m_Max);
+        // copy to read data
+        m_ReadData = m_WriteData;
     }
 
     float GetMin() { return m_Min; }
@@ -344,6 +434,20 @@ public:
         // return
         return glm::vec3(m_ReadData[0], m_ReadData[1], m_ReadData[2]);
     }
+
+    void SetData(t_CKVEC3& data) {
+        // lock (to modify writeData need to lock UI-wide window lock)
+        std::lock_guard<std::mutex> lock(Manager::GetWindowLock());
+        // bounds check, clamp all values between 0 and 1
+        m_WriteData[0] = glm::clamp(data.x, 0.0, 1.0);
+        m_WriteData[1] = glm::clamp(data.y, 0.0, 1.0);
+        m_WriteData[2] = glm::clamp(data.z, 0.0, 1.0);
+        // copy to readData
+        m_ReadData[0] = m_WriteData[0];
+        m_ReadData[1] = m_WriteData[1];
+        m_ReadData[2] = m_WriteData[2];
+    }
+
 private:
     float m_ReadData[3];
     float m_WriteData[3];
@@ -399,6 +503,8 @@ public:
         if (data < 0) data = 0;
         if (data >= m_Options.size()) data = m_Options.size() - 1;
         m_WriteData = data;
+        // copy to read data too
+        m_ReadData = m_WriteData;
         return data;
     }
 

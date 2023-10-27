@@ -85,6 +85,7 @@ t_CKBOOL init_chugl_texture(Chuck_DL_Query *QUERY)
 	QUERY->begin_class(QUERY, "FileTexture", "Texture");
     QUERY->doc_class(QUERY, "Class for loading textures from external files");
     QUERY->add_ex(QUERY, "textures/textures-1.ck");
+    QUERY->add_ex(QUERY, "textures/snowstorm.ck");
 
 	QUERY->add_ctor(QUERY, cgl_texture_file_ctor);
 

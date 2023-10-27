@@ -10,6 +10,7 @@
 #include "renderer/scenegraph/SceneGraphObject.h"
 #include "renderer/scenegraph/Camera.h"
 #include "renderer/scenegraph/Scene.h"
+#include "renderer/scenegraph/Locator.h"
 
 // chuck CORE includes
 #include "ulib_cgl.h"
@@ -223,6 +224,7 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
     // GLEnables ===============================================
     // Blending (TODO) should this be part of renderer? 
     GLCall(glEnable(GL_BLEND));
+    // linear interpolation for alpha blending
     GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
     // depth testing
@@ -345,7 +347,9 @@ void Window::DisplayLoop()
     // Copy from CGL scenegraph ====================================    
     // TODO should just clone these
     scene.SetID(CGL::mainScene.GetID());  // copy scene ID
-    scene.RegisterNode(&scene);  // register itself
+    scene.SetIsAudioThreadObject(false);  // mark as belonging to render thread
+    Locator::RegisterNode(&scene);  // register scene in locator
+    scene.m_ChuckObject = nullptr;  // we DON'T want render thread to every touch ckobj
 
     // size of moving average circular buffer
     const t_CKUINT N = 30;

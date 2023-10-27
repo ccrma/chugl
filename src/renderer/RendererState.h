@@ -5,6 +5,7 @@
 class Camera;
 class Light;
 class Scene;
+class Mesh;
 
 // used to track state while rendering the scenegraph
 class RendererState  
@@ -27,15 +28,18 @@ public:
 	inline glm::vec3 GetViewPos() { return m_ViewPos;  }
 
 	// Scene stuff =========================================================
-	inline void SetScene(Scene* scene) { m_Scene = scene; }
+	void PrepareScene(Scene* scene);
 	inline Scene* GetScene() { return m_Scene; }
 
-	void Reset() {
-		m_ModelStack.clear();
-		m_ModelStack.push_back(glm::mat4(1.0f));
-	}
+	// Reset state =========================================================
+	void Reset();
+
 private:
 	std::vector<glm::mat4> m_ModelStack;  // used to track model transform hierarchy
+
+	// opaque and transparent meshes
+	std::vector<Mesh*> m_OpaqueMeshes;
+	std::vector<Mesh*> m_TransparentMeshes;
 
 	// cache camera data
 	glm::mat4 m_ProjMat, m_ViewMat, m_CameraTransform;
@@ -43,6 +47,9 @@ private:
 
 	// scene reference
 	Scene* m_Scene;
+	Camera* m_Camera;
 
-
+public:
+	std::vector<Mesh*>& GetOpaqueMeshes() { return m_OpaqueMeshes; }
+	std::vector<Mesh*>& GetTransparentMeshes() { return m_TransparentMeshes; }
 };

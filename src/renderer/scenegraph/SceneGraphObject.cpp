@@ -63,21 +63,12 @@ glm::quat SceneGraphObject::GetWorldRotation()
 	return worldRot;
 }
 
-glm::vec3 SceneGraphObject::GetWorldPosition()
+glm::vec3 SceneGraphObject::GetWorldPosition() const
 {
 	if (!m_Parent) return m_Position;
+	// multiply by parent's world matrix to get world position
+	// DON'T multiply by this world matrix, because it double counts our own transform
 	return m_Parent->GetWorldMatrix() * glm::vec4(m_Position, 1.0);
-
-	//if (m_Parent == nullptr)
-	//	return m_Position;
-
-	//auto* parentPtr = m_Parent;
-	//glm::vec3 worldPos = m_Position;
-	//while (parentPtr != nullptr) {
-	//	worldPos = parentPtr->GetPosition() + worldPos;
-	//	parentPtr = parentPtr->GetParent();  // walk up the graph
-	//}
-	//return worldPos;
 }
 
 glm::vec3 SceneGraphObject::GetWorldScale()
