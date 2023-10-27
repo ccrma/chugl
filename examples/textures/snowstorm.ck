@@ -17,7 +17,7 @@ GScene scene;
 GCamera camera;
 scene.backgroundColor(@(0, 0, 0));
 camera.clip(1.5, 1000);
-camera.posZ(18);
+camera.posZ(16);
 
 // setup textures ======================================
 FileTexture sprites[6];
@@ -29,7 +29,7 @@ for (int i; i < 6; i++) {
 PointMaterial snowflakeMats[6];
 
 // default material values
-60.0 => float DEFAULT_POINT_SIZE;
+85.0 => float DEFAULT_POINT_SIZE;
 0.5 => float DEFAULT_ALPHA;
 @(.741, .894, 1.0) => vec3 DEFAULT_COLOR;
 
@@ -103,13 +103,13 @@ snowflakeColor.val(DEFAULT_COLOR);  // default value
 UI_SliderFloat cameraZSlider;
 cameraZSlider.text("Camera Z Position");
 cameraZSlider.range(0.0, 50.0);
-cameraZSlider.val(18.0);  // default value
+cameraZSlider.val(camera.posZ());  // default value
 
 // Wind Speed
 UI_SliderFloat windSpeedSlider;
 windSpeedSlider.text("Wind Speed");
 windSpeedSlider.range(0.0, 1.0);
-windSpeedSlider.val(0.1);  // default value
+windSpeedSlider.val(0.05);  // default value
 
 // add controls to window
 window.add(pointSizeSlider);
@@ -153,7 +153,7 @@ fun void CameraZListener() {
     }
 } spork ~ CameraZListener();
 
-0.1 => float rotationRate;
+windSpeedSlider.val() => float rotationRate;
 fun void WindSpeedListener() {
     while (true) {
         windSpeedSlider => now;
