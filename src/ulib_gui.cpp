@@ -79,12 +79,14 @@ CK_DLL_CTOR( chugl_gui_button_ctor );
 //-----------------------------------------------------------------------------
 CK_DLL_CTOR( chugl_gui_checkbox_ctor );
 CK_DLL_MFUN( chugl_gui_checkbox_val_get );
+CK_DLL_MFUN( chugl_gui_checkbox_val_set );
 
 //-----------------------------------------------------------------------------
 // FloatSlider
 //-----------------------------------------------------------------------------
 CK_DLL_CTOR( chugl_gui_slider_float_ctor );
 CK_DLL_MFUN( chugl_gui_slider_float_val_get );
+CK_DLL_MFUN( chugl_gui_slider_float_val_set );
 CK_DLL_MFUN( chugl_gui_slider_float_range_set );
 CK_DLL_MFUN( chugl_gui_slider_float_power_set );
 
@@ -93,6 +95,7 @@ CK_DLL_MFUN( chugl_gui_slider_float_power_set );
 //-----------------------------------------------------------------------------
 CK_DLL_CTOR( chugl_gui_slider_int_ctor );
 CK_DLL_MFUN( chugl_gui_slider_int_val_get );
+CK_DLL_MFUN( chugl_gui_slider_int_val_set );
 CK_DLL_MFUN( chugl_gui_slider_int_range_set );
 
 //-----------------------------------------------------------------------------
@@ -100,6 +103,7 @@ CK_DLL_MFUN( chugl_gui_slider_int_range_set );
 //-----------------------------------------------------------------------------
 CK_DLL_CTOR( chugl_gui_color3_ctor );
 CK_DLL_MFUN( chugl_gui_color3_val_get );
+CK_DLL_MFUN( chugl_gui_color3_val_set );
 
 //-----------------------------------------------------------------------------
 // Dropdown 
@@ -350,6 +354,10 @@ t_CKBOOL init_chugl_gui_checkbox(Chuck_DL_Query *QUERY)
     QUERY->add_mfun(QUERY, chugl_gui_checkbox_val_get, "int", "val");
     QUERY->doc_func(QUERY, "Get the current state of the checkbox, 1 for checked, 0 for unchecked");
 
+    QUERY->add_mfun(QUERY, chugl_gui_checkbox_val_set, "int", "val");
+    QUERY->add_arg( QUERY, "int", "val" );
+    QUERY->doc_func(QUERY, "Set the current state of the checkbox, 1 for checked, 0 for unchecked");
+
     QUERY->end_class(QUERY);
 
     return TRUE;
@@ -359,9 +367,18 @@ CK_DLL_CTOR( chugl_gui_checkbox_ctor ) {
     OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data) = (t_CKINT) new Checkbox(SELF);
 }
 
-CK_DLL_MFUN( chugl_gui_checkbox_val_get ) {
+CK_DLL_MFUN( chugl_gui_checkbox_val_get )
+{
     Checkbox* cb = (Checkbox *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
     RETURN->v_int = cb->GetData() ? 1 : 0;
+}
+
+CK_DLL_MFUN( chugl_gui_checkbox_val_set )
+{
+    Checkbox* cb = (Checkbox *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    t_CKINT val = GET_NEXT_INT(ARGS);
+    cb->SetData( val ? true : false );
+    RETURN->v_int = val;
 }
 
 
@@ -381,6 +398,10 @@ t_CKBOOL init_chugl_gui_slider_float(Chuck_DL_Query *QUERY)
 
     QUERY->add_mfun(QUERY, chugl_gui_slider_float_val_get, "float", "val");
     QUERY->doc_func(QUERY, "Get the current value of the slider");
+
+    QUERY->add_mfun(QUERY, chugl_gui_slider_float_val_set, "float", "val");
+    QUERY->add_arg( QUERY, "float", "val" );
+    QUERY->doc_func(QUERY, "Set the current value of the slider");
 
     QUERY->add_mfun(QUERY, chugl_gui_slider_float_range_set, "void", "range");
     QUERY->add_arg( QUERY, "float", "min" );
@@ -405,6 +426,14 @@ CK_DLL_MFUN( chugl_gui_slider_float_val_get )
 {
     FloatSlider* slider = (FloatSlider *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
     RETURN->v_float = slider->GetData();
+}
+
+CK_DLL_MFUN( chugl_gui_slider_float_val_set )
+{
+    FloatSlider* slider = (FloatSlider *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    t_CKFLOAT val = GET_NEXT_FLOAT(ARGS);
+    slider->SetData( val );
+    RETURN->v_float = val;
 }
 
 CK_DLL_MFUN( chugl_gui_slider_float_range_set )
@@ -438,6 +467,10 @@ t_CKBOOL init_chugl_gui_slider_int(Chuck_DL_Query *QUERY)
     QUERY->add_mfun(QUERY, chugl_gui_slider_int_val_get, "int", "val");
     QUERY->doc_func(QUERY, "Get the current value of the slider");
 
+    QUERY->add_mfun(QUERY, chugl_gui_slider_int_val_set, "int", "val");
+    QUERY->add_arg( QUERY, "int", "val" );
+    QUERY->doc_func(QUERY, "Set the current value of the slider");
+
     QUERY->add_mfun(QUERY, chugl_gui_slider_int_range_set, "void", "range");
     QUERY->add_arg( QUERY, "int", "min" );
     QUERY->add_arg( QUERY, "int", "max" );
@@ -457,6 +490,14 @@ CK_DLL_MFUN( chugl_gui_slider_int_val_get )
 {
     IntSlider* slider = (IntSlider *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
     RETURN->v_int= slider->GetData();
+}
+
+CK_DLL_MFUN( chugl_gui_slider_int_val_set )
+{
+    IntSlider* slider = (IntSlider *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    t_CKINT val = GET_NEXT_INT(ARGS);
+    slider->SetData( val );
+    RETURN->v_int = val;
 }
 
 CK_DLL_MFUN( chugl_gui_slider_int_range_set )
@@ -484,6 +525,10 @@ t_CKBOOL init_chugl_gui_color3(Chuck_DL_Query *QUERY)
     QUERY->add_mfun(QUERY, chugl_gui_color3_val_get, "vec3", "val");
     QUERY->doc_func(QUERY, "Get the current value of the color picker");
 
+    QUERY->add_mfun(QUERY, chugl_gui_color3_val_set, "vec3", "val");
+    QUERY->add_arg( QUERY, "vec3", "color");
+    QUERY->doc_func(QUERY, "Set the current value of the color picker");
+
     QUERY->end_class(QUERY);
 
     return TRUE;
@@ -499,6 +544,14 @@ CK_DLL_MFUN( chugl_gui_color3_val_get )
     Color3* color3 = (Color3 *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
     glm::vec3 color = color3->GetData();
     RETURN->v_vec3 = {color.r, color.g, color.b};
+}
+
+CK_DLL_MFUN( chugl_gui_color3_val_set )
+{
+    Color3* color3 = (Color3 *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
+    color3->SetData( color );
+    RETURN->v_vec3 = color;
 }
 
 //-----------------------------------------------------------------------------

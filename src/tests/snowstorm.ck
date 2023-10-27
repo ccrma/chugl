@@ -1,17 +1,18 @@
-// Inspired and adapted from the following three.js example
-// https://github.com/mrdoob/three.js/blob/master/examples/webgl_points_sprites.html
+//-----------------------------------------------------------------------------
+// name: basic-UI.ck
+// desc: Snowstorm example demoing the use of point sprites, transparency, 
+//       and UI controls.
+//
+// source: Inspired and adapted from the following three.js example
+//         https://github.com/mrdoob/three.js/blob/master/examples/webgl_points_sprites.html
+//
+// requires: ChuGL + chuck-1.5.1.7 or higher
+//
+// author: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
+// date: Fall 2023
+//-----------------------------------------------------------------------------
 
-// UI Params =============================================
-/*
-pointsize
-alpha
-color
-camera Z
-snowflake rotation
-
-*/
-
-// ====================================================
+// setup scene ====================================================
 GScene scene;
 GCamera camera;
 scene.backgroundColor(@(0, 0, 0));
@@ -25,14 +26,22 @@ for (int i; i < 6; i++) {
 }
 
 // materials ============================================
-PointMaterial snowflakeMats[6]; 
+PointMaterial snowflakeMats[6];
+
+// default material values
+60.0 => float DEFAULT_POINT_SIZE;
+0.5 => float DEFAULT_ALPHA;
+@(.741, .894, 1.0) => vec3 DEFAULT_COLOR;
+
+// initialize materials
 for (int i; i < snowflakeMats.size(); i++) {
     snowflakeMats[i] @=> PointMaterial @ mat;
-    mat.pointSize(50.0);
+    mat.pointSize(DEFAULT_POINT_SIZE);
     mat.pointSprite(sprites[i]);
     mat.attenuatePoints(true);
     mat.transparent(true);
-    mat.alpha(0.5);
+    mat.alpha(DEFAULT_ALPHA);
+    mat.color(DEFAULT_COLOR);
 }
 
 // geometry =============================================
@@ -40,7 +49,7 @@ for (int i; i < snowflakeMats.size(); i++) {
 14 => int SNOWFLAKE_SPREAD;
 vec3 snowflakePos[NUM_SNOWFLAKES];
 
-
+// initialize snowflake positions
 for (0 => int i; i < snowflakePos.size(); i++) {
     @(
         Math.random2f(-SNOWFLAKE_SPREAD, SNOWFLAKE_SPREAD),  // x
@@ -55,6 +64,8 @@ snowflakeGeo.positions(snowflakePos);
 // meshes  ==============================================
 GGen snowstorm --> scene;
 GMesh snowflakes[6];
+
+// initialize snowflake meshes
 for (int i; i < 6; i++) {
     snowflakes[i] @=> GMesh @ snowflake;
     snowflakes[i].set(snowflakeGeo, snowflakeMats[i]);
@@ -67,19 +78,91 @@ for (int i; i < 6; i++) {
     Math.random2f(0, s*Math.TWO_PI) => snowflake.rotZ;
 }
 
-// FPS printer ==========================================
-fun void printFPS( dur howOften )
-{
-    while( true )
-    {
-        <<< "fps:", GG.fps() >>>;
-        howOften => now;
+// UI Controls ==========================================
+UI_Window window;
+window.text("Snowstorm Controls");
+
+// pointsize
+UI_SliderFloat pointSizeSlider;
+pointSizeSlider.text("Snowflake Size");
+pointSizeSlider.range(0.1, 200.0);
+pointSizeSlider.val(DEFAULT_POINT_SIZE);  // default value
+
+// alpha
+UI_SliderFloat alphaSlider;
+alphaSlider.text("Snowflake Opacity");
+alphaSlider.range(0.0, 1.0);
+alphaSlider.val(DEFAULT_ALPHA);  // default value
+
+// color
+UI_Color3 snowflakeColor;
+snowflakeColor.text("Snowflake Color");
+snowflakeColor.val(DEFAULT_COLOR);  // default value
+
+// Camera Z Pos
+UI_SliderFloat cameraZSlider;
+cameraZSlider.text("Camera Z Position");
+cameraZSlider.range(0.0, 50.0);
+cameraZSlider.val(18.0);  // default value
+
+// Wind Speed
+UI_SliderFloat windSpeedSlider;
+windSpeedSlider.text("Wind Speed");
+windSpeedSlider.range(0.0, 1.0);
+windSpeedSlider.val(0.1);  // default value
+
+// add controls to window
+window.add(pointSizeSlider);
+window.add(alphaSlider);
+window.add(snowflakeColor);
+window.add(cameraZSlider);
+window.add(windSpeedSlider);
+
+// UI Event Handlers ====================================
+fun void PointSizeListener() {
+    while (true) {
+        pointSizeSlider => now;
+        pointSizeSlider.val() => float ps;
+        for (auto mat : snowflakeMats)
+            ps => mat.pointSize;
     }
-} spork ~ printFPS(.5::second);
+} spork ~ PointSizeListener();
+
+fun void AlphaListener() {
+    while (true) {
+        alphaSlider => now;
+        alphaSlider.val() => float a;
+        for (auto mat : snowflakeMats)
+            a => mat.alpha;
+    }
+} spork ~ AlphaListener();
+
+fun void ColorListener() {
+    while (true) {
+        snowflakeColor => now;
+        snowflakeColor.val() => vec3 c;
+        for (auto mat : snowflakeMats)
+            c => mat.color;
+    }
+} spork ~ ColorListener();
+
+fun void CameraZListener() {
+    while (true) {
+        cameraZSlider => now;
+        cameraZSlider.val() => camera.posZ;
+    }
+} spork ~ CameraZListener();
+
+0.1 => float rotationRate;
+fun void WindSpeedListener() {
+    while (true) {
+        windSpeedSlider => now;
+        windSpeedSlider.val() => rotationRate;
+    }
+} spork ~ WindSpeedListener();
 
 
 // Game loop ============================================
-0.1 => float rotationRate;
 0.1 => float camSpeed;
 while (true) {
     // camera controls
@@ -87,14 +170,14 @@ while (true) {
     GG.mouseY() / GG.windowHeight() => float mouseY;
     camSpeed * (mouseX - camera.posX()) + camera.posX() => camera.posX;
     camSpeed * (mouseY - camera.posY()) + camera.posY() => camera.posY;
-
     camera.lookAt( scene.pos() );
 
     // snowflake update
     for (int i; i < snowflakes.size(); i++) {
         Math.map(i, 0, snowflakes.size(), 1, 2.5) * rotationRate => float snowflakeRotRate;
         snowflakeRotRate * GG.dt() => snowflakes[i].rotateY;
-        // ( (snowflakes.size() / 2.0) - i ) * rotationRate * GG.dt() => snowflakes[i].rotateY;
     }
+
+    // next frame
     GG.nextFrame() => now;
 }
