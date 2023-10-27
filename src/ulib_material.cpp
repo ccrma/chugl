@@ -87,6 +87,7 @@ t_CKBOOL init_chugl_material(Chuck_DL_Query *QUERY)
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Base), "Object");
 	QUERY->doc_class(QUERY, "Base material class, do not instantiate directly");
     QUERY->add_ex(QUERY, "basic/polygon-modes.ck");
+    QUERY->add_ex(QUERY, "basic/transparency.ck");
 
 	QUERY->add_ctor(QUERY, cgl_mat_ctor);
 	QUERY->add_dtor(QUERY, cgl_mat_dtor);
@@ -303,6 +304,7 @@ t_CKBOOL init_chugl_material(Chuck_DL_Query *QUERY)
 	QUERY->begin_class(QUERY, Material::CKName(MaterialType::Points), Material::CKName(MaterialType::Base));
 	QUERY->doc_class(QUERY, "Used by GPoints");
     QUERY->add_ex(QUERY, "basic/points.ck");
+    QUERY->add_ex(QUERY, "textures/snowstorm.ck");
 	QUERY->add_ctor(QUERY, cgl_mat_points_ctor);
 	QUERY->end_class(QUERY);
 

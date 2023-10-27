@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// name: basic-UI.ck
+// name: snowstorm.ck
 // desc: Snowstorm example demoing the use of point sprites, transparency, 
 //       and UI controls.
 //
@@ -22,7 +22,7 @@ camera.posZ(18);
 // setup textures ======================================
 FileTexture sprites[6];
 for (int i; i < 6; i++) {
-    sprites[i].path(me.dir() + "textures/snowflake" + (i+1) + ".png");
+    sprites[i].path(me.dir() + "data/snowflake" + (i+1) + ".png");
 }
 
 // materials ============================================

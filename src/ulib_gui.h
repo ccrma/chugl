@@ -274,6 +274,8 @@ public:
         std::lock_guard<std::mutex> lock(Manager::GetWindowLock());
         // set
         m_WriteData = data;
+        // copy to readData
+        m_ReadData = m_WriteData;
     }
 
 private:
@@ -319,6 +321,8 @@ public:
         std::lock_guard<std::mutex> lock(Manager::GetWindowLock());
         // set with bounds check
         m_WriteData = glm::clamp(data, m_Min, m_Max);
+        // copy to read data
+        m_ReadData = m_WriteData;
     }
 
     float GetMin() { return m_Min; }
@@ -375,6 +379,8 @@ public:
         std::lock_guard<std::mutex> lock(Manager::GetWindowLock());
         // set with bounds check
         m_WriteData = glm::clamp(data, m_Min, m_Max);
+        // copy to read data
+        m_ReadData = m_WriteData;
     }
 
     float GetMin() { return m_Min; }
@@ -436,6 +442,10 @@ public:
         m_WriteData[0] = glm::clamp(data.x, 0.0, 1.0);
         m_WriteData[1] = glm::clamp(data.y, 0.0, 1.0);
         m_WriteData[2] = glm::clamp(data.z, 0.0, 1.0);
+        // copy to readData
+        m_ReadData[0] = m_WriteData[0];
+        m_ReadData[1] = m_WriteData[1];
+        m_ReadData[2] = m_WriteData[2];
     }
 
 private:
@@ -493,6 +503,8 @@ public:
         if (data < 0) data = 0;
         if (data >= m_Options.size()) data = m_Options.size() - 1;
         m_WriteData = data;
+        // copy to read data too
+        m_ReadData = m_WriteData;
         return data;
     }
 

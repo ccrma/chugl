@@ -268,6 +268,7 @@ t_CKBOOL init_chugl_gui_window( Chuck_DL_Query * QUERY )
         "Window element. Each instance will create a separate GUI window."
         "Add elements to the window via .add() to display them."
     );
+    QUERY->add_ex(QUERY, "ui/basic-ui.ck");
    
 
     QUERY->add_ctor( QUERY, chugl_gui_window_ctor );
@@ -305,6 +306,7 @@ t_CKBOOL init_chugl_gui_button(Chuck_DL_Query *QUERY)
 {
     QUERY->begin_class(QUERY, Manager::GetCkName(Type::Button), Manager::GetCkName(Type::Element));
 	QUERY->doc_class(QUERY, "Button widget, clicking will trigger the button instance, which itself is a Chuck Event");
+    QUERY->add_ex(QUERY, "ui/basic-ui.ck");
 
     QUERY->add_ctor(QUERY, chugl_gui_button_ctor);
     // no destructor, let Element handle
@@ -348,6 +350,7 @@ t_CKBOOL init_chugl_gui_checkbox(Chuck_DL_Query *QUERY)
 {
     QUERY->begin_class(QUERY, Manager::GetCkName(Type::Checkbox), Manager::GetCkName(Type::Element));
 	QUERY->doc_class(QUERY, "Checkbox widget");
+    QUERY->add_ex(QUERY, "ui/basic-ui.ck");
     
     QUERY->add_ctor(QUERY, chugl_gui_checkbox_ctor);
 
@@ -393,6 +396,7 @@ t_CKBOOL init_chugl_gui_slider_float(Chuck_DL_Query *QUERY)
         "Float slider widget"
         "CTRL+Click on any slider to turn them into an input box. Manually input values aren't clamped and can go off-bounds."
     );
+    QUERY->add_ex(QUERY, "ui/basic-ui.ck");
 
     QUERY->add_ctor(QUERY, chugl_gui_slider_float_ctor);
 
@@ -461,6 +465,7 @@ t_CKBOOL init_chugl_gui_slider_int(Chuck_DL_Query *QUERY)
         "Int slider widget"
         "CTRL+Click on any slider to turn them into an input box. Manually input values aren't clamped and can go off-bounds."
     );
+    QUERY->add_ex(QUERY, "ui/basic-ui.ck");
 
     QUERY->add_ctor(QUERY, chugl_gui_slider_int_ctor);
 
@@ -517,8 +522,8 @@ t_CKBOOL init_chugl_gui_color3(Chuck_DL_Query *QUERY)
 	QUERY->doc_class(QUERY, 
         "Color picker widget"
         "Ttip: the ColorEdit* functions have a little colored preview square that can be left-clicked to open a picker, and right-clicked to open an option menu."
-
     );
+    QUERY->add_ex(QUERY, "ui/basic-ui.ck");
 
     QUERY->add_ctor(QUERY, chugl_gui_color3_ctor);
 
@@ -566,6 +571,7 @@ t_CKBOOL init_chugl_gui_dropdown(Chuck_DL_Query *QUERY)
         "Create a dropdown menu with the given list of items"
         "On select, the widget will store the selected items *index* and will trigger an event"
     );
+    QUERY->add_ex(QUERY, "ui/basic-ui.ck");
 
     QUERY->add_ctor(QUERY, chugl_gui_dropdown_ctor);
 
