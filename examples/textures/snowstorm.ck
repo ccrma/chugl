@@ -30,7 +30,7 @@ PointMaterial snowflakeMats[6];
 
 // default material values
 85.0 => float DEFAULT_POINT_SIZE;
-0.5 => float DEFAULT_ALPHA;
+0.75 => float DEFAULT_ALPHA;
 @(.741, .894, 1.0) => vec3 DEFAULT_COLOR;
 
 // initialize materials
@@ -164,10 +164,11 @@ fun void WindSpeedListener() {
 
 // Game loop ============================================
 0.1 => float camSpeed;
+3.5 => float camMovement;
 while (true) {
-    // camera controls
-    GG.mouseX() / GG.windowWidth() => float mouseX;
-    GG.mouseY() / GG.windowHeight() => float mouseY;
+    // camera controls (inverted so it looks like you're moving the snowflakes!)
+    -camMovement * GG.mouseX() / GG.windowWidth() => float mouseX;
+    camMovement * GG.mouseY() / GG.windowHeight() => float mouseY;
     camSpeed * (mouseX - camera.posX()) + camera.posX() => camera.posX;
     camSpeed * (mouseY - camera.posY()) + camera.posY() => camera.posY;
     camera.lookAt( scene.pos() );
