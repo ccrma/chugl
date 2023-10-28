@@ -43,5 +43,9 @@ endif
 	@echo "[probing chugins...]"
 	@chuck --color --chugin-probe 2>&1 >/dev/null | grep ChuGL.chug
 
-clean: 
+clean:
+	cmake --build build-release --target clean
+
+clean-all: 
 	rm -rf $(CHUG) build-release
+

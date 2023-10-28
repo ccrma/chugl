@@ -14,6 +14,7 @@ void Geometry::AddVertex(Vertex v)
 {
 	auto& posAttrib = m_Attributes[POSITION_ATTRIB_IDX];
 	auto& normAttrib = m_Attributes[NORMAL_ATTRIB_IDX];
+    auto& colorAttrib = m_Attributes[COLOR_ATTRIB_IDX];
 	auto& uvAttrib = m_Attributes[UV0_ATTRIB_IDX];
 
 	posAttrib.data.push_back(v.Position.x);
@@ -23,6 +24,11 @@ void Geometry::AddVertex(Vertex v)
 	normAttrib.data.push_back(v.Normal.x);
 	normAttrib.data.push_back(v.Normal.y);
 	normAttrib.data.push_back(v.Normal.z);
+
+    colorAttrib.data.push_back(v.Color.x);
+    colorAttrib.data.push_back(v.Color.y);
+    colorAttrib.data.push_back(v.Color.z);
+    colorAttrib.data.push_back(v.Color.w);
 
 	uvAttrib.data.push_back(v.TexCoords.x);
 	uvAttrib.data.push_back(v.TexCoords.y);

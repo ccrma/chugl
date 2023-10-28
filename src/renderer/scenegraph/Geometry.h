@@ -21,7 +21,11 @@ enum class GeometryType {
 struct Vertex {
     glm::vec3 Position;
     glm::vec3 Normal;
+    glm::vec4 Color;
     glm::vec2 TexCoords;
+
+    // constructor
+    Vertex() : Color(1.0f) { }
 
 	static float & VecIndex(glm::vec3& vec, char c) {
 		if (c == 'x' || c == 'r')
@@ -35,8 +39,34 @@ struct Vertex {
         return vec.x;
 	}
 
+    static float & VecIndex(glm::vec4& vec, char c) {
+        if (c == 'x' || c == 'r')
+            return vec.x;
+        if (c == 'y' || c == 'g')
+            return vec.y;
+        if (c == 'z' || c == 'b')
+            return vec.z;
+        if (c == 'w' || c == 'a')
+            return vec.w;
+        assert(false);
+        // return anything to get around compiler warning/error
+        return vec.x;
+    }
+
+    static float & VecIndex(glm::vec2& vec, char c) {
+        if (c == 'u' || c == 's' || c == 'x')
+            return vec.x;
+        if (c == 'v' || c == 't' || c == 'y')
+            return vec.y;
+        assert(false);
+        // return anything to get around compiler warning/error
+        return vec.x;
+    }
+
 	float& Pos(char c) { return VecIndex(Position, c); }
 	float& Norm(char c) { return VecIndex(Normal, c); }
+    float& Col(char c) { return VecIndex(Color, c); }
+    float& Tex(char c) { return VecIndex(TexCoords, c); }
 };
 
 // attribute struct for CGL Geometry

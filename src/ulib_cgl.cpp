@@ -9,6 +9,7 @@
 #include "ulib_mesh.h"
 #include "ulib_light.h"
 #include "ulib_scene.h"
+#include "ulib_assimp.h"
 
 #include "renderer/scenegraph/Camera.h"
 #include "renderer/scenegraph/Command.h"
@@ -112,7 +113,8 @@ t_CKBOOL init_chugl(Chuck_DL_Query *QUERY)
 	init_chugl_mesh(QUERY);
 	init_chugl_light(QUERY);
 	init_chugl_scene(QUERY);
-	create_chugl_default_objs(QUERY);
+    init_chugl_assimp(QUERY);
+    create_chugl_default_objs(QUERY);
 	init_chugl_static_fns(QUERY);
 
 	return true;
