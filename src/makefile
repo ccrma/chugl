@@ -29,5 +29,19 @@ win win32 win64: build-release
 	@echo '------------'
 	@echo '(windows) --> build ChuGL.chug in Visual Studio from build-release/chugl.sln'
 
+# (mac/linux) remove system installed ChuGL and install local ChuGL
+test-install:
+	@echo "[removing installed ChuGL.chug...]"
+ifneq (,$(wildcard /usr/local/lib/chuck/ChuGL.chug))
+	sudo rm -f /usr/local/lib/chuck/ChuGL.chug
+endif
+ifneq (,$(wildcard ~/.chuck/lib/ChuGL.chug))
+	rm -f ~/.chuck/lib/ChuGL.chug
+endif
+	@echo "[copying ChuGL.chug to local search path...]"
+	cp ChuGL.chug ~/.chuck/lib
+	@echo "[probing chugins...]"
+	@chuck --color --chugin-probe 2>&1 >/dev/null | grep ChuGL.chug
+
 clean: 
 	rm -rf $(CHUG) build-release
