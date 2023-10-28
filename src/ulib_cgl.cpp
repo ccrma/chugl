@@ -40,17 +40,21 @@ CK_DLL_SFUN(cgl_next_frame);
 CK_DLL_SFUN(cgl_register);
 CK_DLL_SFUN(cgl_unregister);
 
-// glfw-state
+// glfw window params
 CK_DLL_SFUN(cgl_window_get_width);
 CK_DLL_SFUN(cgl_window_get_height);
 CK_DLL_SFUN(cgl_window_get_time);
 CK_DLL_SFUN(cgl_window_get_dt);
+
+// glfw mouse params
 CK_DLL_SFUN(cgl_mouse_get_pos_x);
 CK_DLL_SFUN(cgl_mouse_get_pos_y);
 CK_DLL_SFUN(cgl_mouse_set_mode);
 CK_DLL_SFUN(cgl_mouse_hide);
 CK_DLL_SFUN(cgl_mouse_lock);
 CK_DLL_SFUN(cgl_mouse_show);
+
+// glfw framebuffer params
 CK_DLL_SFUN(cgl_framebuffer_get_width);
 CK_DLL_SFUN(cgl_framebuffer_get_height);
 
@@ -59,6 +63,9 @@ CK_DLL_SFUN(cgl_window_fullscreen);
 CK_DLL_SFUN(cgl_window_windowed);
 // CK_DLL_SFUN(cgl_window_maximize);
 CK_DLL_SFUN(cgl_window_set_size);
+
+CK_DLL_SFUN(cgl_window_get_title);
+CK_DLL_SFUN(cgl_window_set_title);
 
 // accessing shared default GGens
 CK_DLL_SFUN(cgl_get_main_camera);
@@ -228,7 +235,7 @@ CK_DLL_SHREDS_WATCHER(cgl_shred_on_destroy_listener)
     if( g_shred2ggen.find( SHRED ) != g_shred2ggen.end() ) {
 		g_shred2ggen.erase( SHRED );
 		if (g_shred2ggen.empty()) {
-			CGL::PushCommand(new CloseWindowCommand());
+			CGL::PushCommand(new CloseWindowCommand(&CGL::mainScene));
 			CGL::Render();  // wake up render thread one last time to process the close window command
 		}
 	}
@@ -373,7 +380,7 @@ t_CKBOOL init_chugl_static_fns(Chuck_DL_Query *QUERY)
 	QUERY->add_sfun(QUERY, cgl_register, "void", "register");
     QUERY->doc_func(QUERY, "For interal debug purposes, registers the calling shred to ChuGL's list of graphics-related shreds.");
 
-	// window state getters
+	// window functions
 	QUERY->add_sfun(QUERY, cgl_window_get_width, "int", "windowWidth");
     QUERY->doc_func(QUERY, "Returns screen-space width of the window");
 	QUERY->add_sfun(QUERY, cgl_window_get_height, "int", "windowHeight");
@@ -386,6 +393,10 @@ t_CKBOOL init_chugl_static_fns(Chuck_DL_Query *QUERY)
     QUERY->doc_func(QUERY, "Time in seconds since the grapics window was opened");
 	QUERY->add_sfun(QUERY, cgl_window_get_dt, "float", "dt");
     QUERY->doc_func(QUERY, "Time in seconds since the last render frame"); 
+
+
+
+	// mouse functions
 	QUERY->add_sfun(QUERY, cgl_mouse_get_pos_x, "float", "mouseX");
     QUERY->doc_func(QUERY, "Mouse horizontal position in window screen-space");
 	QUERY->add_sfun(QUERY, cgl_mouse_get_pos_y, "float", "mouseY");
@@ -413,6 +424,12 @@ t_CKBOOL init_chugl_static_fns(Chuck_DL_Query *QUERY)
 	QUERY->add_arg(QUERY, "int", "width");
 	QUERY->add_arg(QUERY, "int", "height");
     QUERY->doc_func(QUERY, "Change resolution of current window. Will NOT exit fullscreen mode");
+
+	QUERY->add_sfun(QUERY, cgl_window_get_title, "string", "windowTitle");
+	QUERY->doc_func(QUERY, "Returns the title of the window");
+	QUERY->add_sfun(QUERY, cgl_window_set_title, "string", "windowTitle");
+	QUERY->add_arg(QUERY, "string", "title");
+	QUERY->doc_func(QUERY, "Sets the title of the window");
 
 	// Main Camera
 	// TODO: is it possible to add an svar of type GCamera?
@@ -492,27 +509,41 @@ CK_DLL_SFUN(cgl_mouse_get_pos_y) { RETURN->v_float = CGL::GetMousePos().second; 
 CK_DLL_SFUN(cgl_mouse_set_mode)
 {
 	t_CKINT mode = GET_NEXT_INT(ARGS);
-	CGL::PushCommand(new SetMouseModeCommand(mode));
+	CGL::PushCommand(new SetMouseModeCommand(&CGL::mainScene, mode));
 }
 
-CK_DLL_SFUN(cgl_mouse_hide) { CGL::PushCommand(new SetMouseModeCommand(CGL::MOUSE_HIDDEN)); }
-CK_DLL_SFUN(cgl_mouse_lock) { CGL::PushCommand(new SetMouseModeCommand(CGL::MOUSE_LOCKED)); }
-CK_DLL_SFUN(cgl_mouse_show) { CGL::PushCommand(new SetMouseModeCommand(CGL::MOUSE_NORMAL)); }
+CK_DLL_SFUN(cgl_mouse_hide) { CGL::PushCommand(new SetMouseModeCommand(&CGL::mainScene, CGL::MOUSE_HIDDEN)); }
+CK_DLL_SFUN(cgl_mouse_lock) { CGL::PushCommand(new SetMouseModeCommand(&CGL::mainScene, CGL::MOUSE_LOCKED)); }
+CK_DLL_SFUN(cgl_mouse_show) { CGL::PushCommand(new SetMouseModeCommand(&CGL::mainScene, CGL::MOUSE_NORMAL)); }
 
-CK_DLL_SFUN(cgl_window_fullscreen) { CGL::PushCommand(new SetWindowModeCommand(CGL::WINDOW_FULLSCREEN)); }
+CK_DLL_SFUN(cgl_window_fullscreen) { CGL::PushCommand(new SetWindowModeCommand(&CGL::mainScene, CGL::WINDOW_FULLSCREEN)); }
 
 CK_DLL_SFUN(cgl_window_windowed)
 {
 	t_CKINT width = GET_NEXT_INT(ARGS);
 	t_CKINT height = GET_NEXT_INT(ARGS);
-	CGL::PushCommand(new SetWindowModeCommand(CGL::WINDOW_WINDOWED, width, height));
+	CGL::PushCommand(new SetWindowModeCommand(&CGL::mainScene, CGL::WINDOW_WINDOWED, width, height));
 }
 
 CK_DLL_SFUN(cgl_window_set_size)
 {
 	t_CKINT width = GET_NEXT_INT(ARGS);
 	t_CKINT height = GET_NEXT_INT(ARGS);
-	CGL::PushCommand(new SetWindowModeCommand(CGL::WINDOW_SET_SIZE, width, height));
+	CGL::PushCommand(new SetWindowModeCommand(&CGL::mainScene, CGL::WINDOW_SET_SIZE, width, height));
+}
+
+// get glfw window title
+CK_DLL_SFUN(cgl_window_get_title) { 
+	RETURN->v_string = (Chuck_String *)API->object->create_string(
+		VM, CGL::mainScene.m_WindowTitle.c_str(), false
+	);
+}
+
+// set glfw window title
+CK_DLL_SFUN(cgl_window_set_title) { 
+	Chuck_String *title= GET_NEXT_STRING(ARGS);
+	CGL::PushCommand(new SetWindowTitleCommand(&CGL::mainScene, title->str()));
+	RETURN->v_string = title;
 }
 
 CK_DLL_SFUN(cgl_get_main_camera)

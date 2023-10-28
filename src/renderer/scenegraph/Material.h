@@ -247,8 +247,13 @@ public:
 	void SetLineWidth(float width) { 
 		SetUniform(MaterialUniform::Create(LINE_WIDTH_UNAME, width));
 	}
+
 	void SetColor(float r, float g, float b, float a) { 
 		SetUniform(MaterialUniform::Create(COLOR_UNAME, r, g, b, a));
+	}
+	void SetColor(float r, float g, float b) { 
+		auto& col = GetColor();
+		SetUniform(MaterialUniform::Create(COLOR_UNAME, r, g, b, col.a));
 	}
 	void SetAlpha(float a) { 
 		auto& uniform = m_Uniforms[COLOR_UNAME];

@@ -19,7 +19,6 @@ class Shader;
 class Geometry;
 class Renderer;
 
-
 // Renderer helper classes (encapsulate SceneGraph classes)
 /*
 This encapsulation is to decouple the scenegraph objects from any

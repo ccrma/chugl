@@ -99,50 +99,57 @@ void Window::SetViewSize(int width, int height)
     m_ViewHeight = height;
 }
 
-void Window::UpdateState()
+// Updates window state based on render-thread scene params
+void Window::UpdateState(Scene& scene)
 {
     // mouse mode
-    if (Scene::updateMouseMode) {
-        if (Scene::mouseMode == CGL::MOUSE_NORMAL) {
+    if (scene.m_UpdateMouseMode) {
+        if (scene.m_MouseMode == CGL::MOUSE_NORMAL) {
             glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         }
-        else if (Scene::mouseMode == CGL::MOUSE_HIDDEN) {
+        else if (scene.m_MouseMode == CGL::MOUSE_HIDDEN) {
             glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
         }
-        else if (Scene::mouseMode == CGL::MOUSE_LOCKED) {
+        else if (scene.m_MouseMode == CGL::MOUSE_LOCKED) {
             glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         }
     }
 
-    if (Scene::updateWindowMode) {
-        if (Scene::windowMode == CGL::WINDOW_WINDOWED) {
+    if (scene.m_UpdateWindowMode) {
+        if (scene.m_WindowMode == CGL::WINDOW_WINDOWED) {
             // set window (pos at 100,100 so title bar appears....silly)
-            glfwSetWindowMonitor(m_Window, NULL, 100, 100, Scene::windowedWidth, Scene::windowedHeight, GLFW_DONT_CARE);
+            glfwSetWindowMonitor(m_Window, NULL, 100, 100, scene.m_WindowedWidth, scene.m_WindowedHeight, GLFW_DONT_CARE);
             //re-enable decorations
             glfwSetWindowAttrib(m_Window, GLFW_DECORATED, GLFW_TRUE);
         }
-        else if (Scene::windowMode == CGL::WINDOW_FULLSCREEN) {
+        else if (scene.m_WindowMode == CGL::WINDOW_FULLSCREEN) {
             // set to primary monitor
             GLFWmonitor* monitor = glfwGetPrimaryMonitor();
             const GLFWvidmode* mode = glfwGetVideoMode(monitor);
             glfwSetWindowMonitor(m_Window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
-        } else if (Scene::windowMode == CGL::WINDOW_MAXIMIZED) {
+        } else if (scene.m_WindowMode == CGL::WINDOW_MAXIMIZED) {
             // maximize
             glfwMaximizeWindow(m_Window);
-        } else if (Scene::windowMode == CGL::WINDOW_RESTORE) {
+        } else if (scene.m_WindowMode == CGL::WINDOW_RESTORE) {
             // restore
             glfwRestoreWindow(m_Window);
-        } else if (Scene::windowMode == CGL::WINDOW_SET_SIZE) {
+        } else if (scene.m_WindowMode == CGL::WINDOW_SET_SIZE) {
             // if in windowed mode, sets size in screen coordinates
             // if in full screen, changes resolution 
-            glfwSetWindowSize(m_Window, Scene::windowedWidth, Scene::windowedHeight);
+            glfwSetWindowSize(m_Window, scene.m_WindowedWidth, scene.m_WindowedHeight);
         }
     }
 
     // window close command
-    if (Scene::windowShouldClose) {
+    if (scene.m_WindowShouldClose) {
         glfwSetWindowShouldClose(m_Window, GLFW_TRUE);
-        Scene::windowShouldClose = false;  // reset flag
+        scene.m_WindowShouldClose = false;  // reset flag
+    }
+
+    // window title
+    if (scene.m_UpdateWindowTitle) {
+        glfwSetWindowTitle(m_Window, scene.m_WindowTitle.c_str());
+        scene.m_UpdateWindowTitle = false;
     }
 
 }
@@ -431,7 +438,7 @@ void Window::DisplayLoop()
         CGL::FlushCommandQueue(scene, false);
         
         // process any glfw options passed from chuck
-        UpdateState();
+        UpdateState(scene);
 
         // garbage collection! delete GPU-side data for any scenegraph objects that were deleted in chuck
         renderer.ProcessDeletionQueue(&scene); // IMPORTANT: should happen after flushing command queue

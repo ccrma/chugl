@@ -28,7 +28,22 @@ struct FogUniforms {
 class Scene : public SceneGraphObject
 {
 public:
-	Scene() : m_BackgroundColor(glm::vec3(0.0f)) {}
+	Scene() 
+		: m_BackgroundColor(glm::vec3(0.0f)),
+		m_FogUniforms(FogUniforms()),
+		// mouse modes
+		m_MouseMode(0),
+		m_UpdateMouseMode(false),
+		// window modes
+		m_WindowMode(0),
+		m_UpdateWindowMode(false),
+		m_WindowedWidth(0),
+		m_WindowedHeight(0),
+		m_WindowShouldClose(false),
+		// window title
+		m_UpdateWindowTitle(false),
+		m_WindowTitle("ChuGL")
+	{}
 	virtual ~Scene() {}
 	virtual bool IsScene() override { return true; }
 
@@ -132,20 +147,19 @@ public:
 	std::vector<size_t>& GetDeletionQueue() { return m_DeletionQueue; }
 
 public: // major hack, for now because there's only 1 scene, storing render state options here
-	// THESE ARE NOT THREADSAFE, ONLY WRITE/READ FROM RENDER THREAD
-	// set indirectly via scenegraph commands
-	// all this in order to maintain strict decoupling between scenegraph and any specific renderer impl
 	// but maybe these modes can be stored in CGL class? or create a "window" scenegraph type that stores per-window metadata and settings
 
-	// TODO: can actually make these non-static and store twice, once the chuck-thread scene in command constructor, and once on render-thread scene in command execute
-	// this will allow read access, if needed
-	static unsigned int mouseMode;
-	static bool updateMouseMode; 
+	// mouse modes
+	unsigned int m_MouseMode;
+	bool m_UpdateMouseMode; 
 
-	static unsigned int windowMode;  // which mode, fullscreen or windowed
-	static bool updateWindowMode;  // whether to update window mode
-	static int windowedWidth, windowedHeight;  // last user-set window size
-	static bool windowShouldClose;
+	// windowing modes
+	unsigned int m_WindowMode;  // which mode, fullscreen or windowed
+	bool m_UpdateWindowMode;  // whether to update window mode
+	int m_WindowedWidth, m_WindowedHeight;  // last user-set window size
+	bool m_WindowShouldClose;
 
-
+	// window title
+	bool m_UpdateWindowTitle;
+	std::string m_WindowTitle;
 };
