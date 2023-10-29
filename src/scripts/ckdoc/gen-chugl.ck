@@ -42,6 +42,7 @@ doc.addGroup(
         "GCube", 
         "GSphere", 
         "GTorus",
+        "GCylinder",
         "GLight", 
         "GPointLight", 
         "GDirLight", 
