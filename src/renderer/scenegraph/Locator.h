@@ -10,10 +10,12 @@ class Locator
 {
 public:
     static void RegisterNode(SceneGraphNode* node) {
+        if (!node) return;
         GetSceneGraphMap(node->IsAudioThreadObject())[node->GetID()] = node;
     }
 
     static SceneGraphNode* GetNode(size_t id, bool isAudioThread) {
+        if (id == 0) return nullptr;
         SceneGraphNode* node = CheckNode(id, isAudioThread) ? GetSceneGraphMap(isAudioThread)[id] : nullptr;
         if (node) {
             assert(node->IsAudioThreadObject() == isAudioThread);
@@ -21,7 +23,8 @@ public:
         return node;
     }
 
-	static bool CheckNode(size_t id, bool isAudioThread) { 
+	static bool CheckNode(size_t id, bool isAudioThread) {
+        if (id == 0) return false;
         auto& map = GetSceneGraphMap(isAudioThread);
         return map.find(id) != map.end();
     }

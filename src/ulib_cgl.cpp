@@ -14,6 +14,7 @@
 #include "renderer/scenegraph/Command.h"
 #include "renderer/scenegraph/Scene.h"
 #include "renderer/scenegraph/Light.h"
+#include "renderer/scenegraph/Locator.h"
 
 //-----------------------------------------------------------------------------
 // ChuGL Event Listeners
@@ -667,41 +668,51 @@ void CGL::DetachGGensFromShred(Chuck_VM_Shred *shred)
     if( s_Shred2GGen.find( shred ) == s_Shred2GGen.end() )
         return;
 
-    // create a copy of the set of GGens created on this shred that have NOT been garbage collected
+    // create a copy of the set of GGen IDs created on this shred that have NOT been garbage collected
 	// we need a copy here because GGens which are disconnected may be garbage collected, which will
 	// invalidate the iterator, i.e. they remove themselves from the Shred2GGen map
-	auto ggensCopy = std::unordered_set<Chuck_Object *>(s_Shred2GGen[shred]);
+	// we store IDs and not pointers because pointers may be invalidated by garbage collection during 
+	// the loop below
+	std::vector<size_t> ggensCopy; 
+	ggensCopy.reserve(s_Shred2GGen[shred].size());
+
+	// populate copy
+	for (auto *ggen : s_Shred2GGen[shred])
+	{
+		SceneGraphObject* sgo = CGL::GetSGO(ggen);
+		assert(sgo);
+		ggensCopy.push_back(sgo->GetID());
+	}
     
-    for( auto * ggen : ggensCopy )
+    for( auto ggen_id : ggensCopy )
     {
         // verify
-        assert( ggen != NULL );
+        assert( ggen_id > 0 );
+
+		// get then GGen
+		SceneGraphObject* sgo = (SceneGraphObject*) Locator::GetNode(ggen_id, true);
+		if (!sgo) continue;  // already deleted
+
+		Chuck_Object* ckobj = sgo->m_ChuckObject;
+		if (!ckobj) continue;  // already deleted
 
 		// first reset the origin shred of the Chuck_object BEFORE it might be deleted
 		// (issuing a DisconnectCommand may delete the cglObj and its corresponding ckobj)
         // get origin shred
-        Chuck_VM_Shred * originShred = CGL::CKAPI()->object->get_origin_shred( ggen );
+        Chuck_VM_Shred * originShred = CGL::CKAPI()->object->get_origin_shred( ckobj );
         // make sure if ggen has an origin shred, it is this one
         assert( !originShred || originShred == shred );
         // also clear reference to this shred
-        CGL::CKAPI()->object->set_origin_shred( ggen, NULL );
-        
-        // get scenegraph within the GGen
-        SceneGraphObject * cglObj = CGL::GetSGO(ggen);
+        CGL::CKAPI()->object->set_origin_shred( ckobj, NULL );
 
 		// edge case: if it's the main scene or camera, don't disconnect, because these static instances are shared across all shreds!
 		// also don't remove if its the default dir light
 		// TODO: why do we still need this check even though I create_without_shred ???
-		if (cglObj == &CGL::mainScene || cglObj == &CGL::mainCamera || cglObj == CGL::mainScene.GetDefaultLight())
+		if (sgo == &CGL::mainScene || sgo == &CGL::mainCamera || sgo == CGL::mainScene.GetDefaultLight())
 			continue;
 
-        // if null, it is possible shred was removed between GGen instantiate and its pre-constructor
-        if( cglObj )
-        {
-            // disconnect
-			CGL::PushCommand(new DisconnectCommand(cglObj));
-        }
-
+		// disconnect
+		CGL::PushCommand(new DisconnectCommand(sgo));
     }
 }
 

@@ -15,7 +15,7 @@ fun void spawnAndGC() {
     // GGen `c` is attacheed but then immediately detached from scenegraph
     // ALL should be cleaned up by GC
     GCube a, b, c;
-    // b @=> out_of_shred_ref;
+    b @=> out_of_shred_ref;
     c --> GG.scene();
     GG.nextFrame() => now;
     c --< GG.scene();
@@ -26,6 +26,9 @@ fun void spawnAndGCifSporked() {
     // will disconnect it from the scenegraph on shred exit
     GCube a --> GG.scene();
     GG.nextFrame() => now; // give chance for this to be propagated to render thread
+
+    // TODO
+    // GCube c --> GCube d;  // leaks
 
     // also test GC on GGens that are never attached to render-thread scenegraph
     GCube b --> GG.scene();

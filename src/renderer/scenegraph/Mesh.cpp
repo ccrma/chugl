@@ -19,7 +19,8 @@ Geometry *Mesh::GetGeometry()
 
 Material *Mesh::GetMaterial()
 {
-    return (Material*) Locator::GetNode(m_MatID, IsAudioThreadObject());
+    auto* mat = (Material*) Locator::GetNode(m_MatID, IsAudioThreadObject());
+    return mat;
 }
 
 void Mesh::SetGeometry(Geometry *geo)

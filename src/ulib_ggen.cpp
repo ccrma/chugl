@@ -794,6 +794,7 @@ CK_DLL_GFUN(ggen_op_gruck)
 	CGL::PushCommand(new RelationshipCommand(RHS, LHS, RelationshipCommand::Relation::AddChild));
 
 	// return RHS
+	// TODO: this is causing a refcount error
 	RETURN->v_object = rhs;
 }
 

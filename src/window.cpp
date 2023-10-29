@@ -187,8 +187,13 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
 
 
     // VSYNC =================================================
-    // glfwSwapInterval(0);  // TODO: for now disabling vsync introduces jitter
+#ifdef NDEBUG
     glfwSwapInterval(1);  
+#else
+	// we disable vsync in debug mode to more consistently catch
+    // race conditions, concurrency bugs
+    glfwSwapInterval(0);  
+#endif
 
     // Initialize GLAD =======================================
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
