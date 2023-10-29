@@ -3,10 +3,11 @@
 #include "chugl_pch.h"
 #include "SceneGraphObject.h"
 
-enum CameraType : unsigned int {
+// enum CameraType : unsigned int {
+enum CameraType : t_CKINT {
 	NONE = 0,
-	PERSPECTIVE,
-	ORTHO,
+	PERSPECTIVE = 1,
+	ORTHO = 2,
 };
 
 struct CameraParams {
@@ -60,8 +61,8 @@ public:
 	}
 
 
-	static const unsigned int MODE_PERSPECTIVE;
-	static const unsigned int MODE_ORTHO;
+	static const t_CKINT MODE_PERSPECTIVE;
+	static const t_CKINT MODE_ORTHO;
 };
 
 /*
