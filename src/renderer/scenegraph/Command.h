@@ -187,8 +187,9 @@ public:
     };
     virtual void execute(Scene* scene) override {
         SceneGraphObject* obj = dynamic_cast<SceneGraphObject*>(scene->GetNode(m_ID));
-        assert(obj);
-        obj->Disconnect();
+        // obj will be NULL in the case that a GGen is GC'd on the audio-thread before
+        // GG.nextFrame() is ever called
+        if (obj) obj->Disconnect();
     }
 private:
     size_t m_ID;

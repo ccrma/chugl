@@ -21,6 +21,16 @@ fun void spawnAndGC() {
     c --< GG.scene();
 }
 
+fun void spawnAndGCifSporked() {
+    // upon shred exit, GGen `a` should be GC'd because the shred
+    // will disconnect it from the scenegraph on shred exit
+    GCube a --> GG.scene();
+    GG.nextFrame() => now; // give chance for this to be propagated to render thread
+
+    // also test GC on GGens that are never attached to render-thread scenegraph
+    GCube b --> GG.scene();
+}
+
 fun void spawnNoGC() {
     // GGen is attached to the scenegraph. when function exits and `a` falls out of scope,
     // GGen should still be refcounted by scenegraph and NOT be GC'd
@@ -33,5 +43,6 @@ spawnNoGC();
 while (true) {
     spork ~ spawnAndGC();  // test GC happens when shred exits
     spawnAndGC();          // test GC happens when shred does not exit
+    spork ~ spawnAndGCifSporked(); // test GC happens when shred exits
     GG.nextFrame() => now;
 }
