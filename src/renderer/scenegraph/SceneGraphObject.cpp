@@ -243,17 +243,20 @@ void SceneGraphObject::RemoveChild( SceneGraphObject * child )
         // ensure
         assert( child->m_Parent == this );
 
+        // set parent to null (must do this first to prevent double-free, bc releasing the 
+		// child may trigger a disconnect its the destructor)
+        child->m_Parent = NULL;
+
+        // remove from children list
+        m_Children.erase(it);
+
         // release ref count on child's chuck object; one less reference to it from us (parent)
         // CKAPI()->object->release( child->m_ChuckObject );
 		CHUGL_RELEASE(child);
-        // remove from children list
-        m_Children.erase(it);
 
         // release ref count on our (parent's) chuck object; one less reference to it from child
         // CKAPI()->object->release( this->m_ChuckObject );
 		CHUGL_RELEASE(this);
-        // set parent to null
-        child->m_Parent = NULL;
     }
 }
 

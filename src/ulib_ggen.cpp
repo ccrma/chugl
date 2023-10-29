@@ -371,6 +371,11 @@ CK_DLL_CTOR(cgl_obj_ctor)
 
 CK_DLL_DTOR(cgl_obj_dtor)
 {
+	// unregister from Shred2GGen map 
+	// (so we don't geta null ptr reference when the host SHRED exits and tries to detach all GGens)
+	CGL::UnregisterGGenFromShred(SHRED, SELF);
+
+	// push command to destroy this object on render thread as well
 	CGL::PushCommand(new DestroySceneGraphNodeCommand(SELF, CGL::GetGGenDataOffset(), &CGL::mainScene));
 }
 
