@@ -66,6 +66,7 @@ doc.addGroup(
         "LatheGeometry", 
         "PlaneGeometry", 
         "TorusGeometry", 
+        "CylinderGeometry",
         "CustomGeometry",
     ],
     // group name

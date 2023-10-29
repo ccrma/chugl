@@ -36,6 +36,11 @@ CK_DLL_CTOR(cgl_geo_lathe_ctor);
 CK_DLL_MFUN(cgl_geo_lathe_set);
 CK_DLL_MFUN(cgl_geo_lathe_set_no_points);
 
+// cylinder
+CK_DLL_CTOR(cgl_geo_cylinder_ctor);
+CK_DLL_MFUN(cgl_geo_cylinder_set);
+
+
 // custom
 CK_DLL_CTOR(cgl_geo_custom_ctor);
 CK_DLL_MFUN(cgl_geo_set_attribute); // general case for any kind of vertex data
@@ -166,7 +171,7 @@ t_CKBOOL init_chugl_geometry(Chuck_DL_Query *QUERY)
 	QUERY->add_arg(QUERY, "int", "segments");
 	QUERY->add_arg(QUERY, "float", "thetaStart");
 	QUERY->add_arg(QUERY, "float", "thetaLength");
-    QUERY->doc_func(QUERY, "Set cirle dimensions and subdivisions");
+    QUERY->doc_func(QUERY, "Set circle dimensions and subdivisions");
 
 	QUERY->end_class(QUERY);
 
@@ -222,6 +227,26 @@ t_CKBOOL init_chugl_geometry(Chuck_DL_Query *QUERY)
 	QUERY->add_arg(QUERY, "float", "phiStart");
 	QUERY->add_arg(QUERY, "float", "phiLength");
     QUERY->doc_func(QUERY, "Set lathe dimensions and subdivisions while maintaining the previously set curve");
+
+	QUERY->end_class(QUERY);
+
+	// cylinder geo
+	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Cylinder), Geometry::CKName(GeometryType::Base) );
+	QUERY->doc_class(QUERY, "Geometry class for constructing vertex data for cylinders");
+	QUERY->add_ex(QUERY, "geometry/cylinder.ck");
+
+	QUERY->add_ctor(QUERY, cgl_geo_cylinder_ctor);
+
+	QUERY->add_mfun(QUERY, cgl_geo_cylinder_set, "void", "set");
+	QUERY->add_arg(QUERY, "float", "radiusTop");
+	QUERY->add_arg(QUERY, "float", "radiusBottom");
+	QUERY->add_arg(QUERY, "float", "height");
+	QUERY->add_arg(QUERY, "int", "radialSegments");
+	QUERY->add_arg(QUERY, "int", "heightSegments");
+	QUERY->add_arg(QUERY, "int", "openEnded");
+	QUERY->add_arg(QUERY, "float", "thetaStart");
+	QUERY->add_arg(QUERY, "float", "thetaLength");
+	QUERY->doc_func(QUERY, "Set cylinder dimensions and subdivisions");
 
 	QUERY->end_class(QUERY);
 
@@ -383,6 +408,29 @@ CK_DLL_MFUN(cgl_geo_lathe_set_no_points)
 	t_CKFLOAT phiLength = GET_NEXT_FLOAT(ARGS);
 
 	geo->UpdateParams(segments, phiStart, phiLength);
+
+	CGL::PushCommand(new UpdateGeometryCommand(geo));
+}
+
+// Cylinder geo ----------
+
+CK_DLL_CTOR(cgl_geo_cylinder_ctor)
+{
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(new CylinderGeometry, &CGL::mainScene, SELF,  CGL::GetGeometryDataOffset()));
+}
+
+CK_DLL_MFUN(cgl_geo_cylinder_set)
+{
+	CylinderGeometry *geo = (CylinderGeometry *) CGL::GetGeometry(SELF);
+	t_CKFLOAT radiusTop = GET_NEXT_FLOAT(ARGS);
+	t_CKFLOAT radiusBottom = GET_NEXT_FLOAT(ARGS);
+	t_CKFLOAT height = GET_NEXT_FLOAT(ARGS);
+	t_CKINT radialSegments = GET_NEXT_INT(ARGS);
+	t_CKINT heightSegments = GET_NEXT_INT(ARGS);
+	t_CKBOOL openEnded = GET_NEXT_INT(ARGS);
+	t_CKFLOAT thetaStart = GET_NEXT_FLOAT(ARGS);
+	t_CKFLOAT thetaLength = GET_NEXT_FLOAT(ARGS);
+	geo->UpdateParams(radiusTop, radiusBottom, height, radialSegments, heightSegments, openEnded, thetaStart, thetaLength);
 
 	CGL::PushCommand(new UpdateGeometryCommand(geo));
 }

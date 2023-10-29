@@ -252,7 +252,7 @@ public:
 		SetUniform(MaterialUniform::Create(COLOR_UNAME, r, g, b, a));
 	}
 	void SetColor(float r, float g, float b) { 
-		auto& col = GetColor();
+		auto col = GetColor();
 		SetUniform(MaterialUniform::Create(COLOR_UNAME, r, g, b, col.a));
 	}
 	void SetAlpha(float a) { 

@@ -26,6 +26,7 @@ CK_DLL_CTOR(cgl_gsphere_ctor);
 CK_DLL_CTOR(cgl_gcircle_ctor);
 CK_DLL_CTOR(cgl_gplane_ctor);
 CK_DLL_CTOR(cgl_gtorus_ctor);
+CK_DLL_CTOR(cgl_gcylinder_ctor);
 CK_DLL_CTOR(cgl_glines_ctor);
 CK_DLL_CTOR(cgl_gpoints_ctor);
 
@@ -97,6 +98,14 @@ t_CKBOOL init_chugl_mesh(Chuck_DL_Query *QUERY)
 	QUERY->doc_class(QUERY, "Creates a Mesh that uses TorusGeometry and PhongMaterial");
 
 	QUERY->add_ctor(QUERY, cgl_gtorus_ctor);
+	QUERY->end_class(QUERY);
+
+	// GCylinder
+	QUERY->begin_class(QUERY, "GCylinder", "GMesh");
+	QUERY->doc_class(QUERY, "Creates a Mesh that uses CylinderGeometry and PhongMaterial");
+	QUERY->add_ex(QUERY, "geometry/cylinder.ck");
+
+	QUERY->add_ctor(QUERY, cgl_gcylinder_ctor);
 	QUERY->end_class(QUERY);
 
 	QUERY->begin_class(QUERY, "GLines", "GMesh");
@@ -273,6 +282,18 @@ CK_DLL_CTOR(cgl_gtorus_ctor)
 	CGL::CreateChuckObjFromGeo(API, VM, geo, SHRED, true);
 
     cglMeshSet(mesh, geo, mat);
+}
+
+CK_DLL_CTOR(cgl_gcylinder_ctor)
+{
+	Mesh *mesh = (Mesh *) CGL::GetSGO(SELF);
+
+	Material* mat = new PhongMaterial;
+	CGL::CreateChuckObjFromMat(API, VM, mat, SHRED, true);
+	Geometry* geo = new CylinderGeometry;
+	CGL::CreateChuckObjFromGeo(API, VM, geo, SHRED, true);
+
+	cglMeshSet(mesh, geo, mat);
 }
 
 CK_DLL_CTOR(cgl_glines_ctor)
