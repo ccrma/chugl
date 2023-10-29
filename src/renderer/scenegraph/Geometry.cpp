@@ -163,9 +163,6 @@ void BoxGeometry::buildPlane(char u, char v, char w, int udir, int vdir, float w
 	const int gridX1 = gridX + 1;
 	const int gridY1 = gridY + 1;
 
-	// unsigned int vertexCounter = 0;
-	unsigned int groupCount = 0;
-
 	const glm::vec3 vector = glm::vec3(0.0);
 
 	auto& posAttrib = m_Attributes[POSITION_ATTRIB_IDX];
@@ -224,19 +221,9 @@ void BoxGeometry::buildPlane(char u, char v, char w, int udir, int vdir, float w
 			// faces
 			AddTriangleIndices(a, b, d);
 			AddTriangleIndices(b, c, d);
-
-			// increase group counter
-			groupCount += 6;
 		}
 
 	}
-
-	// add a group to the geometry. this will ensure multi material support
-	// TODO: add this later. too complex for now. assume a single geometry is rendererd with a single mat
-	// scope.addGroup(groupStart, groupCount, materialIndex);
-
-	// calculate new start value for groups
-	// groupStart += groupCount;
 }
 
 /* =============================================================================
@@ -288,6 +275,10 @@ void CircleGeometry::BuildGeometry()
 	
 };
 
+/* =============================================================================
+									Plane Geo
+===============================================================================*/
+
 void PlaneGeometry::BuildGeometry()
 {
 	ResetVertexData();
@@ -332,6 +323,10 @@ void PlaneGeometry::BuildGeometry()
 		}
 	}
 }
+
+/* =============================================================================
+									Torus Geo
+===============================================================================*/
 
 void TorusGeometry::BuildGeometry()
 {
@@ -382,6 +377,10 @@ void TorusGeometry::BuildGeometry()
 		}
 	}
 }
+
+/* =============================================================================
+									Lathe Geo
+===============================================================================*/
 
 void LatheGeometry::UpdateParams(int segments, float phiStart, float phiLength)
 {
@@ -539,10 +538,186 @@ void LatheGeometry::BuildGeometry()
 	}
 }
 
+/* =============================================================================
+									Cylinder Geo
+===============================================================================*/
+
+void CylinderGeometry::BuildGeometry()
+{
+	ResetVertexData();
+	m_Dirty = false;
+
+	auto& p = m_Params;
+
+	// helper variables
+	unsigned int index = 0;
+
+	// generate torso
+	GenerateTorso(index);
+
+	if ( p.openEnded == false ) {
+		if ( p.radiusTop > 0 ) GenerateCap( true, index );
+		if ( p.radiusBottom > 0 ) GenerateCap( false, index );
+	}
+}
+
+void CylinderGeometry::GenerateTorso(unsigned int& index)
+{
+	auto& p = m_Params;
+	const float halfHeight = p.height / 2.0f;
+
+	std::vector<std::vector<unsigned int>> indexArray;
+
+	// this will be used to calculate the normal
+	const float slope = ( p.radiusBottom - p.radiusTop ) / p.height;
+
+	// generate vertices, normals and uvs
+	for ( unsigned int y = 0; y <= p.heightSegments; y++ ) {
+
+		std::vector<unsigned int> indexRow;
+
+		const float v = (float) y / (float) p.heightSegments;
+
+		// calculate the radius of the current row
+		const float radius = v * ( p.radiusBottom - p.radiusTop ) + p.radiusTop;
+
+
+		for ( unsigned int x = 0; x <= p.radialSegments; x++ ) {
+			Vertex vert;
+
+			const float u = (float) x / (float) p.radialSegments;
+
+			const float theta = u * p.thetaLength + p.thetaStart;
+
+			const float sinTheta = glm::sin( theta );
+			const float cosTheta = glm::cos( theta );
+
+			// vertex
+			vert.Position.x = radius * sinTheta;
+			vert.Position.y = - v * p.height + halfHeight;
+			vert.Position.z = radius * cosTheta;
+			// vertices.push( vertex.x, vertex.y, vertex.z );
+
+			// normal
+			vert.Normal = glm::normalize(glm::vec3( sinTheta, slope, cosTheta ));
+
+			// uv
+			vert.TexCoords.x = u;
+			vert.TexCoords.y = 1.0 - v;
+
+			// save index of vertex in respective row
+			AddVertex(vert);
+
+			indexRow.push_back( index ++ );
+		}
+
+		// now save vertices of the row in our index array
+		indexArray.push_back( indexRow );
+
+	}
+
+	// generate indices
+	for ( unsigned int x = 0; x < p.radialSegments; x ++ ) {
+		for ( unsigned int y = 0; y < p.heightSegments; y ++ ) {
+
+			// we use the index array to access the correct indices
+
+			const unsigned int a = indexArray[ y ][ x ];
+			const unsigned int b = indexArray[ y + 1 ][ x ];
+			const unsigned int c = indexArray[ y + 1 ][ x + 1 ];
+			const unsigned int d = indexArray[ y ][ x + 1 ];
+
+			// faces
+			AddTriangleIndices( a, b, d );
+			AddTriangleIndices( b, c, d );
+		}
+	}
+}
+
+void CylinderGeometry::GenerateCap(bool top, unsigned int& index)
+{
+	auto& p = m_Params;
+	const float halfHeight = p.height / 2.0f;
+
+	// save the index of the first center vertex
+	const auto centerIndexStart = index;
+
+	const float radius = top ? p.radiusTop : p.radiusBottom;
+	const float sign = top ? 1.0f : -1.0f;
+
+	// first we generate the center vertex data of the cap.
+	// because the geometry needs one set of uvs per face,
+	// we must generate a center vertex per face/segment
+	for (unsigned int x = 1; x <= p.radialSegments; x++)
+	{
+		Vertex vert;
+
+		vert.Position = glm::vec3(0.0, halfHeight * sign, 0.0);
+		vert.Normal = glm::vec3(0.0, sign, 0.0);
+		vert.TexCoords = glm::vec2(0.5, 0.5);
+
+		AddVertex(vert);
+
+		// increase index
+		index++;
+	}
+
+	// save the index of the last center vertex
+	const unsigned int centerIndexEnd = index;
+
+	// now we generate the surrounding vertices, normals and uvs
+
+	for (unsigned int x = 0; x <= p.radialSegments; x++)
+	{
+		Vertex vert;
+
+		const float u = (float) x / (float) p.radialSegments;
+		const float theta = u * p.thetaLength + p.thetaStart;
+
+		const float cosTheta = glm::cos(theta);
+		const float sinTheta = glm::sin(theta);
+
+		// vertex
+		vert.Position.x = radius * sinTheta;
+		vert.Position.y = halfHeight * sign;
+		vert.Position.z = radius * cosTheta;
+
+		// normal
+		vert.Normal = glm::vec3(0, sign, 0);
+
+		// uv
+		vert.TexCoords.x = (cosTheta * 0.5) + 0.5;
+		vert.TexCoords.y = (sinTheta * 0.5 * sign) + 0.5;
+
+		AddVertex(vert);
+
+		// increase index
+		index++;
+	}
+
+	// generate indices
+
+	for (unsigned int x = 0; x < p.radialSegments; x++)
+	{
+
+		const unsigned int c = centerIndexStart + x;
+		const unsigned int i = centerIndexEnd + x;
+
+		if (top)
+		{
+			// face top
+			AddTriangleIndices(i, i + 1, c);
+		}
+		else
+		{
+			// face bottom
+			AddTriangleIndices(i + 1, i, c);
+		}
+	}
+}
 
 // void CapsuleGeometry::BuildGeometry()
 // {
 // 	ResetVertexData();
 // 	m_Dirty = false;
 // }
-

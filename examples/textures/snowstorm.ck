@@ -164,11 +164,14 @@ fun void WindSpeedListener() {
 
 // Game loop ============================================
 0.1 => float camSpeed;
-3.5 => float camMovement;
+1.5 => float camMovement;
 while (true) {
     // camera controls (inverted so it looks like you're moving the snowflakes!)
-    -camMovement * GG.mouseX() / GG.windowWidth() => float mouseX;
-    camMovement * GG.mouseY() / GG.windowHeight() => float mouseY;
+    GG.mouseX() / GG.windowWidth() => float mouseX;
+    GG.mouseY() / GG.windowHeight() => float mouseY;
+    // normalize mouse coordinates to [-1, 1], scale by camMovement
+    -camMovement * (mouseX * 2.0 - 1.0) => mouseX;
+    camMovement * (mouseY * 2.0 - 1.0) => mouseY;
     camSpeed * (mouseX - camera.posX()) + camera.posX() => camera.posX;
     camSpeed * (mouseY - camera.posY()) + camera.posY() => camera.posY;
     camera.lookAt( scene.pos() );

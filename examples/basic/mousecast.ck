@@ -8,7 +8,7 @@
 // date: Fall 2023
 //-----------------------------------------------------------------------------
 
-// simplified Mouse class from examples/input/Mouse.ck
+// simplified Mouse class from examples/input/Mouse.ck  =======================
 class Mouse
 {
     int mouseState[3];
@@ -54,12 +54,60 @@ class Mouse
     }
 }
 
-//==============================================================================
+// Example Parameters ==========================================================
+8 => float spawnDistance;
+false => int rotateCam;
+["Perspective", "Orthographic"] @=> string cameraModes[];
 
-// scene setup
-5 => GG.camera().posZ;
+// UI setup ====================================================================
+UI_Window window;
+window.text("Mousecast Example");
 
-// setup mouse and mouse listeners
+UI_SliderFloat distanceSlider;
+distanceSlider.text("Spawn Distance");
+distanceSlider.range(1, 20);
+distanceSlider.val(spawnDistance);
+
+UI_Checkbox rotateCamCheckbox;
+rotateCamCheckbox.text("Rotate Camera");
+rotateCamCheckbox.val(rotateCam);
+
+UI_Dropdown dropdown;
+dropdown.text("Select Camera Mode");
+dropdown.options(cameraModes);
+dropdown.val(0);
+
+window.add(distanceSlider);
+window.add(rotateCamCheckbox);
+window.add(dropdown);
+
+fun void distanceSliderListener() {
+    while (true) {
+        distanceSlider => now;
+        distanceSlider.val() => spawnDistance;
+    }
+} spork ~ distanceSliderListener();
+
+fun void rotateCamCheckboxListener() {
+    while (true) {
+        rotateCamCheckbox => now;
+        rotateCamCheckbox.val() => rotateCam;
+    }
+} spork ~ rotateCamCheckboxListener();
+
+fun void dropdownListener() {
+    while (true) {
+        dropdown => now;
+        dropdown.val() => int mode;
+        if (cameraModes[mode] == "Perspective") {
+            GG.camera().perspective();
+        } else if (cameraModes[mode] == "Orthographic") {
+            GG.camera().orthographic();
+        }
+    }
+} spork ~ dropdownListener();
+
+// setup mouse and mouse listeners =============================================
 Mouse mouse;
 spork ~ mouse.start(0);
 
@@ -69,15 +117,38 @@ fun void clickListener() {
         // get click location
         GG.mouseX() => float x;
         GG.mouseY() => float y;
-        // generate ray going from camera through click location
-        GG.camera().screenCoordToWorldRay(GG.mouseX(), GG.mouseY()) => vec3 ray;
-
+        GG.windowWidth() * 1.0 => float screenWidth;
+        GG.windowHeight() * 1.0 => float screenHeight;
         <<< "left click at screen pos", x, y >>>;
-        <<< "generates world ray with dir", ray >>>;
 
-        // calculate spawn position by moving along ray
-        3 => float distance;
-        distance * ray + GG.camera().pos() => vec3 spawnPos;
+        vec3 spawnPos;
+
+        // calculate spawn position differently depending on camera mode
+        if (GG.camera().mode() == GCamera.ORTHO) {
+            // calculate screen aspect
+            screenWidth / screenHeight => float aspect;
+
+            // calculate camera frustrum size in world space
+            GG.camera().viewSize() => float frustrumHeight;  // height of frustrum in world space
+            frustrumHeight * aspect => float frustrumWidth;  // width of frustrum in world space
+
+            // convert from normalized mouse coords to view space coords
+            // (we negate viewY so that 0,0 is bottom left instead of top left)
+            frustrumWidth * (x / screenWidth - 0.5) => float viewX;
+            -frustrumHeight * (y / screenHeight - 0.5) => float viewY;
+
+            // convert from view space coords to world space coords
+            GG.camera().posLocalToWorld(@(viewX, viewY, -spawnDistance)) => spawnPos;
+        } else {
+            // generate ray going from camera through click location
+            GG.camera().screenCoordToWorldRay(x, y) => vec3 ray;
+
+            <<< "generates world ray with dir", ray >>>;
+
+            // calculate spawn position by moving along ray
+            spawnDistance * ray + GG.camera().pos() => spawnPos;
+        }
+
         // spawn sphere at spawnPos
         GSphere s --> GG.scene();
         s.pos(spawnPos);
@@ -89,8 +160,8 @@ fun void clickListener() {
     }
 } spork ~ clickListener();
 
-
-// gameloop
+// gameloop ====================================================================
 while (true) {
+    if (rotateCam) { -GG.dt() * .2 => GG.camera().rotateY; }
     GG.nextFrame() => now;
 }

@@ -81,6 +81,9 @@ CK_DLL_MFUN(cgl_obj_get_up);
 	CK_DLL_MFUN(cgl_obj_get_scale_world);
 	CK_DLL_MFUN(cgl_obj_set_scale_world);
 
+// transformation matrix API
+CK_DLL_MFUN(cgl_obj_local_pos_to_world_pos);
+
 // parent-child scenegraph API
 // CK_DLL_MFUN(cgl_obj_disconnect);
 CK_DLL_MFUN(cgl_obj_get_parent);
@@ -322,6 +325,11 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query *QUERY)
 	QUERY->add_mfun(QUERY, cgl_obj_set_scale_world, "vec3", "scaWorld");
 	QUERY->add_arg(QUERY, "vec3", "scale");
 	QUERY->doc_func(QUERY, "Set object scale in world space");
+
+	// Matrix transform API ===============================================================
+	QUERY->add_mfun(QUERY, cgl_obj_local_pos_to_world_pos, "vec3", "posLocalToWorld");
+	QUERY->add_arg(QUERY, "vec3", "localPos");
+	QUERY->doc_func(QUERY, "Transform a position in local space to world space");
 
 	// scenegraph relationship methods =======================================
 	QUERY->add_mfun(QUERY, cgl_obj_get_parent, "GGen", "parent");
@@ -777,6 +785,16 @@ CK_DLL_MFUN(cgl_obj_set_scale_world)
 	cglObj->SetWorldScale(glm::vec3(vec.x, vec.y, vec.z));
 	RETURN->v_vec3 = vec;
 	CGL::PushCommand(new UpdateScaleCommand(cglObj));
+}
+
+// Transformation API ===============================================================
+
+CK_DLL_MFUN(cgl_obj_local_pos_to_world_pos)
+{
+	SceneGraphObject *cglObj = CGL::GetSGO(SELF);
+	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
+	glm::vec3 worldPos = cglObj->GetWorldMatrix() * glm::vec4(vec.x, vec.y, vec.z, 1.0f);
+	RETURN->v_vec3 = {worldPos.x, worldPos.y, worldPos.z};
 }
 
 // Scenegraph Relationship Impl ===============================================================
