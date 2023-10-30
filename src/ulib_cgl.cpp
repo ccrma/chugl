@@ -957,7 +957,7 @@ void CGL::UnregisterShredWaiting(Chuck_VM_Shred *shred)
 //-----------------------------------------------------------------------------
 
 // traverses chuck-side (audio thread) scenegraph and calls user-defined update() on GGens
-void CGL::UpdateSceneGraph(Scene &scene, CK_DL_API API, Chuck_VM *VM, Chuck_VM_Shred *shred)
+void CGL::UpdateSceneGraph(Scene &scene, CK_DL_API API, Chuck_VM *VM, Chuck_VM_Shred * calling_shred)
 {
 	assert(CGL::our_update_vt_offset >= 0);
 
@@ -989,11 +989,23 @@ void CGL::UpdateSceneGraph(Scene &scene, CK_DL_API API, Chuck_VM *VM, Chuck_VM_S
 		SceneGraphObject *obj = queue.front();
 		queue.pop();
 
-		// call update
-		Chuck_Object *ggen = obj->m_ChuckObject;
+        // call update
+        Chuck_Object *ggen = obj->m_ChuckObject;
+
+        // must use shred associated with GGen
+        auto it = s_GGen2Shred.find( ggen );
+        // make sure ggen is in map
+        assert( it != s_GGen2Shred.end() );
+        // the shred
+        Chuck_VM_Shred * origin_shred = (it->second);
+        // make sure it's not null
+        assert( origin_shred != NULL );
+
+        // don't invoke update() for scene and camera
 		if (ggen != nullptr && !obj->IsScene() && !obj->IsCamera())
 		{
-			API->vm->invoke_mfun_immediate_mode(ggen, CGL::our_update_vt_offset, VM, shred, &theArg, 1);
+            // invoke the update function in immediate mode
+			API->vm->invoke_mfun_immediate_mode(ggen, CGL::our_update_vt_offset, VM, origin_shred, &theArg, 1);
 		}
 
 		// add children to stack
