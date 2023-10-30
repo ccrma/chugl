@@ -119,26 +119,6 @@ private:
     SceneGraphNode* m_Clone;
 };
 
-// create Mesh
-// TODO: need to create ID locator class and refactor mesh to use geo and mat IDs, not pointers
-// then can delete this CreateMeshCommand and use general CreateSceneGraphNodeCommand instead
-class CreateMeshCommand : public SceneGraphCommand
-{
-public:
-    CreateMeshCommand(
-        Mesh* mesh,
-        Scene* audioThreadScene,
-        Chuck_Object* ckobj,
-        t_CKUINT data_offset
-    );
-    virtual void execute(Scene* scene) override;
-
-private:
-    size_t mesh_ID;
-    size_t mat_ID;
-    size_t geo_ID;
-};
-
 //==================== SceneGraph Relationship Commands =======================//
 
 // add child

@@ -132,8 +132,8 @@ CK_DLL_CTOR(cgl_mesh_ctor)
 	// 	std::cerr << "GMesh instantiated" << std::endl;
 	// }
 
-	Mesh *mesh = new Mesh;
-	CGL::PushCommand(new CreateMeshCommand(mesh, &CGL::mainScene, SELF, CGL::GetGGenDataOffset()));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(new Mesh, &CGL::mainScene, SELF, CGL::GetGGenDataOffset()));
+	// CGL::PushCommand(new CreateMeshCommand(mesh, &CGL::mainScene, SELF, CGL::GetGGenDataOffset()));
 }
 
 static void cglMeshSet(Mesh *mesh, Geometry *geo, Material *mat)
