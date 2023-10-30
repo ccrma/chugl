@@ -68,6 +68,8 @@ DestroySceneGraphNodeCommand::DestroySceneGraphNodeCommand(
 ) : m_ID(0)
 {
 	SceneGraphNode* node = (SceneGraphNode*) OBJ_MEMBER_INT(ckobj, data_offset);
+    // check
+    assert(node->IsAudioThreadObject());
     // set m_ID
     m_ID = node->GetID();
     // zero out the chuck object memory

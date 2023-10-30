@@ -14,6 +14,7 @@
 #include "renderer/scenegraph/Command.h"
 #include "renderer/scenegraph/Scene.h"
 #include "renderer/scenegraph/Light.h"
+#include "renderer/scenegraph/Locator.h"
 
 //-----------------------------------------------------------------------------
 // ChuGL Event Listeners
@@ -104,6 +105,8 @@ t_CKBOOL init_chugl(Chuck_DL_Query *QUERY)
     CGL::SetCKAPI( QUERY->api() );
     // set API in the scene graph node
     SceneGraphNode::SetCKAPI( QUERY->api() );
+	// set API in the locator service
+	Locator::SetCKAPI( QUERY->api() );
 
 	// init GUI
 	if (!init_chugl_gui(QUERY)) return FALSE;
@@ -147,68 +150,11 @@ t_CKBOOL create_chugl_default_objs(Chuck_DL_Query *QUERY)
     Chuck_Type * t_ggen = QUERY->api()->type->lookup(QUERY->vm(), "GGen");
     // find the offset for update
     CGL::our_update_vt_offset = QUERY->api()->type->get_vtable_offset(QUERY->vm(), t_ggen, "update");
-    
+
     // GGen instantiation listener
-    QUERY->api()->type->callback_on_instantiate( cgl_ggen_on_instantiate_listener, t_ggen, QUERY->vm(), TRUE );
-	
+    QUERY->api()->type->callback_on_instantiate( cgl_ggen_on_instantiate_listener, t_ggen, QUERY->vm(), FALSE );
+
 	return true;
-}
-
-// mapping shred to GGens created on that shred
-static std::map<Chuck_VM_Shred *, std::list<Chuck_Object *> > g_shred2ggen;
-
-static void detach_ggens_from_shred( Chuck_VM_Shred * shred )
-{
-    if( g_shred2ggen.find( shred ) == g_shred2ggen.end() )
-        return;
-
-    // get list of GGens
-    std::list<Chuck_Object *> & ggens = g_shred2ggen[shred];
-    
-    for( auto * ggen : ggens )
-    {
-        // verify
-        assert( ggen != NULL );
-        
-        // get scenegraph within the GGen
-        SceneGraphObject * cglObj = CGL::GetSGO(ggen);
-
-		// edge case: if it's the main scene or camera, don't disconnect, because these static instances are shared across all shreds!
-		// also don't remove if its the default dir light
-		// TODO: why do we still need this check even though I create_without_shred ???
-		if (cglObj == &CGL::mainScene || cglObj == &CGL::mainCamera || cglObj == CGL::mainScene.GetDefaultLight())
-			goto reset_origin_shred;
-
-        // if null, it is possible shred was removed between GGen instantiate and its pre-constructor
-        if( cglObj )
-        {
-            // disconnect
-			CGL::PushCommand(new DisconnectCommand(cglObj));
-        }
-
-reset_origin_shred:
-        // get origin shred
-        Chuck_VM_Shred * originShred = CGL::CKAPI()->object->get_origin_shred( ggen );
-        // make sure if ggen has an origin shred, it is this one
-        assert( !originShred || originShred == shred );
-        // also clear reference to this shred
-        CGL::CKAPI()->object->set_origin_shred( ggen, NULL );
-    }
-
-    // release ref count on all GGen; in theory this could be done in the loop above,
-    // assuming all refcounts properly handled; in practice this is a bit "safer" in case
-    // of inconstencies / bugs elsewhere
-    for( auto * ggen : ggens )
-    {
-		// TODO: need to come up with a new ggen refcount logic that makes the following code not leak:
-		/*
-		while (true) {
-			GCube c;
-		}
-		*/
-        // release it
-		CGL::CKAPI()->object->release(ggen);
-    }
 }
 
 // called when shred is taken out of circulation for any reason
@@ -225,21 +171,18 @@ CK_DLL_SHREDS_WATCHER(cgl_shred_on_destroy_listener)
 	CGL::UnregisterShredWaiting(SHRED);
 
     // detach all GGens on shred
-    detach_ggens_from_shred( SHRED );
+    CGL::DetachGGensFromShred( SHRED );
     
 	// we tell the window to close when the last running
 	// graphics shred is removed. 
 	// this avoids the bug where window is closed 
 	// when a non-graphics shred exits before 
 	// any  graphics shreds have even been created
-    if( g_shred2ggen.find( SHRED ) != g_shred2ggen.end() ) {
-		g_shred2ggen.erase( SHRED );
-		if (g_shred2ggen.empty()) {
-			CGL::PushCommand(new CloseWindowCommand(&CGL::mainScene));
-			CGL::Render();  // wake up render thread one last time to process the close window command
-		}
+	CGL::EraseFromShred2GGenMap(SHRED);
+	if (CGL::Shred2GGenMapEmpty()) {
+		CGL::PushCommand(new CloseWindowCommand(&CGL::mainScene));
+		CGL::Render();  // wake up render thread one last time to process the close window command
 	}
-
 }
 
 CK_DLL_TYPE_ON_INSTANTIATE(cgl_ggen_on_instantiate_listener)
@@ -247,9 +190,7 @@ CK_DLL_TYPE_ON_INSTANTIATE(cgl_ggen_on_instantiate_listener)
     // this should never be called by VM with a NULL object
     assert( OBJECT != NULL );
     // add mapping from SHRED->GGen
-    g_shred2ggen[SHRED].push_back( OBJECT );
-    // add ref
-	CGL::CKAPI()->object->add_ref(OBJECT);
+	CGL::RegisterGGenToShred(SHRED, OBJECT);
 }
 
 
@@ -330,6 +271,8 @@ CK_DLL_MFUN(cgl_update_event_waiting_on)
         // signal the graphics-side that audio-side is done processing for this frame
         // see CGL::WaitOnUpdateDone()
         CGL::Render();
+		// Garbage collect (TODO add API function to control this)
+		Locator::GC();  
 	}
 }
 
@@ -689,6 +632,10 @@ bool CGL::useChuckTime = true;
 Chuck_DL_MainThreadHook *CGL::hook = nullptr;
 bool CGL::hookActivated = false;
 
+// Shred to GGen bookkeeping
+std::unordered_map<Chuck_VM_Shred *, std::unordered_set<Chuck_Object *> > CGL::s_Shred2GGen;
+std::unordered_map<Chuck_Object*, Chuck_VM_Shred*> CGL::s_GGen2Shred;
+
 void CGL::ActivateHook()
 {
 	if (hookActivated || !hook)
@@ -717,6 +664,50 @@ void CGL::SetCKVM( Chuck_VM * theVM )
 void CGL::SetCKAPI( CK_DL_API theAPI )
 {
     s_api = theAPI;
+}
+
+void CGL::DetachGGensFromShred(Chuck_VM_Shred *shred)
+{
+    if( s_Shred2GGen.find( shred ) == s_Shred2GGen.end() )
+        return;
+
+    // create a copy of the set of GGen IDs created on this shred that have NOT been garbage collected
+	// we need a copy here because GGens which are disconnected may be garbage collected, which will
+	// invalidate the iterator, i.e. they remove themselves from the Shred2GGen map
+	// we store IDs and not pointers because pointers may be invalidated by garbage collection during 
+	// the loop below
+	std::vector<size_t> ggensCopy; 
+	ggensCopy.reserve(s_Shred2GGen[shred].size());
+
+	// populate copy
+	for (auto *ggen : s_Shred2GGen[shred])
+	{
+		SceneGraphObject* sgo = CGL::GetSGO(ggen);
+		assert(sgo);
+		ggensCopy.push_back(sgo->GetID());
+	}
+
+    for( auto ggen_id : ggensCopy )
+    {
+        // verify
+        assert( ggen_id > 0 );
+
+		// get then GGen
+		SceneGraphObject* sgo = (SceneGraphObject*) Locator::GetNode(ggen_id, true);
+		if (!sgo) continue;  // already deleted
+
+		Chuck_Object* ckobj = sgo->m_ChuckObject;
+		if (!ckobj) continue;  // already deleted
+
+		// edge case: if it's the main scene or camera, don't disconnect, because these static instances are shared across all shreds!
+		// also don't remove if its the default dir light
+		// TODO: why do we still need this check even though I create_without_shred ???
+		if (sgo == &CGL::mainScene || sgo == &CGL::mainCamera || sgo == CGL::mainScene.GetDefaultLight())
+			continue;
+
+		// disconnect
+		CGL::PushCommand(new DisconnectCommand(sgo));
+    }
 }
 
 // can pick a better name maybe...calling this wakes up renderer thread

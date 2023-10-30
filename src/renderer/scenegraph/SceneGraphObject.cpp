@@ -220,18 +220,15 @@ void SceneGraphObject::AddChild(SceneGraphObject* child)
 		child->GetParent()->RemoveChild(child);
 	}
 
-
 	// assign to new parent
 	child->m_Parent = this;
     // reference count
-    // CKAPI()->object->add_ref( this->m_ChuckObject );
-	CHUGL_ADD_REF(this);
+	CHUGL_NODE_ADD_REF(this);
 
 	// add to list of children
 	m_Children.push_back(child);
     // add ref to kid
-    // CKAPI()->object->add_ref( child->m_ChuckObject );
-	CHUGL_ADD_REF(child);
+	CHUGL_NODE_ADD_REF(child);
 }
 
 void SceneGraphObject::RemoveChild( SceneGraphObject * child )
@@ -243,17 +240,18 @@ void SceneGraphObject::RemoveChild( SceneGraphObject * child )
         // ensure
         assert( child->m_Parent == this );
 
-        // release ref count on child's chuck object; one less reference to it from us (parent)
-        // CKAPI()->object->release( child->m_ChuckObject );
-		CHUGL_RELEASE(child);
+        // set parent to null (must do this first to prevent double-free, bc releasing the 
+		// child may trigger a disconnect its the destructor)
+        child->m_Parent = NULL;
+
         // remove from children list
         m_Children.erase(it);
 
+        // release ref count on child's chuck object; one less reference to it from us (parent)
+		CHUGL_NODE_QUEUE_RELEASE(child);
+
         // release ref count on our (parent's) chuck object; one less reference to it from child
-        // CKAPI()->object->release( this->m_ChuckObject );
-		CHUGL_RELEASE(this);
-        // set parent to null
-        child->m_Parent = NULL;
+		CHUGL_NODE_QUEUE_RELEASE(this);
     }
 }
 
