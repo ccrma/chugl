@@ -2,7 +2,8 @@
     "gc-ggen.ck",
     "gc-texture.ck",
     "gc-geo.ck",
-    "gc-material.ck"
+    "gc-material.ck",
+    "gc-shred.ck"
 ] @=> string gc_test_files[];
 
 for (auto test : gc_test_files) {

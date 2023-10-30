@@ -804,6 +804,17 @@ CK_DLL_GFUN(ggen_op_gruck)
 	Chuck_Object *lhs = GET_NEXT_OBJECT(ARGS);
 	Chuck_Object *rhs = GET_NEXT_OBJECT(ARGS);
 
+	if (!lhs || !rhs) {
+		std::string errMsg = std::string("in gruck operator: ") + (lhs?"LHS":"[null]") + " --> " + (rhs?"RHS":"[null]");
+		// nullptr exception
+		API->vm->throw_exception(
+			"NullPointerException",
+			errMsg.c_str(),
+			SHRED
+		);
+		return;
+	}
+
 	// get internal representation
 	SceneGraphObject *LHS = CGL::GetSGO(lhs);
 	SceneGraphObject *RHS = CGL::GetSGO(rhs);
@@ -812,7 +823,6 @@ CK_DLL_GFUN(ggen_op_gruck)
 	CGL::PushCommand(new RelationshipCommand(RHS, LHS, RelationshipCommand::Relation::AddChild));
 
 	// return RHS
-	// TODO: this is causing a refcount error
 	RETURN->v_object = rhs;
 }
 

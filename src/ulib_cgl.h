@@ -245,7 +245,17 @@ private:  // SHRED --> GGen bookkeeping
 	// This is necessary because there are other instances, depending where/when an object is released,
 	// where the CK_DLL_DTOR `SHRED` param is NULL
 	static std::unordered_map<Chuck_Object*, Chuck_VM_Shred*> s_GGen2Shred;
+
+	// Run it back
+	// This map is used by the auto-update invoker, to track the top-level ancestor
+	// shred of the shred this GGen was created on.
+	// This origin shred contains file-level variables that may be accessed in
+	// this GGen's update(float dt) function
+	// GGens register to this map on instantiation
+	// GGens remove themselves from this map on destruction
+	static std::unordered_map<Chuck_Object*, Chuck_VM_Shred*> s_GGen2OriginShred;
 public: 
+
 	static void RegisterGGenToShred(Chuck_VM_Shred *shred, Chuck_Object *ggen) {
 		// register shred --> GGen
 		s_Shred2GGen[shred].insert(ggen);
@@ -255,8 +265,21 @@ public:
 
 		// register GGen --> shred
 		s_GGen2Shred[ggen] = shred;
+
+		// register GGen --> origin shred
+		auto* parent_shred = shred;
+		// walk up parent chain until top-level
+		while (parent_shred->parent) {
+			parent_shred = parent_shred->parent;
+		}
+		s_GGen2OriginShred[ggen] = parent_shred;
 	}
+
 	static void UnregisterGGenFromShred(Chuck_VM_Shred *shred, Chuck_Object *ggen) {
+		// unregister GGen --> ancestor/origin shred
+		// call this first in case the original shred has already exited and cleaned up
+		s_GGen2OriginShred.erase(ggen);
+
 		// if ggen not found in ggen2shred map, then it's already been unregistered
 		// probably from it's parent shred already being destroyed
 		if (s_GGen2Shred.find(ggen) == s_GGen2Shred.end()) return;
@@ -277,6 +300,7 @@ public:
 		// unregister GGen --> shred
 		s_GGen2Shred.erase(ggen);
 	}
+
 	static void DetachGGensFromShred(Chuck_VM_Shred *shred);
 	
 	// erases shred from map (call when shred is destroyed)
@@ -288,11 +312,23 @@ public:
 			shredInMap = true;
 			for (auto* ggen : s_Shred2GGen[shred]) {
 				s_GGen2Shred.erase(ggen);
+				// DON'T REMOVE FROM ORIGIN SHRED MAP
+				// in case origin shred is still alive, and has a reference to this GGen
 			}
 		}
 		// then remove from Shred2GGen map
 		s_Shred2GGen.erase(shred);
 		return shredInMap;
 	}
-	static bool Shred2GGenMapEmpty() { return s_Shred2GGen.empty(); }
+
+	static bool NoActiveGraphicsShreds() {
+		return s_Shred2GGen.empty();
+	}
+
+	static bool NoActiveGGens() {
+		if (s_Shred2GGen.empty()) assert(s_GGen2Shred.empty());
+		if (s_GGen2Shred.empty()) assert(s_Shred2GGen.empty());
+
+		return s_GGen2OriginShred.empty() && s_GGen2Shred.empty(); 
+	}
 };

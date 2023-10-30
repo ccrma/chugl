@@ -178,7 +178,15 @@ CK_DLL_SHREDS_WATCHER(cgl_shred_on_destroy_listener)
 	// this avoids the bug where window is closed 
 	// when a non-graphics shred exits before 
 	// any  graphics shreds have even been created
-	if (CGL::EraseFromShred2GGenMap(SHRED) && CGL::Shred2GGenMapEmpty()) {
+	bool isGraphicsShred = CGL::EraseFromShred2GGenMap(SHRED);
+	
+	// behavior: after window opens (ie GG.nextFrame() has been called once)
+	// if the #shreds calling GG.nextFrame() drops to zero, window is 
+	// immediately closed and chuck VM is shut down.
+	if ( 
+		isGraphicsShred && CGL::NoActiveGraphicsShreds()
+	) {
+		Locator::GC();  // gc to force any disconnected GGens to be cleaned up
 		CGL::PushCommand(new CloseWindowCommand(&CGL::mainScene));
 		CGL::Render();  // wake up render thread one last time to process the close window command
 	}
@@ -634,6 +642,7 @@ bool CGL::hookActivated = false;
 // Shred to GGen bookkeeping
 std::unordered_map<Chuck_VM_Shred *, std::unordered_set<Chuck_Object *> > CGL::s_Shred2GGen;
 std::unordered_map<Chuck_Object*, Chuck_VM_Shred*> CGL::s_GGen2Shred;
+std::unordered_map<Chuck_Object*, Chuck_VM_Shred*> CGL::s_GGen2OriginShred;
 
 void CGL::ActivateHook()
 {
@@ -993,9 +1002,9 @@ void CGL::UpdateSceneGraph(Scene &scene, CK_DL_API API, Chuck_VM *VM, Chuck_VM_S
         Chuck_Object *ggen = obj->m_ChuckObject;
 
         // must use shred associated with GGen
-        auto it = s_GGen2Shred.find( ggen );
+        auto it = s_GGen2OriginShred.find( ggen );
         // make sure ggen is in map
-        assert( it != s_GGen2Shred.end() );
+        assert( it != s_GGen2OriginShred.end() );
         // the shred
         Chuck_VM_Shred * origin_shred = (it->second);
         // make sure it's not null
