@@ -39,13 +39,13 @@ enum CGL_TextureType : t_CKUINT {
     Count
 };
 
-enum class CGL_TextureWrapMode : t_CKUINT {
+enum CGL_TextureWrapMode : t_CKUINT {
     Repeat = 0,
     MirroredRepeat,
     ClampToEdge
 };
 
-enum class CGL_TextureFilterMode : t_CKUINT {
+enum CGL_TextureFilterMode : t_CKUINT {
     Nearest = 0,
     Linear,
     // Nearest_MipmapNearest,
@@ -148,16 +148,16 @@ public:
 
 // static constants (because pass enums as svars through chuck dll query is undefined)
     // wrap modes
-    const static CGL_TextureWrapMode Repeat; 
-    const static CGL_TextureWrapMode MirroredRepeat;
-    const static CGL_TextureWrapMode ClampToEdge;
+    const static t_CKUINT Repeat; 
+    const static t_CKUINT MirroredRepeat;
+    const static t_CKUINT ClampToEdge;
 
     // filter modes
     // note: X_MipmapY uses X for filtering, and Y for MIPMAP selection
-    const static CGL_TextureFilterMode Nearest;
-    const static CGL_TextureFilterMode Linear;
-    const static CGL_TextureFilterMode Nearest_MipmapNearest;
-    const static CGL_TextureFilterMode Linear_MipmapNearest;
-    const static CGL_TextureFilterMode Nearest_MipmapLinear;
-    const static CGL_TextureFilterMode Linear_MipmapLinear;
+    const static t_CKUINT Nearest;
+    const static t_CKUINT Linear;
+    // const static CGL_TextureFilterMode Nearest_MipmapNearest;
+    // const static CGL_TextureFilterMode Linear_MipmapNearest;
+    // const static CGL_TextureFilterMode Nearest_MipmapLinear;
+    // const static CGL_TextureFilterMode Linear_MipmapLinear;
 };

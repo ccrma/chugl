@@ -40,11 +40,11 @@ fun void cycleCameraModes() {
         2::second => now;
         <<< "persp mode" >>>;
         cam.perspective();
-        GCamera.MODE_PERSP => mode;
+        GCamera.PERSPECTIVE => mode;
         2::second => now;
         <<< "ortho mode" >>>;
         cam.orthographic();
-        GCamera.MODE_ORTHO => mode;
+        GCamera.ORTHO => mode;
     }
 
 } 
@@ -54,14 +54,14 @@ fun void scrollZoom() {
     MM.GetScrollDelta() / 300.0 => float scroll_delta;
     if (scroll_delta == 0) return;
 
-    <<< "cam mode:  ", cam.mode(), "mode persp", GCamera.MODE_PERSP, 
-        "mode ortho", GCamera.MODE_ORTHO, "fov", cam.fov(), "size", cam.viewSize() >>>;
+    <<< "cam mode:  ", cam.mode(), "mode persp", GCamera.PERSPECTIVE, 
+        "mode ortho", GCamera.ORTHO, "fov", cam.fov(), "size", cam.viewSize() >>>;
 
     // TODO why does this integer comparison not work??
-    if (mode == GCamera.MODE_PERSP) {
+    if (mode == GCamera.PERSPECTIVE) {
         <<< "setting  fov" >>>;
         cam.fov() - scroll_delta => cam.fov;
-    } else if (mode == GCamera.MODE_ORTHO) {
+    } else if (mode == GCamera.ORTHO) {
         <<< "setting  size" >>>;
         cam.viewSize() - scroll_delta => cam.viewSize;
     } else {

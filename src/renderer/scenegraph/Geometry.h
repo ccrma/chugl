@@ -132,10 +132,10 @@ public:
 	bool m_Dirty;  // if true, rebuild buffers
 
 public:  // constants
-	static const unsigned int POSITION_ATTRIB_IDX;
-	static const unsigned int NORMAL_ATTRIB_IDX;
-	static const unsigned int COLOR_ATTRIB_IDX;
-	static const unsigned int UV0_ATTRIB_IDX;
+	static const t_CKUINT POSITION_ATTRIB_IDX;
+	static const t_CKUINT NORMAL_ATTRIB_IDX;
+	static const t_CKUINT COLOR_ATTRIB_IDX;
+	static const t_CKUINT UV0_ATTRIB_IDX;
 
 public: // chuck type names
 	// TODO can probably template this and genarlize across all scenegraph classes?

@@ -4,10 +4,10 @@
 ===============================================================================*/
 
 // constants
-const unsigned int Geometry::POSITION_ATTRIB_IDX = 0;
-const unsigned int Geometry::NORMAL_ATTRIB_IDX = 1;
-const unsigned int Geometry::COLOR_ATTRIB_IDX = 2;
-const unsigned int Geometry::UV0_ATTRIB_IDX = 3;
+const t_CKUINT Geometry::POSITION_ATTRIB_IDX = 0;
+const t_CKUINT Geometry::NORMAL_ATTRIB_IDX = 1;
+const t_CKUINT Geometry::COLOR_ATTRIB_IDX = 2;
+const t_CKUINT Geometry::UV0_ATTRIB_IDX = 3;
 
 // methods
 void Geometry::AddVertex(Vertex v)

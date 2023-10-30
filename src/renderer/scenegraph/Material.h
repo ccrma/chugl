@@ -9,7 +9,7 @@
 #include "../Shader.h"
 
 // builtin material type struct
-enum class MaterialType : unsigned int {
+enum class MaterialType : t_CKUINT {
 	Base = 0,
 	Normal,
 	Phong,
@@ -94,19 +94,19 @@ struct MaterialUniform {
 	}
 };
 
-enum MaterialOptionParam : unsigned int {
+enum MaterialOptionParam : t_CKUINT {
 	PolygonMode = 0,
 	PrimitiveMode,
 	Transparent
 };
 
-enum MaterialPolygonMode : unsigned int {
+enum MaterialPolygonMode : t_CKUINT {
 	Fill = 0,
 	Line,
 	Point
 };
 
-enum MaterialPrimitiveMode : unsigned int {
+enum MaterialPrimitiveMode : t_CKUINT {
 	Triangles = 0,
 	TriangleStrip,
 	Lines,
@@ -115,7 +115,7 @@ enum MaterialPrimitiveMode : unsigned int {
 	Points,
 };
 
-enum MaterialOptionType : unsigned int {
+enum MaterialOptionType : t_CKUINT {
 	Float = 0,
 	Int,
 	UnsignedInt,
@@ -306,14 +306,14 @@ public:  // static consts
 	// and uniforms from base chuck Material class (so you don't have to cast e.g. mesh.mat() $ PhongMat)
 
 	// supported polygon modes
-	static const MaterialPolygonMode POLYGON_FILL;
-	static const MaterialPolygonMode POLYGON_LINE;
-	static const MaterialPolygonMode POLYGON_POINT;
+	static const t_CKUINT POLYGON_FILL;
+	static const t_CKUINT POLYGON_LINE;
+	static const t_CKUINT POLYGON_POINT;
 
 	// line rendering modes
-	static const unsigned int LINE_SEGMENTS_MODE;
-	static const unsigned int LINE_STRIP_MODE;
-	static const unsigned int LINE_LOOP_MODE;
+	static const t_CKUINT LINE_SEGMENTS_MODE;
+	static const t_CKUINT LINE_STRIP_MODE;
+	static const t_CKUINT LINE_LOOP_MODE;
 
 	// uniform names (TODO ShaderCode should be reading from here)
 	static const std::string POINT_SIZE_UNAME;
