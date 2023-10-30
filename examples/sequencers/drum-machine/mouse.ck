@@ -4,6 +4,10 @@ public class Mouse
     int mouseState[3];
     Event mouseDownEvents[3];
 
+    GG.nextFrame() => now;
+    // temporary workaround on mac
+    (1.0 * GG.frameWidth()) / (1.0 * GG.windowWidth()) => float SPP;  // screen pixels per pixel
+
     0 => static int LEFT_CLICK;
     1 => static int RIGHT_CLICK;
     2 => static int MIDDLE_CLICK;
@@ -51,8 +55,8 @@ public class Mouse
         while (true) {
             GG.mouseX() => float x;
             GG.mouseY() => float y;
-            GG.frameWidth() * 1.0 => float screenWidth;
-            GG.frameHeight() * 1.0 => float screenHeight;
+            GG.frameWidth() / SPP => float screenWidth;
+            GG.frameHeight() / SPP => float screenHeight;
 
             // calculate mouse world X and Y coords
             if (GG.camera().mode() == GCamera.ORTHO) {

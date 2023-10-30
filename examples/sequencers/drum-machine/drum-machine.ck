@@ -9,11 +9,8 @@ GG.scene() @=> GScene @ scene;
 GG.camera() @=> GCamera @ cam;
 cam.orthographic();  // 2D scene
 
+
 GG.nextFrame() => now;  // bug: have to wait 1 frame for renderer to propagate correct frame dimensions
-// TODO:: add window resize listener
-(GG.frameWidth() * 1.0) / (GG.frameHeight() * 1.0) => float ASPECT;
-cam.viewSize() => float FRUSTRUM_HEIGHT;
-FRUSTRUM_HEIGHT * ASPECT => float FRUSTRUM_WIDTH;
 
 
 class GPad extends GGen {
