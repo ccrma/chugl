@@ -202,14 +202,17 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
     }
 
     // Print Context Info =================================================
-    std::cerr << "====================GLFW Info========================" << std::endl;
-    std::cerr << "GLFW Version: " << glfwGetVersionString() << std::endl;
-    std::cerr << "====================OpenGL Context Info========================" << std::endl;
-    std::cerr << "OpenGL Version: " << glGetString(GL_VERSION) << std::endl;
-    std::cerr << "OpenGL Vendor: " << glGetString(GL_VENDOR) << std::endl;
-    std::cerr << "OpenGL Renderer: " << glGetString(GL_RENDERER) << std::endl;
-    std::cerr << "OpenGL Shading Language Version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
-    std::cerr << "===============================================================" << std::endl;
+    std::cerr << "============================= ChuGL =================================" << std::endl;
+    std::cerr << "ChuGL version: " << CHUGL_VERSION_STRING << std::endl;
+    std::cerr << "ChucK compatibility: " << CHUCK_VERSION_STRING << std::endl;
+    std::cerr << "===================== OpenGL context info ===========================" << std::endl;
+    std::cerr << "OpenGL version: " << glGetString(GL_VERSION) << std::endl;
+    std::cerr << "OpenGL vendor: " << glGetString(GL_VENDOR) << std::endl;
+    std::cerr << "OpenGL renderer: " << glGetString(GL_RENDERER) << std::endl;
+    std::cerr << "OpenGL shading language version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
+    std::cerr << "=========================== GLFW info ===============================" << std::endl;
+    std::cerr << "GLFW version: " << glfwGetVersionString() << std::endl;
+    std::cerr << "=====================================================================" << std::endl;
 
     // OpenGL Viewport and Callbacks =========================
     // for high-DPI displays, framebuffer size is actually a multiple of window size
