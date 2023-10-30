@@ -194,7 +194,7 @@ class AcidBass extends Chugraph {
     fun void play(int note) {
         Std.mtof(note) => float freq;
         saw1.freq(freq);
-        saw2.freq(freq * 1.01); // slight detune for more harmonic content
+        saw2.freq(2 * freq * 1.01); // slight detune for more harmonic content
         env.keyOn();
         env.attackTime() + env.decayTime() => now;
         env.keyOff();
@@ -203,7 +203,7 @@ class AcidBass extends Chugraph {
 
 }
 
-class Kick extends Instrument {
+class Kick extends Instrument {  // thanks Tristan
     inlet => Noise n => LPF f => ADSR e => outlet;
     110 => f.freq;
     40 => f.gain;
@@ -233,7 +233,7 @@ class Snare extends Instrument {  // thanks Tristan
 
 }
 
-class Hat extends Instrument {
+class Hat extends Instrument {  // thanks Tristan
     inlet => Noise n => HPF f => ADSR e => outlet;
     2500 => f.freq;
     0.05 => f.gain;
