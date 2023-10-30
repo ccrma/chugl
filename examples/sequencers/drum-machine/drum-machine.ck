@@ -97,8 +97,12 @@ class GPad extends GGen {
         }
     }
 
-    fun void play() {
+    fun void play(int juice) {
         handleInput(NOTE_ON);
+        if (juice) {
+            pad.sca(1.4);
+            pad.rotZ(Math.random2f(-.5, .2));
+        }
     }
 
     fun void stop() {
@@ -114,6 +118,8 @@ class GPad extends GGen {
     fun void enter(int s) {
         state => lastState;
         s => state;
+        // uncomment to randomize color when playing
+        // if (state == PLAYING) Color.random() => colorMap[PLAYING];
     }
 
     // state machine for handling input
@@ -147,6 +153,12 @@ class GPad extends GGen {
     fun void update(float dt) {
         pollHover();
         this.color(colorMap[state]);
+        // lerp towards uniform scale
+        // this is cursed
+        // pad.scaX()  - .03 * Math.pow(Math.fabs((1.0 - pad.scaX())), .3) => pad.sca;
+        pad.scaX()  + .05 * (1.0 - pad.scaX()) => pad.sca;
+        pad.rot().z  + .06 * (0.0 - pad.rot().z) => pad.rotZ;
+
     }
 }
 
@@ -176,7 +188,7 @@ class AcidBass extends Chugraph {
         while (true) {
             (freqLFO.last() + 1.0) / 2.0 => float freqFactor;  // remap [-1, 1] --> [0, 1]
             (qLFO.last() + 1.0) / 2.0 => float qFactor;
-            freqFactor * 1500.0 + 100 => filter.freq;
+            freqFactor * 2500.0 + 100 => filter.freq;
             qFactor * 7.0 + 1 => filter.Q;
             
             // TODO map env to filter Q
@@ -305,11 +317,11 @@ GGen closedHatPadGroup --> GG.scene();
 GGen acidBassGroups[NUM_STEPS];
 for (auto group : acidBassGroups) group --> GG.scene();
 
-spork ~ sequenceBeat(kick, kickPads, true);
-spork ~ sequenceBeat(snare, snarePads, false);
-spork ~ sequenceBeat(openHat, openHatPads, false);
-spork ~ sequenceBeat(closedHat, closedHatPads, true);
-spork ~ sequenceLead(acidBasses, acidBassPads, SCALE, 60 - 2 * 12);
+spork ~ sequenceBeat(kick, kickPads, true, STEP);
+spork ~ sequenceBeat(snare, snarePads, false, STEP / 2.0);
+spork ~ sequenceBeat(openHat, openHatPads, false, STEP / 2.0);
+spork ~ sequenceBeat(closedHat, closedHatPads, true, STEP / 2.0);
+spork ~ sequenceLead(acidBasses, acidBassPads, SCALE, 60 - 2 * 12, STEP / 2.0);
 
 
 fun void placePads() {
@@ -410,15 +422,18 @@ fun void placePadsVertical(GPad pads[], GGen @ parent, float height, float x)
 }
 
 
-fun void sequenceBeat(Instrument @ instrument, GPad pads[], int rev) {
+fun void sequenceBeat(Instrument @ instrument, GPad pads[], int rev, dur step) {
     0 => int i;
     if (rev) pads.size() - 1 => i;
     while (true) {
+        false => int juice;
         if (pads[i].active()) {
+            true => juice;
             spork ~ instrument.play();
         }
-        pads[i].play();  // must happen after .active() check
-        STEP => now;
+        pads[i].play(juice);  // must happen after .active() check
+        step => now;
+        // STEP => now;
         pads[i].stop();
 
         // bump index
@@ -432,17 +447,17 @@ fun void sequenceBeat(Instrument @ instrument, GPad pads[], int rev) {
     }
 } 
 
-fun void sequenceLead(AcidBass leads[], GPad pads[][], int scale[], int root) {
+fun void sequenceLead(AcidBass leads[], GPad pads[][], int scale[], int root, dur step) {
     while (true) {
         for (0 => int i; i < pads.size(); i++) {
             pads[i] @=> GPad col[];
             for (0 => int j; j < col.size(); j++) {
                 if (col[j].active()) {
-                    col[j].play();
+                    col[j].play(true);
                     spork ~ leads[j].play(root + scale[j]);
                 }
             }
-            STEP / 2.0 => now;
+            step => now;
             for (0 => int j; j < col.size(); j++) {
                 col[j].stop();
             }
