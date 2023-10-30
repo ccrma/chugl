@@ -19,6 +19,9 @@ current:
 build-release:
 	cmake -B build-release -DCMAKE_BUILD_TYPE=Release
 
+build-debug:
+	cmake -B build-debug -DCMAKE_BUILD_TYPE=Debug
+
 .PHONY: mac osx linux linux-oss linux-jack linux-alsa linux-all
 mac osx linux linux-oss linux-jack linux-alsa linux-all: build-release
 	cmake --build build-release
@@ -28,6 +31,10 @@ mac osx linux linux-oss linux-jack linux-alsa linux-all: build-release
 win win32 win64: build-release
 	@echo '------------'
 	@echo '(windows) --> build ChuGL.chug in Visual Studio from build-release/chugl.sln'
+
+debug: build-debug
+	cmake --build build-debug
+	cp build-debug/ChuGL.chug .
 
 # (mac/linux) remove system installed ChuGL and install local ChuGL
 test-install:
@@ -44,4 +51,4 @@ endif
 	@chuck --color --chugin-probe 2>&1 >/dev/null | grep ChuGL.chug
 
 clean: 
-	rm -rf $(CHUG) build-release
+	rm -rf $(CHUG) build-release build-debug
