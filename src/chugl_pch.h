@@ -10,18 +10,16 @@
 #include <condition_variable>
 #include <mutex>
 
-// Data Structures =======================================
+// data structures =======================================
 #include <string>
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
 
-// Chuck includes ========================================
-#include "chuck_def.h"
-#include "chuck_dl.h"
-#include "chuck_vm.h"
+// ChucK includes ========================================
+#include "chuck.h"
 
-// glm includes =======================================
+// glm includes ==========================================
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -31,7 +29,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/epsilon.hpp>
 
-// Other Vendors =======================================
+// other vendors =========================================
 
 // tracy profiler ========================================
 #if defined( __clang__ ) || defined(__GNUC__)
@@ -41,4 +39,4 @@
 #endif
 #include <tracy/Tracy.hpp>
 
-// ChuGL Includes ========================================
+// ChuGL includes ========================================

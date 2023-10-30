@@ -2,7 +2,11 @@
 
 #include "chugl_pch.h"
 
-t_CKBOOL init_chugl(Chuck_DL_Query * QUERY);
+// ChuGL version string
+#define CHUGL_VERSION_STRING "0.1.2 (alpha)"
+
+// ChuGL query interface
+t_CKBOOL init_chugl( Chuck_DL_Query * QUERY );
 
 // foward decls =========================================
 class Camera;
