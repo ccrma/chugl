@@ -23,7 +23,7 @@ add_library(renderer # TODO this whole structure is a mess I realize....can buil
 )
 
 target_link_libraries(renderer
-    PRIVATE glfw glad glm 
+    PRIVATE glfw glad
     PRIVATE chugl_compiler_flags chugl_pch
 )
 

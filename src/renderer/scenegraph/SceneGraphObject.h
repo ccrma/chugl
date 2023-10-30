@@ -19,7 +19,9 @@ public:
 	}
 
 	virtual ~SceneGraphObject() {
-		Disconnect();  // disconnect already handles refcounting
+		// if we're in the destructor of an audio thread object, that means the sgo is *already* disconnected from the scene
+		// so only disconnect if we're on the render-thread copy
+		if (!IsAudioThreadObject()) Disconnect();  // disconnect handles refcounting
 	}
 
 	// clone

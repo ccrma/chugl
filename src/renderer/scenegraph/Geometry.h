@@ -489,6 +489,64 @@ public:
 	}
 };
 
+class CylinderGeometry : public Geometry
+{
+public:
+	struct Params {
+		float radiusTop;
+		float radiusBottom;
+		float height;
+		unsigned int radialSegments;
+		unsigned int heightSegments;
+		bool openEnded;
+		float thetaStart;
+		float thetaLength;
+	} m_Params;
+
+public:
+	CylinderGeometry(
+		float radiusTop = .2f, float radiusBottom = .2f, float height = 1.0f, 
+		unsigned int radialSegments = 32, unsigned int heightSegments = 1, bool openEnded = false, 
+		float thetaStart = 0.0f, float thetaLength = glm::pi<float>() * 2.0f
+	) : m_Params {
+		radiusTop, radiusBottom, height, radialSegments, heightSegments, openEnded, thetaStart, thetaLength
+	} {}
+
+	void UpdateParams(
+		float radiusTop, float radiusBottom, float height, 
+		unsigned int radialSegments, unsigned int heightSegments, bool openEnded, 
+		float thetaStart, float thetaLength
+	) {
+		m_Params = {
+			radiusTop, radiusBottom, height, radialSegments, heightSegments, openEnded, thetaStart, thetaLength
+		};
+		m_Dirty = true;
+	}
+
+	virtual void BuildGeometry() override;  // given data, builds cpu-side index and vertex buffs
+	virtual GeometryType GetGeoType() override { return GeometryType::Cylinder; }
+	virtual Geometry* Clone() override { 
+		CylinderGeometry* geo = new CylinderGeometry(*this);
+		geo->SetID(GetID());
+		return geo;
+	}
+
+	// update command methods
+	virtual void * GenUpdate() override {
+		return new CylinderGeometry::Params(m_Params);
+	};
+	virtual void FreeUpdate(void* data) override {
+		delete (CylinderGeometry::Params*) data;
+	}
+	virtual void ApplyUpdate(void * data) override {
+		m_Params = *(CylinderGeometry::Params*)data;
+		m_Dirty = true;
+	}
+private:  // construction helpers
+	void GenerateTorso(unsigned int& index);
+	void GenerateCap(bool top, unsigned int& index);
+};
+
 
 
 // class CapsuleGeometry: public Geometry

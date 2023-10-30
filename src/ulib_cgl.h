@@ -229,4 +229,62 @@ private:
 	static inline std::vector<SceneGraphCommand*>& GetWriteCommandQueue() {
 		return m_CQReadTarget ? m_ThisCommandQueue : m_ThatCommandQueue;
 	}
+
+private:  // SHRED --> GGen bookkeeping 
+	// mapping shred to GGens created on that shred
+	// Chuck_Objects are added on GGen construction, and removed on GGen destruction
+	// only touched by audio thread, does not need to be lock protected
+	static std::unordered_map<Chuck_VM_Shred*, std::unordered_set<Chuck_Object*>> s_Shred2GGen;
+	// A separate map to track GGen --> Shred
+	// This allows us to, in O(1) time, clear a GGen from a shred's GGen list inside
+	// the GGen's CK_DLL_DTOR.
+	// This is necessary because there are other instances, depending where/when an object is released,
+	// where the CK_DLL_DTOR `SHRED` param is NULL
+	static std::unordered_map<Chuck_Object*, Chuck_VM_Shred*> s_GGen2Shred;
+public: 
+	static void RegisterGGenToShred(Chuck_VM_Shred *shred, Chuck_Object *ggen) {
+		// register shred --> GGen
+		s_Shred2GGen[shred].insert(ggen);
+
+		// a GGen should only ever be associated with 1 shred
+		assert(s_GGen2Shred.find(ggen) == s_GGen2Shred.end());
+
+		// register GGen --> shred
+		s_GGen2Shred[ggen] = shred;
+	}
+	static void UnregisterGGenFromShred(Chuck_VM_Shred *shred, Chuck_Object *ggen) {
+		// if ggen not found in ggen2shred map, then it's already been unregistered
+		// probably from it's parent shred already being destroyed
+		if (s_GGen2Shred.find(ggen) == s_GGen2Shred.end()) return;
+
+		// handle case where shred is NULL, try to find origin shred via lookup
+		if (shred == NULL) {
+			shred = s_GGen2Shred[ggen];
+		} 
+
+		// shred should match the shred in the GGen2Shred map
+		assert(s_GGen2Shred[ggen] == shred);
+
+		// unregister shred --> GGen
+		if (s_Shred2GGen.find(shred) != s_Shred2GGen.end()) {
+			s_Shred2GGen[shred].erase(ggen);
+		}
+
+		// unregister GGen --> shred
+		s_GGen2Shred.erase(ggen);
+	}
+	static void DetachGGensFromShred(Chuck_VM_Shred *shred);
+	
+	// erases shred from map (call when shred is destroyed)
+	static void EraseFromShred2GGenMap(Chuck_VM_Shred *shred) {
+		// first remove from GGen2Shred map
+		if (s_Shred2GGen.find(shred) != s_Shred2GGen.end()) {
+			for (auto* ggen : s_Shred2GGen[shred]) {
+				s_GGen2Shred.erase(ggen);
+			}
+		}
+		// then remove from Shred2GGen map
+		s_Shred2GGen.erase(shred);
+	}
+	static bool Shred2GGenMapEmpty() { return s_Shred2GGen.empty(); }
 };

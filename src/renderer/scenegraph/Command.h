@@ -34,11 +34,12 @@ public:
 class SetMouseModeCommand : public SceneGraphCommand
 {
 public:
-    SetMouseModeCommand(int mode) : m_Mode(mode) {};
-    virtual void execute(Scene* scene) override {
-        // so hacky...but we do this to decouple from the renderer
-        Scene::updateMouseMode = true;
-        Scene::mouseMode = m_Mode;
+    SetMouseModeCommand(Scene* audioThreadScene, int mode) : m_Mode(mode) {
+        audioThreadScene->m_MouseMode = m_Mode;
+    };
+    virtual void execute(Scene* renderThreadScene) override {
+        renderThreadScene->m_UpdateMouseMode = true;
+        renderThreadScene->m_MouseMode = m_Mode;
     }
 private:
     int m_Mode;
@@ -47,15 +48,24 @@ private:
 class SetWindowModeCommand : public SceneGraphCommand
 {
 public:
-    SetWindowModeCommand(int mode, int width = 0, int height = 0) 
-        : m_Mode(mode), m_Width(width), m_Height(height) {};
-    virtual void execute(Scene* scene) override {
-        Scene::updateWindowMode = true;
-        Scene::windowMode = m_Mode;
+    SetWindowModeCommand(Scene* audioThreadScene, int mode, int width = 0, int height = 0) 
+        : m_Mode(mode), m_Width(width), m_Height(height) {
+        audioThreadScene->m_WindowMode = m_Mode;
+
+        // TODO make fullscreen a separate command
+        if (width > 0 && height > 0) {
+            audioThreadScene->m_WindowedWidth = m_Width;
+            audioThreadScene->m_WindowedHeight = m_Height;
+        }
+    };
+
+    virtual void execute(Scene* renderThreadScene) override {
+        renderThreadScene->m_UpdateWindowMode = true;
+        renderThreadScene->m_WindowMode = m_Mode;
 
         if (m_Width > 0 && m_Height > 0) {
-            Scene::windowedWidth = m_Width;
-            Scene::windowedHeight = m_Height;
+            renderThreadScene->m_WindowedWidth = m_Width;
+            renderThreadScene->m_WindowedHeight = m_Height;
         }
     }
 private:
@@ -67,10 +77,27 @@ private:
 class CloseWindowCommand : public SceneGraphCommand
 {
 public:
-    CloseWindowCommand() {};
+    CloseWindowCommand(Scene* audioThreadScene) {
+        audioThreadScene->m_WindowShouldClose = true;
+    };
     virtual void execute(Scene* scene) override {
-        Scene::windowShouldClose = true;
+        scene->m_WindowShouldClose = true;
     }
+};
+
+class SetWindowTitleCommand : public SceneGraphCommand
+{
+public:
+    SetWindowTitleCommand(Scene* audioThreadScene, std::string title) : m_Title(title) {
+        audioThreadScene->m_UpdateWindowTitle = true;
+        audioThreadScene->m_WindowTitle = m_Title;
+    };
+    virtual void execute(Scene* renderThreadScene) override {
+        renderThreadScene->m_UpdateWindowTitle = true;
+        renderThreadScene->m_WindowTitle = m_Title;
+    }
+private:
+    std::string m_Title;
 };
 
 //==================== Creation Commands =====a==================//
@@ -160,8 +187,9 @@ public:
     };
     virtual void execute(Scene* scene) override {
         SceneGraphObject* obj = dynamic_cast<SceneGraphObject*>(scene->GetNode(m_ID));
-        assert(obj);
-        obj->Disconnect();
+        // obj will be NULL in the case that a GGen is GC'd on the audio-thread before
+        // GG.nextFrame() is ever called
+        if (obj) obj->Disconnect();
     }
 private:
     size_t m_ID;

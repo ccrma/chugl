@@ -385,7 +385,7 @@ CK_DLL_MFUN(cgl_mat_set_color)
 {
 	Material *mat = CGL::GetMaterial(SELF);
 	t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
-	mat->SetColor(color.x, color.y, color.z, 1.0f);
+	mat->SetColor(color.x, color.y, color.z);
 
 	RETURN->v_vec3 = color;
 

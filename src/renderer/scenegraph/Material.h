@@ -247,8 +247,13 @@ public:
 	void SetLineWidth(float width) { 
 		SetUniform(MaterialUniform::Create(LINE_WIDTH_UNAME, width));
 	}
+
 	void SetColor(float r, float g, float b, float a) { 
 		SetUniform(MaterialUniform::Create(COLOR_UNAME, r, g, b, a));
+	}
+	void SetColor(float r, float g, float b) { 
+		auto col = GetColor();
+		SetUniform(MaterialUniform::Create(COLOR_UNAME, r, g, b, col.a));
 	}
 	void SetAlpha(float a) { 
 		auto& uniform = m_Uniforms[COLOR_UNAME];
@@ -262,13 +267,13 @@ public:
 		// if it's a texture, refcount it
 		if (uniform.type == UniformType::Texture) {
 			CGL_Texture* texture = (CGL_Texture* )Locator::GetNode(uniform.texID, IsAudioThreadObject());
-			CHUGL_ADD_REF(texture);
+			CHUGL_NODE_ADD_REF(texture);
 		}
 
 		// if old uniform was a texture, unrefcount it
 		if (it != m_Uniforms.end() && it->second.type == UniformType::Texture) {
 			CGL_Texture* oldTexture = (CGL_Texture* )Locator::GetNode(it->second.texID, IsAudioThreadObject());
-			CHUGL_RELEASE(oldTexture);
+			CHUGL_NODE_QUEUE_RELEASE(oldTexture);
 		}
 		
 		m_Uniforms[uniform.name] = uniform;

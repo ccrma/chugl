@@ -42,6 +42,7 @@ doc.addGroup(
         "GCube", 
         "GSphere", 
         "GTorus",
+        "GCylinder",
         "GLight", 
         "GPointLight", 
         "GDirLight", 
@@ -66,6 +67,7 @@ doc.addGroup(
         "LatheGeometry", 
         "PlaneGeometry", 
         "TorusGeometry", 
+        "CylinderGeometry",
         "CustomGeometry",
     ],
     // group name

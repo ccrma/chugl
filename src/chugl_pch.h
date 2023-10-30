@@ -15,7 +15,6 @@
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
-#include <set>
 
 // Chuck includes ========================================
 #include "chuck_def.h"

@@ -22,7 +22,7 @@ public:
 	inline int GetViewHeight() { return m_ViewHeight; }
 	void SetViewSize(int width, int height);
 
-	void UpdateState();
+	void UpdateState(Scene& scene);
 private:
 	// member vars
 	GLFWwindow* m_Window;

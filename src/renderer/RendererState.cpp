@@ -34,7 +34,8 @@ void RendererState::PrepareScene(Scene *scene)
 		if (obj->IsMesh())
 		{
 			Mesh *mesh = dynamic_cast<Mesh*>(obj);
-			if (mesh->GetMaterial()->IsTransparent())
+			Material* mat = mesh->GetMaterial();
+			if (mat && mat->IsTransparent())
 			{
 				m_TransparentMeshes.push_back(mesh);
 			}
