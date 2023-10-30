@@ -105,6 +105,8 @@ t_CKBOOL init_chugl(Chuck_DL_Query *QUERY)
     CGL::SetCKAPI( QUERY->api() );
     // set API in the scene graph node
     SceneGraphNode::SetCKAPI( QUERY->api() );
+	// set API in the locator service
+	Locator::SetCKAPI( QUERY->api() );
 
 	// init GUI
 	if (!init_chugl_gui(QUERY)) return FALSE;
@@ -182,6 +184,7 @@ CK_DLL_SHREDS_WATCHER(cgl_shred_on_destroy_listener)
 		CGL::Render();  // wake up render thread one last time to process the close window command
 	}
 
+	Locator::GC();  
 }
 
 CK_DLL_TYPE_ON_INSTANTIATE(cgl_ggen_on_instantiate_listener)
@@ -270,6 +273,9 @@ CK_DLL_MFUN(cgl_update_event_waiting_on)
         // signal the graphics-side that audio-side is done processing for this frame
         // see CGL::WaitOnUpdateDone()
         CGL::Render();
+
+		// Garbage collect (TODO add API function to control this)
+		Locator::GC();  
 	}
 }
 
@@ -683,7 +689,7 @@ void CGL::DetachGGensFromShred(Chuck_VM_Shred *shred)
 		assert(sgo);
 		ggensCopy.push_back(sgo->GetID());
 	}
-    
+
     for( auto ggen_id : ggensCopy )
     {
         // verify

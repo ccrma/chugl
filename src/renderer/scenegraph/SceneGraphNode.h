@@ -1,11 +1,7 @@
 #pragma once
 
 #include "chugl_pch.h"
-
-// refcount macros ======================================
-// release the ckobj bound to chugl object `x`
-#define CHUGL_RELEASE(x)          do { if(IsAudioThreadObject() && x){ CKAPI()->object->release(x->m_ChuckObject); } } while(0)
-#define CHUGL_ADD_REF(x)          do { if(IsAudioThreadObject() && x){ CKAPI()->object->add_ref(x->m_ChuckObject); } } while(0)
+#include "Locator.h"
 
 /*
 * Base class for all possible scenegraph entities -- objects, meshes, geometries, and materials (eventually add textures?)

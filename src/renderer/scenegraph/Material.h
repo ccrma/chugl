@@ -267,13 +267,13 @@ public:
 		// if it's a texture, refcount it
 		if (uniform.type == UniformType::Texture) {
 			CGL_Texture* texture = (CGL_Texture* )Locator::GetNode(uniform.texID, IsAudioThreadObject());
-			CHUGL_ADD_REF(texture);
+			CHUGL_NODE_ADD_REF(texture);
 		}
 
 		// if old uniform was a texture, unrefcount it
 		if (it != m_Uniforms.end() && it->second.type == UniformType::Texture) {
 			CGL_Texture* oldTexture = (CGL_Texture* )Locator::GetNode(it->second.texID, IsAudioThreadObject());
-			CHUGL_RELEASE(oldTexture);
+			CHUGL_NODE_QUEUE_RELEASE(oldTexture);
 		}
 		
 		m_Uniforms[uniform.name] = uniform;

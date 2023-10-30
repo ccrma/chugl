@@ -287,9 +287,4 @@ public:
 		s_Shred2GGen.erase(shred);
 	}
 	static bool Shred2GGenMapEmpty() { return s_Shred2GGen.empty(); }
-
-
-
-
-
 };

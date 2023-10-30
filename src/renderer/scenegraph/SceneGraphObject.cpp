@@ -223,12 +223,12 @@ void SceneGraphObject::AddChild(SceneGraphObject* child)
 	// assign to new parent
 	child->m_Parent = this;
     // reference count
-	CHUGL_ADD_REF(this);
+	CHUGL_NODE_ADD_REF(this);
 
 	// add to list of children
 	m_Children.push_back(child);
     // add ref to kid
-	CHUGL_ADD_REF(child);
+	CHUGL_NODE_ADD_REF(child);
 }
 
 void SceneGraphObject::RemoveChild( SceneGraphObject * child )
@@ -248,10 +248,10 @@ void SceneGraphObject::RemoveChild( SceneGraphObject * child )
         m_Children.erase(it);
 
         // release ref count on child's chuck object; one less reference to it from us (parent)
-		CHUGL_RELEASE(child);
+		CHUGL_NODE_QUEUE_RELEASE(child);
 
         // release ref count on our (parent's) chuck object; one less reference to it from child
-		CHUGL_RELEASE(this);
+		CHUGL_NODE_QUEUE_RELEASE(this);
     }
 }
 

@@ -1,7 +1,13 @@
 #pragma once
 
 #include "chugl_pch.h"
-#include "SceneGraphNode.h"
+
+// Garbage Collection Macros ============================
+// x is a pointer to a SceneGraphNode
+#define CHUGL_NODE_QUEUE_RELEASE(x)     do { Locator::QueueCKRelease(x); } while(0)
+#define CHUGL_NODE_ADD_REF(x)           do { Locator::CKAddRef(x); } while(0)
+
+class SceneGraphNode;  // avoid circular dependency
 
 typedef std::unordered_map<size_t, SceneGraphNode*> SceneGraphMap;  // map of all scene graph objects
 
@@ -9,31 +15,11 @@ typedef std::unordered_map<size_t, SceneGraphNode*> SceneGraphMap;  // map of al
 class Locator
 {
 public:
-    static void RegisterNode(SceneGraphNode* node) {
-        if (!node) return;
-        GetSceneGraphMap(node->IsAudioThreadObject())[node->GetID()] = node;
-    }
-
-    static SceneGraphNode* GetNode(size_t id, bool isAudioThread) {
-        if (id == 0) return nullptr;
-        SceneGraphNode* node = CheckNode(id, isAudioThread) ? GetSceneGraphMap(isAudioThread)[id] : nullptr;
-        if (node) {
-            assert(node->IsAudioThreadObject() == isAudioThread);
-        }
-        return node;
-    }
-
-	static bool CheckNode(size_t id, bool isAudioThread) {
-        if (id == 0) return false;
-        auto& map = GetSceneGraphMap(isAudioThread);
-        return map.find(id) != map.end();
-    }
-
-    static void UnregisterNode(size_t id, bool isAudioThread)
-    {
-        GetSceneGraphMap(isAudioThread).erase(id);
-    }
-
+    static void RegisterNode(SceneGraphNode* node);
+    static SceneGraphNode* GetNode(size_t id, bool isAudioThread);
+	static bool CheckNode(size_t id, bool isAudioThread);
+    static void UnregisterNode(size_t id, bool isAudioThread);
+    static void PrintContents(bool isAudioThread);
 
 private:
     static SceneGraphMap& GetSceneGraphMap(bool isAudioThread) {
@@ -42,4 +28,25 @@ private:
 
 	static SceneGraphMap m_AudioSceneGraphMap;  // scenegraph map for chuck audio thread
 	static SceneGraphMap m_RendererSceneGraphMap;  // scenegraph map for renderer thread's copy
+
+private:
+    static const Chuck_DL_Api* s_CKAPI;
+public:
+    // access the chugin runtime API
+    static void SetCKAPI( const Chuck_DL_Api* api ) { s_CKAPI = api; }
+    // access the chugin runtime API
+    static const Chuck_DL_Api* CKAPI() { return s_CKAPI; }
+
+// garbage collection queue
+// allows us to defer calling ck_release on objects until we flush the queue
+// preventing free/delete from being called on the audio audio thread until
+// *after* we have finished disconnecting / cleanup / etc
+private:
+	// NOT threadsafe, only call from audio thread
+	static std::vector<size_t> s_AudioThreadGCQueue;
+
+public:
+	static void QueueCKRelease(SceneGraphNode* node);
+	static void CKAddRef(SceneGraphNode* node);
+	static void GC();
 };

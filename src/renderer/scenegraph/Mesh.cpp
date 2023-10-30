@@ -8,8 +8,8 @@
 
 Mesh::~Mesh()
 {
-    CHUGL_RELEASE(GetMaterial());
-    CHUGL_RELEASE(GetGeometry());
+    CHUGL_NODE_QUEUE_RELEASE(GetMaterial());
+    CHUGL_NODE_QUEUE_RELEASE(GetGeometry());
 }
 
 Geometry *Mesh::GetGeometry()
@@ -26,13 +26,13 @@ Material *Mesh::GetMaterial()
 void Mesh::SetGeometry(Geometry *geo)
 {
     // mesh has a pointer to geo, so bump geo refcount
-    CHUGL_ADD_REF(geo);
+    CHUGL_NODE_ADD_REF(geo);
 
     // remove reference to previous geometry 
     // important: this should happen after add_ref in case
     // the incoming geometry is the same as the current one
 
-    CHUGL_RELEASE(GetGeometry());
+    CHUGL_NODE_QUEUE_RELEASE(GetGeometry());
 
     m_GeoID = geo ? geo->GetID() : 0;
 }
@@ -40,12 +40,12 @@ void Mesh::SetGeometry(Geometry *geo)
 void Mesh::SetMaterial(Material *mat)
 {
     // mesh has a pointer to material, so bump material refcount
-    CHUGL_ADD_REF(mat);
+    CHUGL_NODE_ADD_REF(mat);
 
     // remove reference to previous material
     // important: this should happen after add_ref in case
     // the incoming material is the same as the current one
-    CHUGL_RELEASE(GetMaterial());
+    CHUGL_NODE_QUEUE_RELEASE(GetMaterial());
 
     m_MatID = mat ? mat->GetID() : 0;
 }
