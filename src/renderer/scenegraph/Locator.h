@@ -43,7 +43,12 @@ public:
 // *after* we have finished disconnecting / cleanup / etc
 private:
 	// NOT threadsafe, only call from audio thread
-	static std::vector<size_t> s_AudioThreadGCQueue;
+	static std::vector<size_t> s_AudioThreadGCQueueRead;
+	static std::vector<size_t> s_AudioThreadGCQueueWrite;
+    static bool s_WhichGCQueue;
+    static void SwapGCQueues() { s_WhichGCQueue = !s_WhichGCQueue; }
+    static std::vector<size_t>& GetGCQueueRead() { return s_WhichGCQueue ? s_AudioThreadGCQueueRead : s_AudioThreadGCQueueWrite; }
+    static std::vector<size_t>& GetGCQueueWrite() { return s_WhichGCQueue ? s_AudioThreadGCQueueWrite : s_AudioThreadGCQueueRead; }
 
 public:
 	static void QueueCKRelease(SceneGraphNode* node);

@@ -6,7 +6,9 @@ SceneGraphMap Locator::m_RendererSceneGraphMap;  // scenegraph map for renderer 
 
 const Chuck_DL_Api* Locator::s_CKAPI = nullptr;
 
-std::vector<size_t> Locator::s_AudioThreadGCQueue;
+std::vector<size_t> Locator::s_AudioThreadGCQueueRead;
+std::vector<size_t> Locator::s_AudioThreadGCQueueWrite;
+bool Locator::s_WhichGCQueue = false;
 
 void Locator::RegisterNode(SceneGraphNode *node)
 {
@@ -52,7 +54,7 @@ void Locator::QueueCKRelease(SceneGraphNode *node)
 {
     if (!node) return;
     if (!node->IsAudioThreadObject()) return;
-    s_AudioThreadGCQueue.push_back(node->GetID());
+    GetGCQueueWrite().push_back(node->GetID());
 }
 
 void Locator::CKAddRef(SceneGraphNode *node)
@@ -64,15 +66,19 @@ void Locator::CKAddRef(SceneGraphNode *node)
 
 void Locator::GC()
 {
-    // first create a copy of the queue 
-    // (beause the queue will be modified during the loop if objects are destroyed)
+    // swap queues
+    SwapGCQueues();
 
-    auto queueCopy = std::vector<size_t>(s_AudioThreadGCQueue);
+    // get read queue (now the old write queue)
+    auto& readQueue = GetGCQueueRead();
 
-    for (auto id : queueCopy) {
+    // release all objects in read queue
+    for (auto id : readQueue) {
         SceneGraphNode * node = Locator::GetNode(id, true);
         if (!node) continue;  // node already deleted
         CKAPI()->object->release(node->m_ChuckObject);
     }
-    s_AudioThreadGCQueue.clear();
+
+    // clear read queue
+    readQueue.clear();
 }
