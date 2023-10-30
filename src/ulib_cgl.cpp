@@ -150,10 +150,10 @@ t_CKBOOL create_chugl_default_objs(Chuck_DL_Query *QUERY)
     Chuck_Type * t_ggen = QUERY->api()->type->lookup(QUERY->vm(), "GGen");
     // find the offset for update
     CGL::our_update_vt_offset = QUERY->api()->type->get_vtable_offset(QUERY->vm(), t_ggen, "update");
-    
+
     // GGen instantiation listener
-    QUERY->api()->type->callback_on_instantiate( cgl_ggen_on_instantiate_listener, t_ggen, QUERY->vm(), TRUE );
-	
+    QUERY->api()->type->callback_on_instantiate( cgl_ggen_on_instantiate_listener, t_ggen, QUERY->vm(), FALSE );
+
 	return true;
 }
 
@@ -701,15 +701,6 @@ void CGL::DetachGGensFromShred(Chuck_VM_Shred *shred)
 
 		Chuck_Object* ckobj = sgo->m_ChuckObject;
 		if (!ckobj) continue;  // already deleted
-
-		// first reset the origin shred of the Chuck_object BEFORE it might be deleted
-		// (issuing a DisconnectCommand may delete the cglObj and its corresponding ckobj)
-        // get origin shred
-        Chuck_VM_Shred * originShred = CGL::CKAPI()->object->get_origin_shred( ckobj );
-        // make sure if ggen has an origin shred, it is this one
-        assert( !originShred || originShred == shred );
-        // also clear reference to this shred
-        CGL::CKAPI()->object->set_origin_shred( ckobj, NULL );
 
 		// edge case: if it's the main scene or camera, don't disconnect, because these static instances are shared across all shreds!
 		// also don't remove if its the default dir light
