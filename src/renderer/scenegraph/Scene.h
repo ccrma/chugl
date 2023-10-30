@@ -10,7 +10,7 @@ class DirLight;
 class Camera;
 
 
-enum FogType : unsigned int {
+enum FogType : t_CKUINT {
 	Exponential = 0,
 	ExponentialSquared
 };
@@ -118,8 +118,8 @@ public: // camera
 
 public: // fog
 	FogUniforms m_FogUniforms;
-	static const unsigned int FOG_EXP;
-	static const unsigned int FOG_EXP2;
+	static const t_CKUINT FOG_EXP;
+	static const t_CKUINT FOG_EXP2;
 	void SetFogColor(float r, float g, float b) {
 		m_FogUniforms.color = glm::vec3(r, g, b);
 	}

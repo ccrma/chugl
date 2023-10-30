@@ -2,7 +2,7 @@
 
 #include "chugl_pch.h"
 
-enum ShaderType : unsigned int {
+enum ShaderType : t_CKUINT {
     Vertex = 0,
     Fragment,
     Geometry,

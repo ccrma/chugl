@@ -3,8 +3,7 @@
 #include "chugl_pch.h"
 #include "SceneGraphObject.h"
 
-// enum CameraType : unsigned int {
-enum CameraType : t_CKINT {
+enum CameraType : t_CKUINT {
 	NONE = 0,
 	PERSPECTIVE = 1,
 	ORTHO = 2,

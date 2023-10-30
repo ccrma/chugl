@@ -178,8 +178,7 @@ CK_DLL_SHREDS_WATCHER(cgl_shred_on_destroy_listener)
 	// this avoids the bug where window is closed 
 	// when a non-graphics shred exits before 
 	// any  graphics shreds have even been created
-	CGL::EraseFromShred2GGenMap(SHRED);
-	if (CGL::Shred2GGenMapEmpty()) {
+	if (CGL::EraseFromShred2GGenMap(SHRED) && CGL::Shred2GGenMapEmpty()) {
 		CGL::PushCommand(new CloseWindowCommand(&CGL::mainScene));
 		CGL::Render();  // wake up render thread one last time to process the close window command
 	}
@@ -612,16 +611,16 @@ std::mutex CGL::s_WindowStateLock;
 CGL::WindowState CGL::s_WindowState;
 
 // mouse modes
-const unsigned int CGL::MOUSE_NORMAL = 0;
-const unsigned int CGL::MOUSE_HIDDEN = 1;
-const unsigned int CGL::MOUSE_LOCKED = 2;
+const t_CKUINT CGL::MOUSE_NORMAL = 0;
+const t_CKUINT CGL::MOUSE_HIDDEN = 1;
+const t_CKUINT CGL::MOUSE_LOCKED = 2;
 
 // window modes
-const unsigned int CGL::WINDOW_WINDOWED = 0;
-const unsigned int CGL::WINDOW_FULLSCREEN = 1;
-const unsigned int CGL::WINDOW_MAXIMIZED = 2;
-const unsigned int CGL::WINDOW_RESTORE = 3;
-const unsigned int CGL::WINDOW_SET_SIZE = 4;
+const t_CKUINT CGL::WINDOW_WINDOWED = 0;
+const t_CKUINT CGL::WINDOW_FULLSCREEN = 1;
+const t_CKUINT CGL::WINDOW_MAXIMIZED = 2;
+const t_CKUINT CGL::WINDOW_RESTORE = 3;
+const t_CKUINT CGL::WINDOW_SET_SIZE = 4;
 
 // chugl start time
 double CGL::chuglChuckStartTime = 0.0; // value of chuck `now` when chugl is first initialized

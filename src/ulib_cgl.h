@@ -186,16 +186,16 @@ public:
 	static bool useChuckTime;
 
 public:  // mouse modes
-	static const unsigned int MOUSE_NORMAL;
-	static const unsigned int MOUSE_HIDDEN;
-	static const unsigned int MOUSE_LOCKED;
+	static const t_CKUINT MOUSE_NORMAL;
+	static const t_CKUINT MOUSE_HIDDEN;
+	static const t_CKUINT MOUSE_LOCKED;
 
 public: // window modes
-	static const unsigned int WINDOW_WINDOWED;
-	static const unsigned int WINDOW_FULLSCREEN;
-	static const unsigned int WINDOW_MAXIMIZED;
-	static const unsigned int WINDOW_RESTORE;
-	static const unsigned int WINDOW_SET_SIZE;
+	static const t_CKUINT WINDOW_WINDOWED;
+	static const t_CKUINT WINDOW_FULLSCREEN;
+	static const t_CKUINT WINDOW_MAXIMIZED;
+	static const t_CKUINT WINDOW_RESTORE;
+	static const t_CKUINT WINDOW_SET_SIZE;
 
 public: // global main thread hook
 	static Chuck_DL_MainThreadHook* hook;
@@ -276,15 +276,19 @@ public:
 	static void DetachGGensFromShred(Chuck_VM_Shred *shred);
 	
 	// erases shred from map (call when shred is destroyed)
-	static void EraseFromShred2GGenMap(Chuck_VM_Shred *shred) {
+	static bool EraseFromShred2GGenMap(Chuck_VM_Shred *shred) {
+		// flag for whether this is a graphics shred
+		bool shredInMap = false;
 		// first remove from GGen2Shred map
 		if (s_Shred2GGen.find(shred) != s_Shred2GGen.end()) {
+			shredInMap = true;
 			for (auto* ggen : s_Shred2GGen[shred]) {
 				s_GGen2Shred.erase(ggen);
 			}
 		}
 		// then remove from Shred2GGen map
 		s_Shred2GGen.erase(shred);
+		return shredInMap;
 	}
 	static bool Shred2GGenMapEmpty() { return s_Shred2GGen.empty(); }
 };

@@ -10,9 +10,6 @@ spork ~ flycam.selfUpdate();
 
 // ===============================
 
-// GG.fullscreen();
-// GG.lockCursor();
-
 CustomGeometry lineGeo;
 
 // construct line segment
@@ -33,7 +30,7 @@ for (0 => int i; i < NUM_VERTICES; i++) {
     // Math.random2f(0.0, 1.0) => colors[i];
 }
 
-lineGeo.poss(positions);
+lineGeo.positions(positions);
 lineGeo.colors(colors);
 
 GScene scene;
@@ -91,23 +88,15 @@ fun void randomizePositions(CustomGeometry @ geo)
             Math.random2f(-1.0, 1.0) => positions[3*i + 1];
             Math.random2f(-1.0, 1.0) => positions[3*i + 2];
         }
-        geo.poss(positions);
+        geo.positions(positions);
         GG.nextFrame() => now;
     }
 }
-spork ~ randomizePositions(lineGeo);
+// spork ~ randomizePositions(lineGeo);
 
 
 // Game loop =====================
 
-0 => int frameCounter;
-now => time lastTime;
 while (true) {
-    // compute timing
-    frameCounter++;
-    now - lastTime => dur deltaTime;
-    now => lastTime;
-    deltaTime/second => float dt;
-
     GG.nextFrame() => now;
 }
