@@ -1,5 +1,5 @@
 // simplified Mouse class from examples/input/Mouse.ck  =======================
-class Mouse
+public class Mouse
 {
     int mouseState[3];
     Event mouseDownEvents[3];
@@ -8,7 +8,7 @@ class Mouse
     1 => static int RIGHT_CLICK;
     2 => static int MIDDLE_CLICK;
 
-    1.0 => float mouseZ;
+    1.0 => float mouseZ;  // mouse depth in world space
     vec3 worldPos;
 
     // start this device (should be sporked)
@@ -46,12 +46,13 @@ class Mouse
         }
     }
 
+    // update mouse world position
     fun void selfUpdate() {
         while (true) {
             GG.mouseX() => float x;
             GG.mouseY() => float y;
-            GG.windowWidth() * 1.0 => float screenWidth;
-            GG.windowHeight() * 1.0 => float screenHeight;
+            GG.frameWidth() * 1.0 => float screenWidth;
+            GG.frameHeight() * 1.0 => float screenHeight;
 
             // calculate mouse world X and Y coords
             if (GG.camera().mode() == GCamera.ORTHO) {
@@ -80,26 +81,3 @@ class Mouse
         }
     }
 }
-
-// TODO add mouseclick event to chugl
-Mouse mouse;
-spork ~ mouse.start(0);  // start listening for mouse events
-spork ~ mouse.selfUpdate();
-
-// Scene setup ================================================================
-GG.scene() @=> GScene @ scene;
-GG.camera() @=> GCamera @ cam;
-cam.orthographic();
-
-
-fun void mousePos() {
-    while (true) {
-        mouse.mouseDownEvents[Mouse.LEFT_CLICK] => now;
-    }
-} spork ~ clickListener();
-
-
-// Game loop ==================================================================
-
-while (true) { GG.nextFrame() => now; }
-

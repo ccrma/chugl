@@ -117,8 +117,8 @@ fun void clickListener() {
         // get click location
         GG.mouseX() => float x;
         GG.mouseY() => float y;
-        GG.windowWidth() * 1.0 => float screenWidth;
-        GG.windowHeight() * 1.0 => float screenHeight;
+        GG.frameWidth() * 1.0 => float screenWidth;
+        GG.frameHeight() * 1.0 => float screenHeight;
         <<< "left click at screen pos", x, y >>>;
 
         vec3 spawnPos;
