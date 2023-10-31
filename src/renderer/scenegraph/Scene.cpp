@@ -3,8 +3,8 @@
 #include "Camera.h"
 
 // fog modes
-const unsigned int Scene::FOG_EXP = FogType::Exponential;
-const unsigned int Scene::FOG_EXP2 = FogType::ExponentialSquared;
+const t_CKUINT Scene::FOG_EXP = FogType::Exponential;
+const t_CKUINT Scene::FOG_EXP2 = FogType::ExponentialSquared;
 
 
 void Scene::RegisterNode(SceneGraphNode *node)

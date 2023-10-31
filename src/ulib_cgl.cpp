@@ -180,8 +180,15 @@ CK_DLL_SHREDS_WATCHER(cgl_shred_on_destroy_listener)
 	// this avoids the bug where window is closed 
 	// when a non-graphics shred exits before 
 	// any  graphics shreds have even been created
-	CGL::EraseFromShred2GGenMap(SHRED);
-	if (CGL::Shred2GGenMapEmpty()) {
+	bool isGraphicsShred = CGL::EraseFromShred2GGenMap(SHRED);
+	
+	// behavior: after window opens (ie GG.nextFrame() has been called once)
+	// if the #shreds calling GG.nextFrame() drops to zero, window is 
+	// immediately closed and chuck VM is shut down.
+	if ( 
+		isGraphicsShred && CGL::NoActiveGraphicsShreds()
+	) {
+		Locator::GC();  // gc to force any disconnected GGens to be cleaned up
 		CGL::PushCommand(new CloseWindowCommand(&CGL::mainScene));
 		CGL::Render();  // wake up render thread one last time to process the close window command
 	}
@@ -614,16 +621,16 @@ std::mutex CGL::s_WindowStateLock;
 CGL::WindowState CGL::s_WindowState;
 
 // mouse modes
-const unsigned int CGL::MOUSE_NORMAL = 0;
-const unsigned int CGL::MOUSE_HIDDEN = 1;
-const unsigned int CGL::MOUSE_LOCKED = 2;
+const t_CKUINT CGL::MOUSE_NORMAL = 0;
+const t_CKUINT CGL::MOUSE_HIDDEN = 1;
+const t_CKUINT CGL::MOUSE_LOCKED = 2;
 
 // window modes
-const unsigned int CGL::WINDOW_WINDOWED = 0;
-const unsigned int CGL::WINDOW_FULLSCREEN = 1;
-const unsigned int CGL::WINDOW_MAXIMIZED = 2;
-const unsigned int CGL::WINDOW_RESTORE = 3;
-const unsigned int CGL::WINDOW_SET_SIZE = 4;
+const t_CKUINT CGL::WINDOW_WINDOWED = 0;
+const t_CKUINT CGL::WINDOW_FULLSCREEN = 1;
+const t_CKUINT CGL::WINDOW_MAXIMIZED = 2;
+const t_CKUINT CGL::WINDOW_RESTORE = 3;
+const t_CKUINT CGL::WINDOW_SET_SIZE = 4;
 
 // chugl start time
 double CGL::chuglChuckStartTime = 0.0; // value of chuck `now` when chugl is first initialized
@@ -637,6 +644,7 @@ bool CGL::hookActivated = false;
 // Shred to GGen bookkeeping
 std::unordered_map<Chuck_VM_Shred *, std::unordered_set<Chuck_Object *> > CGL::s_Shred2GGen;
 std::unordered_map<Chuck_Object*, Chuck_VM_Shred*> CGL::s_GGen2Shred;
+std::unordered_map<Chuck_Object*, Chuck_VM_Shred*> CGL::s_GGen2OriginShred;
 
 void CGL::ActivateHook()
 {
@@ -960,7 +968,7 @@ void CGL::UnregisterShredWaiting(Chuck_VM_Shred *shred)
 //-----------------------------------------------------------------------------
 
 // traverses chuck-side (audio thread) scenegraph and calls user-defined update() on GGens
-void CGL::UpdateSceneGraph(Scene &scene, CK_DL_API API, Chuck_VM *VM, Chuck_VM_Shred *shred)
+void CGL::UpdateSceneGraph(Scene &scene, CK_DL_API API, Chuck_VM *VM, Chuck_VM_Shred * calling_shred)
 {
 	assert(CGL::our_update_vt_offset >= 0);
 
@@ -992,11 +1000,23 @@ void CGL::UpdateSceneGraph(Scene &scene, CK_DL_API API, Chuck_VM *VM, Chuck_VM_S
 		SceneGraphObject *obj = queue.front();
 		queue.pop();
 
-		// call update
-		Chuck_Object *ggen = obj->m_ChuckObject;
+        // call update
+        Chuck_Object *ggen = obj->m_ChuckObject;
+
+        // must use shred associated with GGen
+        auto it = s_GGen2OriginShred.find( ggen );
+        // make sure ggen is in map
+        assert( it != s_GGen2OriginShred.end() );
+        // the shred
+        Chuck_VM_Shred * origin_shred = (it->second);
+        // make sure it's not null
+        assert( origin_shred != NULL );
+
+        // don't invoke update() for scene and camera
 		if (ggen != nullptr && !obj->IsScene() && !obj->IsCamera())
 		{
-			API->vm->invoke_mfun_immediate_mode(ggen, CGL::our_update_vt_offset, VM, shred, &theArg, 1);
+            // invoke the update function in immediate mode
+			API->vm->invoke_mfun_immediate_mode(ggen, CGL::our_update_vt_offset, VM, origin_shred, &theArg, 1);
 		}
 
 		// add children to stack

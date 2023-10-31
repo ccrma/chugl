@@ -2,7 +2,11 @@
 
 #include "chugl_pch.h"
 
-t_CKBOOL init_chugl(Chuck_DL_Query * QUERY);
+// ChuGL version string
+#define CHUGL_VERSION_STRING "0.1.2 (alpha)"
+
+// ChuGL query interface
+t_CKBOOL init_chugl( Chuck_DL_Query * QUERY );
 
 // foward decls =========================================
 class Camera;
@@ -140,7 +144,7 @@ public: // scenegraph update traversal
 	// TODO: what happens when graphics window loses focus for a long time and then returns?
 	// does it suddenly pass a large dt? if so we may need to throttle
 	static void UpdateSceneGraph(
-		Scene& scene, CK_DL_API API, Chuck_VM* VM, Chuck_VM_Shred* shred
+		Scene& scene, CK_DL_API API, Chuck_VM* VM, Chuck_VM_Shred* calling_shred
 	);
 	static t_CKINT our_update_vt_offset;
 
@@ -186,16 +190,16 @@ public:
 	static bool useChuckTime;
 
 public:  // mouse modes
-	static const unsigned int MOUSE_NORMAL;
-	static const unsigned int MOUSE_HIDDEN;
-	static const unsigned int MOUSE_LOCKED;
+	static const t_CKUINT MOUSE_NORMAL;
+	static const t_CKUINT MOUSE_HIDDEN;
+	static const t_CKUINT MOUSE_LOCKED;
 
 public: // window modes
-	static const unsigned int WINDOW_WINDOWED;
-	static const unsigned int WINDOW_FULLSCREEN;
-	static const unsigned int WINDOW_MAXIMIZED;
-	static const unsigned int WINDOW_RESTORE;
-	static const unsigned int WINDOW_SET_SIZE;
+	static const t_CKUINT WINDOW_WINDOWED;
+	static const t_CKUINT WINDOW_FULLSCREEN;
+	static const t_CKUINT WINDOW_MAXIMIZED;
+	static const t_CKUINT WINDOW_RESTORE;
+	static const t_CKUINT WINDOW_SET_SIZE;
 
 public: // global main thread hook
 	static Chuck_DL_MainThreadHook* hook;
@@ -241,7 +245,17 @@ private:  // SHRED --> GGen bookkeeping
 	// This is necessary because there are other instances, depending where/when an object is released,
 	// where the CK_DLL_DTOR `SHRED` param is NULL
 	static std::unordered_map<Chuck_Object*, Chuck_VM_Shred*> s_GGen2Shred;
+
+	// Run it back
+	// This map is used by the auto-update invoker, to track the top-level ancestor
+	// shred of the shred this GGen was created on.
+	// This origin shred contains file-level variables that may be accessed in
+	// this GGen's update(float dt) function
+	// GGens register to this map on instantiation
+	// GGens remove themselves from this map on destruction
+	static std::unordered_map<Chuck_Object*, Chuck_VM_Shred*> s_GGen2OriginShred;
 public: 
+
 	static void RegisterGGenToShred(Chuck_VM_Shred *shred, Chuck_Object *ggen) {
 		// register shred --> GGen
 		s_Shred2GGen[shred].insert(ggen);
@@ -251,8 +265,21 @@ public:
 
 		// register GGen --> shred
 		s_GGen2Shred[ggen] = shred;
+
+		// register GGen --> origin shred
+		auto* parent_shred = shred;
+		// walk up parent chain until top-level
+		while (parent_shred->parent) {
+			parent_shred = parent_shred->parent;
+		}
+		s_GGen2OriginShred[ggen] = parent_shred;
 	}
+
 	static void UnregisterGGenFromShred(Chuck_VM_Shred *shred, Chuck_Object *ggen) {
+		// unregister GGen --> ancestor/origin shred
+		// call this first in case the original shred has already exited and cleaned up
+		s_GGen2OriginShred.erase(ggen);
+
 		// if ggen not found in ggen2shred map, then it's already been unregistered
 		// probably from it's parent shred already being destroyed
 		if (s_GGen2Shred.find(ggen) == s_GGen2Shred.end()) return;
@@ -273,18 +300,35 @@ public:
 		// unregister GGen --> shred
 		s_GGen2Shred.erase(ggen);
 	}
+
 	static void DetachGGensFromShred(Chuck_VM_Shred *shred);
 	
 	// erases shred from map (call when shred is destroyed)
-	static void EraseFromShred2GGenMap(Chuck_VM_Shred *shred) {
+	static bool EraseFromShred2GGenMap(Chuck_VM_Shred *shred) {
+		// flag for whether this is a graphics shred
+		bool shredInMap = false;
 		// first remove from GGen2Shred map
 		if (s_Shred2GGen.find(shred) != s_Shred2GGen.end()) {
+			shredInMap = true;
 			for (auto* ggen : s_Shred2GGen[shred]) {
 				s_GGen2Shred.erase(ggen);
+				// DON'T REMOVE FROM ORIGIN SHRED MAP
+				// in case origin shred is still alive, and has a reference to this GGen
 			}
 		}
 		// then remove from Shred2GGen map
 		s_Shred2GGen.erase(shred);
+		return shredInMap;
 	}
-	static bool Shred2GGenMapEmpty() { return s_Shred2GGen.empty(); }
+
+	static bool NoActiveGraphicsShreds() {
+		return s_Shred2GGen.empty();
+	}
+
+	static bool NoActiveGGens() {
+		if (s_Shred2GGen.empty()) assert(s_GGen2Shred.empty());
+		if (s_GGen2Shred.empty()) assert(s_Shred2GGen.empty());
+
+		return s_GGen2OriginShred.empty() && s_GGen2Shred.empty(); 
+	}
 };
