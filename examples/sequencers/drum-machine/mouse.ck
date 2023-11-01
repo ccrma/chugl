@@ -11,7 +11,8 @@ public class Mouse
     
     // workaround for mac retina displays
     if (GG.frameWidth() != GG.windowWidth()) {
-        2.0 => float SPP;
+        2.0 => SPP;
+        <<< "retina display detected, SPP = " + SPP >>>;
     }
 
     0 => static int LEFT_CLICK;
