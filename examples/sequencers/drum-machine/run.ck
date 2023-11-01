@@ -8,6 +8,7 @@
 
 [
     "mouse.ck",
+    "gpad.ck",
     "drum-machine.ck"
 ] @=> string files[];
 
