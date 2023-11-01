@@ -153,15 +153,15 @@ class AcidBass extends Chugraph {
     saw2 => env => filter;
 
     // initialize amp EG
-    env.set(50::ms, 10::ms, .6, 100::ms);
+    env.set(40::ms, 10::ms, .6, 150::ms);
 
     // initialize filter EG
     step.next(1.0);
-    filterEnv.duration(60::ms);
+    filterEnv.duration(50::ms);
 
     // initialize filter LFOs
-    freqLFO.period(4::second);
-    qLFO.period(5::second);
+    freqLFO.period(8::second);
+    qLFO.period(10::second);
 
     // initialize filter
     filter.freq(1500);
@@ -170,18 +170,16 @@ class AcidBass extends Chugraph {
     fun void modulate() {
         while (true) {
             // remap [-1, 1] --> [100, 2600]
-            Math.map(freqLFO.last(), -1.0, 1.0, 100, 2600) => float filterFreq;
+            Math.map(freqLFO.last(), -1.0, 1.0, 100, 12000) => float filterFreq;
             // remap [-1, 1] --> [1, 10]
-            Math.map(qLFO.last(), -1.0, 1.0, 1, 8) => float filterQ;
-
-            (.01 + filterEnv.last()) * filterFreq => filter.freq;
-            (.01 + filterEnv.last()) * filterQ => filter.Q;
+            Math.map(qLFO.last(), -1.0, 1.0, .1, 8) => filter.Q;
+             
+            // apply filter EG
+            filterEnv.last() * filterFreq + 100 => filter.freq;
 
             1::ms => now;
         }
     } spork ~ modulate();
-
-    fun void setGain(float g) { g => filter.gain; }
 
     // spork to play!
     fun void play(int note) {
@@ -268,7 +266,7 @@ Gain main => JCRev rev => dac;  // main bus
 AcidBass acidBasses[SCALE.size()];
 for (auto bass : acidBasses) {
     bass => main;
-    bass.gain(2.0 / acidBasses.size());  // reduce gain according to # of voices
+    bass.gain(3.0 / acidBasses.size());  // reduce gain according to # of voices
 }
 
 // initialize percussion instruments
