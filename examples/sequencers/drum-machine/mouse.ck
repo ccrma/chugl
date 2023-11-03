@@ -4,9 +4,16 @@ public class Mouse
     int mouseState[3];
     Event mouseDownEvents[3];
 
+    // need to pass 1 frame to propagate correct frame dimensions from render thread
     GG.nextFrame() => now;
-    // temporary workaround on mac
-    (1.0 * GG.frameWidth()) / (1.0 * GG.windowWidth()) => float SPP;  // screen pixels per pixel
+    
+    1.0 => float SPP;  // framebuffer to screen pixel ratio 
+    
+    // workaround for mac retina displays
+    if (GG.frameWidth() != GG.windowWidth()) {
+        2.0 => SPP;
+        <<< "retina display detected, SPP = " + SPP >>>;
+    }
 
     0 => static int LEFT_CLICK;
     1 => static int RIGHT_CLICK;
