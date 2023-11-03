@@ -20,68 +20,68 @@ CK_DLL_MFUN(cgl_obj_get_right);
 CK_DLL_MFUN(cgl_obj_get_forward);
 CK_DLL_MFUN(cgl_obj_get_up);
 
-	// Position 
-	CK_DLL_MFUN(cgl_obj_get_pos_x);
-	CK_DLL_MFUN(cgl_obj_set_pos_x);
+// Position 
+CK_DLL_MFUN(cgl_obj_get_pos_x);
+CK_DLL_MFUN(cgl_obj_set_pos_x);
 
-	CK_DLL_MFUN(cgl_obj_get_pos_y);
-	CK_DLL_MFUN(cgl_obj_set_pos_y);
+CK_DLL_MFUN(cgl_obj_get_pos_y);
+CK_DLL_MFUN(cgl_obj_set_pos_y);
 
-	CK_DLL_MFUN(cgl_obj_get_pos_z);
-	CK_DLL_MFUN(cgl_obj_set_pos_z);
+CK_DLL_MFUN(cgl_obj_get_pos_z);
+CK_DLL_MFUN(cgl_obj_set_pos_z);
 
-	CK_DLL_MFUN(cgl_obj_set_pos);
-	CK_DLL_MFUN(cgl_obj_get_pos);
+CK_DLL_MFUN(cgl_obj_set_pos);
+CK_DLL_MFUN(cgl_obj_get_pos);
 
-	CK_DLL_MFUN(cgl_obj_get_pos_world);
-	CK_DLL_MFUN(cgl_obj_set_pos_world);
+CK_DLL_MFUN(cgl_obj_get_pos_world);
+CK_DLL_MFUN(cgl_obj_set_pos_world);
 
-	CK_DLL_MFUN(cgl_obj_translate);
-	CK_DLL_MFUN(cgl_obj_translate_x);
-	CK_DLL_MFUN(cgl_obj_translate_y);
-	CK_DLL_MFUN(cgl_obj_translate_z);
+CK_DLL_MFUN(cgl_obj_translate);
+CK_DLL_MFUN(cgl_obj_translate_x);
+CK_DLL_MFUN(cgl_obj_translate_y);
+CK_DLL_MFUN(cgl_obj_translate_z);
 
-	// Rotation
-	CK_DLL_MFUN(cgl_obj_get_rot_x);
-	CK_DLL_MFUN(cgl_obj_set_rot_x);
+// Rotation
+CK_DLL_MFUN(cgl_obj_get_rot_x);
+CK_DLL_MFUN(cgl_obj_set_rot_x);
 
-	CK_DLL_MFUN(cgl_obj_get_rot_y);
-	CK_DLL_MFUN(cgl_obj_set_rot_y);
+CK_DLL_MFUN(cgl_obj_get_rot_y);
+CK_DLL_MFUN(cgl_obj_set_rot_y);
 
-	CK_DLL_MFUN(cgl_obj_get_rot_z);
-	CK_DLL_MFUN(cgl_obj_set_rot_z);
+CK_DLL_MFUN(cgl_obj_get_rot_z);
+CK_DLL_MFUN(cgl_obj_set_rot_z);
 
-	CK_DLL_MFUN(cgl_obj_set_rot);
-	CK_DLL_MFUN(cgl_obj_get_rot);
+CK_DLL_MFUN(cgl_obj_set_rot);
+CK_DLL_MFUN(cgl_obj_get_rot);
 
-	CK_DLL_MFUN(cgl_obj_rotate);
-	CK_DLL_MFUN(cgl_obj_rotate_x);
-	CK_DLL_MFUN(cgl_obj_rotate_y);
-	CK_DLL_MFUN(cgl_obj_rotate_z);
+CK_DLL_MFUN(cgl_obj_rotate);
+CK_DLL_MFUN(cgl_obj_rotate_x);
+CK_DLL_MFUN(cgl_obj_rotate_y);
+CK_DLL_MFUN(cgl_obj_rotate_z);
 
-	CK_DLL_MFUN(cgl_obj_rot_on_local_axis);
-	CK_DLL_MFUN(cgl_obj_rot_on_world_axis);
+CK_DLL_MFUN(cgl_obj_rot_on_local_axis);
+CK_DLL_MFUN(cgl_obj_rot_on_world_axis);
 
-	CK_DLL_MFUN(cgl_obj_lookat_vec3);
-	CK_DLL_MFUN(cgl_obj_lookat_dir);
-	// CK_DLL_MFUN(cgl_obj_rotate_by);  // no rotate by design because converting from euler angles to quat is ambiguous
+CK_DLL_MFUN(cgl_obj_lookat_vec3);
+CK_DLL_MFUN(cgl_obj_lookat_dir);
+// CK_DLL_MFUN(cgl_obj_rotate_by);  // no rotate by design because converting from euler angles to quat is ambiguous
 
-	// Scale
-	CK_DLL_MFUN(cgl_obj_get_scale_x);
-	CK_DLL_MFUN(cgl_obj_set_scale_x);
+// Scale
+CK_DLL_MFUN(cgl_obj_get_scale_x);
+CK_DLL_MFUN(cgl_obj_set_scale_x);
 
-	CK_DLL_MFUN(cgl_obj_get_scale_y);
-	CK_DLL_MFUN(cgl_obj_set_scale_y);
+CK_DLL_MFUN(cgl_obj_get_scale_y);
+CK_DLL_MFUN(cgl_obj_set_scale_y);
 
-	CK_DLL_MFUN(cgl_obj_get_scale_z);
-	CK_DLL_MFUN(cgl_obj_set_scale_z);
+CK_DLL_MFUN(cgl_obj_get_scale_z);
+CK_DLL_MFUN(cgl_obj_set_scale_z);
 
-	CK_DLL_MFUN(cgl_obj_set_scale);
-	CK_DLL_MFUN(cgl_obj_set_scale_uniform);
-	CK_DLL_MFUN(cgl_obj_get_scale);
+CK_DLL_MFUN(cgl_obj_set_scale);
+CK_DLL_MFUN(cgl_obj_set_scale_uniform);
+CK_DLL_MFUN(cgl_obj_get_scale);
 	
-	CK_DLL_MFUN(cgl_obj_get_scale_world);
-	CK_DLL_MFUN(cgl_obj_set_scale_world);
+CK_DLL_MFUN(cgl_obj_get_scale_world);
+CK_DLL_MFUN(cgl_obj_set_scale_world);
 
 // transformation matrix API
 CK_DLL_MFUN(cgl_obj_local_pos_to_world_pos);
