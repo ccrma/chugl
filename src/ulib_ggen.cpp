@@ -12,6 +12,8 @@ CK_DLL_DTOR(cgl_obj_dtor);
 // internal
 CK_DLL_MFUN(cgl_obj_get_id);
 CK_DLL_MFUN(cgl_obj_update);
+CK_DLL_MFUN(cgl_obj_get_name);
+CK_DLL_MFUN(cgl_obj_set_name);
 
 // transform API
 CK_DLL_MFUN(cgl_obj_get_right);
@@ -110,6 +112,13 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query *QUERY)
 
 	QUERY->add_mfun(QUERY, cgl_obj_get_id, "int", "id");
 	QUERY->doc_func(QUERY, "Internal debug. Get the unique ChuGL ID of this GGen");
+
+	QUERY->add_mfun(QUERY, cgl_obj_get_name, "string", "name");
+	QUERY->doc_func(QUERY, "Get the custom name of this GGen");
+
+	QUERY->add_mfun(QUERY, cgl_obj_set_name, "string", "name");
+	QUERY->add_arg(QUERY, "string", "name");
+	QUERY->doc_func(QUERY, "Set the custom name of this GGen");
 
 	QUERY->add_mfun(QUERY, cgl_obj_update, "void", "update");
 	QUERY->add_arg(QUERY, "float", "dt");
@@ -391,6 +400,22 @@ CK_DLL_MFUN(cgl_obj_get_id)
 {
 	SceneGraphObject *cglObj = CGL::GetSGO(SELF);
 	RETURN->v_int = cglObj->GetID();
+}
+
+CK_DLL_MFUN(cgl_obj_get_name)
+{
+	SceneGraphObject *cglObj = CGL::GetSGO(SELF);
+	RETURN->v_string = (Chuck_String *)API->object->create_string(
+		VM, cglObj->GetName().c_str(), false
+	);
+}
+
+CK_DLL_MFUN(cgl_obj_set_name)
+{
+	SceneGraphObject *obj = CGL::GetSGO(SELF);
+	Chuck_String *name = GET_NEXT_STRING(ARGS);
+	CGL::PushCommand(new UpdateNameCommand(obj, name->str()));
+	RETURN->v_string = name;
 }
 
 CK_DLL_MFUN(cgl_obj_update) {}
