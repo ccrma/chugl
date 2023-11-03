@@ -177,6 +177,27 @@ private:
 
 
 //==================== Parameter Modification Commands =======================//
+class UpdateNameCommand : public SceneGraphCommand
+{
+public:
+    UpdateNameCommand(SceneGraphObject* obj, const std::string& name) :
+        m_ID(obj->GetID()), m_Name(name)
+    {
+        assert(name.size() > 0);
+        obj->SetName(m_Name);
+    }
+
+    virtual void execute(Scene* scene) override {
+        SceneGraphObject* obj = dynamic_cast<SceneGraphObject*>(scene->GetNode(m_ID));
+        assert(obj);
+        obj->SetName(m_Name);
+    }
+
+private:
+    size_t m_ID;
+    std::string m_Name;
+};
+
 class UpdatePositionCommand : public SceneGraphCommand
 {
 public:
