@@ -207,29 +207,29 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query *QUERY)
 	// Rotation ===============================================================
 
 	// float rotX()
-	QUERY->add_mfun(QUERY, cgl_obj_get_rot_x, "vec3", "rotX");
+	QUERY->add_mfun(QUERY, cgl_obj_get_rot_x, "float", "rotX");
 	QUERY->doc_func(QUERY, "Get the rotation of this GGen on the X axis in local space");
 
 	// float rotX( float )
-	QUERY->add_mfun(QUERY, cgl_obj_set_rot_x, "vec3", "rotX");
+	QUERY->add_mfun(QUERY, cgl_obj_set_rot_x, "float", "rotX");
 	QUERY->add_arg(QUERY, "float", "radians");
 	QUERY->doc_func(QUERY, "Set the rotation of this GGen on the X axis in local space to the given radians");
 
 	// float rotY()
-	QUERY->add_mfun(QUERY, cgl_obj_get_rot_y, "vec3", "rotY");
+	QUERY->add_mfun(QUERY, cgl_obj_get_rot_y, "float", "rotY");
 	QUERY->doc_func(QUERY, "Get the rotation of this GGen on the Y axis in local space");
 
 	// float rotY( float )
-	QUERY->add_mfun(QUERY, cgl_obj_set_rot_y, "vec3", "rotY");
+	QUERY->add_mfun(QUERY, cgl_obj_set_rot_y, "float", "rotY");
 	QUERY->add_arg(QUERY, "float", "radians");
 	QUERY->doc_func(QUERY, "Set the rotation of this GGen on the Y axis in local space to the given radians");
 
 	// float rotZ()
-	QUERY->add_mfun(QUERY, cgl_obj_get_rot_z, "vec3", "rotZ");
+	QUERY->add_mfun(QUERY, cgl_obj_get_rot_z, "float", "rotZ");
 	QUERY->doc_func(QUERY, "Get the rotation of this GGen on the Z axis in local space");
 
 	// float rotZ( float )
-	QUERY->add_mfun(QUERY, cgl_obj_set_rot_z, "vec3", "rotZ");
+	QUERY->add_mfun(QUERY, cgl_obj_set_rot_z, "float", "rotZ");
 	QUERY->add_arg(QUERY, "float", "radians");
 	QUERY->doc_func(QUERY, "Set the rotation of this GGen on the Z axis in local space to the given radians");
 

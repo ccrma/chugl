@@ -83,6 +83,7 @@ fun void RotationXListener(UI_SliderFloat @ slider) {
     while (true) {
         slider => now;
         cube.rotX(slider.val());
+        <<< "cube rotX: ", cube.rotX() >>>;
     }
 } spork ~ RotationXListener(rotation_x_slider);
 
@@ -90,6 +91,7 @@ fun void RotationYListener(UI_SliderFloat @ slider) {
     while (true) {
         slider => now;
         cube.rotY(slider.val());
+        <<< "cube rotY: ", cube.rotY() >>>;
     }
 } spork ~ RotationYListener(rotation_y_slider);
 
@@ -97,6 +99,7 @@ fun void RotationZListener(UI_SliderFloat @ slider) {
     while (true) {
         slider => now;
         cube.rotZ(slider.val());
+        <<< "cube rotZ: ", cube.rotZ() >>>;
     }
 } spork ~ RotationZListener(rotation_z_slider);
 
