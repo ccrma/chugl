@@ -91,6 +91,7 @@ public:  // creating chuck object helpers
 	static Geometry* CreateChuckObjFromGeo(CK_DL_API API, Chuck_VM *VM, Geometry *geo, Chuck_VM_Shred *SHRED, bool refcount);
 	static Material* DupMeshMat(CK_DL_API API, Chuck_VM *VM, Mesh *mesh, Chuck_VM_Shred *SHRED);
 	static Geometry* DupMeshGeo(CK_DL_API API, Chuck_VM *VM, Mesh *mesh, Chuck_VM_Shred *SHRED);
+	static void CGL::MeshSet( Mesh * mesh, Geometry * geo, Material * mat );
 
 public:
 	static void RegisterShred(Chuck_VM_Shred* shred);

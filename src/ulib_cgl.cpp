@@ -905,6 +905,15 @@ Geometry* CGL::DupMeshGeo(CK_DL_API API, Chuck_VM *VM, Mesh *mesh, Chuck_VM_Shre
 	return newGeo;
 }
 
+void CGL::MeshSet( Mesh * mesh, Geometry * geo, Material * mat )
+{
+	// set on CGL side
+	mesh->SetGeometry( geo );
+	mesh->SetMaterial( mat );
+	// command queue to update renderer side
+	CGL::PushCommand( new SetMeshCommand( mesh ) );
+}
+
 //-----------------------------------------------------------------------------
 // ChuGL Graphics Shred Bookkeeping
 //-----------------------------------------------------------------------------
