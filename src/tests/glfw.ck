@@ -16,10 +16,13 @@ fun void windowResizeListener() {
     WindowResizeEvent wr;
     while (true) {
         wr => now;
-        // <<< "window resize event: ", GG.windowWidth(), "x", GG.windowHeight() >>>;
-        <<< "window resized -- frameWidth: ", GG.frameWidth(), "frameHeight: ", GG.frameHeight() >>>;
+        <<< "============================= Window Resized =================================" >>>;
+        <<< "window resized -- window width:", GG.windowWidth(), "window height", GG.windowHeight() >>>;
+        <<< "window resized -- frame width: ", GG.frameWidth(), "frame height: ", GG.frameHeight() >>>;
+        <<< "window resized -- aspect: ", GG.aspect() >>>;
+        <<< "==============================================================================" >>>;
     }
-} // spork ~ windowResizeListener();
+}  spork ~ windowResizeListener();
 
 fun void cycleWindowModes() {
     while (true) {
@@ -43,8 +46,8 @@ fun void printer() {
         <<< "===================GLFW state=====================" >>>;
 
         <<< 
-            // "window width: ", GG.windowWidth(),
-            // "window height: ", GG.windowHeight(),
+            "window width: ", GG.windowWidth(),
+            "window height: ", GG.windowHeight(),
             "framebuffer width: ", GG.frameWidth(),
             "framebuffer height: ", GG.frameHeight(),
             "glfw time: ", GG.windowUptime(),
@@ -54,7 +57,8 @@ fun void printer() {
         >>>;
         0 => fc;
     }
-}  spork ~ printer();
+}
+// spork ~ printer();
 
 fun void cycleWindowTitles() {
     while (true) {

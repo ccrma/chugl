@@ -40,6 +40,7 @@ static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     // TODO: figure out how to get access to active window object
     // Window::GetInstance().SetViewSize(width, height);
+
     glViewport(
         0, 0,  // index of lower left corner of viewport, in pixels
         width, height
@@ -52,11 +53,13 @@ static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     // auto-update camera aspect
     if (height > 0) {  // don't change aspect if screen minimizes, otherwises causes div by 0 crash
         if (Window::scene.GetMainCamera()) {
+            // bug: this doesn't correctly set aspect on the audio-thread camera scenegraph node
+            // for now its okay, because this field is not currently exposed to chuck in ulib_camera.cpp
             Window::scene.GetMainCamera()->params.aspect = (float)width / (float)height;
         }
     }
 
-    CglEvent::Broadcast(CglEventType::CGL_WINDOW_RESIZE);  // doesn't matter if we brodcast this in frambuffer callback or window size callback
+    CglEvent::Broadcast(CglEventType::CGL_WINDOW_RESIZE);  // doesn't matter if we broadcast this in framebuffer callback or window size callback
 }
 
 // window sizs in screen-space coordinates
@@ -81,8 +84,6 @@ static void glfwErrorCallback(int error, const char* description)
 {
     fprintf(stderr, "Error[%i]: %s\n", error, description);
 }
-
-
 
 
 /* =============================================================================
@@ -182,9 +183,6 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
     }
     glfwMakeContextCurrent(m_Window);
     SetWindow(m_Window, this);  // add to static map
-    CGL::SetWindowSize(m_ViewWidth, m_ViewHeight);
-
-
 
     // VSYNC =================================================
 #ifdef NDEBUG
@@ -215,17 +213,22 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
     std::cerr << "=====================================================================" << std::endl;
 
     // OpenGL Viewport and Callbacks =========================
-    // for high-DPI displays, framebuffer size is actually a multiple of window size
+    glfwSetFramebufferSizeCallback(m_Window, framebuffer_size_callback);
+    glfwSetWindowSizeCallback(m_Window, window_size_callback);
+    glfwSetKeyCallback(m_Window, keyCallback);
+
     glfwPollEvents();  // call poll events first to get correct framebuffer size (glfw bug: https://github.com/glfw/glfw/issues/1968)
+
+    // for high-DPI displays, framebuffer size is actually a multiple of window size
     int frameBufferWidth, frameBufferHeight;
+    int windowWidth, windowHeight;
     glfwGetFramebufferSize(m_Window, &frameBufferWidth, &frameBufferHeight);
+    glfwGetWindowSize(m_Window, &windowWidth, &windowHeight);
     glViewport(0, 0, frameBufferWidth, frameBufferHeight);
 
-    glfwSetFramebufferSizeCallback(m_Window, framebuffer_size_callback);
     // call the callback to first initialize 
     framebuffer_size_callback(m_Window, frameBufferWidth, frameBufferHeight);
-
-    glfwSetKeyCallback(m_Window, keyCallback);
+    window_size_callback(m_Window, windowWidth, windowHeight);
 
     // mouse settings =====================================
     glfwSetCursorPosCallback(m_Window, cursor_position_callback);
@@ -373,6 +376,7 @@ void Window::DisplayLoop()
     memset( deltaTimes, 0, sizeof(deltaTimes) );
     t_CKUINT dtWrite = 0;
     t_CKUINT dtInitFrames = 0;
+    bool firstFrame = true;
 
     // Render Loop ===========================================
     double prevTickTime = glfwGetTime();
@@ -448,6 +452,24 @@ void Window::DisplayLoop()
         // process any glfw options passed from chuck
         UpdateState(scene);
 
+        // hack to update main camera aspect on first frame
+        // reason: camera is created on audio-thread BEFORE activating main hook and starting this display loop
+        // so we can't set the aspect on chuck audio-thread side b/c window has not yet been launched, and we don't
+        // know the actual aspect ratio
+        // we only know the aspect ratio at this point, after the first flush of the command queue, which 
+        // creates the camera on the render thread
+        // Other workarounds:
+        // - create default camera on render thread, like default scene (not idea, ideally we want ALL objects
+        // even the scene to be created on the audio thread)
+        // - have an initial "load" phase like love.load() which is used for initialization of camera, scene,
+        // materials, etc. 
+        //   - better. can have load screen while this is happening. will be long-term solution
+        if (firstFrame) {
+            if (scene.GetMainCamera()) {
+                scene.GetMainCamera()->params.aspect = (float)m_ViewWidth / (float)m_ViewHeight;
+            }
+        }
+
         // garbage collection! delete GPU-side data for any scenegraph objects that were deleted in chuck
         renderer.ProcessDeletionQueue(&scene); // IMPORTANT: should happen after flushing command queue
 
@@ -468,6 +490,8 @@ void Window::DisplayLoop()
 
         // Tracy Frame
         FrameMark;
+
+        firstFrame = false;
     }
 
     // Tracy shutdown (must happen before chuck VM calls dlclose and unloads this chugl library)

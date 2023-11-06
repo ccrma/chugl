@@ -44,6 +44,7 @@ CK_DLL_SFUN(cgl_unregister);
 // glfw window params
 CK_DLL_SFUN(cgl_window_get_width);
 CK_DLL_SFUN(cgl_window_get_height);
+CK_DLL_SFUN(cgl_window_get_aspect_ratio);
 CK_DLL_SFUN(cgl_window_get_time);
 CK_DLL_SFUN(cgl_window_get_dt);
 
@@ -137,10 +138,6 @@ t_CKBOOL create_chugl_default_objs(Chuck_DL_Query *QUERY)
 	CglEvent::s_SharedEventQueue = QUERY->api()->vm->create_event_buffer(
 		QUERY->vm());
 	assert(CglEvent::s_SharedEventQueue);
-
-	// main camera
-	// Chuck_DL_Api::Type type = QUERY->api()->type->lookup(QUERY->api(), NULL, "GCamera");
-	// Chuck_DL_Api::Object obj = QUERY->api()->object->create(QUERY->api(), NULL, type);
 
 	// shred destroy listener
 	QUERY->register_shreds_watcher(QUERY, cgl_shred_on_destroy_listener, CKVM_SHREDS_WATCH_REMOVE, NULL);
@@ -339,12 +336,12 @@ t_CKBOOL init_chugl_static_fns(Chuck_DL_Query *QUERY)
     QUERY->doc_func(QUERY, "Returns width of the framebuffer in pixels. Used for settings the viewport dimensions and camera aspect ratio");
 	QUERY->add_sfun(QUERY, cgl_framebuffer_get_height, "int", "frameHeight");
     QUERY->doc_func(QUERY, "Returns height of the framebuffer in pixels. Used for settings the viewport dimensions and camera aspect ratio");
+	QUERY->add_sfun(QUERY, cgl_window_get_aspect_ratio, "float", "aspect");
+	QUERY->doc_func(QUERY, "Returns aspect ratio of the window. Equal to windowWidth / windowHeight");
 	QUERY->add_sfun(QUERY, cgl_window_get_time, "dur", "windowUptime");
     QUERY->doc_func(QUERY, "Time in seconds since the grapics window was opened");
 	QUERY->add_sfun(QUERY, cgl_window_get_dt, "float", "dt");
     QUERY->doc_func(QUERY, "Time in seconds since the last render frame"); 
-
-
 
 	// mouse functions
 	QUERY->add_sfun(QUERY, cgl_mouse_get_pos_x, "float", "mouseX");
@@ -446,6 +443,8 @@ CK_DLL_SFUN(cgl_window_get_height) { RETURN->v_int = CGL::GetWindowSize().second
 CK_DLL_SFUN(cgl_framebuffer_get_width) { RETURN->v_int = CGL::GetFramebufferSize().first; }
 // get framebuffer height
 CK_DLL_SFUN(cgl_framebuffer_get_height) { RETURN->v_int = CGL::GetFramebufferSize().second; }
+// get window aspect
+CK_DLL_SFUN(cgl_window_get_aspect_ratio) { RETURN->v_float = CGL::GetAspectRatio(); }
 // get glfw time
 CK_DLL_SFUN(cgl_window_get_time) { RETURN->v_dur = API->vm->srate(VM) * CGL::GetTimeInfo().first; }
 // get glfw dt
@@ -1044,6 +1043,12 @@ std::pair<int, int> CGL::GetFramebufferSize()
 {
 	std::unique_lock<std::mutex> lock(s_WindowStateLock);
 	return std::pair<int, int>(s_WindowState.framebufferWidth, s_WindowState.framebufferHeight);
+}
+
+t_CKFLOAT CGL::GetAspectRatio()
+{
+	std::unique_lock<std::mutex> lock(s_WindowStateLock);
+	return (t_CKFLOAT)s_WindowState.windowWidth / (t_CKFLOAT)s_WindowState.windowHeight;
 }
 
 std::pair<double, double> CGL::GetTimeInfo()

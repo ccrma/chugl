@@ -156,6 +156,8 @@ public: // global, lock-protected state for sending info from GLFW --> Chuck
         t_CKINT windowWidth, windowHeight;
         // frame buffer width and height (in pixels)
         t_CKINT framebufferWidth, framebufferHeight;
+		// window aspect
+		t_CKFLOAT aspect;
         // mouse X, mouse Y
         double mouseX, mouseY;
         // glfw time, delta time
@@ -164,9 +166,14 @@ public: // global, lock-protected state for sending info from GLFW --> Chuck
         t_CKINT fps;
 
         // constructor
-        WindowState() : windowWidth(1), windowHeight(1),
-            framebufferWidth(1), framebufferHeight(1), mouseX(0), mouseY(0),
-            glfwTime(0), deltaTime(0), fps(0) { }
+        WindowState() : 
+			windowWidth(1), windowHeight(1),
+            framebufferWidth(1), framebufferHeight(1), 
+			aspect(1.0f),
+			mouseX(0), mouseY(0),
+            glfwTime(0), deltaTime(0), 
+			fps(0) 
+			{}
 	};
 
     // TODO: will need to be non-static if we support multiple windows
@@ -176,6 +183,7 @@ public: // global, lock-protected state for sending info from GLFW --> Chuck
 	static std::pair<double, double> GetMousePos();
 	static std::pair<int, int> GetWindowSize();
 	static std::pair<int, int> GetFramebufferSize();
+	static t_CKFLOAT GetAspectRatio();
 	static std::pair<double, double> GetTimeInfo();
 	static void SetMousePos(double x, double y);
 	static void SetWindowSize(int width, int height);

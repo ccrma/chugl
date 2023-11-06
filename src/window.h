@@ -9,8 +9,7 @@ class Renderer;
 class Window
 {
 public:
-	Window(int viewWidth = 2*640, int viewHeight = 2*480);
-	// Window(int viewWidth = 3840, int viewHeight = 2160);
+	Window(int viewWidth = 1244, int viewHeight = 700);
 	~Window();
 
 	void DisplayLoop();

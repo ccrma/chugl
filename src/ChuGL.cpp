@@ -16,8 +16,8 @@ static CK_DL_API g_chuglAPI = NULL;
 
 t_CKBOOL chugl_main_loop_hook(void* bindle)
 {
-    Window window;
     // std::cerr << "INSIDE chugl main loop hook!" << std::endl;
+    Window window;
 
     window.DisplayLoop();
 
