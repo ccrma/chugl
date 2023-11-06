@@ -323,7 +323,7 @@ static void draw_imgui() {
     //     show_another_window = false;
     // ImGui::End();
     
-    // ImGui::ShowDemoWindow();
+    ImGui::ShowDemoWindow();
 
 
     // Draw the GUI

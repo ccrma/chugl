@@ -89,7 +89,7 @@ struct EnumClassHash
 // name: Type
 // desc: Type enums for GUI elements
 //-----------------------------------------------------------------------------
-enum class Type : unsigned int 
+enum class Type : t_CKUINT 
 {
     Element = 0,
     Window,
@@ -98,7 +98,8 @@ enum class Type : unsigned int
     IntSlider,
     Checkbox,
     Color3,
-    Dropdown
+    Dropdown,
+    Text
 };
 
 //-----------------------------------------------------------------------------
@@ -524,3 +525,56 @@ private:
 
 };  // end namespace GUI
 
+// class Text : public Element
+// {
+// public:
+//     Text(
+//         Chuck_Object* event,
+//         int min = 0,
+//         int max = 10
+//     ) : Element(event), m_Min(min), m_Max(max), m_ReadData(min), m_WriteData(min) {
+//     }
+
+//     virtual Type GetType() override { return Type::FloatSlider; }
+
+//     virtual void Draw() override {
+//         if (ImGui::SliderInt(m_Label.c_str(), &m_WriteData, m_Min, m_Max)) {
+//             // lock
+//             std::unique_lock<std::mutex> lock(m_ReadDataLock);
+//             // copy
+//             m_ReadData = m_WriteData;
+//             // unlock
+//             lock.unlock();
+//             // broadcast chuck event
+//             Broadcast();
+//         }
+//     }
+
+//     float GetData() {
+//         // lock
+//         std::lock_guard<std::mutex> lock(m_ReadDataLock);
+//         // return
+//         return m_ReadData;
+//     }
+
+//     void SetData(int data) {
+//         // lock
+//         std::lock_guard<std::mutex> lock(Manager::GetWindowLock());
+//         // set with bounds check
+//         m_WriteData = glm::clamp(data, m_Min, m_Max);
+//         // copy to read data
+//         m_ReadData = m_WriteData;
+//     }
+
+//     float GetMin() { return m_Min; }
+//     void SetMin(float min) { m_Min = min; }
+
+//     float GetMax() { return m_Max; }
+//     void SetMax(float max) { m_Max = max; }
+
+// private:
+//     int m_Min;
+//     int m_Max;
+//     int m_ReadData;
+//     int m_WriteData;
+// };
