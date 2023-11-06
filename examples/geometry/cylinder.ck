@@ -202,10 +202,10 @@ while (true) {
     camera.lookAt( GG.scene().pos() );
 
     // rotate the meshes
-    GG.dt() * .8 => float dt;
-    dt => normalsMesh.rotateY; dt * .17 => normalsMesh.rotateX;
-    dt => uvMesh.rotateY;      dt * .17 => uvMesh.rotateX;
-    dt => lineMesh.rotateY;    dt * .17 => lineMesh.rotateX;
+    GG.dt() * .4 => float dt;
+    dt => normalsMesh.rotateY; dt * .77 => normalsMesh.rotateX;
+    dt => uvMesh.rotateY;      dt * .77 => uvMesh.rotateX;
+    dt => lineMesh.rotateY;    dt * .77 => lineMesh.rotateX;
     GG.nextFrame() => now; 
 }
 
