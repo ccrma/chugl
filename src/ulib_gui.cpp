@@ -20,8 +20,8 @@ Manager::CkTypeMap Manager::s_CkTypeMap = {
     {Type::IntSlider, "UI_SliderInt"},
     {Type::Checkbox, "UI_Checkbox"},
     {Type::Color3, "UI_Color3"},
-    {Type::Dropdown, "UI_Dropdown"}
-
+    {Type::Dropdown, "UI_Dropdown"},
+    {Type::Text, "UI_Text"}
 };
 
 void Manager::DrawGUI()
@@ -52,6 +52,15 @@ void GUI::Element::SetLabel(const std::string & label)
     // dear imgui does NOT support empty string, so we use a space instead
     m_Label = label.empty() ? " " : label;
 }
+
+//-----------------------------------------------------------------------------
+// name: Text 
+//-----------------------------------------------------------------------------
+const t_CKUINT Text::DefaultText = Text::Mode::Default;
+const t_CKUINT Text::BulletText = Text::Mode::Bullet;
+const t_CKUINT Text::SeparatorText = Text::Mode::Separator;
+
+
 
 // Chuck API =================================================================
 
@@ -113,6 +122,20 @@ CK_DLL_MFUN( chugl_gui_dropdown_options_set );
 CK_DLL_MFUN( chugl_gui_dropdown_val_get );
 CK_DLL_MFUN( chugl_gui_dropdown_val_set );
 
+//-----------------------------------------------------------------------------
+// Text
+//-----------------------------------------------------------------------------
+CK_DLL_CTOR( chugl_gui_text_ctor );
+CK_DLL_MFUN( chugl_gui_text_val_get );
+CK_DLL_MFUN( chugl_gui_text_val_set );
+CK_DLL_MFUN( chugl_gui_text_color3_get );
+CK_DLL_MFUN( chugl_gui_text_color3_set );
+// CK_DLL_MFUN( chugl_gui_text_color4_get );
+// CK_DLL_MFUN( chugl_gui_text_color4_set );
+CK_DLL_MFUN( chugl_gui_text_wrap_get );
+CK_DLL_MFUN( chugl_gui_text_wrap_set );
+CK_DLL_MFUN( chugl_gui_text_mode_get );
+CK_DLL_MFUN( chugl_gui_text_mode_set );
 
 t_CKBOOL init_chugl_gui_element(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_gui_window(Chuck_DL_Query *QUERY);
@@ -122,6 +145,8 @@ t_CKBOOL init_chugl_gui_slider_float(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_gui_slider_int(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_gui_color3(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_gui_dropdown(Chuck_DL_Query *QUERY);
+t_CKBOOL init_chugl_gui_text(Chuck_DL_Query *QUERY);
+
 
 
 t_CKBOOL init_chugl_gui(Chuck_DL_Query *QUERY)
@@ -141,6 +166,7 @@ t_CKBOOL init_chugl_gui(Chuck_DL_Query *QUERY)
     if (!init_chugl_gui_slider_int(QUERY)) return FALSE;
     if (!init_chugl_gui_color3(QUERY)) return FALSE;
     if (!init_chugl_gui_dropdown(QUERY)) return FALSE;
+    if (!init_chugl_gui_text(QUERY)) return FALSE;
 
     return TRUE;
 }
@@ -625,4 +651,168 @@ CK_DLL_MFUN( chugl_gui_dropdown_options_set )
     }
 
     dropdown->SetOptions( options_str );
+}
+
+
+//-----------------------------------------------------------------------------
+// name: init_chugl_gui_text()
+// desc: ...
+//-----------------------------------------------------------------------------
+t_CKBOOL init_chugl_gui_text(Chuck_DL_Query *QUERY)
+{
+    QUERY->begin_class(QUERY, Manager::GetCkName(Type::Text), Manager::GetCkName(Type::Element));
+	QUERY->doc_class(QUERY, 
+        "Text widget"
+        "Add text to the UI window"
+        "Supports options such as color, style, and wrapping"
+    );
+    QUERY->add_ex(QUERY, "ui/basic-ui.ck");
+
+    QUERY->add_svar(QUERY, "int", "MODE_DEFAULT", true, (void *)&Text::DefaultText);
+    QUERY->doc_var(QUERY, "default text mode, no additional formatting");
+
+    QUERY->add_svar(QUERY, "int", "MODE_BULLET", true, (void *)&Text::BulletText);
+    QUERY->doc_var(QUERY, "display text as a bullet point");
+
+    QUERY->add_svar(QUERY, "int", "MODE_SEPARATOR", true, (void *)&Text::SeparatorText);
+    QUERY->doc_var(QUERY, "display text with a horizontal separator line");
+
+    QUERY->add_ctor(QUERY, chugl_gui_text_ctor);
+
+    QUERY->add_mfun(QUERY, chugl_gui_text_val_get, "string", "text");
+    QUERY->doc_func(QUERY, "Set the text string");
+
+    QUERY->add_mfun(QUERY, chugl_gui_text_val_set, "string", "text");
+    QUERY->add_arg( QUERY, "string", "text");
+    QUERY->doc_func(QUERY, "Get the text string");
+
+    QUERY->add_mfun(QUERY, chugl_gui_text_color3_get, "vec3", "color");
+    QUERY->doc_func(QUERY, "Get the text color");
+
+    QUERY->add_mfun(QUERY, chugl_gui_text_color3_set, "vec3", "color");
+    QUERY->add_arg( QUERY, "vec3", "color");
+    QUERY->doc_func(QUERY, "Set the text color, defaults to alpha of 1.0 ie fully opaque");
+
+    // will enable when can create a vec4 type in chuck from a vec3 like:
+    // @(Color.RED, 1.0)
+
+    // QUERY->add_mfun(QUERY, chugl_gui_text_color4_get, "vec4", "color");
+    // QUERY->doc_func(QUERY, "Get the text color");
+
+    // QUERY->add_mfun(QUERY, chugl_gui_text_color4_set, "vec4", "color");
+    // QUERY->add_arg( QUERY, "vec4", "color");
+    // QUERY->doc_func(QUERY, "Set the text color");
+
+    QUERY->add_mfun(QUERY, chugl_gui_text_wrap_get, "int", "wrap");
+    QUERY->doc_func(QUERY, "Get the text wrapping mode. Default True, meaning text will wrap to end of window");
+
+    QUERY->add_mfun(QUERY, chugl_gui_text_wrap_set, "int", "wrap");
+    QUERY->add_arg( QUERY, "int", "wrap");
+    QUERY->doc_func(QUERY, 
+        "Set the text wrapping mode. Default True, meaning text will wrap to end of window"
+        "If false, text will extend past the window bounds, and the user will need to scroll horizontally to see it"
+    );
+
+    QUERY->add_mfun(QUERY, chugl_gui_text_mode_get, "int", "mode");
+    QUERY->doc_func(QUERY, 
+        "Get the text mode. Default is MODE_DEFAULT, meaning no additional formatting"
+        "MODE_BULLET will display text as a bullet point"
+        "MODE_SEPARATOR will display text with a horizontal separator line"
+    );
+
+    QUERY->add_mfun(QUERY, chugl_gui_text_mode_set, "int", "mode");
+    QUERY->add_arg( QUERY, "int", "mode");
+    QUERY->doc_func(QUERY, 
+        "Set the text mode. Default is MODE_DEFAULT, meaning no additional formatting"
+        "MODE_BULLET will display text as a bullet point"
+        "MODE_SEPARATOR will display text with a horizontal separator line"
+    );
+
+    QUERY->end_class(QUERY);
+
+    return TRUE;
+}
+
+CK_DLL_CTOR( chugl_gui_text_ctor )
+{
+    OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data) = (t_CKINT) new Text(SELF);
+}
+
+CK_DLL_MFUN( chugl_gui_text_val_get )
+{
+    Text* text = (Text*) OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    RETURN->v_string = (Chuck_String*)API->object->create_string(VM, text->GetData().c_str(), false);
+}
+
+CK_DLL_MFUN( chugl_gui_text_val_set )
+{
+    Text* text = (Text*) OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    Chuck_String * s = GET_NEXT_STRING(ARGS);
+    if( text && s )
+    {
+        text->SetData( s->str() );
+        RETURN->v_string = s;
+    }
+    else
+    {
+        RETURN->v_string = NULL;
+    }
+}
+
+CK_DLL_MFUN( chugl_gui_text_color3_get )
+{
+    Text* text = (Text*) OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    glm::vec4 color = text->GetColor();
+    RETURN->v_vec3 = {color.r, color.g, color.b};
+}
+
+CK_DLL_MFUN( chugl_gui_text_color3_set )
+{
+    Text* text = (Text*) OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
+    text->SetColor( {color.x, color.y, color.z, 1.0 } );
+    RETURN->v_vec3 = color;
+}
+
+// CK_DLL_MFUN( chugl_gui_text_color4_get )
+// {
+//     Text* text = (Text*) OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+//     glm::vec4 color = text->GetColor();
+//     RETURN->v_vec4 = {color.r, color.g, color.b, color.a};
+// }
+
+// CK_DLL_MFUN( chugl_gui_text_color4_set )
+// {
+//     Text* text = (Text*) OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+//     t_CKVEC4 color = GET_NEXT_VEC4(ARGS);
+//     text->SetColor( { color.x, color.y, color.z, color.w } );
+//     RETURN->v_vec4 = color;
+// }
+
+CK_DLL_MFUN( chugl_gui_text_wrap_get )
+{
+    Text* text = (Text*) OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    RETURN->v_int = text->GetWrap() ? 1 : 0;
+}
+
+CK_DLL_MFUN( chugl_gui_text_wrap_set )
+{
+    Text* text = (Text*) OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    t_CKINT wrap = GET_NEXT_INT(ARGS);
+    text->SetWrap( wrap ? true : false );
+    RETURN->v_int = wrap;
+}
+
+CK_DLL_MFUN( chugl_gui_text_mode_get )
+{
+    Text* text = (Text*) OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    RETURN->v_int = text->GetMode();
+}
+
+CK_DLL_MFUN( chugl_gui_text_mode_set )
+{
+    Text* text = (Text*) OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    t_CKINT mode = GET_NEXT_INT(ARGS);
+    text->SetMode( static_cast<Text::Mode>(mode) );
+    RETURN->v_int = mode;
 }
