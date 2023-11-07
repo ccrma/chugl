@@ -13,8 +13,11 @@
 // default textures ======================================================
 unsigned char whitePixel[] = { 255, 255, 255, 255 };
 unsigned char blackPixel[] = { 0, 0, 0, 255 };
+unsigned char magentaPixel[] = { 255, 0, 255, 255 };
 Texture* Texture::DefaultWhiteTexture{ nullptr };
 Texture* Texture::DefaultBlackTexture{ nullptr };
+Texture* Texture::DefaultMagentaTexture{ nullptr };
+
 // Texture Texture::DefaultWhiteTexture(1, 1, 4, &whitePixel[0]);
 // Texture Texture::DefaultBlackTexture(1, 1, 4, &blackPixel[0]);
 
@@ -193,6 +196,14 @@ Texture *Texture::GetDefaultBlackTexture()
 	return DefaultBlackTexture;
 }
 
+Texture *Texture::GetDefaultMagentaTexture()
+{
+	if (!DefaultMagentaTexture) {
+		DefaultMagentaTexture = new Texture(1, 1, 4, &magentaPixel[0]);
+	}
+	return DefaultMagentaTexture;
+}
+
 void Texture::GenTextureFromPath(const std::string &path)
 {
 	// flip so first pixel in output array is on bottom left.
@@ -211,8 +222,8 @@ void Texture::GenTextureFromPath(const std::string &path)
 	// make sure texture loaded
 	if (!m_LocalBuffer) {
 		std::cerr << "ERROR: failed to load texture at path " << path << std::endl;
-		std::cerr << "STBI ERROR REASON:" << stbi_failure_reason() << std::endl;
-		throw std::runtime_error("failed to load texture");
+		std::cerr << "REASON:" << stbi_failure_reason() << std::endl;
+		std::cerr << "Defaulting to 1x1 magenta pixel texture instead" << std::endl;
 	}
 
 	// copy texture data to GPU
@@ -220,16 +231,17 @@ void Texture::GenTextureFromPath(const std::string &path)
 		GL_TEXTURE_2D,// TODO: only supports 2D textures for now
 		0, // mipmap LOD (for manually creating mipmaps)
 		GL_RGBA8,  // format we want to store texture
-		m_Width, m_Height,  // texture dims
+		m_LocalBuffer ? m_Width : 1, 
+		m_LocalBuffer ? m_Height : 1,  // texture dims
 		0,  // legacy border width, always set 0
 		GL_RGBA,  // format of texture on CPU     -- TODO: accept RGB format no alpha?
 		GL_UNSIGNED_BYTE,  // size of each channel on CPU
-		m_LocalBuffer  // texture buffer
+		m_LocalBuffer ? m_LocalBuffer : &magentaPixel[0]  // texture buffer
 	);
 
 
 	// free local image data
-	stbi_image_free(m_LocalBuffer);
+	if (m_LocalBuffer) stbi_image_free(m_LocalBuffer);
 }
 
 void Texture::GenTextureFromBuffer(int texWidth, int texHeight, unsigned char *texBuffer)

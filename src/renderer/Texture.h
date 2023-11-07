@@ -32,8 +32,10 @@ public:
 	// default pixel textures
 	static Texture* DefaultWhiteTexture;
 	static Texture* DefaultBlackTexture;
+	static Texture* DefaultMagentaTexture;
 	static Texture* GetDefaultWhiteTexture();
 	static Texture* GetDefaultBlackTexture();
+	static Texture* GetDefaultMagentaTexture();
 
 private:
 	// helper fns for creating textures. 
