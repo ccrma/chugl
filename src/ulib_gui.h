@@ -89,7 +89,7 @@ struct EnumClassHash
 // name: Type
 // desc: Type enums for GUI elements
 //-----------------------------------------------------------------------------
-enum class Type : unsigned int 
+enum class Type : t_CKUINT 
 {
     Element = 0,
     Window,
@@ -98,7 +98,8 @@ enum class Type : unsigned int
     IntSlider,
     Checkbox,
     Color3,
-    Dropdown
+    Dropdown,
+    Text
 };
 
 //-----------------------------------------------------------------------------
@@ -160,14 +161,16 @@ public:
 
     void Broadcast() { Manager::Broadcast( m_Event ); }
 
-    std::string& GetLabel() { return m_Label; }
-    void SetLabel(const std::string& label);
+    virtual std::string& GetLabel() { 
+        // threadsafe assuming 
+        // 1. SetLabel grabs window manager lock
+        // 2. Render thread also grabs this lock when drawing (ie reading label)
+        // 3. label is only ever set by audio-thread via UI_Element.text(...) API
+        return m_Label; 
+    }
+    virtual void SetLabel(const std::string& label);
 
 protected:
-    // void* m_ReadData;   // read by chuck thread, written to by render thread on widget update.
-                        // not threadsafe, requires lock to read/write
-
-    // void* m_WriteData;  // only ever written to by the Render thread, threadsafe
     std::string m_Label;  // name of element
 
     std::mutex m_ReadDataLock;  // lock to provide read/write access to m_ReadData
@@ -522,5 +525,145 @@ private:
 };
 
 
-};  // end namespace GUI
 
+/* 
+UI_Text API 
+
+Supported ImGUI text functionality: 
+    Text(const char* fmt, ...)                                      IM_FMTARGS(1); // formatted text
+    TextColored(const ImVec4& col, const char* fmt, ...)            IM_FMTARGS(2); // shortcut for PushStyleColor(ImGuiCol_Text, col); Text(fmt, ...); PopStyleColor();
+    TextWrapped(const char* fmt, ...)                               IM_FMTARGS(1); // shortcut for PushTextWrapPos(0.0f); Text(fmt, ...); PopTextWrapPos();. Note that this won't work on an auto-resizing window if there's no other widgets to extend the window width, yoy may need to set a size using SetNextWindowSize().
+    BulletText(const char* fmt, ...)                                IM_FMTARGS(1); // shortcut for Bullet()+Text()
+    SeparatorText(const char* label);                               // currently: formatted text with an horizontal line
+
+    // TODO: how do we reconcile this with label...
+    // have both .text() and .label()
+    // LabelText currently unsupported
+    LabelText(const char* label, const char* fmt, ...)              IM_FMTARGS(2); // display text+label aligned the same way as value+label widgets
+
+Uses Element base class m_Label to store text.
+
+Locking:
+Because text is not an interactive UI element, if it is ever set, it's probably going to 
+be from the chuck thread. Therefore to reduce lock contention, the m_ReadDataLock is 
+repurposed here to be grabbed by the chuck thread when setting the text, and by the render
+thread every frame when drawing
+- there is no read/write data that needs copying, so m_ReadDataLock doesn't need to serve its original 
+  purpose
+- render thread has to grab the m_ReadDataLock every frame instead of only when the data is modified
+- to change text, chuck thread only has to grab the m_ReadDataLock instead of the global window lock,
+  making the act of changing text less expensive
+- net tradeoff: the cost of drawing the UI is a tiny bit more expensive for the render thread
+  but the cost of changing text is a lot less expensive for audio thread
+*/
+
+class Text : public Element
+{
+public:
+    // text mode enums
+    enum Mode : t_CKUINT {
+        Default = 0,
+        Bullet = 1,
+        Separator = 2
+    };
+public:
+    Text(
+        Chuck_Object* event
+    ) : Element(event), m_Text(" "), m_Color({1.0, 1.0, 1.0, 1.0}),
+        m_Wrap(true), m_Mode(Mode::Default)
+     {}
+
+    virtual Type GetType() override { return Type::Text; }
+
+    virtual void Draw() override {
+        // lock
+        std::lock_guard<std::mutex> lock(m_ReadDataLock);
+
+        // push color state
+        ImGui::PushStyleColor(ImGuiCol_Text, m_Color);
+
+        // push wrap to window edge
+        if (m_Wrap) ImGui::PushTextWrapPos(0.0f);
+
+        // draw text
+        if (m_Mode == Mode::Default)             ImGui::Text("%s", m_Text.c_str());
+        else if (m_Mode == Mode::Bullet)         ImGui::BulletText("%s", m_Text.c_str());
+        else if (m_Mode == Mode::Separator)      ImGui::SeparatorText(m_Text.c_str());
+
+        // pop wrap state
+        if (m_Wrap) ImGui::PopTextWrapPos();
+
+        // pop color state
+        ImGui::PopStyleColor();
+    }
+
+    const std::string& GetData() {
+        // lock
+        std::lock_guard<std::mutex> lock(m_ReadDataLock);
+        // return
+        return m_Text;
+    }
+
+    void SetData(const std::string& text) {
+        // lock
+        std::lock_guard<std::mutex> lock(m_ReadDataLock);
+        // set new text
+        m_Text = text.empty() ? " " : text;
+    }
+
+    void SetColor(const glm::vec4& color) {
+        // lock
+        std::lock_guard<std::mutex> lock(m_ReadDataLock);
+        // set new color
+        m_Color = {color.r, color.g, color.b, color.a};
+    }
+
+    glm::vec4 GetColor() {
+        // lock
+        std::lock_guard<std::mutex> lock(m_ReadDataLock);
+        // return
+        return {m_Color.x, m_Color.y, m_Color.z, m_Color.w};
+    }
+
+    void SetWrap(bool wrap) {
+        // lock
+        std::lock_guard<std::mutex> lock(m_ReadDataLock);
+        // set new wrap
+        m_Wrap = wrap;
+    }
+
+    bool GetWrap() {
+        // lock
+        std::lock_guard<std::mutex> lock(m_ReadDataLock);
+        // return
+        return m_Wrap;
+    }
+
+    void SetMode(Mode mode) {
+        // lock
+        std::lock_guard<std::mutex> lock(m_ReadDataLock);
+        // set new mode
+        m_Mode = mode;
+    }
+
+    Mode GetMode() {
+        // lock
+        std::lock_guard<std::mutex> lock(m_ReadDataLock);
+        // return
+        return m_Mode;
+    }
+
+public: // static const modes
+    static const t_CKUINT DefaultText;
+    static const t_CKUINT BulletText;
+    static const t_CKUINT SeparatorText;
+
+private:
+    std::mutex m_ReadDataLock;  // lock to provide read/write access to m_ReadData
+    std::string m_Text;
+    ImVec4 m_Color;
+    bool m_Wrap;
+    Mode m_Mode;
+};
+
+};  // end namespace GUI
