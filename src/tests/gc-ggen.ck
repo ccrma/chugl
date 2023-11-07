@@ -14,7 +14,7 @@ fun void spawnAndGC() {
     // GGen `b` is sent to external reference, should be cleaned up when that reference gets replaced
     // GGen `c` is attacheed but then immediately detached from scenegraph
     // ALL should be cleaned up by GC
-    GCube a, b, c;
+    GSphere a, b, c;
     b @=> out_of_shred_ref;
     c --> GG.scene();
     GG.nextFrame() => now;
@@ -24,12 +24,12 @@ fun void spawnAndGC() {
 fun void spawnAndGCifSporked() {
     // upon shred exit, GGen `a` should be GC'd because the shred
     // will disconnect it from the scenegraph on shred exit
-    GCube a --> GG.scene();
-    GCube c --> GCube d;
+    GCircle a --> GG.scene();
+    GPlane c --> GTorus d;
     GG.nextFrame() => now; // give chance for this to be propagated to render thread
 
     // also test GC on GGens that are never attached to render-thread scenegraph
-    GCube b --> GG.scene();
+    GCylinder b --> GG.scene();
 }
 
 fun void spawnNoGC() {
