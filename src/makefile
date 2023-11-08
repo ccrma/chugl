@@ -50,5 +50,13 @@ endif
 	@echo "[probing chugins...]"
 	@chuck --color --chugin-probe 2>&1 >/dev/null | grep ChuGL.chug
 
-clean: 
+clean:
+ifneq ("$(wildcard build-release)","")
+	cmake --build build-release --target clean
+endif
+ifneq ("$(wildcard build-debug)","")
+	cmake --build build-debug --target clean
+endif
+
+clean-all: 
 	rm -rf $(CHUG) build-release build-debug

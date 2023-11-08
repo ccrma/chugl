@@ -11,6 +11,7 @@
 #include "ulib_mesh.h"
 #include "ulib_light.h"
 #include "ulib_scene.h"
+#include "ulib_assimp.h"
 
 #include "renderer/scenegraph/Camera.h"
 #include "renderer/scenegraph/Command.h"
@@ -125,7 +126,8 @@ t_CKBOOL init_chugl(Chuck_DL_Query *QUERY)
 	init_chugl_mesh(QUERY);
 	init_chugl_light(QUERY);
 	init_chugl_scene(QUERY);
-	create_chugl_default_objs(QUERY);
+    init_chugl_assimp(QUERY);
+    create_chugl_default_objs(QUERY);
 	init_chugl_static_fns(QUERY);
 
 	return true;
@@ -872,6 +874,19 @@ Geometry* CGL::CreateChuckObjFromGeo(CK_DL_API API, Chuck_VM *VM, Geometry *geo,
 	return geo;
 }
 
+CGL_Texture* CGL::CreateChuckObjFromTex(CK_DL_API API, Chuck_VM* VM, CGL_Texture* tex, Chuck_VM_Shred* SHRED, bool refcount)
+{
+	// create chuck obj
+	Chuck_DL_Api::Type type = API->type->lookup(VM, tex->myCkName());
+	Chuck_DL_Api::Object ckobj = API->object->create(SHRED, type, refcount);
+
+	// tell renderer to create a copy
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(tex, &CGL::mainScene, ckobj, texture_data_offset));
+
+	return tex;
+
+}
+
 Material* CGL::DupMeshMat(CK_DL_API API, Chuck_VM *VM, Mesh *mesh, Chuck_VM_Shred *SHRED)
 {
 	if (!mesh->GetMaterial()) {
@@ -902,6 +917,15 @@ Geometry* CGL::DupMeshGeo(CK_DL_API API, Chuck_VM *VM, Mesh *mesh, Chuck_VM_Shre
 	// tell renderer to set new geo on this mesh
 	CGL::PushCommand(new SetMeshCommand(mesh));
 	return newGeo;
+}
+
+void CGL::MeshSet( Mesh * mesh, Geometry * geo, Material * mat )
+{
+	// set on CGL side
+	mesh->SetGeometry( geo );
+	mesh->SetMaterial( mat );
+	// command queue to update renderer side
+	CGL::PushCommand( new SetMeshCommand( mesh ) );
 }
 
 //-----------------------------------------------------------------------------

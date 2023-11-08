@@ -85,6 +85,24 @@ FetchContent_Declare (
 )
 FetchContent_MakeAvailable (tracy)
 
+# assimp Open Asset Import Library
+# fetch assimp
+FetchContent_Declare (
+    assimp
+    GIT_REPOSITORY https://github.com/assimp/assimp.git
+    GIT_TAG v5.3.1
+)
+# set default assimp options
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "")
+set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "")
+set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "")
+set(ASSIMP_BUILD_SAMPLES OFF CACHE BOOL "")
+set(ASSIMP_INSTALL OFF CACHE BOOL "")
+set(ASSIMP_BUILD_DOCS OFF CACHE BOOL "")
+set(ASSIMP_INJECT_DEBUG_POSTFIX OFF CACHE BOOL "")
+# make available
+FetchContent_MakeAvailable (assimp)
+
 # =================================================================================
 # interface library for compiler flags
 # =================================================================================
@@ -113,7 +131,7 @@ target_precompile_headers(chugl_pch INTERFACE chugl_pch.h)
 
 # add libraries to interface
 target_link_libraries(chugl_pch INTERFACE
-    TracyClient glm
+    TracyClient glm assimp
 )
 
 # set interface include directories
