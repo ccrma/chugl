@@ -166,14 +166,7 @@ public: // global, lock-protected state for sending info from GLFW --> Chuck
         t_CKINT fps;
 
         // constructor
-        WindowState() : 
-			windowWidth(1), windowHeight(1),
-            framebufferWidth(1), framebufferHeight(1), 
-			aspect(1.0f),
-			mouseX(0), mouseY(0),
-            glfwTime(0), deltaTime(0), 
-			fps(0) 
-			{}
+        WindowState();
 	};
 
     // TODO: will need to be non-static if we support multiple windows

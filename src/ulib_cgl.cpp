@@ -1,3 +1,5 @@
+#include "window.h"
+
 #include "ulib_cgl.h"
 #include "ulib_colors.h"
 #include "ulib_gui.h"
@@ -1027,6 +1029,19 @@ void CGL::UpdateSceneGraph(Scene &scene, CK_DL_API API, Chuck_VM *VM, Chuck_VM_S
 //-----------------------------------------------------------------------------
 // ChuGL Window State Setters / Getters (Render Thread --> Audio Thread communication)
 //-----------------------------------------------------------------------------
+CGL::WindowState::WindowState() :
+// keep these dimensions in sync with default window size 
+	windowWidth(Window::s_DefaultWindowWidth),
+	windowHeight(Window::s_DefaultWindowHeight),  
+// TODO: framebuffer dims not accurate on mac retina display, off by factor of 2 
+	framebufferWidth(Window::s_DefaultWindowWidth),  
+	framebufferHeight(Window::s_DefaultWindowHeight),  
+	aspect(1.0f),
+	mouseX(0), mouseY(0),
+	glfwTime(0), deltaTime(0), 
+	fps(0) 
+{}
+
 std::pair<double, double> CGL::GetMousePos()
 {
 	std::unique_lock<std::mutex> lock(s_WindowStateLock);

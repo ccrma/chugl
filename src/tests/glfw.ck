@@ -1,6 +1,12 @@
 now => time lastTime;
 0 => int fc;
 
+<<< "====Initial Default window state====" >>>;
+<<< "window width: ", GG.windowWidth(), "window height", GG.windowHeight() >>>;
+<<< "frame width: ", GG.frameWidth(), "frame height: ", GG.frameHeight() >>>;
+<<< "aspect: ", GG.aspect() >>>;
+<<< "====================================" >>>;
+
 
 fun void cycleMouseModes() {
     [GG.MOUSE_LOCKED, GG.MOUSE_HIDDEN, GG.MOUSE_NORMAL] @=> int modes[];

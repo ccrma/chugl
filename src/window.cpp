@@ -47,7 +47,7 @@ static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     );
     // update window state
     Window* w = Window::GetWindow(window);
-    w->SetViewSize(width, height);
+    w->SetFrameSize(width, height);
     CGL::SetFramebufferSize(width, height);
 
     // auto-update camera aspect
@@ -65,6 +65,8 @@ static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 // window sizs in screen-space coordinates
 static void window_size_callback(GLFWwindow* window, int width, int height)
 {
+    Window* w = Window::GetWindow(window);
+    w->SetWindowSize(width, height);
     CGL::SetWindowSize(width, height);
 }
 
@@ -79,6 +81,18 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
         glfwSetWindowShouldClose(window, GLFW_TRUE);
 }
 
+// static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+// {
+//     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+//         double xpos, ypos;
+//         glfwGetCursorPos(window, &xpos, &ypos);
+//         CGL::SetMousePos(xpos, ypos);
+//         CGL::SetMouseLeftDown(true);
+//     }
+//     else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
+//         CGL::SetMouseLeftDown(false);
+//     }
+// }
 
 static void glfwErrorCallback(int error, const char* description)
 {
@@ -92,12 +106,19 @@ static void glfwErrorCallback(int error, const char* description)
 
 // static initializers
 std::unordered_map<GLFWwindow*, Window*> Window::s_WindowMap;
+int Window::s_DefaultWindowWidth = 1244;
+int Window::s_DefaultWindowHeight = 700;
 
-
-void Window::SetViewSize(int width, int height)
+void Window::SetWindowSize(int width, int height)
 {
-    m_ViewWidth = width;
-    m_ViewHeight = height;
+    m_WindowWidth = width;
+    m_WindowHeight = height;
+}
+
+void Window::SetFrameSize(int width, int height)
+{
+    m_FrameWidth = width;
+    m_FrameHeight = height;
 }
 
 // Updates window state based on render-thread scene params
@@ -155,7 +176,10 @@ void Window::UpdateState(Scene& scene)
 
 }
 
-Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHeight(viewHeight), m_DeltaTime(0.0f)
+Window::Window(int windowWidth, int windowHeight) 
+    : m_WindowWidth(windowWidth), m_WindowHeight(windowWidth), 
+    m_FrameWidth(windowWidth), m_FrameHeight(windowWidth),
+    m_DeltaTime(0.0f), m_Window(nullptr)
 {
     // Set error callback ======================================
     glfwSetErrorCallback(glfwErrorCallback);
@@ -175,7 +199,7 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
 
     
     // create window ============================================
-    m_Window = glfwCreateWindow(m_ViewWidth, m_ViewHeight, "ChuGL", NULL, NULL);
+    m_Window = glfwCreateWindow(m_WindowWidth, m_WindowHeight, "ChuGL", NULL, NULL);
     if (m_Window == NULL)
     {
         glfwTerminate();
@@ -221,14 +245,15 @@ Window::Window(int viewWidth, int viewHeight) : m_ViewWidth(viewWidth), m_ViewHe
 
     // for high-DPI displays, framebuffer size is actually a multiple of window size
     int frameBufferWidth, frameBufferHeight;
-    int windowWidth, windowHeight;
+    int actualWindowWidth, actualWindowHeight;
     glfwGetFramebufferSize(m_Window, &frameBufferWidth, &frameBufferHeight);
-    glfwGetWindowSize(m_Window, &windowWidth, &windowHeight);
+    glfwGetWindowSize(m_Window, &actualWindowWidth, &actualWindowHeight);
+
     glViewport(0, 0, frameBufferWidth, frameBufferHeight);
 
     // call the callback to first initialize 
     framebuffer_size_callback(m_Window, frameBufferWidth, frameBufferHeight);
-    window_size_callback(m_Window, windowWidth, windowHeight);
+    window_size_callback(m_Window, actualWindowWidth, actualWindowHeight);
 
     // mouse settings =====================================
     glfwSetCursorPosCallback(m_Window, cursor_position_callback);
@@ -466,7 +491,7 @@ void Window::DisplayLoop()
         //   - better. can have load screen while this is happening. will be long-term solution
         if (firstFrame) {
             if (scene.GetMainCamera()) {
-                scene.GetMainCamera()->params.aspect = (float)m_ViewWidth / (float)m_ViewHeight;
+                scene.GetMainCamera()->params.aspect = (float) GetFrameWidth() / (float) GetFrameHeight();
             }
         }
 
