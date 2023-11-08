@@ -295,7 +295,7 @@ CK_DLL_CTOR(cgl_gcylinder_ctor)
 	Geometry* geo = new CylinderGeometry;
 	CGL::CreateChuckObjFromGeo(API, VM, geo, SHRED, false);
 
-	cglMeshSet(mesh, geo, mat);
+	CGL::MeshSet(mesh, geo, mat);
 }
 
 CK_DLL_CTOR(cgl_gtriangle_ctor)
