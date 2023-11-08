@@ -128,6 +128,7 @@ public:
 
 // member vars ==========================================================================================================
     CGL_TextureType type;
+    CGL_TextureType GetTextureType() { return type; }
 
     // update flags. these are set in the UpdateTextureXXX commands, and reset by renderer after regenerating GPU data
     unsigned int m_UpdateFlags;
@@ -160,4 +161,11 @@ public:
     // const static CGL_TextureFilterMode Linear_MipmapNearest;
     // const static CGL_TextureFilterMode Nearest_MipmapLinear;
     // const static CGL_TextureFilterMode Linear_MipmapLinear;
+
+public: // chuck type names
+    // TODO can probably template this and genarlize across all scenegraph classes?
+    typedef std::unordered_map<CGL_TextureType, const std::string, EnumClassHash> CkTypeMap;
+    static CkTypeMap s_CkTypeMap;
+    static const char* CKName(CGL_TextureType type);
+    virtual const char* myCkName() { return CKName(GetTextureType()); }
 };

@@ -3,7 +3,7 @@
 #include "chugl_pch.h"
 
 // ChuGL version string
-#define CHUGL_VERSION_STRING "0.1.2 (alpha)"
+#define CHUGL_VERSION_STRING "0.1.3 (alpha)"
 
 // ChuGL query interface
 t_CKBOOL init_chugl( Chuck_DL_Query * QUERY );
@@ -89,6 +89,7 @@ private:
 public:  // creating chuck object helpers
 	static Material* CreateChuckObjFromMat(CK_DL_API API, Chuck_VM *VM, Material *mat, Chuck_VM_Shred *SHRED, bool refcount);
 	static Geometry* CreateChuckObjFromGeo(CK_DL_API API, Chuck_VM *VM, Geometry *geo, Chuck_VM_Shred *SHRED, bool refcount);
+	static CGL_Texture* CreateChuckObjFromTex(CK_DL_API API, Chuck_VM* VM, CGL_Texture *tex, Chuck_VM_Shred* SHRED, bool refcount);
 	static Material* DupMeshMat(CK_DL_API API, Chuck_VM *VM, Mesh *mesh, Chuck_VM_Shred *SHRED);
 	static Geometry* DupMeshGeo(CK_DL_API API, Chuck_VM *VM, Mesh *mesh, Chuck_VM_Shred *SHRED);
 	static void MeshSet( Mesh * mesh, Geometry * geo, Material * mat );

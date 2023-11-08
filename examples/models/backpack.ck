@@ -12,15 +12,26 @@
 // date: Fall 2023
 //-----------------------------------------------------------------------------
 
+// fullscreen
+// GG.fullscreen();
+// windowed
+// GG.windowed( 3200, 1800);
+
+// set window title
+GG.windowTitle( "ChuGL asset loading + rendering demo" );
+
 // load asset
 AssLoader.load( me.dir() + "../assets/backpack/backpack.obj" ) @=> GGen backpack;
 
 // connect to scene
 backpack --> GG.scene();
+// move title
+backpack.posZ(-2);
 
 // time loop
 while (true)
 {
+    <<< GG.fps() >>>;
     // rotate 
     GG.dt() => backpack.rotateY;
     // next frame

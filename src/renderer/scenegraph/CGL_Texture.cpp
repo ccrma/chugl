@@ -2,6 +2,17 @@
 
 #include "CGL_Texture.h"
 
+// Chuck Naming
+CGL_Texture::CkTypeMap CGL_Texture::s_CkTypeMap = {
+    {CGL_TextureType::File2D, "FileTexture"},
+    {CGL_TextureType::RawData, "DataTexture"},
+};
+
+const char* CGL_Texture::CKName(CGL_TextureType type) 
+{
+    return s_CkTypeMap[type].c_str();
+}
+
 // static initializers
 const t_CKUINT CGL_Texture::Repeat = CGL_TextureWrapMode::Repeat;
 const t_CKUINT CGL_Texture::MirroredRepeat = CGL_TextureWrapMode::MirroredRepeat;

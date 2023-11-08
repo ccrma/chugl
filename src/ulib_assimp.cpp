@@ -70,16 +70,24 @@ t_CKBOOL init_chugl_assimp(Chuck_DL_Query *QUERY)
     return TRUE;
 }
 
+
+//-----------------------------------------------------------------------------
 // internal asset loader data structure
+//-----------------------------------------------------------------------------
 struct AssLoader
 {
     Chuck_VM * vm;
     Chuck_VM_Shred * shred;
     CK_DL_API api;
     const aiScene * scene;
+    string directory;
 
     // mirrors the aiScene's meshes table
     vector<CustomGeometry*> geometries;
+    // material cache
+    vector<Material*> materials;
+    // texture cache
+    unordered_map<string, CGL_Texture*> textures;
 
 public:
     // constructor
@@ -95,11 +103,18 @@ private:
     Mesh * CreateMesh( t_CKUINT index );
     // create custom geo from ai mesh
     CustomGeometry * CreateGeometry(aiMesh* assMesh);
+    // create material
+    Material * CreateMaterial( aiMaterial * assMat );
+    // create texture
+    CGL_Texture * CreateTexture( aiMaterial * assMat, aiTextureType type );
     // process a node
     SceneGraphObject* ProcessNode(SceneGraphObject* parent, aiNode* assNode);
 };
 
+
+//-----------------------------------------------------------------------------
 // load
+//-----------------------------------------------------------------------------
 // create GMesh to mirror scene
 // link up child / parent
 // for each GMesh, create Geometry (and default Material / e.g., PhongMaterial)
@@ -107,6 +122,7 @@ private:
 // see Geometry.cpp / addVertex()
 // see GPlane, GCube etc. for proper refcounting in creating GMesh + Geometry
 // if assets include textures, also create Texture, bind to Material
+//-----------------------------------------------------------------------------
 CK_DLL_SFUN( chugl_assimp_load )
 {
     // get argument
@@ -135,6 +151,8 @@ error:
 }
 
 
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 CustomGeometry * AssLoader::CreateGeometry( aiMesh * assMesh )
 {
     vector<t_CKFLOAT> positions;
@@ -193,13 +211,116 @@ CustomGeometry * AssLoader::CreateGeometry( aiMesh * assMesh )
     return geo;
 }
 
-Mesh * AssLoader::CreateMesh( t_CKUINT index )
+
+
+
+//-----------------------------------------------------------------------------
+// create material
+//-----------------------------------------------------------------------------
+Material* AssLoader::CreateMaterial( aiMaterial * assMat )
+{
+    PhongMaterial* mat = new PhongMaterial;
+    CGL::CreateChuckObjFromMat(api, vm, mat, shred, false);
+
+    // currently only support specular and diffuse textures
+    // in the FUTURE: may support normal mapping and ambient oclusion
+    CGL_Texture* diffuseMap = CreateTexture(assMat, aiTextureType_DIFFUSE);
+    CGL_Texture* specularMap = CreateTexture(assMat, aiTextureType_SPECULAR);
+
+    if(diffuseMap) {
+        // TODO: the diffuseMap should be set in constructor of command
+        mat->SetDiffuseMap(diffuseMap);
+        CGL::PushCommand(new UpdateMaterialUniformCommand(
+            mat, *mat->GetUniform(Material::DIFFUSE_MAP_UNAME)));
+    }
+
+    if(specularMap) {
+        // TODO: the diffuseMap should be set in constructor of command
+        mat->SetSpecularMap(specularMap);
+        CGL::PushCommand(new UpdateMaterialUniformCommand(
+            mat, *mat->GetUniform(Material::SPECULAR_MAP_UNAME)));
+    }
+
+    return mat;
+}
+
+
+
+
+//-----------------------------------------------------------------------------
+// create texture
+//-----------------------------------------------------------------------------
+CGL_Texture * AssLoader::CreateTexture(aiMaterial* assMat, aiTextureType type)
+{
+    CGL_Texture* firstTexture = NULL;
+    for(unsigned int i = 0; i < assMat->GetTextureCount(type); i++)
+    {
+        aiString path;
+        assMat->GetTexture(type, i, &path);
+
+        // check if already in map
+        if(textures.find(path.C_Str()) != textures.end()) {
+            if(i == 0) firstTexture = textures[path.C_Str()];
+            continue;
+        }
+
+        // create new texture
+        CGL_Texture* texture = new CGL_Texture(CGL_TextureType::File2D);
+        CGL::CreateChuckObjFromTex(api, vm, texture, shred, false);
+
+        // set (TODO this should happen in the UpdateTexturePathCommand constructor)
+        texture->m_FilePath = directory + "/" + path.C_Str();
+        cerr << "PATH: " << texture->m_FilePath << endl;
+
+        // put in cache
+        textures[path.C_Str()] = texture;
+        
+        // propagate to render thread
+        CGL::PushCommand(new UpdateTexturePathCommand(texture));
+
+        if(i == 0) firstTexture = texture;
+    }
+
+    return firstTexture;
+}
+
+
+
+
+//-----------------------------------------------------------------------------
+// create mesh
+//-----------------------------------------------------------------------------
+Mesh* AssLoader::CreateMesh(t_CKUINT index)
 {
     // check for out of bound
     if(index >= geometries.size())
     {
         cerr << "[chugl] AssLoader.load() encountered invalid mesh index: " << index << " out of " << geometries.size() << endl;
         return NULL;
+    }
+
+    // get assimp mesh
+    aiMesh* assMesh = scene->mMeshes[index];
+
+    // check if material specified
+    Material* mat = NULL;
+    if(assMesh->mMaterialIndex >= 0)
+    {
+        unsigned int matIndex = assMesh->mMaterialIndex;
+        mat = materials[matIndex] ? materials[matIndex] : CreateMaterial(scene->mMaterials[matIndex]);
+
+        if(!mat)
+        {
+            cerr << "[chugl] AssLoader.load() failed to create material: " << index << " out of " << materials.size() << endl;
+        }
+    }
+    // if mat is still NULL
+    if( !mat )
+    {
+        // create material
+        mat = new PhongMaterial;
+        // create corresponding chuck object, refcount=false since MeshSet() later will refcount
+        CGL::CreateChuckObjFromMat(api, vm, mat, shred, false);
     }
 
     // get type
@@ -209,24 +330,22 @@ Mesh * AssLoader::CreateMesh( t_CKUINT index )
     // create object
     Chuck_DL_Api::Object meshObj = api->object->create(shred, type, false);
 
-    // create material
-    Material* mat = new PhongMaterial;
-    // create corresponding chuck object, refcount=false since MeshSet() later will refcount
-    CGL::CreateChuckObjFromMat(api, vm, mat, shred, false);
-
     // look up the geo, creating it from corresponding aiMesh if necessary
-    CustomGeometry* geo = geometries[index] ? geometries[index] : CreateGeometry( scene->mMeshes[index] );
+    CustomGeometry* geo = geometries[index] ? geometries[index] : CreateGeometry(assMesh);
 
     // create mesh
-    Mesh* mesh = NULL;
+    Mesh* mesh = new Mesh;
     // create HACK: would not need this if pre-ctors are called as part of create() above!
-    CGL::PushCommand(new CreateSceneGraphNodeCommand(mesh = new Mesh, &CGL::mainScene, meshObj, CGL::GetGGenDataOffset()));
+    CGL::PushCommand(new CreateSceneGraphNodeCommand(mesh, &CGL::mainScene, meshObj, CGL::GetGGenDataOffset()));
     // set geo and mat into mesh
     CGL::MeshSet(mesh, geo, mat);
 
     return mesh;
 }
 
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 SceneGraphObject* AssLoader::ProcessNode( SceneGraphObject * parent, aiNode* assNode )
 {
     // get type
@@ -261,7 +380,10 @@ SceneGraphObject* AssLoader::ProcessNode( SceneGraphObject * parent, aiNode* ass
     return cgobj;
 }
 
+
+//-----------------------------------------------------------------------------
 // helper function to import asset
+//-----------------------------------------------------------------------------
 Chuck_Object * AssLoader::LoadAss( const string & path, unsigned int flags )
 {
     // assimp importer
@@ -277,8 +399,13 @@ Chuck_Object * AssLoader::LoadAss( const string & path, unsigned int flags )
         return NULL;
     }
 
-    // reserve
+    // set directory
+    directory = path.substr(0, path.find_last_of('/'));
+
+    // resize
     geometries.resize(scene->mNumMeshes, NULL);
+    // resize
+    materials.resize(scene->mNumMaterials, NULL);
 
     // process starting from root node
     SceneGraphObject * cgobj = ProcessNode( NULL, scene->mRootNode );

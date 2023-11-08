@@ -873,6 +873,19 @@ Geometry* CGL::CreateChuckObjFromGeo(CK_DL_API API, Chuck_VM *VM, Geometry *geo,
 	return geo;
 }
 
+CGL_Texture* CGL::CreateChuckObjFromTex(CK_DL_API API, Chuck_VM* VM, CGL_Texture* tex, Chuck_VM_Shred* SHRED, bool refcount)
+{
+	// create chuck obj
+	Chuck_DL_Api::Type type = API->type->lookup(VM, tex->myCkName());
+	Chuck_DL_Api::Object ckobj = API->object->create(SHRED, type, refcount);
+
+	// tell renderer to create a copy
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(tex, &CGL::mainScene, ckobj, texture_data_offset));
+
+	return tex;
+
+}
+
 Material* CGL::DupMeshMat(CK_DL_API API, Chuck_VM *VM, Mesh *mesh, Chuck_VM_Shred *SHRED)
 {
 	if (!mesh->GetMaterial()) {
