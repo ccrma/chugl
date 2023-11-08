@@ -40,6 +40,11 @@ CK_DLL_MFUN(cgl_geo_lathe_set_no_points);
 CK_DLL_CTOR(cgl_geo_cylinder_ctor);
 CK_DLL_MFUN(cgl_geo_cylinder_set);
 
+// triangle
+CK_DLL_CTOR(cgl_geo_triangle_ctor);
+CK_DLL_MFUN(cgl_geo_triangle_set);
+
+
 
 // custom
 CK_DLL_CTOR(cgl_geo_custom_ctor);
@@ -247,6 +252,26 @@ t_CKBOOL init_chugl_geometry(Chuck_DL_Query *QUERY)
 	QUERY->add_arg(QUERY, "float", "thetaStart");
 	QUERY->add_arg(QUERY, "float", "thetaLength");
 	QUERY->doc_func(QUERY, "Set cylinder dimensions and subdivisions");
+	
+	QUERY->end_class(QUERY);
+
+	// triangle geo
+	QUERY->begin_class(QUERY, Geometry::CKName(GeometryType::Triangle), Geometry::CKName(GeometryType::Base) );
+	QUERY->doc_class(QUERY, "Geometry class for constructing vertex data for triangles");
+	QUERY->add_ex(QUERY, "geometry/triangle.ck");
+
+	QUERY->add_ctor(QUERY, cgl_geo_triangle_ctor);
+
+	QUERY->add_mfun(QUERY, cgl_geo_triangle_set, "void", "set");
+	QUERY->add_arg(QUERY, "float", "theta");
+	QUERY->add_arg(QUERY, "float", "width");
+	QUERY->add_arg(QUERY, "float", "height");
+	QUERY->doc_func(QUERY, 
+		"Set triangle construction params."
+		"Theta is the angle in radians betweeen the base and the hypotenuse"
+		"Width is the length of the base"
+		"Height is distance from base to the opposite vertex"
+	);
 
 	QUERY->end_class(QUERY);
 
@@ -431,6 +456,23 @@ CK_DLL_MFUN(cgl_geo_cylinder_set)
 	t_CKFLOAT thetaStart = GET_NEXT_FLOAT(ARGS);
 	t_CKFLOAT thetaLength = GET_NEXT_FLOAT(ARGS);
 	geo->UpdateParams(radiusTop, radiusBottom, height, radialSegments, heightSegments, openEnded, thetaStart, thetaLength);
+
+	CGL::PushCommand(new UpdateGeometryCommand(geo));
+}
+
+// Triangle geo -------------------------------------------------
+CK_DLL_CTOR(cgl_geo_triangle_ctor)
+{
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(new TriangleGeometry, &CGL::mainScene, SELF,  CGL::GetGeometryDataOffset()));
+}
+
+CK_DLL_MFUN(cgl_geo_triangle_set)
+{
+	TriangleGeometry *geo = (TriangleGeometry *) CGL::GetGeometry(SELF);
+	t_CKFLOAT theta = GET_NEXT_FLOAT(ARGS);
+	t_CKFLOAT width = GET_NEXT_FLOAT(ARGS);
+	t_CKFLOAT height = GET_NEXT_FLOAT(ARGS);
+	geo->UpdateParams(theta, width, height);
 
 	CGL::PushCommand(new UpdateGeometryCommand(geo));
 }

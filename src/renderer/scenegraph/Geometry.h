@@ -15,6 +15,7 @@ enum class GeometryType {
 	Plane,
 	Quad,
 	Torus,
+	Triangle,
 	Custom
 };
 
@@ -515,6 +516,61 @@ public:
 private:  // construction helpers
 	void GenerateTorso(unsigned int& index);
 	void GenerateCap(bool top, unsigned int& index);
+};
+
+class TriangleGeometry : public Geometry
+{
+public:
+	/*
+		 /\
+		/  \ 
+	   /    \
+      /	     \
+	 / 0      \
+	.----width--
+	*/
+	struct Params {
+		float theta;      // angle in radians of triangle
+		float width;	  // width of triangle
+		float height;	  // height of triangle
+	} m_Params;
+
+public:
+	TriangleGeometry(
+		// default to equilateral triangle
+		float theta = glm::pi<float>() / 3.0f, 
+		float width = 1.0f, 
+		float height = glm::sin(glm::pi<float>() / 3.0f)
+	) : m_Params {theta, width, height} {}
+
+	void UpdateParams(
+		float theta, float width, float height
+	) {
+		// clamp theta between 0 and pi
+		theta = glm::clamp(theta, 0.0001f, glm::pi<float>() - 0.0001f);
+		m_Params = {theta, width, height};
+		m_Dirty = true;
+	}
+
+	virtual void BuildGeometry() override;  // given data, builds cpu-side index and vertex buffs
+	virtual GeometryType GetGeoType() override { return GeometryType::Triangle; }
+	virtual Geometry* Clone() override { 
+		TriangleGeometry* geo = new TriangleGeometry(*this);
+		geo->SetID(GetID());
+		return geo;
+	}
+
+	// update command methods
+	virtual void * GenUpdate() override {
+		return new TriangleGeometry::Params(m_Params);
+	};
+	virtual void FreeUpdate(void* data) override {
+		delete (TriangleGeometry::Params*) data;
+	}
+	virtual void ApplyUpdate(void * data) override {
+		m_Params = *(TriangleGeometry::Params*)data;
+		m_Dirty = true;
+	}
 };
 
 

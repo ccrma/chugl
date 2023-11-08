@@ -40,6 +40,7 @@ Geometry::CkTypeMap Geometry::s_CkTypeMap = {
 	{GeometryType::Base, "Geometry"},
 	{GeometryType::Box, "BoxGeometry"},
 	{GeometryType::Sphere, "SphereGeometry"},
+	{GeometryType::Triangle, "TriangleGeometry"},
 	{GeometryType::Circle, "CircleGeometry"},
 	{GeometryType::Cylinder, "CylinderGeometry"},
 	{GeometryType::Capsule, "CapsuleGeometry"},
@@ -721,3 +722,47 @@ void CylinderGeometry::GenerateCap(bool top, unsigned int& index)
 // 	ResetVertexData();
 // 	m_Dirty = false;
 // }
+
+/* =============================================================================
+								Triangle Geo
+===============================================================================*/
+
+void TriangleGeometry::BuildGeometry()
+{
+	ResetVertexData();
+	m_Dirty = false;
+
+	// first calculate position data, assuming bottom left point is centered at 0,0
+	glm::vec3 p1 = glm::vec3(0, 0, 0);   		  // bottom left
+	glm::vec3 p2 = glm::vec3(m_Params.width, 0, 0);   // bottom right
+	glm::vec3 p3 = glm::vec3(					  // top
+		m_Params.height / glm::tan(m_Params.theta),
+		m_Params.height,
+		0
+	);
+
+	// then modify position data to center triangle at 0,0
+	glm::vec3 center = (p1 + p2 + p3) / 3.0f;
+	p1 -= center;
+	p2 -= center;
+	p3 -= center;
+
+	// add vertex data
+	Vertex vert;
+	vert.Position = p1;
+	vert.Normal = glm::vec3(0, 0, 1);
+	vert.TexCoords = glm::vec2(0, 0);
+	AddVertex(vert);
+
+	vert.Position = p2;
+	vert.Normal = glm::vec3(0, 0, 1);
+	vert.TexCoords = glm::vec2(1, 0);
+	AddVertex(vert);
+
+	vert.Position = p3;
+	vert.Normal = glm::vec3(0, 0, 1);
+	vert.TexCoords = glm::vec2(0, 1);
+	AddVertex(vert);
+
+	AddTriangleIndices(0, 1, 2);
+}

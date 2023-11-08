@@ -36,7 +36,6 @@ fun void updateParams(CylinderGeometry @ geo) {
 GMesh normalsMesh, uvMesh;
 CylinderGeometry geo;
 updateParams(geo);  // set initial geometry params
-// BoxGeometry geo;
 NormalsMaterial normMat;
 MangoUVMaterial mangoMat;
 
