@@ -18,6 +18,8 @@
 // waterfall depth
 128 => int WATERFALL_DEPTH;
 
+// window title
+GG.windowTitle( "sndpeek" );
 // uncomment to fullscreen
 GG.fullscreen();
 // put camera on a dolly
