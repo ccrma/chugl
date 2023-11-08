@@ -86,12 +86,6 @@ FetchContent_Declare (
 FetchContent_MakeAvailable (tracy)
 
 # assimp Open Asset Import Library
-# fetch assimp
-FetchContent_Declare (
-    assimp
-    GIT_REPOSITORY https://github.com/assimp/assimp.git
-    GIT_TAG v5.3.1
-)
 # set default assimp options
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "")
 set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "")
@@ -100,6 +94,24 @@ set(ASSIMP_BUILD_SAMPLES OFF CACHE BOOL "")
 set(ASSIMP_INSTALL OFF CACHE BOOL "")
 set(ASSIMP_BUILD_DOCS OFF CACHE BOOL "")
 set(ASSIMP_INJECT_DEBUG_POSTFIX OFF CACHE BOOL "")
+set(ASSIMP_NO_EXPORT ON CACHE BOOL "")  # disable export functionality for now until we add it to the DL API
+set(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT OFF CACHE BOOL "")  # disable all importers by default
+# which importers to build
+set(ASSIMP_BUILD_FBX_IMPORTER ON CACHE BOOL "")       # Autodesk
+set(ASSIMP_BUILD_GLTF_IMPORTER ON CACHE BOOL "")      # .gltf, .glb
+set(ASSIMP_BUILD_COLLADA_IMPORTER ON CACHE BOOL "")   # digital asset exchange (.dae)
+set(ASSIMP_BUILD_BLEND_IMPORTER ON CACHE BOOL "")     # blender
+set(ASSIMP_BUILD_PLY_IMPORTER ON CACHE BOOL "")       # standard polygon library
+set(ASSIMP_BUILD_STL_IMPORTER ON CACHE BOOL "")       # stereolithography
+set(ASSIMP_BUILD_3DS_IMPORTER ON CACHE BOOL "")       # 3ds max
+set(ASSIMP_BUILD_BVH_IMPORTER ON CACHE BOOL "")       # motion capture
+set(ASSIMP_BUILD_OBJ_IMPORTER ON CACHE BOOL "")       # wavefront obj
+# fetch assimp
+FetchContent_Declare (
+    assimp
+    GIT_REPOSITORY https://github.com/assimp/assimp.git
+    GIT_TAG v5.3.1
+)
 # make available
 FetchContent_MakeAvailable (assimp)
 
