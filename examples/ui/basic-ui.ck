@@ -107,7 +107,6 @@ fun void ISliderListener(UI_SliderInt @ islider) {
             ( i$float / childCubes.size() ) * Math.PI * 2.0 => float angle;
             childCubes[i].pos(@(Math.cos(angle) * 2, Math.sin(angle) * 2, 0));
         }
-        
     }
 } spork ~ ISliderListener(islider);
 
