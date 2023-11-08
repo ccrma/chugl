@@ -35,6 +35,7 @@ t_CKBOOL init_chugl_assimp(Chuck_DL_Query *QUERY)
     QUERY->begin_class( QUERY, "AssLoader", "Object" );
     // add class documentation
     QUERY->doc_class( QUERY, "Utility for asset loading; based on the AssImp library." );
+	QUERY->add_ex(QUERY, "models/backpa.ck");
 
     /*
     // add ctor
