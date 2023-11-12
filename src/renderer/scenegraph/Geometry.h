@@ -1,10 +1,7 @@
 #pragma once
+
+#include "chugl_pch.h"
 #include "SceneGraphNode.h"
-#include "glm/glm.hpp"
-#include "glm/gtc/constants.hpp"
-#include "glm/gtc/epsilon.hpp"
-#include <vector>
-#include <unordered_map>
 
 enum class GeometryType {
 	Base = 0,
@@ -18,13 +15,18 @@ enum class GeometryType {
 	Plane,
 	Quad,
 	Torus,
+	Triangle,
 	Custom
 };
 
 struct Vertex {
     glm::vec3 Position;
     glm::vec3 Normal;
+    glm::vec4 Color;
     glm::vec2 TexCoords;
+
+    // constructor
+    Vertex() : Color(1.0f) { }
 
 	static float & VecIndex(glm::vec3& vec, char c) {
 		if (c == 'x' || c == 'r')
@@ -38,8 +40,34 @@ struct Vertex {
         return vec.x;
 	}
 
+    static float & VecIndex(glm::vec4& vec, char c) {
+        if (c == 'x' || c == 'r')
+            return vec.x;
+        if (c == 'y' || c == 'g')
+            return vec.y;
+        if (c == 'z' || c == 'b')
+            return vec.z;
+        if (c == 'w' || c == 'a')
+            return vec.w;
+        assert(false);
+        // return anything to get around compiler warning/error
+        return vec.x;
+    }
+
+    static float & VecIndex(glm::vec2& vec, char c) {
+        if (c == 'u' || c == 's' || c == 'x')
+            return vec.x;
+        if (c == 'v' || c == 't' || c == 'y')
+            return vec.y;
+        assert(false);
+        // return anything to get around compiler warning/error
+        return vec.x;
+    }
+
 	float& Pos(char c) { return VecIndex(Position, c); }
 	float& Norm(char c) { return VecIndex(Normal, c); }
+    float& Col(char c) { return VecIndex(Color, c); }
+    float& Tex(char c) { return VecIndex(TexCoords, c); }
 };
 
 // attribute struct for CGL Geometry
@@ -135,10 +163,10 @@ public:
 	bool m_Dirty;  // if true, rebuild buffers
 
 public:  // constants
-	static const unsigned int POSITION_ATTRIB_IDX;
-	static const unsigned int NORMAL_ATTRIB_IDX;
-	static const unsigned int COLOR_ATTRIB_IDX;
-	static const unsigned int UV0_ATTRIB_IDX;
+	static const t_CKUINT POSITION_ATTRIB_IDX;
+	static const t_CKUINT NORMAL_ATTRIB_IDX;
+	static const t_CKUINT COLOR_ATTRIB_IDX;
+	static const t_CKUINT UV0_ATTRIB_IDX;
 
 public: // chuck type names
 	// TODO can probably template this and genarlize across all scenegraph classes?
@@ -458,6 +486,119 @@ public:
 	}
 	virtual void ApplyUpdate(void * data) override {
 		m_Params = *(LatheGeometry::Params*)data;
+		m_Dirty = true;
+	}
+};
+
+class CylinderGeometry : public Geometry
+{
+public:
+	struct Params {
+		float radiusTop;
+		float radiusBottom;
+		float height;
+		unsigned int radialSegments;
+		unsigned int heightSegments;
+		bool openEnded;
+		float thetaStart;
+		float thetaLength;
+	} m_Params;
+
+public:
+	CylinderGeometry(
+		float radiusTop = .2f, float radiusBottom = .2f, float height = 1.0f, 
+		unsigned int radialSegments = 32, unsigned int heightSegments = 1, bool openEnded = false, 
+		float thetaStart = 0.0f, float thetaLength = glm::pi<float>() * 2.0f
+	) : m_Params {
+		radiusTop, radiusBottom, height, radialSegments, heightSegments, openEnded, thetaStart, thetaLength
+	} {}
+
+	void UpdateParams(
+		float radiusTop, float radiusBottom, float height, 
+		unsigned int radialSegments, unsigned int heightSegments, bool openEnded, 
+		float thetaStart, float thetaLength
+	) {
+		m_Params = {
+			radiusTop, radiusBottom, height, radialSegments, heightSegments, openEnded, thetaStart, thetaLength
+		};
+		m_Dirty = true;
+	}
+
+	virtual void BuildGeometry() override;  // given data, builds cpu-side index and vertex buffs
+	virtual GeometryType GetGeoType() override { return GeometryType::Cylinder; }
+	virtual Geometry* Clone() override { 
+		CylinderGeometry* geo = new CylinderGeometry(*this);
+		geo->SetID(GetID());
+		return geo;
+	}
+
+	// update command methods
+	virtual void * GenUpdate() override {
+		return new CylinderGeometry::Params(m_Params);
+	};
+	virtual void FreeUpdate(void* data) override {
+		delete (CylinderGeometry::Params*) data;
+	}
+	virtual void ApplyUpdate(void * data) override {
+		m_Params = *(CylinderGeometry::Params*)data;
+		m_Dirty = true;
+	}
+private:  // construction helpers
+	void GenerateTorso(unsigned int& index);
+	void GenerateCap(bool top, unsigned int& index);
+};
+
+class TriangleGeometry : public Geometry
+{
+public:
+	/*
+		 /\
+		/  \ 
+	   /    \
+      /	     \
+	 / 0      \
+	.----width--
+	*/
+	struct Params {
+		float theta;      // angle in radians of triangle
+		float width;	  // width of triangle
+		float height;	  // height of triangle
+	} m_Params;
+
+public:
+	TriangleGeometry(
+		// default to equilateral triangle
+		float theta = glm::pi<float>() / 3.0f, 
+		float width = 1.0f, 
+		float height = glm::sin(glm::pi<float>() / 3.0f)
+	) : m_Params {theta, width, height} {}
+
+	void UpdateParams(
+		float theta, float width, float height
+	) {
+		// clamp theta between 0 and pi
+		theta = glm::clamp(theta, 0.0001f, glm::pi<float>() - 0.0001f);
+		m_Params = {theta, width, height};
+		m_Dirty = true;
+	}
+
+	virtual void BuildGeometry() override;  // given data, builds cpu-side index and vertex buffs
+	virtual GeometryType GetGeoType() override { return GeometryType::Triangle; }
+	virtual Geometry* Clone() override { 
+		TriangleGeometry* geo = new TriangleGeometry(*this);
+		geo->SetID(GetID());
+		return geo;
+	}
+
+	// update command methods
+	virtual void * GenUpdate() override {
+		return new TriangleGeometry::Params(m_Params);
+	};
+	virtual void FreeUpdate(void* data) override {
+		delete (TriangleGeometry::Params*) data;
+	}
+	virtual void ApplyUpdate(void * data) override {
+		m_Params = *(TriangleGeometry::Params*)data;
 		m_Dirty = true;
 	}
 };

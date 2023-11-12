@@ -2,7 +2,6 @@
 
 #include "IndexBuffer.h"
 #include "VertexBuffer.h"
-// #include "VertexBufferLayout.h"
 
 // forward decls
 struct CGL_GeoAttribute;

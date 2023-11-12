@@ -37,11 +37,13 @@ doc.addGroup(
         "GPoints", 
         "GLines", 
         "GMesh", 
+        "GTriangle",
         "GCircle", 
         "GPlane", 
         "GCube", 
         "GSphere", 
         "GTorus",
+        "GCylinder",
         "GLight", 
         "GPointLight", 
         "GDirLight", 
@@ -62,10 +64,12 @@ doc.addGroup(
         "Geometry", 
         "BoxGeometry", 
         "SphereGeometry", 
+        "TriangleGeometry",
         "CircleGeometry", 
         "LatheGeometry", 
         "PlaneGeometry", 
         "TorusGeometry", 
+        "CylinderGeometry",
         "CustomGeometry",
     ],
     // group name
@@ -133,4 +137,4 @@ doc.addGroup(
 );
 
 // generate
-doc.outputToDir( ".", "ChuGL [alpha] API Reference (v0.1.1)" );
+doc.outputToDir( ".", "ChuGL [alpha] API Reference (v0.1.2)" );

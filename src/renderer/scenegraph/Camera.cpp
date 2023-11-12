@@ -1,7 +1,7 @@
 #include "Camera.h"
 
-const unsigned int Camera::MODE_PERSPECTIVE = CameraType::PERSPECTIVE;
-const unsigned int Camera::MODE_ORTHO = CameraType::ORTHO;
+const t_CKINT Camera::MODE_PERSPECTIVE = CameraType::PERSPECTIVE;
+const t_CKINT Camera::MODE_ORTHO = CameraType::ORTHO;
 
 glm::mat4 Camera::GetProjectionMatrix()
 {

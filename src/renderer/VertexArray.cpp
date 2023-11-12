@@ -1,4 +1,3 @@
-#include <glad/glad.h>
 #include "Util.h"
 #include "VertexArray.h"
 #include "scenegraph/Geometry.h"

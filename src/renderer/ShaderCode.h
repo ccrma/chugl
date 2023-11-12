@@ -1,8 +1,8 @@
 #pragma once
-#include <string>
-#include <unordered_map>
 
-enum ShaderType : unsigned int {
+#include "chugl_pch.h"
+
+enum ShaderType : t_CKUINT {
     Vertex = 0,
     Fragment,
     Geometry,

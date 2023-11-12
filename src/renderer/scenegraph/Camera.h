@@ -1,12 +1,12 @@
 #pragma once
 
+#include "chugl_pch.h"
 #include "SceneGraphObject.h"
-#include "glm/glm.hpp"
 
-enum CameraType : unsigned int {
+enum CameraType : t_CKUINT {
 	NONE = 0,
-	PERSPECTIVE,
-	ORTHO,
+	PERSPECTIVE = 1,
+	ORTHO = 2,
 };
 
 struct CameraParams {
@@ -41,6 +41,8 @@ public:
 	void SetClipPlanes(float n, float f) { params.nearPlane = n; params.farPlane = f; }
 	void SetFOV(float fov) { params.fov = fov; }
 	void SetSize(float size) { params.size = size; }
+	void SetAspect(float aspect) { params.aspect = aspect; }
+
 	glm::mat4 GetViewMatrix() { 
 		return glm::inverse(GetWorldMatrix());
 		// return GetInvModelMatrix(); 
@@ -51,6 +53,7 @@ public:
 	float GetClipFar() { return params.farPlane; }
 	float GetFOV() { return params.fov; }
 	float GetSize() { return params.size; }
+	float GetAspect() { return params.aspect; }
 
 	Camera* Clone() override {
 		Camera* c = new Camera();
@@ -60,8 +63,8 @@ public:
 	}
 
 
-	static const unsigned int MODE_PERSPECTIVE;
-	static const unsigned int MODE_ORTHO;
+	static const t_CKINT MODE_PERSPECTIVE;
+	static const t_CKINT MODE_ORTHO;
 };
 
 /*

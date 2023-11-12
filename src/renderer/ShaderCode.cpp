@@ -1,5 +1,4 @@
 #include "ShaderCode.h"
-#include <iostream>
 
 // #define REGISTER_CODE(var) \
 //     do { \
@@ -398,7 +397,7 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
         void main()
         {
             result = vec4(
-                v_TexCoord, .5 * sin(u_Time) + .5, 1.0
+                v_TexCoord, 0.0, 1.0
             );
     )"},
     {SCREEN_VERT,

@@ -16,7 +16,7 @@ NormalsMaterial mat;
 
 // load the obj file and assign it to the mesh geometry
 mesh.set( 
-    ObjLoader.load(me.dir() + "assets/suzanne.obj"),   // set obj geometry
+    ObjLoader.load(me.dir() + "../assets/suzanne.obj"),   // set obj geometry
     mat                                                       // set material
 );
 
@@ -24,7 +24,7 @@ mesh --> GG.scene();
 mesh.posZ(-5);
 
 while (true) { 
-    GG.dt() => mesh.rotY;
+    GG.dt() => mesh.rotateY;
     GG.nextFrame() => now; 
 }
 

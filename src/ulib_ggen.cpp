@@ -1,4 +1,3 @@
-#include "chuck_vm.h"
 #include "ulib_ggen.h"
 #include "ulib_cgl.h"
 #include "scenegraph/Command.h"
@@ -13,74 +12,79 @@ CK_DLL_DTOR(cgl_obj_dtor);
 // internal
 CK_DLL_MFUN(cgl_obj_get_id);
 CK_DLL_MFUN(cgl_obj_update);
+CK_DLL_MFUN(cgl_obj_get_name);
+CK_DLL_MFUN(cgl_obj_set_name);
 
 // transform API
 CK_DLL_MFUN(cgl_obj_get_right);
 CK_DLL_MFUN(cgl_obj_get_forward);
 CK_DLL_MFUN(cgl_obj_get_up);
 
-	// Position 
-	CK_DLL_MFUN(cgl_obj_get_pos_x);
-	CK_DLL_MFUN(cgl_obj_set_pos_x);
+// Position 
+CK_DLL_MFUN(cgl_obj_get_pos_x);
+CK_DLL_MFUN(cgl_obj_set_pos_x);
 
-	CK_DLL_MFUN(cgl_obj_get_pos_y);
-	CK_DLL_MFUN(cgl_obj_set_pos_y);
+CK_DLL_MFUN(cgl_obj_get_pos_y);
+CK_DLL_MFUN(cgl_obj_set_pos_y);
 
-	CK_DLL_MFUN(cgl_obj_get_pos_z);
-	CK_DLL_MFUN(cgl_obj_set_pos_z);
+CK_DLL_MFUN(cgl_obj_get_pos_z);
+CK_DLL_MFUN(cgl_obj_set_pos_z);
 
-	CK_DLL_MFUN(cgl_obj_set_pos);
-	CK_DLL_MFUN(cgl_obj_get_pos);
+CK_DLL_MFUN(cgl_obj_set_pos);
+CK_DLL_MFUN(cgl_obj_get_pos);
 
-	CK_DLL_MFUN(cgl_obj_get_pos_world);
-	CK_DLL_MFUN(cgl_obj_set_pos_world);
+CK_DLL_MFUN(cgl_obj_get_pos_world);
+CK_DLL_MFUN(cgl_obj_set_pos_world);
 
-	CK_DLL_MFUN(cgl_obj_translate);
-	CK_DLL_MFUN(cgl_obj_translate_x);
-	CK_DLL_MFUN(cgl_obj_translate_y);
-	CK_DLL_MFUN(cgl_obj_translate_z);
+CK_DLL_MFUN(cgl_obj_translate);
+CK_DLL_MFUN(cgl_obj_translate_x);
+CK_DLL_MFUN(cgl_obj_translate_y);
+CK_DLL_MFUN(cgl_obj_translate_z);
 
-	// Rotation
-	CK_DLL_MFUN(cgl_obj_get_rot_x);
-	CK_DLL_MFUN(cgl_obj_set_rot_x);
+// Rotation
+CK_DLL_MFUN(cgl_obj_get_rot_x);
+CK_DLL_MFUN(cgl_obj_set_rot_x);
 
-	CK_DLL_MFUN(cgl_obj_get_rot_y);
-	CK_DLL_MFUN(cgl_obj_set_rot_y);
+CK_DLL_MFUN(cgl_obj_get_rot_y);
+CK_DLL_MFUN(cgl_obj_set_rot_y);
 
-	CK_DLL_MFUN(cgl_obj_get_rot_z);
-	CK_DLL_MFUN(cgl_obj_set_rot_z);
+CK_DLL_MFUN(cgl_obj_get_rot_z);
+CK_DLL_MFUN(cgl_obj_set_rot_z);
 
-	CK_DLL_MFUN(cgl_obj_set_rot);
-	CK_DLL_MFUN(cgl_obj_get_rot);
+CK_DLL_MFUN(cgl_obj_set_rot);
+CK_DLL_MFUN(cgl_obj_get_rot);
 
-	CK_DLL_MFUN(cgl_obj_rotate);
-	CK_DLL_MFUN(cgl_obj_rotate_x);
-	CK_DLL_MFUN(cgl_obj_rotate_y);
-	CK_DLL_MFUN(cgl_obj_rotate_z);
+CK_DLL_MFUN(cgl_obj_rotate);
+CK_DLL_MFUN(cgl_obj_rotate_x);
+CK_DLL_MFUN(cgl_obj_rotate_y);
+CK_DLL_MFUN(cgl_obj_rotate_z);
 
-	CK_DLL_MFUN(cgl_obj_rot_on_local_axis);
-	CK_DLL_MFUN(cgl_obj_rot_on_world_axis);
+CK_DLL_MFUN(cgl_obj_rot_on_local_axis);
+CK_DLL_MFUN(cgl_obj_rot_on_world_axis);
 
-	CK_DLL_MFUN(cgl_obj_lookat_vec3);
-	CK_DLL_MFUN(cgl_obj_lookat_dir);
-	// CK_DLL_MFUN(cgl_obj_rotate_by);  // no rotate by design because converting from euler angles to quat is ambiguous
+CK_DLL_MFUN(cgl_obj_lookat_vec3);
+CK_DLL_MFUN(cgl_obj_lookat_dir);
+// CK_DLL_MFUN(cgl_obj_rotate_by);  // no rotate by design because converting from euler angles to quat is ambiguous
 
-	// Scale
-	CK_DLL_MFUN(cgl_obj_get_scale_x);
-	CK_DLL_MFUN(cgl_obj_set_scale_x);
+// Scale
+CK_DLL_MFUN(cgl_obj_get_scale_x);
+CK_DLL_MFUN(cgl_obj_set_scale_x);
 
-	CK_DLL_MFUN(cgl_obj_get_scale_y);
-	CK_DLL_MFUN(cgl_obj_set_scale_y);
+CK_DLL_MFUN(cgl_obj_get_scale_y);
+CK_DLL_MFUN(cgl_obj_set_scale_y);
 
-	CK_DLL_MFUN(cgl_obj_get_scale_z);
-	CK_DLL_MFUN(cgl_obj_set_scale_z);
+CK_DLL_MFUN(cgl_obj_get_scale_z);
+CK_DLL_MFUN(cgl_obj_set_scale_z);
 
-	CK_DLL_MFUN(cgl_obj_set_scale);
-	CK_DLL_MFUN(cgl_obj_set_scale_uniform);
-	CK_DLL_MFUN(cgl_obj_get_scale);
+CK_DLL_MFUN(cgl_obj_set_scale);
+CK_DLL_MFUN(cgl_obj_set_scale_uniform);
+CK_DLL_MFUN(cgl_obj_get_scale);
 	
-	CK_DLL_MFUN(cgl_obj_get_scale_world);
-	CK_DLL_MFUN(cgl_obj_set_scale_world);
+CK_DLL_MFUN(cgl_obj_get_scale_world);
+CK_DLL_MFUN(cgl_obj_set_scale_world);
+
+// transformation matrix API
+CK_DLL_MFUN(cgl_obj_local_pos_to_world_pos);
 
 // parent-child scenegraph API
 // CK_DLL_MFUN(cgl_obj_disconnect);
@@ -108,6 +112,13 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query *QUERY)
 
 	QUERY->add_mfun(QUERY, cgl_obj_get_id, "int", "id");
 	QUERY->doc_func(QUERY, "Internal debug. Get the unique ChuGL ID of this GGen");
+
+	QUERY->add_mfun(QUERY, cgl_obj_get_name, "string", "name");
+	QUERY->doc_func(QUERY, "Get the custom name of this GGen");
+
+	QUERY->add_mfun(QUERY, cgl_obj_set_name, "string", "name");
+	QUERY->add_arg(QUERY, "string", "name");
+	QUERY->doc_func(QUERY, "Set the custom name of this GGen");
 
 	QUERY->add_mfun(QUERY, cgl_obj_update, "void", "update");
 	QUERY->add_arg(QUERY, "float", "dt");
@@ -196,29 +207,29 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query *QUERY)
 	// Rotation ===============================================================
 
 	// float rotX()
-	QUERY->add_mfun(QUERY, cgl_obj_get_rot_x, "vec3", "rotX");
+	QUERY->add_mfun(QUERY, cgl_obj_get_rot_x, "float", "rotX");
 	QUERY->doc_func(QUERY, "Get the rotation of this GGen on the X axis in local space");
 
 	// float rotX( float )
-	QUERY->add_mfun(QUERY, cgl_obj_set_rot_x, "vec3", "rotX");
+	QUERY->add_mfun(QUERY, cgl_obj_set_rot_x, "float", "rotX");
 	QUERY->add_arg(QUERY, "float", "radians");
 	QUERY->doc_func(QUERY, "Set the rotation of this GGen on the X axis in local space to the given radians");
 
 	// float rotY()
-	QUERY->add_mfun(QUERY, cgl_obj_get_rot_y, "vec3", "rotY");
+	QUERY->add_mfun(QUERY, cgl_obj_get_rot_y, "float", "rotY");
 	QUERY->doc_func(QUERY, "Get the rotation of this GGen on the Y axis in local space");
 
 	// float rotY( float )
-	QUERY->add_mfun(QUERY, cgl_obj_set_rot_y, "vec3", "rotY");
+	QUERY->add_mfun(QUERY, cgl_obj_set_rot_y, "float", "rotY");
 	QUERY->add_arg(QUERY, "float", "radians");
 	QUERY->doc_func(QUERY, "Set the rotation of this GGen on the Y axis in local space to the given radians");
 
 	// float rotZ()
-	QUERY->add_mfun(QUERY, cgl_obj_get_rot_z, "vec3", "rotZ");
+	QUERY->add_mfun(QUERY, cgl_obj_get_rot_z, "float", "rotZ");
 	QUERY->doc_func(QUERY, "Get the rotation of this GGen on the Z axis in local space");
 
 	// float rotZ( float )
-	QUERY->add_mfun(QUERY, cgl_obj_set_rot_z, "vec3", "rotZ");
+	QUERY->add_mfun(QUERY, cgl_obj_set_rot_z, "float", "rotZ");
 	QUERY->add_arg(QUERY, "float", "radians");
 	QUERY->doc_func(QUERY, "Set the rotation of this GGen on the Z axis in local space to the given radians");
 
@@ -324,6 +335,11 @@ t_CKBOOL init_chugl_obj(Chuck_DL_Query *QUERY)
 	QUERY->add_arg(QUERY, "vec3", "scale");
 	QUERY->doc_func(QUERY, "Set object scale in world space");
 
+	// Matrix transform API ===============================================================
+	QUERY->add_mfun(QUERY, cgl_obj_local_pos_to_world_pos, "vec3", "posLocalToWorld");
+	QUERY->add_arg(QUERY, "vec3", "localPos");
+	QUERY->doc_func(QUERY, "Transform a position in local space to world space");
+
 	// scenegraph relationship methods =======================================
 	QUERY->add_mfun(QUERY, cgl_obj_get_parent, "GGen", "parent");
     QUERY->doc_func(QUERY, "Get the parent of this GGen");
@@ -372,6 +388,11 @@ CK_DLL_CTOR(cgl_obj_ctor)
 
 CK_DLL_DTOR(cgl_obj_dtor)
 {
+	// unregister from Shred2GGen map 
+	// (so we don't geta null ptr reference when the host SHRED exits and tries to detach all GGens)
+	CGL::UnregisterGGenFromShred(SHRED, SELF);
+
+	// push command to destroy this object on render thread as well
 	CGL::PushCommand(new DestroySceneGraphNodeCommand(SELF, CGL::GetGGenDataOffset(), &CGL::mainScene));
 }
 
@@ -379,6 +400,22 @@ CK_DLL_MFUN(cgl_obj_get_id)
 {
 	SceneGraphObject *cglObj = CGL::GetSGO(SELF);
 	RETURN->v_int = cglObj->GetID();
+}
+
+CK_DLL_MFUN(cgl_obj_get_name)
+{
+	SceneGraphObject *cglObj = CGL::GetSGO(SELF);
+	RETURN->v_string = (Chuck_String *)API->object->create_string(
+		VM, cglObj->GetName().c_str(), false
+	);
+}
+
+CK_DLL_MFUN(cgl_obj_set_name)
+{
+	SceneGraphObject *obj = CGL::GetSGO(SELF);
+	Chuck_String *name = GET_NEXT_STRING(ARGS);
+	CGL::PushCommand(new UpdateNameCommand(obj, name->str()));
+	RETURN->v_string = name;
 }
 
 CK_DLL_MFUN(cgl_obj_update) {}
@@ -775,12 +812,33 @@ CK_DLL_MFUN(cgl_obj_set_scale_world)
 	CGL::PushCommand(new UpdateScaleCommand(cglObj));
 }
 
+// Transformation API ===============================================================
+
+CK_DLL_MFUN(cgl_obj_local_pos_to_world_pos)
+{
+	SceneGraphObject *cglObj = CGL::GetSGO(SELF);
+	t_CKVEC3 vec = GET_NEXT_VEC3(ARGS);
+	glm::vec3 worldPos = cglObj->GetWorldMatrix() * glm::vec4(vec.x, vec.y, vec.z, 1.0f);
+	RETURN->v_vec3 = {worldPos.x, worldPos.y, worldPos.z};
+}
+
 // Scenegraph Relationship Impl ===============================================================
 CK_DLL_GFUN(ggen_op_gruck)
 {
 	// get the arguments
 	Chuck_Object *lhs = GET_NEXT_OBJECT(ARGS);
 	Chuck_Object *rhs = GET_NEXT_OBJECT(ARGS);
+
+	if (!lhs || !rhs) {
+		std::string errMsg = std::string("in gruck operator: ") + (lhs?"LHS":"[null]") + " --> " + (rhs?"RHS":"[null]");
+		// nullptr exception
+		API->vm->throw_exception(
+			"NullPointerException",
+			errMsg.c_str(),
+			SHRED
+		);
+		return;
+	}
 
 	// get internal representation
 	SceneGraphObject *LHS = CGL::GetSGO(lhs);

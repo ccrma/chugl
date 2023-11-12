@@ -1,5 +1,6 @@
 #pragma once
-#include <string>
+
+#include "chugl_pch.h"
 #include "scenegraph/CGL_Texture.h"
 
 class Texture
@@ -31,8 +32,10 @@ public:
 	// default pixel textures
 	static Texture* DefaultWhiteTexture;
 	static Texture* DefaultBlackTexture;
+	static Texture* DefaultMagentaTexture;
 	static Texture* GetDefaultWhiteTexture();
 	static Texture* GetDefaultBlackTexture();
+	static Texture* GetDefaultMagentaTexture();
 
 private:
 	// helper fns for creating textures. 

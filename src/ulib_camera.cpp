@@ -83,10 +83,10 @@ t_CKBOOL init_chugl_camera(Chuck_DL_Query *QUERY)
 	// ortho view size
 	QUERY->add_mfun(QUERY, cgl_cam_set_ortho_size, "float", "viewSize");
 	QUERY->add_arg(QUERY, "float", "s");
-	QUERY->doc_func(QUERY, "(orthographic mode) set the height of the view in pixels. Width is automatically calculated based on aspect ratio");
+	QUERY->doc_func(QUERY, "(orthographic mode) set the height of the view in world space units. Width is automatically calculated based on aspect ratio");
 
 	QUERY->add_mfun(QUERY, cgl_cam_get_ortho_size, "float", "viewSize");
-	QUERY->doc_func(QUERY, "(orthographic mode) get the height of the view in pixels");
+	QUERY->doc_func(QUERY, "(orthographic mode) get the height of the view in world space units");
 
 	// raycast from mousepos
 	QUERY->add_mfun(QUERY, chugl_cam_screen_coord_to_world_ray, "vec3", "screenCoordToWorldRay");
@@ -217,22 +217,30 @@ CK_DLL_MFUN(chugl_cam_screen_coord_to_world_ray)
 	t_CKFLOAT screenX = GET_NEXT_FLOAT(ARGS);
 	t_CKFLOAT screenY = GET_NEXT_FLOAT(ARGS);
 
-	// first convert to normalized device coordinates in range [-1, 1]
 	auto windowSize = CGL::GetWindowSize();
-	float x = ( (2.0f * screenX) / windowSize.first ) - 1.0f;
-	float y = 1.0f - ( (2.0f * screenY) / windowSize.second );
-	float z = 1.0f;
-	glm::vec4 ray_clip = glm::vec4(x, y, -1.0, 1.0);
-	// convert to eye space
-	glm::mat4 proj = cam->GetProjectionMatrix();
-	glm::vec4 ray_eye = glm::inverse(proj) * ray_clip;
-	// convert to world space
-	ray_eye = glm::vec4(ray_eye.x, ray_eye.y, -1.0, 0.0);
-	glm::mat4 view = cam->GetViewMatrix();
-	glm::vec3 ray_wor = glm::inverse(view) * ray_eye;
-	// normalize
-	ray_wor = glm::normalize(ray_wor);
-	RETURN->v_vec3 = {ray_wor.x, ray_wor.y, ray_wor.z};
+	int screenWidth = windowSize.first;
+	int screenHeight = windowSize.second;
+
+	// first convert to normalized device coordinates in range [-1, 1]
+	glm::vec4 lRayStart_NDC(
+		((float)screenX/(float)screenWidth  - 0.5f) * 2.0f, // [0,1024] -> [-1,1]
+		-((float)screenY/(float)screenHeight - 0.5f) * 2.0f, // [0, 768] -> [-1,1]
+		-1.0, // The near plane maps to Z=-1 in Normalized Device Coordinates
+		1.0f
+	);
+	glm::vec4 lRayEnd_NDC(
+		((float)screenX/(float)screenWidth  - 0.5f) * 2.0f,
+		-((float)screenY/(float)screenHeight - 0.5f) * 2.0f,
+		1.0,
+		1.0f
+	);
+	glm::mat4 M = glm::inverse(cam->GetProjectionMatrix() * cam->GetViewMatrix());
+	glm::vec4 lRayStart_world = M * lRayStart_NDC; lRayStart_world/=lRayStart_world.w;
+	glm::vec4 lRayEnd_world   = M * lRayEnd_NDC  ; lRayEnd_world  /=lRayEnd_world.w;
+
+	glm::vec3 lRayDir_world(lRayEnd_world - lRayStart_world);
+	lRayDir_world = glm::normalize(lRayDir_world);
+	RETURN->v_vec3 =  { lRayDir_world.x, lRayDir_world.y, lRayDir_world.z };
 }
 
 CK_DLL_MFUN(chugl_cam_world_pos_to_screen_coord)

@@ -1,13 +1,16 @@
 #pragma once
+
+#include "chugl_pch.h"
+
 #include "SceneGraphObject.h"
-#include <unordered_map>
+#include "Locator.h"
 
 class Light;
 class DirLight;
 class Camera;
 
 
-enum FogType : unsigned int {
+enum FogType : t_CKUINT {
 	Exponential = 0,
 	ExponentialSquared
 };
@@ -25,7 +28,22 @@ struct FogUniforms {
 class Scene : public SceneGraphObject
 {
 public:
-	Scene() : m_BackgroundColor(glm::vec3(0.9f)) {}
+	Scene() 
+		: m_BackgroundColor(glm::vec3(0.0f)),
+		m_FogUniforms(FogUniforms()),
+		// mouse modes
+		m_MouseMode(0),
+		m_UpdateMouseMode(false),
+		// window modes
+		m_WindowMode(0),
+		m_UpdateWindowMode(false),
+		m_WindowedWidth(0),
+		m_WindowedHeight(0),
+		m_WindowShouldClose(false),
+		// window title
+		m_UpdateWindowTitle(false),
+		m_WindowTitle("ChuGL")
+	{}
 	virtual ~Scene() {}
 	virtual bool IsScene() override { return true; }
 
@@ -50,15 +68,14 @@ public:
 	void RegisterNode(SceneGraphNode* node);
 	// remove any scene pointers to this node
 	void UnregisterNode(size_t id);
-	bool CheckNode(size_t id) { return m_SceneGraphMap.find(id) != m_SceneGraphMap.end(); }
-	SceneGraphNode * GetNode(size_t id) { return CheckNode(id) ? m_SceneGraphMap[id] : nullptr; }
+	bool CheckNode(size_t id) { return Locator::CheckNode(id, IsAudioThreadObject()); }
+	SceneGraphNode * GetNode(size_t id) { return Locator::GetNode(id, IsAudioThreadObject()); }
 
 
 	
 private:  // attributes
 	// this lives in scene obj for now because we want to decouple from the renderer
 	// to support multiple scenes in the future, can make this map static
-	std::unordered_map<size_t, SceneGraphNode*> m_SceneGraphMap;  // map of all scene graph objects
 	void RegisterLight(Light* light);
 	void RegisterCamera(Camera* camera);
 
@@ -101,8 +118,8 @@ public: // camera
 
 public: // fog
 	FogUniforms m_FogUniforms;
-	static const unsigned int FOG_EXP;
-	static const unsigned int FOG_EXP2;
+	static const t_CKUINT FOG_EXP;
+	static const t_CKUINT FOG_EXP2;
 	void SetFogColor(float r, float g, float b) {
 		m_FogUniforms.color = glm::vec3(r, g, b);
 	}
@@ -130,20 +147,19 @@ public:
 	std::vector<size_t>& GetDeletionQueue() { return m_DeletionQueue; }
 
 public: // major hack, for now because there's only 1 scene, storing render state options here
-	// THESE ARE NOT THREADSAFE, ONLY WRITE/READ FROM RENDER THREAD
-	// set indirectly via scenegraph commands
-	// all this in order to maintain strict decoupling between scenegraph and any specific renderer impl
 	// but maybe these modes can be stored in CGL class? or create a "window" scenegraph type that stores per-window metadata and settings
 
-	// TODO: can actually make these non-static and store twice, once the chuck-thread scene in command constructor, and once on render-thread scene in command execute
-	// this will allow read access, if needed
-	static unsigned int mouseMode;
-	static bool updateMouseMode; 
+	// mouse modes
+	unsigned int m_MouseMode;
+	bool m_UpdateMouseMode; 
 
-	static unsigned int windowMode;  // which mode, fullscreen or windowed
-	static bool updateWindowMode;  // whether to update window mode
-	static int windowedWidth, windowedHeight;  // last user-set window size
-	static bool windowShouldClose;
+	// windowing modes
+	unsigned int m_WindowMode;  // which mode, fullscreen or windowed
+	bool m_UpdateWindowMode;  // whether to update window mode
+	int m_WindowedWidth, m_WindowedHeight;  // last user-set window size
+	bool m_WindowShouldClose;
 
-
+	// window title
+	bool m_UpdateWindowTitle;
+	std::string m_WindowTitle;
 };

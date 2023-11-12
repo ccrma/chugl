@@ -21,8 +21,6 @@ phong.diffuseMap( tex );
 mesh.set( boxGeo, phong );
 // connect to scene
 mesh --> scene;
-// move mesh 
-mesh.posZ( -3 );
 
 // time loop
 while( true )

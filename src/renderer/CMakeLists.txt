@@ -19,10 +19,12 @@ add_library(renderer # TODO this whole structure is a mess I realize....can buil
     scenegraph/SceneGraphNode.cpp
     scenegraph/SceneGraphObject.cpp
     scenegraph/CGL_Texture.cpp
+    scenegraph/Locator.cpp
 )
 
 target_link_libraries(renderer
-    PUBLIC glfw glad glm chugl_compiler_flags
+    PRIVATE glfw glad
+    PRIVATE chugl_compiler_flags chugl_pch
 )
 
 target_include_directories(renderer 

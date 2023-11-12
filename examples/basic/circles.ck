@@ -6,6 +6,8 @@
 //   3) many instances: local independence + global organization
 //      -- design principle from artful design chapter 3
 
+// window title
+GG.windowTitle( "circles in ChuGL" );
 // fullscreen
 GG.fullscreen();
 // position

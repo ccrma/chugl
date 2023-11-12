@@ -1,15 +1,15 @@
 #pragma once
 
+#include "chugl_pch.h"
+
+#include "Locator.h"
 #include "SceneGraphNode.h"
 #include "SceneGraphObject.h"
 #include "../Texture.h"
 #include "../Shader.h"
-#include <string>
-#include <unordered_map>
-// #include <cmath>
 
 // builtin material type struct
-enum class MaterialType : unsigned int {
+enum class MaterialType : t_CKUINT {
 	Base = 0,
 	Normal,
 	Phong,
@@ -94,18 +94,19 @@ struct MaterialUniform {
 	}
 };
 
-enum MaterialOptionParam : unsigned int {
+enum MaterialOptionParam : t_CKUINT {
 	PolygonMode = 0,
-	PrimitiveMode
+	PrimitiveMode,
+	Transparent
 };
 
-enum MaterialPolygonMode : unsigned int {
+enum MaterialPolygonMode : t_CKUINT {
 	Fill = 0,
 	Line,
 	Point
 };
 
-enum MaterialPrimitiveMode : unsigned int {
+enum MaterialPrimitiveMode : t_CKUINT {
 	Triangles = 0,
 	TriangleStrip,
 	Lines,
@@ -114,7 +115,7 @@ enum MaterialPrimitiveMode : unsigned int {
 	Points,
 };
 
-enum MaterialOptionType : unsigned int {
+enum MaterialOptionType : t_CKUINT {
 	Float = 0,
 	Int,
 	UnsignedInt,
@@ -166,6 +167,8 @@ public:
 		SetOption(MaterialOption::Create(MaterialOptionParam::PolygonMode, MaterialPolygonMode::Fill));
 		// default to triangle primitives
 		SetOption(MaterialOption::Create(MaterialOptionParam::PrimitiveMode, MaterialPrimitiveMode::Triangles));
+		// default to opaque
+		SetOption(MaterialOption::Create(MaterialOptionParam::Transparent, false));
 
 
 		// set default material uniforms
@@ -182,14 +185,12 @@ public:
 	virtual bool IsMaterial() override { return true; }
 
 	virtual MaterialType GetMaterialType() { return MaterialType::Base; }
-	virtual std::unordered_map<std::string, MaterialUniform>& GetLocalUniforms() { return m_Uniforms;  }  // for setting properties specific to the material, e.g. color
 
 	virtual Material* Dup() {  // clone but get new ID 
 		Material* mat = (Material*)Clone();
 		mat->NewID();
 		return mat;
 	}
-
 
 	// commands for telling a material how to update itself
 	// TODO: inefficient, updates all uniforms each time. is there a clean way to only update the exact diff?
@@ -198,52 +199,87 @@ public:
 	virtual void ApplyUpdate(void* uniform_data) { m_Uniforms = *(LocalUniformCache*)uniform_data; }
 	virtual void FreeUpdate(void* uniform_data) { if (uniform_data) delete (LocalUniformCache*)uniform_data; }
 
-	inline void SetOption(MaterialOption options) {
+	void SetOption(MaterialOption options) {
 		m_Options[options.param] = options;
 	}
 
-
-	inline MaterialOption* GetOption(MaterialOptionParam p) {
-		return (m_Options.find(p) != m_Options.end()) ? &m_Options[p] : nullptr;
+	MaterialOption* GetOption(MaterialOptionParam p) {
+		MaterialOption* ret = (m_Options.find(p) != m_Options.end()) ? &m_Options[p] : nullptr;
+		return ret;
 	}
 
 	// Option getters
 	MaterialPolygonMode GetPolygonMode() { return m_Options[MaterialOptionParam::PolygonMode].polygonMode; }
-	MaterialPrimitiveMode GetPrimitiveMode() { return m_Options[MaterialOptionParam::PrimitiveMode].primitiveMode;}
-	// float GetLineWidth() { return m_Options[MaterialOptionParam::LineWidth].f; }
-	float GetPointSize() { return m_Uniforms[POINT_SIZE_UNAME].f; } 
-	float GetLineWidth() { return m_Uniforms[LINE_WIDTH_UNAME].f; }
+	MaterialPrimitiveMode GetPrimitiveMode() { return m_Options[MaterialOptionParam::PrimitiveMode].primitiveMode; }
+	bool IsTransparent() { return m_Options[MaterialOptionParam::Transparent].b; }
+
+	float GetPointSize() { 
+		auto* uniform = GetUniform(POINT_SIZE_UNAME);
+		if (uniform) return uniform->f;
+		else return 0.0f;
+	} 
+
+	float GetLineWidth() { 
+		auto* uniform = GetUniform(LINE_WIDTH_UNAME);
+		if (uniform) return uniform->f;
+		else return 0.0f;
+	}
 	glm::vec4 GetColor() { 
-		auto& matUniform = m_Uniforms[COLOR_UNAME];
-		return glm::vec4(matUniform.f4[0], matUniform.f4[1], matUniform.f4[2], matUniform.f4[3]);
+		auto* uniform = GetUniform(COLOR_UNAME);
+		if (uniform) return glm::vec4(uniform->f4[0], uniform->f4[1], uniform->f4[2], uniform->f4[3]);
+		else return glm::vec4(0.0f);
 	}
 	float GetAlpha() {
-		auto& matUniform = m_Uniforms[COLOR_UNAME];
-		return matUniform.f4[3];
+		auto* uniform = GetUniform(COLOR_UNAME);
+		if (uniform) return uniform->f4[3];
+		else return 0.0f;
 	}
 
 	// option setters
 	void SetPolygonMode(MaterialPolygonMode mode) { m_Options[MaterialOptionParam::PolygonMode].polygonMode = mode; }
-	// virtual void SetLineWidth(float width) { m_Options[MaterialOptionParam::LineWidth].f = width; }
-	virtual void SetPointSize(float size) { m_Uniforms[POINT_SIZE_UNAME].f = size; }
-	void SetLineWidth(float width) { m_Uniforms[LINE_WIDTH_UNAME].f = width; }
+	void SetTransparent(bool b) { m_Options[MaterialOptionParam::Transparent].b = b; }
+
+	// uniform setters
+	virtual void SetPointSize(float size) { 
+		SetUniform(MaterialUniform::Create(POINT_SIZE_UNAME, size));
+	}
+
+	void SetLineWidth(float width) { 
+		SetUniform(MaterialUniform::Create(LINE_WIDTH_UNAME, width));
+	}
+
 	void SetColor(float r, float g, float b, float a) { 
-		auto& uniform = m_Uniforms[COLOR_UNAME];
-		uniform.f4[0] = r; uniform.f4[1] = g; uniform.f4[2] = b; uniform.f4[3] = a;
+		SetUniform(MaterialUniform::Create(COLOR_UNAME, r, g, b, a));
+	}
+	void SetColor(float r, float g, float b) { 
+		auto col = GetColor();
+		SetUniform(MaterialUniform::Create(COLOR_UNAME, r, g, b, col.a));
 	}
 	void SetAlpha(float a) { 
 		auto& uniform = m_Uniforms[COLOR_UNAME];
-		uniform.f4[3] = a;
+		SetUniform(MaterialUniform::Create(COLOR_UNAME, uniform.f4[0], uniform.f4[1], uniform.f4[2], a));
 	}
 
-	inline void SetUniform(MaterialUniform uniform) {
-		// can't do this here because texture refcounting won't happen
-		// assert(uniform.type != UniformType::Texture);
+	void SetUniform(MaterialUniform uniform) {
+		// get old uniform, if it exists
+		auto it = m_Uniforms.find(uniform.name);
+
+		// if it's a texture, refcount it
+		if (uniform.type == UniformType::Texture) {
+			CGL_Texture* texture = (CGL_Texture* )Locator::GetNode(uniform.texID, IsAudioThreadObject());
+			CHUGL_NODE_ADD_REF(texture);
+		}
+
+		// if old uniform was a texture, unrefcount it
+		if (it != m_Uniforms.end() && it->second.type == UniformType::Texture) {
+			CGL_Texture* oldTexture = (CGL_Texture* )Locator::GetNode(it->second.texID, IsAudioThreadObject());
+			CHUGL_NODE_QUEUE_RELEASE(oldTexture);
+		}
 		
 		m_Uniforms[uniform.name] = uniform;
 	}
 
-	inline MaterialUniform* GetUniform(std::string s) {
+	MaterialUniform* GetUniform(std::string s) {
 		return (m_Uniforms.find(s) != m_Uniforms.end()) ? &m_Uniforms[s] : nullptr;
 	}
 
@@ -253,6 +289,9 @@ public: // material options and uniforms settings
 	// need to pass hash function, enum keys not supported until c++14 :(
 	std::unordered_map<MaterialOptionParam, MaterialOption, std::hash<unsigned int>> m_Options;
 
+	std::unordered_map<std::string, MaterialUniform>& GetLocalUniforms() { return m_Uniforms;  }
+
+private:
 	// uniform cache (copied to shader on render)
 	LocalUniformCache m_Uniforms;
 
@@ -267,14 +306,14 @@ public:  // static consts
 	// and uniforms from base chuck Material class (so you don't have to cast e.g. mesh.mat() $ PhongMat)
 
 	// supported polygon modes
-	static const MaterialPolygonMode POLYGON_FILL;
-	static const MaterialPolygonMode POLYGON_LINE;
-	static const MaterialPolygonMode POLYGON_POINT;
+	static const t_CKUINT POLYGON_FILL;
+	static const t_CKUINT POLYGON_LINE;
+	static const t_CKUINT POLYGON_POINT;
 
 	// line rendering modes
-	static const unsigned int LINE_SEGMENTS_MODE;
-	static const unsigned int LINE_STRIP_MODE;
-	static const unsigned int LINE_LOOP_MODE;
+	static const t_CKUINT LINE_SEGMENTS_MODE;
+	static const t_CKUINT LINE_STRIP_MODE;
+	static const t_CKUINT LINE_LOOP_MODE;
 
 	// uniform names (TODO ShaderCode should be reading from here)
 	static const std::string POINT_SIZE_UNAME;
@@ -298,17 +337,42 @@ public:  // static consts
 
 public:  // uniform getters and setters
 	// uniform getters
-	size_t GetDiffuseMapID() { return m_Uniforms[Material::DIFFUSE_MAP_UNAME].texID; }
-	size_t GetSpecularMapID() { return m_Uniforms[Material::SPECULAR_MAP_UNAME].texID; }
-	glm::vec3 GetSpecularColor() { 
-		auto& matUniform = m_Uniforms[Material::SPECULAR_COLOR_UNAME];
-		return glm::vec3(matUniform.f3[0], matUniform.f3[1], matUniform.f3[2]); 
+	size_t GetDiffuseMapID() { 
+		auto* uniform = GetUniform(Material::DIFFUSE_MAP_UNAME);
+		if (uniform) return uniform->texID;
+		else return 0;
 	}
-	float GetLogShininess() { return m_Uniforms[Material::SHININESS_UNAME].f; }
-	bool GetUseLocalNormals() { return m_Uniforms[USE_LOCAL_NORMALS_UNAME].b; }
+	size_t GetSpecularMapID() { 
+		auto* uniform = GetUniform(Material::SPECULAR_MAP_UNAME);
+		if (uniform) return uniform->texID;
+		else return 0;
+	}
+	glm::vec3 GetSpecularColor() { 
+		auto* uniform = GetUniform(Material::SPECULAR_COLOR_UNAME);
+		if (uniform) return glm::vec3(uniform->f3[0], uniform->f3[1], uniform->f3[2]);
+		else return glm::vec3(0.0f);
+	}
+	float GetLogShininess() { 
+		auto* uniform = GetUniform(Material::SHININESS_UNAME);
+		if (uniform) return std::log2(uniform->f);
+		else return 0.0f;
+	}
+	bool GetUseLocalNormals() { 
+		auto* uniform = GetUniform(USE_LOCAL_NORMALS_UNAME);
+		if (uniform) return uniform->b;
+		else return false;
+	}
 	// point uniform getters
-	bool GetSizeAttenuation() { return m_Uniforms[POINT_SIZE_ATTENUATION_UNAME].b; }
-	size_t GetSpriteID() { return m_Uniforms[POINT_SPRITE_TEXTURE_UNAME].texID; }
+	bool GetSizeAttenuation() { 
+		auto* uniform = GetUniform(POINT_SIZE_ATTENUATION_UNAME);
+		if (uniform) return uniform->b;
+		else return false;
+	}
+	size_t GetSpriteID() { 
+		auto* uniform = GetUniform(POINT_SPRITE_TEXTURE_UNAME);
+		if (uniform) return uniform->texID;
+		else return 0;
+	}
 	const std::string& GetVertShader() { return m_VertShader; }
 	const std::string& GetFragShader() { return m_FragShader; }
 	bool GetVertIsPath() { return m_VertIsPath; }
@@ -316,25 +380,30 @@ public:  // uniform getters and setters
 	bool RecompileShader() { return m_RecompileShader; }
 
 	// uniform setters
-	// void SetTexture(CGL_Texture* )
-	
 	void SetDiffuseMap(CGL_Texture* texture) { 
-		m_Uniforms[Material::DIFFUSE_MAP_UNAME].texID = texture->GetID(); 
+		SetUniform(MaterialUniform::Create(Material::DIFFUSE_MAP_UNAME, texture->GetID()));
 	}
 
 	void SetSpecularMap(CGL_Texture* texture) { 
-		m_Uniforms[Material::SPECULAR_COLOR_UNAME].texID = texture->GetID(); 
+		SetUniform(MaterialUniform::Create(Material::SPECULAR_MAP_UNAME, texture->GetID()));
 	}
 
+
 	void SetSpecularColor(float r, float g, float b) {
-		auto& uniform = m_Uniforms[Material::SPECULAR_COLOR_UNAME];
-		uniform.f3[0] = r; uniform.f3[1] = g; uniform.f3[2] = b;
+		SetUniform(MaterialUniform::Create(Material::SPECULAR_COLOR_UNAME, r, g, b));
+		// auto& uniform = m_Uniforms[Material::SPECULAR_COLOR_UNAME];
+		// uniform.f3[0] = r; uniform.f3[1] = g; uniform.f3[2] = b;
 	}
 	void SetLogShininess(float logShininess) { 
-		m_Uniforms[Material::SHININESS_UNAME].f = std::pow(2.0f, logShininess);
+		float shininess = std::pow(2.0f, logShininess);
+		SetUniform(MaterialUniform::Create(Material::SHININESS_UNAME, shininess));
 	}
-	void UseLocalNormals() { m_Uniforms[USE_LOCAL_NORMALS_UNAME].b = true; }
-	void UseWorldNormals() { m_Uniforms[USE_LOCAL_NORMALS_UNAME].b = false; }
+	void UseLocalNormals() { 
+		SetUniform(MaterialUniform::Create(USE_LOCAL_NORMALS_UNAME, true));
+	}
+	void UseWorldNormals() { 
+		SetUniform(MaterialUniform::Create(USE_LOCAL_NORMALS_UNAME, false));
+	}
 	virtual void SetFragShader(const std::string& fragmentShader, bool isPath = true) {
 		m_FragShader = fragmentShader;
 		m_FragIsPath = isPath;
@@ -354,8 +423,12 @@ public:  // uniform getters and setters
 	void SetLineLoop() { SetLineMode(MaterialPrimitiveMode::LineLoop); }
 	void SetLines() { SetLineMode(MaterialPrimitiveMode::Lines); }
 	// point uniform setters
-	void SetSizeAttenuation(bool b) { m_Uniforms[POINT_SIZE_ATTENUATION_UNAME].b = b; }
-	void SetSprite(CGL_Texture* texture) { m_Uniforms[POINT_SPRITE_TEXTURE_UNAME].texID = texture->GetID(); }
+	void SetSizeAttenuation(bool b) { 
+		SetUniform(MaterialUniform::Create(POINT_SIZE_ATTENUATION_UNAME, b));
+	}
+	void SetSprite(CGL_Texture* texture) { 
+		SetUniform(MaterialUniform::Create(POINT_SPRITE_TEXTURE_UNAME, texture->GetID()));
+	}
 
 public:  // static material type --> chuck type name map
 	typedef std::unordered_map<MaterialType, const std::string, EnumClassHash> CkTypeMap;

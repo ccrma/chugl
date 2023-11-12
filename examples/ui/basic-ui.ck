@@ -20,6 +20,12 @@ GCube childCubes[0];
 UI_Window window;
 window.text("ChuGL UI Window");
 
+UI_Text text;
+text.text("This is a text widget! Below are other widgets.");
+text.wrap(true);
+text.mode(UI_Text.MODE_DEFAULT);
+text.color(Color.GREEN);
+
 UI_Button button;
 button.text("Click me! To change color of cube");
 
@@ -42,6 +48,7 @@ dropdown.text("Dropdown! Select polygon mode");
 dropdown.options(["FILL", "LINE", "POINT"]);
 
 window.add(button);
+window.add(text);
 window.add(fslider);
 window.add(islider);
 window.add(checkbox);
@@ -100,7 +107,6 @@ fun void ISliderListener(UI_SliderInt @ islider) {
             ( i$float / childCubes.size() ) * Math.PI * 2.0 => float angle;
             childCubes[i].pos(@(Math.cos(angle) * 2, Math.sin(angle) * 2, 0));
         }
-        
     }
 } spork ~ ISliderListener(islider);
 

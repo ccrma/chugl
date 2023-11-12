@@ -1,6 +1,12 @@
 now => time lastTime;
 0 => int fc;
 
+<<< "====Initial Default window state====" >>>;
+<<< "window width: ", GG.windowWidth(), "window height", GG.windowHeight() >>>;
+<<< "frame width: ", GG.frameWidth(), "frame height: ", GG.frameHeight() >>>;
+<<< "aspect: ", GG.aspect() >>>;
+<<< "====================================" >>>;
+
 
 fun void cycleMouseModes() {
     [GG.MOUSE_LOCKED, GG.MOUSE_HIDDEN, GG.MOUSE_NORMAL] @=> int modes[];
@@ -16,10 +22,13 @@ fun void windowResizeListener() {
     WindowResizeEvent wr;
     while (true) {
         wr => now;
-        // <<< "window resize event: ", GG.windowWidth(), "x", GG.windowHeight() >>>;
-        <<< "window resized -- frameWidth: ", GG.frameWidth(), "frameHeight: ", GG.frameHeight() >>>;
+        <<< "============================= Window Resized =================================" >>>;
+        <<< "window resized -- window width:", GG.windowWidth(), "window height", GG.windowHeight() >>>;
+        <<< "window resized -- frame width: ", GG.frameWidth(), "frame height: ", GG.frameHeight() >>>;
+        <<< "window resized -- aspect: ", GG.aspect() >>>;
+        <<< "==============================================================================" >>>;
     }
-} spork ~ windowResizeListener();
+}  spork ~ windowResizeListener();
 
 fun void cycleWindowModes() {
     while (true) {
@@ -33,7 +42,7 @@ fun void cycleWindowModes() {
         GG.resolution(300, 100);
         1.5::second => now;
     }
-} spork ~ cycleWindowModes();
+} // spork ~ cycleWindowModes();
 
 fun void printer() {
     while (1::second => now) {
@@ -43,8 +52,8 @@ fun void printer() {
         <<< "===================GLFW state=====================" >>>;
 
         <<< 
-            // "window width: ", GG.windowWidth(),
-            // "window height: ", GG.windowHeight(),
+            "window width: ", GG.windowWidth(),
+            "window height: ", GG.windowHeight(),
             "framebuffer width: ", GG.frameWidth(),
             "framebuffer height: ", GG.frameHeight(),
             "glfw time: ", GG.windowUptime(),
@@ -54,6 +63,21 @@ fun void printer() {
         >>>;
         0 => fc;
     }
-}  // spork ~ printer();
+}
+// spork ~ printer();
+
+fun void cycleWindowTitles() {
+    while (true) {
+        "window title 1" => GG.windowTitle;
+        <<< "window title: ", GG.windowTitle() >>>;
+        1::second => now;
+        "window title 2" => GG.windowTitle;
+        <<< "window title: ", GG.windowTitle() >>>;
+        1::second => now;
+        "window title 3" => GG.windowTitle;
+        <<< "window title: ", GG.windowTitle() >>>;
+        1::second => now;
+    }
+} spork ~ cycleWindowTitles();
 
 while (true) { GG.nextFrame() => now; }

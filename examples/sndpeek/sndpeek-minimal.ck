@@ -14,6 +14,8 @@
 // width of waveform and spectrum display
 10 => float DISPLAY_WIDTH;
 
+// window title
+GG.windowTitle( "sndpeek (minimal version)" );
 // uncomment to fullscreen
 GG.fullscreen();
 // put camera on a dolly

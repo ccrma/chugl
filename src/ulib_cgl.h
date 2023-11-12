@@ -1,15 +1,12 @@
 #pragma once
 
-#include "chuck_def.h"
-#include "chuck_dl.h"
+#include "chugl_pch.h"
 
+// ChuGL version string
+#define CHUGL_VERSION_STRING "0.1.3 (alpha)"
 
-#include <condition_variable>
-#include <unordered_map>
-#include <unordered_set>
-#include <vector>
-
-t_CKBOOL init_chugl(Chuck_DL_Query * QUERY);
+// ChuGL query interface
+t_CKBOOL init_chugl( Chuck_DL_Query * QUERY );
 
 // foward decls =========================================
 class Camera;
@@ -92,8 +89,10 @@ private:
 public:  // creating chuck object helpers
 	static Material* CreateChuckObjFromMat(CK_DL_API API, Chuck_VM *VM, Material *mat, Chuck_VM_Shred *SHRED, bool refcount);
 	static Geometry* CreateChuckObjFromGeo(CK_DL_API API, Chuck_VM *VM, Geometry *geo, Chuck_VM_Shred *SHRED, bool refcount);
+	static CGL_Texture* CreateChuckObjFromTex(CK_DL_API API, Chuck_VM* VM, CGL_Texture *tex, Chuck_VM_Shred* SHRED, bool refcount);
 	static Material* DupMeshMat(CK_DL_API API, Chuck_VM *VM, Mesh *mesh, Chuck_VM_Shred *SHRED);
 	static Geometry* DupMeshGeo(CK_DL_API API, Chuck_VM *VM, Mesh *mesh, Chuck_VM_Shred *SHRED);
+	static void MeshSet( Mesh * mesh, Geometry * geo, Material * mat );
 
 public:
 	static void RegisterShred(Chuck_VM_Shred* shred);
@@ -147,7 +146,7 @@ public: // scenegraph update traversal
 	// TODO: what happens when graphics window loses focus for a long time and then returns?
 	// does it suddenly pass a large dt? if so we may need to throttle
 	static void UpdateSceneGraph(
-		Scene& scene, CK_DL_API API, Chuck_VM* VM, Chuck_VM_Shred* shred
+		Scene& scene, CK_DL_API API, Chuck_VM* VM, Chuck_VM_Shred* calling_shred
 	);
 	static t_CKINT our_update_vt_offset;
 
@@ -159,6 +158,8 @@ public: // global, lock-protected state for sending info from GLFW --> Chuck
         t_CKINT windowWidth, windowHeight;
         // frame buffer width and height (in pixels)
         t_CKINT framebufferWidth, framebufferHeight;
+		// window aspect
+		t_CKFLOAT aspect;
         // mouse X, mouse Y
         double mouseX, mouseY;
         // glfw time, delta time
@@ -167,9 +168,7 @@ public: // global, lock-protected state for sending info from GLFW --> Chuck
         t_CKINT fps;
 
         // constructor
-        WindowState() : windowWidth(1), windowHeight(1),
-            framebufferWidth(1), framebufferHeight(1), mouseX(0), mouseY(0),
-            glfwTime(0), deltaTime(0), fps(0) { }
+        WindowState();
 	};
 
     // TODO: will need to be non-static if we support multiple windows
@@ -179,6 +178,7 @@ public: // global, lock-protected state for sending info from GLFW --> Chuck
 	static std::pair<double, double> GetMousePos();
 	static std::pair<int, int> GetWindowSize();
 	static std::pair<int, int> GetFramebufferSize();
+	static t_CKFLOAT GetAspectRatio();
 	static std::pair<double, double> GetTimeInfo();
 	static void SetMousePos(double x, double y);
 	static void SetWindowSize(int width, int height);
@@ -193,16 +193,16 @@ public:
 	static bool useChuckTime;
 
 public:  // mouse modes
-	static const unsigned int MOUSE_NORMAL;
-	static const unsigned int MOUSE_HIDDEN;
-	static const unsigned int MOUSE_LOCKED;
+	static const t_CKUINT MOUSE_NORMAL;
+	static const t_CKUINT MOUSE_HIDDEN;
+	static const t_CKUINT MOUSE_LOCKED;
 
 public: // window modes
-	static const unsigned int WINDOW_WINDOWED;
-	static const unsigned int WINDOW_FULLSCREEN;
-	static const unsigned int WINDOW_MAXIMIZED;
-	static const unsigned int WINDOW_RESTORE;
-	static const unsigned int WINDOW_SET_SIZE;
+	static const t_CKUINT WINDOW_WINDOWED;
+	static const t_CKUINT WINDOW_FULLSCREEN;
+	static const t_CKUINT WINDOW_MAXIMIZED;
+	static const t_CKUINT WINDOW_RESTORE;
+	static const t_CKUINT WINDOW_SET_SIZE;
 
 public: // global main thread hook
 	static Chuck_DL_MainThreadHook* hook;
@@ -235,5 +235,103 @@ private:
 	// get the write target command queue
 	static inline std::vector<SceneGraphCommand*>& GetWriteCommandQueue() {
 		return m_CQReadTarget ? m_ThisCommandQueue : m_ThatCommandQueue;
+	}
+
+private:  // SHRED --> GGen bookkeeping 
+	// mapping shred to GGens created on that shred
+	// Chuck_Objects are added on GGen construction, and removed on GGen destruction
+	// only touched by audio thread, does not need to be lock protected
+	static std::unordered_map<Chuck_VM_Shred*, std::unordered_set<Chuck_Object*>> s_Shred2GGen;
+	// A separate map to track GGen --> Shred
+	// This allows us to, in O(1) time, clear a GGen from a shred's GGen list inside
+	// the GGen's CK_DLL_DTOR.
+	// This is necessary because there are other instances, depending where/when an object is released,
+	// where the CK_DLL_DTOR `SHRED` param is NULL
+	static std::unordered_map<Chuck_Object*, Chuck_VM_Shred*> s_GGen2Shred;
+
+	// Run it back
+	// This map is used by the auto-update invoker, to track the top-level ancestor
+	// shred of the shred this GGen was created on.
+	// This origin shred contains file-level variables that may be accessed in
+	// this GGen's update(float dt) function
+	// GGens register to this map on instantiation
+	// GGens remove themselves from this map on destruction
+	static std::unordered_map<Chuck_Object*, Chuck_VM_Shred*> s_GGen2OriginShred;
+public: 
+
+	static void RegisterGGenToShred(Chuck_VM_Shred *shred, Chuck_Object *ggen) {
+		// register shred --> GGen
+		s_Shred2GGen[shred].insert(ggen);
+
+		// a GGen should only ever be associated with 1 shred
+		assert(s_GGen2Shred.find(ggen) == s_GGen2Shred.end());
+
+		// register GGen --> shred
+		s_GGen2Shred[ggen] = shred;
+
+		// register GGen --> origin shred
+		auto* parent_shred = shred;
+		// walk up parent chain until top-level
+		while (parent_shred->parent) {
+			parent_shred = parent_shred->parent;
+		}
+		s_GGen2OriginShred[ggen] = parent_shred;
+	}
+
+	static void UnregisterGGenFromShred(Chuck_VM_Shred *shred, Chuck_Object *ggen) {
+		// unregister GGen --> ancestor/origin shred
+		// call this first in case the original shred has already exited and cleaned up
+		s_GGen2OriginShred.erase(ggen);
+
+		// if ggen not found in ggen2shred map, then it's already been unregistered
+		// probably from it's parent shred already being destroyed
+		if (s_GGen2Shred.find(ggen) == s_GGen2Shred.end()) return;
+
+		// handle case where shred is NULL, try to find origin shred via lookup
+		if (shred == NULL) {
+			shred = s_GGen2Shred[ggen];
+		} 
+
+		// shred should match the shred in the GGen2Shred map
+		assert(s_GGen2Shred[ggen] == shred);
+
+		// unregister shred --> GGen
+		if (s_Shred2GGen.find(shred) != s_Shred2GGen.end()) {
+			s_Shred2GGen[shred].erase(ggen);
+		}
+
+		// unregister GGen --> shred
+		s_GGen2Shred.erase(ggen);
+	}
+
+	static void DetachGGensFromShred(Chuck_VM_Shred *shred);
+	
+	// erases shred from map (call when shred is destroyed)
+	static bool EraseFromShred2GGenMap(Chuck_VM_Shred *shred) {
+		// flag for whether this is a graphics shred
+		bool shredInMap = false;
+		// first remove from GGen2Shred map
+		if (s_Shred2GGen.find(shred) != s_Shred2GGen.end()) {
+			shredInMap = true;
+			for (auto* ggen : s_Shred2GGen[shred]) {
+				s_GGen2Shred.erase(ggen);
+				// DON'T REMOVE FROM ORIGIN SHRED MAP
+				// in case origin shred is still alive, and has a reference to this GGen
+			}
+		}
+		// then remove from Shred2GGen map
+		s_Shred2GGen.erase(shred);
+		return shredInMap;
+	}
+
+	static bool NoActiveGraphicsShreds() {
+		return s_Shred2GGen.empty();
+	}
+
+	static bool NoActiveGGens() {
+		if (s_Shred2GGen.empty()) assert(s_GGen2Shred.empty());
+		if (s_GGen2Shred.empty()) assert(s_Shred2GGen.empty());
+
+		return s_GGen2OriginShred.empty() && s_GGen2Shred.empty(); 
 	}
 };

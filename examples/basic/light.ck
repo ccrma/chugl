@@ -2,8 +2,12 @@
 // 12 point lights
 // 12 directional lights
 
+// window title
+GG.windowTitle( "ChuGL light demo" );
+
 // lightbulb class that renders pointlight with a colored sphere to visualize its position
-class LightBulb extends GGen {
+class LightBulb extends GGen
+{
     // GGen network. a light + sphere at the same position
     FlatMaterial mat;
     GPointLight light --> GSphere bulb --> this;
@@ -69,7 +73,8 @@ blueLight.color(0, 0, 1);
 whiteLight.color(1, 1, 1);
 
 // Gameloop ==================================
-while (true) {
+while (true)
+{
     // rotate lights
     GG.dt() => lightGroup.rotateY;
     // nextFrame

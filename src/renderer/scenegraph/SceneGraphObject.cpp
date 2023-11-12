@@ -1,13 +1,4 @@
 #include "SceneGraphObject.h"
-#include "../Util.h"
-#include "glm/gtx/matrix_decompose.hpp"
-#include "glm/gtx/quaternion.hpp"
-
-#include <algorithm>
-
-#include "chuck_dl.h"
-
-
 
 /*==========================Static constants=================================*/
 const glm::vec3 SceneGraphObject::UP	   = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -18,7 +9,6 @@ const glm::vec3 SceneGraphObject::FORWARD  = glm::vec3(0.0f, 0.0f, -1.0f);
 const glm::vec3 SceneGraphObject::BACKWARD = glm::vec3(0.0f, 0.0f, 1.0f);
 
 const glm::quat SceneGraphObject::IDENTITY_QUAT = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-
 
 /*==========================Transform Methods=================================*/
 glm::mat4 SceneGraphObject::GetModelMatrix()
@@ -73,21 +63,12 @@ glm::quat SceneGraphObject::GetWorldRotation()
 	return worldRot;
 }
 
-glm::vec3 SceneGraphObject::GetWorldPosition()
+glm::vec3 SceneGraphObject::GetWorldPosition() const
 {
 	if (!m_Parent) return m_Position;
+	// multiply by parent's world matrix to get world position
+	// DON'T multiply by this world matrix, because it double counts our own transform
 	return m_Parent->GetWorldMatrix() * glm::vec4(m_Position, 1.0);
-
-	//if (m_Parent == nullptr)
-	//	return m_Position;
-
-	//auto* parentPtr = m_Parent;
-	//glm::vec3 worldPos = m_Position;
-	//while (parentPtr != nullptr) {
-	//	worldPos = parentPtr->GetPosition() + worldPos;
-	//	parentPtr = parentPtr->GetParent();  // walk up the graph
-	//}
-	//return worldPos;
 }
 
 glm::vec3 SceneGraphObject::GetWorldScale()
@@ -215,17 +196,17 @@ void SceneGraphObject::AddChild(SceneGraphObject* child)
 {
 	// Object cannot be added as child of itself
 	if (child == this) {
-		Util::printErr("GGen cannot be added as child of itself");
+		std::cerr << "GGen cannot be added as child of itself" << std::endl;
 		return;
 	}
 
 	if (child == nullptr) {
-		Util::printErr("cannot add nullptr as child of GGen ");
+		std::cerr << "cannot add nullptr as child of GGen " << std::endl;
 		return;
 	}
 
 	if (child->IsScene()) {  // necessary to prevent cycles
-		Util::printErr("cannot add make GScene a child of another GGen");
+		std::cerr << "cannot add make GScene a child of another GGen" << std::endl;
 		return;
 	}
 
@@ -239,18 +220,15 @@ void SceneGraphObject::AddChild(SceneGraphObject* child)
 		child->GetParent()->RemoveChild(child);
 	}
 
-
 	// assign to new parent
 	child->m_Parent = this;
     // reference count
-    // CKAPI()->object->add_ref( this->m_ChuckObject );
-	CHUGL_ADD_REF(this);
+	CHUGL_NODE_ADD_REF(this);
 
 	// add to list of children
 	m_Children.push_back(child);
     // add ref to kid
-    // CKAPI()->object->add_ref( child->m_ChuckObject );
-	CHUGL_ADD_REF(child);
+	CHUGL_NODE_ADD_REF(child);
 }
 
 void SceneGraphObject::RemoveChild( SceneGraphObject * child )
@@ -262,17 +240,18 @@ void SceneGraphObject::RemoveChild( SceneGraphObject * child )
         // ensure
         assert( child->m_Parent == this );
 
-        // release ref count on child's chuck object; one less reference to it from us (parent)
-        // CKAPI()->object->release( child->m_ChuckObject );
-		CHUGL_RELEASE(child);
+        // set parent to null (must do this first to prevent double-free, bc releasing the 
+		// child may trigger a disconnect its the destructor)
+        child->m_Parent = NULL;
+
         // remove from children list
         m_Children.erase(it);
 
+        // release ref count on child's chuck object; one less reference to it from us (parent)
+		CHUGL_NODE_QUEUE_RELEASE(child);
+
         // release ref count on our (parent's) chuck object; one less reference to it from child
-        // CKAPI()->object->release( this->m_ChuckObject );
-		CHUGL_RELEASE(this);
-        // set parent to null
-        child->m_Parent = NULL;
+		CHUGL_NODE_QUEUE_RELEASE(this);
     }
 }
 

@@ -23,9 +23,11 @@ CK_DLL_MFUN(cgl_mesh_dup_all);
 //-----------------------------------------------------------------------------
 CK_DLL_CTOR(cgl_gcube_ctor);
 CK_DLL_CTOR(cgl_gsphere_ctor);
+CK_DLL_CTOR(cgl_gtriangle_ctor);
 CK_DLL_CTOR(cgl_gcircle_ctor);
 CK_DLL_CTOR(cgl_gplane_ctor);
 CK_DLL_CTOR(cgl_gtorus_ctor);
+CK_DLL_CTOR(cgl_gcylinder_ctor);
 CK_DLL_CTOR(cgl_glines_ctor);
 CK_DLL_CTOR(cgl_gpoints_ctor);
 
@@ -99,6 +101,23 @@ t_CKBOOL init_chugl_mesh(Chuck_DL_Query *QUERY)
 	QUERY->add_ctor(QUERY, cgl_gtorus_ctor);
 	QUERY->end_class(QUERY);
 
+	// GCylinder
+	QUERY->begin_class(QUERY, "GCylinder", "GMesh");
+	QUERY->doc_class(QUERY, "Creates a Mesh that uses CylinderGeometry and PhongMaterial");
+	QUERY->add_ex(QUERY, "geometry/cylinder.ck");
+
+	QUERY->add_ctor(QUERY, cgl_gcylinder_ctor);
+	QUERY->end_class(QUERY);
+
+	// GTriangle
+	QUERY->begin_class(QUERY, "GTriangle", "GMesh");
+	QUERY->doc_class(QUERY, "Creates a Mesh that uses TriangleGeometry and PhongMaterial");
+	QUERY->add_ex(QUERY, "geometry/triangle.ck");
+
+	QUERY->add_ctor(QUERY, cgl_gtriangle_ctor);
+	QUERY->end_class(QUERY);
+
+	// GLines
 	QUERY->begin_class(QUERY, "GLines", "GMesh");
 	QUERY->doc_class(QUERY, "Creates a Mesh that uses CustomGeometry and LineMaterial");
 	QUERY->add_ex(QUERY, "basic/circles.ck");
@@ -108,6 +127,7 @@ t_CKBOOL init_chugl_mesh(Chuck_DL_Query *QUERY)
 	QUERY->add_ctor(QUERY, cgl_glines_ctor);
 	QUERY->end_class(QUERY);
 
+	// GPoints
 	QUERY->begin_class(QUERY, "GPoints", "GMesh");
 	QUERY->doc_class(QUERY, "Creates a Mesh that uses CustomGeometry and PointMaterial");
 	QUERY->add_ctor(QUERY, cgl_gpoints_ctor);
@@ -123,17 +143,8 @@ CK_DLL_CTOR(cgl_mesh_ctor)
 	// 	std::cerr << "GMesh instantiated" << std::endl;
 	// }
 
-	Mesh *mesh = new Mesh;
-	CGL::PushCommand(new CreateMeshCommand(mesh, &CGL::mainScene, SELF, CGL::GetGGenDataOffset()));
-}
-
-static void cglMeshSet(Mesh *mesh, Geometry *geo, Material *mat)
-{
-	// set on CGL side
-	mesh->SetGeometry(geo);
-	mesh->SetMaterial(mat);
-	// command queue to update renderer side
-	CGL::PushCommand(new SetMeshCommand(mesh));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(new Mesh, &CGL::mainScene, SELF, CGL::GetGGenDataOffset()));
+	// CGL::PushCommand(new CreateMeshCommand(mesh, &CGL::mainScene, SELF, CGL::GetGGenDataOffset()));
 }
 
 CK_DLL_MFUN(cgl_mesh_set)
@@ -147,7 +158,7 @@ CK_DLL_MFUN(cgl_mesh_set)
 	Geometry *geo = geo_obj == nullptr ? nullptr : CGL::GetGeometry(geo_obj);
 	Material *mat = mat_obj == nullptr ? nullptr : CGL::GetMaterial(mat_obj);
 
-	cglMeshSet(mesh, geo, mat);
+	CGL::MeshSet(mesh, geo, mat);
 }
 
 CK_DLL_MFUN(cgl_mesh_set_geo)
@@ -224,7 +235,7 @@ CK_DLL_CTOR(cgl_gcube_ctor)
 	// don't refcount here because will be refcounted when we assign to mat
 	CGL::CreateChuckObjFromGeo(API, VM, geo, SHRED, false);
 
-    cglMeshSet(mesh, geo, mat);
+    CGL::MeshSet(mesh, geo, mat);
 }
 
 CK_DLL_CTOR(cgl_gsphere_ctor)
@@ -232,11 +243,11 @@ CK_DLL_CTOR(cgl_gsphere_ctor)
     Mesh *mesh = (Mesh *) CGL::GetSGO(SELF);
 
 	Material* mat = new PhongMaterial;
-	CGL::CreateChuckObjFromMat(API, VM, mat, SHRED, true);
+	CGL::CreateChuckObjFromMat(API, VM, mat, SHRED, false);
 	Geometry* geo = new SphereGeometry;
-	CGL::CreateChuckObjFromGeo(API, VM, geo, SHRED, true);
+	CGL::CreateChuckObjFromGeo(API, VM, geo, SHRED, false);
 
-    cglMeshSet(mesh, geo, mat);
+    CGL::MeshSet(mesh, geo, mat);
 }
 
 CK_DLL_CTOR(cgl_gcircle_ctor)
@@ -244,11 +255,11 @@ CK_DLL_CTOR(cgl_gcircle_ctor)
     Mesh *mesh = (Mesh *) CGL::GetSGO(SELF);
 
 	Material* mat = new PhongMaterial;
-	CGL::CreateChuckObjFromMat(API, VM, mat, SHRED, true);
+	CGL::CreateChuckObjFromMat(API, VM, mat, SHRED, false);
 	Geometry* geo = new CircleGeometry;
-	CGL::CreateChuckObjFromGeo(API, VM, geo, SHRED, true);
+	CGL::CreateChuckObjFromGeo(API, VM, geo, SHRED, false);
 
-    cglMeshSet(mesh, geo, mat);
+    CGL::MeshSet(mesh, geo, mat);
 }
 
 CK_DLL_CTOR(cgl_gplane_ctor)
@@ -256,11 +267,11 @@ CK_DLL_CTOR(cgl_gplane_ctor)
     Mesh *mesh = (Mesh *) CGL::GetSGO(SELF);
 
 	Material* mat = new PhongMaterial;
-	CGL::CreateChuckObjFromMat(API, VM, mat, SHRED, true);
+	CGL::CreateChuckObjFromMat(API, VM, mat, SHRED, false);
 	Geometry* geo = new PlaneGeometry;
-	CGL::CreateChuckObjFromGeo(API, VM, geo, SHRED, true);
+	CGL::CreateChuckObjFromGeo(API, VM, geo, SHRED, false);
 
-    cglMeshSet(mesh, geo, mat);
+    CGL::MeshSet(mesh, geo, mat);
 }
 
 CK_DLL_CTOR(cgl_gtorus_ctor)
@@ -268,11 +279,35 @@ CK_DLL_CTOR(cgl_gtorus_ctor)
     Mesh *mesh = (Mesh *) CGL::GetSGO(SELF);
 
 	Material* mat = new PhongMaterial;
-	CGL::CreateChuckObjFromMat(API, VM, mat, SHRED, true);
+	CGL::CreateChuckObjFromMat(API, VM, mat, SHRED, false);
 	Geometry* geo = new TorusGeometry;
-	CGL::CreateChuckObjFromGeo(API, VM, geo, SHRED, true);
+	CGL::CreateChuckObjFromGeo(API, VM, geo, SHRED, false);
 
-    cglMeshSet(mesh, geo, mat);
+    CGL::MeshSet(mesh, geo, mat);
+}
+
+CK_DLL_CTOR(cgl_gcylinder_ctor)
+{
+	Mesh *mesh = (Mesh *) CGL::GetSGO(SELF);
+
+	Material* mat = new PhongMaterial;
+	CGL::CreateChuckObjFromMat(API, VM, mat, SHRED, false);
+	Geometry* geo = new CylinderGeometry;
+	CGL::CreateChuckObjFromGeo(API, VM, geo, SHRED, false);
+
+	CGL::MeshSet(mesh, geo, mat);
+}
+
+CK_DLL_CTOR(cgl_gtriangle_ctor)
+{
+	Mesh *mesh = (Mesh *) CGL::GetSGO(SELF);
+
+	Material* mat = new PhongMaterial;
+	CGL::CreateChuckObjFromMat(API, VM, mat, SHRED, false);
+	Geometry* geo = new TriangleGeometry;
+	CGL::CreateChuckObjFromGeo(API, VM, geo, SHRED, false);
+
+	CGL::MeshSet(mesh, geo, mat);
 }
 
 CK_DLL_CTOR(cgl_glines_ctor)
@@ -280,9 +315,9 @@ CK_DLL_CTOR(cgl_glines_ctor)
     Mesh *mesh = (Mesh *) CGL::GetSGO(SELF);
 
 	Material* mat = new LineMaterial;
-	CGL::CreateChuckObjFromMat(API, VM, mat, SHRED, true);
+	CGL::CreateChuckObjFromMat(API, VM, mat, SHRED, false);
 	Geometry* geo = new CustomGeometry;
-	CGL::CreateChuckObjFromGeo(API, VM, geo, SHRED, true);
+	CGL::CreateChuckObjFromGeo(API, VM, geo, SHRED, false);
 
 	std::vector<double> firstLine = {0, 0, 0, 0, 0, 0};
 
@@ -293,7 +328,7 @@ CK_DLL_CTOR(cgl_glines_ctor)
 		)
 	);
 
-    cglMeshSet(mesh, geo, mat);
+    CGL::MeshSet(mesh, geo, mat);
 }
 
 CK_DLL_CTOR(cgl_gpoints_ctor)
@@ -301,9 +336,9 @@ CK_DLL_CTOR(cgl_gpoints_ctor)
     Mesh *mesh = (Mesh *) CGL::GetSGO(SELF);
 
 	Material* mat = new PointsMaterial;
-	CGL::CreateChuckObjFromMat(API, VM, mat, SHRED, true);
+	CGL::CreateChuckObjFromMat(API, VM, mat, SHRED, false);
 	Geometry* geo = new CustomGeometry;
-	CGL::CreateChuckObjFromGeo(API, VM, geo, SHRED, true);
+	CGL::CreateChuckObjFromGeo(API, VM, geo, SHRED, false);
 
 	std::vector<double> firstPoint = {0, 0, 0};
 
@@ -314,5 +349,5 @@ CK_DLL_CTOR(cgl_gpoints_ctor)
 		)
 	);
 
-    cglMeshSet(mesh, geo, mat);
+    CGL::MeshSet(mesh, geo, mat);
 }

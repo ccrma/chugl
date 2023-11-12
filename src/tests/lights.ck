@@ -64,8 +64,11 @@ fileMesh.pos(@(0, 1.5, 0));
 shaderMesh.pos(@(0, -1.5, 0));
 flatCube.pos(@(0, -3, 0));
 lightbulb.pos( @(2, 0, 0) );
-lightbulb.scale( @(0.1, 0.1, 0.1) );
+lightbulb.sca( @(0.1, 0.1, 0.1) );
 light --> lightbulb --> group;
+
+true => filePhongMaterial.transparent;
+true => flatMat.transparent;
 
 light.falloff(0.14, .07);
 

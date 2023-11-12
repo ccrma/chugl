@@ -1,5 +1,7 @@
 #pragma once
 
+#include "chugl_pch.h"
+
 #include "RendererState.h"
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
@@ -13,14 +15,9 @@
 #include "scenegraph/Material.h"
 #include "scenegraph/Command.h"
 
-#include <mutex>
-#include <vector>
-#include <unordered_map>
-
 class Shader;
 class Geometry;
 class Renderer;
-
 
 // Renderer helper classes (encapsulate SceneGraph classes)
 /*
@@ -145,6 +142,7 @@ public:  // framebuffer setup
 	void BuildFramebuffer(unsigned int width, unsigned int height);
 
 	void UpdateFramebufferSize(unsigned int width, unsigned int height) {
+		// TODO: check Khronos docs if it's okay to rebuild the framebuffer like this
 		// update texture dimensions 
 		glBindTexture(GL_TEXTURE_2D, m_TextureColorbuffer);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
@@ -153,6 +151,10 @@ public:  // framebuffer setup
 		glBindRenderbuffer(GL_RENDERBUFFER, m_RenderBufferID); 
 		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);  
 		glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+		// check if framebuffer is complete
+		if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+			std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
 	}
 
 	void BindFramebuffer() {
@@ -174,7 +176,6 @@ public:  // framebuffer setup
 		GLCall(glActiveTexture(GL_TEXTURE0));  // activate slot 0
 		GLCall(glBindTexture(GL_TEXTURE_2D, m_TextureColorbuffer));
 		// draw
-		// GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_LINE));
 		GLCall(glDrawArrays(GL_TRIANGLES, 0, 6));
 	}
 
@@ -201,10 +202,39 @@ public:
 		// cache camera values
 		m_RenderState.ComputeCameraUniforms(m_MainCamera);
 
-		// cache current scene being rendered
-		m_RenderState.SetScene(scene);
+		// cache renderables from target scene
+		m_RenderState.PrepareScene(scene);
 
-		RenderNodeAndChildren(scene);
+		OpaquePass();
+		TransparentPass();
+
+		// OLD: render in DFS order
+		// now we process the scenegraph into a render queue
+		// RenderNodeAndChildren(scene);
+	}
+
+	// render opaque meshes
+	void OpaquePass() {
+		for (auto* mesh : m_RenderState.GetOpaqueMeshes()) {
+			// TODO: access cached world matrix here
+			RenderMesh(mesh, mesh->GetWorldMatrix());
+		}
+	}
+
+	void TransparentPass() {
+		// disable depth writes
+		glDepthMask(GL_FALSE);
+
+		// transparent meshes are already sorted during insertion
+		// don't need to sort here
+
+		// render transparent meshes
+		for (auto* mesh : m_RenderState.GetTransparentMeshes()) {
+			RenderMesh(mesh, mesh->GetWorldMatrix());
+		}
+
+		// reenable depth writes
+		glDepthMask(GL_TRUE);
 	}
 
 	void RenderNodeAndChildren(SceneGraphObject* sgo) {

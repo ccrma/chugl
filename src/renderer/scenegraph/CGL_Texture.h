@@ -1,6 +1,9 @@
 // Scenegraph texture class (separate from any GPU/renderer-specific impl)
 #pragma once
 
+#include "chugl_pch.h"
+#include "SceneGraphNode.h"
+
 /*
 Goals
 
@@ -29,14 +32,6 @@ Params:
         - impl: glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 */
 
-#include "SceneGraphNode.h"
-
-#include "chuck_def.h"
-
-#include <string>
-#include <vector>
-
-
 enum CGL_TextureType : t_CKUINT {
     Base = 0,
     File2D,
@@ -44,13 +39,13 @@ enum CGL_TextureType : t_CKUINT {
     Count
 };
 
-enum class CGL_TextureWrapMode : t_CKUINT {
+enum CGL_TextureWrapMode : t_CKUINT {
     Repeat = 0,
     MirroredRepeat,
     ClampToEdge
 };
 
-enum class CGL_TextureFilterMode : t_CKUINT {
+enum CGL_TextureFilterMode : t_CKUINT {
     Nearest = 0,
     Linear,
     // Nearest_MipmapNearest,
@@ -133,6 +128,7 @@ public:
 
 // member vars ==========================================================================================================
     CGL_TextureType type;
+    CGL_TextureType GetTextureType() { return type; }
 
     // update flags. these are set in the UpdateTextureXXX commands, and reset by renderer after regenerating GPU data
     unsigned int m_UpdateFlags;
@@ -153,16 +149,23 @@ public:
 
 // static constants (because pass enums as svars through chuck dll query is undefined)
     // wrap modes
-    const static CGL_TextureWrapMode Repeat; 
-    const static CGL_TextureWrapMode MirroredRepeat;
-    const static CGL_TextureWrapMode ClampToEdge;
+    const static t_CKUINT Repeat; 
+    const static t_CKUINT MirroredRepeat;
+    const static t_CKUINT ClampToEdge;
 
     // filter modes
     // note: X_MipmapY uses X for filtering, and Y for MIPMAP selection
-    const static CGL_TextureFilterMode Nearest;
-    const static CGL_TextureFilterMode Linear;
-    const static CGL_TextureFilterMode Nearest_MipmapNearest;
-    const static CGL_TextureFilterMode Linear_MipmapNearest;
-    const static CGL_TextureFilterMode Nearest_MipmapLinear;
-    const static CGL_TextureFilterMode Linear_MipmapLinear;
+    const static t_CKUINT Nearest;
+    const static t_CKUINT Linear;
+    // const static CGL_TextureFilterMode Nearest_MipmapNearest;
+    // const static CGL_TextureFilterMode Linear_MipmapNearest;
+    // const static CGL_TextureFilterMode Nearest_MipmapLinear;
+    // const static CGL_TextureFilterMode Linear_MipmapLinear;
+
+public: // chuck type names
+    // TODO can probably template this and genarlize across all scenegraph classes?
+    typedef std::unordered_map<CGL_TextureType, const std::string, EnumClassHash> CkTypeMap;
+    static CkTypeMap s_CkTypeMap;
+    static const char* CKName(CGL_TextureType type);
+    virtual const char* myCkName() { return CKName(GetTextureType()); }
 };

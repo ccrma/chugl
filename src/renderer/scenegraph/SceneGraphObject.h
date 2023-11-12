@@ -1,12 +1,7 @@
 #pragma once
-#include "SceneGraphNode.h"
-#include <vector>
-#include <string>
-#include "glm/glm.hpp"
-#include "glm/gtc/matrix_transform.hpp"
-#include "glm/gtc/quaternion.hpp"
-#include "glm/gtx/quaternion.hpp"
 
+#include "chugl_pch.h"
+#include "SceneGraphNode.h"
 
 class SceneGraphObject : public SceneGraphNode
 {
@@ -24,7 +19,9 @@ public:
 	}
 
 	virtual ~SceneGraphObject() {
-		Disconnect();  // disconnect already handles refcounting
+		// if we're in the destructor of an audio thread object, that means the sgo is *already* disconnected from the scene
+		// so only disconnect if we're on the render-thread copy
+		if (!IsAudioThreadObject()) Disconnect();  // disconnect handles refcounting
 	}
 
 	// clone
@@ -65,7 +62,7 @@ public:
 
 	glm::mat4 GetWorldMatrix();
 	glm::quat GetWorldRotation();
-	glm::vec3 GetWorldPosition();
+	glm::vec3 GetWorldPosition() const;
 	glm::vec3 GetWorldScale();
 	glm::vec3 SetWorldPosition(const glm::vec3& pos);
 	glm::vec3 SetWorldScale(const glm::vec3& scale);

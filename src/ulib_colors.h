@@ -1,13 +1,8 @@
 #pragma once
 
-#include "chuck_def.h"
-#include "chuck_dl.h"
-
-#include "glm/glm.hpp"
-
+#include "chugl_pch.h"
 
 // Color class functions
-
 t_CKBOOL init_chugl_colors(Chuck_DL_Query *QUERY);
 
 CK_DLL_SFUN(chugl_color_hsv_to_rgb);

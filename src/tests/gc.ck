@@ -1,15 +1,14 @@
-// Test garbage collection on mesh, mat, and geo
-// TODO add texture garbage collection
+[
+    "gc-ggen.ck",
+    "gc-texture.ck",
+    "gc-geo.ck",
+    "gc-material.ck",
+    "gc-shred.ck"
+] @=> string gc_test_files[];
 
-fun void Spawn() {
-    GCube c;
-    c --> GG.scene();
-    GG.nextFrame() => now;
-    c --< GG.scene();
+for (auto test : gc_test_files) {
+    me.dir() + test => string file;
+    Machine.add(me.dir() + test);
 }
 
-while (true) {
-    spork ~ Spawn();
-    // Spawn();  // TODO: this leaks right now until we figure out a better way to refcount GGens
-    GG.nextFrame() => now;
-}
+1::eon => now;

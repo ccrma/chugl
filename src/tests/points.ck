@@ -64,7 +64,7 @@ for (int k; k < POINTS_PER_AXIS; k++) {
 
 <<< "Rendering ", pointPos.size()/3, " points!" >>>;
 
-pointsGeo.poss(pointPos);
+pointsGeo.positions(pointPos);
 pointsGeo.colors(pointColor);
 
 pointMesh.set(pointsGeo, pointsMat);

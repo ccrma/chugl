@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.16)
 
 set(CMAKE_VERBOSE_MAKEFILE on)
 
@@ -31,25 +31,6 @@ if(APPLE)
     #set( CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-undefined,error" )
 endif()
 
-# global compiler flags interface
-# specify the C++ standard
-add_library(chugl_compiler_flags INTERFACE)
-target_compile_features(chugl_compiler_flags INTERFACE cxx_std_11)
-
-# add compiler warning flags just when building this project via
-# the BUILD_INTERFACE genex
-set(gcc_like_cxx "$<COMPILE_LANG_AND_ID:CXX,ARMClang,AppleClang,Clang,GNU,LCC>")
-set(msvc_cxx "$<COMPILE_LANG_AND_ID:CXX,MSVC>")
-target_compile_options(chugl_compiler_flags INTERFACE
-  "$<${gcc_like_cxx}:$<BUILD_INTERFACE:-Werror;>>"
-  "$<${msvc_cxx}:$<BUILD_INTERFACE:-W3>>"
-)
-
-# find chuck program
-find_program(CHUCK_EXECUTABLE NAMES chuck)
-if (NOT CHUCK_EXECUTABLE)
-    message(FATAL_ERROR "Could not find chuck executable")
-endif()
 
 # all ulib_*.cpp files
 file(GLOB ULIB_SOURCES "ulib_*.cpp")
@@ -88,9 +69,96 @@ add_subdirectory(./renderer)
 add_subdirectory(./vendor/imgui)
 
 
+# Tracy profiler
+include(FetchContent)
+# set default tracy options
+set(TRACY_ENABLE OFF CACHE BOOL "")
+set(TRACY_DELAYED_INIT ON CACHE BOOL "" FORCE)
+set(TRACY_MANUAL_LIFETIME ON CACHE BOOL "" FORCE)
+# fetch tracy
+FetchContent_Declare (
+    tracy
+    GIT_REPOSITORY https://github.com/wolfpld/tracy.git
+    GIT_TAG v0.10  # must match the profiler server version
+    GIT_SHALLOW TRUE
+    GIT_PROGRESS TRUE
+)
+FetchContent_MakeAvailable (tracy)
+
+# assimp Open Asset Import Library
+# set default assimp options
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "")
+set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "")
+set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "")
+set(ASSIMP_BUILD_SAMPLES OFF CACHE BOOL "")
+set(ASSIMP_INSTALL OFF CACHE BOOL "")
+set(ASSIMP_BUILD_DOCS OFF CACHE BOOL "")
+set(ASSIMP_INJECT_DEBUG_POSTFIX OFF CACHE BOOL "")
+set(ASSIMP_NO_EXPORT ON CACHE BOOL "")  # disable export functionality for now until we add it to the DL API
+set(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT OFF CACHE BOOL "")  # disable all importers by default
+# which importers to build
+set(ASSIMP_BUILD_FBX_IMPORTER ON CACHE BOOL "")       # Autodesk
+set(ASSIMP_BUILD_GLTF_IMPORTER ON CACHE BOOL "")      # .gltf, .glb
+set(ASSIMP_BUILD_COLLADA_IMPORTER ON CACHE BOOL "")   # digital asset exchange (.dae)
+set(ASSIMP_BUILD_BLEND_IMPORTER ON CACHE BOOL "")     # blender
+set(ASSIMP_BUILD_PLY_IMPORTER ON CACHE BOOL "")       # standard polygon library
+set(ASSIMP_BUILD_STL_IMPORTER ON CACHE BOOL "")       # stereolithography
+set(ASSIMP_BUILD_3DS_IMPORTER ON CACHE BOOL "")       # 3ds max
+set(ASSIMP_BUILD_BVH_IMPORTER ON CACHE BOOL "")       # motion capture
+set(ASSIMP_BUILD_OBJ_IMPORTER ON CACHE BOOL "")       # wavefront obj
+# fetch assimp
+FetchContent_Declare (
+    assimp
+    GIT_REPOSITORY https://github.com/assimp/assimp.git
+    GIT_TAG v5.3.1
+)
+# make available
+FetchContent_MakeAvailable (assimp)
+
+# =================================================================================
+# interface library for compiler flags
+# =================================================================================
+add_library(chugl_compiler_flags INTERFACE)
+
+# specify the C++ standard
+target_compile_features(chugl_compiler_flags INTERFACE cxx_std_11)
+
+# add compiler warning flags just when building this project via
+# the BUILD_INTERFACE genex
+set(gcc_like_cxx "$<COMPILE_LANG_AND_ID:CXX,ARMClang,AppleClang,Clang,GNU,LCC>")
+set(msvc_cxx "$<COMPILE_LANG_AND_ID:CXX,MSVC>")
+target_compile_options(chugl_compiler_flags INTERFACE
+  "$<${gcc_like_cxx}:$<BUILD_INTERFACE:-Werror;>>"
+  "$<${msvc_cxx}:$<BUILD_INTERFACE:-W3>>"
+)
+# =================================================================================
+
+# =================================================================================
+# interface library for precompiled headers
+# =================================================================================
+add_library(chugl_pch INTERFACE)
+
+# add precompiled headers to interface
+target_precompile_headers(chugl_pch INTERFACE chugl_pch.h)
+
+# add libraries to interface
+target_link_libraries(chugl_pch INTERFACE
+    TracyClient glm assimp
+)
+
+# set interface include directories
+target_include_directories(chugl_pch INTERFACE
+    .
+    ./chuck/include
+    ./vendor
+)
+# =================================================================================
+
+
+# link libraries to chugl.chug
 target_link_libraries(${PROJECT_NAME} 
-    PRIVATE glfw glad glm imgui
-    PRIVATE chugl_compiler_flags
+    PRIVATE glfw glad imgui
+    PRIVATE chugl_compiler_flags chugl_pch
     PRIVATE renderer
 )
 

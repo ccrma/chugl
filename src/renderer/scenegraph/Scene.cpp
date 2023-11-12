@@ -1,27 +1,18 @@
 #include "Scene.h"
 #include "Light.h"
 #include "Camera.h"
-// static render state (options passed from chuck to configure glfw)
-
-// mouse modes
-unsigned int Scene::mouseMode = 0;
-bool Scene::updateMouseMode = false; 
-
-// window modes
-unsigned int Scene::windowMode = 0;  // which mode, fullscreen or windowed
-bool Scene::updateWindowMode = false;  // whether to update window mode
-int Scene::windowedWidth = 0;
-int Scene::windowedHeight = 0;  // last user-set window size
-bool Scene::windowShouldClose = false;
 
 // fog modes
-const unsigned int Scene::FOG_EXP = FogType::Exponential;
-const unsigned int Scene::FOG_EXP2 = FogType::ExponentialSquared;
+const t_CKUINT Scene::FOG_EXP = FogType::Exponential;
+const t_CKUINT Scene::FOG_EXP2 = FogType::ExponentialSquared;
 
 
 void Scene::RegisterNode(SceneGraphNode *node)
 {
-    m_SceneGraphMap[node->GetID()] = node;
+    assert(node);
+    assert(node->IsAudioThreadObject() == IsAudioThreadObject());
+
+    Locator::RegisterNode(node);
 
     // register light
     if (node->IsLight()) {
@@ -41,10 +32,14 @@ void Scene::UnregisterNode(size_t id)
 {
     if (!CheckNode(id)) return;
 
-    SceneGraphNode* node = GetNode(id);
+    SceneGraphNode* node = Locator::GetNode(id, IsAudioThreadObject());
 
-    // remove from map
-    m_SceneGraphMap.erase(id);
+    // make sure they belong to the same thread as the scene
+    assert(node);
+    assert(node->IsAudioThreadObject() == IsAudioThreadObject());
+
+    // remove from locator 
+    Locator::UnregisterNode(id, IsAudioThreadObject());
 
     if (node->IsLight()) {
         for (auto it = m_Lights.begin(); it != m_Lights.end(); ++it) {

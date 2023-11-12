@@ -1,5 +1,7 @@
 #pragma once
 
+#include "chugl_pch.h"
+
 class VertexBuffer
 {
 private:

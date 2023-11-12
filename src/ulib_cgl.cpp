@@ -1,6 +1,4 @@
-#include <algorithm>
-#include <iostream>
-#include <stdexcept>
+#include "window.h"
 
 #include "ulib_cgl.h"
 #include "ulib_colors.h"
@@ -13,14 +11,13 @@
 #include "ulib_mesh.h"
 #include "ulib_light.h"
 #include "ulib_scene.h"
+#include "ulib_assimp.h"
 
 #include "renderer/scenegraph/Camera.h"
 #include "renderer/scenegraph/Command.h"
 #include "renderer/scenegraph/Scene.h"
 #include "renderer/scenegraph/Light.h"
-
-#include "chuck_vm.h"
-#include "chuck_dl.h"
+#include "renderer/scenegraph/Locator.h"
 
 //-----------------------------------------------------------------------------
 // ChuGL Event Listeners
@@ -47,17 +44,22 @@ CK_DLL_SFUN(cgl_next_frame);
 CK_DLL_SFUN(cgl_register);
 CK_DLL_SFUN(cgl_unregister);
 
-// glfw-state
+// glfw window params
 CK_DLL_SFUN(cgl_window_get_width);
 CK_DLL_SFUN(cgl_window_get_height);
+CK_DLL_SFUN(cgl_window_get_aspect_ratio);
 CK_DLL_SFUN(cgl_window_get_time);
 CK_DLL_SFUN(cgl_window_get_dt);
+
+// glfw mouse params
 CK_DLL_SFUN(cgl_mouse_get_pos_x);
 CK_DLL_SFUN(cgl_mouse_get_pos_y);
 CK_DLL_SFUN(cgl_mouse_set_mode);
 CK_DLL_SFUN(cgl_mouse_hide);
 CK_DLL_SFUN(cgl_mouse_lock);
 CK_DLL_SFUN(cgl_mouse_show);
+
+// glfw framebuffer params
 CK_DLL_SFUN(cgl_framebuffer_get_width);
 CK_DLL_SFUN(cgl_framebuffer_get_height);
 
@@ -66,6 +68,9 @@ CK_DLL_SFUN(cgl_window_fullscreen);
 CK_DLL_SFUN(cgl_window_windowed);
 // CK_DLL_SFUN(cgl_window_maximize);
 CK_DLL_SFUN(cgl_window_set_size);
+
+CK_DLL_SFUN(cgl_window_get_title);
+CK_DLL_SFUN(cgl_window_set_title);
 
 // accessing shared default GGens
 CK_DLL_SFUN(cgl_get_main_camera);
@@ -104,6 +109,8 @@ t_CKBOOL init_chugl(Chuck_DL_Query *QUERY)
     CGL::SetCKAPI( QUERY->api() );
     // set API in the scene graph node
     SceneGraphNode::SetCKAPI( QUERY->api() );
+	// set API in the locator service
+	Locator::SetCKAPI( QUERY->api() );
 
 	// init GUI
 	if (!init_chugl_gui(QUERY)) return FALSE;
@@ -119,7 +126,8 @@ t_CKBOOL init_chugl(Chuck_DL_Query *QUERY)
 	init_chugl_mesh(QUERY);
 	init_chugl_light(QUERY);
 	init_chugl_scene(QUERY);
-	create_chugl_default_objs(QUERY);
+    init_chugl_assimp(QUERY);
+    create_chugl_default_objs(QUERY);
 	init_chugl_static_fns(QUERY);
 
 	return true;
@@ -135,10 +143,6 @@ t_CKBOOL create_chugl_default_objs(Chuck_DL_Query *QUERY)
 		QUERY->vm());
 	assert(CglEvent::s_SharedEventQueue);
 
-	// main camera
-	// Chuck_DL_Api::Type type = QUERY->api()->type->lookup(QUERY->api(), NULL, "GCamera");
-	// Chuck_DL_Api::Object obj = QUERY->api()->object->create(QUERY->api(), NULL, type);
-
 	// shred destroy listener
 	QUERY->register_shreds_watcher(QUERY, cgl_shred_on_destroy_listener, CKVM_SHREDS_WATCH_REMOVE, NULL);
 
@@ -147,68 +151,11 @@ t_CKBOOL create_chugl_default_objs(Chuck_DL_Query *QUERY)
     Chuck_Type * t_ggen = QUERY->api()->type->lookup(QUERY->vm(), "GGen");
     // find the offset for update
     CGL::our_update_vt_offset = QUERY->api()->type->get_vtable_offset(QUERY->vm(), t_ggen, "update");
-    
+
     // GGen instantiation listener
-    QUERY->api()->type->callback_on_instantiate( cgl_ggen_on_instantiate_listener, t_ggen, QUERY->vm(), TRUE );
-	
+    QUERY->api()->type->callback_on_instantiate( cgl_ggen_on_instantiate_listener, t_ggen, QUERY->vm(), FALSE );
+
 	return true;
-}
-
-// mapping shred to GGens created on that shred
-static std::map<Chuck_VM_Shred *, std::list<Chuck_Object *> > g_shred2ggen;
-
-static void detach_ggens_from_shred( Chuck_VM_Shred * shred )
-{
-    if( g_shred2ggen.find( shred ) == g_shred2ggen.end() )
-        return;
-
-    // get list of GGens
-    std::list<Chuck_Object *> & ggens = g_shred2ggen[shred];
-    
-    for( auto * ggen : ggens )
-    {
-        // verify
-        assert( ggen != NULL );
-        
-        // get scenegraph within the GGen
-        SceneGraphObject * cglObj = CGL::GetSGO(ggen);
-
-		// edge case: if it's the main scene or camera, don't disconnect, because these static instances are shared across all shreds!
-		// also don't remove if its the default dir light
-		// TODO: why do we still need this check even though I create_without_shred ???
-		if (cglObj == &CGL::mainScene || cglObj == &CGL::mainCamera || cglObj == CGL::mainScene.GetDefaultLight())
-			goto reset_origin_shred;
-
-        // if null, it is possible shred was removed between GGen instantiate and its pre-constructor
-        if( cglObj )
-        {
-            // disconnect
-			CGL::PushCommand(new DisconnectCommand(cglObj));
-        }
-
-reset_origin_shred:
-        // get origin shred
-        Chuck_VM_Shred * originShred = CGL::CKAPI()->object->get_origin_shred( ggen );
-        // make sure if ggen has an origin shred, it is this one
-        assert( !originShred || originShred == shred );
-        // also clear reference to this shred
-        CGL::CKAPI()->object->set_origin_shred( ggen, NULL );
-    }
-
-    // release ref count on all GGen; in theory this could be done in the loop above,
-    // assuming all refcounts properly handled; in practice this is a bit "safer" in case
-    // of inconstencies / bugs elsewhere
-    for( auto * ggen : ggens )
-    {
-		// TODO: need to come up with a new ggen refcount logic that makes the following code not leak:
-		/*
-		while (true) {
-			GCube c;
-		}
-		*/
-        // release it
-		CGL::CKAPI()->object->release(ggen);
-    }
 }
 
 // called when shred is taken out of circulation for any reason
@@ -225,21 +172,25 @@ CK_DLL_SHREDS_WATCHER(cgl_shred_on_destroy_listener)
 	CGL::UnregisterShredWaiting(SHRED);
 
     // detach all GGens on shred
-    detach_ggens_from_shred( SHRED );
+    CGL::DetachGGensFromShred( SHRED );
     
 	// we tell the window to close when the last running
 	// graphics shred is removed. 
 	// this avoids the bug where window is closed 
 	// when a non-graphics shred exits before 
 	// any  graphics shreds have even been created
-    if( g_shred2ggen.find( SHRED ) != g_shred2ggen.end() ) {
-		g_shred2ggen.erase( SHRED );
-		if (g_shred2ggen.empty()) {
-			CGL::PushCommand(new CloseWindowCommand());
-			CGL::Render();  // wake up render thread one last time to process the close window command
-		}
+	bool isGraphicsShred = CGL::EraseFromShred2GGenMap(SHRED);
+	
+	// behavior: after window opens (ie GG.nextFrame() has been called once)
+	// if the #shreds calling GG.nextFrame() drops to zero, window is 
+	// immediately closed and chuck VM is shut down.
+	if ( 
+		isGraphicsShred && CGL::NoActiveGraphicsShreds()
+	) {
+		Locator::GC();  // gc to force any disconnected GGens to be cleaned up
+		CGL::PushCommand(new CloseWindowCommand(&CGL::mainScene));
+		CGL::Render();  // wake up render thread one last time to process the close window command
 	}
-
 }
 
 CK_DLL_TYPE_ON_INSTANTIATE(cgl_ggen_on_instantiate_listener)
@@ -247,9 +198,7 @@ CK_DLL_TYPE_ON_INSTANTIATE(cgl_ggen_on_instantiate_listener)
     // this should never be called by VM with a NULL object
     assert( OBJECT != NULL );
     // add mapping from SHRED->GGen
-    g_shred2ggen[SHRED].push_back( OBJECT );
-    // add ref
-	CGL::CKAPI()->object->add_ref(OBJECT);
+	CGL::RegisterGGenToShred(SHRED, OBJECT);
 }
 
 
@@ -330,6 +279,8 @@ CK_DLL_MFUN(cgl_update_event_waiting_on)
         // signal the graphics-side that audio-side is done processing for this frame
         // see CGL::WaitOnUpdateDone()
         CGL::Render();
+		// Garbage collect (TODO add API function to control this)
+		Locator::GC();  
 	}
 }
 
@@ -380,7 +331,7 @@ t_CKBOOL init_chugl_static_fns(Chuck_DL_Query *QUERY)
 	QUERY->add_sfun(QUERY, cgl_register, "void", "register");
     QUERY->doc_func(QUERY, "For interal debug purposes, registers the calling shred to ChuGL's list of graphics-related shreds.");
 
-	// window state getters
+	// window functions
 	QUERY->add_sfun(QUERY, cgl_window_get_width, "int", "windowWidth");
     QUERY->doc_func(QUERY, "Returns screen-space width of the window");
 	QUERY->add_sfun(QUERY, cgl_window_get_height, "int", "windowHeight");
@@ -389,10 +340,14 @@ t_CKBOOL init_chugl_static_fns(Chuck_DL_Query *QUERY)
     QUERY->doc_func(QUERY, "Returns width of the framebuffer in pixels. Used for settings the viewport dimensions and camera aspect ratio");
 	QUERY->add_sfun(QUERY, cgl_framebuffer_get_height, "int", "frameHeight");
     QUERY->doc_func(QUERY, "Returns height of the framebuffer in pixels. Used for settings the viewport dimensions and camera aspect ratio");
+	QUERY->add_sfun(QUERY, cgl_window_get_aspect_ratio, "float", "aspect");
+	QUERY->doc_func(QUERY, "Returns aspect ratio of the window. Equal to windowWidth / windowHeight");
 	QUERY->add_sfun(QUERY, cgl_window_get_time, "dur", "windowUptime");
     QUERY->doc_func(QUERY, "Time in seconds since the grapics window was opened");
 	QUERY->add_sfun(QUERY, cgl_window_get_dt, "float", "dt");
     QUERY->doc_func(QUERY, "Time in seconds since the last render frame"); 
+
+	// mouse functions
 	QUERY->add_sfun(QUERY, cgl_mouse_get_pos_x, "float", "mouseX");
     QUERY->doc_func(QUERY, "Mouse horizontal position in window screen-space");
 	QUERY->add_sfun(QUERY, cgl_mouse_get_pos_y, "float", "mouseY");
@@ -420,6 +375,12 @@ t_CKBOOL init_chugl_static_fns(Chuck_DL_Query *QUERY)
 	QUERY->add_arg(QUERY, "int", "width");
 	QUERY->add_arg(QUERY, "int", "height");
     QUERY->doc_func(QUERY, "Change resolution of current window. Will NOT exit fullscreen mode");
+
+	QUERY->add_sfun(QUERY, cgl_window_get_title, "string", "windowTitle");
+	QUERY->doc_func(QUERY, "Returns the title of the window");
+	QUERY->add_sfun(QUERY, cgl_window_set_title, "string", "windowTitle");
+	QUERY->add_arg(QUERY, "string", "title");
+	QUERY->doc_func(QUERY, "Sets the title of the window");
 
 	// Main Camera
 	// TODO: is it possible to add an svar of type GCamera?
@@ -486,6 +447,8 @@ CK_DLL_SFUN(cgl_window_get_height) { RETURN->v_int = CGL::GetWindowSize().second
 CK_DLL_SFUN(cgl_framebuffer_get_width) { RETURN->v_int = CGL::GetFramebufferSize().first; }
 // get framebuffer height
 CK_DLL_SFUN(cgl_framebuffer_get_height) { RETURN->v_int = CGL::GetFramebufferSize().second; }
+// get window aspect
+CK_DLL_SFUN(cgl_window_get_aspect_ratio) { RETURN->v_float = CGL::GetAspectRatio(); }
 // get glfw time
 CK_DLL_SFUN(cgl_window_get_time) { RETURN->v_dur = API->vm->srate(VM) * CGL::GetTimeInfo().first; }
 // get glfw dt
@@ -499,27 +462,41 @@ CK_DLL_SFUN(cgl_mouse_get_pos_y) { RETURN->v_float = CGL::GetMousePos().second; 
 CK_DLL_SFUN(cgl_mouse_set_mode)
 {
 	t_CKINT mode = GET_NEXT_INT(ARGS);
-	CGL::PushCommand(new SetMouseModeCommand(mode));
+	CGL::PushCommand(new SetMouseModeCommand(&CGL::mainScene, mode));
 }
 
-CK_DLL_SFUN(cgl_mouse_hide) { CGL::PushCommand(new SetMouseModeCommand(CGL::MOUSE_HIDDEN)); }
-CK_DLL_SFUN(cgl_mouse_lock) { CGL::PushCommand(new SetMouseModeCommand(CGL::MOUSE_LOCKED)); }
-CK_DLL_SFUN(cgl_mouse_show) { CGL::PushCommand(new SetMouseModeCommand(CGL::MOUSE_NORMAL)); }
+CK_DLL_SFUN(cgl_mouse_hide) { CGL::PushCommand(new SetMouseModeCommand(&CGL::mainScene, CGL::MOUSE_HIDDEN)); }
+CK_DLL_SFUN(cgl_mouse_lock) { CGL::PushCommand(new SetMouseModeCommand(&CGL::mainScene, CGL::MOUSE_LOCKED)); }
+CK_DLL_SFUN(cgl_mouse_show) { CGL::PushCommand(new SetMouseModeCommand(&CGL::mainScene, CGL::MOUSE_NORMAL)); }
 
-CK_DLL_SFUN(cgl_window_fullscreen) { CGL::PushCommand(new SetWindowModeCommand(CGL::WINDOW_FULLSCREEN)); }
+CK_DLL_SFUN(cgl_window_fullscreen) { CGL::PushCommand(new SetWindowModeCommand(&CGL::mainScene, CGL::WINDOW_FULLSCREEN)); }
 
 CK_DLL_SFUN(cgl_window_windowed)
 {
 	t_CKINT width = GET_NEXT_INT(ARGS);
 	t_CKINT height = GET_NEXT_INT(ARGS);
-	CGL::PushCommand(new SetWindowModeCommand(CGL::WINDOW_WINDOWED, width, height));
+	CGL::PushCommand(new SetWindowModeCommand(&CGL::mainScene, CGL::WINDOW_WINDOWED, width, height));
 }
 
 CK_DLL_SFUN(cgl_window_set_size)
 {
 	t_CKINT width = GET_NEXT_INT(ARGS);
 	t_CKINT height = GET_NEXT_INT(ARGS);
-	CGL::PushCommand(new SetWindowModeCommand(CGL::WINDOW_SET_SIZE, width, height));
+	CGL::PushCommand(new SetWindowModeCommand(&CGL::mainScene, CGL::WINDOW_SET_SIZE, width, height));
+}
+
+// get glfw window title
+CK_DLL_SFUN(cgl_window_get_title) { 
+	RETURN->v_string = (Chuck_String *)API->object->create_string(
+		VM, CGL::mainScene.m_WindowTitle.c_str(), false
+	);
+}
+
+// set glfw window title
+CK_DLL_SFUN(cgl_window_set_title) { 
+	Chuck_String *title= GET_NEXT_STRING(ARGS);
+	CGL::PushCommand(new SetWindowTitleCommand(&CGL::mainScene, title->str()));
+	RETURN->v_string = title;
 }
 
 CK_DLL_SFUN(cgl_get_main_camera)
@@ -645,16 +622,16 @@ std::mutex CGL::s_WindowStateLock;
 CGL::WindowState CGL::s_WindowState;
 
 // mouse modes
-const unsigned int CGL::MOUSE_NORMAL = 0;
-const unsigned int CGL::MOUSE_HIDDEN = 1;
-const unsigned int CGL::MOUSE_LOCKED = 2;
+const t_CKUINT CGL::MOUSE_NORMAL = 0;
+const t_CKUINT CGL::MOUSE_HIDDEN = 1;
+const t_CKUINT CGL::MOUSE_LOCKED = 2;
 
 // window modes
-const unsigned int CGL::WINDOW_WINDOWED = 0;
-const unsigned int CGL::WINDOW_FULLSCREEN = 1;
-const unsigned int CGL::WINDOW_MAXIMIZED = 2;
-const unsigned int CGL::WINDOW_RESTORE = 3;
-const unsigned int CGL::WINDOW_SET_SIZE = 4;
+const t_CKUINT CGL::WINDOW_WINDOWED = 0;
+const t_CKUINT CGL::WINDOW_FULLSCREEN = 1;
+const t_CKUINT CGL::WINDOW_MAXIMIZED = 2;
+const t_CKUINT CGL::WINDOW_RESTORE = 3;
+const t_CKUINT CGL::WINDOW_SET_SIZE = 4;
 
 // chugl start time
 double CGL::chuglChuckStartTime = 0.0; // value of chuck `now` when chugl is first initialized
@@ -664,6 +641,11 @@ bool CGL::useChuckTime = true;
 // main loop hook
 Chuck_DL_MainThreadHook *CGL::hook = nullptr;
 bool CGL::hookActivated = false;
+
+// Shred to GGen bookkeeping
+std::unordered_map<Chuck_VM_Shred *, std::unordered_set<Chuck_Object *> > CGL::s_Shred2GGen;
+std::unordered_map<Chuck_Object*, Chuck_VM_Shred*> CGL::s_GGen2Shred;
+std::unordered_map<Chuck_Object*, Chuck_VM_Shred*> CGL::s_GGen2OriginShred;
 
 void CGL::ActivateHook()
 {
@@ -693,6 +675,50 @@ void CGL::SetCKVM( Chuck_VM * theVM )
 void CGL::SetCKAPI( CK_DL_API theAPI )
 {
     s_api = theAPI;
+}
+
+void CGL::DetachGGensFromShred(Chuck_VM_Shred *shred)
+{
+    if( s_Shred2GGen.find( shred ) == s_Shred2GGen.end() )
+        return;
+
+    // create a copy of the set of GGen IDs created on this shred that have NOT been garbage collected
+	// we need a copy here because GGens which are disconnected may be garbage collected, which will
+	// invalidate the iterator, i.e. they remove themselves from the Shred2GGen map
+	// we store IDs and not pointers because pointers may be invalidated by garbage collection during 
+	// the loop below
+	std::vector<size_t> ggensCopy; 
+	ggensCopy.reserve(s_Shred2GGen[shred].size());
+
+	// populate copy
+	for (auto *ggen : s_Shred2GGen[shred])
+	{
+		SceneGraphObject* sgo = CGL::GetSGO(ggen);
+		assert(sgo);
+		ggensCopy.push_back(sgo->GetID());
+	}
+
+    for( auto ggen_id : ggensCopy )
+    {
+        // verify
+        assert( ggen_id > 0 );
+
+		// get then GGen
+		SceneGraphObject* sgo = (SceneGraphObject*) Locator::GetNode(ggen_id, true);
+		if (!sgo) continue;  // already deleted
+
+		Chuck_Object* ckobj = sgo->m_ChuckObject;
+		if (!ckobj) continue;  // already deleted
+
+		// edge case: if it's the main scene or camera, don't disconnect, because these static instances are shared across all shreds!
+		// also don't remove if its the default dir light
+		// TODO: why do we still need this check even though I create_without_shred ???
+		if (sgo == &CGL::mainScene || sgo == &CGL::mainCamera || sgo == CGL::mainScene.GetDefaultLight())
+			continue;
+
+		// disconnect
+		CGL::PushCommand(new DisconnectCommand(sgo));
+    }
 }
 
 // can pick a better name maybe...calling this wakes up renderer thread
@@ -796,10 +822,15 @@ Chuck_DL_Api::Object CGL::GetMainScene(Chuck_VM_Shred *shred, CK_DL_API API, Chu
 		// create default camera
 		Chuck_DL_Api::Type camCKType = API->type->lookup(VM, "GCamera");
 		Chuck_DL_Api::Object camObj = API->object->create(shred, camCKType, true);
-		// no creation command b/c window already has static copy
+        // initial main scene camera position
+        mainCamera.SetPosition( glm::vec3(0,0,5) );
+
+        // no creation command b/c window already has static copy
 		CGL::PushCommand(new CreateSceneGraphNodeCommand(&mainCamera, &mainScene, camObj, CGL::GetGGenDataOffset()));
 		// add to scene command
 		CGL::PushCommand(new RelationshipCommand(&CGL::mainScene, &mainCamera, RelationshipCommand::Relation::AddChild));
+        // update camera position command
+        CGL::PushCommand(new UpdatePositionCommand(&mainCamera));
 
 		// create default light
 		// TODO create generic create-chuck-obj method
@@ -843,6 +874,19 @@ Geometry* CGL::CreateChuckObjFromGeo(CK_DL_API API, Chuck_VM *VM, Geometry *geo,
 	return geo;
 }
 
+CGL_Texture* CGL::CreateChuckObjFromTex(CK_DL_API API, Chuck_VM* VM, CGL_Texture* tex, Chuck_VM_Shred* SHRED, bool refcount)
+{
+	// create chuck obj
+	Chuck_DL_Api::Type type = API->type->lookup(VM, tex->myCkName());
+	Chuck_DL_Api::Object ckobj = API->object->create(SHRED, type, refcount);
+
+	// tell renderer to create a copy
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(tex, &CGL::mainScene, ckobj, texture_data_offset));
+
+	return tex;
+
+}
+
 Material* CGL::DupMeshMat(CK_DL_API API, Chuck_VM *VM, Mesh *mesh, Chuck_VM_Shred *SHRED)
 {
 	if (!mesh->GetMaterial()) {
@@ -873,6 +917,15 @@ Geometry* CGL::DupMeshGeo(CK_DL_API API, Chuck_VM *VM, Mesh *mesh, Chuck_VM_Shre
 	// tell renderer to set new geo on this mesh
 	CGL::PushCommand(new SetMeshCommand(mesh));
 	return newGeo;
+}
+
+void CGL::MeshSet( Mesh * mesh, Geometry * geo, Material * mat )
+{
+	// set on CGL side
+	mesh->SetGeometry( geo );
+	mesh->SetMaterial( mat );
+	// command queue to update renderer side
+	CGL::PushCommand( new SetMeshCommand( mesh ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -938,7 +991,7 @@ void CGL::UnregisterShredWaiting(Chuck_VM_Shred *shred)
 //-----------------------------------------------------------------------------
 
 // traverses chuck-side (audio thread) scenegraph and calls user-defined update() on GGens
-void CGL::UpdateSceneGraph(Scene &scene, CK_DL_API API, Chuck_VM *VM, Chuck_VM_Shred *shred)
+void CGL::UpdateSceneGraph(Scene &scene, CK_DL_API API, Chuck_VM *VM, Chuck_VM_Shred * calling_shred)
 {
 	assert(CGL::our_update_vt_offset >= 0);
 
@@ -970,11 +1023,23 @@ void CGL::UpdateSceneGraph(Scene &scene, CK_DL_API API, Chuck_VM *VM, Chuck_VM_S
 		SceneGraphObject *obj = queue.front();
 		queue.pop();
 
-		// call update
-		Chuck_Object *ggen = obj->m_ChuckObject;
+        // call update
+        Chuck_Object *ggen = obj->m_ChuckObject;
+
+        // must use shred associated with GGen
+        auto it = s_GGen2OriginShred.find( ggen );
+        // make sure ggen is in map
+        assert( it != s_GGen2OriginShred.end() );
+        // the shred
+        Chuck_VM_Shred * origin_shred = (it->second);
+        // make sure it's not null
+        assert( origin_shred != NULL );
+
+        // don't invoke update() for scene and camera
 		if (ggen != nullptr && !obj->IsScene() && !obj->IsCamera())
 		{
-			API->vm->invoke_mfun_immediate_mode(ggen, CGL::our_update_vt_offset, VM, shred, &theArg, 1);
+            // invoke the update function in immediate mode
+			API->vm->invoke_mfun_immediate_mode(ggen, CGL::our_update_vt_offset, VM, origin_shred, &theArg, 1);
 		}
 
 		// add children to stack
@@ -988,6 +1053,19 @@ void CGL::UpdateSceneGraph(Scene &scene, CK_DL_API API, Chuck_VM *VM, Chuck_VM_S
 //-----------------------------------------------------------------------------
 // ChuGL Window State Setters / Getters (Render Thread --> Audio Thread communication)
 //-----------------------------------------------------------------------------
+CGL::WindowState::WindowState() :
+// keep these dimensions in sync with default window size 
+	windowWidth(Window::s_DefaultWindowWidth),
+	windowHeight(Window::s_DefaultWindowHeight),  
+// TODO: framebuffer dims not accurate on mac retina display, off by factor of 2 
+	framebufferWidth(Window::s_DefaultWindowWidth),  
+	framebufferHeight(Window::s_DefaultWindowHeight),  
+	aspect(1.0f),
+	mouseX(0), mouseY(0),
+	glfwTime(0), deltaTime(0), 
+	fps(0) 
+{}
+
 std::pair<double, double> CGL::GetMousePos()
 {
 	std::unique_lock<std::mutex> lock(s_WindowStateLock);
@@ -1004,6 +1082,12 @@ std::pair<int, int> CGL::GetFramebufferSize()
 {
 	std::unique_lock<std::mutex> lock(s_WindowStateLock);
 	return std::pair<int, int>(s_WindowState.framebufferWidth, s_WindowState.framebufferHeight);
+}
+
+t_CKFLOAT CGL::GetAspectRatio()
+{
+	std::unique_lock<std::mutex> lock(s_WindowStateLock);
+	return (t_CKFLOAT)s_WindowState.windowWidth / (t_CKFLOAT)s_WindowState.windowHeight;
 }
 
 std::pair<double, double> CGL::GetTimeInfo()

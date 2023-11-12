@@ -1,9 +1,7 @@
 #pragma once
 
-#include <glad/glad.h>
-#include <vector>
+#include "chugl_pch.h"
 #include "Util.h"
-#include <string>
 
 /*
 * Helper class for VertexAttribPointer assignment on VertexArrayObjects
