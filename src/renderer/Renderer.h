@@ -256,6 +256,11 @@ public:
 		// early out if no skybox
 		if (!m_SkyboxTexture.IsLoaded()) { return; }
 
+		// TODO: wtf why does this cause point rendering to fail??
+		// other problems
+			// in sndpeek and circles, weird edge shows
+			// TODO: create mvb to cause this. not background color, not dolly
+
 		glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
 
 		// Flatten depth range to far plane
@@ -283,6 +288,11 @@ public:
 		// restore depth range
 		// GLCall(glDepthRange(0.0f, 1.0f));
 		glDepthFunc(GL_LESS);  // restore default depth func
+
+		// unbind
+		m_SkyboxVA->Unbind();
+		m_SkyboxShader.Unbind();
+		m_SkyboxTexture.Unbind();
 	}
 
 	// render opaque meshes
