@@ -398,6 +398,17 @@ void Window::DisplayLoop()
     std::cout << "framebuffer height " << m_FrameHeight << std::endl; 
 
     renderer.BuildSkybox();
+    // TODO: cleanup after adding to ulib API
+    std::vector<std::string> faces = {
+        "./tests/textures/skybox/right.jpg",
+        "./tests/textures/skybox/left.jpg",
+        "./tests/textures/skybox/top.jpg",
+        "./tests/textures/skybox/bottom.jpg",
+        "./tests/textures/skybox/front.jpg",
+        "./tests/textures/skybox/back.jpg"
+    };
+    renderer.LoadSkyboxTexture(faces);
+
 
     // Copy from CGL scenegraph ====================================    
     // TODO should just clone these

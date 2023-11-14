@@ -29,7 +29,8 @@ const std::string ShaderCode::SKYBOX_VERT_CODE = R"(
     void main()
     {
         v_TexCoord = a_Pos;
-        gl_Position = u_Projection * u_View * vec4(a_Pos, 1.0);
+        vec4 pos = u_Projection * u_View * vec4(a_Pos, 1.0);
+        gl_Position = pos.xyww;  // force z to be 1.0 after perspective division
     }  
 )";
 
@@ -44,6 +45,9 @@ const std::string ShaderCode::SKYBOX_FRAG_CODE = R"(
     void main()
     {    
         FragColor = texture(skybox, v_TexCoord);
+        // debug UV
+        // FragColor = vec4(v_TexCoord, 1.0);
+        // FragColor = vec4(1.0, 0.0, 0.0, 1.0);
     }
 
 )";

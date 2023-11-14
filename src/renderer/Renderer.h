@@ -196,6 +196,10 @@ public: // skybox envmap vars
 	CubeMapTexture m_SkyboxTexture;
 
 public:
+	void LoadSkyboxTexture(const std::vector<std::string>& faces) {
+		m_SkyboxTexture.Load(faces);
+	}
+
 	void BuildSkybox() {
 		m_SkyboxVA = new VertexArray();
 		m_SkyboxVB = new VertexBuffer();
@@ -240,29 +244,45 @@ public:
 		OpaquePass();
 		TransparentPass();
 
+		// draw skybox last to avoid overdraw
+		SkyboxPass();
+
 		// OLD: render in DFS order
 		// now we process the scenegraph into a render queue
 		// RenderNodeAndChildren(scene);
 	}
 
-	void SkyboxPass(Scene* scene) {
+	void SkyboxPass() {
 		// early out if no skybox
 		if (!m_SkyboxTexture.IsLoaded()) { return; }
 
+		glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
+
 		// Flatten depth range to far plane
 		// ref: https://gamedev.stackexchange.com/questions/83739/how-do-i-ensure-my-skybox-is-always-in-the-background-with-opengl
-		GLCall(glDepthRange(1.0f, 1.0f));
+		// GLCall(glDepthRange(0.99f, 1.0f));
 
 		// bind
 		m_SkyboxVA->Bind();
 		m_SkyboxShader.Bind();
 		m_SkyboxTexture.Bind(0);
 
+		// set shader uniforms (TODO can refactor to better uniform management system)
+		m_SkyboxShader.setMat4f("u_Projection", m_RenderState.GetProjMat());
+		m_SkyboxShader.setMat4f("u_View", 
+			// remove translation component from view matrix
+			// so that skybox is always centered around camera
+			glm::mat4(glm::mat3(
+				m_RenderState.GetViewMat()
+			))
+		);
+
 		// draw
 		GLCall(glDrawArrays(GL_TRIANGLES, 0, 36));
 
 		// restore depth range
-		GLCall(glDepthRange(0.0f, 1.0f));
+		// GLCall(glDepthRange(0.0f, 1.0f));
+		glDepthFunc(GL_LESS);  // restore default depth func
 	}
 
 	// render opaque meshes
