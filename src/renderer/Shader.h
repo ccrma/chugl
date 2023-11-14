@@ -14,7 +14,20 @@ public:
 		const std::string& vertexPath, const std::string& fragmentPath,
 		bool vertexFromFile, bool fragmentFromFile
 	);
+
+	Shader()
+		: m_VertexPath(""), m_FragmentPath(""),
+		  m_VertexSource(""), m_FragmentSource(""),
+		  m_VertFromFile(false), m_FragFromFile(false),
+		  m_RendererID(0) {}
+
 	~Shader();
+
+	// Compile and create
+	void Compile(
+		const std::string& vertex, const std::string& fragment,
+		bool vertexFromFile, bool fragmentFromFile
+	);
 
 	// hot reloading!
 	void Reload();

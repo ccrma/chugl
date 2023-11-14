@@ -17,6 +17,37 @@ const std::string ShaderCode::FLAT_FRAG = "GG_FLAT_FRAG";
 const std::string ShaderCode::SCREEN_VERT = "GG_SCREEN_VERT";
 const std::string ShaderCode::SCREEN_FRAG = "GG_SCREEN_FRAG";
 
+const std::string ShaderCode::SKYBOX_VERT_CODE = R"(
+    #version 330 core
+    layout (location = 0) in vec3 a_Pos;
+    
+    out vec3 v_TexCoord;
+
+    uniform mat4 u_Projection;
+    uniform mat4 u_View;
+
+    void main()
+    {
+        v_TexCoord = a_Pos;
+        gl_Position = u_Projection * u_View * vec4(a_Pos, 1.0);
+    }  
+)";
+
+const std::string ShaderCode::SKYBOX_FRAG_CODE = R"(
+    #version 330 core
+    out vec4 FragColor;
+
+    in vec3 v_TexCoord;
+
+    uniform samplerCube skybox;
+
+    void main()
+    {    
+        FragColor = texture(skybox, v_TexCoord);
+    }
+
+)";
+
 ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
     {"SHADER_VERSION", "#version 330 core\n"},
     {"FRAG_OUT_COLOR_DEF", 
@@ -444,6 +475,8 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
 // {
 //     REGISTER_CODE(SHADER_VERSION);
 // }
+
+
 
 std::string ShaderCode::GenShaderSource(
     const std::string& name,

@@ -2,7 +2,7 @@
 
 #include "chugl_pch.h"
 
-enum ShaderType : t_CKUINT {
+enum class ShaderType : t_CKUINT {
     Vertex = 0,
     Fragment,
     Geometry,
@@ -32,6 +32,10 @@ static const std::string FLAT_FRAG;
 // screen shader components
 static const std::string SCREEN_VERT;
 static const std::string SCREEN_FRAG;
+
+// skybox shader impl
+static const std::string SKYBOX_VERT_CODE;
+static const std::string SKYBOX_FRAG_CODE;
 
 // map of names to shader code components
 typedef std::unordered_map<std::string, const std::string> ShaderMap;

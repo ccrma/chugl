@@ -392,9 +392,12 @@ void Window::DisplayLoop()
     srand((unsigned int)time(0));
 
     // Render initialization ==================================
+    // This setup must happen *after* OpenGL context is created
     renderer.BuildFramebuffer(m_FrameWidth, m_FrameHeight);
     std::cout << "framebuffer width " << m_FrameWidth << std::endl;
     std::cout << "framebuffer height " << m_FrameHeight << std::endl; 
+
+    renderer.BuildSkybox();
 
     // Copy from CGL scenegraph ====================================    
     // TODO should just clone these
@@ -517,6 +520,7 @@ void Window::DisplayLoop()
         renderer.RenderScene(&scene, scene.GetMainCamera());
 
         // screen pass: copy contents from framebuffer to screen
+        // TODO: move this into RenderScene as a post-processing step
         renderer.UnbindFramebuffer();  // unbind framebuffer, bind default framebuffer
         renderer.Clear(
             scene.GetBackgroundColor(),

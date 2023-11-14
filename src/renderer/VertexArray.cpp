@@ -67,6 +67,7 @@ void VertexArray::RemoveAttribute(unsigned int location)
 	GLCall(glDisableVertexAttribArray(location));
 }
 
+// TODO: vb should be a reference to prevent nullptr
 void VertexArray::AddBufferAndLayout(const VertexBuffer *vb, const CGL_GeoAttribute &attribute)
 {
 	Bind();

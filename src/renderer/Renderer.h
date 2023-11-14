@@ -7,6 +7,7 @@
 #include "IndexBuffer.h"
 #include "VertexArray.h"
 #include "Util.h"
+#include "ShaderCode.h"  // TODO remove after refactoring into cpp
 
 #include "scenegraph/SceneGraphObject.h"
 #include "scenegraph/Scene.h"
@@ -138,7 +139,6 @@ public:  // framebuffer setup
 	VertexBuffer* m_ScreenPositionsVB;
 	VertexBuffer* m_ScreenTexCoordsVB;
 
-
 	void BuildFramebuffer(unsigned int width, unsigned int height);
 
 	void UpdateFramebufferSize(unsigned int width, unsigned int height) {
@@ -175,11 +175,43 @@ public:  // framebuffer setup
 		// bind texture
 		GLCall(glActiveTexture(GL_TEXTURE0));  // activate slot 0
 		GLCall(glBindTexture(GL_TEXTURE_2D, m_TextureColorbuffer));
+		// set polygon mode to fill
+		GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
+		
+		// TODO add culling?
+
 		// draw
 		GLCall(glDrawArrays(GL_TRIANGLES, 0, 6));
 	}
 
+public: // skybox envmap vars
+	static const float SKYBOX_VERTICES[];
+	// sadly these need to be pointers 
+	// because OpenGL context is not initialized until window is created
+	// TODO: free these in destructor
+	// better fix: don't initialize buffers in default constructor
+	VertexArray* m_SkyboxVA;
+	VertexBuffer* m_SkyboxVB;
+	Shader m_SkyboxShader;
+	CubeMapTexture m_SkyboxTexture;
+
 public:
+	void BuildSkybox() {
+		m_SkyboxVA = new VertexArray();
+		m_SkyboxVB = new VertexBuffer();
+		// setup skybox geometry
+		m_SkyboxVB->SetBuffer(SKYBOX_VERTICES, sizeof(float) * 36 * 3, 36, GL_STATIC_DRAW);
+		m_SkyboxVA->AddBufferAndLayout(m_SkyboxVB, {
+			CGL_GeoAttribute("a_Position", 0, 3)
+		});
+
+		// setup skybox shader
+		const std::string& skyboxVert = ShaderCode::SKYBOX_VERT_CODE;
+		const std::string& skyboxFrag = ShaderCode::SKYBOX_FRAG_CODE;
+
+		m_SkyboxShader.Compile(skyboxVert, skyboxFrag, false, false);
+	}
+
 	void Clear(glm::vec3 bgCol, bool color = true, bool depth = true);
 	void Draw(RenderGeometry* renderGeo, RenderMaterial* renderMat);
 
@@ -211,6 +243,26 @@ public:
 		// OLD: render in DFS order
 		// now we process the scenegraph into a render queue
 		// RenderNodeAndChildren(scene);
+	}
+
+	void SkyboxPass(Scene* scene) {
+		// early out if no skybox
+		if (!m_SkyboxTexture.IsLoaded()) { return; }
+
+		// Flatten depth range to far plane
+		// ref: https://gamedev.stackexchange.com/questions/83739/how-do-i-ensure-my-skybox-is-always-in-the-background-with-opengl
+		GLCall(glDepthRange(1.0f, 1.0f));
+
+		// bind
+		m_SkyboxVA->Bind();
+		m_SkyboxShader.Bind();
+		m_SkyboxTexture.Bind(0);
+
+		// draw
+		GLCall(glDrawArrays(GL_TRIANGLES, 0, 36));
+
+		// restore depth range
+		GLCall(glDepthRange(0.0f, 1.0f));
 	}
 
 	// render opaque meshes

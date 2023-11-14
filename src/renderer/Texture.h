@@ -50,4 +50,24 @@ private:
 	void SetFilterMode(unsigned int op, CGL_TextureFilterMode mode, bool enableMipMaps);
 };
 
+class CubeMapTexture
+{
+private:  // member vars
+	unsigned int m_RendererID;	   // openGL generated UID for this texture
+
+public:
+	// faces must be passed in the order:
+	// Right, Left, Top, Bottom, Back, Front
+	CubeMapTexture() : m_RendererID(0) { }
+	~CubeMapTexture();
+
+	bool IsLoaded() const { return m_RendererID != 0; }
+
+	void Load( const std::vector<std::string>& faces );
+
+	void Bind(unsigned int slot = 0) const;
+	void Unbind();
+
+};
+
 

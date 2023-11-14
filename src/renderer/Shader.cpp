@@ -11,6 +11,22 @@ Shader::Shader(
     m_VertexSource(""), m_FragmentSource(""),
     m_VertFromFile(vertexFromFile), m_FragFromFile(fragmentFromFile)
 {
+    Compile(vertex, fragment, vertexFromFile, fragmentFromFile);
+}
+
+Shader::~Shader()
+{
+    if (m_RendererID) GLCall(glDeleteProgram(m_RendererID));
+}
+
+void Shader::Compile(
+    const std::string& vertex, const std::string& fragment,
+    bool vertexFromFile, bool fragmentFromFile
+)
+{
+    m_VertFromFile = vertexFromFile;
+    m_FragFromFile = fragmentFromFile;
+
     if (vertexFromFile) {
         m_VertexSource = Shadinclude::load(vertex);
         m_VertexPath = vertex;
@@ -29,13 +45,7 @@ Shader::Shader(
 
     m_RendererID = CreateShaderProgram(m_VertexSource, m_FragmentSource);
     ASSERT(m_RendererID);
-
     Bind();
-}
-
-Shader::~Shader()
-{
-    GLCall(glDeleteProgram(m_RendererID));
 }
 
 void Shader::Reload()
