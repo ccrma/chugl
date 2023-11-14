@@ -9,6 +9,9 @@
 # Audio files
 *.wav
 
+# Image files
+src/tests/textures/skybox
+
 # Compiled Object files
 *.slo
 *.lo
