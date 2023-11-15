@@ -61,9 +61,17 @@ public:
 	CubeMapTexture() : m_RendererID(0) { }
 	~CubeMapTexture();
 
+	static CubeMapTexture* DefaultBlackCubeMap;
+	static CubeMapTexture* DefaultWhiteCubeMap;
+	static CubeMapTexture* GetDefaultBlackCubeMap();
+	static CubeMapTexture* GetDefaultWhiteCubeMap();
+
 	bool IsLoaded() const { return m_RendererID != 0; }
 
+	// load from files
 	void Load( const std::vector<std::string>& faces );
+	// load from a buffer
+	void Load( unsigned char* colorData);
 
 	void Bind(unsigned int slot = 0) const;
 	void Unbind();

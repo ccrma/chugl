@@ -130,6 +130,10 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
         uniform sampler2D u_DiffuseMap;
         uniform sampler2D u_SpecularMap;
         // TODO add others
+
+        // skybox
+        // TODO: maybe this should go in its own section?
+        uniform samplerCube u_Skybox;
     )"},
     {
     "FOG_UNIFORMS",
@@ -334,9 +338,19 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
                 );
             }
 
+            // calculate skybox contribution
+            // TODO: add option to enable/disable envmap
+            // TODO: add option for envmap blend mode (additive, multiplicative, mix)
+            vec3 reflectDir = reflect(-viewDir, norm);
+            vec3 reflectCol = vec3(texture(u_Skybox, reflectDir));
+            // lighting += reflectCol;  // additive blend
+            lighting *= reflectCol;  // multiplicative blend
+            // lighting = mix(lighting, reflectCol, 0.5);  // mix blend
+
+
             result = vec4(
                 lighting, 
-                diffuse.a * specular.a
+                diffuse.a * specular.a  // TODO this is not correct way to composite alpha
             );
     )"},
     {"POINTS_VERT",

@@ -337,9 +337,53 @@ void Texture::SetFilterMode(unsigned int op, CGL_TextureFilterMode mode, bool en
 // CubeMapTexture
 // =======================================================================
 
+CubeMapTexture* CubeMapTexture::DefaultBlackCubeMap = NULL;
+CubeMapTexture* CubeMapTexture::DefaultWhiteCubeMap = NULL;
+CubeMapTexture* CubeMapTexture::GetDefaultBlackCubeMap() {
+	unsigned char blackPixel[3] = { 0, 0, 0 };
+	if (DefaultBlackCubeMap) return DefaultBlackCubeMap;
+	DefaultBlackCubeMap = new CubeMapTexture();
+	DefaultBlackCubeMap->Load(blackPixel);
+	return DefaultBlackCubeMap;
+}
+CubeMapTexture* CubeMapTexture::GetDefaultWhiteCubeMap() {
+	unsigned char whitePixel[3] = { 255, 255, 255 };
+	if (DefaultWhiteCubeMap) return DefaultWhiteCubeMap;
+	DefaultWhiteCubeMap = new CubeMapTexture();
+	DefaultWhiteCubeMap->Load(whitePixel);
+	return DefaultWhiteCubeMap;
+}
+
+
 CubeMapTexture::~CubeMapTexture()
 {
 	GLCall(glDeleteTextures(1, &m_RendererID));
+}
+
+void CubeMapTexture::Load(unsigned char* colorData)
+{
+	if (!m_RendererID) {
+		glGenTextures(1, &m_RendererID);
+	}
+	glBindTexture(GL_TEXTURE_CUBE_MAP, m_RendererID);
+
+	// set tex data to all black pixels
+	for (unsigned int i = 0; i < 6; i++) {
+		GLCall(
+			glTexImage2D(
+				GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, 1, 1, 0,
+				GL_RGB, GL_UNSIGNED_BYTE, colorData
+			)
+		);
+	}
+
+	// set texture params
+	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+	// clamp to edge to avoid seams
+	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE );
 }
 
 void CubeMapTexture::Load(const std::vector<std::string> &faces)

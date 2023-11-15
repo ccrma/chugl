@@ -133,7 +133,8 @@ void RenderGeometry::BuildGeometry() {
 // set static vars
 RenderMaterial* RenderMaterial::defaultMat = nullptr;
 
-RenderMaterial::RenderMaterial(Material *mat, Renderer *renderer) : m_Mat(mat), m_Shader(nullptr), m_Renderer(renderer)
+RenderMaterial::RenderMaterial(Material *mat, Renderer *renderer) 
+	: m_Mat(mat), m_Shader(nullptr), m_Renderer(renderer), m_TextureCounter(0)
 {
 	std::string vert, frag;
 	bool vertIsPath = false, fragIsPath = false;
@@ -236,7 +237,6 @@ RenderMaterial* RenderMaterial::GetDefaultMaterial(Renderer* renderer) {
 
 void RenderMaterial::SetLocalUniforms()
 {
-	size_t textureCounter = 0;
 	for (auto& it: m_Mat->GetLocalUniforms())
 	{
 		auto& uniform = it.second;
@@ -272,13 +272,12 @@ void RenderMaterial::SetLocalUniforms()
 				break;
 			case UniformType::Texture:
 				// bind texture first
-				// TODO: do we need to do any texture refcounting here?
 				rendererTexture = m_Renderer->GetOrCreateTexture(uniform.texID);
-				rendererTexture->Bind(textureCounter);
+				rendererTexture->Bind(m_TextureCounter);
 				// update GPU params if CGL_shader has been modified
 				rendererTexture->Update();
-				m_Shader->setInt(uniform.name, textureCounter);
-				textureCounter++;
+				// set uniform
+				SetTextureUniform(uniform.name);
 				break;
 			default:
 				throw std::runtime_error("Uniform type not supported");

@@ -102,19 +102,27 @@ public:
 	// GPU side data
 	Shader* GetShader() { return m_Shader; }
 	void UpdateShader();
-	void BindShader() { m_Shader->Bind(); }
+	void BindShader() { 
+		m_Shader->Bind();
+	}
 	void SetLocalUniforms();
 	void SetGlobalUniforms(const GlobalUniforms& globals) {
-
-		m_Shader->setMat4f("u_Model", globals.u_Model);
+		m_Shader->setMat4f("u_Model", globals.u_Model);  // TODO model is not a global uniform
 		m_Shader->setMat4f("u_View", globals.u_View);
 		m_Shader->setMat4f("u_Projection", globals.u_Projection);
 		m_Shader->setMat4f("u_Normal", globals.u_Normal);
 		m_Shader->setFloat3("u_ViewPos", globals.u_ViewPos);
 	}
 
+	// sets texture uniform and increments texture counter
+	void SetTextureUniform(const std::string& name) {
+		m_Shader->setInt(name, m_TextureCounter++);
+	}
+
 	void SetLightingUniforms(Scene* scene, const std::vector<size_t>& lights); 
 	void SetFogUniforms(Scene* scene);
+
+	void ResetTextureCounter() { m_TextureCounter = 0; }
 
 
 public:  // statics
@@ -122,6 +130,7 @@ public:  // statics
 	static RenderMaterial* defaultMat;
 
 private:
+	t_CKUINT m_TextureCounter;
 	Material* m_Mat;
 	Shader* m_Shader;
 	Renderer* m_Renderer;
@@ -371,6 +380,18 @@ public:
 
 		// set uniforms
 		renderMat->BindShader();
+		renderMat->ResetTextureCounter();  // reset texture image unit counter back to 0
+
+		// set skybox (reserve texture unit 0 for skybox)
+		// TODO move this into UBO?
+		// TODO: make the envMap a per-material property?
+		if (m_SkyboxTexture.IsLoaded()) {
+			m_SkyboxTexture.Bind(0);
+		} else {
+			CubeMapTexture::GetDefaultWhiteCubeMap()->Bind(0);
+		}
+		renderMat->SetTextureUniform("u_Skybox");
+
 		renderMat->SetLocalUniforms();
 		renderMat->SetGlobalUniforms({
 			worldTransform,
@@ -381,6 +402,7 @@ public:
 		});
 		renderMat->SetFogUniforms(m_RenderState.GetScene());
 		renderMat->SetLightingUniforms(m_RenderState.GetScene(), m_RenderState.GetScene()->m_Lights);
+
 
 		// draw
 		Draw(renderGeo, renderMat);
