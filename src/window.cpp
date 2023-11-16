@@ -160,6 +160,9 @@ void Window::UpdateState(Scene& scene)
             // if in full screen, changes resolution 
             glfwSetWindowSize(m_Window, scene.m_WindowedWidth, scene.m_WindowedHeight);
         }
+
+        // reset flag
+        scene.m_UpdateWindowMode = false;
     }
 
     // window close command

@@ -44,6 +44,7 @@ shouldNotGC();
 cube.geo(out_of_shred_ref);
 
 while (true) {
+    <<< "gc geo " >>>;
     alwaysShouldGC();
     spork ~ alwaysShouldGC();
     spork ~ sporkShouldGC();
