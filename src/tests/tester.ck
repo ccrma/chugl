@@ -3,6 +3,7 @@
     // TODO re-enable after resolving Machine.remove() not clearing children
     // which are sporked via Machine.add()
     // TODO: gc test causes segfault
+    "skybox",
     "lights",
     "alpha",
     "gameloop",

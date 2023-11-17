@@ -76,7 +76,11 @@ void Scene::RegisterCamera(Camera *camera)
 
 void Scene::SetSkybox(CGL_CubeMap *skybox)
 {
-    // TODO: refcount this
+    // refcount new skybox
+    CHUGL_NODE_ADD_REF(skybox);
+
+    // release old skybox
+    CHUGL_NODE_QUEUE_RELEASE(Locator::GetNode(skyboxID, IsAudioThreadObject()));
+
     skyboxID = skybox->GetID(); 
-    // updateSkybox = true;
 }

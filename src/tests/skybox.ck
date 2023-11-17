@@ -87,7 +87,20 @@ cube.mat().color(Color.RED);
 cube.posX(2);
 
 // set skybox
-GG.scene().skybox(waterEnvMap);
+// if refcounting happens correctly, this should be fine
+fun void setSkybox() {
+    CubeTexture refCountedEnvMap;
+    refCountedEnvMap.paths(
+        me.dir() + "./textures/skybox/water/right.jpg",
+        me.dir() + "./textures/skybox/water/left.jpg",
+        me.dir() + "./textures/skybox/water/top.jpg",
+        me.dir() + "./textures/skybox/water/bottom.jpg",
+        me.dir() + "./textures/skybox/water/front.jpg",
+        me.dir() + "./textures/skybox/water/back.jpg"
+    );
+    GG.scene().skybox(refCountedEnvMap);
+} 
+setSkybox();
 
 fun void fpser(dur d) {
     while (d => now) <<< GG.fps() >>>;

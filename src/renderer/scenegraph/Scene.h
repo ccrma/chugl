@@ -46,7 +46,6 @@ public:
 		m_WindowTitle("ChuGL"),
 		// skybox
 		skyboxEnabled(false)
-		// updateSkybox(false)
 	{}
 	virtual ~Scene() {}
 	virtual bool IsScene() override { return true; }
@@ -138,14 +137,11 @@ public: // fog
 
 private:  // skybox data
 	bool skyboxEnabled;
-	// bool updateSkybox;
 	size_t skyboxID;
 
 public: // skybox methods
 	void SetSkyboxEnabled(bool enabled) { skyboxEnabled = enabled; }
 	bool GetSkyboxEnabled() { return skyboxEnabled; }
-	// void SetUpdateSkybox(bool enabled) { updateSkybox = enabled; }
-	// bool GetUpdateSkybox() { return updateSkybox; }
 	void SetSkybox(CGL_CubeMap* skybox);
 	size_t GetSkyboxID() { return skyboxID; }
 
