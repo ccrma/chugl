@@ -32,10 +32,12 @@ Params:
         - impl: glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 */
 
-enum CGL_TextureType : t_CKUINT {
+
+enum class CGL_TextureType : t_CKUINT {
     Base = 0,
     File2D,
-    RawData,
+    RawData2D,
+    CubeMap,
     Count
 };
 
@@ -55,6 +57,7 @@ enum CGL_TextureFilterMode : t_CKUINT {
 };
 
 
+// TODO: can this be extended to other texture types
 struct CGL_TextureSamplerParams {
     CGL_TextureWrapMode wrapS, wrapT;  // ST <==> UV
     CGL_TextureFilterMode filterMin, filterMag;
@@ -67,32 +70,42 @@ struct CGL_TextureSamplerParams {
         {}
 };
 
-
 class CGL_Texture : public SceneGraphNode
 {
+protected:
+    // update flags. these are set in the UpdateTextureXXX commands,
+    // and reset by renderer after regenerating GPU data
+    unsigned int m_UpdateFlags; 
+    CGL_TextureSamplerParams m_SamplerParams;
 public:
-    // default constructor
-    CGL_Texture(CGL_TextureType t = CGL_TextureType::Base) : 
-        type(t), m_UpdateFlags(0),
-        m_FilePath(""),
-        m_Width(0), m_Height(0)
-        {}
+    CGL_Texture() : m_UpdateFlags(0) {}
     
-    // destructor
     virtual ~CGL_Texture() {
         // all state stored in structs and vectors, no need to do anything
     }
 
-	virtual bool IsTexture() { return true; }
-
-    CGL_Texture * Clone() {
-        CGL_Texture * tex = new CGL_Texture(*this);
-        tex->SetID(GetID());
-        return tex;
-    }
+	bool IsTexture() const { return true; }
+    virtual CGL_TextureType GetTextureType() const { return CGL_TextureType::Base; }
 
     bool NeedsUpdate() { return m_UpdateFlags != 0; }
     void ResetUpdateFlags() { m_UpdateFlags = 0; }
+
+public:  // update sampler params 
+    void SetFilterMode(CGL_TextureFilterMode min, CGL_TextureFilterMode mag) { 
+        m_SamplerParams.filterMin = min; m_SamplerParams.filterMag = mag; 
+    }
+    void SetWrapMode(CGL_TextureWrapMode s, CGL_TextureWrapMode t) { 
+        m_SamplerParams.wrapS = s; m_SamplerParams.wrapT = t; 
+    }
+    void SetGenMipMaps(bool gen) { m_SamplerParams.genMipMaps = gen; }
+    void SetSamplerParams(const CGL_TextureSamplerParams& params) { m_SamplerParams = params; }
+    const CGL_TextureSamplerParams& GetSamplerParams() { return m_SamplerParams; }
+
+public: // update flags
+    const static unsigned int NEW_SAMPLER; // whether to reset texture sampling params
+    const static unsigned int NEW_RAWDATA;   // whether to raw texture data buffer has changed
+    const static unsigned int NEW_FILEPATH;   // whether filepath has changed
+    const static unsigned int NEW_DIMENSIONS;     // whether texture dimensions have changed
 
     bool HasNewSampler() { return m_UpdateFlags & CGL_Texture::NEW_SAMPLER; }
     bool HasNewRawData() { return m_UpdateFlags & CGL_Texture::NEW_RAWDATA; }
@@ -103,50 +116,7 @@ public:
     bool SetNewRawData() { return m_UpdateFlags |= CGL_Texture::NEW_RAWDATA; }
     bool SetNewFilePath() { return m_UpdateFlags |= CGL_Texture::NEW_FILEPATH; }
     bool SetNewDimensions() { return m_UpdateFlags |= CGL_Texture::NEW_DIMENSIONS; }
-
-
-    // set texture params
-    // performance note: it's faster to create 2 duplicate textures with different sampler params than to switch back and forth constantly
-    void SetWrapMode(CGL_TextureWrapMode s, CGL_TextureWrapMode t) { 
-        m_SamplerParams.wrapS = s; m_SamplerParams.wrapT = t; 
-    }
-    void SetGenMipMaps(bool gen) { m_SamplerParams.genMipMaps = gen; }
-    void SetFilterMode(CGL_TextureFilterMode min, CGL_TextureFilterMode mag) { 
-        m_SamplerParams.filterMin = min; m_SamplerParams.filterMag = mag; 
-    }
-
-    // File methods
-    void SetFilePath(const std::string& path) { m_FilePath = path; }
-
-    // RawData methods
-    void SetRawData(
-        std::vector<double>& ck_array, 
-        int texWidth, 
-        int texHeight,
-        bool doCopy
-    );
-
-// member vars ==========================================================================================================
-    CGL_TextureType type;
-    CGL_TextureType GetTextureType() { return type; }
-
-    // update flags. these are set in the UpdateTextureXXX commands, and reset by renderer after regenerating GPU data
-    unsigned int m_UpdateFlags;
-    const static unsigned int NEW_SAMPLER; // whether to reset texture sampling params
-    const static unsigned int NEW_RAWDATA;   // whether to raw texture data buffer has changed
-    const static unsigned int NEW_FILEPATH;   // whether filepath has changed
-    const static unsigned int NEW_DIMENSIONS;     // whether texture dimensions have changed
     
-    // DATA (TODO put in union or refactor this into multiple classes w/ polymorphism)
-    std::string m_FilePath;                                        // for FileTexture
-    std::vector<unsigned char> m_DataBuffer; int m_Width, m_Height; // for DataTexture
-    
-
-    // sampler options
-    // TODO: image mapping type (https://threejs.org/docs/index.html#api/en/constants/Textures)
-    // TODO: select UV channel?
-    CGL_TextureSamplerParams m_SamplerParams;
-
 // static constants (because pass enums as svars through chuck dll query is undefined)
     // wrap modes
     const static t_CKUINT Repeat; 
@@ -155,12 +125,9 @@ public:
 
     // filter modes
     // note: X_MipmapY uses X for filtering, and Y for MIPMAP selection
+    // for now, mipmaps are always linearly interpolated
     const static t_CKUINT Nearest;
     const static t_CKUINT Linear;
-    // const static CGL_TextureFilterMode Nearest_MipmapNearest;
-    // const static CGL_TextureFilterMode Linear_MipmapNearest;
-    // const static CGL_TextureFilterMode Nearest_MipmapLinear;
-    // const static CGL_TextureFilterMode Linear_MipmapLinear;
 
 public: // chuck type names
     // TODO can probably template this and genarlize across all scenegraph classes?
@@ -168,4 +135,99 @@ public: // chuck type names
     static CkTypeMap s_CkTypeMap;
     static const char* CKName(CGL_TextureType type);
     virtual const char* myCkName() { return CKName(GetTextureType()); }
+// member vars ==========================================================================================================
+    
+    // sampler options
+    // TODO: image mapping type (https://threejs.org/docs/index.html#api/en/constants/Textures)
+    // TODO: select UV channel?
+};
+
+class FileTexture2D : public CGL_Texture 
+{
+private:
+    std::string m_FilePath;
+
+public:
+    FileTexture2D() : m_FilePath("") {}
+
+    virtual FileTexture2D* Clone() override {
+        FileTexture2D * tex = new FileTexture2D(*this);
+        tex->SetID(GetID());
+        return tex;
+    }
+
+    virtual CGL_TextureType GetTextureType() const override {
+         return CGL_TextureType::File2D; 
+    }
+
+    void SetFilePath(const std::string& path) { m_FilePath = path; }
+    const std::string& GetFilePath() { return m_FilePath; }
+};
+
+class DataTexture2D : public CGL_Texture 
+{
+private:
+    std::vector<unsigned char> m_DataBuffer; 
+    unsigned int m_Width, m_Height; // for DataTexture
+public:
+    DataTexture2D() : 
+        m_Width(0), 
+        m_Height(0)
+    {}
+
+    virtual DataTexture2D* Clone() override {
+        DataTexture2D* tex = new DataTexture2D(*this);
+        tex->SetID(GetID());
+        return tex;
+    }
+
+    virtual CGL_TextureType GetTextureType() const override {
+         return CGL_TextureType::RawData2D; 
+    }
+
+    // RawData methods
+    bool SetRawData(
+        std::vector<unsigned char>& data, 
+        int texWidth, 
+        int texHeight,
+        bool doCopy = false,
+        bool doMove = false
+    );
+
+public: // member var getters
+    const std::vector<unsigned char>& GetDataBuffer() { return m_DataBuffer; }
+    unsigned int GetWidth() { return m_Width; }
+    unsigned int GetHeight() { return m_Height; }
+};
+
+class CGL_CubeMap : public CGL_Texture
+{
+private:
+    std::vector<std::string> m_FilePaths;
+    
+public:
+    CGL_CubeMap() {
+        // initialize all faces to empty string
+        m_FilePaths.resize(6, "");
+
+        // custom sampler params currently not supported for cubemaps
+        // otherwise would initialize here
+    }
+
+    void SetFilePaths(const std::vector<std::string>& faces) {
+        assert(faces.size() == 6);
+        m_FilePaths = faces;
+    }
+    std::vector<std::string>& GetFilePaths() { return m_FilePaths; }
+
+
+    virtual CGL_TextureType GetTextureType() const override {
+         return CGL_TextureType::CubeMap; 
+    }
+
+    virtual CGL_CubeMap * Clone() override {
+        CGL_CubeMap * tex = new CGL_CubeMap(*this);
+        tex->SetID(GetID());
+        return tex;
+    }
 };

@@ -1,6 +1,7 @@
 #include "Scene.h"
 #include "Light.h"
 #include "Camera.h"
+#include "CGL_Texture.h"
 
 // fog modes
 const t_CKUINT Scene::FOG_EXP = FogType::Exponential;
@@ -71,4 +72,11 @@ void Scene::RegisterCamera(Camera *camera)
 {
     assert(camera);
     m_Cameras.push_back(camera->GetID());
+}
+
+void Scene::SetSkybox(CGL_CubeMap *skybox)
+{
+    // TODO: refcount this
+    skyboxID = skybox->GetID(); 
+    // updateSkybox = true;
 }

@@ -5,37 +5,69 @@
 
 class Texture
 {
-private:
+protected:
 	unsigned int m_RendererID;	   // openGL generated UID for this texture
+	bool m_IsLoaded;			   // whether or not this texture has been generated
+public:
+	Texture() : m_RendererID(0), m_IsLoaded(false) {}
+	virtual ~Texture();
 
+	// Texture Factory
+	static Texture* CreateTexture(CGL_Texture* cglTexture);
+
+	// generate texture on GPU
+	void Generate();
+	bool IsLoaded() const { return m_IsLoaded; }
+
+	// create texture from CGL_Texture
+	virtual void Load(CGL_Texture* cglTexture) = 0;
+	
+	// update texture according to changes to CGL_Texture 
+	virtual void Update() = 0;
+
+	// bind/unbind texture to openGL context
+	virtual void Bind(unsigned int slot = 0) const = 0;
+	virtual void Unbind() const = 0;
+};
+
+class Texture2D : public Texture
+{
+private:
 	// params for if this texture is NOT tied to a CGL_texture
 	std::string m_FilePath;		   // path to texture
-	unsigned char* m_LocalBuffer;  // CPU-side texture data 
+
 	int m_Width, m_Height, m_BPP;  // texture params
 
-	// otherwise this data to generate a texture is stored here
 	CGL_Texture* m_CGL_Texture;	   // CGL texture object
-
 public:
-	Texture(const std::string& path);
-	Texture(  // create a texture from a buffer directly
+	// Note: constructors do not make any openGL calls so that
+	// textures can be allocated as member variables in classes
+	// and be allocated BEFORE the openGL context is created
+	Texture2D() : 
+		Texture(),
+		m_FilePath(""),
+		m_Width(0), m_Height(0), m_BPP(0),
+		m_CGL_Texture(nullptr)
+	{}
+	
+	virtual void Update() override;
+	virtual void Bind(unsigned int slot = 0) const override;
+	virtual void Unbind() const override;
+	virtual void Load(CGL_Texture* cglTexture) override;
+
+	void LoadFile(const std::string& path);
+	void LoadBuffer(  // create a texture from a buffer directly
 		int texWidth, int texHeight, int bytesPerPixel,
 		unsigned char* texBuffer
 	);
-	Texture(CGL_Texture* cglTexture);
-	~Texture();
 
-	void Update();
-	void Bind(unsigned int slot = 0) const;
-	void Unbind();
-
-	// default pixel textures
-	static Texture* DefaultWhiteTexture;
-	static Texture* DefaultBlackTexture;
-	static Texture* DefaultMagentaTexture;
-	static Texture* GetDefaultWhiteTexture();
-	static Texture* GetDefaultBlackTexture();
-	static Texture* GetDefaultMagentaTexture();
+public:  // static default pixel textures
+	static Texture2D* DefaultWhiteTexture;
+	static Texture2D* DefaultBlackTexture;
+	static Texture2D* DefaultMagentaTexture;
+	static Texture2D* GetDefaultWhiteTexture();
+	static Texture2D* GetDefaultBlackTexture();
+	static Texture2D* GetDefaultMagentaTexture();
 
 private:
 	// helper fns for creating textures. 
@@ -43,39 +75,42 @@ private:
 	// will not unbind, so they can be efficiently composed
 	void GenTextureFromPath(const std::string& path);
 	void GenTextureFromBuffer(
-		int texWidth, int texHeight, unsigned char* texBuffer
+		int texWidth, int texHeight, const unsigned char* texBuffer
 	);
 	void SetSamplerParams(const CGL_TextureSamplerParams& params);
 	void SetWrapMode(unsigned int axis, CGL_TextureWrapMode mode);
 	void SetFilterMode(unsigned int op, CGL_TextureFilterMode mode, bool enableMipMaps);
 };
 
-class CubeMapTexture
+class CubeMapTexture : public Texture
 {
-private:  // member vars
-	unsigned int m_RendererID;	   // openGL generated UID for this texture
-
+private:
+	CGL_CubeMap* m_CGL_CubeMap;
 public:
 	// faces must be passed in the order:
 	// Right, Left, Top, Bottom, Back, Front
-	CubeMapTexture() : m_RendererID(0) { }
-	~CubeMapTexture();
+	CubeMapTexture() : Texture(), m_CGL_CubeMap(nullptr) {}
 
+	virtual void Update() override;
+	virtual void Bind(unsigned int slot = 0) const override;
+	virtual void Unbind() const override;
+	virtual void Load(CGL_Texture* cglTexture) override;
+
+	// load from files
+	void LoadFiles( const std::vector<std::string>& faces );
+	// load from a buffer
+	void LoadBuffer( unsigned char* colorData);
+
+public:  // static defaults
 	static CubeMapTexture* DefaultBlackCubeMap;
 	static CubeMapTexture* DefaultWhiteCubeMap;
 	static CubeMapTexture* GetDefaultBlackCubeMap();
 	static CubeMapTexture* GetDefaultWhiteCubeMap();
 
-	bool IsLoaded() const { return m_RendererID != 0; }
-
-	// load from files
-	void Load( const std::vector<std::string>& faces );
-	// load from a buffer
-	void Load( unsigned char* colorData);
-
-	void Bind(unsigned int slot = 0) const;
-	void Unbind();
-
+private: // helper fns
+	// void GenTextureFromFiles(const std::vector<std::string>& faces);
+	// void GenTextureFromBuffer(unsigned char* colorData);
+	void SetSamplerParams();
 };
 
 

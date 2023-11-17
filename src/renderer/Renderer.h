@@ -139,6 +139,17 @@ private:
 
 class Renderer
 {
+public: // constructor
+	Renderer() : m_MainCamera(nullptr), m_RenderState(this),
+	m_FrameBufferID(0), m_TextureColorbuffer(0), m_RenderBufferID(0),
+	m_ScreenShader(nullptr), m_ScreenVA(nullptr), m_ScreenPositionsVB(nullptr), m_ScreenTexCoordsVB(nullptr),
+	m_SkyboxVA(nullptr), m_SkyboxVB(nullptr), m_SkyboxShader(nullptr)
+	{
+		// TODO: initialize this after window is created 
+		// and openGL context is initialized.
+		// Then can do framebuffer and envmap setup in constructor
+	}
+
 public:  // framebuffer setup
 	unsigned int m_FrameBufferID;
 	unsigned int m_TextureColorbuffer;
@@ -201,17 +212,16 @@ public: // skybox envmap vars
 	// better fix: don't initialize buffers in default constructor
 	VertexArray* m_SkyboxVA;
 	VertexBuffer* m_SkyboxVB;
-	Shader m_SkyboxShader;
-	CubeMapTexture m_SkyboxTexture;
+	Shader* m_SkyboxShader;
 
 public:
-	void LoadSkyboxTexture(const std::vector<std::string>& faces) {
-		m_SkyboxTexture.Load(faces);
-	}
-
+	// builds skybox geometry, only meant to be called once
 	void BuildSkybox() {
+		assert(!m_SkyboxVA && !m_SkyboxVB);  // should only be called once
+
 		m_SkyboxVA = new VertexArray();
 		m_SkyboxVB = new VertexBuffer();
+		m_SkyboxShader = new Shader();
 		// setup skybox geometry
 		m_SkyboxVB->SetBuffer(SKYBOX_VERTICES, sizeof(float) * 36 * 3, 36, GL_STATIC_DRAW);
 		m_SkyboxVA->AddBufferAndLayout(m_SkyboxVB, {
@@ -222,7 +232,7 @@ public:
 		const std::string& skyboxVert = ShaderCode::SKYBOX_VERT_CODE;
 		const std::string& skyboxFrag = ShaderCode::SKYBOX_FRAG_CODE;
 
-		m_SkyboxShader.Compile(skyboxVert, skyboxFrag, false, false);
+		m_SkyboxShader->Compile(skyboxVert, skyboxFrag, false, false);
 	}
 
 	void Clear(glm::vec3 bgCol, bool color = true, bool depth = true);
@@ -230,79 +240,9 @@ public:
 
 	// Rendering =======================================================================
 	// TODO add cacheing for world matrices
-	void RenderScene(Scene* scene, Camera* camera = nullptr) {
-		assert(scene->IsScene());
+	void RenderScene(Scene* scene, Camera* camera = nullptr);
 
-		// enable depth testing
-		GLCall(glEnable(GL_DEPTH_TEST));	
-
-		// optionally change the camera to render from
-		if (camera) {
-			m_MainCamera = camera;
-		}
-
-		// clear the render state
-		m_RenderState.Reset();
-
-		// cache camera values
-		m_RenderState.ComputeCameraUniforms(m_MainCamera);
-
-		// cache renderables from target scene
-		m_RenderState.PrepareScene(scene);
-
-		OpaquePass();
-		TransparentPass();
-
-		// draw skybox last to avoid overdraw
-		SkyboxPass();
-
-		// OLD: render in DFS order
-		// now we process the scenegraph into a render queue
-		// RenderNodeAndChildren(scene);
-	}
-
-	void SkyboxPass() {
-		// early out if no skybox
-		if (!m_SkyboxTexture.IsLoaded()) { return; }
-
-		// TODO: wtf why does this cause point rendering to fail??
-		// other problems
-			// in sndpeek and circles, weird edge shows
-			// TODO: create mvb to cause this. not background color, not dolly
-
-		glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
-
-		// Flatten depth range to far plane
-		// ref: https://gamedev.stackexchange.com/questions/83739/how-do-i-ensure-my-skybox-is-always-in-the-background-with-opengl
-		// GLCall(glDepthRange(0.99f, 1.0f));
-
-		// bind
-		m_SkyboxVA->Bind();
-		m_SkyboxShader.Bind();
-		m_SkyboxTexture.Bind(0);
-
-		// set shader uniforms (TODO can refactor to better uniform management system)
-		m_SkyboxShader.setMat4f("u_Projection", m_RenderState.GetProjMat());
-		m_SkyboxShader.setMat4f("u_View", 
-			// remove translation component from view matrix
-			// so that skybox is always centered around camera
-			glm::mat4(glm::mat3(
-				m_RenderState.GetViewMat()
-			))
-		);
-
-		// draw
-		GLCall(glDrawArrays(GL_TRIANGLES, 0, 36));
-
-		// restore depth range
-		// GLCall(glDepthRange(0.0f, 1.0f));
-		glDepthFunc(GL_LESS);  // restore default depth func
-
-		// unbind
-		m_SkyboxVA->Unbind();
-		m_SkyboxShader.Unbind();
-		m_SkyboxTexture.Unbind();
-	}
+	void SkyboxPass(int textureUnit = 0);
 
 	// render opaque meshes
 	void OpaquePass() {
@@ -358,6 +298,7 @@ public:
 	void RenderMesh(Mesh* mesh, glm::mat4 worldTransform) {
 		Geometry* geo = mesh->GetGeometry();
 		Material* mat = mesh->GetMaterial();
+		Scene* scene = m_RenderState.GetScene();
 
 		// if no geometry nothing to draw
 		if (!geo) { return; }
@@ -373,7 +314,6 @@ public:
 
 		// lookup or create render material
 		RenderMaterial* renderMat = GetOrCreateRenderMat(mat);
-		// TODO add a dirty check?
 
 		// update shader program if changed
 		renderMat->UpdateShader();
@@ -385,14 +325,14 @@ public:
 		// set skybox (reserve texture unit 0 for skybox)
 		// TODO move this into UBO?
 		// TODO: make the envMap a per-material property?
-		if (m_SkyboxTexture.IsLoaded()) {
-			m_SkyboxTexture.Bind(0);
+		Texture* envMap = m_RenderState.GetSkyboxTexture();
+		if (envMap && envMap->IsLoaded()) {
+			envMap->Bind(0);
 		} else {
 			CubeMapTexture::GetDefaultWhiteCubeMap()->Bind(0);
 		}
-		renderMat->SetTextureUniform("u_Skybox");
+		renderMat->SetTextureUniform("u_Skybox");  // TODO shader refactor, make this a variable
 
-		renderMat->SetLocalUniforms();
 		renderMat->SetGlobalUniforms({
 			worldTransform,
 			m_RenderState.GetViewMat(),
@@ -400,8 +340,11 @@ public:
 			glm::transpose(glm::inverse(worldTransform)),  // TODO cache this normal matrix or move to math util library
 			m_RenderState.GetViewPos()
 		});
-		renderMat->SetFogUniforms(m_RenderState.GetScene());
-		renderMat->SetLightingUniforms(m_RenderState.GetScene(), m_RenderState.GetScene()->m_Lights);
+
+		renderMat->SetLocalUniforms();
+
+		renderMat->SetFogUniforms(scene);
+		renderMat->SetLightingUniforms(scene, scene->m_Lights);
 
 
 		// draw
@@ -442,17 +385,20 @@ public:
 		return renderMat;
 	}
 
-	Texture* GetOrCreateTexture(size_t ID) {
+	Texture* GetOrCreateTexture(size_t ID, Texture* defaultTexture = Texture2D::GetDefaultWhiteTexture()) {
 		CGL_Texture* tex = dynamic_cast<CGL_Texture*>(m_RenderState.GetScene()->GetNode(ID));
-		if (!tex)  // no scenegraph texture, use default
-			return Texture::GetDefaultWhiteTexture();
 		
+		if (!tex)  // no scenegraph texture, use default
+			return defaultTexture;
+		
+		// return cached texture if it exists
 		if (m_Textures.find(ID) != m_Textures.end()) {
 			return m_Textures[ID];
 		}
 
 		// not found, create it
-		Texture* texture = new Texture(tex);
+		Texture* texture = Texture::CreateTexture(tex);
+
 		// cache it
 		m_Textures[ID] = texture;
 		return texture;

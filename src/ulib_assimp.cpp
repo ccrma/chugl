@@ -266,18 +266,18 @@ CGL_Texture * AssLoader::CreateTexture(aiMaterial* assMat, aiTextureType type)
         }
 
         // create new texture
-        CGL_Texture* texture = new CGL_Texture(CGL_TextureType::File2D);
+        FileTexture2D* texture = new FileTexture2D;
         CGL::CreateChuckObjFromTex(api, vm, texture, shred, false);
 
         // set (TODO this should happen in the UpdateTexturePathCommand constructor)
-        texture->m_FilePath = directory + "/" + path.C_Str();
-        cerr << "PATH: " << texture->m_FilePath << endl;
+        std::string fullPath = directory + "/" + path.C_Str();
+        cerr << "PATH: " << fullPath << endl;
 
         // put in cache
         textures[path.C_Str()] = texture;
         
         // propagate to render thread
-        CGL::PushCommand(new UpdateTexturePathCommand(texture));
+        CGL::PushCommand(new UpdateTexturePathCommand(texture, fullPath));
 
         if(i == 0) firstTexture = texture;
     }

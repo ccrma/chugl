@@ -6,12 +6,17 @@ class Camera;
 class Light;
 class Scene;
 class Mesh;
+class Renderer;
+class Texture;
 
 // used to track state while rendering the scenegraph
 class RendererState  
 {
 public:
-	RendererState() : m_ViewMat(1.0f), m_CameraTransform(1.0f), m_ViewPos(0.0f) { 
+	RendererState(Renderer* renderer) 
+	: m_Renderer(renderer), m_ViewMat(1.0f), m_CameraTransform(1.0f), m_ViewPos(0.0f),
+	m_Scene(nullptr), m_Camera(nullptr), m_SkyboxTexture(nullptr)
+	{
 		m_ModelStack.push_back(glm::mat4(1.0f)); 
 	};
 
@@ -29,12 +34,15 @@ public:
 
 	// Scene stuff =========================================================
 	void PrepareScene(Scene* scene);
-	inline Scene* GetScene() { return m_Scene; }
+	Scene* GetScene() { return m_Scene; }
+	Texture* GetSkyboxTexture() { return m_SkyboxTexture; }
 
 	// Reset state =========================================================
 	void Reset();
 
 private:
+	Renderer *m_Renderer;  // the renderer that owns this state
+
 	std::vector<glm::mat4> m_ModelStack;  // used to track model transform hierarchy
 
 	// opaque and transparent meshes
@@ -48,6 +56,9 @@ private:
 	// scene reference
 	Scene* m_Scene;
 	Camera* m_Camera;
+	
+	// cache envmap
+	Texture* m_SkyboxTexture;
 
 public:
 	std::vector<Mesh*>& GetOpaqueMeshes() { return m_OpaqueMeshes; }

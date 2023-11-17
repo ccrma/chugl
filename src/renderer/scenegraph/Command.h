@@ -449,82 +449,106 @@ private:
 class UpdateTextureSamplerCommand : public SceneGraphCommand
 {
 public:
-    UpdateTextureSamplerCommand(CGL_Texture * tex) : texID(tex->GetID()) {
-        samplerParams = tex->m_SamplerParams;
+    UpdateTextureSamplerCommand(CGL_Texture * tex) : m_TexID(tex->GetID()) {
+        m_SamplerParams = tex->GetSamplerParams();
     };
 
     virtual void execute(Scene* scene) override {
-        CGL_Texture* tex = dynamic_cast<CGL_Texture*>(scene->GetNode(texID));
+        CGL_Texture* tex = dynamic_cast<CGL_Texture*>(scene->GetNode(m_TexID));
         assert(tex);
 
         // copy sampler params
-        tex->m_SamplerParams = samplerParams;
+        tex->SetSamplerParams(m_SamplerParams);
         tex->SetNewSampler();  // set flag to let renderer know it needs to update texture sampling params on GPU
     }
 
 private:
-    size_t texID;
-    CGL_TextureSamplerParams samplerParams;
+    size_t m_TexID;
+    CGL_TextureSamplerParams m_SamplerParams;
 };
 
 
 class UpdateTexturePathCommand : public SceneGraphCommand
 {
 public:
-    UpdateTexturePathCommand(CGL_Texture * tex) : texID(tex->GetID()) {
-        filePath = tex->m_FilePath;
+    UpdateTexturePathCommand(FileTexture2D* tex, const std::string& path) 
+        : m_TexID(tex->GetID()), m_Path(path) 
+    {
+            tex->SetFilePath(path);
     };
 
     virtual void execute(Scene* scene) override {
-        CGL_Texture* tex = dynamic_cast<CGL_Texture*>(scene->GetNode(texID));
+        FileTexture2D* tex = dynamic_cast<FileTexture2D*>(scene->GetNode(m_TexID));
         assert(tex);
 
-        // if no change, do nothing
-        if (tex->m_FilePath == filePath) return;
-        // std::cout << " changing path to " << filePath << std::endl;
+        tex->SetFilePath(m_Path);
+        tex->SetNewFilePath();
+        tex->SetNewSampler();  // need to reset sampler after regerating texture
+    }
 
-        tex->m_FilePath = filePath;
+private:
+    size_t m_TexID;
+    std::string m_Path;
+};
+
+class UpdateCubeMapPathsCommand : public SceneGraphCommand
+{
+public:
+    UpdateCubeMapPathsCommand(
+        CGL_CubeMap * tex, const std::vector<std::string>& paths
+    ) : texID(tex->GetID()), m_Paths(paths)
+    {   
+        tex->SetFilePaths(paths);
+    }
+
+    virtual void execute(Scene* renderThreadScene) override {
+        CGL_CubeMap* tex = dynamic_cast<CGL_CubeMap*>(renderThreadScene->GetNode(texID));
+        assert(tex);
+
+        tex->SetFilePaths(m_Paths);
         tex->SetNewFilePath();
         tex->SetNewSampler();  // need to reset sampler after regerating texture
     }
 
 private:
     size_t texID;
-    std::string filePath;
+    std::vector<std::string> m_Paths;
 };
 
 class UpdateTextureDataCommand : public SceneGraphCommand
 {
 public:
-    UpdateTextureDataCommand(size_t id, std::vector<double>& ck_array, int w, int h) 
-    : texID(id), width(w), height(h) {
+    UpdateTextureDataCommand(DataTexture2D* tex, std::vector<double>& ck_array, int w, int h) 
+    : m_TexID(tex->GetID()), width(w), height(h) {
         // copy tex params
-        dataBuffer.reserve(ck_array.size());
+        m_DataBuffer.reserve(ck_array.size());
         for (auto& val : ck_array) {
-            dataBuffer.emplace_back(static_cast<unsigned char>(val));
+            m_DataBuffer.emplace_back(static_cast<unsigned char>(val));
         }
+
+        // update dimensions
+        // we are NOT setting raw data here to minimize blocking on audio thread
+        // the array should already be accessible anyways from the chuck script
+        tex->SetRawData(m_DataBuffer, width, height);
     };
 
     virtual void execute(Scene* scene) override {
-        CGL_Texture* tex = dynamic_cast<CGL_Texture*>(scene->GetNode(texID));
+        DataTexture2D* tex = dynamic_cast<DataTexture2D*>(scene->GetNode(m_TexID));
         assert(tex);
 
-        // first check if dimensions changed and we need to regen
-        if (tex->m_Width != width || tex->m_Height != height) {
-            tex->m_Width = width;
-            tex->m_Height = height;
+        // move vector into texture
+        if (tex->SetRawData(m_DataBuffer, width, height, false, true)) {
+            // dimensions have changed and we need to regen
             tex->SetNewDimensions();
             tex->SetNewSampler();  // need to reset sampler after regerating texture
-        }
 
-        // move vector into texture
-        tex->m_DataBuffer = std::move(dataBuffer);
+        }
         tex->SetNewRawData();
     }
 
 private:
-    size_t texID;
-    std::vector<unsigned char> dataBuffer;
+    size_t m_TexID;
+    std::vector<unsigned char> m_DataBuffer;
     int width, height;
 };
 
@@ -563,6 +587,48 @@ public:
     }
 private:
     glm::vec3 color;
+};
+
+class UpdateSceneSkyboxCommand : public SceneGraphCommand
+{
+public:
+    UpdateSceneSkyboxCommand(
+        Scene* audioThreadScene, 
+        CGL_CubeMap* cubeMap
+        // const SkyboxPaths& paths
+    ) : m_CubeMapID(cubeMap->GetID()) {
+        // audioThreadScene->UpdateSkybox(m_Paths);
+        audioThreadScene->SetSkybox(cubeMap);
+        audioThreadScene->SetSkyboxEnabled(true);
+    };
+
+    virtual void execute(Scene* renderThreadScene) override {
+        CGL_CubeMap* cubeMap = dynamic_cast<CGL_CubeMap*>(renderThreadScene->GetNode(m_CubeMapID));
+
+        assert(cubeMap);
+
+        renderThreadScene->SetSkybox(cubeMap);
+        renderThreadScene->SetSkyboxEnabled(true);
+        // renderThreadScene->UpdateSkybox(m_Paths);
+    }
+
+private:
+    // SkyboxPaths m_Paths;
+    size_t m_CubeMapID;
+};
+
+class UpdateSceneSkyboxEnabledCommand : public SceneGraphCommand
+{
+public:
+    UpdateSceneSkyboxEnabledCommand(Scene* audioThreadScene, bool enabled) : m_Enabled(enabled) {
+        audioThreadScene->SetSkyboxEnabled(m_Enabled);
+    };
+
+    virtual void execute(Scene* renderThreadScene) override {
+        renderThreadScene->SetSkyboxEnabled(m_Enabled);
+    }
+private: 
+    bool m_Enabled;
 };
 
 

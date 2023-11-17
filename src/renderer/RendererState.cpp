@@ -1,4 +1,5 @@
 #include "RendererState.h"
+#include "Renderer.h"
 #include "scenegraph/Camera.h"
 #include "scenegraph/Mesh.h"
 #include "scenegraph/Scene.h"
@@ -67,6 +68,14 @@ void RendererState::PrepareScene(Scene *scene)
 	);
 
 	// TODO sort opaque meshes front to back
+
+	// Cache skybox texture
+	if (scene->GetSkyboxEnabled()) {
+		m_SkyboxTexture = m_Renderer->GetOrCreateTexture(scene->GetSkyboxID(), CubeMapTexture::GetDefaultWhiteCubeMap());
+	} else {
+		m_SkyboxTexture = nullptr;
+	}
+
 }
 
 void RendererState::Reset()

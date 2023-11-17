@@ -15,22 +15,61 @@
 unsigned char whitePixel[] = { 255, 255, 255, 255 };
 unsigned char blackPixel[] = { 0, 0, 0, 255 };
 unsigned char magentaPixel[] = { 255, 0, 255, 255 };
-Texture* Texture::DefaultWhiteTexture{ nullptr };
-Texture* Texture::DefaultBlackTexture{ nullptr };
-Texture* Texture::DefaultMagentaTexture{ nullptr };
+Texture2D* Texture2D::DefaultWhiteTexture { nullptr };
+Texture2D* Texture2D::DefaultBlackTexture { nullptr };
+Texture2D* Texture2D::DefaultMagentaTexture { nullptr };
 
 // Texture Texture::DefaultWhiteTexture(1, 1, 4, &whitePixel[0]);
 // Texture Texture::DefaultBlackTexture(1, 1, 4, &blackPixel[0]);
 
-// methods ===============================================================
+// ===============================================================
+// Texture base class
+// ===============================================================
+
+Texture::~Texture()
+{
+	// don't need to free m_CGL_Texture, already freed by deletion command
+	GLCall(glDeleteTextures(1, &m_RendererID));
+}
+
+Texture* Texture::CreateTexture(CGL_Texture* cglTexture)
+{
+	Texture* texture = nullptr;
+	switch (cglTexture->GetTextureType())
+	{
+	case CGL_TextureType::File2D:
+		texture = new Texture2D;
+		break;
+	case CGL_TextureType::RawData2D:
+		texture = new Texture2D;
+		break;
+	case CGL_TextureType::CubeMap:
+		texture = new CubeMapTexture;
+		break;
+	default:
+		throw std::runtime_error("Invalid CGL_TextureType");
+	}
+	texture->Load(cglTexture);
+	return texture;
+}
+
+void Texture::Generate()
+{
+	if (!m_RendererID) glGenTextures(1, &m_RendererID);
+}
+
+// ===============================================================
+// Texture2D
+// ===============================================================
 
 // build texture from filepath
-Texture::Texture(const std::string& path)
-	: m_RendererID(0), m_FilePath(path), m_LocalBuffer(nullptr),
-	m_Width(0), m_Height(0), m_BPP(0), m_CGL_Texture(nullptr)
+void Texture2D::LoadFile(const std::string& path)
 {
+	// set member vars
+	m_FilePath = path;
+
 	// generate the texture
-	GLCall(glGenTextures(1, &m_RendererID));
+	Generate();
 	Bind();
 
 	GenTextureFromPath(path);
@@ -51,31 +90,25 @@ Texture::Texture(const std::string& path)
 }
 
 // build texture from raw data buffer
-Texture::Texture(int texWidth, int texHeight, int bytesPerPixel, unsigned char * texBuffer)
-	: m_RendererID(0), m_FilePath(""), m_LocalBuffer(texBuffer),
-	m_Width(texWidth), m_Height(texHeight), m_BPP(bytesPerPixel),
-	m_CGL_Texture(nullptr)
+void Texture2D::LoadBuffer(
+	int texWidth, int texHeight, int bytesPerPixel, 
+	unsigned char * texBuffer
+)
 {
+	// update member vars
+	m_Width = texWidth;
+	m_Height = texHeight;
+	m_BPP = bytesPerPixel;
+
 	// generate the texture
-	GLCall(glGenTextures(1, &m_RendererID));
+	Generate();
 	Bind();
 
 	// copy texture data to GPU
-	glTexImage2D(
-		GL_TEXTURE_2D,
-		0, // mipmap LOD (for manually creating mipmaps)
-		GL_RGBA8,  // format we want to store texture (TODO: should be based off bytes per pixel...right now hardcoded to 4)
-		texWidth, texHeight,  // texture dims
-		0,  // legacy border width, always set 0
-		GL_RGBA,  // format of texture on CPU
-		GL_UNSIGNED_BYTE,  // size of each channel on CPU
-		texBuffer  // texture buffer
-	);
+	GenTextureFromBuffer(texWidth, texHeight, texBuffer);
 
 	// generate mipmaps
 	GLCall(glGenerateMipmap(GL_TEXTURE_2D));
-
-	// DON'T free m_LocalBuffer because it's a pointer to an external buffer?
 
 	// Texture params
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -86,89 +119,81 @@ Texture::Texture(int texWidth, int texHeight, int bytesPerPixel, unsigned char *
 	Unbind();
 }
 
-Texture::Texture(CGL_Texture *cglTexture)
-	: m_RendererID(0), m_FilePath(cglTexture->m_FilePath), m_LocalBuffer(nullptr),
-	m_Width(cglTexture->m_Width), m_Height(cglTexture->m_Height), m_BPP(0),
-	m_CGL_Texture(cglTexture)
+// build texture from CGL_Texture
+void Texture2D::Load(CGL_Texture *cglTexture)
 {
+	// don't allow overwriting
+	assert(!m_CGL_Texture);
+
+	// must be a 2D texture type
+	assert(
+		cglTexture->GetTextureType() == CGL_TextureType::File2D ||
+		cglTexture->GetTextureType() == CGL_TextureType::RawData2D
+	);
+
+	// update member vars
+	m_CGL_Texture = cglTexture;
+
 	// generate the texture
-	GLCall(glGenTextures(1, &m_RendererID));
+	Generate();
 	Bind();
-
-	// if (cglTexture->m_FilePath == "" && cglTexture->m_ImgBuffer == nullptr)
-	// 	return;
-	
-	// no constructors in chuck for now, this is for when they are eventually added
-	// switch on texture type
-	switch (cglTexture->type)
-	{
-		case CGL_TextureType::Base:
-			throw std::runtime_error("trying to init abstract base CGL_Texture");
-		case CGL_TextureType::File2D:
-			GenTextureFromPath(cglTexture->m_FilePath);
-			break;
-		case CGL_TextureType::RawData:
-			GenTextureFromBuffer(
-				cglTexture->m_Width, cglTexture->m_Height,
-				cglTexture->m_DataBuffer.data()
-			);
-			break;
-		default:
-			throw std::runtime_error("Texture type undefined");
-	}
-
-	SetSamplerParams(cglTexture->m_SamplerParams);
-	Unbind();
+	Update();
 }
 
-Texture::~Texture()
-{
-	// don't need to free m_localBuffer, already freed by stbi_image_free after loading
-	// don't need to free m_CGL_Texture, already freed by deletion command
-	GLCall(glDeleteTextures(1, &m_RendererID));
-}
 
 // update GPU texture data from changes to CGL_texture. Assumes already bound!
-void Texture::Update()
+void Texture2D::Update()
 {
 	if (!m_CGL_Texture) return;
 
 	if (!m_CGL_Texture->NeedsUpdate()) return;
 
-	if (m_CGL_Texture->HasNewFilePath())
-		GenTextureFromPath(m_CGL_Texture->m_FilePath);
 
-	if (m_CGL_Texture->HasNewRawData()) {
-		if (m_CGL_Texture->HasNewDimensions()) {
-			// new dimensions, need to recreate from scratch
-			GenTextureFromBuffer(
-				m_CGL_Texture->m_Width, m_CGL_Texture->m_Height,
-				m_CGL_Texture->m_DataBuffer.data()
-			);
-		} else {
-			// same dimensions, just copy in place
-			glTexSubImage2D(
-				GL_TEXTURE_2D,
-				0, // mipmap level
-				0, 0,  // offset
-				m_CGL_Texture->m_Width, m_CGL_Texture->m_Height,  // texture dims
-				GL_RGBA,  // format we want to store texture (TODO: should be based off bytes per pixel...right now hardcoded to 4)
-				GL_UNSIGNED_BYTE,  // size of each channel on CPU
-				m_CGL_Texture->m_DataBuffer.data()// texture buffer
-			);
-		}
+	
+	// load texture data
+	auto type = m_CGL_Texture->GetTextureType();
+	if (type == CGL_TextureType::File2D) {
+		FileTexture2D* fileTex = dynamic_cast<FileTexture2D*>(m_CGL_Texture);
+		assert(fileTex);
+		if (m_CGL_Texture->HasNewFilePath())
+			GenTextureFromPath(fileTex->GetFilePath());
 	}
+	else if (type == CGL_TextureType::RawData2D) {
+		DataTexture2D* dataTex = dynamic_cast<DataTexture2D*>(m_CGL_Texture);
+		assert(dataTex);
+		unsigned int width = dataTex->GetWidth();
+		unsigned int height = dataTex->GetHeight();
+		const unsigned char* dataBuffer = dataTex->GetDataBuffer().data();
+		if (dataTex->HasNewRawData()) {
+
+			if (m_CGL_Texture->HasNewDimensions()) {
+				// new dimensions, need to recreate from scratch
+				GenTextureFromBuffer(width, height, dataBuffer);
+			}
+			else {
+				// same dimensions, just copy in place
+				glTexSubImage2D(
+					GL_TEXTURE_2D,
+					0, // mipmap level
+					0, 0,  // offset
+					width, height,  // texture dims
+					GL_RGBA,  // format we want to store texture (TODO: should be based off bytes per pixel...right now hardcoded to 4)
+					GL_UNSIGNED_BYTE,  // size of each channel on CPU
+					dataBuffer // texture buffer
+				);
+			}
+		}
+	} else { throw std::runtime_error("Texture type unsupported"); }
 
 	// always update sampler params last, because generating mipmaps must happen AFTER image data is loaded 
 	if (m_CGL_Texture->HasNewSampler())
-		SetSamplerParams(m_CGL_Texture->m_SamplerParams);
+		SetSamplerParams(m_CGL_Texture->GetSamplerParams());
 
 	m_CGL_Texture->ResetUpdateFlags();
 }
 
-void Texture::Bind(unsigned int slot) const
+void Texture2D::Bind(unsigned int slot) const
 {
-	// Util::println("activating texture slot " + std::to_string(slot));
 	// activate texture unit first (GL_TEXTURE0 is default active unit)
 	GLCall(glActiveTexture(GL_TEXTURE0 + slot));
 
@@ -176,43 +201,46 @@ void Texture::Bind(unsigned int slot) const
 	GLCall(glBindTexture(GL_TEXTURE_2D, m_RendererID));
 }
 
-void Texture::Unbind()
+void Texture2D::Unbind() const
 {
 	GLCall(glBindTexture(GL_TEXTURE_2D, 0));
 }
 
-Texture *Texture::GetDefaultWhiteTexture()
+Texture2D* Texture2D::GetDefaultWhiteTexture()
 {
 	if (!DefaultWhiteTexture) {
-		DefaultWhiteTexture = new Texture(1, 1, 4, &whitePixel[0]);
+		DefaultWhiteTexture = new Texture2D;
+		DefaultWhiteTexture->LoadBuffer(1, 1, 4, &whitePixel[0]);
 	}
 	return DefaultWhiteTexture;
 }
 
-Texture *Texture::GetDefaultBlackTexture()
+Texture2D* Texture2D::GetDefaultBlackTexture()
 {
 	if (!DefaultBlackTexture) {
-		DefaultBlackTexture = new Texture(1, 1, 4, &blackPixel[0]);
+		DefaultBlackTexture = new Texture2D;
+		DefaultBlackTexture->LoadBuffer(1, 1, 4, &blackPixel[0]);
 	}
 	return DefaultBlackTexture;
 }
 
-Texture *Texture::GetDefaultMagentaTexture()
+Texture2D* Texture2D::GetDefaultMagentaTexture()
 {
 	if (!DefaultMagentaTexture) {
-		DefaultMagentaTexture = new Texture(1, 1, 4, &magentaPixel[0]);
+		DefaultMagentaTexture = new Texture2D;
+		DefaultMagentaTexture->LoadBuffer(1, 1, 4, &magentaPixel[0]);
 	}
 	return DefaultMagentaTexture;
 }
 
-void Texture::GenTextureFromPath(const std::string &path)
+void Texture2D::GenTextureFromPath(const std::string &path)
 {
 	// flip so first pixel in output array is on bottom left.
 	// this is the format expected by openGL
 	stbi_set_flip_vertically_on_load(1);
 
 	// load texture to CPU
-	m_LocalBuffer = stbi_load(
+	unsigned char* imageBuffer = stbi_load(
 		path.c_str(),
 		&m_Width,  // texture width
 		&m_Height, // texture height
@@ -221,7 +249,7 @@ void Texture::GenTextureFromPath(const std::string &path)
 	);
 	
 	// make sure texture loaded
-	if (!m_LocalBuffer) {
+	if (!imageBuffer) {
 		std::cerr << "ERROR: failed to load texture at path " << path << std::endl;
 		std::cerr << "REASON:" << stbi_failure_reason() << std::endl;
 		std::cerr << "Defaulting to 1x1 magenta pixel texture instead" << std::endl;
@@ -232,21 +260,26 @@ void Texture::GenTextureFromPath(const std::string &path)
 		GL_TEXTURE_2D,// TODO: only supports 2D textures for now
 		0, // mipmap LOD (for manually creating mipmaps)
 		GL_RGBA8,  // format we want to store texture
-		m_LocalBuffer ? m_Width : 1, 
-		m_LocalBuffer ? m_Height : 1,  // texture dims
+		imageBuffer ? m_Width : 1, 
+		imageBuffer ? m_Height : 1,  // texture dims
 		0,  // legacy border width, always set 0
 		GL_RGBA,  // format of texture on CPU     -- TODO: accept RGB format no alpha?
 		GL_UNSIGNED_BYTE,  // size of each channel on CPU
-		m_LocalBuffer ? m_LocalBuffer : &magentaPixel[0]  // texture buffer
+		imageBuffer ? imageBuffer : &magentaPixel[0]  // texture buffer
 	);
 
 
 	// free local image data
-	if (m_LocalBuffer) stbi_image_free(m_LocalBuffer);
+	if (imageBuffer) stbi_image_free(imageBuffer);
+
+	m_IsLoaded = true;
 }
 
-void Texture::GenTextureFromBuffer(int texWidth, int texHeight, unsigned char *texBuffer)
+void Texture2D::GenTextureFromBuffer(
+	int texWidth, int texHeight, const unsigned char *texBuffer
+)
 {
+	// TODO after adding HDR, support linear-space or srgb textures
 	glTexImage2D(
 		GL_TEXTURE_2D,
 		0, 
@@ -257,9 +290,11 @@ void Texture::GenTextureFromBuffer(int texWidth, int texHeight, unsigned char *t
 		GL_UNSIGNED_BYTE,  // size of each channel on CPU
 		texBuffer
 	);
+
+	m_IsLoaded = true;
 }
 
-void Texture::SetSamplerParams(const CGL_TextureSamplerParams &params)
+void Texture2D::SetSamplerParams(const CGL_TextureSamplerParams &params)
 {
 	// generate mipmaps
 	if (params.genMipMaps) GLCall(glGenerateMipmap(GL_TEXTURE_2D));
@@ -273,7 +308,7 @@ void Texture::SetSamplerParams(const CGL_TextureSamplerParams &params)
 	SetFilterMode(GL_TEXTURE_MAG_FILTER, params.filterMag, params.genMipMaps);
 }
 
-void Texture::SetWrapMode(unsigned int axis, CGL_TextureWrapMode mode)
+void Texture2D::SetWrapMode(unsigned int axis, CGL_TextureWrapMode mode)
 {
 	switch (mode) {
 		case CGL_TextureWrapMode::Repeat:
@@ -290,7 +325,7 @@ void Texture::SetWrapMode(unsigned int axis, CGL_TextureWrapMode mode)
 	}
 }
 
-void Texture::SetFilterMode(unsigned int op, CGL_TextureFilterMode mode, bool enableMipMaps)
+void Texture2D::SetFilterMode(unsigned int op, CGL_TextureFilterMode mode, bool enableMipMaps)
 {
 	if (op == GL_TEXTURE_MAG_FILTER) {
 		switch (mode) {
@@ -337,45 +372,27 @@ void Texture::SetFilterMode(unsigned int op, CGL_TextureFilterMode mode, bool en
 // CubeMapTexture
 // =======================================================================
 
-CubeMapTexture* CubeMapTexture::DefaultBlackCubeMap = NULL;
-CubeMapTexture* CubeMapTexture::DefaultWhiteCubeMap = NULL;
+CubeMapTexture* CubeMapTexture::DefaultBlackCubeMap {nullptr};
+CubeMapTexture* CubeMapTexture::DefaultWhiteCubeMap {nullptr};
 CubeMapTexture* CubeMapTexture::GetDefaultBlackCubeMap() {
 	unsigned char blackPixel[3] = { 0, 0, 0 };
 	if (DefaultBlackCubeMap) return DefaultBlackCubeMap;
-	DefaultBlackCubeMap = new CubeMapTexture();
-	DefaultBlackCubeMap->Load(blackPixel);
+	DefaultBlackCubeMap = new CubeMapTexture;
+	DefaultBlackCubeMap->LoadBuffer(blackPixel);
 	return DefaultBlackCubeMap;
 }
 CubeMapTexture* CubeMapTexture::GetDefaultWhiteCubeMap() {
 	unsigned char whitePixel[3] = { 255, 255, 255 };
 	if (DefaultWhiteCubeMap) return DefaultWhiteCubeMap;
-	DefaultWhiteCubeMap = new CubeMapTexture();
-	DefaultWhiteCubeMap->Load(whitePixel);
+	DefaultWhiteCubeMap = new CubeMapTexture;
+	DefaultWhiteCubeMap->LoadBuffer(whitePixel);
 	return DefaultWhiteCubeMap;
 }
 
-
-CubeMapTexture::~CubeMapTexture()
+void CubeMapTexture::SetSamplerParams()
 {
-	GLCall(glDeleteTextures(1, &m_RendererID));
-}
-
-void CubeMapTexture::Load(unsigned char* colorData)
-{
-	if (!m_RendererID) {
-		glGenTextures(1, &m_RendererID);
-	}
-	glBindTexture(GL_TEXTURE_CUBE_MAP, m_RendererID);
-
-	// set tex data to all black pixels
-	for (unsigned int i = 0; i < 6; i++) {
-		GLCall(
-			glTexImage2D(
-				GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, 1, 1, 0,
-				GL_RGB, GL_UNSIGNED_BYTE, colorData
-			)
-		);
-	}
+	// For now, cubemaps are only for skyboxes and therefore have 
+	// a fixed sampler as defined below 
 
 	// set texture params
 	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
@@ -386,10 +403,42 @@ void CubeMapTexture::Load(unsigned char* colorData)
 	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE );
 }
 
-void CubeMapTexture::Load(const std::vector<std::string> &faces)
+void CubeMapTexture::LoadBuffer(unsigned char* colorData)
 {
-	glGenTextures(1, &m_RendererID);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, m_RendererID);
+	Generate();
+	Bind();
+
+	for (unsigned int i = 0; i < 6; i++) {
+		GLCall(
+			glTexImage2D(
+				GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, 1, 1, 0,
+				GL_RGB, GL_UNSIGNED_BYTE, colorData
+			)
+		);
+	}
+
+	SetSamplerParams();
+	m_IsLoaded = true;
+}
+
+void CubeMapTexture::Load(CGL_Texture* cglTexture)
+{
+	assert(!m_CGL_CubeMap);  // don't allow overwriting
+	assert(cglTexture->GetTextureType() == CGL_TextureType::CubeMap);
+
+	// update member vars
+	m_CGL_CubeMap = dynamic_cast<CGL_CubeMap*>(cglTexture);
+	assert(m_CGL_CubeMap);
+
+	Generate();
+	Bind();
+	Update();
+}
+
+void CubeMapTexture::LoadFiles(const std::vector<std::string> &faces)
+{
+	Generate();
+	Bind();
 
 	int width, height, nrChannels;
 	for (unsigned int i = 0; i < faces.size(); i++) {
@@ -416,13 +465,24 @@ void CubeMapTexture::Load(const std::vector<std::string> &faces)
 		}
 	}
 
-	// set texture params
-	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-	// clamp to edge to avoid seams
-	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
-	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
-	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE );
+	SetSamplerParams();
+
+	m_IsLoaded = true;
+}
+
+void CubeMapTexture::Update()
+{
+	if (!m_CGL_CubeMap) return;
+
+	if (!m_CGL_CubeMap->NeedsUpdate()) return;
+
+	// Update texture data if new paths
+	if (m_CGL_CubeMap->HasNewFilePath()) {
+		LoadFiles(m_CGL_CubeMap->GetFilePaths());
+		SetSamplerParams();
+	}
+
+	m_CGL_CubeMap->ResetUpdateFlags();
 }
 
 void CubeMapTexture::Bind(unsigned int slot) const
@@ -432,7 +492,8 @@ void CubeMapTexture::Bind(unsigned int slot) const
 	GLCall(glBindTexture(GL_TEXTURE_CUBE_MAP, m_RendererID));
 }
 
-void CubeMapTexture::Unbind()
+void CubeMapTexture::Unbind() const
 {
 	GLCall(glBindTexture(GL_TEXTURE_CUBE_MAP, 0));
 }
+

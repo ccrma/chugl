@@ -8,6 +8,7 @@
 class Light;
 class DirLight;
 class Camera;
+class CGL_CubeMap;
 
 
 enum FogType : t_CKUINT {
@@ -42,7 +43,10 @@ public:
 		m_WindowShouldClose(false),
 		// window title
 		m_UpdateWindowTitle(false),
-		m_WindowTitle("ChuGL")
+		m_WindowTitle("ChuGL"),
+		// skybox
+		skyboxEnabled(false)
+		// updateSkybox(false)
 	{}
 	virtual ~Scene() {}
 	virtual bool IsScene() override { return true; }
@@ -131,6 +135,19 @@ public: // fog
 	void SetFogEnabled(bool enabled) { m_FogUniforms.enabled = enabled; }
 	bool GetFogEnabled() { return m_FogUniforms.enabled; }
 
+
+private:  // skybox data
+	bool skyboxEnabled;
+	// bool updateSkybox;
+	size_t skyboxID;
+
+public: // skybox methods
+	void SetSkyboxEnabled(bool enabled) { skyboxEnabled = enabled; }
+	bool GetSkyboxEnabled() { return skyboxEnabled; }
+	// void SetUpdateSkybox(bool enabled) { updateSkybox = enabled; }
+	// bool GetUpdateSkybox() { return updateSkybox; }
+	void SetSkybox(CGL_CubeMap* skybox);
+	size_t GetSkyboxID() { return skyboxID; }
 
 public: // background color ie clear color
 	glm::vec3 m_BackgroundColor;

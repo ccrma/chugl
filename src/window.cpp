@@ -76,6 +76,10 @@ static void window_size_callback(GLFWwindow* window, int width, int height)
 
 static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 {
+    // uncomment to disable mouse input when imgui is active
+    // ImGuiIO& io = ImGui::GetIO();
+    // if (io.WantCaptureMouse) return;
+
     CGL::SetMousePos(xpos, ypos);
 }
 
@@ -397,18 +401,8 @@ void Window::DisplayLoop()
     std::cout << "framebuffer width " << m_FrameWidth << std::endl;
     std::cout << "framebuffer height " << m_FrameHeight << std::endl; 
 
+    // builds skybox buffers and cubemap texture
     renderer.BuildSkybox();
-    // TODO: cleanup after adding to ulib API
-    std::vector<std::string> faces = {
-        "./tests/textures/skybox/right.jpg",
-        "./tests/textures/skybox/left.jpg",
-        "./tests/textures/skybox/top.jpg",
-        "./tests/textures/skybox/bottom.jpg",
-        "./tests/textures/skybox/front.jpg",
-        "./tests/textures/skybox/back.jpg"
-    };
-    renderer.LoadSkyboxTexture(faces);
-
 
     // Copy from CGL scenegraph ====================================    
     // TODO should just clone these
@@ -538,7 +532,7 @@ void Window::DisplayLoop()
             true,   // clear color buffer
             false   // don't clear depth buffer
         );
-        renderer.RenderScreen();
+        renderer.RenderScreen();  // TODO change name to PostProcess
 
         // Handle Events, Draw framebuffer
         glfwPollEvents();  // TODO: maybe put event handling in a separate thread?

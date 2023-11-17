@@ -28,6 +28,12 @@ CK_DLL_MFUN(cgl_scene_get_fog_color);
 CK_DLL_MFUN(cgl_scene_get_fog_density);
 CK_DLL_MFUN(cgl_scene_get_fog_type);
 
+// skybox
+CK_DLL_MFUN(cgl_scene_set_skybox_cubemap);
+CK_DLL_MFUN(cgl_scene_set_skybox_enabled);
+CK_DLL_MFUN(cgl_scene_get_skybox_enabled);
+
+
 //-----------------------------------------------------------------------------
 // init_chugl_scene()
 //-----------------------------------------------------------------------------
@@ -58,7 +64,7 @@ t_CKBOOL init_chugl_scene(Chuck_DL_Query *QUERY)
 	QUERY->add_mfun(QUERY, cgl_scene_get_background_color, "vec3", "backgroundColor");
 	QUERY->doc_func(QUERY, "Get the background color of the scene");
 
-	// light
+	// light --------------------------------------------------------
 	QUERY->add_mfun(QUERY, cgl_scene_get_default_light, Light::CKName(LightType::Base), "light");
 	QUERY->doc_func(QUERY, "Get the default directional light of the scene");
 
@@ -66,7 +72,7 @@ t_CKBOOL init_chugl_scene(Chuck_DL_Query *QUERY)
 	QUERY->doc_func(QUERY, "Get the number of instantiated lights");
 
 
-	// fog member vars
+	// fog member vars ----------------------------------------------
 	QUERY->add_mfun(QUERY, cgl_scene_set_fog_color, "vec3", "fogColor");
 	QUERY->add_arg(QUERY, "vec3", "color");
 	QUERY->doc_func(QUERY, "Set the fog color of the scene");
@@ -94,6 +100,31 @@ t_CKBOOL init_chugl_scene(Chuck_DL_Query *QUERY)
 	QUERY->add_mfun(QUERY, cgl_scene_set_fog_disabled, "void", "disableFog");
 	QUERY->doc_func(QUERY, "disable fog for the scene");
 
+	// skybox --------------------------------------------------------
+	QUERY->add_mfun(
+		QUERY, 
+		cgl_scene_set_skybox_cubemap, 
+		CGL_Texture::CKName(CGL_TextureType::CubeMap), 
+		"skybox"
+	);
+	QUERY->add_arg(
+		QUERY, 
+		CGL_Texture::CKName(CGL_TextureType::CubeMap), 
+		"cubemap"
+	);
+	QUERY->doc_func(
+		QUERY, 
+		"Set the skybox of the scene. Pass in a cubemap texture. Will enable the skybox."
+	);
+
+	QUERY->add_mfun(QUERY, cgl_scene_set_skybox_enabled, "int", "skyboxEnabled");
+	QUERY->add_arg(QUERY, "int", "enabled");
+	QUERY->doc_func(QUERY, "Enable or disable the skybox");
+
+	QUERY->add_mfun(QUERY, cgl_scene_get_skybox_enabled, "int", "skyboxEnabled");
+	QUERY->doc_func(QUERY, "Get whether the skybox is enabled or disabled");
+
+	// end class -----------------------------------------------------
 	QUERY->end_class(QUERY);
 
 	return true;
@@ -200,4 +231,37 @@ CK_DLL_MFUN(cgl_scene_set_fog_disabled)
 	Scene *scene = (Scene *) CGL::GetSGO(SELF);
 	scene->SetFogEnabled(false);
 	CGL::PushCommand(new UpdateSceneFogCommand(scene));
+}
+
+// skybox ==============================================
+
+CK_DLL_MFUN(cgl_scene_set_skybox_cubemap)
+{
+	Scene *scene = (Scene *) CGL::GetSGO(SELF);
+	Chuck_Object* cubemap_obj = GET_NEXT_OBJECT(ARGS);
+
+	CGL_CubeMap* cubemap = (CGL_CubeMap*) CGL::GetTexture(cubemap_obj);
+
+	CGL::PushCommand(
+		new UpdateSceneSkyboxCommand(
+			scene,
+			cubemap
+		)
+	);
+
+	RETURN->v_object = cubemap_obj;
+}
+
+CK_DLL_MFUN(cgl_scene_set_skybox_enabled)
+{
+	Scene *scene = (Scene *) CGL::GetSGO(SELF);
+	t_CKINT enabled = GET_NEXT_INT(ARGS);
+	CGL::PushCommand(new UpdateSceneSkyboxEnabledCommand(scene, enabled));
+	RETURN->v_int = enabled;
+}
+
+CK_DLL_MFUN(cgl_scene_get_skybox_enabled)
+{
+	Scene *scene = (Scene *) CGL::GetSGO(SELF);
+	RETURN->v_int = scene->GetSkyboxEnabled();
 }

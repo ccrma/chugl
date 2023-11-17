@@ -20,15 +20,22 @@ CK_DLL_MFUN(cgl_texture_set_filter);
 CK_DLL_MFUN(cgl_texture_get_filter_min);
 CK_DLL_MFUN(cgl_texture_get_filter_mag);
 
-// Texture --> FileTexture (texture from filepath .png .jpg etc)
+// Texture --> FileTexture (texture from filepath .png .jpg etc) ==============
 CK_DLL_CTOR(cgl_texture_file_ctor);
 CK_DLL_MFUN(cgl_texture_file_set_filepath);
 CK_DLL_MFUN(cgl_texture_file_get_filepath);
 
-// Texture --> DataTexture (texture from chuck array)
+// Texture --> DataTexture (texture from chuck array) ========================
 CK_DLL_CTOR(cgl_texture_rawdata_ctor);
 CK_DLL_MFUN(cgl_texture_rawdata_set_data);
 // CK_DLL_MFUN(cgl_texture_rawdata_get_data);
+
+// Texture --> CubeMapTexture (texture from 6 filepaths) =====================
+CK_DLL_CTOR(cgl_texture_cubemap_ctor);
+CK_DLL_MFUN(cgl_texture_cubemap_set_filepaths);
+// CK_DLL_MFUN(cgl_texture_cubemap_get_filepaths);  // TODO: impl once we can create arrays from chugin
+// TODO: add option to set each face individually, from file or from data
+
 
 
 //-----------------------------------------------------------------------------
@@ -37,7 +44,7 @@ CK_DLL_MFUN(cgl_texture_rawdata_set_data);
 
 t_CKBOOL init_chugl_texture(Chuck_DL_Query *QUERY)
 {
-	QUERY->begin_class(QUERY, "Texture", "Object");
+	QUERY->begin_class(QUERY, CGL_Texture::CKName(CGL_TextureType::Base), "Object");
     QUERY->doc_class(QUERY, "Base texture class, do not instantiate directly");
 
 	QUERY->add_ctor(QUERY, cgl_texture_ctor);
@@ -82,7 +89,7 @@ t_CKBOOL init_chugl_texture(Chuck_DL_Query *QUERY)
 	QUERY->end_class(QUERY);
 
 	// FileTexture -----------------------------------------------------------
-	QUERY->begin_class(QUERY, "FileTexture", "Texture");
+	QUERY->begin_class(QUERY, CGL_Texture::CKName(CGL_TextureType::File2D), CGL_Texture::CKName(CGL_TextureType::Base));
     QUERY->doc_class(QUERY, "Class for loading textures from external files");
     QUERY->add_ex(QUERY, "textures/textures-1.ck");
     QUERY->add_ex(QUERY, "textures/snowstorm.ck");
@@ -99,7 +106,7 @@ t_CKBOOL init_chugl_texture(Chuck_DL_Query *QUERY)
 	QUERY->end_class(QUERY);
 
 	// DataTexture -----------------------------------------------------------
-	QUERY->begin_class(QUERY, "DataTexture", "Texture");
+	QUERY->begin_class(QUERY, CGL_Texture::CKName(CGL_TextureType::RawData2D), CGL_Texture::CKName(CGL_TextureType::Base));
     QUERY->doc_class(QUERY, "Class for dynamically creating textures from chuck arrays");
     QUERY->add_ex(QUERY, "audioshader/audio-texture.ck");
 
@@ -114,6 +121,29 @@ t_CKBOOL init_chugl_texture(Chuck_DL_Query *QUERY)
 		"where each pixel is represented by 4 floats for r,g,b,a."
 		"Currently only supports unsigned bytes, so each float must be in range [0,255]"
 	);
+	QUERY->end_class(QUERY);
+
+	// CubeMapTexture -----------------------------------------------------------
+	QUERY->begin_class(QUERY, CGL_Texture::CKName(CGL_TextureType::CubeMap), CGL_Texture::CKName(CGL_TextureType::Base));
+	QUERY->doc_class(QUERY, 
+		"Class for loading cubemap textures from external files or chuck arrays."
+	);
+	// QUERY->add_ex(QUERY, "textures/cubemap.ck");
+
+	QUERY->add_ctor(QUERY, cgl_texture_cubemap_ctor);
+
+	QUERY->add_mfun(QUERY, cgl_texture_cubemap_set_filepaths, "void", "paths");
+	QUERY->add_arg(QUERY, "string", "right");
+	QUERY->add_arg(QUERY, "string", "left");
+	QUERY->add_arg(QUERY, "string", "top");
+	QUERY->add_arg(QUERY, "string", "bottom");
+	QUERY->add_arg(QUERY, "string", "front");
+	QUERY->add_arg(QUERY, "string", "back");
+	QUERY->doc_func(QUERY, 
+		"Pass in paths to the 6 faces of the cubemap"
+		" in the order: right, left, top, bottom, front, back"
+	);
+
 	QUERY->end_class(QUERY);
 
 	return true;
@@ -144,13 +174,13 @@ CK_DLL_MFUN(cgl_texture_set_wrap)
 CK_DLL_MFUN(cgl_texture_get_wrap_s)
 {
 	CGL_Texture *texture = CGL::GetTexture(SELF);
-	RETURN->v_int = static_cast<t_CKINT>(texture->m_SamplerParams.wrapS);
+	RETURN->v_int = static_cast<t_CKINT>(texture->GetSamplerParams().wrapS);
 }
 
 CK_DLL_MFUN(cgl_texture_get_wrap_t)
 {
 	CGL_Texture *texture = CGL::GetTexture(SELF);
-	RETURN->v_int = static_cast<t_CKINT>(texture->m_SamplerParams.wrapS);
+	RETURN->v_int = static_cast<t_CKINT>(texture->GetSamplerParams().wrapS);
 }
 
 CK_DLL_MFUN(cgl_texture_set_filter)
@@ -166,13 +196,13 @@ CK_DLL_MFUN(cgl_texture_set_filter)
 CK_DLL_MFUN(cgl_texture_get_filter_min)
 {
 	CGL_Texture *texture = CGL::GetTexture(SELF);
-	RETURN->v_int = static_cast<t_CKINT>(texture->m_SamplerParams.filterMin);
+	RETURN->v_int = static_cast<t_CKINT>(texture->GetSamplerParams().filterMin);
 }
 
 CK_DLL_MFUN(cgl_texture_get_filter_mag)
 {
 	CGL_Texture *texture = CGL::GetTexture(SELF);
-	RETURN->v_int = static_cast<t_CKINT>(texture->m_SamplerParams.filterMag);
+	RETURN->v_int = static_cast<t_CKINT>(texture->GetSamplerParams().filterMag);
 }
 
 // FileTexture API impl =====================================================
@@ -180,7 +210,7 @@ CK_DLL_CTOR(cgl_texture_file_ctor)
 {
 	CGL::PushCommand(
         new CreateSceneGraphNodeCommand(
-            new CGL_Texture(CGL_TextureType::File2D), 
+            new FileTexture2D,
             &CGL::mainScene, SELF, CGL::GetTextureDataOffset()
         )
     );
@@ -188,19 +218,18 @@ CK_DLL_CTOR(cgl_texture_file_ctor)
 
 CK_DLL_MFUN(cgl_texture_file_set_filepath)
 {
-	CGL_Texture *texture = CGL::GetTexture(SELF);
+	auto* texture = dynamic_cast<FileTexture2D*>(CGL::GetTexture(SELF));
 	Chuck_String *path = GET_NEXT_STRING(ARGS);
-	texture->m_FilePath = path->str(); // note: doesn't make sense to update flags on chuck-side copy because renderer doesn't have access
 
-	CGL::PushCommand(new UpdateTexturePathCommand(texture));
+	CGL::PushCommand(new UpdateTexturePathCommand(texture, path->str()));
 
 	RETURN->v_string = path;
 }
 
 CK_DLL_MFUN(cgl_texture_file_get_filepath)
 {
-	CGL_Texture *texture = CGL::GetTexture(SELF);
-	RETURN->v_string = (Chuck_String *)API->object->create_string(VM, texture->m_FilePath.c_str(), false);
+	auto* texture = dynamic_cast<FileTexture2D*>(CGL::GetTexture(SELF));
+	RETURN->v_string = (Chuck_String *)API->object->create_string(VM, texture->GetFilePath().c_str(), false);
 }
 
 // DataTexture API impl =====================================================
@@ -208,7 +237,7 @@ CK_DLL_CTOR(cgl_texture_rawdata_ctor)
 {
 	CGL::PushCommand(
         new CreateSceneGraphNodeCommand(
-            new CGL_Texture(CGL_TextureType::RawData), 
+            new DataTexture2D,
             &CGL::mainScene, SELF, CGL::GetTextureDataOffset()
         )
     );
@@ -216,13 +245,37 @@ CK_DLL_CTOR(cgl_texture_rawdata_ctor)
 
 CK_DLL_MFUN(cgl_texture_rawdata_set_data)
 {
-	CGL_Texture *texture = CGL::GetTexture(SELF);
+	auto* texture = dynamic_cast<DataTexture2D*>(CGL::GetTexture(SELF));
 	Chuck_ArrayFloat *data = (Chuck_ArrayFloat *)GET_NEXT_OBJECT(ARGS);
 	t_CKINT width = GET_NEXT_INT(ARGS);
 	t_CKINT height = GET_NEXT_INT(ARGS);
 
-	// update chuck-side texture ( no copy to avoid blocking audio thread )
-	texture->SetRawData(data->m_vector, width, height, false);
+	CGL::PushCommand(new UpdateTextureDataCommand(texture, data->m_vector, width, height));
+}
 
-	CGL::PushCommand(new UpdateTextureDataCommand(texture->GetID(), data->m_vector, width, height));
+// CubeMapTexture impl =====================================================
+CK_DLL_CTOR(cgl_texture_cubemap_ctor)
+{
+	CGL::PushCommand(
+		new CreateSceneGraphNodeCommand(
+			new CGL_CubeMap,
+			&CGL::mainScene, SELF, CGL::GetTextureDataOffset()
+		)
+	);
+}
+
+CK_DLL_MFUN(cgl_texture_cubemap_set_filepaths)
+{
+	CGL_CubeMap* cubeMap = dynamic_cast<CGL_CubeMap*>(CGL::GetTexture(SELF));
+	Chuck_String* right = GET_NEXT_STRING(ARGS);
+	Chuck_String* left = GET_NEXT_STRING(ARGS);
+	Chuck_String* top = GET_NEXT_STRING(ARGS);
+	Chuck_String* bottom = GET_NEXT_STRING(ARGS);
+	Chuck_String* front = GET_NEXT_STRING(ARGS);
+	Chuck_String* back = GET_NEXT_STRING(ARGS);
+
+	CGL::PushCommand(new UpdateCubeMapPathsCommand(
+		cubeMap, 
+		{right->str(), left->str(), top->str(), bottom->str(), front->str(), back->str()}
+	));
 }

@@ -67,7 +67,7 @@ void RenderGeometry::BuildGeometry() {
 				(void*) attrib.data.data(),
 				attrib.SizeInBytes(),
 				attrib.NumVertices(),
-				GL_STATIC_DRAW  // TODO test GL_DYNAMIC and GL_STREAM
+				GL_STATIC_DRAW 
 				// GL_DYNAMIC_DRAW  // doesn't seem to make a difference
 				// GL_STREAM_DRAW   // doesn't seem to make a difference
 				// with all 3 modes, sndpeek with 1024 waterfall depth is 54 fps on andrew's macbook
@@ -585,6 +585,76 @@ void Renderer::ProcessDeletionQueue(Scene *scene)
 
 	// clear queue
 	scene->ClearDeletionQueue();
+}
+
+void Renderer::RenderScene(Scene* scene, Camera* camera)
+{
+	assert(scene->IsScene());
+
+	// enable depth testing
+	GLCall(glEnable(GL_DEPTH_TEST));	
+
+	// optionally change the camera to render from
+	if (camera) {
+		m_MainCamera = camera;
+	}
+
+	// clear the render state
+	m_RenderState.Reset();
+
+	// cache camera values
+	m_RenderState.ComputeCameraUniforms(m_MainCamera);
+
+	// cache renderables from target scene
+	m_RenderState.PrepareScene(scene);
+
+	OpaquePass();
+	TransparentPass();
+
+	// draw skybox last to avoid overdraw
+	SkyboxPass();
+}
+
+void Renderer::SkyboxPass(int textureUnit)
+{
+	auto* scene = m_RenderState.GetScene();
+
+	// early out if skybox disabled
+	if (!scene->GetSkyboxEnabled()) { return; }
+
+	Texture* skyboxTexture = GetOrCreateTexture(scene->GetSkyboxID(), nullptr);
+
+	// out if no skybox texture
+	if (!skyboxTexture || !skyboxTexture->IsLoaded()) { return; }
+
+	// update skybox texture if it's dirty
+	skyboxTexture->Update();
+
+	// change depth function so depth test passes when values are equal to depth buffer's content
+	glDepthFunc(GL_LEQUAL);  
+
+	// bind
+	m_SkyboxVA->Bind();
+	m_SkyboxShader->Bind();
+	skyboxTexture->Bind(textureUnit);
+
+	// set shader uniforms (TODO can refactor to better uniform management system)
+	m_SkyboxShader->setMat4f("u_Projection", m_RenderState.GetProjMat());
+	m_SkyboxShader->setMat4f("u_View", 
+		// remove translation component from view matrix
+		// so that skybox is always centered around camera
+		glm::mat4(glm::mat3(
+			m_RenderState.GetViewMat()
+		))
+	);
+
+	// set polygon mode to fill
+	GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
+	// draw
+	GLCall(glDrawArrays(GL_TRIANGLES, 0, 36));
+
+	// restore default depth func
+	glDepthFunc(GL_LESS);  
 }
 
 // deprecating this function for now, bc we want different materials of the 

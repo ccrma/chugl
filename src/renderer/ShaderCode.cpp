@@ -312,6 +312,7 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
         void main()
         {
             vec3 norm = normalize(v_Normal);  // fragment normal direction
+            // TODO: flip this?
             vec3 viewDir = normalize(u_ViewPos - v_Pos);  // direction from camera to this frag
 
             // material color properties (ignore alpha channel for now)
@@ -343,9 +344,26 @@ ShaderCode::ShaderMap ShaderCode::s_CodeMap = {
             // TODO: add option for envmap blend mode (additive, multiplicative, mix)
             vec3 reflectDir = reflect(-viewDir, norm);
             vec3 reflectCol = vec3(texture(u_Skybox, reflectDir));
-            // lighting += reflectCol;  // additive blend
-            lighting *= reflectCol;  // multiplicative blend
-            // lighting = mix(lighting, reflectCol, 0.5);  // mix blend
+
+            // envmap refraction
+            /*
+            Air	1.00
+            Water	1.33
+            Ice	    1.309
+            Glass	1.52
+            Diamond	2.42
+
+            */
+            float ratio = 1.00 / 1.52;
+            vec3 R = refract(-viewDir, norm, ratio);
+            vec3 refractCol = texture(u_Skybox, R).rgb;
+
+            vec3 envMapCol = reflectCol;
+
+            // envmap blending
+            // lighting += envMapCol;  // additive blend
+            lighting *= envMapCol;  // multiplicative blend
+            // lighting = mix(lighting, envMapCol, 0.5);  // mix blend
 
 
             result = vec4(
