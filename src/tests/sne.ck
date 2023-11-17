@@ -53,6 +53,8 @@ NormalsMaterial wireframeNormalsMaterial;
 wireframeNormalsMaterial.polygonMode(Material.POLYGON_LINE);
 // wireframeNormalsMaterial.wireframe(true);
 
+GG.scene().backgroundColor(Color.WHITE);
+
 // ECS classes ==================================================
 
 class GameObject {

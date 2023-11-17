@@ -40,8 +40,7 @@ fun int VecEquals(vec3 a, vec3 b) {
 // 512 => int WAVEFORM_LENGTH;
 256 => int WAVEFORM_LENGTH;
 
-adc => Gain g => dac;
-dac => FFT fft => blackhole;
+adc => FFT fft => blackhole;
 WAVEFORM_LENGTH * 2 => fft.size;
 
 float waveform[WAVEFORM_LENGTH];
@@ -50,7 +49,7 @@ complex spectrum[WAVEFORM_LENGTH];
 fun void WaveformWriter() {
     0 => int i;
     while (true) {
-        dac.last() => waveform[i++];
+        adc.last() => waveform[i++];
         // g.last() => waveform[i++];
         if (i >= waveform.size()) { 0 => i; }
         1::samp => now;
@@ -86,12 +85,12 @@ GMesh spectrumBoxMeshes[WAVEFORM_LENGTH];
 // initialize boxes for waveform
 for (0 => int i; i < WAVEFORM_LENGTH; i++) {
     waveformBoxMeshes[i].set(boxGeo, normMat);
-    waveformBoxMeshes[i].scale(boxScale * UNIFORM);
+    waveformBoxMeshes[i].sca(boxScale * UNIFORM);
     waveformBoxMeshes[i].pos(((-WAVEFORM_LENGTH/2) + i) * RIGHT * boxScale);
     waveformBoxMeshes[i] --> scene;
 
     spectrumBoxMeshes[i].set(SphereGeometry , normMat);  // TODO add different material for spectrum
-    spectrumBoxMeshes[i].scale(boxScale * UNIFORM);
+    spectrumBoxMeshes[i].sca(boxScale * UNIFORM);
     spectrumBoxMeshes[i].pos(((-WAVEFORM_LENGTH/2) + i) * RIGHT * boxScale + FORWARD);
     (spectrumBoxMeshes[i]) --> scene;
 }
@@ -152,7 +151,6 @@ fun void GameLoop(){
 
 		// 70::ms => now;  // why does this not deadlock???
 		// FrameEvent => now;
-		<<< "==== update loop " >>>;
 		1 +=> G.frameCounter;
 		
 		// compute timing

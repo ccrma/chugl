@@ -8,7 +8,11 @@
 
 for (auto test : gc_test_files) {
     me.dir() + test => string file;
-    Machine.add(me.dir() + test);
+    <<< "adding GC test:", file >>>;
+    Machine.add(file);
 }
 
-1::eon => now;
+while (true) {
+    <<< "gc" >>>;
+    GG.nextFrame() => now;
+}
