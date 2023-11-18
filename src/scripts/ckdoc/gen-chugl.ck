@@ -125,6 +125,7 @@ doc.addGroup(
         "UI_Checkbox",
         "UI_Color3",
         "UI_Dropdown",
+        "UI_Text"
     ],
     // group name
     "ChuGL GUI",

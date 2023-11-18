@@ -330,6 +330,24 @@ public:  // static consts
 	static const std::string SPECULAR_COLOR_UNAME;
 	static const std::string SHININESS_UNAME;
 
+	// phong env map
+	static const std::string SKYBOX_UNAME;
+	static const std::string ENV_MAP_ENABLED_UNAME;
+	static const std::string ENV_MAP_INTENSITY_UNAME;
+	static const std::string ENV_MAP_BLEND_MODE_UNAME;
+	static const std::string ENV_MAP_METHOD_UNAME;
+	static const std::string ENV_MAP_RATIO_UNAME;
+
+	// env map blend modes
+	static const int BLEND_MODE_ADD;
+	static const int BLEND_MODE_MULTIPLY;
+	static const int BLEND_MODE_MIX;
+
+	// env mapping methods
+	static const int ENV_MAP_METHOD_REFLECTION;
+	static const int ENV_MAP_METHOD_REFRACTION;
+
+
 	// point mats
 	static const std::string POINT_SIZE_ATTENUATION_UNAME;
 	static const std::string POINT_SPRITE_TEXTURE_UNAME;
@@ -430,6 +448,58 @@ public:  // uniform getters and setters
 		SetUniform(MaterialUniform::Create(POINT_SPRITE_TEXTURE_UNAME, texture->GetID()));
 	}
 
+public: // env mapping setters and getters
+	void SetEnvMapEnabled(bool b) { 
+		SetUniform(MaterialUniform::Create(ENV_MAP_ENABLED_UNAME, b));
+	}
+
+	void SetEnvMapIntensity(float intensity) { 
+		SetUniform(MaterialUniform::Create(ENV_MAP_INTENSITY_UNAME, intensity));
+	}
+
+	void SetEnvMapBlendMode(int mode) { 
+		SetUniform(MaterialUniform::Create(ENV_MAP_BLEND_MODE_UNAME, mode));
+	}
+
+	void SetEnvMapMethod(int method) { 
+		SetUniform(MaterialUniform::Create(ENV_MAP_METHOD_UNAME, method));
+	}
+
+	void SetEnvMapRatio(float ratio) { 
+		SetUniform(MaterialUniform::Create(ENV_MAP_RATIO_UNAME, ratio));
+	}
+
+	bool GetEnvMapEnabled() { 
+		auto* uniform = GetUniform(ENV_MAP_ENABLED_UNAME);
+		if (uniform) return uniform->b;
+		else return false;
+	}
+
+	float GetEnvMapIntensity() { 
+		auto* uniform = GetUniform(ENV_MAP_INTENSITY_UNAME);
+		if (uniform) return uniform->f;
+		else return 0.0f;
+	}
+
+	int GetEnvMapBlendMode() { 
+		auto* uniform = GetUniform(ENV_MAP_BLEND_MODE_UNAME);
+		if (uniform) return uniform->i;
+		else return 0;
+	}
+
+	int GetEnvMapMethod() { 
+		auto* uniform = GetUniform(ENV_MAP_METHOD_UNAME);
+		if (uniform) return uniform->i;
+		else return 0;
+	}
+
+	float GetEnvMapRatio() { 
+		auto* uniform = GetUniform(ENV_MAP_RATIO_UNAME);
+		if (uniform) return uniform->f;
+		else return 0.0f;
+	}
+
+
 public:  // static material type --> chuck type name map
 	typedef std::unordered_map<MaterialType, const std::string, EnumClassHash> CkTypeMap;
 	static CkTypeMap s_CkTypeMap;
@@ -467,6 +537,13 @@ public:
 		SetUniform(MaterialUniform::Create(Material::SPECULAR_MAP_UNAME, specularMapID));
 		SetUniform(MaterialUniform::Create(Material::SPECULAR_COLOR_UNAME, specularColor));
 		SetUniform(MaterialUniform::Create(Material::SHININESS_UNAME, logShininess));
+
+		// env map params
+		SetUniform(MaterialUniform::Create(Material::ENV_MAP_ENABLED_UNAME, false));
+		SetUniform(MaterialUniform::Create(Material::ENV_MAP_INTENSITY_UNAME, 0.0f));
+		SetUniform(MaterialUniform::Create(Material::ENV_MAP_BLEND_MODE_UNAME, Material::BLEND_MODE_MULTIPLY));
+		SetUniform(MaterialUniform::Create(Material::ENV_MAP_METHOD_UNAME, Material::ENV_MAP_METHOD_REFLECTION));
+		SetUniform(MaterialUniform::Create(Material::ENV_MAP_RATIO_UNAME, 1.0f));
 	}
 
 	virtual MaterialType GetMaterialType() override { return MaterialType::Phong; }

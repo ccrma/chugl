@@ -28,6 +28,24 @@ const t_CKUINT Material::LINE_LOOP_MODE = MaterialPrimitiveMode::LineLoop;
 const std::string Material::POINT_SIZE_ATTENUATION_UNAME = "u_PointSizeAttenuation";
 const std::string Material::POINT_SPRITE_TEXTURE_UNAME = "u_PointTexture";
 
+// env map uniforms (must match ShaderCode::ENV_MAP_UNIFORMS)
+const std::string Material::SKYBOX_UNAME = "u_Skybox";
+const std::string Material::ENV_MAP_ENABLED_UNAME = "u_EnvMapParams.enabled";
+const std::string Material::ENV_MAP_INTENSITY_UNAME = "u_EnvMapParams.intensity";
+const std::string Material::ENV_MAP_BLEND_MODE_UNAME = "u_EnvMapParams.blendMode";
+const std::string Material::ENV_MAP_METHOD_UNAME = "u_EnvMapParams.method";
+const std::string Material::ENV_MAP_RATIO_UNAME = "u_EnvMapParams.ratio";
+
+// env map blend modes (must match ShaderCode::ENV_MAP_UNIFORMS)
+const int Material::BLEND_MODE_ADD = 0;
+const int Material::BLEND_MODE_MULTIPLY = 1;
+const int Material::BLEND_MODE_MIX = 2;
+
+// env mapping methods (must match ShaderCode::ENV_MAP_UNIFORMS)
+const int Material::ENV_MAP_METHOD_REFLECTION = 0;
+const int Material::ENV_MAP_METHOD_REFRACTION = 1;
+
+
 // ck type name map 
 Material::CkTypeMap Material::s_CkTypeMap = {
     {MaterialType::Base, "Material"},

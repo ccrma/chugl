@@ -40,7 +40,6 @@ CK_DLL_CTOR(cgl_mat_norm_ctor);
 CK_DLL_MFUN(cgl_set_use_local_normals);
 CK_DLL_MFUN(cgl_set_use_world_normals);
 
-
 // flat shade mat
 CK_DLL_CTOR(cgl_mat_flat_ctor);
 
@@ -51,6 +50,20 @@ CK_DLL_MFUN(cgl_mat_phong_set_diffuse_map);
 CK_DLL_MFUN(cgl_mat_phong_set_specular_map);
 CK_DLL_MFUN(cgl_mat_phong_set_specular_color);
 CK_DLL_MFUN(cgl_mat_phong_set_log_shininess);
+// phong envMap options
+CK_DLL_MFUN(cgl_mat_phong_set_env_map_enabled);
+CK_DLL_MFUN(cgl_mat_phong_set_env_map_intensity);
+CK_DLL_MFUN(cgl_mat_phong_set_env_map_blend_mode);
+CK_DLL_MFUN(cgl_mat_phong_set_env_map_method);
+CK_DLL_MFUN(cgl_mat_phong_set_env_map_ratio);
+// phong envMap getters
+CK_DLL_MFUN(cgl_mat_phong_get_env_map_enabled);
+CK_DLL_MFUN(cgl_mat_phong_get_env_map_intensity);
+CK_DLL_MFUN(cgl_mat_phong_get_env_map_blend_mode);
+CK_DLL_MFUN(cgl_mat_phong_get_env_map_method);
+CK_DLL_MFUN(cgl_mat_phong_get_env_map_ratio);
+
+
 // uniform getters TODO
 
 // custom shader mat
@@ -104,6 +117,22 @@ t_CKBOOL init_chugl_material(Chuck_DL_Query *QUERY)
 	QUERY->doc_var(QUERY, "pass into Material.polygonMode() to render geometry as a line mesh");
 	QUERY->add_svar(QUERY, "int", "POLYGON_POINT", TRUE, (void *)&Material::POLYGON_POINT);
 	QUERY->doc_var(QUERY, "pass into Material.polygonMode() to render geometry as a point mesh (points drawn at each vertex position)");
+
+	QUERY->add_svar(QUERY, "int", "BLEND_MODE_MULTIPLY", TRUE, (void *)&Material::BLEND_MODE_MULTIPLY);
+	QUERY->doc_var(QUERY, "blend colors by multiplying them");
+
+	QUERY->add_svar(QUERY, "int", "BLEND_MODE_ADD", TRUE, (void *)&Material::BLEND_MODE_ADD);
+	QUERY->doc_var(QUERY, "blend colors by adding them");
+
+	QUERY->add_svar(QUERY, "int", "BLEND_MODE_MIX", TRUE, (void *)&Material::BLEND_MODE_MIX);
+	QUERY->doc_var(QUERY, "blend colors by mixing, i.e. interpolating between them");
+
+	QUERY->add_svar(QUERY, "int", "ENV_MAP_REFLECT", TRUE, (void *)&Material::ENV_MAP_METHOD_REFLECTION);
+	QUERY->doc_var(QUERY, "pass into Material.envMapMethod() to use reflection mapping");
+
+	QUERY->add_svar(QUERY, "int", "ENV_MAP_REFRACT", TRUE, (void *)&Material::ENV_MAP_METHOD_REFRACTION);
+	QUERY->doc_var(QUERY, "pass into Material.envMapMethod() to use refraction mapping");
+
 
 	// line rendering static vars
 	QUERY->add_svar(QUERY, "int", "LINE_SEGMENTS", TRUE, (void *)&Material::LINE_SEGMENTS_MODE);
@@ -176,6 +205,46 @@ t_CKBOOL init_chugl_material(Chuck_DL_Query *QUERY)
 	QUERY->add_mfun(QUERY, cgl_mat_phong_set_specular_color, "vec3", "specular");
 	QUERY->add_arg(QUERY, "vec3", "color");
 	QUERY->doc_func(QUERY, "For PhongMat: set specular color");
+
+	// phong env map fns
+	QUERY->add_mfun(QUERY, cgl_mat_phong_set_env_map_enabled, "int", "envMapEnabled");
+	QUERY->add_arg(QUERY, "int", "enabled");
+	QUERY->doc_func(QUERY, "For PhongMaterial: enable or disable environment mapping");
+
+	QUERY->add_mfun(QUERY, cgl_mat_phong_set_env_map_intensity, "float", "envMapIntensity");
+	QUERY->add_arg(QUERY, "float", "intensity");
+	QUERY->doc_func(QUERY, "For PhongMaterial: set environment map intensity. Environment Map lighting contribution is multiplied by this value");
+
+	QUERY->add_mfun(QUERY, cgl_mat_phong_set_env_map_blend_mode, "int", "envMapBlend");
+	QUERY->add_arg(QUERY, "int", "blendMode");
+	QUERY->doc_func(QUERY, 
+		"For PhongMaterial: set environment map blend mode. Can be Material.BLEND_MODE_ADD, Material.BLEND_MODE_MULTIPLY, or Material.BLEND_MODE_MIX"
+	);
+
+	QUERY->add_mfun(QUERY, cgl_mat_phong_set_env_map_method, "int", "envMapMethod");
+	QUERY->add_arg(QUERY, "int", "method");
+	QUERY->doc_func(QUERY, 
+		"For PhongMaterial: set environment map method. Can be Material.ENV_MAP_REFLECT or Material.ENV_MAP_REFRACT"
+	);
+
+	QUERY->add_mfun(QUERY, cgl_mat_phong_set_env_map_ratio, "float", "envMapRefractionRatio");
+	QUERY->add_arg(QUERY, "float", "ratio");
+	QUERY->doc_func(QUERY, "For PhongMaterial: set environment map refactive ratio");
+
+	QUERY->add_mfun(QUERY, cgl_mat_phong_get_env_map_enabled, "int", "envMapEnabled");
+	QUERY->doc_func(QUERY, "For PhongMaterial: returns 1 if environment mapping is enabled, else 0");
+
+	QUERY->add_mfun(QUERY, cgl_mat_phong_get_env_map_intensity, "float", "envMapIntensity");
+	QUERY->doc_func(QUERY, "For PhongMaterial: returns environment map intensity");
+
+	QUERY->add_mfun(QUERY, cgl_mat_phong_get_env_map_blend_mode, "int", "envMapBlend");
+	QUERY->doc_func(QUERY, "For PhongMaterial: returns environment map blend mode");
+
+	QUERY->add_mfun(QUERY, cgl_mat_phong_get_env_map_method, "int", "envMapMethod");
+	QUERY->doc_func(QUERY, "For PhongMaterial: returns environment map method");
+
+	QUERY->add_mfun(QUERY, cgl_mat_phong_get_env_map_ratio, "float", "envMapRatio");
+	QUERY->doc_func(QUERY, "For PhongMaterial: returns environment map refactive ratio");
 
 	// shader mat fns  (TODO allow setting vert and frag separately)
 	QUERY->add_mfun(QUERY, cgl_mat_custom_shader_set_shaders, "void", "shaders");
@@ -654,6 +723,92 @@ CK_DLL_MFUN(cgl_mat_phong_set_log_shininess)
 
 	CGL::PushCommand(new UpdateMaterialUniformCommand(
 		mat, *mat->GetUniform(Material::SHININESS_UNAME)));
+}
+
+CK_DLL_MFUN(cgl_mat_phong_set_env_map_enabled)
+{
+	Material *mat = CGL::GetMaterial(SELF);
+	auto enabled = GET_NEXT_INT(ARGS);
+	mat->SetEnvMapEnabled(enabled);
+
+	RETURN->v_float = enabled;
+
+	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, *mat->GetUniform(Material::ENV_MAP_ENABLED_UNAME)));
+}
+
+CK_DLL_MFUN(cgl_mat_phong_set_env_map_intensity)
+{
+	Material *mat = CGL::GetMaterial(SELF);
+	t_CKFLOAT intensity = GET_NEXT_FLOAT(ARGS);
+	mat->SetEnvMapIntensity(intensity);
+
+	RETURN->v_float = intensity;
+
+	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, *mat->GetUniform(Material::ENV_MAP_INTENSITY_UNAME)));
+}
+
+CK_DLL_MFUN(cgl_mat_phong_set_env_map_blend_mode)
+{
+	Material *mat = CGL::GetMaterial(SELF);
+	auto blendMode = GET_NEXT_INT(ARGS);
+	mat->SetEnvMapBlendMode(blendMode);
+
+	RETURN->v_int = blendMode;
+
+	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, *mat->GetUniform(Material::ENV_MAP_BLEND_MODE_UNAME)));
+}
+
+CK_DLL_MFUN(cgl_mat_phong_set_env_map_method)
+{
+	Material *mat = CGL::GetMaterial(SELF);
+	auto method = GET_NEXT_INT(ARGS);
+	mat->SetEnvMapMethod(method);
+
+	RETURN->v_int = method;
+
+	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, *mat->GetUniform(Material::ENV_MAP_METHOD_UNAME)));
+}
+
+CK_DLL_MFUN(cgl_mat_phong_set_env_map_ratio)
+{
+	Material *mat = CGL::GetMaterial(SELF);
+	t_CKFLOAT ratio = GET_NEXT_FLOAT(ARGS);
+	mat->SetEnvMapRatio(ratio);
+
+	RETURN->v_float = ratio;
+
+	CGL::PushCommand(new UpdateMaterialUniformCommand(mat, *mat->GetUniform(Material::ENV_MAP_RATIO_UNAME)));
+}
+
+// phong envMap getters
+CK_DLL_MFUN(cgl_mat_phong_get_env_map_enabled)
+{
+	Material *mat = CGL::GetMaterial(SELF);
+	RETURN->v_int = mat->GetEnvMapEnabled() ? 1 : 0;
+}
+
+CK_DLL_MFUN(cgl_mat_phong_get_env_map_intensity)
+{
+	Material *mat = CGL::GetMaterial(SELF);
+	RETURN->v_float = mat->GetEnvMapIntensity();
+}
+
+CK_DLL_MFUN(cgl_mat_phong_get_env_map_blend_mode)
+{
+	Material *mat = CGL::GetMaterial(SELF);
+	RETURN->v_int = mat->GetEnvMapBlendMode();
+}
+
+CK_DLL_MFUN(cgl_mat_phong_get_env_map_method)
+{
+	Material *mat = CGL::GetMaterial(SELF);
+	RETURN->v_int = mat->GetEnvMapMethod();
+}
+
+CK_DLL_MFUN(cgl_mat_phong_get_env_map_ratio)
+{
+	Material *mat = CGL::GetMaterial(SELF);
+	RETURN->v_float = mat->GetEnvMapRatio();
 }
 
 // custom shader mat fns ---------------------------------
