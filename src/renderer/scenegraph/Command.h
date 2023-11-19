@@ -180,17 +180,17 @@ private:
 class UpdateNameCommand : public SceneGraphCommand
 {
 public:
-    UpdateNameCommand(SceneGraphObject* obj, const std::string& name) :
-        m_ID(obj->GetID()), m_Name(name)
+    UpdateNameCommand(SceneGraphNode* node, const std::string& name) :
+        m_ID(node->GetID()), m_Name(name)
     {
         assert(name.size() > 0);
-        obj->SetName(m_Name);
+        node->SetName(m_Name);
     }
 
     virtual void execute(Scene* scene) override {
-        SceneGraphObject* obj = dynamic_cast<SceneGraphObject*>(scene->GetNode(m_ID));
-        assert(obj);
-        obj->SetName(m_Name);
+        SceneGraphNode* node = scene->GetNode(m_ID);
+        assert(node);
+        node->SetName(m_Name);
     }
 
 private:

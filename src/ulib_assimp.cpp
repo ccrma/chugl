@@ -243,6 +243,50 @@ Material* AssLoader::CreateMaterial( aiMaterial * assMat )
             mat, *mat->GetUniform(Material::SPECULAR_MAP_UNAME)));
     }
 
+    // Apply material properties
+    // Ref: https://assimp-docs.readthedocs.io/en/latest/usage/use_the_lib.html#material-system
+
+    // name
+    aiString name;
+    if (assMat->Get(AI_MATKEY_NAME, name) == AI_SUCCESS) {
+        CGL::PushCommand(new UpdateNameCommand(mat, name.C_Str()));
+    }
+
+    // ambient color
+    // TODO: should be scaled by ambient light
+    // currently phong shader does not support ambient color
+    // and instead multiples ambient light color by diffuse color
+    // aiColor3D ambientColor;
+    // if (assMat->Get(AI_MATKEY_COLOR_AMBIENT, ambientColor) == AI_SUCCESS) {
+    //     mat->SetColor(ambientColor.r, ambientColor.g, ambientColor.b);
+    //     CGL::PushCommand(new UpdateMaterialUniformCommand(
+    //         mat, *mat->GetUniform(Material::COLOR_UNAME)));
+    // }
+
+    // diffuse color
+
+    // specular color
+    aiColor3D specularColor;
+    if (assMat->Get(AI_MATKEY_COLOR_SPECULAR, specularColor) == AI_SUCCESS) {
+        // TODO change specularColor shader param to vec3
+        mat->SetSpecularColor(specularColor.r, specularColor.g, specularColor.b);
+        CGL::PushCommand(new UpdateMaterialUniformCommand(
+            mat, *mat->GetUniform(Material::SPECULAR_COLOR_UNAME)));
+    }
+
+    // shininess exponent
+    // TODO: something seems wrong with phong specular calculation
+    // at higher values of shine, specular highlight flashes way too quickly,
+    // seems too sensitive to direction
+    float shine = 0.0f;
+    if (assMat->Get(AI_MATKEY_SHININESS, shine) == AI_SUCCESS && shine > 0.0f) {
+        mat->SetLogShininess(std::log2(shine));
+        CGL::PushCommand(new UpdateMaterialUniformCommand(
+            mat, *mat->GetUniform(Material::SHININESS_UNAME)));
+    }
+
+    // TODO: many others to support like emissiveColor, opacity, etc.
+
     return mat;
 }
 
@@ -332,7 +376,7 @@ CGL_Texture * AssLoader::CreateTexture(aiMaterial* assMat, aiTextureType type)
         } else {  // not embedded, must be a normal filepath
             // set (TODO this should happen in the UpdateTexturePathCommand constructor)
             texture->m_FilePath = directory + "/" + path.C_Str();
-            cerr << "Loading Texture at PATH: " << texture->m_FilePath << endl;
+            cerr << "[ChuGL::AssLoader] Loading Texture at PATH: " << texture->m_FilePath << endl;
             // propagate to render thread
             CGL::PushCommand(new UpdateTexturePathCommand(texture));
         }

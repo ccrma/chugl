@@ -21,9 +21,11 @@ struct EnumClassHash
 
 class SceneGraphNode
 {
-public:
+private:
     // data
 	size_t m_ID;
+	std::string m_Name;
+public:
 
     // methods
 	SceneGraphNode() 
@@ -40,6 +42,10 @@ public:
 	inline size_t GetID() { return m_ID; }
 	inline void SetID(size_t id) { m_ID = id; }
 	void NewID() { m_ID = SceneGraphNode::idCounter++; }
+	
+	// name
+	const std::string& GetName() const { return m_Name; }
+	void SetName(const std::string& name) { m_Name = name; }
 
 	// Creation fns
 	virtual SceneGraphNode* Clone() = 0;
