@@ -505,6 +505,15 @@ public:
         }
     };
 
+    UpdateTextureDataCommand(size_t id, unsigned char* data, int w, int h, int numChannels)
+    : texID(id), width(w), height(h) {
+        // copy tex params
+        dataBuffer.reserve(w * h * numChannels);
+        for (int i = 0; i < w * h * numChannels; i++) {
+            dataBuffer.emplace_back(data[i]);
+        }
+    }
+
     virtual void execute(Scene* scene) override {
         CGL_Texture* tex = dynamic_cast<CGL_Texture*>(scene->GetNode(texID));
         assert(tex);

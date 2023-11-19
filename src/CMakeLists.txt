@@ -123,6 +123,12 @@ add_library(chugl_compiler_flags INTERFACE)
 # specify the C++ standard
 target_compile_features(chugl_compiler_flags INTERFACE cxx_std_11)
 
+# add compiler definitions
+target_compile_definitions(chugl_compiler_flags INTERFACE
+    $<$<CONFIG:Debug>:CHUGL_DEBUG>
+    $<$<CONFIG:Release>:CHUGL_RELEASE>
+)
+
 # add compiler warning flags just when building this project via
 # the BUILD_INTERFACE genex
 set(gcc_like_cxx "$<COMPILE_LANG_AND_ID:CXX,ARMClang,AppleClang,Clang,GNU,LCC>")
@@ -186,7 +192,7 @@ if (APPLE)
     target_link_libraries(${PROJECT_NAME} PRIVATE "-framework OpenGL")
 endif()
 
-# windows debugging setup
+# windows debugging setup for visual studio
 if ( MSVC )
     set_property( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME} )
     set(CHUCK_EXECUTABLE_DEBUG "${CMAKE_SOURCE_DIR}/chuck-debug.exe")

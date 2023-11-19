@@ -246,7 +246,7 @@ void Texture::GenTextureFromPath(const std::string &path)
 
 void Texture::GenTextureFromBuffer(int texWidth, int texHeight, unsigned char *texBuffer)
 {
-	glTexImage2D(
+	GLCall(glTexImage2D(
 		GL_TEXTURE_2D,
 		0, 
 		GL_RGBA8,  // format we want to store texture (TODO: should be based off bytes per pixel...right now hardcoded to 4)
@@ -255,7 +255,7 @@ void Texture::GenTextureFromBuffer(int texWidth, int texHeight, unsigned char *t
 		GL_RGBA,  // format of texture on CPU
 		GL_UNSIGNED_BYTE,  // size of each channel on CPU
 		texBuffer
-	);
+	));
 }
 
 void Texture::SetSamplerParams(const CGL_TextureSamplerParams &params)

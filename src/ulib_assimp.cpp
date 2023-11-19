@@ -12,6 +12,7 @@
 #include "renderer/scenegraph/SceneGraphObject.h"
 #include "renderer/scenegraph/Geometry.h"
 
+#include <stb/stb_image.h>
 
 //-----------------------------------------------------------------------------
 // assimp implementation
@@ -256,6 +257,11 @@ CGL_Texture * AssLoader::CreateTexture(aiMaterial* assMat, aiTextureType type)
     CGL_Texture* firstTexture = NULL;
     for(unsigned int i = 0; i < assMat->GetTextureCount(type); i++)
     {
+        // https://assimp-docs.readthedocs.io/en/latest/usage/use_the_lib.html#textures
+        // some textures are embedded in the model, some are referenced by path
+        // E.g. .glb files embed their textures, but .obj files reference them by path
+        // see above link for documentation on how to handle this
+
         aiString path;
         assMat->GetTexture(type, i, &path);
 
@@ -266,19 +272,75 @@ CGL_Texture * AssLoader::CreateTexture(aiMaterial* assMat, aiTextureType type)
         }
 
         // create new texture
-        CGL_Texture* texture = new CGL_Texture(CGL_TextureType::File2D);
+        CGL_Texture* texture;
+        
+        // first check if this is an embedded texture
+        const aiTexture* embeddedTexture = scene->GetEmbeddedTexture(path.C_Str());
+        if (embeddedTexture) {
+            // data texture
+            texture = new CGL_Texture(CGL_TextureType::RawData);
+        } else {
+            // file texture
+            texture = new CGL_Texture(CGL_TextureType::File2D);
+        }
+        
+        // create
         CGL::CreateChuckObjFromTex(api, vm, texture, shred, false);
 
-        // set (TODO this should happen in the UpdateTexturePathCommand constructor)
-        texture->m_FilePath = directory + "/" + path.C_Str();
-        cerr << "PATH: " << texture->m_FilePath << endl;
+        // set data
+        if (embeddedTexture) {
+            // check if embedded texture is compressed
+            if (embeddedTexture->mHeight == 0) {
+                // decode
+                int width, height, channels;
+                int desiredChannels = 4;
+                unsigned char* decoded = stbi_load_from_memory(
+                    (unsigned char*)embeddedTexture->pcData,
+                    embeddedTexture->mWidth,
+                    &width,
+                    &height,
+                    &channels,
+                    desiredChannels 
+                );
+                // not storing the decoded data on audio thread side
+                texture->SetDimensions(width, height);
+                // // propagate to render thread
+                CGL::PushCommand(new UpdateTextureDataCommand(
+                    texture->GetID(),
+                    decoded,
+                    width,
+                    height,
+                    desiredChannels  // fix to rgba 4 channels
+                ));
+                // free
+                stbi_image_free(decoded);
+            } else {
+                texture->SetDimensions(
+                    embeddedTexture->mWidth,
+                    embeddedTexture->mHeight
+                );
+                // propagate to render thread
+                CGL::PushCommand(new UpdateTextureDataCommand(
+                    texture->GetID(),
+                    // TODO set to ARGB8888 for now
+                    (unsigned char*)embeddedTexture->pcData,
+                    embeddedTexture->mWidth,
+                    embeddedTexture->mHeight,
+                    4
+                ));
+            }
+        } else {  // not embedded, must be a normal filepath
+            // set (TODO this should happen in the UpdateTexturePathCommand constructor)
+            texture->m_FilePath = directory + "/" + path.C_Str();
+            cerr << "Loading Texture at PATH: " << texture->m_FilePath << endl;
+            // propagate to render thread
+            CGL::PushCommand(new UpdateTexturePathCommand(texture));
+        }
 
         // put in cache
         textures[path.C_Str()] = texture;
-        
-        // propagate to render thread
-        CGL::PushCommand(new UpdateTexturePathCommand(texture));
 
+        // only supporting one texture per type for now
         if(i == 0) firstTexture = texture;
     }
 

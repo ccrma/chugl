@@ -126,6 +126,8 @@ public:
         bool doCopy
     );
 
+    void SetDimensions(int width, int height) { m_Width = width; m_Height = height; }
+
 // member vars ==========================================================================================================
     CGL_TextureType type;
     CGL_TextureType GetTextureType() { return type; }
