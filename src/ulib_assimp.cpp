@@ -12,6 +12,7 @@
 #include "renderer/scenegraph/SceneGraphObject.h"
 #include "renderer/scenegraph/Geometry.h"
 
+#include <stb/stb_image.h>
 
 //-----------------------------------------------------------------------------
 // assimp implementation
@@ -242,6 +243,50 @@ Material* AssLoader::CreateMaterial( aiMaterial * assMat )
             mat, *mat->GetUniform(Material::SPECULAR_MAP_UNAME)));
     }
 
+    // Apply material properties
+    // Ref: https://assimp-docs.readthedocs.io/en/latest/usage/use_the_lib.html#material-system
+
+    // name
+    aiString name;
+    if (assMat->Get(AI_MATKEY_NAME, name) == AI_SUCCESS) {
+        CGL::PushCommand(new UpdateNameCommand(mat, name.C_Str()));
+    }
+
+    // ambient color
+    // TODO: should be scaled by ambient light
+    // currently phong shader does not support ambient color
+    // and instead multiples ambient light color by diffuse color
+    // aiColor3D ambientColor;
+    // if (assMat->Get(AI_MATKEY_COLOR_AMBIENT, ambientColor) == AI_SUCCESS) {
+    //     mat->SetColor(ambientColor.r, ambientColor.g, ambientColor.b);
+    //     CGL::PushCommand(new UpdateMaterialUniformCommand(
+    //         mat, *mat->GetUniform(Material::COLOR_UNAME)));
+    // }
+
+    // diffuse color
+
+    // specular color
+    aiColor3D specularColor;
+    if (assMat->Get(AI_MATKEY_COLOR_SPECULAR, specularColor) == AI_SUCCESS) {
+        // TODO change specularColor shader param to vec3
+        mat->SetSpecularColor(specularColor.r, specularColor.g, specularColor.b);
+        CGL::PushCommand(new UpdateMaterialUniformCommand(
+            mat, *mat->GetUniform(Material::SPECULAR_COLOR_UNAME)));
+    }
+
+    // shininess exponent
+    // TODO: something seems wrong with phong specular calculation
+    // at higher values of shine, specular highlight flashes way too quickly,
+    // seems too sensitive to direction
+    float shine = 0.0f;
+    if (assMat->Get(AI_MATKEY_SHININESS, shine) == AI_SUCCESS && shine > 0.0f) {
+        mat->SetLogShininess(std::log2(shine));
+        CGL::PushCommand(new UpdateMaterialUniformCommand(
+            mat, *mat->GetUniform(Material::SHININESS_UNAME)));
+    }
+
+    // TODO: many others to support like emissiveColor, opacity, etc.
+
     return mat;
 }
 
@@ -256,6 +301,11 @@ CGL_Texture * AssLoader::CreateTexture(aiMaterial* assMat, aiTextureType type)
     CGL_Texture* firstTexture = NULL;
     for(unsigned int i = 0; i < assMat->GetTextureCount(type); i++)
     {
+        // https://assimp-docs.readthedocs.io/en/latest/usage/use_the_lib.html#textures
+        // some textures are embedded in the model, some are referenced by path
+        // E.g. .glb files embed their textures, but .obj files reference them by path
+        // see above link for documentation on how to handle this
+
         aiString path;
         assMat->GetTexture(type, i, &path);
 
@@ -266,19 +316,78 @@ CGL_Texture * AssLoader::CreateTexture(aiMaterial* assMat, aiTextureType type)
         }
 
         // create new texture
-        FileTexture2D* texture = new FileTexture2D;
+        CGL_Texture* texture;
+        
+        // first check if this is an embedded texture
+        const aiTexture* embeddedTexture = scene->GetEmbeddedTexture(path.C_Str());
+        if (embeddedTexture) {
+            // data texture
+            texture = new DataTexture2D;
+        } else {
+            // file texture
+            texture = new FileTexture2D; 
+        }
+        
+        // create
         CGL::CreateChuckObjFromTex(api, vm, texture, shred, false);
 
-        // set (TODO this should happen in the UpdateTexturePathCommand constructor)
-        std::string fullPath = directory + "/" + path.C_Str();
-        cerr << "PATH: " << fullPath << endl;
+        // set data
+        if (embeddedTexture) {
+            DataTexture2D* dataTexture = dynamic_cast<DataTexture2D*>(texture);
+            assert(dataTexture);
+            // check if embedded texture is compressed
+            if (embeddedTexture->mHeight == 0) {
+                // decode
+                int width, height, channels;
+                int desiredChannels = 4;
+                unsigned char* decoded = stbi_load_from_memory(
+                    (unsigned char*)embeddedTexture->pcData,
+                    embeddedTexture->mWidth,
+                    &width,
+                    &height,
+                    &channels,
+                    desiredChannels 
+                );
+                // not storing the decoded data on audio thread side
+                dataTexture->SetDimensions(width, height);
+                // // propagate to render thread
+                CGL::PushCommand(new UpdateTextureDataCommand(
+                    texture->GetID(),
+                    decoded,
+                    width,
+                    height,
+                    desiredChannels  // fix to rgba 4 channels
+                ));
+                // free
+                stbi_image_free(decoded);
+            } else {
+                dataTexture->SetDimensions(
+                    embeddedTexture->mWidth,
+                    embeddedTexture->mHeight
+                );
+                // propagate to render thread
+                CGL::PushCommand(new UpdateTextureDataCommand(
+                    texture->GetID(),
+                    // TODO add format support to CGL_Texture and set to ARGB8888 
+                    (unsigned char*)embeddedTexture->pcData,
+                    embeddedTexture->mWidth,
+                    embeddedTexture->mHeight,
+                    4
+                ));
+            }
+        } else {  // not embedded, must be a normal filepath
+            FileTexture2D* fileTexture = dynamic_cast<FileTexture2D*>(texture);
+            assert(fileTexture);
+            // set (TODO this should happen in the UpdateTexturePathCommand constructor)
+            cerr << "[ChuGL::AssLoader] Loading Texture at PATH: " << fileTexture->GetFilePath() << endl;
+            // propagate to render thread
+            CGL::PushCommand(new UpdateTexturePathCommand(fileTexture, directory + "/" + path.C_Str()));
+        }
 
         // put in cache
         textures[path.C_Str()] = texture;
-        
-        // propagate to render thread
-        CGL::PushCommand(new UpdateTexturePathCommand(texture, fullPath));
 
+        // only supporting one texture per type for now
         if(i == 0) firstTexture = texture;
     }
 

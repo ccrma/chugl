@@ -146,6 +146,7 @@ class FileTexture2D : public CGL_Texture
 {
 private:
     std::string m_FilePath;
+    unsigned int m_Width, m_Height;
 
 public:
     FileTexture2D() : m_FilePath("") {}
@@ -162,6 +163,8 @@ public:
 
     void SetFilePath(const std::string& path) { m_FilePath = path; }
     const std::string& GetFilePath() { return m_FilePath; }
+    
+    void SetDimensions(int width, int height) { m_Width = width; m_Height = height; }
 };
 
 class DataTexture2D : public CGL_Texture 
@@ -193,6 +196,8 @@ public:
         bool doCopy = false,
         bool doMove = false
     );
+
+    void SetDimensions(int width, int height) { m_Width = width; m_Height = height; }
 
 public: // member var getters
     const std::vector<unsigned char>& GetDataBuffer() { return m_DataBuffer; }

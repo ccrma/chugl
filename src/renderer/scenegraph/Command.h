@@ -180,17 +180,17 @@ private:
 class UpdateNameCommand : public SceneGraphCommand
 {
 public:
-    UpdateNameCommand(SceneGraphObject* obj, const std::string& name) :
-        m_ID(obj->GetID()), m_Name(name)
+    UpdateNameCommand(SceneGraphNode* node, const std::string& name) :
+        m_ID(node->GetID()), m_Name(name)
     {
         assert(name.size() > 0);
-        obj->SetName(m_Name);
+        node->SetName(m_Name);
     }
 
     virtual void execute(Scene* scene) override {
-        SceneGraphObject* obj = dynamic_cast<SceneGraphObject*>(scene->GetNode(m_ID));
-        assert(obj);
-        obj->SetName(m_Name);
+        SceneGraphNode* node = scene->GetNode(m_ID);
+        assert(node);
+        node->SetName(m_Name);
     }
 
 private:
@@ -531,6 +531,15 @@ public:
         // the array should already be accessible anyways from the chuck script
         tex->SetRawData(m_DataBuffer, width, height);
     };
+
+    UpdateTextureDataCommand(size_t id, unsigned char* data, int w, int h, int numChannels)
+    : m_TexID(id), width(w), height(h) {
+        // copy tex params
+        m_DataBuffer.reserve(w * h * numChannels);
+        for (int i = 0; i < w * h * numChannels; i++) {
+            m_DataBuffer.emplace_back(data[i]);
+        }
+    }
 
     virtual void execute(Scene* scene) override {
         DataTexture2D* tex = dynamic_cast<DataTexture2D*>(scene->GetNode(m_TexID));

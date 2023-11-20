@@ -407,8 +407,9 @@ public:  // uniform getters and setters
 	}
 
 
-	void SetSpecularColor(float r, float g, float b) {
-		SetUniform(MaterialUniform::Create(Material::SPECULAR_COLOR_UNAME, r, g, b));
+	void SetSpecularColor(float r, float g, float b, float a = 1.0f) {
+		// TODO: switch to vec3 
+		SetUniform(MaterialUniform::Create(Material::SPECULAR_COLOR_UNAME, r, g, b, a));
 		// auto& uniform = m_Uniforms[Material::SPECULAR_COLOR_UNAME];
 		// uniform.f3[0] = r; uniform.f3[1] = g; uniform.f3[2] = b;
 	}

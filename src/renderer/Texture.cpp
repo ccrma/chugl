@@ -279,8 +279,7 @@ void Texture2D::GenTextureFromBuffer(
 	int texWidth, int texHeight, const unsigned char *texBuffer
 )
 {
-	// TODO after adding HDR, support linear-space or srgb textures
-	glTexImage2D(
+	GLCall(glTexImage2D(
 		GL_TEXTURE_2D,
 		0, 
 		GL_RGBA8,  // format we want to store texture (TODO: should be based off bytes per pixel...right now hardcoded to 4)
@@ -289,7 +288,7 @@ void Texture2D::GenTextureFromBuffer(
 		GL_RGBA,  // format of texture on CPU
 		GL_UNSIGNED_BYTE,  // size of each channel on CPU
 		texBuffer
-	);
+	));
 
 	m_IsLoaded = true;
 }

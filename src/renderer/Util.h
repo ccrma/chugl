@@ -21,12 +21,29 @@
 #define GLCall(x) x
 #endif
 
+static std::string ErrorCodeToString(GLenum errorCode)
+{
+	std::string error = "";
+	switch (errorCode)
+	{
+		case GL_INVALID_ENUM:                  error = "INVALID_ENUM"; break;
+		case GL_INVALID_VALUE:                 error = "INVALID_VALUE"; break;
+		case GL_INVALID_OPERATION:             error = "INVALID_OPERATION"; break;
+		case GL_OUT_OF_MEMORY:                 error = "OUT_OF_MEMORY"; break;
+		case GL_INVALID_FRAMEBUFFER_OPERATION: error = "INVALID_FRAMEBUFFER_OPERATION"; break;
+		// undefined in Glad 4.1 OpenGL headers
+		// case GL_STACK_OVERFLOW:                error = "STACK_OVERFLOW"; break;
+		// case GL_STACK_UNDERFLOW:               error = "STACK_UNDERFLOW"; break;
+	}
+	return error;
+}
 
 static void GLClearError(const char* function, const char* file, int line)
 {	
-	GLenum error;
-	while ((error = glGetError()) != GL_NO_ERROR) {
-		std::cout << "CLEARING: [OpenGL Error] (" << error << ")" << 
+	GLenum errorCode;
+	while ((errorCode = glGetError()) != GL_NO_ERROR) {
+		std::string error = ErrorCodeToString(errorCode);
+		std::cout << "CLEARING: [OpenGL Error: " << errorCode << "] (" << error << ")" << 
 			function << " " << file << ":" << line <<
 			std::endl;
 
@@ -35,9 +52,10 @@ static void GLClearError(const char* function, const char* file, int line)
 
 static bool GLLogErrors(const char* function, const char* file, int line)
 {
-	while (GLenum error = glGetError())
+	while (GLenum errorCode = glGetError())
 	{
-		std::cerr << "[OpenGL Error] (" << error << ")" << 
+		std::string error = ErrorCodeToString(errorCode);
+		std::cerr << "[OpenGL Error: " << errorCode << "] (" << error << ")" << 
 			function << " " << file << ":" << line <<
 			std::endl;
 		return false;

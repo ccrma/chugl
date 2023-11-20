@@ -609,10 +609,12 @@ void Renderer::RenderScene(Scene* scene, Camera* camera)
 	m_RenderState.PrepareScene(scene);
 
 	OpaquePass();
-	TransparentPass();
 
 	// draw skybox last to avoid overdraw
 	SkyboxPass();
+
+	// must draw after skybox pass so that transparent objects are drawn on top of skybox
+	TransparentPass();
 }
 
 void Renderer::SkyboxPass(int textureUnit)

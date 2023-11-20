@@ -88,8 +88,6 @@ public:
 	void RemoveChild(SceneGraphObject* child);
 	bool HasChild(SceneGraphObject* child);
 	inline SceneGraphObject* GetParent() { return m_Parent;  }
-	const std::string& GetName() const { return m_Name; }
-	void SetName(const std::string& name) { m_Name = name; }
 	const std::vector<SceneGraphObject*>& GetChildren() { return m_Children; }
 	bool BelongsToSceneObject(SceneGraphObject* sgo);
 
