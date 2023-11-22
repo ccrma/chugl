@@ -185,6 +185,7 @@ public:  // framebuffer setup
 		GLCall(glBindFramebuffer(GL_FRAMEBUFFER, 0));
 	}
 
+	// Post process pass
 	void RenderScreen() {
 		// disable depth test
 		GLCall(glDisable(GL_DEPTH_TEST));
@@ -198,10 +199,10 @@ public:  // framebuffer setup
 		// set polygon mode to fill
 		GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
 		
-		// TODO add culling?
+		// TODO add face culling on the screen mesh so that only front faces are drawn
 
 		// draw
-		GLCall(glDrawArrays(GL_TRIANGLES, 0, 6));
+		GLCall(glDrawArrays(GL_TRIANGLES, 0, 3));
 	}
 
 public: // skybox envmap vars

@@ -74,7 +74,7 @@ public:
 
 public: // command queue methods
 	static void SwapCommandQueues();
-	static void FlushCommandQueue(Scene& scene, bool swap);
+	static void FlushCommandQueue(Scene& scene);
 	static void PushCommand(SceneGraphCommand * cmd);
 
 private:

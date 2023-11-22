@@ -752,12 +752,8 @@ void CGL::SwapCommandQueues()
 }
 
 // perform all queued commands to sync the renderer scenegraph with the CGL scenegraph
-void CGL::FlushCommandQueue(Scene &scene, bool swap)
+void CGL::FlushCommandQueue(Scene &scene)
 { // TODO: shouldn't command be associated with scenes?
-	// swap the command queues (so we can read from what was just being written to)
-	if (swap)
-		SwapCommandQueues(); // Note: this already locks the command queue
-
 	// we no longer need to hold a lock here because all writes are done to the other queue
 
 	// get the new read queue

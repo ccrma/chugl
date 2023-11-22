@@ -571,7 +571,7 @@ void Window::DisplayLoop()
         // now apply changes from the command queue chuck is NO Longer writing to
         // this executes all commands on the command queue, performs actions from CK code
         // essentially applying a diff to bring graphics state up to date with what is done in CK code
-        CGL::FlushCommandQueue(scene, false);
+        CGL::FlushCommandQueue(scene);
         
         // process any glfw options passed from chuck
         UpdateState(scene);
@@ -605,6 +605,15 @@ void Window::DisplayLoop()
             true    // clear depth buffer
         );
         renderer.RenderScene(&scene, scene.GetMainCamera());
+
+        // output pass: apply gamma correction, tone mapping, anti-aliasing, etc.
+        // Tonemapping:
+        // - reinhard
+        // - try clamp: color.rgb = min(color.rgb, 60.0);
+            // avoids precision limitations
+        // Gamma Correction
+        // - add Texture.color_space constants to set internal texture formats
+
 
         // screen pass: copy contents from framebuffer to screen
         // TODO: move this into RenderScene as a post-processing step

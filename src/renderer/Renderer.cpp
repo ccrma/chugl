@@ -426,34 +426,47 @@ void Renderer::BuildFramebuffer(unsigned int width, unsigned int height) {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);  
 	std::cout << "FRAMEBUFFER loader done" << std::endl;
 
-	// setup screen quad (in ndc)
+	// setup screen triangle (in ndc)
+	// We can cover the entire screen with a single triangle
+	// requires only 3 vertices instead of 6, and prevents redundant fragment processing
+	// along pixels that would bridge the edge between two triangles in a quad
+	// See the link below for more info
+	// https://catlikecoding.com/unity/tutorials/custom-srp/post-processing/
+
 	// TODO: put in a CGL geo attribute?
 	float positions[] = {
-		-1.0f,  1.0f,  0.0f,  // top left
-		-1.0f, -1.0f,  0.0f,  // bottom left
-			1.0f, -1.0f,  0.0f,  // bottom right
-		-1.0f,  1.0f,  0.0f,  // top left
-			1.0f, -1.0f,  0.0f,  // bottom right
-			1.0f,  1.0f,  0.0f,  // top right
+		// -1.0f,  1.0f,  0.0f,  // top left
+		// -1.0f, -1.0f,  0.0f,  // bottom left
+		// 	1.0f, -1.0f,  0.0f,  // bottom right
+		// -1.0f,  1.0f,  0.0f,  // top left
+		// 	1.0f, -1.0f,  0.0f,  // bottom right
+		// 	1.0f,  1.0f,  0.0f,  // top right
+
+		-1.0f, 3.0f, 0.0f,   // top left
+		-1.0f, -1.0f, 0.0f,  // bottom left
+		 3.0f, -1.0f, 0.0f,  // bottom right 
 	};
 	float texCoords[] = {
-		0.0f, 1.0f,  // top left
+		// 0.0f, 1.0f,  // top left
+		// 0.0f, 0.0f,  // bottom left
+		// 1.0f, 0.0f,  // bottom right
+		// 0.0f, 1.0f,  // top left
+		// 1.0f, 0.0f,  // bottom right
+		// 1.0f, 1.0f,  // top right
+		0.0f, 2.0f,  // top left
 		0.0f, 0.0f,  // bottom left
-		1.0f, 0.0f,  // bottom right
-		0.0f, 1.0f,  // top left
-		1.0f, 0.0f,  // bottom right
-		1.0f, 1.0f,  // top right
+		2.0f, 0.0f,  // bottom right 
 	};
 	m_ScreenPositionsVB->SetBuffer(
 		positions, 
 		sizeof(positions), 
-		6, 
+		3,  // num vertices
 		GL_STATIC_DRAW
 	);
 	m_ScreenTexCoordsVB->SetBuffer(
 		texCoords, 
 		sizeof(texCoords), 
-		6, 
+		3,  // num vertices
 		GL_STATIC_DRAW
 	);
 

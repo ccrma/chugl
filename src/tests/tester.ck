@@ -96,7 +96,7 @@ fun void reset() {
     GG.scene().backgroundColor(Color.BLACK);
 
     // reset skybox
-    GG.scene().skyboxEnabled(false);
+    // GG.scene().skyboxEnabled(false);
 
     // reset default light
     GG.scene().light() @=> GLight light;
