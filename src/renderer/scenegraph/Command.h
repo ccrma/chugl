@@ -112,7 +112,8 @@ public:
         SceneGraphNode* node,
         Scene* audioThreadScene,
         Chuck_Object* ckobj,
-        t_CKUINT data_offset
+        t_CKUINT data_offset,
+        CK_DL_API API
     );
     virtual void execute(Scene* scene) override;
 private:
@@ -603,6 +604,7 @@ public:
     DestroySceneGraphNodeCommand(
         Chuck_Object* ckobj,
         t_CKUINT data_offset,
+        CK_DL_API API,
         Scene* audioThreadScene
     );
 

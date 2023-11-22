@@ -19,6 +19,8 @@
 #include "renderer/scenegraph/Light.h"
 #include "renderer/scenegraph/Locator.h"
 
+#include <queue>
+
 //-----------------------------------------------------------------------------
 // ChuGL Event Listeners
 //-----------------------------------------------------------------------------
@@ -104,13 +106,17 @@ static t_CKUINT window_resize_event_data_offset = 0;
 
 t_CKBOOL init_chugl(Chuck_DL_Query *QUERY)
 {
+    // get the VM and API
+    Chuck_VM * vm = QUERY->get_vm(QUERY);
+    CK_DL_API api = QUERY->get_api(QUERY);
+
     // set VM and API refs
-    CGL::SetCKVM( QUERY->vm() );
-    CGL::SetCKAPI( QUERY->api() );
+    CGL::SetCKVM( vm );
+    CGL::SetCKAPI( api );
     // set API in the scene graph node
-    SceneGraphNode::SetCKAPI( QUERY->api() );
+    SceneGraphNode::SetCKAPI( api );
 	// set API in the locator service
-	Locator::SetCKAPI( QUERY->api() );
+	Locator::SetCKAPI( api );
 
 	// init GUI
 	if (!init_chugl_gui(QUERY)) return FALSE;
@@ -138,22 +144,24 @@ t_CKBOOL init_chugl(Chuck_DL_Query *QUERY)
 //-----------------------------------------------------------------------------
 t_CKBOOL create_chugl_default_objs(Chuck_DL_Query *QUERY)
 {
+    // get the VM and API
+    Chuck_VM * vm = QUERY->get_vm(QUERY);
+    CK_DL_API api = QUERY->get_api(QUERY);
 	// threadsafe event queue
-	CglEvent::s_SharedEventQueue = QUERY->api()->vm->create_event_buffer(
-		QUERY->vm());
+    CglEvent::s_SharedEventQueue = api->vm->create_event_buffer(vm);
 	assert(CglEvent::s_SharedEventQueue);
 
 	// shred destroy listener
-	QUERY->register_shreds_watcher(QUERY, cgl_shred_on_destroy_listener, CKVM_SHREDS_WATCH_REMOVE, NULL);
+	QUERY->register_shreds_watcher(QUERY, cgl_shred_on_destroy_listener, ckvm_shreds_watch_REMOVE, NULL);
 
 	// update() vt offset
     // get the GGen type
-    Chuck_Type * t_ggen = QUERY->api()->type->lookup(QUERY->vm(), "GGen");
+    Chuck_Type * t_ggen = api->type->lookup(vm, "GGen");
     // find the offset for update
-    CGL::our_update_vt_offset = QUERY->api()->type->get_vtable_offset(QUERY->vm(), t_ggen, "update");
+    CGL::our_update_vt_offset = api->type->get_vtable_offset(vm, t_ggen, "update");
 
     // GGen instantiation listener
-    QUERY->api()->type->callback_on_instantiate( cgl_ggen_on_instantiate_listener, t_ggen, QUERY->vm(), FALSE );
+    api->type->callback_on_instantiate( cgl_ggen_on_instantiate_listener, t_ggen, vm, FALSE );
 
 	return true;
 }
@@ -289,7 +297,7 @@ CK_DLL_CTOR(cgl_window_resize_ctor)
 {
 	// store reference to our new class
 	OBJ_MEMBER_INT(SELF, window_resize_event_data_offset) = (t_CKINT) new CglEvent(
-		(Chuck_Event *)SELF, SHRED->vm_ref, API, CglEventType::CGL_WINDOW_RESIZE);
+		(Chuck_Event *)SELF, VM, API, CglEventType::CGL_WINDOW_RESIZE);
 }
 CK_DLL_DTOR(cgl_window_resize_dtor)
 {
@@ -495,7 +503,7 @@ CK_DLL_SFUN(cgl_window_get_title) {
 // set glfw window title
 CK_DLL_SFUN(cgl_window_set_title) { 
 	Chuck_String *title= GET_NEXT_STRING(ARGS);
-	CGL::PushCommand(new SetWindowTitleCommand(&CGL::mainScene, title->str()));
+	CGL::PushCommand(new SetWindowTitleCommand(&CGL::mainScene, API->object->str(title)));
 	RETURN->v_string = title;
 }
 
@@ -666,6 +674,7 @@ void CGL::DeactivateHook()
 // VM and API references
 Chuck_VM * CGL::s_vm = NULL;
 CK_DL_API CGL::s_api = NULL;
+CK_DL_API CGL::API; // specifically named API for decoupled OBJ_MEMBER_* access
 
 void CGL::SetCKVM( Chuck_VM * theVM )
 {
@@ -674,7 +683,7 @@ void CGL::SetCKVM( Chuck_VM * theVM )
 
 void CGL::SetCKAPI( CK_DL_API theAPI )
 {
-    s_api = theAPI;
+    s_api = API = theAPI;
 }
 
 void CGL::DetachGGensFromShred(Chuck_VM_Shred *shred)
@@ -826,7 +835,7 @@ Chuck_DL_Api::Object CGL::GetMainScene(Chuck_VM_Shred *shred, CK_DL_API API, Chu
         mainCamera.SetPosition( glm::vec3(0,0,5) );
 
         // no creation command b/c window already has static copy
-		CGL::PushCommand(new CreateSceneGraphNodeCommand(&mainCamera, &mainScene, camObj, CGL::GetGGenDataOffset()));
+		CGL::PushCommand(new CreateSceneGraphNodeCommand(&mainCamera, &mainScene, camObj, CGL::GetGGenDataOffset(), API));
 		// add to scene command
 		CGL::PushCommand(new RelationshipCommand(&CGL::mainScene, &mainCamera, RelationshipCommand::Relation::AddChild));
         // update camera position command
@@ -838,7 +847,7 @@ Chuck_DL_Api::Object CGL::GetMainScene(Chuck_VM_Shred *shred, CK_DL_API API, Chu
 		Chuck_DL_Api::Type lightType = API->type->lookup(VM, defaultLight->myCkName());
 		Chuck_Object* lightObj = API->object->create(shred, lightType, true);  // refcount for scene
 		// creation command
-		CGL::PushCommand(new CreateSceneGraphNodeCommand(defaultLight, &CGL::mainScene, lightObj, CGL::GetGGenDataOffset()));
+		CGL::PushCommand(new CreateSceneGraphNodeCommand(defaultLight, &CGL::mainScene, lightObj, CGL::GetGGenDataOffset(), API));
 		// add to scene command
 		CGL::PushCommand(new RelationshipCommand(&CGL::mainScene, defaultLight, RelationshipCommand::Relation::AddChild));
 	}
@@ -856,7 +865,7 @@ Material* CGL::CreateChuckObjFromMat(
 	Chuck_DL_Api::Object ckobj = API->object->create(SHRED, type, refcount);
 
 	// tell renderer to create a copy
-	CGL::PushCommand(new CreateSceneGraphNodeCommand(mat, &CGL::mainScene, ckobj, CGL::GetMaterialDataOffset()));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(mat, &CGL::mainScene, ckobj, CGL::GetMaterialDataOffset(), API));
 
 	return mat;
 }
@@ -869,7 +878,7 @@ Geometry* CGL::CreateChuckObjFromGeo(CK_DL_API API, Chuck_VM *VM, Geometry *geo,
 	Chuck_DL_Api::Object ckobj = API->object->create(SHRED, type, refcount);
 
 	// tell renderer to create a copy
-	CGL::PushCommand(new CreateSceneGraphNodeCommand(geo, &CGL::mainScene, ckobj, geometry_data_offset));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(geo, &CGL::mainScene, ckobj, geometry_data_offset, API));
 
 	return geo;
 }
@@ -881,7 +890,7 @@ CGL_Texture* CGL::CreateChuckObjFromTex(CK_DL_API API, Chuck_VM* VM, CGL_Texture
 	Chuck_DL_Api::Object ckobj = API->object->create(SHRED, type, refcount);
 
 	// tell renderer to create a copy
-	CGL::PushCommand(new CreateSceneGraphNodeCommand(tex, &CGL::mainScene, ckobj, texture_data_offset));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(tex, &CGL::mainScene, ckobj, texture_data_offset, API));
 
 	return tex;
 

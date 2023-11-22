@@ -5,7 +5,8 @@ CreateSceneGraphNodeCommand::CreateSceneGraphNodeCommand(
     SceneGraphNode* node,
     Scene* audioThreadScene,
     Chuck_Object* ckobj,
-    t_CKUINT data_offset
+    t_CKUINT data_offset,
+    CK_DL_API API
 ) : m_Clone(node->Clone())
 {
     // set audio thread ownership
@@ -33,6 +34,7 @@ void CreateSceneGraphNodeCommand::execute(Scene *scene)
 DestroySceneGraphNodeCommand::DestroySceneGraphNodeCommand(
         Chuck_Object* ckobj,
         t_CKUINT data_offset,
+        CK_DL_API API,
         Scene* audioThreadScene
 ) : m_ID(0)
 {
