@@ -424,7 +424,7 @@ CK_DLL_MFUN(cgl_geo_lathe_set)
     t_CKINT vsize = API->object->array_float_size(points);
     std::vector<t_CKFLOAT> thePoints; thePoints.reserve(vsize);
     for( t_CKINT idx = 0; idx < vsize; idx++ )
-    { thePoints[idx] = API->object->array_float_get_idx(points,idx); }
+    { thePoints .push_back( API->object->array_float_get_idx(points,idx) ); }
     
     // update geo
 	geo->UpdateParams(thePoints, segments, phiStart, phiLength);
@@ -506,7 +506,7 @@ CK_DLL_MFUN(cgl_geo_set_attribute)
     t_CKINT vsize = API->object->array_float_size(ckarray);
     std::vector<t_CKFLOAT> theVec; theVec.reserve(vsize);
     for( t_CKINT idx = 0; idx < vsize; idx++ )
-    { theVec[idx] = API->object->array_float_get_idx(ckarray,idx); }
+    { theVec.push_back( API->object->array_float_get_idx(ckarray,idx) ); }
     
 	CGL::PushCommand(
 		new UpdateGeometryAttributeCommand(
@@ -522,7 +522,7 @@ CK_DLL_MFUN(cgl_geo_set_positions)
     t_CKINT vsize = API->object->array_float_size(ckarray);
     std::vector<t_CKFLOAT> theVec; theVec.reserve(vsize);
     for( t_CKINT idx = 0; idx < vsize; idx++ )
-    { theVec[idx] = API->object->array_float_get_idx(ckarray,idx); }
+    { theVec.push_back( API->object->array_float_get_idx(ckarray,idx) ); }
     
 	CGL::PushCommand(
 		new UpdateGeometryAttributeCommand(
@@ -563,7 +563,7 @@ CK_DLL_MFUN(cgl_geo_set_colors)
     t_CKINT vsize = API->object->array_float_size(ckarray);
     std::vector<t_CKFLOAT> theVec; theVec.reserve(vsize);
     for( t_CKINT idx = 0; idx < vsize; idx++ )
-    { theVec[idx] = API->object->array_float_get_idx(ckarray,idx); }
+    { theVec.push_back( API->object->array_float_get_idx(ckarray,idx) ); }
 
 	CGL::PushCommand(
 		new UpdateGeometryAttributeCommand(
@@ -631,7 +631,7 @@ CK_DLL_MFUN(cgl_geo_set_normals)
     t_CKINT vsize = API->object->array_float_size(ckarray);
     std::vector<t_CKFLOAT> theVec; theVec.reserve(vsize);
     for( t_CKINT idx = 0; idx < vsize; idx++ )
-    { theVec[idx] = API->object->array_float_get_idx(ckarray,idx); }
+    { theVec.push_back(API->object->array_float_get_idx(ckarray,idx)); }
 
 	CGL::PushCommand(
 		new UpdateGeometryAttributeCommand(
@@ -673,7 +673,7 @@ CK_DLL_MFUN(cgl_geo_set_uvs)
     t_CKINT vsize = API->object->array_float_size(ckarray);
     std::vector<t_CKFLOAT> theVec; theVec.reserve(vsize);
     for( t_CKINT idx = 0; idx < vsize; idx++ )
-    { theVec[idx] = API->object->array_float_get_idx(ckarray,idx); }
+    { theVec.push_back(API->object->array_float_get_idx(ckarray,idx)); }
     
 	CGL::PushCommand(
 		new UpdateGeometryAttributeCommand(
@@ -711,7 +711,7 @@ CK_DLL_MFUN(cgl_geo_set_indices)
     t_CKINT vsize = API->object->array_int_size(ckarray);
     std::vector<t_CKUINT> theVec; theVec.reserve(vsize);
     for( t_CKINT idx = 0; idx < vsize; idx++ )
-    { theVec[idx] = API->object->array_int_get_idx(ckarray,idx); }
+    { theVec.push_back( (t_CKUINT)API->object->array_int_get_idx(ckarray,idx)); }
 
     CGL::PushCommand(
         new UpdateGeometryIndicesCommand(geo, theVec) );

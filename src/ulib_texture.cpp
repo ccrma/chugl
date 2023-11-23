@@ -225,7 +225,7 @@ CK_DLL_MFUN(cgl_texture_rawdata_set_data)
     t_CKINT vsize = API->object->array_float_size(ckarray);
     std::vector<t_CKFLOAT> theVec; theVec.reserve(vsize);
     for( t_CKINT idx = 0; idx < vsize; idx++ )
-    { theVec[idx] = API->object->array_float_get_idx(ckarray,idx); }
+    { theVec.push_back(API->object->array_float_get_idx(ckarray,idx)); }
     
 	// update chuck-side texture ( no copy to avoid blocking audio thread )
 	texture->SetRawData(theVec, width, height, false);
