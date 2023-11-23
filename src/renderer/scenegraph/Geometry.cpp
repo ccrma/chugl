@@ -398,7 +398,7 @@ void LatheGeometry::UpdateParams(int segments, float phiStart, float phiLength)
 }
 
 void LatheGeometry::UpdateParams(
-	std::vector<double> points, int segments, float phiStart, float phiLength
+	const std::vector<double> & points, int segments, float phiStart, float phiLength
 ) {
 	// convert points to glm::vec2
 	m_Params.points.clear();

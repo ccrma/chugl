@@ -449,7 +449,7 @@ public:
 	} m_Params;
 public:
 	LatheGeometry(
-		std::vector<glm::vec2> points = {glm::vec2(0, -0.5), glm::vec2(0.5, 0), glm::vec2(0, 0.5)}, 
+		const std::vector<glm::vec2> & points = {glm::vec2(0, -0.5), glm::vec2(0.5, 0), glm::vec2(0, 0.5)},
 		int segments = 12, 
 		float phiStart = 0, 
 		float phiLength = glm::pi<float>() * 2.0
@@ -457,7 +457,7 @@ public:
 	{}
 
 	void UpdateParams(
-		std::vector<glm::vec2> points, int segments, float phiStart, float phiLength
+		const std::vector<glm::vec2> & points, int segments, float phiStart, float phiLength
 	) {
 		m_Params = {points, segments, phiStart, phiLength};
 		m_Dirty = true;
@@ -466,7 +466,7 @@ public:
 		int segments, float phiStart, float phiLength
 	);
 	void UpdateParams(
-		std::vector<double> points, int segments, float phiStart, float phiLength
+		const std::vector<double> & points, int segments, float phiStart, float phiLength
 	);
 
 	virtual void BuildGeometry() override;  // given data, builds cpu-side index and vertex buffs
