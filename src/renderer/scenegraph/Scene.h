@@ -9,6 +9,7 @@ class Light;
 class DirLight;
 class Camera;
 class CGL_CubeMap;
+namespace PP { class Effect; }
 
 
 enum FogType : t_CKUINT {
@@ -45,7 +46,9 @@ public:
 		m_UpdateWindowTitle(false),
 		m_WindowTitle("ChuGL"),
 		// skybox
-		skyboxEnabled(false)
+		skyboxEnabled(false),
+		// post processing
+		m_RootEffectID(0)   // base pp effect
 	{}
 	virtual ~Scene() {}
 	virtual bool IsScene() override { return true; }
@@ -144,6 +147,14 @@ public: // skybox methods
 	bool GetSkyboxEnabled() { return skyboxEnabled; }
 	void SetSkybox(CGL_CubeMap* skybox);
 	size_t GetSkyboxID() { return skyboxID; }
+
+private: // post processing
+// for now just store post processing effects in scene
+// but eventually will store in either a Renderer object, GCamera, or separate PostProcessing object
+	size_t m_RootEffectID;   // base pp effect
+public:
+	PP::Effect* GetRootEffect() { return (PP::Effect*)GetNode(m_RootEffectID); }
+	void SetRootEffect(size_t id) { m_RootEffectID = id; }
 
 public: // background color ie clear color
 	glm::vec3 m_BackgroundColor;

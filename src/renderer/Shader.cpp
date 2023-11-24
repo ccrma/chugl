@@ -1,5 +1,5 @@
 #include "Shader.h"
-#include "Util.h"
+#include "Graphics.h"
 #include <shadinclude/Shadinclude.hpp>
 
 // TODO: break this into read file, compile, link&validate separate functions
@@ -52,9 +52,11 @@ void Shader::Reload()
 {
     assert(false); // not implemented yet
     unsigned int reloadedProgram = CreateShaderProgram(m_VertexPath, m_FragmentPath);
-    if (!reloadedProgram) { Util::println("failed to reload shader program"); }
+    if (!reloadedProgram) { 
+        std::cerr << "failed to reload shader program" << std::endl;
+    }
 
-	Util::println("reloading shader new ID: " + std::to_string(reloadedProgram));
+    std::cout << "reloading shader new ID: " << reloadedProgram << std::endl;
 
     // clear cache
     m_UniformLocationCache.clear();

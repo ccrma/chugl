@@ -17,6 +17,13 @@ class Locator
 public:
     static void RegisterNode(SceneGraphNode* node);
     static SceneGraphNode* GetNode(size_t id, bool isAudioThread);
+
+    // templated GetNode
+    template <typename T>
+    static T* GetNode(size_t id, bool isAudioThread) {
+        return dynamic_cast<T*>(GetNode(id, isAudioThread));
+    }
+
 	static bool CheckNode(size_t id, bool isAudioThread);
     static void UnregisterNode(size_t id, bool isAudioThread);
     static void PrintContents(bool isAudioThread);

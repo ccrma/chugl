@@ -1,3 +1,7 @@
+// =============================================================================
+// Header file to include all OpenGL related headers
+// =============================================================================
+
 #pragma once
 #include <glad/glad.h>
 #include <cassert>
@@ -13,12 +17,12 @@
 	#define ASSERT(x) assert(x);
 	#endif
 
-#define GLCall(x) GLClearError(#x, __FILE__, __LINE__); x; ASSERT(GLLogErrors(#x, __FILE__, __LINE__));
+	#define GLCall(x) GLClearError(#x, __FILE__, __LINE__); x; ASSERT(GLLogErrors(#x, __FILE__, __LINE__));
 	//#define GLCall(x) ASSERT(GLLogErrors(#x, __FILE__, __LINE__)); x;
-#else
-#define ASSERT(x) ;
-#define ASSERTM(exp, msg) ((void)0)
-#define GLCall(x) x
+#else // Release
+	#define ASSERT(x) ;
+	#define ASSERTM(exp, msg) ((void)0)
+	#define GLCall(x) x
 #endif
 
 static std::string ErrorCodeToString(GLenum errorCode)
@@ -62,32 +66,25 @@ static bool GLLogErrors(const char* function, const char* file, int line)
 	}
 	return true;
 }
-namespace Util
-{
-	inline void println(const std::string& str) {
-		std::cout << str << std::endl;
-	}
 
-	inline void printErr(const std::string& str) {
-		std::cerr << str << std::endl;
-	}
-
-	// A hash function used to hash a pair of any kind
-	struct hash_pair {
-		template <class T1, class T2>
-		size_t operator()(const std::pair<T1, T2>& p) const
-		{
-			auto hash1 = std::hash<T1>{}(p.first);
-			auto hash2 = std::hash<T2>{}(p.second);
+// namespace Util
+// {
+// 	// A hash function used to hash a pair of any kind
+// 	struct hash_pair {
+// 		template <class T1, class T2>
+// 		size_t operator()(const std::pair<T1, T2>& p) const
+// 		{
+// 			auto hash1 = std::hash<T1>{}(p.first);
+// 			auto hash2 = std::hash<T2>{}(p.second);
 	
-			if (hash1 != hash2)
-				return hash1 ^ hash2;             
+// 			if (hash1 != hash2)
+// 				return hash1 ^ hash2;             
 			
-			// If hash1 == hash2, their XOR is zero.
-			return hash1;
-		}
-	};
+// 			// If hash1 == hash2, their XOR is zero.
+// 			return hash1;
+// 		}
+// 	};
 
-}
+// }
 
 

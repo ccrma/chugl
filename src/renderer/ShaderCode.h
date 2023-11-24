@@ -29,9 +29,10 @@ static const std::string BASIC_VERT;
 static const std::string NORMAL_FRAG;
 static const std::string FLAT_FRAG;
 
-// screen shader components
-static const std::string SCREEN_VERT;
-static const std::string SCREEN_FRAG;
+// post process shader components
+static const std::string PP_VERT;               // vertex shared by all post process shaders
+static const std::string PP_PASS_THROUGH;       // passthrough effect
+static const std::string PP_OUTPUT;             // output effect
 
 // skybox shader impl
 static const std::string SKYBOX_VERT_CODE;

@@ -396,35 +396,8 @@ void Renderer::BuildFramebuffer(unsigned int width, unsigned int height) {
 	m_ScreenPositionsVB = new VertexBuffer();
 	m_ScreenTexCoordsVB = new VertexBuffer();
 
-	GLCall(glGenFramebuffers(1, &m_FrameBufferID));
-	GLCall(glBindFramebuffer(GL_FRAMEBUFFER, m_FrameBufferID));    
-	
-	// generate texture
-	glGenTextures(1, &m_TextureColorbuffer);
-	glBindTexture(GL_TEXTURE_2D, m_TextureColorbuffer);
-	// TODO: pass texture size as param, update when window resizes
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	// attach it to currently bound framebuffer object
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_TextureColorbuffer, 0); 
-
-	// create and attach depth buffer (renderbuffer)
-	glGenRenderbuffers(1, &m_RenderBufferID);
-	glBindRenderbuffer(GL_RENDERBUFFER, m_RenderBufferID); 
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);  
-	glBindRenderbuffer(GL_RENDERBUFFER, 0);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_RenderBufferID);
-
-	// check if framebuffer is complete
-	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
-
-	// unbind framebuffer
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);  
-	std::cout << "FRAMEBUFFER loader done" << std::endl;
+	m_FrameBufferPing = new FrameBuffer(width, height);
+	m_FrameBufferPong = new FrameBuffer(width, height);
 
 	// setup screen triangle (in ndc)
 	// We can cover the entire screen with a single triangle
@@ -433,30 +406,17 @@ void Renderer::BuildFramebuffer(unsigned int width, unsigned int height) {
 	// See the link below for more info
 	// https://catlikecoding.com/unity/tutorials/custom-srp/post-processing/
 
-	// TODO: put in a CGL geo attribute?
 	float positions[] = {
-		// -1.0f,  1.0f,  0.0f,  // top left
-		// -1.0f, -1.0f,  0.0f,  // bottom left
-		// 	1.0f, -1.0f,  0.0f,  // bottom right
-		// -1.0f,  1.0f,  0.0f,  // top left
-		// 	1.0f, -1.0f,  0.0f,  // bottom right
-		// 	1.0f,  1.0f,  0.0f,  // top right
-
 		-1.0f, 3.0f, 0.0f,   // top left
 		-1.0f, -1.0f, 0.0f,  // bottom left
 		 3.0f, -1.0f, 0.0f,  // bottom right 
 	};
 	float texCoords[] = {
-		// 0.0f, 1.0f,  // top left
-		// 0.0f, 0.0f,  // bottom left
-		// 1.0f, 0.0f,  // bottom right
-		// 0.0f, 1.0f,  // top left
-		// 1.0f, 0.0f,  // bottom right
-		// 1.0f, 1.0f,  // top right
 		0.0f, 2.0f,  // top left
 		0.0f, 0.0f,  // bottom left
 		2.0f, 0.0f,  // bottom right 
 	};
+
 	m_ScreenPositionsVB->SetBuffer(
 		positions, 
 		sizeof(positions), 
@@ -481,14 +441,77 @@ void Renderer::BuildFramebuffer(unsigned int width, unsigned int height) {
 	);
 
 	// setup screen shader
-	const std::string& screenShaderVert = ShaderCode::s_CodeMap[ShaderCode::SCREEN_VERT];
-	const std::string& screenShaderFrag = ShaderCode::s_CodeMap[ShaderCode::SCREEN_FRAG];
+	const std::string& screenShaderVert = ShaderCode::PP_VERT;
+	const std::string& screenShaderFrag = ShaderCode::PP_PASS_THROUGH;
 
-	m_ScreenShader = new Shader(
+	auto* passThroughShader = new Shader(
 		screenShaderVert,
 		screenShaderFrag,
 		false, false
 	);
+}
+
+void Renderer::PostProcessPass()
+{
+	Scene* scene = m_RenderState.GetScene();
+	PP::Effect* chugl_root_effect = scene->GetRootEffect();
+
+	// root should always exist
+	assert(chugl_root_effect);
+
+	// get root effect
+	PostProcessEffect* rootEffect = GetOrCreateEffect(chugl_root_effect->GetID());
+
+	// early out if no active post processing effects
+	if (!rootEffect || !rootEffect->GetChuglEffect()->NextEnabled()) return;
+	
+	// disable depth test
+	GLCall(glDisable(GL_DEPTH_TEST));
+	// bind screen quad 
+	m_ScreenVA->Bind();
+	// set polygon mode to fill
+	GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
+	// face culling on the screen mesh so that only front faces are drawn
+	GLCall(glEnable(GL_CULL_FACE));
+	GLCall(glCullFace(GL_BACK));
+
+	// step through post processing effects
+	bool ping = true;  // start with reading from ping buffer
+	int effectCount = 1;
+	PP::Effect* chugl_effect = rootEffect->GetChuglEffect()->NextEnabled();
+	while (chugl_effect) {
+		PostProcessEffect* effect = GetOrCreateEffect(chugl_effect->GetID());
+		// std::cout << "effect num: " << effectCount++ << std::endl;
+		// if last effect, unbind framebuffer
+		if (!chugl_effect->NextEnabled()) {
+			GLCall(glBindFramebuffer(GL_FRAMEBUFFER, 0)); 
+		} else {
+			// bind framebuffer
+			GetWriteFrameBuffer(ping)->Bind();
+		}
+
+		// bind color attachment from previous effect
+		GetReadFrameBuffer(ping)->BindColorAttachment();
+		// clear
+		Clear(
+			m_RenderState.GetScene()->GetBackgroundColor(),
+			true,   // clear color buffer
+			false   // don't clear depth buffer
+		);
+
+		// bind screen shader
+		effect->Apply();  
+		// draw
+		GLCall(glDrawArrays(GL_TRIANGLES, 0, 3));
+
+		// move on to next effect
+		chugl_effect = chugl_effect->NextEnabled();
+		// flip ping pong buffer
+		ping = !ping;
+	}
+
+	// disable face fulling
+	GLCall(glDisable(GL_CULL_FACE));
 }
 
 void Renderer::Clear(glm::vec3 bgCol, bool color, bool depth)
@@ -579,6 +602,25 @@ void Renderer::Draw(RenderGeometry *renderGeo, RenderMaterial *renderMat)
 	}
 }
 
+PostProcessEffect *Renderer::GetOrCreateEffect(size_t ID)
+{
+	// return cached effect if it exists
+	if (m_Effects.find(ID) != m_Effects.end()) {
+		return m_Effects[ID];
+	}
+
+	// lookup effect in scenegraph
+	PP::Effect* chugl_effect = dynamic_cast<PP::Effect*>(m_RenderState.GetScene()->GetNode(ID));
+	if (!chugl_effect) return nullptr;
+
+	// not found, create it
+	PostProcessEffect* newEffect = PostProcessEffect::Create(chugl_effect);
+
+	// cache it
+	m_Effects[ID] = newEffect;
+	return newEffect;
+}
+
 void Renderer::ProcessDeletionQueue(Scene *scene)
 {
 	auto& deletionQueue = scene->GetDeletionQueue();
@@ -594,6 +636,8 @@ void Renderer::ProcessDeletionQueue(Scene *scene)
 
 		// delete texture
 		if (DeleteTexture(id)) continue;
+
+		// TODO: delete PP effect
 	}
 
 	// clear queue
@@ -603,6 +647,13 @@ void Renderer::ProcessDeletionQueue(Scene *scene)
 void Renderer::RenderScene(Scene* scene, Camera* camera)
 {
 	assert(scene->IsScene());
+
+	// clear background
+	Clear(
+		scene->GetBackgroundColor(),
+		true,   // clear color buffer
+		true    // clear depth buffer
+	);
 
 	// enable depth testing
 	GLCall(glEnable(GL_DEPTH_TEST));	
@@ -628,6 +679,11 @@ void Renderer::RenderScene(Scene* scene, Camera* camera)
 
 	// must draw after skybox pass so that transparent objects are drawn on top of skybox
 	TransparentPass();
+
+	// post processing pass
+	if (m_RenderState.IsPostProcessingEnabled()) {
+		PostProcessPass();
+	}
 }
 
 void Renderer::SkyboxPass(int textureUnit)

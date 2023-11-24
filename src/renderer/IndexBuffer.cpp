@@ -1,5 +1,5 @@
 #include "IndexBuffer.h"
-#include "Util.h"
+#include "Graphics.h"
 
 IndexBuffer::IndexBuffer() : m_Count(0)
 {

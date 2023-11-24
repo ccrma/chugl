@@ -15,7 +15,7 @@ class RendererState
 public:
 	RendererState(Renderer* renderer) 
 	: m_Renderer(renderer), m_ViewMat(1.0f), m_CameraTransform(1.0f), m_ViewPos(0.0f),
-	m_Scene(nullptr), m_Camera(nullptr), m_SkyboxTexture(nullptr)
+	m_Scene(nullptr), m_Camera(nullptr), m_SkyboxTexture(nullptr), m_PostProcessingEnabled(false)
 	{
 		m_ModelStack.push_back(glm::mat4(1.0f)); 
 	};
@@ -36,6 +36,9 @@ public:
 	void PrepareScene(Scene* scene);
 	Scene* GetScene() { return m_Scene; }
 	Texture* GetSkyboxTexture() { return m_SkyboxTexture; }
+
+	// PP ==================================================================
+	bool IsPostProcessingEnabled() { return m_PostProcessingEnabled; }
 
 	// Reset state =========================================================
 	void Reset();
@@ -59,6 +62,9 @@ private:
 	
 	// cache envmap
 	Texture* m_SkyboxTexture;
+	
+	// post processing
+	bool m_PostProcessingEnabled;
 
 public:
 	std::vector<Mesh*>& GetOpaqueMeshes() { return m_OpaqueMeshes; }

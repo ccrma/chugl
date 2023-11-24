@@ -2,11 +2,13 @@
 
 #include "chugl_pch.h"
 
+#include "FrameBuffer.h"
+#include "PostProcess.h"
 #include "RendererState.h"
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
 #include "VertexArray.h"
-#include "Util.h"
+#include "Graphics.h"
 #include "ShaderCode.h"  // TODO remove after refactoring into cpp
 
 #include "scenegraph/SceneGraphObject.h"
@@ -19,6 +21,8 @@
 class Shader;
 class Geometry;
 class Renderer;
+
+namespace PP { class Effect; }
 
 // Renderer helper classes (encapsulate SceneGraph classes)
 /*
@@ -141,20 +145,20 @@ class Renderer
 {
 public: // constructor
 	Renderer() : m_MainCamera(nullptr), m_RenderState(this),
-	m_FrameBufferID(0), m_TextureColorbuffer(0), m_RenderBufferID(0),
-	m_ScreenShader(nullptr), m_ScreenVA(nullptr), m_ScreenPositionsVB(nullptr), m_ScreenTexCoordsVB(nullptr),
-	m_SkyboxVA(nullptr), m_SkyboxVB(nullptr), m_SkyboxShader(nullptr)
+	m_ScreenVA(nullptr), m_ScreenPositionsVB(nullptr), m_ScreenTexCoordsVB(nullptr),
+	m_SkyboxVA(nullptr), m_SkyboxVB(nullptr), m_SkyboxShader(nullptr),
+	m_FrameBufferPing(nullptr), m_FrameBufferPong(nullptr)
 	{
 		// TODO: initialize this after window is created 
 		// and openGL context is initialized.
 		// Then can do framebuffer and envmap setup in constructor
 	}
 
+	// friend class
+	friend class RendererState;
+
 public:  // framebuffer setup
-	unsigned int m_FrameBufferID;
-	unsigned int m_TextureColorbuffer;
-	unsigned int m_RenderBufferID;
-	Shader *m_ScreenShader;
+	FrameBuffer* m_FrameBufferPing, *m_FrameBufferPong;  // ping pong buffers for post processing
 	VertexArray* m_ScreenVA;
 	VertexBuffer* m_ScreenPositionsVB;
 	VertexBuffer* m_ScreenTexCoordsVB;
@@ -162,48 +166,20 @@ public:  // framebuffer setup
 	void BuildFramebuffer(unsigned int width, unsigned int height);
 
 	void UpdateFramebufferSize(unsigned int width, unsigned int height) {
-		// TODO: check Khronos docs if it's okay to rebuild the framebuffer like this
-		// update texture dimensions 
-		glBindTexture(GL_TEXTURE_2D, m_TextureColorbuffer);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-		glBindTexture(GL_TEXTURE_2D, 0);
-		// update renderbuffer dimensions
-		glBindRenderbuffer(GL_RENDERBUFFER, m_RenderBufferID); 
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);  
-		glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-		// check if framebuffer is complete
-		if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-			std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+		if (m_FrameBufferPing) m_FrameBufferPing->UpdateSize(width, height);
+		if (m_FrameBufferPong) m_FrameBufferPong->UpdateSize(width, height);
 	}
 
-	void BindFramebuffer() {
-		GLCall(glBindFramebuffer(GL_FRAMEBUFFER, m_FrameBufferID));
+	FrameBuffer* GetReadFrameBuffer(bool ping) {
+		return ping ? m_FrameBufferPing : m_FrameBufferPong;
 	}
 
-	void UnbindFramebuffer() {
-		GLCall(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+	FrameBuffer* GetWriteFrameBuffer(bool ping) {
+		return ping ? m_FrameBufferPong : m_FrameBufferPing;
 	}
 
 	// Post process pass
-	void RenderScreen() {
-		// disable depth test
-		GLCall(glDisable(GL_DEPTH_TEST));
-		// bind screen shader
-		m_ScreenShader->Bind();
-		// bind screen quad 
-		m_ScreenVA->Bind();
-		// bind texture
-		GLCall(glActiveTexture(GL_TEXTURE0));  // activate slot 0
-		GLCall(glBindTexture(GL_TEXTURE_2D, m_TextureColorbuffer));
-		// set polygon mode to fill
-		GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
-		
-		// TODO add face culling on the screen mesh so that only front faces are drawn
-
-		// draw
-		GLCall(glDrawArrays(GL_TRIANGLES, 0, 3));
-	}
+	void PostProcessPass();
 
 public: // skybox envmap vars
 	static const float SKYBOX_VERTICES[];
@@ -405,6 +381,8 @@ public:
 		return texture;
 	}
 
+	PostProcessEffect* GetOrCreateEffect(size_t ID);
+
 	// deprecating for now
 	// sharing shaders between materials requires Materials to know how to unset uniforms/attributes
 	// TODO: come back to this when trying to implement batching, how to accomodate uniforms...
@@ -452,6 +430,7 @@ private:  // private member vars
 	std::unordered_map<size_t, RenderGeometry*> m_RenderGeometries;
 	std::unordered_map<size_t, RenderMaterial*> m_RenderMaterials;
 	std::unordered_map<size_t, Texture*> m_Textures;
+	std::unordered_map<size_t, PostProcessEffect*> m_Effects;
 
 
 	// shader cache

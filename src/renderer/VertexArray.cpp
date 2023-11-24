@@ -1,5 +1,8 @@
-#include "Util.h"
+#include "Graphics.h"
+#include "IndexBuffer.h"
 #include "VertexArray.h"
+#include "VertexBuffer.h"
+
 #include "scenegraph/Geometry.h"
 
 VertexArray::VertexArray()

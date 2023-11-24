@@ -76,6 +76,11 @@ void RendererState::PrepareScene(Scene *scene)
 		m_SkyboxTexture = nullptr;
 	}
 
+	// post processing setup
+	PP::Effect* chugl_root_effect = scene->GetRootEffect();
+	m_PostProcessingEnabled = chugl_root_effect && chugl_root_effect->NextEnabled();
+	// bind framebuffer if post processing enabled
+	if (m_PostProcessingEnabled) m_Renderer->m_FrameBufferPing->Bind();
 }
 
 void RendererState::Reset()

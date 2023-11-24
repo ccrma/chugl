@@ -125,6 +125,10 @@ cube.posX(2);
 
 sphere.mat() @=> Material @ mat;
 
+// Post Processing =======================================================
+PP_PassThrough pass1, pass2, pass3, pass4;
+GG.renderPass().next(pass1).next(pass2).next(pass3).next(pass4);
+
 // Material UI options =================================================== 
 
 fun void EnvMapToggleListener() {

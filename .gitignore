@@ -10,7 +10,7 @@
 *.wav
 
 # Image files
-src/tests/textures/skybox
+src/tests/textures/*
 
 # Compiled Object files
 *.slo

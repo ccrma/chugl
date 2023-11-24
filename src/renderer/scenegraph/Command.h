@@ -8,6 +8,7 @@
 #include "Light.h"
 #include "CGL_Texture.h"
 #include "Camera.h"
+#include "chugl_postprocess.h"
 
 
 // Forward Declarations =========================================
@@ -676,4 +677,81 @@ public:
 
 private:
     size_t m_ID;
+};
+
+//========================= Post Processing Commands =========================//
+
+class SetSceneRootEffectCommand : public SceneGraphCommand
+{
+public:
+    SetSceneRootEffectCommand(Scene* audioThreadScene, PP::Effect* effect) 
+        : m_EffectID(effect->GetID()) {
+        audioThreadScene->SetRootEffect(m_EffectID);
+    };
+
+    virtual void execute(Scene* renderThreadScene) override {
+        PP::Effect* effect = dynamic_cast<PP::Effect*>(renderThreadScene->GetNode(m_EffectID));
+        assert(effect);
+        
+        renderThreadScene->SetRootEffect(m_EffectID);
+    }
+private:
+    size_t m_EffectID;
+};
+
+class AddEffectCommand : public SceneGraphCommand
+{
+public:
+    AddEffectCommand(PP::Effect* LHS, PP::Effect* RHS) 
+        : m_LHS_ID(LHS->GetID()), m_RHS_ID(RHS->GetID()) {
+        LHS->Add(RHS);
+    };
+
+    virtual void execute(Scene* renderThreadScene) override {
+        PP::Effect* lhs = dynamic_cast<PP::Effect*>(renderThreadScene->GetNode(m_LHS_ID));
+        PP::Effect* rhs = dynamic_cast<PP::Effect*>(renderThreadScene->GetNode(m_RHS_ID));
+        assert(lhs);
+        assert(rhs);
+
+        lhs->Add(rhs);
+    }
+private:
+    size_t m_LHS_ID, m_RHS_ID;
+};
+
+class RemoveEffectCommand : public SceneGraphCommand
+{
+public:
+    RemoveEffectCommand(PP::Effect* effect) 
+        : m_ID(effect->GetID()) {
+        effect->Remove();
+    };
+
+    virtual void execute(Scene* renderThreadScene) override {
+        PP::Effect* effect = dynamic_cast<PP::Effect*>(renderThreadScene->GetNode(m_ID));
+        assert(effect);
+
+        effect->Remove();
+    }
+private:
+    size_t m_ID;
+};
+
+class BypassEffectCommand : public SceneGraphCommand
+{
+public:
+    BypassEffectCommand(PP::Effect* effect, bool bypass) 
+        : m_ID(effect->GetID()), m_Bypass(bypass) {
+        effect->SetBypass(bypass);
+    };
+
+    virtual void execute(Scene* renderThreadScene) override {
+        PP::Effect* effect = dynamic_cast<PP::Effect*>(renderThreadScene->GetNode(m_ID));
+        assert(effect);
+
+        effect->SetBypass(m_Bypass);
+    }
+private:
+    size_t m_ID;
+    bool m_Bypass;
 };

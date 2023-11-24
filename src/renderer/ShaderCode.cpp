@@ -17,8 +17,6 @@
 const std::string ShaderCode::BASIC_VERT = "GG_BASIC_VERT";
 const std::string ShaderCode::NORMAL_FRAG = "GG_NORMAL_FRAG";
 const std::string ShaderCode::FLAT_FRAG = "GG_FLAT_FRAG";
-const std::string ShaderCode::SCREEN_VERT = "GG_SCREEN_VERT";
-const std::string ShaderCode::SCREEN_FRAG = "GG_SCREEN_FRAG";
 
 const std::string ShaderCode::SKYBOX_VERT_CODE = R"glsl(
     #version 330 core
@@ -542,10 +540,14 @@ R"glsl(
             v_TexCoord, 0.0, 1.0
         );
 )glsl"
-},
-{
-SCREEN_VERT,
-R"glsl(
+}
+};  // end ShaderCode::s_CodeMap
+
+// ====================================================================================================
+// Post Process Shaders
+// ====================================================================================================
+
+const std::string ShaderCode::PP_VERT = R"glsl(
     #version 330 core
     layout (location = 0) in vec2 aPos;
     layout (location = 1) in vec2 aTexCoords;
@@ -557,11 +559,9 @@ R"glsl(
         gl_Position = vec4(aPos.x, aPos.y, 0.0, 1.0); 
         TexCoords = aTexCoords;
     }  
-)glsl"
-},
-{
-SCREEN_FRAG,
-R"glsl(
+)glsl";
+
+const std::string ShaderCode::PP_PASS_THROUGH = R"glsl(
     #version 330 core
     out vec4 FragColor;
 
@@ -573,15 +573,29 @@ R"glsl(
     { 
         // normal render
         FragColor = texture(screenTexture, TexCoords);
-        // invert
-        // FragColor = vec4(vec3(1.0 - texture(screenTexture, TexCoords)), 1.0);
-        // uv test
-        // FragColor = vec4(TexCoords, 0.0, 1.0);
     }
-)glsl"
-}
+)glsl";
 
-};  // end ShaderCode::s_CodeMap
+const std::string ShaderCode::PP_OUTPUT = R"glsl(
+    #version 330 core
+    out vec4 FragColor;
+
+    in vec2 TexCoords;
+
+    uniform sampler2D screenTexture;
+
+    void main()
+    { 
+        // normal render
+        vec4 color = texture(screenTexture, TexCoords);
+
+        // apply gamma correction
+        float gamma = 2.2;
+        color.rgb = pow(color.rgb, vec3(1.0/gamma));
+
+        FragColor = color;
+    }
+)glsl";
 
 // ====================================================================================================
 //  ShaderCode impl

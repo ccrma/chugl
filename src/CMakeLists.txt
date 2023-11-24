@@ -66,6 +66,7 @@ add_subdirectory(./vendor/glfw)  # TODO prob create a top-level CMakeLists.txt t
 add_subdirectory(./vendor/glad)
 add_subdirectory(./vendor/glm)
 add_subdirectory(./renderer)
+add_subdirectory(./util)
 add_subdirectory(./vendor/imgui)
 
 
@@ -149,7 +150,8 @@ target_precompile_headers(chugl_pch INTERFACE chugl_pch.h)
 
 # add libraries to interface
 target_link_libraries(chugl_pch INTERFACE
-    TracyClient glm assimp
+    TracyClient glm assimp 
+    chugl_util
 )
 
 # set interface include directories

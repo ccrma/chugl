@@ -5,7 +5,7 @@
 
 // CGL includes
 #include "renderer/Renderer.h"
-#include "renderer/Util.h"
+#include "renderer/Graphics.h"
 
 #include "renderer/scenegraph/SceneGraphObject.h"
 #include "renderer/scenegraph/Camera.h"
@@ -598,12 +598,6 @@ void Window::DisplayLoop()
         renderer.ProcessDeletionQueue(&scene); // IMPORTANT: should happen after flushing command queue
 
         // now renderer can work on drawing the copied scenegraph
-        renderer.BindFramebuffer();
-        renderer.Clear(
-            scene.GetBackgroundColor(),
-            true,   // clear color buffer
-            true    // clear depth buffer
-        );
         renderer.RenderScene(&scene, scene.GetMainCamera());
 
         // output pass: apply gamma correction, tone mapping, anti-aliasing, etc.
@@ -613,17 +607,6 @@ void Window::DisplayLoop()
             // avoids precision limitations
         // Gamma Correction
         // - add Texture.color_space constants to set internal texture formats
-
-
-        // screen pass: copy contents from framebuffer to screen
-        // TODO: move this into RenderScene as a post-processing step
-        renderer.UnbindFramebuffer();  // unbind framebuffer, bind default framebuffer
-        renderer.Clear(
-            scene.GetBackgroundColor(),
-            true,   // clear color buffer
-            false   // don't clear depth buffer
-        );
-        renderer.RenderScreen();  // TODO change name to PostProcess
 
         // Handle Events, Draw framebuffer
         glfwPollEvents();  // TODO: maybe put event handling in a separate thread?

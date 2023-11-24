@@ -7,6 +7,8 @@ add_library(renderer # TODO this whole structure is a mess I realize....can buil
     Texture.cpp
     VertexArray.cpp
     VertexBuffer.cpp
+    FrameBuffer.cpp
+    PostProcess.cpp
 
     # scenegraph -------
     scenegraph/Camera.cpp
@@ -20,6 +22,7 @@ add_library(renderer # TODO this whole structure is a mess I realize....can buil
     scenegraph/SceneGraphObject.cpp
     scenegraph/CGL_Texture.cpp
     scenegraph/Locator.cpp
+    scenegraph/chugl_postprocess.cpp
 )
 
 target_link_libraries(renderer

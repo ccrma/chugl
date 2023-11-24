@@ -1,7 +1,7 @@
 #pragma once
 
 #include "chugl_pch.h"
-#include "Util.h"
+#include "Graphics.h"
 
 /*
 * Helper class for VertexAttribPointer assignment on VertexArrayObjects

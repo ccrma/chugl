@@ -12,12 +12,14 @@
 #include "ulib_light.h"
 #include "ulib_scene.h"
 #include "ulib_assimp.h"
+#include "ulib_postprocess.h"
 
 #include "renderer/scenegraph/Camera.h"
 #include "renderer/scenegraph/Command.h"
 #include "renderer/scenegraph/Scene.h"
 #include "renderer/scenegraph/Light.h"
 #include "renderer/scenegraph/Locator.h"
+#include "renderer/scenegraph/chugl_postprocess.h"
 
 //-----------------------------------------------------------------------------
 // ChuGL Event Listeners
@@ -86,6 +88,9 @@ CK_DLL_SFUN(cgl_use_chuck_time);
 // get FPS
 CK_DLL_SFUN(cgl_get_fps);
 
+// Get root of post processing chain
+CK_DLL_SFUN(cgl_get_pp_root);
+
 
 
 // exports =========================================
@@ -99,6 +104,7 @@ t_CKUINT CGL::geometry_data_offset = 0;
 t_CKUINT CGL::material_data_offset = 0;
 t_CKUINT CGL::texture_data_offset = 0;
 t_CKUINT CGL::ggen_data_offset = 0;
+t_CKUINT CGL::pp_effect_offset_data;
 static t_CKUINT cgl_next_frame_event_data_offset = 0;
 static t_CKUINT window_resize_event_data_offset = 0;
 
@@ -127,6 +133,7 @@ t_CKBOOL init_chugl(Chuck_DL_Query *QUERY)
 	init_chugl_light(QUERY);
 	init_chugl_scene(QUERY);
     init_chugl_assimp(QUERY);
+	init_chugl_postprocess(QUERY);
     create_chugl_default_objs(QUERY);
 	init_chugl_static_fns(QUERY);
 
@@ -406,6 +413,10 @@ t_CKBOOL init_chugl_static_fns(Chuck_DL_Query *QUERY)
     QUERY->add_sfun(QUERY, cgl_get_fps, "int", "fps");
     QUERY->doc_func(QUERY, "FPS of current window, averaged over sliding window of 30 frames");
 
+	// Post Processing
+	QUERY->add_sfun(QUERY, cgl_get_pp_root, PP::Effect::CKName(PP::Type::Base), "renderPass");
+	QUERY->doc_func(QUERY, "Returns the root of the post processing chain. See the ChuGL post processing tutorial for more information.");
+
 	QUERY->end_class(QUERY);
 
 	return true;
@@ -530,6 +541,12 @@ CK_DLL_SFUN(cgl_use_chuck_time)
 CK_DLL_SFUN(cgl_get_fps)
 {
     RETURN->v_int = CGL::GetFPS();
+}
+
+CK_DLL_SFUN(cgl_get_pp_root)
+{
+	Scene *scene = (Scene *)CGL::GetSGO(CGL::GetMainScene(SHRED, API, VM));
+	RETURN->v_object = scene->GetRootEffect()->m_ChuckObject;
 }
 
 //-----------------------------------------------------------------------------
@@ -837,7 +854,18 @@ Chuck_DL_Api::Object CGL::GetMainScene(Chuck_VM_Shred *shred, CK_DL_API API, Chu
 		CGL::PushCommand(new CreateSceneGraphNodeCommand(defaultLight, &CGL::mainScene, lightObj, CGL::GetGGenDataOffset()));
 		// add to scene command
 		CGL::PushCommand(new RelationshipCommand(&CGL::mainScene, defaultLight, RelationshipCommand::Relation::AddChild));
+
+		// create root post process effect
+		PP::PassThroughEffect* rootEffect = new PP::PassThroughEffect;
+		Chuck_DL_Api::Type effectType = API->type->lookup(VM, rootEffect->myCkName());
+		// TODO: refcounting should jsut happen in the scene assignment
+		Chuck_Object* effectObj = API->object->create(shred, effectType, true);  // refcount for scene
+		// creation command
+		CGL::PushCommand(new CreateSceneGraphNodeCommand(rootEffect, &CGL::mainScene, effectObj, CGL::GetPPEffectDataOffset()));
+		// add to scene command
+		CGL::PushCommand(new SetSceneRootEffectCommand(&CGL::mainScene, rootEffect));
 	}
+
 	return CGL::mainScene.m_ChuckObject;
 }
 

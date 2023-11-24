@@ -1,10 +1,9 @@
 #pragma once
 
-#include "IndexBuffer.h"
-#include "VertexBuffer.h"
-
 // forward decls
 struct CGL_GeoAttribute;
+class VertexBuffer;
+class IndexBuffer;
 
 class VertexArray
 {

@@ -45,3 +45,4 @@
 #include <assimp/postprocess.h>
 
 // ChuGL includes ========================================
+#include "util/Timer.h"
