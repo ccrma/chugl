@@ -128,7 +128,7 @@ CK_DLL_CTOR(cgl_texture_ctor)
 
 CK_DLL_DTOR(cgl_texture_dtor)
 {
-	CGL::PushCommand(new DestroySceneGraphNodeCommand(SELF, CGL::GetTextureDataOffset(), &CGL::mainScene));
+	CGL::PushCommand(new DestroySceneGraphNodeCommand(SELF, CGL::GetTextureDataOffset(), API, &CGL::mainScene));
 }
 
 CK_DLL_MFUN(cgl_texture_set_wrap)
@@ -181,7 +181,7 @@ CK_DLL_CTOR(cgl_texture_file_ctor)
 	CGL::PushCommand(
         new CreateSceneGraphNodeCommand(
             new CGL_Texture(CGL_TextureType::File2D), 
-            &CGL::mainScene, SELF, CGL::GetTextureDataOffset()
+            &CGL::mainScene, SELF, CGL::GetTextureDataOffset(), API
         )
     );
 }
@@ -190,7 +190,7 @@ CK_DLL_MFUN(cgl_texture_file_set_filepath)
 {
 	CGL_Texture *texture = CGL::GetTexture(SELF);
 	Chuck_String *path = GET_NEXT_STRING(ARGS);
-	texture->m_FilePath = path->str(); // note: doesn't make sense to update flags on chuck-side copy because renderer doesn't have access
+	texture->m_FilePath = API->object->str(path); // note: doesn't make sense to update flags on chuck-side copy because renderer doesn't have access
 
 	CGL::PushCommand(new UpdateTexturePathCommand(texture));
 
@@ -209,20 +209,26 @@ CK_DLL_CTOR(cgl_texture_rawdata_ctor)
 	CGL::PushCommand(
         new CreateSceneGraphNodeCommand(
             new CGL_Texture(CGL_TextureType::RawData), 
-            &CGL::mainScene, SELF, CGL::GetTextureDataOffset()
+            &CGL::mainScene, SELF, CGL::GetTextureDataOffset(), API
         )
     );
 }
 
 CK_DLL_MFUN(cgl_texture_rawdata_set_data)
 {
-	CGL_Texture *texture = CGL::GetTexture(SELF);
-	Chuck_ArrayFloat *data = (Chuck_ArrayFloat *)GET_NEXT_OBJECT(ARGS);
+	CGL_Texture * texture = CGL::GetTexture(SELF);
+	Chuck_ArrayFloat * ckarray = (Chuck_ArrayFloat *)GET_NEXT_OBJECT(ARGS);
 	t_CKINT width = GET_NEXT_INT(ARGS);
 	t_CKINT height = GET_NEXT_INT(ARGS);
 
+    // TODO: extra round of copying here, can avoid if it matters
+    t_CKINT vsize = API->object->array_float_size(ckarray);
+    std::vector<t_CKFLOAT> theVec; theVec.reserve(vsize);
+    for( t_CKINT idx = 0; idx < vsize; idx++ )
+    { theVec.push_back(API->object->array_float_get_idx(ckarray,idx)); }
+    
 	// update chuck-side texture ( no copy to avoid blocking audio thread )
-	texture->SetRawData(data->m_vector, width, height, false);
-
-	CGL::PushCommand(new UpdateTextureDataCommand(texture->GetID(), data->m_vector, width, height));
+	texture->SetRawData(theVec, width, height, false);
+    // push command
+	CGL::PushCommand(new UpdateTextureDataCommand(texture->GetID(), theVec, width, height));
 }

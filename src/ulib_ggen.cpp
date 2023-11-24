@@ -377,13 +377,13 @@ CK_DLL_CTOR(cgl_obj_ctor)
     if (
         API->type->is_equal( thisType, ggenType ) // this type is GGen (subclasses are handled on their own)
         ||
-        thisType->originHint == te_originUserDefined // this type is defined .ck file
+        API->type->origin_hint(thisType) == ckte_origin_USERDEFINED // this type is defined .ck file
         ||
-        thisType->originHint == te_originImport // .ck file included in search path
+        API->type->origin_hint(thisType) == ckte_origin_IMPORT // .ck file included in search path
     )
     {
         SceneGraphObject *cglObj = new SceneGraphObject;
-        CGL::PushCommand(new CreateSceneGraphNodeCommand(cglObj, &CGL::mainScene, SELF, CGL::GetGGenDataOffset()));
+        CGL::PushCommand(new CreateSceneGraphNodeCommand(cglObj, &CGL::mainScene, SELF, CGL::GetGGenDataOffset(), API));
     }
 }
 
@@ -394,7 +394,7 @@ CK_DLL_DTOR(cgl_obj_dtor)
 	CGL::UnregisterGGenFromShred(SHRED, SELF);
 
 	// push command to destroy this object on render thread as well
-	CGL::PushCommand(new DestroySceneGraphNodeCommand(SELF, CGL::GetGGenDataOffset(), &CGL::mainScene));
+	CGL::PushCommand(new DestroySceneGraphNodeCommand(SELF, CGL::GetGGenDataOffset(), API, &CGL::mainScene));
 }
 
 CK_DLL_MFUN(cgl_obj_get_id)
@@ -415,7 +415,7 @@ CK_DLL_MFUN(cgl_obj_set_name)
 {
 	SceneGraphObject *obj = CGL::GetSGO(SELF);
 	Chuck_String *name = GET_NEXT_STRING(ARGS);
-	CGL::PushCommand(new UpdateNameCommand(obj, name->str()));
+	CGL::PushCommand(new UpdateNameCommand(obj, API->object->str(name)));
 	RETURN->v_string = name;
 }
 

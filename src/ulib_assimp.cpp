@@ -13,6 +13,7 @@
 #include "renderer/scenegraph/Geometry.h"
 
 #include <stb/stb_image.h>
+using namespace std;
 
 //-----------------------------------------------------------------------------
 // assimp implementation
@@ -142,7 +143,7 @@ CK_DLL_SFUN( chugl_assimp_load )
     }
 
     // this should be a GMesh ggen
-    RETURN->v_object = al.LoadAss( str->str(), aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals );
+    RETURN->v_object = al.LoadAss( API->object->str(str), aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals );
 
     // done
     return;
@@ -443,7 +444,7 @@ Mesh* AssLoader::CreateMesh(t_CKUINT index)
     // create mesh
     Mesh* mesh = new Mesh;
     // create HACK: would not need this if pre-ctors are called as part of create() above!
-    CGL::PushCommand(new CreateSceneGraphNodeCommand(mesh, &CGL::mainScene, meshObj, CGL::GetGGenDataOffset()));
+    CGL::PushCommand(new CreateSceneGraphNodeCommand(mesh, &CGL::mainScene, meshObj, CGL::GetGGenDataOffset(), CGL::CKAPI()));
     // set geo and mat into mesh
     CGL::MeshSet(mesh, geo, mat);
 
@@ -464,7 +465,7 @@ SceneGraphObject* AssLoader::ProcessNode( SceneGraphObject * parent, aiNode* ass
     // create chugl internal represensation
     SceneGraphObject * cgobj = new SceneGraphObject();
     // propagate to render thread
-    CGL::PushCommand(new CreateSceneGraphNodeCommand(cgobj, &CGL::mainScene, ggen, CGL::GetGGenDataOffset()));
+    CGL::PushCommand(new CreateSceneGraphNodeCommand(cgobj, &CGL::mainScene, ggen, CGL::GetGGenDataOffset(), CGL::CKAPI()));
     // set up ggen relationship
     if( parent ) CGL::PushCommand(new RelationshipCommand(parent, cgobj, RelationshipCommand::Relation::AddChild));
 

@@ -219,6 +219,7 @@ public: // VM and API references
 protected:
     static Chuck_VM * s_vm;
     static CK_DL_API s_api;
+    static CK_DL_API API; // specifically named API for decoupled OBJ_MEMBER_* access
 
 private: // attributes
 	// command queues 
@@ -272,8 +273,8 @@ public:
 		// register GGen --> origin shred
 		auto* parent_shred = shred;
 		// walk up parent chain until top-level
-		while (parent_shred->parent) {
-			parent_shred = parent_shred->parent;
+		while (API->shred->parent(parent_shred)) {
+			parent_shred = API->shred->parent(parent_shred);
 		}
 		s_GGen2OriginShred[ggen] = parent_shred;
 	}
