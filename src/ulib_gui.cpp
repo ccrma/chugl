@@ -152,8 +152,8 @@ t_CKBOOL init_chugl_gui_text(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_gui(Chuck_DL_Query *QUERY)
 {
     // get the VM and API
-    Chuck_VM * vm = QUERY->get_vm(QUERY);
-    CK_DL_API api = QUERY->get_api(QUERY);
+    Chuck_VM * vm = QUERY->ck_vm(QUERY);
+    CK_DL_API api = QUERY->ck_api(QUERY);
 
     // initialize Manager static references
     Manager::SetCKAPI(api);
