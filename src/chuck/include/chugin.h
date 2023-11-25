@@ -26,12 +26,16 @@
 // file: chugin.h
 // desc: unified header for creating chugins, including the following
 //
-//   * chuck c++ typedefs and #defines such as t_CKFLOAT
-//   * macros for defining chugin methods
-//   * chugin DL query API to interface with chuck type system
-//   * chugin runtime DL API to access host functionality
+//   * chuck c++ typedefs and #defines such as t_CKINT, t_CKFLOAT, etc.
+//   * macros for chugin components, e.g., member/static variables & functions,
+//     contructors, destructors, and operator overloads
+//   * chugin DL query API for adding new types to the ChucK type system
+//   * chugin DL runtime API for accessing host functionalities across
+//     shared-library boundaries
 //   * header version string CHUCK_VERSION_STRING
+//     (associated with a particular chuck language version)
 //   * host/chugin compatibility version
+//     (used when a chugin loads to determine chugin:host compatibility)
 //
 // NOTE: please see the chugins page and the chugins repository for examples
 //       https://chuck.stanford.edu/extend/
@@ -1210,7 +1214,6 @@ class CBufferSimple;
 #define GET_CK_VECTOR(ptr)     (*(t_CKVECTOR *)ptr)
 #define GET_CK_OBJECT(ptr)     (*(Chuck_Object **)ptr)
 #define GET_CK_STRING(ptr)     (*(Chuck_String **)ptr)
-#define GET_CK_STRING_SAFE(ptr) std::string( GET_CK_STRING(ptr)->c_str() )
 
 // param conversion with pointer advance
 #define GET_NEXT_FLOAT(ptr)    (*((t_CKFLOAT *&)ptr)++)
@@ -1228,7 +1231,17 @@ class CBufferSimple;
 #define GET_NEXT_VECTOR(ptr)   (*((t_CKVECTOR *&)ptr)++)
 #define GET_NEXT_OBJECT(ptr)   (*((Chuck_Object **&)ptr)++)
 #define GET_NEXT_STRING(ptr)   (*((Chuck_String **&)ptr)++)
+
+// string-specific operations
+#ifndef __CHUCK_CHUGIN__ // CHUGIN flag NOT present
+// assume macro used from host
+#define GET_CK_STRING_SAFE(ptr) std::string( GET_CK_STRING(ptr)->c_str() )
 #define GET_NEXT_STRING_SAFE(ptr) std::string( GET_NEXT_STRING(ptr)->c_str() )
+#else // CHUGIN flag is present
+// assume macro used from chugin; use chugins runtime API for portability
+#define GET_CK_STRING_SAFE(ptr) std::string( API->object->str((Chuck_String *)ptr) )
+#define GET_NEXT_STRING_SAFE(ptr) std::string( API->object->str(GET_NEXT_STRING(ptr) ) )
+#endif
 
 // param conversion
 #define SET_CK_FLOAT(ptr,v)      (*(t_CKFLOAT *&)ptr=v)
@@ -2022,26 +2035,31 @@ public:
         t_CKINT (CK_DLL_CALL * const array_int_get_idx)( ArrayInt array, t_CKINT idx );
         t_CKBOOL (CK_DLL_CALL * const array_int_get_key)( ArrayInt array, const char * key, t_CKINT & value  );
         t_CKBOOL (CK_DLL_CALL * const array_int_push_back)( ArrayInt array, t_CKINT value );
+        void (CK_DLL_CALL * const array_int_clear)( ArrayInt array );
         // array_float operations
         t_CKINT (CK_DLL_CALL * const array_float_size)( ArrayFloat array );
         t_CKFLOAT (CK_DLL_CALL * const array_float_get_idx)( ArrayFloat array, t_CKINT idx );
         t_CKBOOL (CK_DLL_CALL * const array_float_get_key)( ArrayFloat array, const char * key, t_CKFLOAT & value );
         t_CKBOOL (CK_DLL_CALL * const array_float_push_back)( ArrayFloat array, t_CKFLOAT value );
+        void (CK_DLL_CALL * const array_float_clear)(ArrayFloat array);
         // array_vec2/complex/polar/16 operations | 1.5.2.0 (ge) added
         t_CKINT (CK_DLL_CALL * const array_vec2_size)( ArrayVec2 array );
         t_CKVEC2 (CK_DLL_CALL * const array_vec2_get_idx)( ArrayVec2 array, t_CKINT idx );
         t_CKBOOL (CK_DLL_CALL * const array_vec2_get_key)( ArrayVec2 array, const char * key, t_CKVEC2 & value );
         t_CKBOOL (CK_DLL_CALL * const array_vec2_push_back)( ArrayVec2 array, const t_CKVEC2 & value );
+        void (CK_DLL_CALL * const array_vec2_clear)(ArrayVec2 array);
         // array_vec3/24 operations | 1.5.2.0 (ge) added
         t_CKINT (CK_DLL_CALL * const array_vec3_size)( ArrayVec3 array );
         t_CKVEC3 (CK_DLL_CALL * const array_vec3_get_idx)( ArrayVec3 array, t_CKINT idx );
         t_CKBOOL (CK_DLL_CALL * const array_vec3_get_key)( ArrayVec3 array, const char * key, t_CKVEC3 & value );
         t_CKBOOL (CK_DLL_CALL * const array_vec3_push_back)( ArrayVec3 array, const t_CKVEC3 & value );
+        void (CK_DLL_CALL * const array_vec3_clear)(ArrayVec3 array);
         // array_vec4/32 operations | 1.5.2.0 (ge) added
         t_CKINT (CK_DLL_CALL * const array_vec4_size)( ArrayVec4 array );
         t_CKVEC4 (CK_DLL_CALL * const array_vec4_get_idx)( ArrayVec4 array, t_CKINT idx );
         t_CKBOOL (CK_DLL_CALL * const array_vec4_get_key)( ArrayVec4 array, const char * key, t_CKVEC4 & value );
         t_CKBOOL (CK_DLL_CALL * const array_vec4_push_back)( ArrayVec4 array, const t_CKVEC4 & value );
+        void (CK_DLL_CALL * const array_vec4_clear)(ArrayVec4 array);
         // (UNSAFE) get c++ vector pointers from chuck arrays | 1.5.2.0
         // std::vector<t_CKUINT> * (CK_DLL_CALL * const array_int_vector)( ArrayInt array );
         // std::vector<t_CKFLOAT> * (CK_DLL_CALL * const array_float_vector)( ArrayFloat array );
@@ -2066,6 +2084,10 @@ public:
         void (CK_DLL_CALL * const callback_on_instantiate)( f_callback_on_instantiate callback, Type base_type, Chuck_VM * vm, t_CKBOOL shouldSetShredOrigin );
         // get origin hint ("where did this type originate?")
         ckte_Origin (CK_DLL_CALL * const origin_hint)(Type type);
+        // get type name (full, with decorations) (NOTE do not save a reference to the return value; make a copy if needed) | 1.5.2.0
+        const char * (CK_DLL_CALL * const name)(Type type);
+        // get type base name (no decorations) (NOTE do not save a reference to the return value; make a copy if needed) | 1.5.2.0
+        const char * (CK_DLL_CALL * const base_name)(Type type);
     } * const type;
 
     // api to access host-side shreds | 1.5.2.0
