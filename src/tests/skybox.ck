@@ -161,9 +161,44 @@ fun void CheckboxListener(UI_Checkbox @ checkbox, PP_Effect @ effect)
 fun void GammaListener(UI_SliderFloat @ gammaSlider, PP_Output @ output) {
     while (true) {
         gammaSlider => now;
-        gammaSlider.val() => float val;
-        output.gamma(val);
+        gammaSlider.val() => output.gamma;
         <<< "gamma set to", output.gamma() >>>;
+    }
+}
+
+fun void ExposureListener(UI_SliderFloat @ exposureSlider, PP_Output @ output) {
+    while (true) {
+        exposureSlider => now;
+        exposureSlider.val() => output.exposure;
+        <<< "exposure set to", output.exposure() >>>;
+    }
+}
+[
+    "None",
+    "Linear",
+    "Reinhard",
+    "Cineon",
+    "ACES",
+    "Uncharted"
+] @=> string tonemapOptions[];
+
+fun void TonemapListener(UI_Dropdown @ tonemapDropdown, PP_Output @ output) {
+    while (true) {
+        tonemapDropdown => now;
+        tonemapDropdown.val() => int val;
+        if (val == 0) {
+            output.toneMap(PP_Output.TONEMAP_NONE);
+        } else if (val == 1) {
+            output.toneMap(PP_Output.TONEMAP_LINEAR);
+        } else if (val == 2) {
+            output.toneMap(PP_Output.TONEMAP_REINHARD);
+        } else if (val == 3) {
+            output.toneMap(PP_Output.TONEMAP_CINEON);
+        } else if (val == 4) {
+            output.toneMap(PP_Output.TONEMAP_ACES);
+        } else if (val == 5) {
+            output.toneMap(PP_Output.TONEMAP_UNCHARTED);
+        }
     }
 }
 
@@ -191,10 +226,28 @@ while (effect != null) {
         // gamma
         UI_SliderFloat gammaSlider;
         gammaSlider.text("Gamma");
-        gammaSlider.val(2.2);
+        gammaSlider.val((effect$PP_Output).gamma());
+        <<< "init gamma: ", (effect$PP_Output).gamma() >>>;
         gammaSlider.range(0.1, 10);
         window.add(gammaSlider);
         spork ~ GammaListener(gammaSlider, effect$PP_Output);
+
+        // exposure
+        UI_SliderFloat exposureSlider;
+        exposureSlider.text("Exposure");
+        exposureSlider.val(1);
+        exposureSlider.range(0.01, 16);
+        window.add(exposureSlider);
+        spork ~ ExposureListener(exposureSlider, effect$PP_Output);
+        
+        // tonemap
+        UI_Dropdown tonemapDropdown;
+        tonemapDropdown.text("Tone Mapping method");
+        tonemapDropdown.options(tonemapOptions);
+        tonemapDropdown.val(0);
+        window.add(tonemapDropdown);
+        spork ~ TonemapListener(tonemapDropdown, effect$PP_Output);
+
     }
 
     effect.next() @=> effect;

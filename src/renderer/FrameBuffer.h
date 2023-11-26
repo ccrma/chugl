@@ -7,9 +7,10 @@ private:  // member vars
     unsigned int m_Width, m_Height;
     unsigned int m_ColorAttachment, m_DepthAttachment;
     bool m_IsMultisampled;
+    bool m_HDR;
 public:
     FrameBuffer(
-        unsigned int width, unsigned int height, bool isMultisampled = false
+        unsigned int width, unsigned int height, bool hdr, bool isMultisampled = false
     );
 
     ~FrameBuffer();

@@ -80,6 +80,9 @@ struct MaterialUniform {
 	static MaterialUniform Create(std::string s, int i0) {
 		MaterialUniform m; m.type = UniformType::Int; m.name = s; m.i = i0; return m;
 	}
+	static MaterialUniform CreateInt(std::string s, int i0) {
+		MaterialUniform m; m.type = UniformType::Int; m.name = s; m.i = i0; return m;
+	}
 	static MaterialUniform Create(std::string s, int i0, int i1) {
 		MaterialUniform m; m.type = UniformType::Int2; m.name = s; m.i2[0] = i0; m.i2[1] = i1; return m;
 	}

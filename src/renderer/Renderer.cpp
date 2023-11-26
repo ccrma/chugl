@@ -396,9 +396,9 @@ void Renderer::BuildFramebuffer(unsigned int width, unsigned int height) {
 	m_ScreenPositionsVB = new VertexBuffer();
 	m_ScreenTexCoordsVB = new VertexBuffer();
 
-	m_FrameBufferPing = new FrameBuffer(width, height);
-	m_FrameBufferPong = new FrameBuffer(width, height);
-	m_SceneFrameBufferMS = new FrameBuffer(width, height, true);
+	m_FrameBufferPing = new FrameBuffer(width, height, true, false);
+	m_FrameBufferPong = new FrameBuffer(width, height, true, false);
+	m_SceneFrameBufferMS = new FrameBuffer(width, height, true, true);
 	// m_SceneFrameBufferMS = new FrameBuffer(width, height, false);
 
 	// setup screen triangle (in ndc)

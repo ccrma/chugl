@@ -41,6 +41,13 @@ CK_DLL_CTOR(chugl_pp_output_ctor);
 CK_DLL_MFUN(chugl_pp_output_set_gamma);
 CK_DLL_MFUN(chugl_pp_output_get_gamma);
 
+CK_DLL_MFUN(chugl_pp_output_set_tonemap_method);
+CK_DLL_MFUN(chugl_pp_output_get_tonemap_method);
+
+CK_DLL_MFUN(chugl_pp_output_set_exposure);
+CK_DLL_MFUN(chugl_pp_output_get_exposure);
+
+
 //-----------------------------------------------------------------------------
 // PP class declarations
 //-----------------------------------------------------------------------------
@@ -250,6 +257,37 @@ t_CKBOOL init_chugl_pp_output(Chuck_DL_Query *QUERY)
 
     QUERY->add_ctor(QUERY, chugl_pp_output_ctor);
 
+    QUERY->add_svar(QUERY, "int", "TONEMAP_NONE", TRUE, (void*) &OutputEffect::TONEMAP_NONE);
+    QUERY->doc_var(QUERY, "No tonemapping. HDR color values will be clamped to [0, 1].");
+
+    QUERY->add_svar(QUERY, "int", "TONEMAP_LINEAR", TRUE, (void*) &OutputEffect::TONEMAP_LINEAR);
+    QUERY->doc_var(QUERY,
+        "Linear tonemapping. HDR color values will be clamped to [0, 1] after being scaled by exposure"
+    );
+
+    QUERY->add_svar(QUERY, "int", "TONEMAP_REINHARD", TRUE, (void*) &OutputEffect::TONEMAP_REINHARD);
+    QUERY->doc_var(QUERY,
+        "Reinhard tonemapping. HDR color values will be mapped with the formula (HDR / (HDR + 1)) * exposure" 
+    );
+
+    QUERY->add_svar(QUERY, "int", "TONEMAP_CINEON", TRUE, (void*) &OutputEffect::TONEMAP_CINEON);
+    QUERY->doc_var(QUERY,
+        "Cineon tonemapping. Source: http://filmicworlds.com/blog/filmic-tonemapping-operators/"
+    );
+
+    QUERY->add_svar(QUERY, "int", "TONEMAP_ACES", TRUE, (void*) &OutputEffect::TONEMAP_ACES);
+    QUERY->doc_var(QUERY,
+        "Tone mapping approach developed by the Academy Color Encoding System (ACES)."
+        "Gilves filmic quality"
+    );
+
+    QUERY->add_svar(QUERY, "int", "TONEMAP_UNCHARTED", TRUE, (void*) &OutputEffect::TONEMAP_UNCHARTED);
+    QUERY->doc_var(QUERY,
+        "Tone mapping used by Uncharted 2."
+        "Source: http://filmicworlds.com/blog/filmic-tonemapping-operators/"
+    );
+
+
     // TODO add param get/set
 
     QUERY->add_mfun(QUERY, chugl_pp_output_set_gamma, "float", "gamma");
@@ -261,6 +299,25 @@ t_CKBOOL init_chugl_pp_output(Chuck_DL_Query *QUERY)
 
     QUERY->add_mfun(QUERY, chugl_pp_output_get_gamma, "float", "gamma");
     QUERY->doc_func(QUERY, "Get value for gamma correction.");
+
+    QUERY->add_mfun(QUERY, chugl_pp_output_set_tonemap_method, "int", "toneMap");
+    QUERY->add_arg(QUERY, "int", "method");
+    QUERY->doc_func(QUERY, 
+        "Set the tonemapping method."
+        "0 = none, 1 = Reinhard"
+    );
+
+    QUERY->add_mfun(QUERY, chugl_pp_output_get_tonemap_method, "int", "toneMap");
+    QUERY->doc_func(QUERY, "Get the tonemapping method.");
+
+    QUERY->add_mfun(QUERY, chugl_pp_output_set_exposure, "float", "exposure");
+    QUERY->add_arg(QUERY, "float", "exposure");
+    QUERY->doc_func(QUERY, 
+        "Set the exposure value. Multiplies the HDR color values before tonemapping."
+    );
+
+    QUERY->add_mfun(QUERY, chugl_pp_output_get_exposure, "float", "exposure");
+    QUERY->doc_func(QUERY, "Get the exposure value.");
 
     QUERY->end_class(QUERY);
 
@@ -284,12 +341,11 @@ CK_DLL_MFUN(chugl_pp_output_set_gamma)
 
     RETURN->v_float = gamma;
 
-    auto uniform = MaterialUniform::CreateFloat(OutputEffect::U_GAMMA, gamma);
 
 
     CGL::PushCommand(
         new UpdateEffectUniformCommand(
-            effect, uniform
+            effect, MaterialUniform::CreateFloat(OutputEffect::U_GAMMA, gamma)
         )
     );
 }
@@ -298,4 +354,44 @@ CK_DLL_MFUN(chugl_pp_output_get_gamma)
 {
     OutputEffect* effect = (OutputEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
     RETURN->v_float = effect->GetGamma();
+}
+
+CK_DLL_MFUN(chugl_pp_output_set_tonemap_method)
+{
+    OutputEffect* effect = (OutputEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    int method = GET_NEXT_INT(ARGS);
+
+    RETURN->v_int = method;
+
+    CGL::PushCommand( 
+        new UpdateEffectUniformCommand( 
+            effect, MaterialUniform::CreateInt(OutputEffect::U_TONEMAP, method) 
+        ) 
+    );
+}
+
+CK_DLL_MFUN(chugl_pp_output_get_tonemap_method)
+{
+    OutputEffect* effect = (OutputEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    RETURN->v_int = effect->GetTonemap();
+}
+
+CK_DLL_MFUN(chugl_pp_output_set_exposure)
+{
+    OutputEffect* effect = (OutputEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    float exposure = GET_NEXT_FLOAT(ARGS);
+
+    RETURN->v_float = exposure;
+
+    CGL::PushCommand( 
+        new UpdateEffectUniformCommand( 
+            effect, MaterialUniform::CreateFloat(OutputEffect::U_EXPOSURE, exposure) 
+        ) 
+    );
+}
+
+CK_DLL_MFUN(chugl_pp_output_get_exposure)
+{
+    OutputEffect* effect = (OutputEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    RETURN->v_float = effect->GetExposure();
 }

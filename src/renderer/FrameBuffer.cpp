@@ -2,13 +2,14 @@
 #include "Graphics.h"
 
 FrameBuffer::FrameBuffer(
-	unsigned int width, unsigned int height, bool isMultisampled
+	unsigned int width, unsigned int height, bool hdr, bool isMultisampled
 ) : m_FrameBufferID(0), m_ColorBufferID(0), m_DepthBufferID(0),
     m_Width(width), 
     m_Height(height), 
     m_ColorAttachment(0), 
     m_DepthAttachment(0),
-    m_IsMultisampled(isMultisampled)
+    m_IsMultisampled(isMultisampled),
+    m_HDR(hdr)
 {
     // gen and bind
     GLCall(glGenFramebuffers(1, &m_FrameBufferID));
@@ -61,12 +62,13 @@ void FrameBuffer::UpdateSize(unsigned int width, unsigned int height, bool force
 
     // update texture dimensions 
     auto textureTarget = m_IsMultisampled ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D;
+    auto internalFormat = m_HDR ? GL_RGBA16F : GL_RGBA8;
 
     GLCall(glBindTexture(textureTarget, m_ColorBufferID));
     if (m_IsMultisampled) {
-        GLCall(glTexImage2DMultisample(textureTarget, 4, GL_RGBA8, width, height, GL_TRUE));
+        GLCall(glTexImage2DMultisample(textureTarget, 4, internalFormat, width, height, GL_TRUE));
     } else {
-        GLCall(glTexImage2D(textureTarget, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL));
+        GLCall(glTexImage2D(textureTarget, 0, internalFormat, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL));
 		GLCall(glTexParameteri(textureTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR ));
 		GLCall(glTexParameteri(textureTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
     }

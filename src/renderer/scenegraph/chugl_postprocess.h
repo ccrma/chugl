@@ -81,17 +81,36 @@ public:
         // TODO: can we auto-extrapolate this from shader annotations?
         // if not the ChuGL API impl at least the DLL query and UI auto-gen
 
+        // tone mapping
+        SetUniform(MaterialUniform::CreateInt(U_TONEMAP, TONEMAP_REINHARD));
+
+        // exposure
+        SetUniform(MaterialUniform::CreateFloat(U_EXPOSURE, 1.0f));
+
         // gamma correction
-        SetUniform(MaterialUniform::Create(U_GAMMA, 2.2f));
+        SetUniform(MaterialUniform::CreateFloat(U_GAMMA, 2.2f));
     };
     virtual Type GetType() override { return Type::Output; }
     virtual OutputEffect* Clone() override { return new OutputEffect(*this); }\
 
     // uniform getters
+    int GetTonemap() { return GetUniform(U_TONEMAP).i; }
     float GetGamma() { return GetUniform(U_GAMMA).f; }
+    float GetExposure() { return GetUniform(U_EXPOSURE).f; }
 
 public: // uniform names
     static const std::string U_GAMMA;
+    static const std::string U_TONEMAP;
+    static const std::string U_EXPOSURE;
+
+public:  // uniform constants
+    // tonemap methods
+    static const int TONEMAP_NONE;
+    static const int TONEMAP_LINEAR;
+    static const int TONEMAP_REINHARD;
+    static const int TONEMAP_CINEON;
+    static const int TONEMAP_ACES;
+    static const int TONEMAP_UNCHARTED;
 
 };
 

@@ -61,3 +61,12 @@ Effect *PP::Effect::NextEnabled()
 // =================================================================================================
 
 const std::string OutputEffect::U_GAMMA = "u_Gamma";
+const std::string OutputEffect::U_TONEMAP = "u_Tonemap";
+const std::string OutputEffect::U_EXPOSURE = "u_Exposure";
+
+const int OutputEffect::TONEMAP_NONE = 0;
+const int OutputEffect::TONEMAP_LINEAR = 1;
+const int OutputEffect::TONEMAP_REINHARD = 2;
+const int OutputEffect::TONEMAP_CINEON = 3;
+const int OutputEffect::TONEMAP_ACES = 4;
+const int OutputEffect::TONEMAP_UNCHARTED = 5;
