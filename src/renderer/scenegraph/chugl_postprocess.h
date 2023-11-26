@@ -2,6 +2,7 @@
 
 #include "chugl_pch.h"
 #include "SceneGraphNode.h"
+#include "Material.h"  // used for UniformType enum. TODO refactor into separate file
 
 namespace PP
 {
@@ -15,22 +16,38 @@ enum class Type : t_CKUINT
 
 class Effect : public SceneGraphNode
 {
+public:
+    typedef std::unordered_map<std::string, MaterialUniform> UniformMap;
 protected:
     size_t m_NextID;
     bool m_Bypass;
+    UniformMap m_Uniforms;
+
 public:
     Effect() : m_NextID(0), m_Bypass(false) {};
     virtual ~Effect() {};
 
+    // uniform map accessors
+    UniformMap& GetUniforms() { return m_Uniforms; }
+    MaterialUniform& GetUniform(const std::string& name) {
+        return m_Uniforms[name];
+    }
+    void SetUniform(const MaterialUniform& uniform);
+
+    // bypass
     bool GetBypass() { return m_Bypass; }
     void SetBypass(bool bypass) { m_Bypass = bypass; }
+    bool* GetBypassPtr() { return &m_Bypass; }
 
+    // effect chain accessors
     size_t GetNextID() { return m_NextID; }
     Effect* Next();
     Effect* NextEnabled();
 
+    // add effect to chain
     void Add(Effect* next) { m_NextID = next ? next->GetID() : 0; }
-    void Remove() { m_NextID = 0; }
+    // remove next effect from chain
+    void RemoveNext() { m_NextID = 0; }
 
 public:  // virtual, override in derived classes
     virtual Type GetType() { return Type::Base; }
@@ -58,14 +75,24 @@ public:
 class OutputEffect : public Effect
 {
 public:
-    struct Params {
-        float gamma;
+    OutputEffect() : Effect() {
+        // initialize default uniforms
+
+        // TODO: can we auto-extrapolate this from shader annotations?
+        // if not the ChuGL API impl at least the DLL query and UI auto-gen
+
+        // gamma correction
+        SetUniform(MaterialUniform::Create(U_GAMMA, 2.2f));
     };
-    Params m_Params;
-public:
-    OutputEffect(Params params) : Effect(), m_Params(params) {};
     virtual Type GetType() override { return Type::Output; }
-    virtual OutputEffect* Clone() override { return new OutputEffect(*this); }
+    virtual OutputEffect* Clone() override { return new OutputEffect(*this); }\
+
+    // uniform getters
+    float GetGamma() { return GetUniform(U_GAMMA).f; }
+
+public: // uniform names
+    static const std::string U_GAMMA;
+
 };
 
 // TODO: consolidates a series of PP effects into a chain

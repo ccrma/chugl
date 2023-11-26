@@ -147,6 +147,7 @@ public: // skybox methods
 	bool GetSkyboxEnabled() { return skyboxEnabled; }
 	void SetSkybox(CGL_CubeMap* skybox);
 	size_t GetSkyboxID() { return skyboxID; }
+	CGL_CubeMap* GetSkybox() { return (CGL_CubeMap*)GetNode(skyboxID); }
 
 private: // post processing
 // for now just store post processing effects in scene

@@ -1,4 +1,5 @@
 #include "ulib_gui.h"
+#include "ulib_cgl.h"
 
 using namespace GUI;
 
@@ -175,7 +176,6 @@ t_CKBOOL init_chugl_gui(Chuck_DL_Query *QUERY)
 // name: init_chugl_gui_element()
 // desc: ...
 //-----------------------------------------------------------------------------
-static t_CKINT chugl_gui_element_offset_data = 0;
 t_CKBOOL init_chugl_gui_element(Chuck_DL_Query *QUERY)
 {   
     QUERY->begin_class(QUERY, Manager::GetCkName(Type::Element), "Event");
@@ -189,7 +189,7 @@ t_CKBOOL init_chugl_gui_element(Chuck_DL_Query *QUERY)
     QUERY->add_dtor(QUERY, chugl_gui_element_dtor);
     
     // add member
-    chugl_gui_element_offset_data = QUERY->add_mvar(QUERY, "int", "@data", FALSE);
+    CGL::SetGUIDataOffset(QUERY->add_mvar(QUERY, "int", "@data", FALSE));
 
     // add label()
     QUERY->add_mfun(QUERY, chugl_gui_element_label_set, "string", "text");
@@ -254,15 +254,15 @@ CK_DLL_CTOR( chugl_gui_element_ctor )
 
 CK_DLL_DTOR( chugl_gui_element_dtor )
 {
-    GUI::Element* element = (GUI::Element*) OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
-    OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data) = 0;
+    GUI::Element* element = (GUI::Element*) OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
+    OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset()) = 0;
     // TODO only going to clear chuck mem for now
     // no destructors yet, can do mem management + delete later
 }
 
 CK_DLL_MFUN( chugl_gui_element_label_set )
 {
-    Element* element = (Element*)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    Element* element = (Element*)OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
     Chuck_String * s = GET_NEXT_STRING(ARGS);
     if( element && s )
     {
@@ -277,7 +277,7 @@ CK_DLL_MFUN( chugl_gui_element_label_set )
 
 CK_DLL_MFUN( chugl_gui_element_label_get )
 {
-    Element* element = (Element*)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    Element* element = (Element*)OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
     RETURN->v_string = (Chuck_String*)API->object->create_string(VM, element->GetLabel().c_str(), false);
 }
 
@@ -312,15 +312,15 @@ t_CKBOOL init_chugl_gui_window( Chuck_DL_Query * QUERY )
 CK_DLL_CTOR( chugl_gui_window_ctor )
 {
     Window* window = new Window(SELF);
-    OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data) = (t_CKINT) window;
+    OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset()) = (t_CKINT) window;
     // add window to manager
     Manager::AddWindow(window);
 }
 
 CK_DLL_MFUN( chugl_gui_window_add_element )
 {
-    Window* window = (Window*)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
-    Element* e = (Element *)OBJ_MEMBER_INT(GET_NEXT_OBJECT(ARGS), chugl_gui_element_offset_data);
+    Window* window = (Window*)OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
+    Element* e = (Element *)OBJ_MEMBER_INT(GET_NEXT_OBJECT(ARGS), CGL::GetGUIDataOffset());
     window->AddElement(e);
 }
 
@@ -364,7 +364,7 @@ t_CKBOOL init_chugl_gui_button(Chuck_DL_Query *QUERY)
 }
 
 CK_DLL_CTOR( chugl_gui_button_ctor ) {
-    OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data) = (t_CKINT) new Button(SELF);
+    OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset()) = (t_CKINT) new Button(SELF);
 }
 
 
@@ -393,18 +393,18 @@ t_CKBOOL init_chugl_gui_checkbox(Chuck_DL_Query *QUERY)
 }
 
 CK_DLL_CTOR( chugl_gui_checkbox_ctor ) {
-    OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data) = (t_CKINT) new Checkbox(SELF);
+    OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset()) = (t_CKINT) new Checkbox(SELF);
 }
 
 CK_DLL_MFUN( chugl_gui_checkbox_val_get )
 {
-    Checkbox* cb = (Checkbox *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    Checkbox* cb = (Checkbox *)OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
     RETURN->v_int = cb->GetData() ? 1 : 0;
 }
 
 CK_DLL_MFUN( chugl_gui_checkbox_val_set )
 {
-    Checkbox* cb = (Checkbox *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    Checkbox* cb = (Checkbox *)OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
     t_CKINT val = GET_NEXT_INT(ARGS);
     cb->SetData( val ? true : false );
     RETURN->v_int = val;
@@ -449,18 +449,18 @@ t_CKBOOL init_chugl_gui_slider_float(Chuck_DL_Query *QUERY)
 
 CK_DLL_CTOR( chugl_gui_slider_float_ctor )
 {
-    OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data) = (t_CKINT) new FloatSlider(SELF);
+    OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset()) = (t_CKINT) new FloatSlider(SELF);
 }
 
 CK_DLL_MFUN( chugl_gui_slider_float_val_get )
 {
-    FloatSlider* slider = (FloatSlider *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    FloatSlider* slider = (FloatSlider *)OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
     RETURN->v_float = slider->GetData();
 }
 
 CK_DLL_MFUN( chugl_gui_slider_float_val_set )
 {
-    FloatSlider* slider = (FloatSlider *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    FloatSlider* slider = (FloatSlider *)OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
     t_CKFLOAT val = GET_NEXT_FLOAT(ARGS);
     slider->SetData( val );
     RETURN->v_float = val;
@@ -468,14 +468,14 @@ CK_DLL_MFUN( chugl_gui_slider_float_val_set )
 
 CK_DLL_MFUN( chugl_gui_slider_float_range_set )
 {
-    FloatSlider* slider = (FloatSlider *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    FloatSlider* slider = (FloatSlider *)OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
     slider->SetMin( GET_NEXT_FLOAT(ARGS) ); 
     slider->SetMax( GET_NEXT_FLOAT(ARGS) ); 
 }
 
 CK_DLL_MFUN( chugl_gui_slider_float_power_set )
 {
-    FloatSlider* slider = (FloatSlider *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    FloatSlider* slider = (FloatSlider *)OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
     slider->SetPower( GET_NEXT_FLOAT(ARGS) ); 
 }
 
@@ -514,18 +514,18 @@ t_CKBOOL init_chugl_gui_slider_int(Chuck_DL_Query *QUERY)
 
 CK_DLL_CTOR( chugl_gui_slider_int_ctor )
 {
-    OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data) = (t_CKINT) new IntSlider(SELF);
+    OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset()) = (t_CKINT) new IntSlider(SELF);
 }
 
 CK_DLL_MFUN( chugl_gui_slider_int_val_get )
 {
-    IntSlider* slider = (IntSlider *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    IntSlider* slider = (IntSlider *)OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
     RETURN->v_int= slider->GetData();
 }
 
 CK_DLL_MFUN( chugl_gui_slider_int_val_set )
 {
-    IntSlider* slider = (IntSlider *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    IntSlider* slider = (IntSlider *)OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
     t_CKINT val = GET_NEXT_INT(ARGS);
     slider->SetData( val );
     RETURN->v_int = val;
@@ -533,7 +533,7 @@ CK_DLL_MFUN( chugl_gui_slider_int_val_set )
 
 CK_DLL_MFUN( chugl_gui_slider_int_range_set )
 {
-    IntSlider* slider = (IntSlider *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    IntSlider* slider = (IntSlider *)OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
     slider->SetMin( GET_NEXT_INT(ARGS) ); 
     slider->SetMax( GET_NEXT_INT(ARGS) ); 
 }
@@ -567,19 +567,19 @@ t_CKBOOL init_chugl_gui_color3(Chuck_DL_Query *QUERY)
 
 CK_DLL_CTOR( chugl_gui_color3_ctor )
 {
-    OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data) = (t_CKINT) new Color3(SELF);
+    OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset()) = (t_CKINT) new Color3(SELF);
 }
 
 CK_DLL_MFUN( chugl_gui_color3_val_get )
 {
-    Color3* color3 = (Color3 *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    Color3* color3 = (Color3 *)OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
     glm::vec3 color = color3->GetData();
     RETURN->v_vec3 = {color.r, color.g, color.b};
 }
 
 CK_DLL_MFUN( chugl_gui_color3_val_set )
 {
-    Color3* color3 = (Color3 *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    Color3* color3 = (Color3 *)OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
     t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
     color3->SetData( color );
     RETURN->v_vec3 = color;
@@ -621,18 +621,18 @@ t_CKBOOL init_chugl_gui_dropdown(Chuck_DL_Query *QUERY)
 
 CK_DLL_CTOR( chugl_gui_dropdown_ctor )
 {
-    OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data) = (t_CKINT) new Dropdown(SELF);
+    OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset()) = (t_CKINT) new Dropdown(SELF);
 }
 
 CK_DLL_MFUN( chugl_gui_dropdown_val_get )
 {
-    Dropdown* dropdown = (Dropdown *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    Dropdown* dropdown = (Dropdown *)OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
     RETURN->v_int = dropdown->GetData();
 }
 
 CK_DLL_MFUN( chugl_gui_dropdown_val_set )
 {
-    Dropdown* dropdown = (Dropdown *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    Dropdown* dropdown = (Dropdown *)OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
     t_CKINT idx = GET_NEXT_INT(ARGS);
     dropdown->SetData( idx );
     RETURN->v_int = idx;
@@ -640,7 +640,7 @@ CK_DLL_MFUN( chugl_gui_dropdown_val_set )
 
 CK_DLL_MFUN( chugl_gui_dropdown_options_set )
 {
-    Dropdown* dropdown = (Dropdown *)OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    Dropdown* dropdown = (Dropdown *)OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
     Chuck_ArrayInt * options = (Chuck_ArrayInt *) GET_NEXT_OBJECT(ARGS);
     std::vector<std::string> options_str;
     // pull chuck_strings out of the array
@@ -735,18 +735,18 @@ t_CKBOOL init_chugl_gui_text(Chuck_DL_Query *QUERY)
 
 CK_DLL_CTOR( chugl_gui_text_ctor )
 {
-    OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data) = (t_CKINT) new Text(SELF);
+    OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset()) = (t_CKINT) new Text(SELF);
 }
 
 CK_DLL_MFUN( chugl_gui_text_val_get )
 {
-    Text* text = (Text*) OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    Text* text = (Text*) OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
     RETURN->v_string = (Chuck_String*)API->object->create_string(VM, text->GetData().c_str(), false);
 }
 
 CK_DLL_MFUN( chugl_gui_text_val_set )
 {
-    Text* text = (Text*) OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    Text* text = (Text*) OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
     Chuck_String * s = GET_NEXT_STRING(ARGS);
     if( text && s )
     {
@@ -761,14 +761,14 @@ CK_DLL_MFUN( chugl_gui_text_val_set )
 
 CK_DLL_MFUN( chugl_gui_text_color3_get )
 {
-    Text* text = (Text*) OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    Text* text = (Text*) OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
     glm::vec4 color = text->GetColor();
     RETURN->v_vec3 = {color.r, color.g, color.b};
 }
 
 CK_DLL_MFUN( chugl_gui_text_color3_set )
 {
-    Text* text = (Text*) OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    Text* text = (Text*) OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
     t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
     text->SetColor( {color.x, color.y, color.z, 1.0 } );
     RETURN->v_vec3 = color;
@@ -776,14 +776,14 @@ CK_DLL_MFUN( chugl_gui_text_color3_set )
 
 // CK_DLL_MFUN( chugl_gui_text_color4_get )
 // {
-//     Text* text = (Text*) OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+//     Text* text = (Text*) OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
 //     glm::vec4 color = text->GetColor();
 //     RETURN->v_vec4 = {color.r, color.g, color.b, color.a};
 // }
 
 // CK_DLL_MFUN( chugl_gui_text_color4_set )
 // {
-//     Text* text = (Text*) OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+//     Text* text = (Text*) OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
 //     t_CKVEC4 color = GET_NEXT_VEC4(ARGS);
 //     text->SetColor( { color.x, color.y, color.z, color.w } );
 //     RETURN->v_vec4 = color;
@@ -791,13 +791,13 @@ CK_DLL_MFUN( chugl_gui_text_color3_set )
 
 CK_DLL_MFUN( chugl_gui_text_wrap_get )
 {
-    Text* text = (Text*) OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    Text* text = (Text*) OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
     RETURN->v_int = text->GetWrap() ? 1 : 0;
 }
 
 CK_DLL_MFUN( chugl_gui_text_wrap_set )
 {
-    Text* text = (Text*) OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    Text* text = (Text*) OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
     t_CKINT wrap = GET_NEXT_INT(ARGS);
     text->SetWrap( wrap ? true : false );
     RETURN->v_int = wrap;
@@ -805,13 +805,13 @@ CK_DLL_MFUN( chugl_gui_text_wrap_set )
 
 CK_DLL_MFUN( chugl_gui_text_mode_get )
 {
-    Text* text = (Text*) OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    Text* text = (Text*) OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
     RETURN->v_int = text->GetMode();
 }
 
 CK_DLL_MFUN( chugl_gui_text_mode_set )
 {
-    Text* text = (Text*) OBJ_MEMBER_INT(SELF, chugl_gui_element_offset_data);
+    Text* text = (Text*) OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
     t_CKINT mode = GET_NEXT_INT(ARGS);
     text->SetMode( static_cast<Text::Mode>(mode) );
     RETURN->v_int = mode;

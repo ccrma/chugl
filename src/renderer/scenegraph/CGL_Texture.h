@@ -56,12 +56,18 @@ enum CGL_TextureFilterMode : t_CKUINT {
     // Linear_MipmapLinear
 };
 
+enum class CGL_TextureColorSpace : t_CKUINT {
+    Linear = 0,
+    sRGB = 1
+};
+
 
 // TODO: can this be extended to other texture types
 struct CGL_TextureSamplerParams {
     CGL_TextureWrapMode wrapS, wrapT;  // ST <==> UV
     CGL_TextureFilterMode filterMin, filterMag;
     bool genMipMaps;
+
 
     // default constructor
     CGL_TextureSamplerParams() : wrapS(CGL_TextureWrapMode::ClampToEdge), wrapT(CGL_TextureWrapMode::ClampToEdge),
@@ -77,8 +83,9 @@ protected:
     // and reset by renderer after regenerating GPU data
     unsigned int m_UpdateFlags; 
     CGL_TextureSamplerParams m_SamplerParams;
+    CGL_TextureColorSpace m_ColorSpace;
 public:
-    CGL_Texture() : m_UpdateFlags(0) {}
+    CGL_Texture() : m_UpdateFlags(0), m_ColorSpace(CGL_TextureColorSpace::Linear)  {}
     
     virtual ~CGL_Texture() {
         // all state stored in structs and vectors, no need to do anything
@@ -101,21 +108,28 @@ public:  // update sampler params
     void SetSamplerParams(const CGL_TextureSamplerParams& params) { m_SamplerParams = params; }
     const CGL_TextureSamplerParams& GetSamplerParams() { return m_SamplerParams; }
 
+public:  // color space
+    void SetColorSpace(CGL_TextureColorSpace colorSpace) { m_ColorSpace = colorSpace; }
+    CGL_TextureColorSpace GetColorSpace() { return m_ColorSpace; }
+
 public: // update flags
     const static unsigned int NEW_SAMPLER; // whether to reset texture sampling params
     const static unsigned int NEW_RAWDATA;   // whether to raw texture data buffer has changed
     const static unsigned int NEW_FILEPATH;   // whether filepath has changed
     const static unsigned int NEW_DIMENSIONS;     // whether texture dimensions have changed
+    const static unsigned int NEW_COLORSPACE;     // whether texture colorspace has changed
 
     bool HasNewSampler() { return m_UpdateFlags & CGL_Texture::NEW_SAMPLER; }
     bool HasNewRawData() { return m_UpdateFlags & CGL_Texture::NEW_RAWDATA; }
     bool HasNewFilePath() { return m_UpdateFlags & CGL_Texture::NEW_FILEPATH; }
     bool HasNewDimensions() { return m_UpdateFlags & CGL_Texture::NEW_DIMENSIONS; }
+    bool HasNewColorSpace() { return m_UpdateFlags & CGL_Texture::NEW_COLORSPACE; }
 
     bool SetNewSampler() { return m_UpdateFlags |= CGL_Texture::NEW_SAMPLER; }
     bool SetNewRawData() { return m_UpdateFlags |= CGL_Texture::NEW_RAWDATA; }
     bool SetNewFilePath() { return m_UpdateFlags |= CGL_Texture::NEW_FILEPATH; }
     bool SetNewDimensions() { return m_UpdateFlags |= CGL_Texture::NEW_DIMENSIONS; }
+    bool SetNewColorSpace() { return m_UpdateFlags |= CGL_Texture::NEW_COLORSPACE; }
     
 // static constants (because pass enums as svars through chuck dll query is undefined)
     // wrap modes
@@ -128,6 +142,9 @@ public: // update flags
     // for now, mipmaps are always linearly interpolated
     const static t_CKUINT Nearest;
     const static t_CKUINT Linear;
+
+    const static t_CKUINT ColorSpace_Linear;
+    const static t_CKUINT ColorSpace_sRGB;
 
 public: // chuck type names
     // TODO can probably template this and genarlize across all scenegraph classes?
@@ -149,7 +166,7 @@ private:
     unsigned int m_Width, m_Height;
 
 public:
-    FileTexture2D() : m_FilePath("") {}
+    FileTexture2D() : CGL_Texture(), m_FilePath("") {}
 
     virtual FileTexture2D* Clone() override {
         FileTexture2D * tex = new FileTexture2D(*this);
@@ -174,6 +191,7 @@ private:
     unsigned int m_Width, m_Height; // for DataTexture
 public:
     DataTexture2D() : 
+        CGL_Texture(),
         m_Width(0), 
         m_Height(0)
     {}
@@ -211,7 +229,7 @@ private:
     std::vector<std::string> m_FilePaths;
     
 public:
-    CGL_CubeMap() {
+    CGL_CubeMap() : CGL_Texture() {
         // initialize all faces to empty string
         m_FilePaths.resize(6, "");
 

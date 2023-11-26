@@ -28,6 +28,17 @@ public:
 	// bind/unbind texture to openGL context
 	virtual void Bind(unsigned int slot = 0) const = 0;
 	virtual void Unbind() const = 0;
+
+
+public:
+	static int GetInternalFormat(CGL_Texture* chugl_tex);
+	static void GenTex2D(
+		CGL_Texture* cglTexture,
+		int width, int height,
+		const unsigned char* data,
+		int target,
+		int mipLevel
+	);
 };
 
 class Texture2D : public Texture

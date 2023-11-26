@@ -147,7 +147,7 @@ public: // constructor
 	Renderer() : m_MainCamera(nullptr), m_RenderState(this),
 	m_ScreenVA(nullptr), m_ScreenPositionsVB(nullptr), m_ScreenTexCoordsVB(nullptr),
 	m_SkyboxVA(nullptr), m_SkyboxVB(nullptr), m_SkyboxShader(nullptr),
-	m_FrameBufferPing(nullptr), m_FrameBufferPong(nullptr)
+	m_FrameBufferPing(nullptr), m_FrameBufferPong(nullptr), m_SceneFrameBufferMS(nullptr)
 	{
 		// TODO: initialize this after window is created 
 		// and openGL context is initialized.
@@ -158,6 +158,7 @@ public: // constructor
 	friend class RendererState;
 
 public:  // framebuffer setup
+	FrameBuffer* m_SceneFrameBufferMS;  // multisampled framebuffer for scene rendering
 	FrameBuffer* m_FrameBufferPing, *m_FrameBufferPong;  // ping pong buffers for post processing
 	VertexArray* m_ScreenVA;
 	VertexBuffer* m_ScreenPositionsVB;
@@ -165,10 +166,7 @@ public:  // framebuffer setup
 
 	void BuildFramebuffer(unsigned int width, unsigned int height);
 
-	void UpdateFramebufferSize(unsigned int width, unsigned int height) {
-		if (m_FrameBufferPing) m_FrameBufferPing->UpdateSize(width, height);
-		if (m_FrameBufferPong) m_FrameBufferPong->UpdateSize(width, height);
-	}
+	void UpdateFramebufferSize(unsigned int width, unsigned int height);
 
 	FrameBuffer* GetReadFrameBuffer(bool ping) {
 		return ping ? m_FrameBufferPing : m_FrameBufferPong;

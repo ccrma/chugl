@@ -30,6 +30,7 @@ CK_DLL_MFUN(cgl_scene_get_fog_type);
 
 // skybox
 CK_DLL_MFUN(cgl_scene_set_skybox_cubemap);
+CK_DLL_MFUN(cgl_scene_get_skybox_cubemap);
 CK_DLL_MFUN(cgl_scene_set_skybox_enabled);
 CK_DLL_MFUN(cgl_scene_get_skybox_enabled);
 
@@ -116,6 +117,9 @@ t_CKBOOL init_chugl_scene(Chuck_DL_Query *QUERY)
 		QUERY, 
 		"Set the skybox of the scene. Pass in a cubemap texture. Will enable the skybox."
 	);
+
+	QUERY->add_mfun(QUERY, cgl_scene_get_skybox_cubemap, CGL_Texture::CKName(CGL_TextureType::CubeMap), "skybox");
+	QUERY->doc_func(QUERY, "Get the skybox of the scene");
 
 	QUERY->add_mfun(QUERY, cgl_scene_set_skybox_enabled, "int", "skyboxEnabled");
 	QUERY->add_arg(QUERY, "int", "enabled");
@@ -250,6 +254,13 @@ CK_DLL_MFUN(cgl_scene_set_skybox_cubemap)
 	);
 
 	RETURN->v_object = cubemap_obj;
+}
+
+CK_DLL_MFUN(cgl_scene_get_skybox_cubemap)
+{
+	Scene *scene = (Scene *) CGL::GetSGO(SELF);
+	CGL_CubeMap* cubemap = scene->GetSkybox();
+	RETURN->v_object = cubemap ? cubemap->m_ChuckObject : nullptr;
 }
 
 CK_DLL_MFUN(cgl_scene_set_skybox_enabled)

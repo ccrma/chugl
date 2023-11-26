@@ -398,6 +398,8 @@ void Renderer::BuildFramebuffer(unsigned int width, unsigned int height) {
 
 	m_FrameBufferPing = new FrameBuffer(width, height);
 	m_FrameBufferPong = new FrameBuffer(width, height);
+	m_SceneFrameBufferMS = new FrameBuffer(width, height, true);
+	// m_SceneFrameBufferMS = new FrameBuffer(width, height, false);
 
 	// setup screen triangle (in ndc)
 	// We can cover the entire screen with a single triangle
@@ -451,6 +453,13 @@ void Renderer::BuildFramebuffer(unsigned int width, unsigned int height) {
 	);
 }
 
+void Renderer::UpdateFramebufferSize(unsigned int width, unsigned int height)
+{
+	if (m_FrameBufferPing) m_FrameBufferPing->UpdateSize(width, height);
+	if (m_FrameBufferPong) m_FrameBufferPong->UpdateSize(width, height);
+	if (m_SceneFrameBufferMS) m_SceneFrameBufferMS->UpdateSize(width, height);
+}
+
 void Renderer::PostProcessPass()
 {
 	Scene* scene = m_RenderState.GetScene();
@@ -475,10 +484,30 @@ void Renderer::PostProcessPass()
 	GLCall(glEnable(GL_CULL_FACE));
 	GLCall(glCullFace(GL_BACK));
 
+
 	// step through post processing effects
 	bool ping = true;  // start with reading from ping buffer
-	int effectCount = 1;
+	int effectCount = 0;
 	PP::Effect* chugl_effect = rootEffect->GetChuglEffect()->NextEnabled();
+
+	// for first effect, blit from MSAA framebuffer to read frame buffer
+	auto* writeFrameBuffer = GetReadFrameBuffer(ping);
+	assert(writeFrameBuffer->GetWidth() == m_SceneFrameBufferMS->GetWidth());
+	assert(writeFrameBuffer->GetHeight() == m_SceneFrameBufferMS->GetHeight());
+	GLCall(glBindFramebuffer(GL_READ_FRAMEBUFFER, m_SceneFrameBufferMS->GetID()));
+	GLCall(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, writeFrameBuffer->GetID()));
+	GLCall(
+		glBlitFramebuffer(
+			0, 0, 
+			m_SceneFrameBufferMS->GetWidth(), m_SceneFrameBufferMS->GetHeight(), 
+			0, 0, 
+			writeFrameBuffer->GetWidth(), writeFrameBuffer->GetHeight(),
+			GL_COLOR_BUFFER_BIT, 
+			// GL_LINEAR
+			GL_NEAREST
+		)
+	);
+
 	while (chugl_effect) {
 		PostProcessEffect* effect = GetOrCreateEffect(chugl_effect->GetID());
 		// std::cout << "effect num: " << effectCount++ << std::endl;
@@ -500,7 +529,7 @@ void Renderer::PostProcessPass()
 		);
 
 		// bind screen shader
-		effect->Apply();  
+		effect->Apply(*this);  
 		// draw
 		GLCall(glDrawArrays(GL_TRIANGLES, 0, 3));
 
@@ -508,6 +537,8 @@ void Renderer::PostProcessPass()
 		chugl_effect = chugl_effect->NextEnabled();
 		// flip ping pong buffer
 		ping = !ping;
+		// incr effect count
+		++effectCount;
 	}
 
 	// disable face fulling
@@ -648,12 +679,6 @@ void Renderer::RenderScene(Scene* scene, Camera* camera)
 {
 	assert(scene->IsScene());
 
-	// clear background
-	Clear(
-		scene->GetBackgroundColor(),
-		true,   // clear color buffer
-		true    // clear depth buffer
-	);
 
 	// enable depth testing
 	GLCall(glEnable(GL_DEPTH_TEST));	

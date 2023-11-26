@@ -582,16 +582,19 @@ const std::string ShaderCode::PP_OUTPUT = R"glsl(
 
     in vec2 TexCoords;
 
+    // Uniforms ==================================================================
     uniform sampler2D screenTexture;
+    uniform float u_Gamma = 2.2;
+    
 
+    // Main ======================================================================
     void main()
     { 
         // normal render
         vec4 color = texture(screenTexture, TexCoords);
 
         // apply gamma correction
-        float gamma = 2.2;
-        color.rgb = pow(color.rgb, vec3(1.0/gamma));
+        color.rgb = pow(color.rgb, vec3(1.0/u_Gamma));
 
         FragColor = color;
     }

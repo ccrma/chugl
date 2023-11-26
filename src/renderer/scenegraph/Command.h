@@ -468,6 +468,27 @@ private:
     CGL_TextureSamplerParams m_SamplerParams;
 };
 
+class UpdateTextureColorSpaceCommand : public SceneGraphCommand
+{
+public:
+    UpdateTextureColorSpaceCommand(CGL_Texture * tex, CGL_TextureColorSpace colorspace) 
+    : m_TexID(tex->GetID()), m_ColorSpace(colorspace) {
+        tex->SetColorSpace(colorspace);
+    };
+
+    virtual void execute(Scene* scene) override {
+        CGL_Texture* tex = dynamic_cast<CGL_Texture*>(scene->GetNode(m_TexID));
+        assert(tex);
+
+        // copy sampler params
+        tex->SetColorSpace(m_ColorSpace);
+        tex->SetNewColorSpace();  // set flag to let renderer know it needs to update texture sampling params on GPU
+        tex->SetNewSampler();  // changing color space requires regenerating texture, need to reset sampler
+    }
+private:
+    size_t m_TexID;
+    CGL_TextureColorSpace m_ColorSpace;
+};
 
 class UpdateTexturePathCommand : public SceneGraphCommand
 {
@@ -681,6 +702,9 @@ private:
 
 //========================= Post Processing Commands =========================//
 
+// Sets the root post processing effect of the scene
+// only meant to be called once on initialization, to propogate root to render thread
+// NOT exposed through chuck API
 class SetSceneRootEffectCommand : public SceneGraphCommand
 {
 public:
@@ -724,14 +748,14 @@ class RemoveEffectCommand : public SceneGraphCommand
 public:
     RemoveEffectCommand(PP::Effect* effect) 
         : m_ID(effect->GetID()) {
-        effect->Remove();
+        effect->RemoveNext();
     };
 
     virtual void execute(Scene* renderThreadScene) override {
         PP::Effect* effect = dynamic_cast<PP::Effect*>(renderThreadScene->GetNode(m_ID));
         assert(effect);
 
-        effect->Remove();
+        effect->RemoveNext();
     }
 private:
     size_t m_ID;
@@ -754,4 +778,26 @@ public:
 private:
     size_t m_ID;
     bool m_Bypass;
+};
+
+
+class UpdateEffectUniformCommand: public SceneGraphCommand
+{
+public:
+    UpdateEffectUniformCommand(PP::Effect* effect, const MaterialUniform& uniform) 
+        : m_ID(effect->GetID()), m_Uniform(uniform)
+    {
+        effect->SetUniform(m_Uniform);
+    }
+
+    virtual void execute(Scene* renderThreadScene) override {
+        PP::Effect* effect = dynamic_cast<PP::Effect*>(renderThreadScene->GetNode(m_ID));
+        assert(effect);
+
+        effect->SetUniform(m_Uniform);
+    }
+
+private:
+    size_t m_ID;
+    MaterialUniform m_Uniform;
 };

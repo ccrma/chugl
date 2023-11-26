@@ -20,6 +20,10 @@ CK_DLL_MFUN(cgl_texture_set_filter);
 CK_DLL_MFUN(cgl_texture_get_filter_min);
 CK_DLL_MFUN(cgl_texture_get_filter_mag);
 
+// color space
+CK_DLL_MFUN(chugl_texture_set_colorspace);
+CK_DLL_MFUN(chugl_texture_get_colorspace);
+
 // Texture --> FileTexture (texture from filepath .png .jpg etc) ==============
 CK_DLL_CTOR(cgl_texture_file_ctor);
 CK_DLL_MFUN(cgl_texture_file_set_filepath);
@@ -65,6 +69,20 @@ t_CKBOOL init_chugl_texture(Chuck_DL_Query *QUERY)
 	QUERY->add_svar(QUERY, "int", "FILTER_LINEAR", TRUE, (void *)&CGL_Texture::Linear);
     QUERY->doc_var(QUERY, "When passed into Texture.filter(), sets texture sampler to use bilinear filtering");
 
+	// colorspace options
+	QUERY->add_svar(QUERY, "int", "COLOR_SPACE_LINEAR", TRUE, (void *)&CGL_Texture::ColorSpace_Linear);
+	QUERY->doc_var(QUERY, 
+		"Specifices the texture data to be in linear colorspace."
+		"Textures used for lighting parameters (like specular or normal maps) are typically in this linear space"
+		"Pass into Texture.colorSpace()"
+	);
+	QUERY->add_svar(QUERY, "int", "COLOR_SPACE_SRGB", TRUE, (void *)&CGL_Texture::ColorSpace_sRGB);
+	QUERY->doc_var(QUERY, 
+		"Specifices the colorspace of the texture data to be in gamma-corrected sRGB colorspace."
+		"Textures used for color data (like diffuse maps) are typically in this colorspace"
+		"Pass into Texture.colorSpace()"
+	);
+
 	// member fns -----------------------------------------------------------
 	QUERY->add_mfun(QUERY, cgl_texture_set_wrap, "void", "wrap");
 	QUERY->add_arg(QUERY, "int", "s");
@@ -85,6 +103,13 @@ t_CKBOOL init_chugl_texture(Chuck_DL_Query *QUERY)
     QUERY->doc_func(QUERY, "Set texture sampler minification filter. Default FILTER_LINEAR");
 	QUERY->add_mfun(QUERY, cgl_texture_get_filter_mag, "int", "filterMag");
     QUERY->doc_func(QUERY, "Set texture sampler magnification filter. Default FILTER_LINEAR");
+
+	QUERY->add_mfun(QUERY, chugl_texture_set_colorspace, "int", "colorSpace");
+	QUERY->add_arg(QUERY, "int", "colorSpace");
+	QUERY->doc_func(QUERY, "Set the colorspace of the texture data. Default COLOR_SPACE_LINEAR");
+
+	QUERY->add_mfun(QUERY, chugl_texture_get_colorspace, "int", "colorSpace");
+	QUERY->doc_func(QUERY, "Get the colorspace of the texture data. Default COLOR_SPACE_LINEAR");
 
 	QUERY->end_class(QUERY);
 
@@ -203,6 +228,25 @@ CK_DLL_MFUN(cgl_texture_get_filter_mag)
 {
 	CGL_Texture *texture = CGL::GetTexture(SELF);
 	RETURN->v_int = static_cast<t_CKINT>(texture->GetSamplerParams().filterMag);
+}
+
+CK_DLL_MFUN(chugl_texture_set_colorspace)
+{
+	CGL_Texture *texture = CGL::GetTexture(SELF);
+	t_CKINT colorspace = GET_NEXT_INT(ARGS);
+
+	RETURN->v_int = colorspace;
+
+	CGL::PushCommand(new UpdateTextureColorSpaceCommand(
+		texture, 
+		static_cast<CGL_TextureColorSpace>(colorspace)
+	));
+}
+
+CK_DLL_MFUN(chugl_texture_get_colorspace)
+{
+	CGL_Texture *texture = CGL::GetTexture(SELF);
+	RETURN->v_int = static_cast<t_CKINT>(texture->GetColorSpace());
 }
 
 // FileTexture API impl =====================================================

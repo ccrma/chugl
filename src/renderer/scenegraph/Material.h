@@ -59,6 +59,9 @@ struct MaterialUniform {
 	static MaterialUniform Create(const std::string s, float f0) {
 		MaterialUniform m; m.type = UniformType::Float; m.name = s; m.f = f0; return m;
 	}
+	static MaterialUniform CreateFloat(const std::string s, float f0) {
+		MaterialUniform m; m.type = UniformType::Float; m.name = s; m.f = f0; return m;
+	}
 	static MaterialUniform Create(std::string s, float f0, float f1) {
 		MaterialUniform m; m.type = UniformType::Float2; m.name = s; m.f2[0] = f0; m.f2[1] = f1; return m;
 	}

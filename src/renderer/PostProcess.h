@@ -55,9 +55,7 @@ public:
         if (m_Shader) delete m_Shader;
     }
 
-    virtual void Apply() {
-        m_Shader->Bind();
-    };
+    virtual void Apply(Renderer& renderer);
 
     PP::Effect* GetChuglEffect() { return m_Effect; }
 

@@ -80,7 +80,16 @@ void RendererState::PrepareScene(Scene *scene)
 	PP::Effect* chugl_root_effect = scene->GetRootEffect();
 	m_PostProcessingEnabled = chugl_root_effect && chugl_root_effect->NextEnabled();
 	// bind framebuffer if post processing enabled
-	if (m_PostProcessingEnabled) m_Renderer->m_FrameBufferPing->Bind();
+	if (m_PostProcessingEnabled) {
+		m_Renderer->m_SceneFrameBufferMS->Bind();
+	}
+
+	// clear background (must happen AFTER framebuffer bind)
+	m_Renderer->Clear(
+		scene->GetBackgroundColor(),
+		true,   // clear color buffer
+		true    // clear depth buffer
+	);
 }
 
 void RendererState::Reset()

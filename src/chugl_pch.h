@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <condition_variable>
 #include <mutex>
+#include <functional>
 
 // data structures =======================================
 #include <string>

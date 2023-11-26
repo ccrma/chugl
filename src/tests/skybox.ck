@@ -26,6 +26,11 @@ UI_Checkbox skyboxCheckbox;
 skyboxCheckbox.text("skybox enabled");
 skyboxCheckbox.val(true);
 
+UI_Dropdown colorSpaceDropdown;
+colorSpaceDropdown.text("Skybox Color Space");
+["linear", "srgb"] @=> string colorSpaceOptions[];
+colorSpaceDropdown.options(colorSpaceOptions);
+
 UI_Text separator;
 separator.text("PhongMaterial environment mapping params");
 separator.mode(UI_Text.MODE_SEPARATOR);
@@ -56,6 +61,7 @@ envMapRatioSlider.range(0, 1);
 
 
 window.add(dropdown);
+window.add(colorSpaceDropdown);
 window.add(skyboxCheckbox);
 window.add(separator);
 window.add(envMapEnabledCheckbox);
@@ -101,6 +107,18 @@ fun void DropdownListener() {
     }
 } spork ~ DropdownListener();
 
+fun void ColorSpaceDropdownListener() {
+    while (true) {
+        colorSpaceDropdown => now;
+        colorSpaceDropdown.val() => int val;
+        if (val == 0) {
+            scene.skybox().colorSpace(Texture.COLOR_SPACE_LINEAR);
+        } else if (val == 1) {
+            scene.skybox().colorSpace(Texture.COLOR_SPACE_SRGB);
+        }
+    }
+} spork ~ ColorSpaceDropdownListener();
+
 fun void SkyboxToggleListener() {
     while (true) {
         skyboxCheckbox => now;
@@ -127,7 +145,69 @@ sphere.mat() @=> Material @ mat;
 
 // Post Processing =======================================================
 PP_PassThrough pass1, pass2, pass3, pass4;
-GG.renderPass().next(pass1).next(pass2).next(pass3).next(pass4);
+PP_Output output;
+// GG.renderPass().next(pass1); // .next(pass2).next(pass3).next(pass4);
+GG.renderPass().next(pass1).next(pass2).next(output); // .next(pass2).next(pass3).next(pass4);
+
+fun void CheckboxListener(UI_Checkbox @ checkbox, PP_Effect @ effect)
+{
+    while (true)
+    {
+        checkbox => now;
+        effect.bypass(checkbox.val());
+    }
+}
+
+fun void GammaListener(UI_SliderFloat @ gammaSlider, PP_Output @ output) {
+    while (true) {
+        gammaSlider => now;
+        gammaSlider.val() => float val;
+        output.gamma(val);
+        <<< "gamma set to", output.gamma() >>>;
+    }
+}
+
+<<< "Texture.COLOR_SPACE_LINEAR", Texture.COLOR_SPACE_LINEAR >>>;
+<<< "Texture.COLOR_SPACE_SRGB", Texture.COLOR_SPACE_SRGB >>>;
+
+// create UI
+GG.renderPass().next() @=> PP_Effect @ effect;
+0 => int effectIndex;
+while (effect != null) {
+    // effect.UI() @=> UI_Element @ effectUI;
+    // effectUI.text("pass " + effectIndex);
+    // window.add(effectUI);
+
+    <<< "Creating UI for pass", effectIndex, "Type:", Type.of(effect).baseName() >>>;
+
+    UI_Checkbox checkbox;
+    checkbox.text("pass " + effectIndex);
+    checkbox.val(false);    
+    window.add(checkbox);
+    spork ~ CheckboxListener(checkbox, effect);
+
+    // create UI based on type
+    if (Type.of(effect).baseName() == "PP_Output") {
+        // gamma
+        UI_SliderFloat gammaSlider;
+        gammaSlider.text("Gamma");
+        gammaSlider.val(2.2);
+        gammaSlider.range(0.1, 10);
+        window.add(gammaSlider);
+        spork ~ GammaListener(gammaSlider, effect$PP_Output);
+    }
+
+    effect.next() @=> effect;
+    effectIndex++;
+}
+
+// pass1.UI() @=> UI_Element @ effectUI;
+// effectUI.text("passthrough1");
+// window.add(effectUI);
+
+// output.UI() @=> UI_Element @ outputUI;
+// outputUI.text("output pass");
+// window.add(outputUI);
 
 // Material UI options =================================================== 
 

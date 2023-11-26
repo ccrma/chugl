@@ -104,7 +104,8 @@ t_CKUINT CGL::geometry_data_offset = 0;
 t_CKUINT CGL::material_data_offset = 0;
 t_CKUINT CGL::texture_data_offset = 0;
 t_CKUINT CGL::ggen_data_offset = 0;
-t_CKUINT CGL::pp_effect_offset_data;
+t_CKUINT CGL::pp_effect_offset_data = 0;
+t_CKUINT CGL::gui_data_offset = 0;
 static t_CKUINT cgl_next_frame_event_data_offset = 0;
 static t_CKUINT window_resize_event_data_offset = 0;
 

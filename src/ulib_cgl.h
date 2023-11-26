@@ -117,6 +117,7 @@ private: // chuck object offsets
 	static t_CKUINT texture_data_offset;
 	static t_CKUINT ggen_data_offset;
 	static t_CKUINT pp_effect_offset_data;
+	static t_CKUINT gui_data_offset;
 
 public:  // chuck object offset setters and getters
 	static void SetGeometryDataOffset(t_CKUINT offset) { geometry_data_offset = offset; }
@@ -129,6 +130,8 @@ public:  // chuck object offset setters and getters
 	static t_CKUINT GetGGenDataOffset() { return ggen_data_offset; }
 	static void SetPPEffectDataOffset(t_CKUINT offset) { pp_effect_offset_data = offset; }
 	static t_CKUINT GetPPEffectDataOffset() { return pp_effect_offset_data; }
+	static void SetGUIDataOffset(t_CKUINT offset) { gui_data_offset = offset; }
+	static t_CKUINT GetGUIDataOffset() { return gui_data_offset; }
 
 public: // chuck obj getters
 	static Geometry* GetGeometry(Chuck_Object* ckobj) { return (Geometry *)OBJ_MEMBER_INT(ckobj, CGL::geometry_data_offset); }

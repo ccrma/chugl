@@ -99,7 +99,8 @@ enum class Type : t_CKUINT
     Checkbox,
     Color3,
     Dropdown,
-    Text
+    Text,
+    Custom
 };
 
 //-----------------------------------------------------------------------------
@@ -569,8 +570,8 @@ public:
 public:
     Text(
         Chuck_Object* event
-    ) : Element(event), m_Text(" "), m_Color({1.0, 1.0, 1.0, 1.0}),
-        m_Wrap(true), m_Mode(Mode::Default)
+    ) : Element(event), m_Color({1.0, 1.0, 1.0, 1.0}),
+        m_Wrap(true), m_Mode(Mode::Default), m_Text(" ")
      {}
 
     virtual Type GetType() override { return Type::Text; }
@@ -659,11 +660,36 @@ public: // static const modes
     static const t_CKUINT SeparatorText;
 
 private:
-    std::mutex m_ReadDataLock;  // lock to provide read/write access to m_ReadData
+    // std::mutex m_ReadDataLock;  // lock to provide read/write access to m_ReadData
     std::string m_Text;
     ImVec4 m_Color;
     bool m_Wrap;
     Mode m_Mode;
+};
+
+// Custom element class
+// Currently used by PostProcessors to generate custom GUI controls
+// Assumed to be READ ONLY to chuck thread, does not offer any way to set data
+template <typename T>
+class Custom : public Element
+{
+public:
+    Custom(
+        Chuck_Object* event,
+        const std::function<void(Custom*, T&)>& drawFn,
+        T data
+    ) :  Element(event), m_DrawFn(drawFn), m_Data(data) {}
+
+    virtual Type GetType() override { return Type::Custom; }
+
+    virtual void Draw() override {
+        // no need to lock because only ever accessed by render thread
+        m_DrawFn(this, m_Data);
+    }
+private:
+    // custom draw function which takes current Custom element as argument
+    std::function<void(Custom*, T&)> m_DrawFn;
+    T m_Data;
 };
 
 };  // end namespace GUI
