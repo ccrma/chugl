@@ -3,6 +3,7 @@
     // TODO re-enable after resolving Machine.remove() not clearing children
     // which are sporked via Machine.add()
     // TODO: gc test causes segfault
+    "bloom",
     "skybox",
     "lights",
     "alpha",
@@ -81,7 +82,7 @@ fun void reset() {
     GG.camera().sca(1);
 
     // reset window
-    GG.windowed(800, 600);
+    GG.windowed(1200, 900);
     GG.windowTitle("Chugl Unit Tests");
 
     // reset mouse

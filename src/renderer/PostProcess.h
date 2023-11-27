@@ -66,8 +66,6 @@ public:
     BloomEffect(PP::Effect* effect, unsigned int viewportWidth, unsigned int viewportHeight) 
     :
     PostProcessEffect(effect),
-    // uniforms (TODO move into chugl postprocess effect)
-    m_ChainLength(5), 
     // shaders
     m_DownSampleShader(nullptr), 
     m_UpSampleShader(nullptr),
@@ -137,13 +135,14 @@ public:
         // bind bloom texture
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, GetBloomTexture());
+        // glBindTexture(GL_TEXTURE_2D, GetBloomTexture());
         // m_BlendShader->setInt("bloomTexture", 1); // must match uniform name in PP_BLOOM_BLEND 
 
-        // TODO: apply blend uniforms
-        // blend mode
-        // blend amount
+        // apply blending uniforms
         auto* chugl_bloom = GetChuglBloom();
         m_BlendShader->setFloat(PP::BloomEffect::U_STRENGTH, chugl_bloom->GetStrength());
+        m_BlendShader->setInt(PP::BloomEffect::U_BLEND_MODE, chugl_bloom->GetBlendMode());
+        m_BlendShader->setInt(PP::BloomEffect::U_LEVELS, GetChainLength());
 
         // Render screen-filled quad
         // (current don't need to because already done in postproecsspass)
@@ -226,11 +225,21 @@ private:  // internal methods
         return m_MipChain[0].texID;
     }
 
+    int GetChainLength() {
+        return glm::clamp<int>(GetChuglBloom()->GetLevels(), 1, m_MipChain.size() - 1);
+    }
+
     void RenderDownsamples() {
         m_DownSampleShader->Bind();
 
         // set uniforms
         m_DownSampleShader->setFloat2("u_SrcResolution", m_SrcViewportWidth, m_SrcViewportHeight);
+        auto* chugl_bloom = GetChuglBloom();
+        m_DownSampleShader->setFloat(PP::BloomEffect::U_THRESHOLD, chugl_bloom->GetThreshold());
+
+        m_DownSampleShader->setBool(PP::BloomEffect::U_KARIS_ENABLED, chugl_bloom->GetKarisEnabled());
+
+        // m_DownSampleShader->setFloat(PP::BloomEffect::U_THRESHOLD_KNEE, chugl_bloom->GetThresholdKnee());
 
         // should already be bound
         // Bind srcTexture (HDR color buffer) as initial texture input
@@ -238,9 +247,11 @@ private:  // internal methods
         // glBindTexture(GL_TEXTURE_2D, srcTexture);
 
         // Progressively downsample through the mip chain
-        for (int i = 0; i < m_ChainLength; i++)
+        for (int i = 0; i < GetChainLength(); i++)
         {
             const Mip& mip = m_MipChain[i];
+            // set mip level
+            m_DownSampleShader->setInt("u_MipLevel", i);
             // rescale viewport
             glViewport(0, 0, mip.size.x, mip.size.y);
             // bind destination
@@ -254,7 +265,7 @@ private:  // internal methods
             // glBindVertexArray(0);
 
             // Set current mip resolution as srcResolution for next iteration
-            m_DownSampleShader->setFloat2("u_SrcResolution", m_SrcViewportWidth, m_SrcViewportHeight);
+            m_DownSampleShader->setFloat2("u_SrcResolution", mip.size.x, mip.size.y);
             // Set current mip as texture input for next iteration
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, mip.texID);
@@ -271,7 +282,7 @@ private:  // internal methods
         glBlendFunc(GL_ONE, GL_ONE);
         glBlendEquation(GL_FUNC_ADD);
 
-        for (int i = m_ChainLength - 1; i > 0; i--)
+        for (int i = GetChainLength() - 1; i > 0; i--)
         {
             const Mip& mip = m_MipChain[i];
             const Mip& nextMip = m_MipChain[i-1];
@@ -306,7 +317,6 @@ private:  // shader setup
 
 private:  // framebuffer setup
     unsigned int m_FrameBufferID;
-    int m_ChainLength;
     static const int MAX_CHAIN_LENGTH;
 
 

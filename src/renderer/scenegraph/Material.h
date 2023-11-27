@@ -95,6 +95,9 @@ struct MaterialUniform {
 	static MaterialUniform Create(std::string s, bool b0) {
 		MaterialUniform m; m.type = UniformType::Bool; m.name = s; m.b = b0; return m;
 	}
+	static MaterialUniform CreateBool(std::string s, bool b0) {
+		MaterialUniform m; m.type = UniformType::Bool; m.name = s; m.b = b0; return m;
+	}
 	static MaterialUniform Create(std::string s, size_t texID) {
 		MaterialUniform m; m.type = UniformType::Texture; m.name = s; m.texID = texID; return m;
 	}

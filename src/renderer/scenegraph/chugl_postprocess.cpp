@@ -78,3 +78,13 @@ const int OutputEffect::TONEMAP_UNCHARTED = 5;
 // =================================================================================================
 const std::string BloomEffect::U_STRENGTH = "u_BloomStrength";
 const std::string BloomEffect::U_RADIUS = "u_FilterRadius";
+const std::string BloomEffect::U_THRESHOLD = "u_Threshold";
+// const std::string BloomEffect::U_THRESHOLD_KNEE = "u_ThresholdKnee";
+const std::string BloomEffect::U_LEVELS = "u_Levels";
+const std::string BloomEffect::U_BLEND_MODE = "u_BlendMode";
+
+const std::string BloomEffect::U_KARIS_ENABLED = "u_KarisEnabled";
+const std::string BloomEffect::U_KARIS_MODE = "u_KarisMode";
+
+const t_CKUINT BloomEffect::BLEND_MIX = 0;
+const t_CKUINT BloomEffect::BLEND_ADD = 1;

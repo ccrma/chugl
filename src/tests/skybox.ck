@@ -224,8 +224,41 @@ fun void BloomRadiusListener(UI_SliderFloat @ radiusSlider, PP_Bloom @ bloom) {
     }
 }
 
-<<< "Texture.COLOR_SPACE_LINEAR", Texture.COLOR_SPACE_LINEAR >>>;
-<<< "Texture.COLOR_SPACE_SRGB", Texture.COLOR_SPACE_SRGB >>>;
+fun void BloomThresholdListener(UI_SliderFloat @ thresholdSlider, PP_Bloom @ bloom) {
+    while (true) {
+        thresholdSlider => now;
+        thresholdSlider.val() => bloom.threshold;
+        <<< "bloom threshold set to", bloom.threshold() >>>;
+    }
+}
+
+fun void BloomLevelsListener(UI_SliderInt @ levelsSlider, PP_Bloom @ bloom) {
+    while (true) {
+        levelsSlider => now;
+        levelsSlider.val() => bloom.levels;
+        <<< "bloom levels set to", bloom.levels() >>>;
+    }
+}
+
+fun void BloomBlendListener(UI_Dropdown @ blendDropdown, PP_Bloom @ bloom) {
+    while (true) {
+        blendDropdown => now;
+        blendDropdown.val() => int val;
+        if (val == 0) {
+            bloom.blend(PP_Bloom.BLEND_MIX);
+        } else if (val == 1) {
+            bloom.blend(PP_Bloom.BLEND_ADD);
+        } 
+    }
+}
+
+
+fun void KarisEnabledListener(UI_Checkbox @ karisCheckbox, PP_Bloom @ bloom) {
+    while (true) {
+        karisCheckbox => now;
+        karisCheckbox.val() => bloom.karisAverage;
+    }
+}
 
 // create UI
 GG.renderPass().next() @=> PP_Effect @ effect;
@@ -267,7 +300,7 @@ while (effect != null) {
         UI_Dropdown tonemapDropdown;
         tonemapDropdown.text("Tone Mapping method");
         tonemapDropdown.options(tonemapOptions);
-        tonemapDropdown.val(0);
+        tonemapDropdown.val(output.toneMap());
         window.add(tonemapDropdown);
         spork ~ TonemapListener(tonemapDropdown, effect$PP_Output);
 
@@ -284,9 +317,41 @@ while (effect != null) {
         UI_SliderFloat radiusSlider;
         radiusSlider.text("Bloom Radius");
         radiusSlider.val((effect$PP_Bloom).radius());
-        radiusSlider.range(0.01, 5);
+        radiusSlider.range(0.001, 4);
         window.add(radiusSlider);
         spork ~ BloomRadiusListener(radiusSlider, effect$PP_Bloom);
+
+        // threshold
+        UI_SliderFloat thresholdSlider;
+        thresholdSlider.text("Bloom Threshold");
+        thresholdSlider.val((effect$PP_Bloom).threshold());
+        thresholdSlider.range(0, 2);
+        window.add(thresholdSlider);
+        spork ~ BloomThresholdListener(thresholdSlider, effect$PP_Bloom);
+
+        // levels
+        UI_SliderInt levelsSlider;
+        levelsSlider.text("Bloom #Passes");
+        levelsSlider.val((effect$PP_Bloom).levels());
+        levelsSlider.range(1, 10);
+        window.add(levelsSlider);
+        spork ~ BloomLevelsListener(levelsSlider, effect$PP_Bloom);
+
+        // blend mode
+        UI_Dropdown blendDropdown;
+        blendDropdown.text("Bloom Blend Mode");
+        ["mix", "add"] @=> string blendOptions[];
+        blendDropdown.options(blendOptions);
+        blendDropdown.val(0);
+        window.add(blendDropdown);
+        spork ~ BloomBlendListener(blendDropdown, effect$PP_Bloom);
+
+        // karis enabled
+        UI_Checkbox karisCheckbox;
+        karisCheckbox.text("Karis Bloom");
+        window.add(karisCheckbox);
+        spork ~ KarisEnabledListener(karisCheckbox, effect$PP_Bloom);
+
     }
 
     effect.next() @=> effect;

@@ -20,6 +20,9 @@ CK_DLL_MFUN(cgl_pp_effect_remove_next);
 CK_DLL_MFUN(cgl_pp_effect_set_bypass);
 CK_DLL_MFUN(cgl_pp_effect_get_bypass);
 
+CK_DLL_GFUN(chugl_pp_op_gruck);	  // add next effect to chain
+
+
 // CK_DLL_MFUN(cgl_pp_effect_create_gui);
 
 //-----------------------------------------------------------------------------
@@ -57,7 +60,21 @@ CK_DLL_MFUN(chugl_pp_bloom_get_strength);
 CK_DLL_MFUN(chugl_pp_bloom_set_strength);
 CK_DLL_MFUN(chugl_pp_bloom_get_radius);
 CK_DLL_MFUN(chugl_pp_bloom_set_radius);
+CK_DLL_MFUN(chugl_pp_bloom_set_threshold);
+CK_DLL_MFUN(chugl_pp_bloom_get_threshold);
 
+// hard threshold looks good enough
+// CK_DLL_MFUN(chugl_pp_bloom_set_threshold_knee);
+// CK_DLL_MFUN(chugl_pp_bloom_get_threshold_knee);
+
+CK_DLL_MFUN(chugl_pp_bloom_set_levels);
+CK_DLL_MFUN(chugl_pp_bloom_get_levels);
+
+CK_DLL_MFUN(chugl_pp_bloom_set_blend_mode);
+CK_DLL_MFUN(chugl_pp_bloom_get_blend_mode);
+
+CK_DLL_MFUN(chugl_pp_bloom_set_karis_enabled);
+CK_DLL_MFUN(chugl_pp_bloom_get_karis_enabled);
 
 //-----------------------------------------------------------------------------
 // PP class declarations
@@ -112,6 +129,10 @@ t_CKBOOL init_chugl_pp_effect(Chuck_DL_Query *QUERY)
 
     QUERY->add_mfun(QUERY, cgl_pp_effect_get_bypass, "int", "bypass");
     QUERY->doc_func(QUERY, "Get the bypass flag");
+
+
+	// QUERY->add_op_overload_binary(QUERY, chugl_pp_op_gruck, Effect::CKName(Type::Base), "-->",
+	// 							  Effect::CKName(Type::Base), "lhs", Effect::CKName(Type::Base), "rhs");
 
     // Custom GUI Element
     // QUERY->add_mfun(QUERY, cgl_pp_effect_create_gui, GUI::Manager::GetCkName(GUI::Type::Element), "UI");
@@ -179,6 +200,33 @@ CK_DLL_MFUN(cgl_pp_effect_get_bypass)
 {
     Effect* effect = (Effect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
     RETURN->v_int = effect->GetBypass() ? 1 : 0;
+}
+
+CK_DLL_GFUN(chugl_pp_op_gruck)
+{
+    // get args
+    Chuck_Object* lhs = GET_NEXT_OBJECT(ARGS);
+    Chuck_Object* rhs = GET_NEXT_OBJECT(ARGS);
+
+	if (!lhs || !rhs) {
+		std::string errMsg = std::string("in gruck operator: ") + (lhs?"LHS":"[null]") + " --> " + (rhs?"RHS":"[null]");
+		// nullptr exception
+		API->vm->throw_exception(
+			"NullPointerException",
+			errMsg.c_str(),
+			SHRED
+		);
+		return;
+	}
+
+    // get effect objects
+    Effect* lhsEffect = (Effect*) OBJ_MEMBER_INT(lhs, CGL::GetPPEffectDataOffset());
+    Effect* rhsEffect = (Effect*) OBJ_MEMBER_INT(rhs, CGL::GetPPEffectDataOffset());
+
+    // add rhs to lhs
+    CGL::PushCommand(new AddEffectCommand(lhsEffect, rhsEffect));
+
+    RETURN->v_object = rhs;
 }
 
 // Bug: doesn't work for multiple effects past the 1st in chain for some reason
@@ -422,6 +470,14 @@ t_CKBOOL init_chugl_pp_bloom(Chuck_DL_Query *QUERY)
 
     QUERY->add_ctor(QUERY, chugl_pp_bloom_ctor);
 
+    // svars ===================================================================
+    QUERY->add_svar(QUERY, "int", "BLEND_ADD", TRUE, (void*) &BloomEffect::BLEND_ADD);
+    QUERY->doc_var(QUERY, "Additive blending mode. Bloom texture is multiplied by strength and added to input texture.");
+
+    QUERY->add_svar(QUERY, "int", "BLEND_MIX", TRUE, (void*) &BloomEffect::BLEND_MIX);
+    QUERY->doc_var(QUERY, "Mix blending mode. Bloom texture is interpolated with input texture by strength.");
+
+    // mfuns ===================================================================
     QUERY->add_mfun(QUERY, chugl_pp_bloom_get_strength, "float", "strength");
     QUERY->doc_func(QUERY, "Get the bloom strength.");
 
@@ -440,6 +496,55 @@ t_CKBOOL init_chugl_pp_bloom(Chuck_DL_Query *QUERY)
     QUERY->add_mfun(QUERY, chugl_pp_bloom_set_radius, "float", "radius");
     QUERY->add_arg(QUERY, "float", "radius");
     QUERY->doc_func(QUERY, "Radius of filter kernel during bloom blur pass.");
+
+    QUERY->add_mfun(QUERY, chugl_pp_bloom_get_threshold, "float", "threshold");
+    QUERY->doc_func(QUERY, "Get the bloom threshold.");
+
+    QUERY->add_mfun(QUERY, chugl_pp_bloom_set_threshold, "float", "threshold");
+    QUERY->add_arg(QUERY, "float", "threshold");
+    QUERY->doc_func(QUERY, "Threshold for bloom effect. Pixels with brightness below this value will not be bloomed.");
+
+    QUERY->add_mfun(QUERY, chugl_pp_bloom_set_levels, "int", "levels");
+    QUERY->add_arg(QUERY, "int", "numLevels");
+    QUERY->doc_func(QUERY, 
+        "Number of blur passes to apply to the bloom texture."
+        "Clamped between 1 and 16."
+    );
+
+    QUERY->add_mfun(QUERY, chugl_pp_bloom_get_levels, "int", "levels");
+    QUERY->doc_func(QUERY, "Get the number of blur passes applied to the bloom texture.");
+
+    QUERY->add_mfun(QUERY, chugl_pp_bloom_set_blend_mode, "int", "blend");
+    QUERY->add_arg(QUERY, "int", "blendMode");
+    QUERY->doc_func(QUERY, 
+        "Set the blend mode for the bloom effect."
+        "Use one of the static constants: ADD or MIX"
+    );
+
+    QUERY->add_mfun(QUERY, chugl_pp_bloom_get_blend_mode, "int", "blend");
+    QUERY->doc_func(QUERY, "Get the blend mode for the bloom effect.");
+
+
+    QUERY->add_mfun(QUERY, chugl_pp_bloom_set_karis_enabled, "int", "karisAverage");
+    QUERY->add_arg(QUERY, "int", "karisEnabled");
+    QUERY->doc_func(QUERY, 
+        "Enable or disable Karis averaging"
+        "Reduces flickering artifacts (aka fireflies) caused by overly bright subpixels"
+    );
+
+    QUERY->add_mfun(QUERY, chugl_pp_bloom_get_karis_enabled, "int", "karisAverage");
+    QUERY->doc_func(QUERY, "Get the Karis averaging flag.");
+
+    // QUERY->add_mfun(QUERY, chugl_pp_bloom_get_threshold_knee, "float", "thresholdKnee");
+    // QUERY->doc_func(QUERY, "Get the bloom threshold knee.");
+
+    // QUERY->add_mfun(QUERY, chugl_pp_bloom_set_threshold_knee, "float", "thresholdKnee");
+    // QUERY->add_arg(QUERY, "float", "thresholdKnee");
+    // QUERY->doc_func(QUERY, 
+    //     "Threshold knee for bloom effect. Controls how suddenly pixels near the threshold are bloomed."
+    //     "See: https://catlikecoding.com/unity/tutorials/custom-srp/post-processing/"
+    //     "This value should be between 0 and 1."
+    // );
 
     QUERY->end_class(QUERY);
 
@@ -495,3 +600,104 @@ CK_DLL_MFUN(chugl_pp_bloom_set_radius)
         ) 
     );
 }
+
+CK_DLL_MFUN(chugl_pp_bloom_set_threshold)
+{
+    BloomEffect* effect = (BloomEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    float threshold = GET_NEXT_FLOAT(ARGS);
+
+    RETURN->v_float = threshold;
+
+    CGL::PushCommand( 
+        new UpdateEffectUniformCommand( 
+            effect, MaterialUniform::CreateFloat(BloomEffect::U_THRESHOLD, threshold) 
+        ) 
+    );
+}
+
+CK_DLL_MFUN(chugl_pp_bloom_get_threshold)
+{
+    BloomEffect* effect = (BloomEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    RETURN->v_float = effect->GetThreshold();
+}
+
+CK_DLL_MFUN(chugl_pp_bloom_set_levels)
+{
+    BloomEffect* effect = (BloomEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    int levels = GET_NEXT_INT(ARGS);
+
+    RETURN->v_int = levels;
+
+    CGL::PushCommand( 
+        new UpdateEffectUniformCommand( 
+            effect, MaterialUniform::CreateInt(BloomEffect::U_LEVELS, levels) 
+        ) 
+    );
+}
+
+CK_DLL_MFUN(chugl_pp_bloom_get_levels)
+{
+    BloomEffect* effect = (BloomEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    RETURN->v_int = effect->GetLevels();
+}
+
+CK_DLL_MFUN(chugl_pp_bloom_set_blend_mode)
+{
+    BloomEffect* effect = (BloomEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    int blendMode = GET_NEXT_INT(ARGS);
+
+    RETURN->v_int = blendMode;
+
+    CGL::PushCommand( 
+        new UpdateEffectUniformCommand( 
+            effect, MaterialUniform::CreateInt(BloomEffect::U_BLEND_MODE, blendMode) 
+        ) 
+    );
+}
+
+CK_DLL_MFUN(chugl_pp_bloom_get_blend_mode)
+{
+    BloomEffect* effect = (BloomEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    RETURN->v_int = effect->GetBlendMode();
+}
+
+CK_DLL_MFUN(chugl_pp_bloom_set_karis_enabled)
+{
+    BloomEffect* effect = (BloomEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    int karis= GET_NEXT_INT(ARGS);
+
+    RETURN->v_int = karis;
+
+    CGL::PushCommand( 
+        new UpdateEffectUniformCommand(
+            effect, MaterialUniform::CreateBool(BloomEffect::U_KARIS_ENABLED, karis ? true : false) 
+        ) 
+    );
+
+}
+
+CK_DLL_MFUN(chugl_pp_bloom_get_karis_enabled)
+{
+    BloomEffect* effect = (BloomEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    RETURN->v_int = effect->GetKarisEnabled() ? 1 : 0;
+}
+
+// CK_DLL_MFUN(chugl_pp_bloom_set_threshold_knee)
+// {
+//     BloomEffect* effect = (BloomEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+//     float thresholdKnee = GET_NEXT_FLOAT(ARGS);
+
+//     RETURN->v_float = thresholdKnee;
+
+//     CGL::PushCommand( 
+//         new UpdateEffectUniformCommand( 
+//             effect, MaterialUniform::CreateFloat(BloomEffect::U_THRESHOLD_KNEE, thresholdKnee) 
+//         ) 
+//     );
+// }
+
+// CK_DLL_MFUN(chugl_pp_bloom_get_threshold_knee)
+// {
+//     BloomEffect* effect = (BloomEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+//     RETURN->v_float = effect->GetThresholdKnee();
+// }

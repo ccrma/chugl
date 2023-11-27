@@ -89,7 +89,7 @@ public:
         SetUniform(MaterialUniform::CreateFloat(U_EXPOSURE, 1.0f));
 
         // gamma correction
-        SetUniform(MaterialUniform::CreateFloat(U_GAMMA, 2.2f));
+        SetUniform(MaterialUniform::CreateFloat(U_GAMMA, 2.2f));    
     };
     virtual Type GetType() override { return Type::Output; }
     virtual OutputEffect* Clone() override { return new OutputEffect(*this); }\
@@ -123,19 +123,48 @@ public:
         SetUniform(MaterialUniform::CreateFloat(U_STRENGTH, .04f));
         // filter radius
         SetUniform(MaterialUniform::CreateFloat(U_RADIUS, .01f));
+        // threshold
+        SetUniform(MaterialUniform::CreateFloat(U_THRESHOLD, .8f));
+        // threshold knee
+        // SetUniform(MaterialUniform::CreateFloat(U_THRESHOLD_KNEE, .5f));
+        // levels
+        SetUniform(MaterialUniform::CreateInt(U_LEVELS, 5));
+        // blend mode
+        SetUniform(MaterialUniform::CreateInt(U_BLEND_MODE, BLEND_ADD));
+
+        // karis mode
+        SetUniform(MaterialUniform::CreateInt(U_KARIS_MODE, 0));
+        // karis enabled
+        SetUniform(MaterialUniform::CreateBool(U_KARIS_ENABLED, false));
     };
     virtual Type GetType() override { return Type::Bloom; }
     virtual BloomEffect* Clone() override { return new BloomEffect(*this); }
 
     float GetStrength() { return GetUniform(U_STRENGTH).f; }
     float GetRadius() { return GetUniform(U_RADIUS).f; }
+    float GetThreshold() { return GetUniform(U_THRESHOLD).f; }
+    int GetLevels() { return GetUniform(U_LEVELS).i; }
+    int GetBlendMode() { return GetUniform(U_BLEND_MODE).i; }
+    // float GetThresholdKnee() { return GetUniform(U_THRESHOLD_KNEE).f; }
+    bool GetKarisEnabled() { return GetUniform(U_KARIS_ENABLED).b; }
+    // int GetKarisMode() { return GetUniform(U_KARIS_MODE).i; }
 
 public:  // uniform names
     static const std::string U_STRENGTH;
     static const std::string U_RADIUS;
+    static const std::string U_THRESHOLD;
+    // static const std::string U_THRESHOLD_KNEE;
+    static const std::string U_LEVELS;
+    static const std::string U_BLEND_MODE;
+
+    static const std::string U_KARIS_ENABLED;
+    static const std::string U_KARIS_MODE;
+
 
 public:  // uniform constants
-
+    // TODO: support blend modes
+    static const t_CKUINT BLEND_ADD;
+    static const t_CKUINT BLEND_MIX;
 };
 
 // TODO: consolidates a series of PP effects into a chain

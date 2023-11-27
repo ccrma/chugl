@@ -727,6 +727,43 @@ const std::string ShaderCode::PP_BLOOM_DOWNSAMPLE = R"glsl(
     // uniforms ==================================================================
     uniform sampler2D srcTexture;
     uniform vec2 u_SrcResolution;
+    uniform int u_MipLevel;  // current level of the downsample chain
+    uniform float u_Threshold;      // range: [0, inf]
+    uniform float u_ThresholdKnee;  // range: [0, 1]
+
+    uniform bool u_KarisEnabled = false;
+
+    // helpers ===================================================================
+
+    float max3 (vec3 v) {
+        return max (max (v.x, v.y), v.z);
+    }
+    vec3 PowVec3(vec3 v, float p)
+    {
+        return vec3(pow(v.x, p), pow(v.y, p), pow(v.z, p));
+    }
+
+    const float invGamma = 1.0 / 2.2;
+    vec3 ToSRGB(vec3 v) { return PowVec3(v, invGamma); }
+
+    float RGBToLuminance(vec3 col)
+    {
+        return dot(col, vec3(0.2126f, 0.7152f, 0.0722f));
+    }
+
+    float KarisAverageLuma(vec3 col)
+    {
+        // Formula is 1 / (1 + luma)
+        float luma = RGBToLuminance(ToSRGB(col));
+        return 1.0f / (1.0f + luma);
+    }
+
+    float KarisAverageBrightness(vec3 col)
+    {
+        // Formula is 1 / (1 + brightness)
+        float brightness = max3(col);
+        return 1.0f / (1.0f + brightness);
+    }
 
 
     void main()
@@ -773,10 +810,45 @@ const std::string ShaderCode::PP_BLOOM_DOWNSAMPLE = R"glsl(
         // contribute 0.5 to the final color output. The code below is written
         // to effectively yield this sum. We get:
         // 0.125*5 + 0.03125*4 + 0.0625*4 = 1
-        vec3 downsample = e*0.125;
-        downsample += (a+c+g+i)*0.03125;
-        downsample += (b+d+f+h)*0.0625;
-        downsample += (j+k+l+m)*0.125;
+        vec3 downsample = vec3(0.0);
+
+        // apply thresholding
+        vec3 groups[5];
+        switch (u_MipLevel) {
+        case 0:
+            // karis average
+            if (u_KarisEnabled) {
+                groups[0] = (a+b+d+e) * 0.25f;
+                groups[1] = (b+c+e+f) * 0.25f;
+                groups[2] = (d+e+g+h) * 0.25f;
+                groups[3] = (e+f+h+i) * 0.25f;
+                groups[4] = (j+k+l+m) * 0.25f;
+
+                float kw0 = KarisAverageLuma(groups[0]);
+                float kw1 = KarisAverageLuma(groups[1]);
+                float kw2 = KarisAverageLuma(groups[2]);
+                float kw3 = KarisAverageLuma(groups[3]);
+                float kw4 = KarisAverageLuma(groups[4]);
+                downsample = (kw0 * groups[0] + kw1* groups[1] + kw2 * groups[2] + kw3* groups[3] + kw4 * groups[4]) / (kw0 + kw1 + kw2 + kw3 + kw4);
+            }
+            else {
+                downsample = e*0.125;
+                downsample += (a+c+g+i)*0.03125;
+                downsample += (b+d+f+h)*0.0625;
+                downsample += (j+k+l+m)*0.125;
+            }
+            // thresholding
+            float brightness = max3(e);
+            float contribution = max(0, brightness - u_Threshold) / max (brightness, 0.00001);
+            downsample *= contribution;
+            break;
+        default:
+            downsample = e*0.125;
+            downsample += (a+c+g+i)*0.03125;
+            downsample += (b+d+f+h)*0.0625;
+            downsample += (j+k+l+m)*0.125;
+            break;
+        }
 
         outputColor = vec4(downsample, alpha);
     }
@@ -848,18 +920,38 @@ const std::string ShaderCode::PP_BLOOM_BLEND = R"glsl(
     // Input =====================================================================
     in vec2 TexCoords;
 
+    // enums =====================================================================
+    // blend modes must match does defined by PP:BloomEffect::BLEND_*
+    const int BLEND_MODE_MIX = 0;
+    const int BLEND_MODE_ADD = 1;
+
     // Uniforms ==================================================================
     uniform sampler2D srcTexture;
     uniform sampler2D bloomTexture;
     uniform float u_BloomStrength = 0.04f;
+    uniform int u_BlendMode = 0;
+    uniform int u_Levels = 1;
 
     void main()
     {
         vec4 hdrColor = texture(srcTexture, TexCoords);
         vec3 bloomColor = texture(bloomTexture, TexCoords).rgb;
 
+        // normalize bloomColor by the number of levels
+        bloomColor *= 1.0 / float(u_Levels);
+
         // TODO: switch for additive blend vs linear mix
-        vec3 result = mix(hdrColor.rgb, bloomColor, u_BloomStrength); // linear interpolation
+        vec3 result = vec3(0.0);
+        switch (u_BlendMode) {
+        case BLEND_MODE_MIX:
+            result = mix(hdrColor.rgb, bloomColor, u_BloomStrength); // linear interpolation
+            break;
+        case BLEND_MODE_ADD:
+            result = hdrColor.rgb + bloomColor * u_BloomStrength; // additive
+            break;
+        default:
+            break;
+        }
 
         FragColor = vec4(result, hdrColor.a);
     }
