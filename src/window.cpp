@@ -464,6 +464,9 @@ static void draw_imgui() {
         ImGui::RenderPlatformWindowsDefault();
         glfwMakeContextCurrent(backup_current_context);
     }
+    
+    // update imgui mouse capture
+    CGL::SetMouseCapturedByImGUI(io.WantCaptureMouse);
 }
 
 
@@ -609,6 +612,7 @@ void Window::DisplayLoop()
         // - add Texture.color_space constants to set internal texture formats
 
         // Handle Events, Draw framebuffer
+        CGL::ZeroMouseDeltas();  // reset mouse deltas
         glfwPollEvents();  // TODO: maybe put event handling in a separate thread?
 
         // imgui rendering

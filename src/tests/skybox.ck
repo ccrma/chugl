@@ -30,6 +30,7 @@ UI_Dropdown colorSpaceDropdown;
 colorSpaceDropdown.text("Skybox Color Space");
 ["linear", "srgb"] @=> string colorSpaceOptions[];
 colorSpaceDropdown.options(colorSpaceOptions);
+colorSpaceDropdown.val(1);
 
 UI_Text separator;
 separator.text("PhongMaterial environment mapping params");
@@ -42,7 +43,7 @@ envMapEnabledCheckbox.val(false);
 UI_SliderFloat envMapIntensitySlider;
 envMapIntensitySlider.text("Intensity");
 envMapIntensitySlider.val(0);
-envMapIntensitySlider.range(0, 1);
+envMapIntensitySlider.range(0, 4);
 
 UI_Dropdown envMapMethodDropdown;
 envMapMethodDropdown.text("Type");
@@ -80,6 +81,7 @@ waterEnvMap.paths(
     me.dir() + "./textures/skybox/water/front.jpg",
     me.dir() + "./textures/skybox/water/back.jpg"
 );
+waterEnvMap.colorSpace(Texture.COLOR_SPACE_SRGB);
 
 yokohamaEnvMap.paths(
     me.dir() + "./textures/skybox/Yokohama3/right.jpg",
@@ -89,8 +91,10 @@ yokohamaEnvMap.paths(
     me.dir() + "./textures/skybox/Yokohama3/front.jpg",
     me.dir() + "./textures/skybox/Yokohama3/back.jpg"
 );
+yokohamaEnvMap.colorSpace(Texture.COLOR_SPACE_SRGB);
 
 GG.scene() @=> GScene @ scene;
+scene.skybox(waterEnvMap);
 
 fun void DropdownListener() {
     while (true) {
@@ -135,6 +139,7 @@ fun void SkyboxToggleListener() {
 
 // scene setup ===========================================================
 
+// GG.mouseMode(GG.MOUSE_LOCKED);
 
 GSphere sphere --> GG.scene();
 GCube cube --> GG.scene();
@@ -146,8 +151,9 @@ sphere.mat() @=> Material @ mat;
 // Post Processing =======================================================
 PP_PassThrough pass1, pass2, pass3, pass4;
 PP_Output output;
+PP_Bloom bloom;
 // GG.renderPass().next(pass1); // .next(pass2).next(pass3).next(pass4);
-GG.renderPass().next(pass1).next(pass2).next(output); // .next(pass2).next(pass3).next(pass4);
+GG.renderPass().next(pass1).next(pass2).next(bloom).next(output);
 
 fun void CheckboxListener(UI_Checkbox @ checkbox, PP_Effect @ effect)
 {
@@ -202,6 +208,22 @@ fun void TonemapListener(UI_Dropdown @ tonemapDropdown, PP_Output @ output) {
     }
 }
 
+fun void BloomStrengthListener(UI_SliderFloat @ strengthSlider, PP_Bloom @ bloom) {
+    while (true) {
+        strengthSlider => now;
+        strengthSlider.val() => bloom.strength;
+        <<< "bloom strength set to", bloom.strength() >>>;
+    }
+}
+
+fun void BloomRadiusListener(UI_SliderFloat @ radiusSlider, PP_Bloom @ bloom) {
+    while (true) {
+        radiusSlider => now;
+        radiusSlider.val() => bloom.radius;
+        <<< "bloom radius set to", bloom.radius() >>>;
+    }
+}
+
 <<< "Texture.COLOR_SPACE_LINEAR", Texture.COLOR_SPACE_LINEAR >>>;
 <<< "Texture.COLOR_SPACE_SRGB", Texture.COLOR_SPACE_SRGB >>>;
 
@@ -222,7 +244,8 @@ while (effect != null) {
     spork ~ CheckboxListener(checkbox, effect);
 
     // create UI based on type
-    if (Type.of(effect).baseName() == "PP_Output") {
+    Type.of(effect).baseName() => string baseName;
+    if (baseName == "PP_Output") {
         // gamma
         UI_SliderFloat gammaSlider;
         gammaSlider.text("Gamma");
@@ -248,6 +271,22 @@ while (effect != null) {
         window.add(tonemapDropdown);
         spork ~ TonemapListener(tonemapDropdown, effect$PP_Output);
 
+    } else if (baseName == "PP_Bloom") {
+        // strength
+        UI_SliderFloat strengthSlider;
+        strengthSlider.text("Bloom Strength");
+        strengthSlider.val((effect$PP_Bloom).strength());
+        strengthSlider.range(0, 2);
+        window.add(strengthSlider);
+        spork ~ BloomStrengthListener(strengthSlider, effect$PP_Bloom);
+
+        // radius
+        UI_SliderFloat radiusSlider;
+        radiusSlider.text("Bloom Radius");
+        radiusSlider.val((effect$PP_Bloom).radius());
+        radiusSlider.range(0.01, 5);
+        window.add(radiusSlider);
+        spork ~ BloomRadiusListener(radiusSlider, effect$PP_Bloom);
     }
 
     effect.next() @=> effect;
@@ -316,7 +355,7 @@ fun void EnvMapRatioListener() {
 
 // set skybox
 // if refcounting happens correctly, this should be fine
-fun void setSkybox() {
+fun void setRefCountedSkybox() {
     CubeTexture refCountedEnvMap;
     refCountedEnvMap.paths(
         me.dir() + "./textures/skybox/water/right.jpg",
@@ -328,7 +367,7 @@ fun void setSkybox() {
     );
     GG.scene().skybox(refCountedEnvMap);
 } 
-setSkybox();
+// setRefCountedSkybox();
 
 fun void fpser(dur d) {
     while (d => now) <<< GG.fps() >>>;

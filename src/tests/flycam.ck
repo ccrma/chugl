@@ -44,16 +44,22 @@ public class FlyCam {
 
 		// mouse lookaround
 
+		if (GG.mouseCapturedByUI()) {return;}
+
 		.001 => float mouseSpeed;
 		MM.GetDeltas() * mouseSpeed => vec3 mouseDeltas;
 
-		// <<< mouseDeltas >>>;
+		// <<< "GG", GG.mouseDX(), GG.mouseDY() >>>;
+		// <<< "GG abs", GG.mouseX(), GG.mouseY() >>>;
+		// <<< "mousedeltas", mouseDeltas >>>;
 
 		// for mouse deltaY, rotate around right axis
 		mainCamera.rotateOnLocalAxis(RIGHT, -mouseDeltas.y);
+		// mainCamera.rotateOnLocalAxis(RIGHT, -GG.mouseDY() * .002 );
 
 		// for mouse deltaX, rotate around (0,1,0)
 		mainCamera.rotateOnWorldAxis(UP, -mouseDeltas.x);
+		// mainCamera.rotateOnWorldAxis(UP, -GG.mouseDX() * .002);
 	}
 
 	fun void selfUpdate() {

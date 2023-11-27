@@ -639,16 +639,21 @@ const std::string ShaderCode::PP_OUTPUT = R"glsl(
 
         // apply tonemapping
         // source: http://filmicworlds.com/blog/filmic-tonemapping-operators/
-        if (u_Tonemap == TONEMAP_LINEAR) {
+        switch (u_Tonemap)
+        {
+        case TONEMAP_LINEAR:
             color = clamp(color, 0.0, 1.0);
-        } else if (u_Tonemap == TONEMAP_REINHARD) {
+            break;
+        case TONEMAP_REINHARD:
             color = hdrColor.rgb / (hdrColor.rgb + vec3(1.0));
-        } else if (u_Tonemap == TONEMAP_CINEON) {
+            break;
+        case TONEMAP_CINEON:
             vec3 x = max(vec3(0), color-0.004);
             color = (x*(6.2*x+.5))/(x*(6.2*x+1.7)+0.06);
             // cancel out gamma!!
             color = pow(color, vec3(u_Gamma));
-        } else if (u_Tonemap == TONEMAP_ACES) {
+            break;
+        case TONEMAP_ACES:
             // source: https://github.com/selfshadow/ltc_code/blob/master/webgl/shaders/ltc/ltc_blit.fs
             // source: https://github.com/selfshadow/ltc_code/blob/master/webgl/shaders/ltc/ltc_blit.fs
 
@@ -678,8 +683,9 @@ const std::string ShaderCode::PP_OUTPUT = R"glsl(
 
             // clamp
             color = clamp(color, 0.0, 1.0);
-        } else if (u_Tonemap == TONEMAP_UNCHARTED) {
-            // 
+
+            break;
+        case TONEMAP_UNCHARTED:
             float ExposureBias = 2.0f;
             vec3 curr = Uncharted2Tonemap(ExposureBias*color);
 
@@ -687,6 +693,9 @@ const std::string ShaderCode::PP_OUTPUT = R"glsl(
             float W = 11.2;
             vec3 whiteScale = vec3(1.0/Uncharted2Tonemap(vec3(W)));
             color = curr*whiteScale;
+            break;
+        default:
+            break;
         }
 
         // apply gamma correction
@@ -695,6 +704,170 @@ const std::string ShaderCode::PP_OUTPUT = R"glsl(
         FragColor = vec4(color, 1.0);
     }
 )glsl";
+
+// Karis average: https://github.com/github-linguist/linguist/blob/master/samples/HLSL/bloom.cginc
+const std::string ShaderCode::PP_BLOOM_DOWNSAMPLE = R"glsl(
+    #version 330 core
+
+    // This shader performs downsampling on a texture,
+    // as taken from Call Of Duty method, presented at ACM Siggraph 2014.
+    // This particular method was customly designed to eliminate
+    // "pulsating artifacts and temporal stability issues".
+
+    // Remember to add bilinear minification filter for this texture!
+    // Remember to use a floating-point texture format (for HDR)!
+    // Remember to use edge clamping for this texture!
+
+    // output ====================================================================
+    layout (location = 0) out vec4 outputColor;
+
+    // input varyings ============================================================
+    in vec2 TexCoords;
+
+    // uniforms ==================================================================
+    uniform sampler2D srcTexture;
+    uniform vec2 u_SrcResolution;
+
+
+    void main()
+    {
+        vec2 srcTexelSize = 1.0 / u_SrcResolution;
+        float x = srcTexelSize.x;
+        float y = srcTexelSize.y;
+        float alpha = texture(srcTexture, TexCoords).a;
+
+        // Take 13 samples around current texel:
+        // a - b - c
+        // - j - k -
+        // d - e - f
+        // - l - m -
+        // g - h - i
+        // === ('e' is the current texel) ===
+        vec3 a = texture(srcTexture, vec2(TexCoords.x - 2*x, TexCoords.y + 2*y)).rgb;
+        vec3 b = texture(srcTexture, vec2(TexCoords.x,       TexCoords.y + 2*y)).rgb;
+        vec3 c = texture(srcTexture, vec2(TexCoords.x + 2*x, TexCoords.y + 2*y)).rgb;
+
+        vec3 d = texture(srcTexture, vec2(TexCoords.x - 2*x, TexCoords.y)).rgb;
+        vec3 e = texture(srcTexture, vec2(TexCoords.x,       TexCoords.y)).rgb;
+        vec3 f = texture(srcTexture, vec2(TexCoords.x + 2*x, TexCoords.y)).rgb;
+
+        vec3 g = texture(srcTexture, vec2(TexCoords.x - 2*x, TexCoords.y - 2*y)).rgb;
+        vec3 h = texture(srcTexture, vec2(TexCoords.x,       TexCoords.y - 2*y)).rgb;
+        vec3 i = texture(srcTexture, vec2(TexCoords.x + 2*x, TexCoords.y - 2*y)).rgb;
+
+        vec3 j = texture(srcTexture, vec2(TexCoords.x - x, TexCoords.y + y)).rgb;
+        vec3 k = texture(srcTexture, vec2(TexCoords.x + x, TexCoords.y + y)).rgb;
+        vec3 l = texture(srcTexture, vec2(TexCoords.x - x, TexCoords.y - y)).rgb;
+        vec3 m = texture(srcTexture, vec2(TexCoords.x + x, TexCoords.y - y)).rgb;
+
+        // Apply weighted distribution:
+        // 0.5 + 0.125 + 0.125 + 0.125 + 0.125 = 1
+        // a,b,d,e * 0.125
+        // b,c,e,f * 0.125
+        // d,e,g,h * 0.125
+        // e,f,h,i * 0.125
+        // j,k,l,m * 0.5
+        // This shows 5 square areas that are being sampled. But some of them overlap,
+        // so to have an energy preserving downsample we need to make some adjustments.
+        // The weights are the distributed, so that the sum of j,k,l,m (e.g.)
+        // contribute 0.5 to the final color output. The code below is written
+        // to effectively yield this sum. We get:
+        // 0.125*5 + 0.03125*4 + 0.0625*4 = 1
+        vec3 downsample = e*0.125;
+        downsample += (a+c+g+i)*0.03125;
+        downsample += (b+d+f+h)*0.0625;
+        downsample += (j+k+l+m)*0.125;
+
+        outputColor = vec4(downsample, alpha);
+    }
+
+)glsl";
+
+const std::string ShaderCode::PP_BLOOM_UPSAMPLE = R"glsl(
+    #version 330 core
+    // This shader performs upsampling on a texture,
+    // as taken from Call Of Duty method, presented at ACM Siggraph 2014.
+
+    // Remember to add bilinear minification filter for this texture!
+    // Remember to use a floating-point texture format (for HDR)!
+    // Remember to use edge clamping for this texture!  
+
+    // output ====================================================================
+    layout (location = 0) out vec4 output;
+
+    // input varyings ============================================================
+    in vec2 TexCoords;
+
+    // uniforms ==================================================================
+    uniform sampler2D srcTexture;
+    uniform float u_FilterRadius = 0.1f;
+
+    void main()
+    {
+        // The filter kernel is applied with a radius, specified in texture
+        // coordinates, so that the radius will vary across mip resolutions.
+        float x = u_FilterRadius;
+        float y = u_FilterRadius;
+
+        // Take 9 samples around current texel:
+        // a - b - c
+        // d - e - f
+        // g - h - i
+        // === ('e' is the current texel) ===
+        vec3 a = texture(srcTexture, vec2(TexCoords.x - x, TexCoords.y + y)).rgb;
+        vec3 b = texture(srcTexture, vec2(TexCoords.x,     TexCoords.y + y)).rgb;
+        vec3 c = texture(srcTexture, vec2(TexCoords.x + x, TexCoords.y + y)).rgb;
+
+        vec3 d = texture(srcTexture, vec2(TexCoords.x - x, TexCoords.y)).rgb;
+        vec3 e = texture(srcTexture, vec2(TexCoords.x,     TexCoords.y)).rgb;
+        vec3 f = texture(srcTexture, vec2(TexCoords.x + x, TexCoords.y)).rgb;
+
+        vec3 g = texture(srcTexture, vec2(TexCoords.x - x, TexCoords.y - y)).rgb;
+        vec3 h = texture(srcTexture, vec2(TexCoords.x,     TexCoords.y - y)).rgb;
+        vec3 i = texture(srcTexture, vec2(TexCoords.x + x, TexCoords.y - y)).rgb;
+
+        // Apply weighted distribution, by using a 3x3 tent filter:
+        //  1   | 1 2 1 |
+        // -- * | 2 4 2 |
+        // 16   | 1 2 1 |
+        vec3 upsample = e*4.0;
+        upsample += (b+d+f+h)*2.0;
+        upsample += (a+c+g+i);
+        upsample *= 1.0 / 16.0;
+
+        output = vec4(upsample, 1.0);
+    }
+)glsl";
+
+const std::string ShaderCode::PP_BLOOM_BLEND = R"glsl(
+    #version 330 core
+
+    // Output ====================================================================
+    out vec4 FragColor;
+
+    // Input =====================================================================
+    in vec2 TexCoords;
+
+    // Uniforms ==================================================================
+    uniform sampler2D srcTexture;
+    uniform sampler2D bloomTexture;
+    uniform float u_BloomStrength = 0.04f;
+
+    void main()
+    {
+        vec4 hdrColor = texture(srcTexture, TexCoords);
+        vec3 bloomColor = texture(bloomTexture, TexCoords).rgb;
+
+        // TODO: switch for additive blend vs linear mix
+        vec3 result = mix(hdrColor.rgb, bloomColor, u_BloomStrength); // linear interpolation
+
+        FragColor = vec4(result, hdrColor.a);
+    }
+
+)glsl";
+
+
+
 
 // ====================================================================================================
 //  ShaderCode impl

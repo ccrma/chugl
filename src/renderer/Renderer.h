@@ -147,7 +147,8 @@ public: // constructor
 	Renderer() : m_MainCamera(nullptr), m_RenderState(this),
 	m_ScreenVA(nullptr), m_ScreenPositionsVB(nullptr), m_ScreenTexCoordsVB(nullptr),
 	m_SkyboxVA(nullptr), m_SkyboxVB(nullptr), m_SkyboxShader(nullptr),
-	m_FrameBufferPing(nullptr), m_FrameBufferPong(nullptr), m_SceneFrameBufferMS(nullptr)
+	m_FrameBufferPing(nullptr), m_FrameBufferPong(nullptr), m_SceneFrameBufferMS(nullptr),
+	m_ViewportWidth(0), m_ViewportHeight(0)
 	{
 		// TODO: initialize this after window is created 
 		// and openGL context is initialized.
@@ -168,12 +169,12 @@ public:  // framebuffer setup
 
 	void UpdateFramebufferSize(unsigned int width, unsigned int height);
 
-	FrameBuffer* GetReadFrameBuffer(bool ping) {
-		return ping ? m_FrameBufferPing : m_FrameBufferPong;
+	const FrameBuffer& GetReadFrameBuffer(bool ping) {
+		return ping ? *m_FrameBufferPing : *m_FrameBufferPong;
 	}
 
-	FrameBuffer* GetWriteFrameBuffer(bool ping) {
-		return ping ? m_FrameBufferPong : m_FrameBufferPing;
+	const FrameBuffer& GetWriteFrameBuffer(bool ping) {
+		return ping ? *m_FrameBufferPong : *m_FrameBufferPing;
 	}
 
 	// Post process pass
@@ -429,6 +430,10 @@ private:  // private member vars
 	std::unordered_map<size_t, RenderMaterial*> m_RenderMaterials;
 	std::unordered_map<size_t, Texture*> m_Textures;
 	std::unordered_map<size_t, PostProcessEffect*> m_Effects;
+
+
+	// viewport sizes
+	unsigned int m_ViewportWidth, m_ViewportHeight;
 
 
 	// shader cache

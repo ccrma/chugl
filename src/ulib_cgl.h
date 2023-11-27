@@ -168,6 +168,10 @@ public: // global, lock-protected state for sending info from GLFW --> Chuck
 		t_CKFLOAT aspect;
         // mouse X, mouse Y
         double mouseX, mouseY;
+		// mouse delta X, mouse delta Y
+		double mouseDX, mouseDY;
+		// imgui capture mouse
+		bool mouseCapturedByImGUI;
         // glfw time, delta time
 		double glfwTime, deltaTime;
         // frames per second
@@ -182,11 +186,15 @@ public: // global, lock-protected state for sending info from GLFW --> Chuck
 	static std::mutex s_WindowStateLock;
 	// making these doubles to reduce lock frequency
 	static std::pair<double, double> GetMousePos();
+	static std::pair<double, double> GetMouseDelta();
+	static bool GetMouseCapturedByImGUI();
 	static std::pair<int, int> GetWindowSize();
 	static std::pair<int, int> GetFramebufferSize();
 	static t_CKFLOAT GetAspectRatio();
 	static std::pair<double, double> GetTimeInfo();
 	static void SetMousePos(double x, double y);
+	static void ZeroMouseDeltas();
+	static void SetMouseCapturedByImGUI(bool captured);
 	static void SetWindowSize(int width, int height);
 	static void SetFramebufferSize(int width, int height);
 	static void SetTimeInfo(double glfwTime, double deltaTime);

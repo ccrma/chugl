@@ -504,8 +504,8 @@ public:
         // lock
         std::lock_guard<std::mutex> lock(Manager::GetWindowLock());
         // bounds check
-        if (data < 0) data = 0;
         if (data >= m_Options.size()) data = m_Options.size() - 1;
+        if (data < 0) data = 0;
         m_WriteData = data;
         // copy to read data too
         m_ReadData = m_WriteData;

@@ -11,7 +11,8 @@ enum class Type : t_CKUINT
 {
     Base = 0,
     PassThrough,
-    Output
+    Output,
+    Bloom
 };
 
 class Effect : public SceneGraphNode
@@ -82,7 +83,7 @@ public:
         // if not the ChuGL API impl at least the DLL query and UI auto-gen
 
         // tone mapping
-        SetUniform(MaterialUniform::CreateInt(U_TONEMAP, TONEMAP_REINHARD));
+        SetUniform(MaterialUniform::CreateInt(U_TONEMAP, TONEMAP_LINEAR));
 
         // exposure
         SetUniform(MaterialUniform::CreateFloat(U_EXPOSURE, 1.0f));
@@ -111,6 +112,29 @@ public:  // uniform constants
     static const int TONEMAP_CINEON;
     static const int TONEMAP_ACES;
     static const int TONEMAP_UNCHARTED;
+
+};
+
+class BloomEffect : public Effect
+{
+public:
+    BloomEffect() : Effect() {
+        // default strength
+        SetUniform(MaterialUniform::CreateFloat(U_STRENGTH, .04f));
+        // filter radius
+        SetUniform(MaterialUniform::CreateFloat(U_RADIUS, .01f));
+    };
+    virtual Type GetType() override { return Type::Bloom; }
+    virtual BloomEffect* Clone() override { return new BloomEffect(*this); }
+
+    float GetStrength() { return GetUniform(U_STRENGTH).f; }
+    float GetRadius() { return GetUniform(U_RADIUS).f; }
+
+public:  // uniform names
+    static const std::string U_STRENGTH;
+    static const std::string U_RADIUS;
+
+public:  // uniform constants
 
 };
 

@@ -3,7 +3,42 @@
 #include "scenegraph/chugl_postprocess.h"
 #include "scenegraph/Locator.h"
 
-void PostProcessEffect::Apply(Renderer& renderer)
+
+
+PostProcessEffect* PostProcessEffect::Create(PP::Effect* chugl_effect, unsigned int viewportWidth, unsigned int viewportHeight)
+{
+
+	const std::string& screenShaderVert = ShaderCode::PP_VERT;
+	std::string screenShaderFrag;
+
+	// get fragment shader code based on pp type
+	switch (chugl_effect->GetType()) {
+	case PP::Type::Base:
+		throw std::runtime_error("Cannot create PostProcessEffect from base class");
+	case PP::Type::PassThrough:
+		screenShaderFrag = ShaderCode::PP_PASS_THROUGH;
+		// return effect
+		return new BasicEffect(
+			chugl_effect,
+			new Shader(screenShaderVert, screenShaderFrag, false, false)
+		);
+	case PP::Type::Output:
+		screenShaderFrag = ShaderCode::PP_OUTPUT;
+		// return effect
+		return new BasicEffect(
+			chugl_effect,
+			new Shader(screenShaderVert, screenShaderFrag, false, false)
+		);
+	case PP::Type::Bloom:
+		return new BloomEffect(chugl_effect, viewportWidth, viewportHeight);
+		break;
+	default:
+		throw std::runtime_error("Unknown PP::Type");
+	}
+}
+
+// Most basic post process effect. Single shader, no secondary FBOs, single pass
+void BasicEffect::Apply(Renderer& renderer, unsigned int srcTexture, unsigned int writeFrameBufferID)
 {
     // bind shader
     m_Shader->Bind();
@@ -62,3 +97,10 @@ void PostProcessEffect::Apply(Renderer& renderer)
         }
     }
 }
+
+// ====================
+// Bloom
+// ====================
+
+// enough downsample steps to go from 65536x65536 to 1x1
+const int BloomEffect::MAX_CHAIN_LENGTH = 16;

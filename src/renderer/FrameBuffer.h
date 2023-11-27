@@ -5,7 +5,6 @@ class FrameBuffer
 private:  // member vars
     unsigned int m_FrameBufferID, m_ColorBufferID, m_DepthBufferID;
     unsigned int m_Width, m_Height;
-    unsigned int m_ColorAttachment, m_DepthAttachment;
     bool m_IsMultisampled;
     bool m_HDR;
 public:
@@ -23,5 +22,6 @@ public:
 
     void Bind() const;
     void BindColorAttachment() const;
+    unsigned int GetColorBufferID() const { return m_ColorBufferID; }
     void Unbind() const;
 };

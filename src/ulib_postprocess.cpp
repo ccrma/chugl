@@ -32,6 +32,7 @@ CK_DLL_MFUN(cgl_pp_effect_get_bypass);
 //-----------------------------------------------------------------------------
 CK_DLL_CTOR(cgl_pp_passthrough_ctor);
 
+//-----------------------------------------------------------------------------
 // PP_Effect --> PP_Output
 //-----------------------------------------------------------------------------
 CK_DLL_CTOR(chugl_pp_output_ctor);
@@ -47,6 +48,16 @@ CK_DLL_MFUN(chugl_pp_output_get_tonemap_method);
 CK_DLL_MFUN(chugl_pp_output_set_exposure);
 CK_DLL_MFUN(chugl_pp_output_get_exposure);
 
+//-----------------------------------------------------------------------------
+// PP_Effect --> Bloom 
+//-----------------------------------------------------------------------------
+CK_DLL_CTOR(chugl_pp_bloom_ctor);
+
+CK_DLL_MFUN(chugl_pp_bloom_get_strength);
+CK_DLL_MFUN(chugl_pp_bloom_set_strength);
+CK_DLL_MFUN(chugl_pp_bloom_get_radius);
+CK_DLL_MFUN(chugl_pp_bloom_set_radius);
+
 
 //-----------------------------------------------------------------------------
 // PP class declarations
@@ -55,6 +66,7 @@ CK_DLL_MFUN(chugl_pp_output_get_exposure);
 t_CKBOOL init_chugl_pp_effect(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_pp_passthrough(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_pp_output(Chuck_DL_Query *QUERY);
+t_CKBOOL init_chugl_pp_bloom(Chuck_DL_Query *QUERY);
 
 //-----------------------------------------------------------------------------
 // init_chugl_postprocess() query
@@ -66,6 +78,7 @@ t_CKBOOL init_chugl_postprocess(Chuck_DL_Query *QUERY)
     if (!init_chugl_pp_effect(QUERY)) return FALSE;
     if (!init_chugl_pp_passthrough(QUERY)) return FALSE;
     if (!init_chugl_pp_output(QUERY)) return FALSE;
+    if (!init_chugl_pp_bloom(QUERY)) return FALSE;
 
     return TRUE;
 }
@@ -394,4 +407,91 @@ CK_DLL_MFUN(chugl_pp_output_get_exposure)
 {
     OutputEffect* effect = (OutputEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
     RETURN->v_float = effect->GetExposure();
+}
+
+//-----------------------------------------------------------------------------
+// Bloom 
+//-----------------------------------------------------------------------------
+t_CKBOOL init_chugl_pp_bloom(Chuck_DL_Query *QUERY)
+{
+    QUERY->begin_class(QUERY, Effect::CKName(Type::Bloom), Effect::CKName(Type::Base));
+    QUERY->doc_class(QUERY, 
+        "Physically-based Bloom effect. Combines input texture with a blurred version of itself to create a glow effect."
+        "Recommended to use with Output effect, for gamma correction and tone mapping."
+    );
+
+    QUERY->add_ctor(QUERY, chugl_pp_bloom_ctor);
+
+    QUERY->add_mfun(QUERY, chugl_pp_bloom_get_strength, "float", "strength");
+    QUERY->doc_func(QUERY, "Get the bloom strength.");
+
+    QUERY->add_mfun(QUERY, chugl_pp_bloom_set_strength, "float", "strength");
+    QUERY->add_arg(QUERY, "float", "strength");
+    QUERY->doc_func(
+        QUERY, 
+        "Set the bloom strength."
+        "If the bloom blending mode is additive, this is the multiplier for the bloom texture."
+        "If the bloom blending mode is mix, this is the interpolation factor between the input texture and the bloom texture."
+    );
+
+    QUERY->add_mfun(QUERY, chugl_pp_bloom_get_radius, "float", "radius");
+    QUERY->doc_func(QUERY, "Get the bloom filter radius.");
+
+    QUERY->add_mfun(QUERY, chugl_pp_bloom_set_radius, "float", "radius");
+    QUERY->add_arg(QUERY, "float", "radius");
+    QUERY->doc_func(QUERY, "Radius of filter kernel during bloom blur pass.");
+
+    QUERY->end_class(QUERY);
+
+    return TRUE;
+}
+
+CK_DLL_CTOR(chugl_pp_bloom_ctor)
+{
+    CGL::PushCommand(
+        new CreateSceneGraphNodeCommand(
+            new BloomEffect,
+            &CGL::mainScene, SELF, CGL::GetPPEffectDataOffset()
+        )
+    );
+}
+
+CK_DLL_MFUN(chugl_pp_bloom_get_strength)
+{
+    BloomEffect* effect = (BloomEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    RETURN->v_float = effect->GetStrength();
+}
+
+CK_DLL_MFUN(chugl_pp_bloom_set_strength)
+{
+    BloomEffect* effect = (BloomEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    float strength = GET_NEXT_FLOAT(ARGS);
+
+    RETURN->v_float = strength ;
+
+    CGL::PushCommand( 
+        new UpdateEffectUniformCommand( 
+            effect, MaterialUniform::CreateFloat(BloomEffect::U_STRENGTH, strength) 
+        ) 
+    );
+}
+
+CK_DLL_MFUN(chugl_pp_bloom_get_radius)
+{
+    BloomEffect* effect = (BloomEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    RETURN->v_float = effect->GetRadius();
+}
+
+CK_DLL_MFUN(chugl_pp_bloom_set_radius)
+{
+    BloomEffect* effect = (BloomEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    float radius = GET_NEXT_FLOAT(ARGS);
+
+    RETURN->v_float = radius;
+
+    CGL::PushCommand( 
+        new UpdateEffectUniformCommand( 
+            effect, MaterialUniform::CreateFloat(BloomEffect::U_RADIUS, radius) 
+        ) 
+    );
 }

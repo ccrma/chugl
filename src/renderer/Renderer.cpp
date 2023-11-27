@@ -455,6 +455,18 @@ void Renderer::BuildFramebuffer(unsigned int width, unsigned int height) {
 
 void Renderer::UpdateFramebufferSize(unsigned int width, unsigned int height)
 {
+	// Update member vars
+	m_ViewportWidth = width;
+	m_ViewportHeight = height;
+
+	// TODO: propagate to post processors
+	// loop over all effects in map
+	for (auto& it : m_Effects) {
+		auto* effect = it.second;
+		effect->Resize(width, height);
+	}
+
+	// Update framebuffers
 	if (m_FrameBufferPing) m_FrameBufferPing->UpdateSize(width, height);
 	if (m_FrameBufferPong) m_FrameBufferPong->UpdateSize(width, height);
 	if (m_SceneFrameBufferMS) m_SceneFrameBufferMS->UpdateSize(width, height);
@@ -491,17 +503,17 @@ void Renderer::PostProcessPass()
 	PP::Effect* chugl_effect = rootEffect->GetChuglEffect()->NextEnabled();
 
 	// for first effect, blit from MSAA framebuffer to read frame buffer
-	auto* writeFrameBuffer = GetReadFrameBuffer(ping);
-	assert(writeFrameBuffer->GetWidth() == m_SceneFrameBufferMS->GetWidth());
-	assert(writeFrameBuffer->GetHeight() == m_SceneFrameBufferMS->GetHeight());
+	auto& writeFrameBuffer = GetReadFrameBuffer(ping);
+	assert(writeFrameBuffer.GetWidth() == m_SceneFrameBufferMS->GetWidth());
+	assert(writeFrameBuffer.GetHeight() == m_SceneFrameBufferMS->GetHeight());
 	GLCall(glBindFramebuffer(GL_READ_FRAMEBUFFER, m_SceneFrameBufferMS->GetID()));
-	GLCall(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, writeFrameBuffer->GetID()));
+	GLCall(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, writeFrameBuffer.GetID()));
 	GLCall(
 		glBlitFramebuffer(
 			0, 0, 
 			m_SceneFrameBufferMS->GetWidth(), m_SceneFrameBufferMS->GetHeight(), 
 			0, 0, 
-			writeFrameBuffer->GetWidth(), writeFrameBuffer->GetHeight(),
+			writeFrameBuffer.GetWidth(), writeFrameBuffer.GetHeight(),
 			GL_COLOR_BUFFER_BIT, 
 			// GL_LINEAR
 			GL_NEAREST
@@ -512,15 +524,19 @@ void Renderer::PostProcessPass()
 		PostProcessEffect* effect = GetOrCreateEffect(chugl_effect->GetID());
 		// std::cout << "effect num: " << effectCount++ << std::endl;
 		// if last effect, unbind framebuffer
+		unsigned int writeFrameBufferID {0};
 		if (!chugl_effect->NextEnabled()) {
 			GLCall(glBindFramebuffer(GL_FRAMEBUFFER, 0)); 
 		} else {
 			// bind framebuffer
-			GetWriteFrameBuffer(ping)->Bind();
+			GetWriteFrameBuffer(ping).Bind();
+			writeFrameBufferID = GetWriteFrameBuffer(ping).GetID();
 		}
 
 		// bind color attachment from previous effect
-		GetReadFrameBuffer(ping)->BindColorAttachment();
+		auto& readFramebuffer = GetReadFrameBuffer(ping);
+		readFramebuffer.BindColorAttachment();
+
 		// clear
 		Clear(
 			m_RenderState.GetScene()->GetBackgroundColor(),
@@ -529,7 +545,7 @@ void Renderer::PostProcessPass()
 		);
 
 		// bind screen shader
-		effect->Apply(*this);  
+		effect->Apply(*this, readFramebuffer.GetColorBufferID(), writeFrameBufferID);  
 		// draw
 		GLCall(glDrawArrays(GL_TRIANGLES, 0, 3));
 
@@ -645,7 +661,7 @@ PostProcessEffect *Renderer::GetOrCreateEffect(size_t ID)
 	if (!chugl_effect) return nullptr;
 
 	// not found, create it
-	PostProcessEffect* newEffect = PostProcessEffect::Create(chugl_effect);
+	PostProcessEffect* newEffect = PostProcessEffect::Create(chugl_effect, m_ViewportWidth, m_ViewportHeight);
 
 	// cache it
 	m_Effects[ID] = newEffect;

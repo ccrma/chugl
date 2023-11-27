@@ -10,7 +10,8 @@ using namespace PP;
 Effect::CkTypeMap Effect::s_CkTypeMap = {
     { Type::Base, "PP_Effect" },
     { Type::PassThrough, "PP_PassThrough" },
-    { Type::Output, "PP_Output" }
+    { Type::Output, "PP_Output" },
+    { Type::Bloom, "PP_Bloom" }
 };
 
 void PP::Effect::SetUniform(const MaterialUniform &uniform)
@@ -70,3 +71,10 @@ const int OutputEffect::TONEMAP_REINHARD = 2;
 const int OutputEffect::TONEMAP_CINEON = 3;
 const int OutputEffect::TONEMAP_ACES = 4;
 const int OutputEffect::TONEMAP_UNCHARTED = 5;
+
+
+// =================================================================================================
+// Bloom Effect 
+// =================================================================================================
+const std::string BloomEffect::U_STRENGTH = "u_BloomStrength";
+const std::string BloomEffect::U_RADIUS = "u_FilterRadius";

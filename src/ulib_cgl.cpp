@@ -56,10 +56,13 @@ CK_DLL_SFUN(cgl_window_get_dt);
 // glfw mouse params
 CK_DLL_SFUN(cgl_mouse_get_pos_x);
 CK_DLL_SFUN(cgl_mouse_get_pos_y);
+CK_DLL_SFUN(cgl_mouse_get_dx);
+CK_DLL_SFUN(cgl_mouse_get_dy);
 CK_DLL_SFUN(cgl_mouse_set_mode);
 CK_DLL_SFUN(cgl_mouse_hide);
 CK_DLL_SFUN(cgl_mouse_lock);
 CK_DLL_SFUN(cgl_mouse_show);
+CK_DLL_SFUN(chugl_imgui_want_capture_mouse);
 
 // glfw framebuffer params
 CK_DLL_SFUN(cgl_framebuffer_get_width);
@@ -90,7 +93,6 @@ CK_DLL_SFUN(cgl_get_fps);
 
 // Get root of post processing chain
 CK_DLL_SFUN(cgl_get_pp_root);
-
 
 
 // exports =========================================
@@ -360,6 +362,12 @@ t_CKBOOL init_chugl_static_fns(Chuck_DL_Query *QUERY)
     QUERY->doc_func(QUERY, "Mouse horizontal position in window screen-space");
 	QUERY->add_sfun(QUERY, cgl_mouse_get_pos_y, "float", "mouseY");
     QUERY->doc_func(QUERY, "Mouse vertical position in window screen-space");
+
+	QUERY->add_sfun(QUERY, cgl_mouse_get_dx, "float", "mouseDX");
+	QUERY->doc_func(QUERY, "Mouse horizontal position change since last frame");
+	QUERY->add_sfun(QUERY, cgl_mouse_get_dy, "float", "mouseDY");
+	QUERY->doc_func(QUERY, "Mouse vertical position change since last frame");
+
 	QUERY->add_sfun(QUERY, cgl_mouse_set_mode, "void", "mouseMode");
     QUERY->doc_func(QUERY, "Set mouse mode. Options are GG.MOUSE_LOCKED, GG.MOUSE_HIDDEN, GG.MOUSE_NORMAL.");
 	QUERY->add_arg(QUERY, "int", "mode");
@@ -370,6 +378,13 @@ t_CKBOOL init_chugl_static_fns(Chuck_DL_Query *QUERY)
     QUERY->doc_func(QUERY, "Hides and locks cursor to the window");
 	QUERY->add_sfun(QUERY, cgl_mouse_show, "void", "showCursor");
     QUERY->doc_func(QUERY, "Default mouse behavior. Not hidden or locked");
+
+	QUERY->add_sfun(QUERY, chugl_imgui_want_capture_mouse, "int", "mouseCapturedByUI");
+	QUERY->doc_func(QUERY, 
+		"Returns true if the ImGui library is currently capturing the mouse."
+		"I.e. if the mouse is currently over an ImGui window"
+		"Useful for disabling mouse controls when the mouse is over an ImGui window"
+	);
 
 	QUERY->add_sfun(QUERY, cgl_window_fullscreen, "void", "fullscreen");
     QUERY->doc_func(QUERY, "Fullscreen the window. This will significantly improve performance");
@@ -469,6 +484,10 @@ CK_DLL_SFUN(cgl_window_get_dt) { RETURN->v_float = CGL::GetTimeInfo().second; }
 CK_DLL_SFUN(cgl_mouse_get_pos_x) { RETURN->v_float = CGL::GetMousePos().first; }
 // get mouse y
 CK_DLL_SFUN(cgl_mouse_get_pos_y) { RETURN->v_float = CGL::GetMousePos().second; }
+// get mouse dx
+CK_DLL_SFUN(cgl_mouse_get_dx) { RETURN->v_float = CGL::GetMouseDelta().first; }
+// get mouse dy
+CK_DLL_SFUN(cgl_mouse_get_dy) { RETURN->v_float = CGL::GetMouseDelta().second; }
 
 // set mouse mode
 CK_DLL_SFUN(cgl_mouse_set_mode)
@@ -480,6 +499,7 @@ CK_DLL_SFUN(cgl_mouse_set_mode)
 CK_DLL_SFUN(cgl_mouse_hide) { CGL::PushCommand(new SetMouseModeCommand(&CGL::mainScene, CGL::MOUSE_HIDDEN)); }
 CK_DLL_SFUN(cgl_mouse_lock) { CGL::PushCommand(new SetMouseModeCommand(&CGL::mainScene, CGL::MOUSE_LOCKED)); }
 CK_DLL_SFUN(cgl_mouse_show) { CGL::PushCommand(new SetMouseModeCommand(&CGL::mainScene, CGL::MOUSE_NORMAL)); }
+CK_DLL_SFUN(chugl_imgui_want_capture_mouse) { RETURN->v_int = CGL::GetMouseCapturedByImGUI() ? 1 : 0; }
 
 CK_DLL_SFUN(cgl_window_fullscreen) { CGL::PushCommand(new SetWindowModeCommand(&CGL::mainScene, CGL::WINDOW_FULLSCREEN)); }
 
@@ -1087,6 +1107,8 @@ CGL::WindowState::WindowState() :
 	framebufferHeight(Window::s_DefaultWindowHeight),  
 	aspect(1.0f),
 	mouseX(0), mouseY(0),
+	mouseDX(0), mouseDY(0),
+	mouseCapturedByImGUI(false),
 	glfwTime(0), deltaTime(0), 
 	fps(0) 
 {}
@@ -1095,6 +1117,18 @@ std::pair<double, double> CGL::GetMousePos()
 {
 	std::unique_lock<std::mutex> lock(s_WindowStateLock);
 	return std::pair<double, double>(s_WindowState.mouseX, s_WindowState.mouseY);
+}
+
+std::pair<double, double> CGL::GetMouseDelta()
+{
+	std::unique_lock<std::mutex> lock(s_WindowStateLock);
+	return std::pair<double, double>(s_WindowState.mouseDX, s_WindowState.mouseDY);
+}
+
+bool CGL::GetMouseCapturedByImGUI()
+{
+	std::unique_lock<std::mutex> lock(s_WindowStateLock);
+	return s_WindowState.mouseCapturedByImGUI;
 }
 
 std::pair<int, int> CGL::GetWindowSize()
@@ -1124,8 +1158,27 @@ std::pair<double, double> CGL::GetTimeInfo()
 void CGL::SetMousePos(double x, double y)
 {
 	std::unique_lock<std::mutex> lock(s_WindowStateLock);
+
+	// mouse delta
+	s_WindowState.mouseDX = x - s_WindowState.mouseX;
+	s_WindowState.mouseDY = y - s_WindowState.mouseY;
+
+	// mouse absolute
 	s_WindowState.mouseX = x;
 	s_WindowState.mouseY = y;
+}
+
+void CGL::ZeroMouseDeltas()
+{
+	std::unique_lock<std::mutex> lock(s_WindowStateLock);
+	s_WindowState.mouseDX = 0;
+	s_WindowState.mouseDY = 0;
+}
+
+void CGL::SetMouseCapturedByImGUI(bool captured)
+{
+	std::unique_lock<std::mutex> lock(s_WindowStateLock);
+	s_WindowState.mouseCapturedByImGUI = captured;
 }
 
 void CGL::SetWindowSize(int width, int height)
