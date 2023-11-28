@@ -38,11 +38,21 @@ t_CKBOOL chugl_main_loop_quit(void* bindle)
     return true;
 }
 
+// ChuGL chugin entry point
 CK_DLL_QUERY(ChuGL)
 {
     // hmm, don't change this...
     QUERY->setname(QUERY, "ChuGL");
+    // set info
+    QUERY->setinfo( QUERY, CHUGIN_INFO_AUTHORS, "Andrew Zhu Aday & Ge Wang" );
+    QUERY->setinfo( QUERY, CHUGIN_INFO_CHUGIN_VERSION, CHUGL_VERSION_STRING );
+    QUERY->setinfo( QUERY, CHUGIN_INFO_DESCRIPTION, "ChuGL (ChucK Graphics Library) is a unified audiovisual programming framework built into the ChucK programming language." );
+    QUERY->setinfo( QUERY, CHUGIN_INFO_URL, "https://chuck.stanford.edu/chugl/" );
+
+    // set up for main thread hook, for running ChuGL on the main thread
     CGL::hook = QUERY->create_main_thread_hook(QUERY, chugl_main_loop_hook, chugl_main_loop_quit, NULL);
+
+    // initialize ChuGL API
     init_chugl(QUERY);
 
     // remember
