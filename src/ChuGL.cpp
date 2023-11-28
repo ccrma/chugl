@@ -46,8 +46,8 @@ CK_DLL_QUERY(ChuGL)
     init_chugl(QUERY);
 
     // remember
-    g_chuglVM = QUERY->vm();
-    g_chuglAPI = QUERY->api();
+    g_chuglVM = QUERY->ck_vm(QUERY);
+    g_chuglAPI = QUERY->ck_api(QUERY);
 
     // wasn't that a breeze?
     return TRUE;

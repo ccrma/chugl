@@ -161,7 +161,7 @@ CK_DLL_MFUN(cgl_light_get_specular)
 
 CK_DLL_CTOR(cgl_point_light_ctor)
 {
-	CGL::PushCommand(new CreateSceneGraphNodeCommand(new PointLight, &CGL::mainScene, SELF, CGL::GetGGenDataOffset()));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(new PointLight, &CGL::mainScene, SELF, CGL::GetGGenDataOffset(), API));
 }
 
 CK_DLL_MFUN(cgl_points_light_set_falloff)
@@ -177,6 +177,6 @@ CK_DLL_MFUN(cgl_points_light_set_falloff)
 
 CK_DLL_CTOR(cgl_dir_light_ctor)
 {
-	CGL::PushCommand(new CreateSceneGraphNodeCommand(new DirLight, &CGL::mainScene, SELF, CGL::GetGGenDataOffset()));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(new DirLight, &CGL::mainScene, SELF, CGL::GetGGenDataOffset(), API));
 }
 

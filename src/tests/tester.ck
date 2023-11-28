@@ -99,6 +99,9 @@ fun void reset() {
     // reset skybox
     GG.scene().skyboxEnabled(false);
 
+    // reset FX
+    // GG.renderPass().removeNext();
+
     // reset default light
     GG.scene().light() @=> GLight light;
     light.lookAt(@(0,0,1));

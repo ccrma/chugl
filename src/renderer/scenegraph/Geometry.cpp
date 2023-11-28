@@ -398,7 +398,7 @@ void LatheGeometry::UpdateParams(int segments, float phiStart, float phiLength)
 }
 
 void LatheGeometry::UpdateParams(
-	std::vector<double> points, int segments, float phiStart, float phiLength
+	const std::vector<double> & points, int segments, float phiStart, float phiLength
 ) {
 	// convert points to glm::vec2
 	m_Params.points.clear();
@@ -420,112 +420,111 @@ void LatheGeometry::BuildGeometry()
 	int segments = m_Params.segments;
 	auto& points = m_Params.points;
 	float phiStart = m_Params.phiStart;
-
-
 	float phiLength = glm::clamp<float>( m_Params.phiLength, 0, glm::pi<float>() * 2.0f );
 
-		// buffers
-		std::vector<float> initNormals;
+    // buffers
+    std::vector<float> initNormals;
 
-		// helper variables
+    // helper variables
+    const float inverseSegments = 1.0f / segments;
+    auto normal = glm::vec3(0.0);
+    auto curNormal = glm::vec3(0.0);
+    auto prevNormal = glm::vec3(0.0);
+    float dx = 0;
+    float dy = 0;
 
-		const float inverseSegments = 1.0f / segments;
-		auto normal = glm::vec3(0.0);
-		auto curNormal = glm::vec3(0.0);
-		auto prevNormal = glm::vec3(0.0);
-		float dx = 0;
-		float dy = 0;
+    // do nothing if no points (ge) 0.1.5
+    // size_t is unsigned; points.size()-1 will result in a big positive number if size is 0
+    if( points.size() == 0 ) return;
 
-		// pre-compute normals for initial "meridian"
+    // pre-compute normals for initial "meridian"
+    for ( size_t j = 0; j <= ( points.size() - 1 ); j++ )
+    {
+        if (j == 0) // special handling for 1st vertex on path
+        {
+            dx = points[ j + 1 ].x - points[ j ].x;
+            dy = points[ j + 1 ].y - points[ j ].y;
 
-		for ( size_t j = 0; j <= ( points.size() - 1 ); j ++ ) {
-				if (j == 0) {				// special handling for 1st vertex on path
+            normal.x = dy * 1.0f;
+            normal.y = - dx;
+            normal.z = dy * 0.0f;
 
-					dx = points[ j + 1 ].x - points[ j ].x;
-					dy = points[ j + 1 ].y - points[ j ].y;
+            prevNormal = normal;
+            normal = glm::normalize(normal);
 
-					normal.x = dy * 1.0f;
-					normal.y = - dx;
-					normal.z = dy * 0.0f;
+            // initNormals.push_back(normal);
+            initNormals.push_back(normal.x);
+            initNormals.push_back(normal.y);
+            initNormals.push_back(normal.z);
 
-					prevNormal = normal;
+        }
+        else if (j ==  points.size() - 1 ) // special handling for last Vertex on path
+        {
+            // initNormals.push_back( prevNormal.x, prevNormal.y, prevNormal.z );
+            // initNormals.push_back(prevNormal);
+            initNormals.push_back(prevNormal.x);
+            initNormals.push_back(prevNormal.y);
+            initNormals.push_back(prevNormal.z);
+        }
+        else
+        {
+            dx = points[ j + 1 ].x - points[ j ].x;
+            dy = points[ j + 1 ].y - points[ j ].y;
 
-					normal = glm::normalize(normal);
+            normal.x = dy * 1.0f;
+            normal.y = - dx;
+            normal.z = dy * 0.0f;
 
-					// initNormals.push_back(normal);
-					initNormals.push_back(normal.x);
-					initNormals.push_back(normal.y);
-					initNormals.push_back(normal.z);
+            curNormal = normal;
 
-				} else if  (j ==  points.size() - 1 )	{// special handling for last Vertex on path
+            normal.x += prevNormal.x;
+            normal.y += prevNormal.y;
+            normal.z += prevNormal.z;
 
-					// initNormals.push_back( prevNormal.x, prevNormal.y, prevNormal.z );
-					// initNormals.push_back(prevNormal);
-					initNormals.push_back(prevNormal.x);
-					initNormals.push_back(prevNormal.y);
-					initNormals.push_back(prevNormal.z);
-				} else {
+            normal = glm::normalize(normal);
 
+            // initNormals.push_back( normal.x, normal.y, normal.z );
+            // initNormals.push_back( normal);
+            initNormals.push_back(normal.x);
+            initNormals.push_back(normal.y);
+            initNormals.push_back(normal.z);
+            prevNormal = curNormal;
+        }
 
-					dx = points[ j + 1 ].x - points[ j ].x;
-					dy = points[ j + 1 ].y - points[ j ].y;
+    }
 
-					normal.x = dy * 1.0f;
-					normal.y = - dx;
-					normal.z = dy * 0.0f;
+    // generate vertices, uvs and normals
+    Vertex vert;
+    for ( int i = 0; i <= segments; i++ )
+    {
+        const float phi = phiStart + i * inverseSegments * phiLength;
+        const float sin = glm::sin( phi );
+        const float cos = glm::cos( phi );
 
-					curNormal = normal;
+        for ( size_t j = 0; j <= ( points.size() - 1 ); j ++ )
+        {
+            // vertex
+            vert.Position.x = points[ j ].x * sin;
+            vert.Position.y = points[ j ].y;
+            vert.Position.z = points[ j ].x * cos;
 
-					normal.x += prevNormal.x;
-					normal.y += prevNormal.y;
-					normal.z += prevNormal.z;
+            // uv
+            vert.TexCoords.x = (float) i / (float) segments;
+            vert.TexCoords.y = (float) j / (float) ( points.size() - 1 );
 
-					normal = glm::normalize(normal);
+            // normal
+            // auto initNorm = initNormals[ j ];
+            // vert.Normal.x = initNorm.x * sin;
+            // vert.Normal.y = initNorm.y;
+            // vert.Normal.z = initNorm.x * cos;
 
-					// initNormals.push_back( normal.x, normal.y, normal.z );
-					// initNormals.push_back( normal);
-					initNormals.push_back(normal.x);
-					initNormals.push_back(normal.y);
-					initNormals.push_back(normal.z);
-					prevNormal = curNormal;
-				}
+            vert.Normal.x = initNormals[3 * j + 0] * sin;
+            vert.Normal.y = initNormals[3 * j + 1];
+            vert.Normal.z = initNormals[3 * j + 0] * cos;
 
-			}
-
-		// generate vertices, uvs and normals
-		Vertex vert;
-		for ( int i = 0; i <= segments; i++ ) {
-
-			const float phi = phiStart + i * inverseSegments * phiLength;
-
-			const float sin = glm::sin( phi );
-			const float cos = glm::cos( phi );
-
-			for ( size_t j = 0; j <= ( points.size() - 1 ); j ++ ) {
-
-				// vertex
-
-				vert.Position.x = points[ j ].x * sin;
-				vert.Position.y = points[ j ].y;
-				vert.Position.z = points[ j ].x * cos;
-
-				// uv
-				vert.TexCoords.x = (float) i / (float) segments;
-				vert.TexCoords.y = (float) j / (float) ( points.size() - 1 );
-
-				// normal
-				// auto initNorm = initNormals[ j ];
-				// vert.Normal.x = initNorm.x * sin;
-				// vert.Normal.y = initNorm.y;
-				// vert.Normal.z = initNorm.x * cos;
-
-				vert.Normal.x = initNormals[3 * j + 0] * sin;
-				vert.Normal.y = initNormals[3 * j + 1];
-				vert.Normal.z = initNormals[3 * j + 0] * cos;
-
-				AddVertex(vert);
-			}
-		}
+            AddVertex(vert);
+        }
+    }
 
 	// indices
 	for ( size_t i = 0; i < segments; i ++ ) {

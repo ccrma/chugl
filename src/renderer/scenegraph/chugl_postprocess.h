@@ -12,6 +12,7 @@ enum class Type : t_CKUINT
     Base = 0,
     PassThrough,
     Output,
+    Invert,
     Bloom
 };
 
@@ -70,6 +71,22 @@ public:
     virtual PassThroughEffect* Clone() override { 
         return new PassThroughEffect(*this); 
     }
+};
+
+// Color Inverse
+class InverseEffect : public Effect
+{
+public:
+    InverseEffect() : Effect() {
+        // set mix
+        SetUniform(MaterialUniform::CreateFloat(U_MIX, 1.0f));
+    };
+    virtual Type GetType() override { return Type::Invert; }
+    virtual InverseEffect* Clone() override { return new InverseEffect(*this); }
+
+    float GetMix() { return GetUniform(U_MIX).f; }
+public:
+    static const std::string U_MIX;
 };
 
 // Output effect

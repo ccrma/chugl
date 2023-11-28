@@ -1,14 +1,3 @@
-// controls ==============================================================
-InputManager IM;
-spork ~ IM.start(0);
-
-MouseManager MM;
-spork ~ MM.start(0);
-
-FlyCam flycam;
-flycam.init(IM, MM);
-spork ~ flycam.selfUpdate();
-
 // Scene setup ============================================================
 
 GSphere sphere --> GG.scene();
@@ -21,14 +10,16 @@ GCube cube --> GG.scene();
 @(0, 5, 0) => cube.mat().color;
 
 // FX Chain ===============================================================
-// GG.renderPass() --> PP_Bloom bloom --> PP_Output output;
-PP_Bloom bloom; PP_Output output;
-GG.renderPass().next(bloom).next(output);
+// GG.renderPass() --> BloomFX bloom --> OutputFX output;
+PassThroughFX passthrough;
+BloomFX bloom; OutputFX output;
+
+GG.renderPass().next(passthrough).next(bloom).next(output);
 
 // UI =====================================================================
 UI_Window window;
 window.text("bloom test");
-fun void CheckboxListener(UI_Checkbox @ checkbox, PP_Effect @ effect)
+fun void CheckboxListener(UI_Checkbox @ checkbox, FX @ effect)
 {
     while (true)
     {
@@ -37,7 +28,7 @@ fun void CheckboxListener(UI_Checkbox @ checkbox, PP_Effect @ effect)
     }
 }
 
-fun void GammaListener(UI_SliderFloat @ gammaSlider, PP_Output @ output) {
+fun void GammaListener(UI_SliderFloat @ gammaSlider, OutputFX @ output) {
     while (true) {
         gammaSlider => now;
         gammaSlider.val() => output.gamma;
@@ -45,7 +36,7 @@ fun void GammaListener(UI_SliderFloat @ gammaSlider, PP_Output @ output) {
     }
 }
 
-fun void ExposureListener(UI_SliderFloat @ exposureSlider, PP_Output @ output) {
+fun void ExposureListener(UI_SliderFloat @ exposureSlider, OutputFX @ output) {
     while (true) {
         exposureSlider => now;
         exposureSlider.val() => output.exposure;
@@ -61,27 +52,27 @@ fun void ExposureListener(UI_SliderFloat @ exposureSlider, PP_Output @ output) {
     "Uncharted"
 ] @=> string tonemapOptions[];
 
-fun void TonemapListener(UI_Dropdown @ tonemapDropdown, PP_Output @ output) {
+fun void TonemapListener(UI_Dropdown @ tonemapDropdown, OutputFX @ output) {
     while (true) {
         tonemapDropdown => now;
         tonemapDropdown.val() => int val;
         if (val == 0) {
-            output.toneMap(PP_Output.TONEMAP_NONE);
+            output.toneMap(OutputFX.TONEMAP_NONE);
         } else if (val == 1) {
-            output.toneMap(PP_Output.TONEMAP_LINEAR);
+            output.toneMap(OutputFX.TONEMAP_LINEAR);
         } else if (val == 2) {
-            output.toneMap(PP_Output.TONEMAP_REINHARD);
+            output.toneMap(OutputFX.TONEMAP_REINHARD);
         } else if (val == 3) {
-            output.toneMap(PP_Output.TONEMAP_CINEON);
+            output.toneMap(OutputFX.TONEMAP_CINEON);
         } else if (val == 4) {
-            output.toneMap(PP_Output.TONEMAP_ACES);
+            output.toneMap(OutputFX.TONEMAP_ACES);
         } else if (val == 5) {
-            output.toneMap(PP_Output.TONEMAP_UNCHARTED);
+            output.toneMap(OutputFX.TONEMAP_UNCHARTED);
         }
     }
 }
 
-fun void BloomStrengthListener(UI_SliderFloat @ strengthSlider, PP_Bloom @ bloom) {
+fun void BloomStrengthListener(UI_SliderFloat @ strengthSlider, BloomFX @ bloom) {
     while (true) {
         strengthSlider => now;
         strengthSlider.val() => bloom.strength;
@@ -89,7 +80,7 @@ fun void BloomStrengthListener(UI_SliderFloat @ strengthSlider, PP_Bloom @ bloom
     }
 }
 
-fun void BloomRadiusListener(UI_SliderFloat @ radiusSlider, PP_Bloom @ bloom) {
+fun void BloomRadiusListener(UI_SliderFloat @ radiusSlider, BloomFX @ bloom) {
     while (true) {
         radiusSlider => now;
         radiusSlider.val() => bloom.radius;
@@ -97,7 +88,7 @@ fun void BloomRadiusListener(UI_SliderFloat @ radiusSlider, PP_Bloom @ bloom) {
     }
 }
 
-fun void BloomThresholdListener(UI_SliderFloat @ thresholdSlider, PP_Bloom @ bloom) {
+fun void BloomThresholdListener(UI_SliderFloat @ thresholdSlider, BloomFX @ bloom) {
     while (true) {
         thresholdSlider => now;
         thresholdSlider.val() => bloom.threshold;
@@ -105,7 +96,7 @@ fun void BloomThresholdListener(UI_SliderFloat @ thresholdSlider, PP_Bloom @ blo
     }
 }
 
-fun void BloomLevelsListener(UI_SliderInt @ levelsSlider, PP_Bloom @ bloom) {
+fun void BloomLevelsListener(UI_SliderInt @ levelsSlider, BloomFX @ bloom) {
     while (true) {
         levelsSlider => now;
         levelsSlider.val() => bloom.levels;
@@ -113,27 +104,27 @@ fun void BloomLevelsListener(UI_SliderInt @ levelsSlider, PP_Bloom @ bloom) {
     }
 }
 
-fun void BloomBlendListener(UI_Dropdown @ blendDropdown, PP_Bloom @ bloom) {
+fun void BloomBlendListener(UI_Dropdown @ blendDropdown, BloomFX @ bloom) {
     while (true) {
         blendDropdown => now;
         blendDropdown.val() => int val;
         if (val == 0) {
-            bloom.blend(PP_Bloom.BLEND_MIX);
+            bloom.blend(BloomFX.BLEND_MIX);
         } else if (val == 1) {
-            bloom.blend(PP_Bloom.BLEND_ADD);
+            bloom.blend(BloomFX.BLEND_ADD);
         } 
     }
 }
 
 
-fun void KarisEnabledListener(UI_Checkbox @ karisCheckbox, PP_Bloom @ bloom) {
+fun void KarisEnabledListener(UI_Checkbox @ karisCheckbox, BloomFX @ bloom) {
     while (true) {
         karisCheckbox => now;
         karisCheckbox.val() => bloom.karisAverage;
     }
 }
 
-GG.renderPass().next() @=> PP_Effect @ effect;
+GG.renderPass().next() @=> FX @ effect;
 
 0 => int effectIndex;
 while (effect != null) {
@@ -151,15 +142,15 @@ while (effect != null) {
 
     // create UI based on type
     Type.of(effect).baseName() => string baseName;
-    if (baseName == "PP_Output") {
+    if (baseName == "OutputFX") {
         // gamma
         UI_SliderFloat gammaSlider;
         gammaSlider.text("Gamma");
-        gammaSlider.val((effect$PP_Output).gamma());
-        <<< "init gamma: ", (effect$PP_Output).gamma() >>>;
+        gammaSlider.val((effect$OutputFX).gamma());
+        <<< "init gamma: ", (effect$OutputFX).gamma() >>>;
         gammaSlider.range(0.1, 10);
         window.add(gammaSlider);
-        spork ~ GammaListener(gammaSlider, effect$PP_Output);
+        spork ~ GammaListener(gammaSlider, effect$OutputFX);
 
         // exposure
         UI_SliderFloat exposureSlider;
@@ -167,7 +158,7 @@ while (effect != null) {
         exposureSlider.val(1);
         exposureSlider.range(0.01, 16);
         window.add(exposureSlider);
-        spork ~ ExposureListener(exposureSlider, effect$PP_Output);
+        spork ~ ExposureListener(exposureSlider, effect$OutputFX);
         
         // tonemap
         UI_Dropdown tonemapDropdown;
@@ -175,40 +166,40 @@ while (effect != null) {
         tonemapDropdown.options(tonemapOptions);
         tonemapDropdown.val(output.toneMap());
         window.add(tonemapDropdown);
-        spork ~ TonemapListener(tonemapDropdown, effect$PP_Output);
+        spork ~ TonemapListener(tonemapDropdown, effect$OutputFX);
 
-    } else if (baseName == "PP_Bloom") {
+    } else if (baseName == "BloomFX") {
         // strength
         UI_SliderFloat strengthSlider;
         strengthSlider.text("Bloom Strength");
-        strengthSlider.val((effect$PP_Bloom).strength());
+        strengthSlider.val((effect$BloomFX).strength());
         strengthSlider.range(0, 2);
         window.add(strengthSlider);
-        spork ~ BloomStrengthListener(strengthSlider, effect$PP_Bloom);
+        spork ~ BloomStrengthListener(strengthSlider, effect$BloomFX);
 
         // radius
         UI_SliderFloat radiusSlider;
         radiusSlider.text("Bloom Radius");
-        radiusSlider.val((effect$PP_Bloom).radius());
+        radiusSlider.val((effect$BloomFX).radius());
         radiusSlider.range(0.001, .01);
         window.add(radiusSlider);
-        spork ~ BloomRadiusListener(radiusSlider, effect$PP_Bloom);
+        spork ~ BloomRadiusListener(radiusSlider, effect$BloomFX);
 
         // threshold
         UI_SliderFloat thresholdSlider;
         thresholdSlider.text("Bloom Threshold");
-        thresholdSlider.val((effect$PP_Bloom).threshold());
+        thresholdSlider.val((effect$BloomFX).threshold());
         thresholdSlider.range(0, 2);
         window.add(thresholdSlider);
-        spork ~ BloomThresholdListener(thresholdSlider, effect$PP_Bloom);
+        spork ~ BloomThresholdListener(thresholdSlider, effect$BloomFX);
 
         // levels
         UI_SliderInt levelsSlider;
         levelsSlider.text("Bloom #Passes");
-        levelsSlider.val((effect$PP_Bloom).levels());
+        levelsSlider.val((effect$BloomFX).levels());
         levelsSlider.range(1, 10);
         window.add(levelsSlider);
-        spork ~ BloomLevelsListener(levelsSlider, effect$PP_Bloom);
+        spork ~ BloomLevelsListener(levelsSlider, effect$BloomFX);
 
         // blend mode
         UI_Dropdown blendDropdown;
@@ -217,13 +208,13 @@ while (effect != null) {
         blendDropdown.options(blendOptions);
         blendDropdown.val(0);
         window.add(blendDropdown);
-        spork ~ BloomBlendListener(blendDropdown, effect$PP_Bloom);
+        spork ~ BloomBlendListener(blendDropdown, effect$BloomFX);
 
         // karis enabled
         UI_Checkbox karisCheckbox;
         karisCheckbox.text("Karis Bloom");
         window.add(karisCheckbox);
-        spork ~ KarisEnabledListener(karisCheckbox, effect$PP_Bloom);
+        spork ~ KarisEnabledListener(karisCheckbox, effect$BloomFX);
 
     }
 

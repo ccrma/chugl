@@ -18,7 +18,7 @@
 #include <unordered_set>
 
 // ChucK includes ========================================
-#include "chuck.h"
+#include "chugin.h"
 
 // glm includes ==========================================
 #include <glm/glm.hpp>

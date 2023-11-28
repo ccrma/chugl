@@ -8,10 +8,11 @@ using namespace PP;
 // =================================================================================================
 
 Effect::CkTypeMap Effect::s_CkTypeMap = {
-    { Type::Base, "PP_Effect" },
-    { Type::PassThrough, "PP_PassThrough" },
-    { Type::Output, "PP_Output" },
-    { Type::Bloom, "PP_Bloom" }
+    { Type::Base, "FX" },
+    { Type::PassThrough, "PassThroughFX" },
+    { Type::Output, "OutputFX" },
+    { Type::Invert, "InvertFX"},
+    { Type::Bloom, "BloomFX" }
 };
 
 void PP::Effect::SetUniform(const MaterialUniform &uniform)
@@ -56,6 +57,10 @@ Effect *PP::Effect::NextEnabled()
 
     return next;
 }
+// =================================================================================================
+// Color Invert Effect 
+// =================================================================================================
+const std::string InverseEffect::U_MIX = "u_Mix";
 
 // =================================================================================================
 // Output Effect 

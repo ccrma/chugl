@@ -153,7 +153,8 @@ PP_PassThrough pass1, pass2, pass3, pass4;
 PP_Output output;
 PP_Bloom bloom;
 // GG.renderPass().next(pass1); // .next(pass2).next(pass3).next(pass4);
-GG.renderPass().next(pass1).next(pass2).next(bloom).next(output);
+PP_Invert invert;  // want to do AFTER tonemapping.
+GG.renderPass().next(bloom).next(output).next(invert);
 
 fun void CheckboxListener(UI_Checkbox @ checkbox, PP_Effect @ effect)
 {
@@ -260,6 +261,14 @@ fun void KarisEnabledListener(UI_Checkbox @ karisCheckbox, PP_Bloom @ bloom) {
     }
 }
 
+fun void InvertMixSlider(UI_SliderFloat @ mixSlider, PP_Invert @ invert) {
+    while (true) {
+        mixSlider => now;
+        mixSlider.val() => invert.mix;
+        <<< "invert mix set to", invert.mix() >>>;
+    }
+}
+
 // create UI
 GG.renderPass().next() @=> PP_Effect @ effect;
 0 => int effectIndex;
@@ -352,6 +361,14 @@ while (effect != null) {
         window.add(karisCheckbox);
         spork ~ KarisEnabledListener(karisCheckbox, effect$PP_Bloom);
 
+    } else if (baseName == "PP_Invert") {
+        // mix
+        UI_SliderFloat mixSlider;
+        mixSlider.text("Invert Mix");
+        mixSlider.val((effect$PP_Invert).mix());
+        mixSlider.range(0, 1);
+        window.add(mixSlider);
+        spork ~ InvertMixSlider(mixSlider, effect$PP_Invert);
     }
 
     effect.next() @=> effect;

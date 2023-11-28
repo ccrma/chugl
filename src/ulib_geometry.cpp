@@ -295,7 +295,7 @@ CK_DLL_DTOR(cgl_geo_dtor) // all geos can share this base destructor
 {
 	CGL::PushCommand(
         new DestroySceneGraphNodeCommand(
-            SELF, CGL::GetGeometryDataOffset(), &CGL::mainScene
+            SELF, CGL::GetGeometryDataOffset(), API, &CGL::mainScene
         )
     );
 }
@@ -313,7 +313,7 @@ CK_DLL_MFUN(cgl_geo_clone)
 // box geo
 CK_DLL_CTOR(cgl_geo_box_ctor)
 {
-	CGL::PushCommand(new CreateSceneGraphNodeCommand(new BoxGeometry, &CGL::mainScene, SELF,  CGL::GetGeometryDataOffset()));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(new BoxGeometry, &CGL::mainScene, SELF,  CGL::GetGeometryDataOffset(), API));
 }
 
 CK_DLL_MFUN(cgl_geo_box_set)
@@ -333,7 +333,7 @@ CK_DLL_MFUN(cgl_geo_box_set)
 // sphere geo
 CK_DLL_CTOR(cgl_geo_sphere_ctor)
 {
-	CGL::PushCommand(new CreateSceneGraphNodeCommand(new SphereGeometry, &CGL::mainScene, SELF, CGL::GetGeometryDataOffset()));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(new SphereGeometry, &CGL::mainScene, SELF, CGL::GetGeometryDataOffset(), API));
 }
 
 CK_DLL_MFUN(cgl_geo_sphere_set)
@@ -354,7 +354,7 @@ CK_DLL_MFUN(cgl_geo_sphere_set)
 // Circle geo ---------
 CK_DLL_CTOR(cgl_geo_circle_ctor)
 {
-	CGL::PushCommand(new CreateSceneGraphNodeCommand(new CircleGeometry, &CGL::mainScene, SELF,  CGL::GetGeometryDataOffset()));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(new CircleGeometry, &CGL::mainScene, SELF, CGL::GetGeometryDataOffset(), API));
 }
 
 CK_DLL_MFUN(cgl_geo_circle_set)
@@ -372,7 +372,7 @@ CK_DLL_MFUN(cgl_geo_circle_set)
 // plane geo ----------
 CK_DLL_CTOR(cgl_geo_plane_ctor)
 {
-	CGL::PushCommand(new CreateSceneGraphNodeCommand(new PlaneGeometry, &CGL::mainScene, SELF,  CGL::GetGeometryDataOffset()));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(new PlaneGeometry, &CGL::mainScene, SELF, CGL::GetGeometryDataOffset(), API));
 }
 
 CK_DLL_MFUN(cgl_geo_plane_set)
@@ -390,7 +390,7 @@ CK_DLL_MFUN(cgl_geo_plane_set)
 // torus geo  ----------
 CK_DLL_CTOR(cgl_geo_torus_ctor)
 {
-	CGL::PushCommand(new CreateSceneGraphNodeCommand(new TorusGeometry, &CGL::mainScene, SELF,  CGL::GetGeometryDataOffset()));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(new TorusGeometry, &CGL::mainScene, SELF, CGL::GetGeometryDataOffset(), API));
 }
 
 CK_DLL_MFUN(cgl_geo_torus_set)
@@ -409,22 +409,29 @@ CK_DLL_MFUN(cgl_geo_torus_set)
 // Lathe geo ----------
 CK_DLL_CTOR(cgl_geo_lathe_ctor)
 {
-	CGL::PushCommand(new CreateSceneGraphNodeCommand(new LatheGeometry, &CGL::mainScene, SELF,  CGL::GetGeometryDataOffset()));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(new LatheGeometry, &CGL::mainScene, SELF, CGL::GetGeometryDataOffset(), API));
 }
 
 CK_DLL_MFUN(cgl_geo_lathe_set)
 {
-	LatheGeometry *geo = (LatheGeometry *) CGL::GetGeometry(SELF);
-
-	Chuck_ArrayFloat *points = (Chuck_ArrayFloat *)GET_NEXT_OBJECT(ARGS);
+	LatheGeometry * geo = (LatheGeometry *) CGL::GetGeometry(SELF);
+	Chuck_ArrayFloat * points = (Chuck_ArrayFloat *)GET_NEXT_OBJECT(ARGS);
 	t_CKINT segments = GET_NEXT_INT(ARGS);
 	t_CKFLOAT phiStart = GET_NEXT_FLOAT(ARGS);
 	t_CKFLOAT phiLength = GET_NEXT_FLOAT(ARGS);
 
-	geo->UpdateParams(points->m_vector, segments, phiStart, phiLength);
-
+    // TODO: extra round of copying here, can avoid if it matters
+    t_CKINT vsize = API->object->array_float_size(points);
+    std::vector<t_CKFLOAT> thePoints; thePoints.reserve(vsize);
+    for( t_CKINT idx = 0; idx < vsize; idx++ )
+    { thePoints .push_back( API->object->array_float_get_idx(points,idx) ); }
+    
+    // update geo
+	geo->UpdateParams(thePoints, segments, phiStart, phiLength);
+    // push command
 	CGL::PushCommand(new UpdateGeometryCommand(geo));
 }
+
 CK_DLL_MFUN(cgl_geo_lathe_set_no_points)
 {
 	LatheGeometry *geo = (LatheGeometry *) CGL::GetGeometry(SELF);
@@ -441,7 +448,7 @@ CK_DLL_MFUN(cgl_geo_lathe_set_no_points)
 
 CK_DLL_CTOR(cgl_geo_cylinder_ctor)
 {
-	CGL::PushCommand(new CreateSceneGraphNodeCommand(new CylinderGeometry, &CGL::mainScene, SELF,  CGL::GetGeometryDataOffset()));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(new CylinderGeometry, &CGL::mainScene, SELF, CGL::GetGeometryDataOffset(), API));
 }
 
 CK_DLL_MFUN(cgl_geo_cylinder_set)
@@ -463,7 +470,7 @@ CK_DLL_MFUN(cgl_geo_cylinder_set)
 // Triangle geo -------------------------------------------------
 CK_DLL_CTOR(cgl_geo_triangle_ctor)
 {
-	CGL::PushCommand(new CreateSceneGraphNodeCommand(new TriangleGeometry, &CGL::mainScene, SELF,  CGL::GetGeometryDataOffset()));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(new TriangleGeometry, &CGL::mainScene, SELF, CGL::GetGeometryDataOffset(), API));
 }
 
 CK_DLL_MFUN(cgl_geo_triangle_set)
@@ -480,7 +487,7 @@ CK_DLL_MFUN(cgl_geo_triangle_set)
 // Custom geo ---------
 CK_DLL_CTOR(cgl_geo_custom_ctor)
 {
-	CGL::PushCommand(new CreateSceneGraphNodeCommand(new CustomGeometry, &CGL::mainScene, SELF,  CGL::GetGeometryDataOffset()));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(new CustomGeometry, &CGL::mainScene, SELF, CGL::GetGeometryDataOffset(), API));
 }
 
 CK_DLL_MFUN(cgl_geo_set_attribute)
@@ -490,40 +497,54 @@ CK_DLL_MFUN(cgl_geo_set_attribute)
 	t_CKINT location = GET_NEXT_INT(ARGS);
 	t_CKINT numComponents = GET_NEXT_INT(ARGS);
 	bool normalize = GET_NEXT_INT(ARGS);
-	Chuck_ArrayFloat *data = (Chuck_ArrayFloat *)GET_NEXT_OBJECT(ARGS);
+	Chuck_ArrayFloat * ckarray = (Chuck_ArrayFloat *)GET_NEXT_OBJECT(ARGS);
 
 	// not stored in chuck-side copy to save time
 	// geo->SetAttribute(name, location, numComponents, normalize, data);
 
+    // TODO: extra round of copying here, can avoid if it matters
+    t_CKINT vsize = API->object->array_float_size(ckarray);
+    std::vector<t_CKFLOAT> theVec; theVec.reserve(vsize);
+    for( t_CKINT idx = 0; idx < vsize; idx++ )
+    { theVec.push_back( API->object->array_float_get_idx(ckarray,idx) ); }
+    
 	CGL::PushCommand(
 		new UpdateGeometryAttributeCommand(
-			geo, name->str(), location, numComponents, data->m_vector, normalize));
+			geo, API->object->str(name), location, numComponents, theVec, normalize));
 }
 
 CK_DLL_MFUN(cgl_geo_set_positions)
 {
-	CustomGeometry *geo = (CustomGeometry *) CGL::GetGeometry(SELF);
+	CustomGeometry * geo = (CustomGeometry *) CGL::GetGeometry(SELF);
+	Chuck_ArrayFloat * ckarray = (Chuck_ArrayFloat *)GET_NEXT_OBJECT(ARGS);
 
-	Chuck_ArrayFloat *data = (Chuck_ArrayFloat *)GET_NEXT_OBJECT(ARGS);
-
+    // TODO: extra round of copying here, can avoid if it matters
+    t_CKINT vsize = API->object->array_float_size(ckarray);
+    std::vector<t_CKFLOAT> theVec; theVec.reserve(vsize);
+    for( t_CKINT idx = 0; idx < vsize; idx++ )
+    { theVec.push_back( API->object->array_float_get_idx(ckarray,idx) ); }
+    
 	CGL::PushCommand(
 		new UpdateGeometryAttributeCommand(
-			geo, "position", Geometry::POSITION_ATTRIB_IDX, 3, data->m_vector, false));
+			geo, "position", Geometry::POSITION_ATTRIB_IDX, 3, theVec, false));
 }
 
 CK_DLL_MFUN(cgl_geo_set_positions_vec3)
 {
-	CustomGeometry *geo = (CustomGeometry *) CGL::GetGeometry(SELF);
-	auto* data = (Chuck_Array24*)GET_NEXT_OBJECT(ARGS);
+	CustomGeometry * geo = (CustomGeometry *) CGL::GetGeometry(SELF);
+	auto * ckarray = (Chuck_ArrayVec3 *)GET_NEXT_OBJECT(ARGS);
 
-	// TODO extra round of copying here, can avoid if it matters
-	std::vector<t_CKFLOAT> vec3s;
-	vec3s.reserve(3 * data->m_vector.size());
-	for (auto& val : data->m_vector) {
-		vec3s.emplace_back(val.x);
-		vec3s.emplace_back(val.y);
-		vec3s.emplace_back(val.z);
-	}
+    // TODO extra round of copying here, can avoid if it matters
+    t_CKINT vsize = API->object->array_vec3_size(ckarray);
+    std::vector<t_CKFLOAT> vec3s;
+    vec3s.reserve(3 * vsize);
+    t_CKVEC3 val;
+    for( t_CKINT idx = 0; idx < vsize; idx++ ) {
+        val = API->object->array_vec3_get_idx(ckarray,idx);
+        vec3s.emplace_back(val.x);
+        vec3s.emplace_back(val.y);
+        vec3s.emplace_back(val.z);
+    }
 
 	CGL::PushCommand(
 		new UpdateGeometryAttributeCommand(
@@ -535,24 +556,33 @@ CK_DLL_MFUN(cgl_geo_set_positions_vec3)
 // set colors
 CK_DLL_MFUN(cgl_geo_set_colors)
 {
-	CustomGeometry *geo = (CustomGeometry *) CGL::GetGeometry(SELF);
+	CustomGeometry * geo = (CustomGeometry *) CGL::GetGeometry(SELF);
+	Chuck_ArrayFloat * ckarray = (Chuck_ArrayFloat *)GET_NEXT_OBJECT(ARGS);
 
-	Chuck_ArrayFloat *data = (Chuck_ArrayFloat *)GET_NEXT_OBJECT(ARGS);
+    // TODO: extra round of copying here, can avoid if it matters
+    t_CKINT vsize = API->object->array_float_size(ckarray);
+    std::vector<t_CKFLOAT> theVec; theVec.reserve(vsize);
+    for( t_CKINT idx = 0; idx < vsize; idx++ )
+    { theVec.push_back( API->object->array_float_get_idx(ckarray,idx) ); }
 
 	CGL::PushCommand(
 		new UpdateGeometryAttributeCommand(
-			geo, "color", Geometry::COLOR_ATTRIB_IDX, 4, data->m_vector, false));
+			geo, "color", Geometry::COLOR_ATTRIB_IDX, 4, theVec, false)
+    );
 }
 
 CK_DLL_MFUN(cgl_geo_set_colors_vec3)
 {
-    CustomGeometry *geo = (CustomGeometry *) CGL::GetGeometry(SELF);
-    auto* data = (Chuck_Array24*)GET_NEXT_OBJECT(ARGS);
+    CustomGeometry * geo = (CustomGeometry *) CGL::GetGeometry(SELF);
+    auto * ckarray = (Chuck_ArrayVec3*)GET_NEXT_OBJECT(ARGS);
 
     // TODO extra round of copying here, can avoid if it matters
+    t_CKINT vsize = API->object->array_vec3_size(ckarray);
     std::vector<t_CKFLOAT> vec4s;
-    vec4s.reserve(4 * data->m_vector.size());
-    for (auto& val : data->m_vector) {
+    vec4s.reserve(4 * vsize);
+    t_CKVEC3 val;
+    for( t_CKINT idx = 0; idx < vsize; idx++ ) {
+        val = API->object->array_vec3_get_idx(ckarray,idx);
         vec4s.emplace_back(val.x);
         vec4s.emplace_back(val.y);
         vec4s.emplace_back(val.z);
@@ -568,13 +598,16 @@ CK_DLL_MFUN(cgl_geo_set_colors_vec3)
 
 CK_DLL_MFUN(cgl_geo_set_colors_vec4)
 {
-    CustomGeometry *geo = (CustomGeometry *) CGL::GetGeometry(SELF);
-    auto* data = (Chuck_Array32*)GET_NEXT_OBJECT(ARGS);
+    CustomGeometry * geo = (CustomGeometry *) CGL::GetGeometry(SELF);
+    auto * ckarray = (Chuck_ArrayVec4 *)GET_NEXT_OBJECT(ARGS);
 
     // TODO extra round of copying here, can avoid if it matters
+    t_CKINT vsize = API->object->array_vec4_size(ckarray);
     std::vector<t_CKFLOAT> vec4s;
-    vec4s.reserve(4 * data->m_vector.size());
-    for (auto& val : data->m_vector) {
+    vec4s.reserve(4 * vsize);
+    t_CKVEC4 val;
+    for( t_CKINT idx = 0; idx < vsize; idx++ ) {
+        val = API->object->array_vec4_get_idx(ckarray,idx);
         vec4s.emplace_back(val.x);
         vec4s.emplace_back(val.y);
         vec4s.emplace_back(val.z);
@@ -591,13 +624,18 @@ CK_DLL_MFUN(cgl_geo_set_colors_vec4)
 // set normals
 CK_DLL_MFUN(cgl_geo_set_normals)
 {
-	CustomGeometry *geo = (CustomGeometry *) CGL::GetGeometry(SELF);
+	CustomGeometry * geo = (CustomGeometry *) CGL::GetGeometry(SELF);
+	Chuck_ArrayFloat * ckarray = (Chuck_ArrayFloat *)GET_NEXT_OBJECT(ARGS);
 
-	Chuck_ArrayFloat *data = (Chuck_ArrayFloat *)GET_NEXT_OBJECT(ARGS);
+    // TODO: extra round of copying here, can avoid if it matters
+    t_CKINT vsize = API->object->array_float_size(ckarray);
+    std::vector<t_CKFLOAT> theVec; theVec.reserve(vsize);
+    for( t_CKINT idx = 0; idx < vsize; idx++ )
+    { theVec.push_back(API->object->array_float_get_idx(ckarray,idx)); }
 
 	CGL::PushCommand(
 		new UpdateGeometryAttributeCommand(
-			geo, "normal", Geometry::NORMAL_ATTRIB_IDX, 3, data->m_vector, false)
+			geo, "normal", Geometry::NORMAL_ATTRIB_IDX, 3, theVec, false)
     );
 }
 
@@ -605,13 +643,15 @@ CK_DLL_MFUN(cgl_geo_set_normals)
 CK_DLL_MFUN(cgl_geo_set_normals_vec3)
 {
     CustomGeometry *geo = (CustomGeometry *) CGL::GetGeometry(SELF);
-
-    auto * data = (Chuck_Array24*)GET_NEXT_OBJECT(ARGS);
+    auto * ckarray = (Chuck_ArrayVec3*)GET_NEXT_OBJECT(ARGS);
 
     // TODO extra round of copying here, can avoid if it matters
+    t_CKINT vsize = API->object->array_vec3_size(ckarray);
     std::vector<t_CKFLOAT> vec3s;
-    vec3s.reserve(3 * data->m_vector.size());
-    for (auto& val : data->m_vector) {
+    vec3s.reserve(3 * vsize);
+    t_CKVEC3 val;
+    for( t_CKINT idx = 0; idx < vsize; idx++ ) {
+        val = API->object->array_vec3_get_idx(ckarray,idx);
         vec3s.emplace_back(val.x);
         vec3s.emplace_back(val.y);
         vec3s.emplace_back(val.z);
@@ -626,42 +666,53 @@ CK_DLL_MFUN(cgl_geo_set_normals_vec3)
 // set uvs
 CK_DLL_MFUN(cgl_geo_set_uvs)
 {
-	CustomGeometry *geo = (CustomGeometry *) CGL::GetGeometry(SELF);
+	CustomGeometry * geo = (CustomGeometry *) CGL::GetGeometry(SELF);
+	Chuck_ArrayFloat * ckarray = (Chuck_ArrayFloat *)GET_NEXT_OBJECT(ARGS);
 
-	Chuck_ArrayFloat *data = (Chuck_ArrayFloat *)GET_NEXT_OBJECT(ARGS);
-
+    // TODO: extra round of copying here, can avoid if it matters
+    t_CKINT vsize = API->object->array_float_size(ckarray);
+    std::vector<t_CKFLOAT> theVec; theVec.reserve(vsize);
+    for( t_CKINT idx = 0; idx < vsize; idx++ )
+    { theVec.push_back(API->object->array_float_get_idx(ckarray,idx)); }
+    
 	CGL::PushCommand(
 		new UpdateGeometryAttributeCommand(
-			geo, "uv", Geometry::UV0_ATTRIB_IDX, 2, data->m_vector, false));
+			geo, "uv", Geometry::UV0_ATTRIB_IDX, 2, theVec, false));
 }
 
 // set uvs
 CK_DLL_MFUN(cgl_geo_set_uvs_vec2)
 {
-    CustomGeometry *geo = (CustomGeometry *) CGL::GetGeometry(SELF);
-
-    auto* data = (Chuck_Array16*)GET_NEXT_OBJECT(ARGS);
+    CustomGeometry * geo = (CustomGeometry *)CGL::GetGeometry(SELF);
+    auto * ckarray = (Chuck_ArrayVec2 *)GET_NEXT_OBJECT(ARGS);
 
     // TODO extra round of copying here, can avoid if it matters
-    std::vector<t_CKFLOAT> vec2s;
-    vec2s.reserve(2 * data->m_vector.size());
-    for( auto & val : data->m_vector) {
+    t_CKINT vsize = API->object->array_vec2_size(ckarray);
+    std::vector<t_CKFLOAT> vec2s; vec2s.reserve(2 * vsize);
+    t_CKVEC2 val;
+    for( t_CKINT idx = 0; idx < vsize; idx++ ) {
+        val = API->object->array_vec2_get_idx(ckarray,idx);
         vec2s.emplace_back(val.x);
         vec2s.emplace_back(val.y);
     }
 
     CGL::PushCommand(
         new UpdateGeometryAttributeCommand(
-            geo, "uv", Geometry::UV0_ATTRIB_IDX, 2, vec2s, false));
+            geo, "uv", Geometry::UV0_ATTRIB_IDX, 2, vec2s, false) );
 }
 
 // set indices
 CK_DLL_MFUN(cgl_geo_set_indices)
 {
-	CustomGeometry *geo = (CustomGeometry *) CGL::GetGeometry(SELF);
+    CustomGeometry * geo = (CustomGeometry *) CGL::GetGeometry(SELF);
+    Chuck_ArrayInt * ckarray = (Chuck_ArrayInt *)GET_NEXT_OBJECT(ARGS);
 
-	Chuck_ArrayInt *data = (Chuck_ArrayInt *)GET_NEXT_OBJECT(ARGS);
+    // TODO: extra round of copying here, can avoid if it matters
+    t_CKINT vsize = API->object->array_int_size(ckarray);
+    std::vector<t_CKUINT> theVec; theVec.reserve(vsize);
+    for( t_CKINT idx = 0; idx < vsize; idx++ )
+    { theVec.push_back( (t_CKUINT)API->object->array_int_get_idx(ckarray,idx)); }
 
-	CGL::PushCommand(
-		new UpdateGeometryIndicesCommand(geo, data->m_vector));
+    CGL::PushCommand(
+        new UpdateGeometryIndicesCommand(geo, theVec) );
 }

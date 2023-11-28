@@ -151,12 +151,16 @@ t_CKBOOL init_chugl_gui_text(Chuck_DL_Query *QUERY);
 
 
 t_CKBOOL init_chugl_gui(Chuck_DL_Query *QUERY)
-{   
+{
+    // get the VM and API
+    Chuck_VM * vm = QUERY->ck_vm(QUERY);
+    CK_DL_API api = QUERY->ck_api(QUERY);
+
     // initialize Manager static references
-    Manager::SetCKAPI( QUERY->api() );
-    Manager::SetCKVM( QUERY->vm() );
+    Manager::SetCKAPI(api);
+    Manager::SetCKVM(vm);
 	Manager::SetEventQueue(
-        QUERY->api()->vm->create_event_buffer(QUERY->vm())
+        api->vm->create_event_buffer(vm)
     );
 
     if (!init_chugl_gui_element(QUERY)) return FALSE;
@@ -266,7 +270,7 @@ CK_DLL_MFUN( chugl_gui_element_label_set )
     Chuck_String * s = GET_NEXT_STRING(ARGS);
     if( element && s )
     {
-        element->SetLabel( s->str() );
+        element->SetLabel( API->object->str(s) );
         RETURN->v_string = s;
     }
     else
@@ -642,12 +646,18 @@ CK_DLL_MFUN( chugl_gui_dropdown_options_set )
 {
     Dropdown* dropdown = (Dropdown *)OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
     Chuck_ArrayInt * options = (Chuck_ArrayInt *) GET_NEXT_OBJECT(ARGS);
+    
+    // TODO: extra round of copying here, can avoid if it matters
+    t_CKINT vsize = API->object->array_int_size(options);
     std::vector<std::string> options_str;
+    options_str.reserve(vsize);
     // pull chuck_strings out of the array
-    for (auto& string_addr : options->m_vector)
+    for( t_CKINT idx = 0; idx < vsize; idx++ )
     {
-        Chuck_String * s = (Chuck_String *) string_addr;
-        options_str.push_back( s->str() );
+        // cast to chuck string *
+        Chuck_String * ckstr = (Chuck_String *)API->object->array_int_get_idx(options,idx);
+        // convert to c++ string and put into array
+        options_str.push_back( API->object->str(ckstr) );
     }
 
     dropdown->SetOptions( options_str );
@@ -750,7 +760,7 @@ CK_DLL_MFUN( chugl_gui_text_val_set )
     Chuck_String * s = GET_NEXT_STRING(ARGS);
     if( text && s )
     {
-        text->SetData( s->str() );
+        text->SetData( API->object->str(s) );
         RETURN->v_string = s;
     }
     else

@@ -183,7 +183,7 @@ CK_DLL_CTOR(cgl_texture_ctor)
 
 CK_DLL_DTOR(cgl_texture_dtor)
 {
-	CGL::PushCommand(new DestroySceneGraphNodeCommand(SELF, CGL::GetTextureDataOffset(), &CGL::mainScene));
+	CGL::PushCommand(new DestroySceneGraphNodeCommand(SELF, CGL::GetTextureDataOffset(), API, &CGL::mainScene));
 }
 
 CK_DLL_MFUN(cgl_texture_set_wrap)
@@ -255,7 +255,7 @@ CK_DLL_CTOR(cgl_texture_file_ctor)
 	CGL::PushCommand(
         new CreateSceneGraphNodeCommand(
             new FileTexture2D,
-            &CGL::mainScene, SELF, CGL::GetTextureDataOffset()
+            &CGL::mainScene, SELF, CGL::GetTextureDataOffset(), API
         )
     );
 }
@@ -265,7 +265,7 @@ CK_DLL_MFUN(cgl_texture_file_set_filepath)
 	auto* texture = dynamic_cast<FileTexture2D*>(CGL::GetTexture(SELF));
 	Chuck_String *path = GET_NEXT_STRING(ARGS);
 
-	CGL::PushCommand(new UpdateTexturePathCommand(texture, path->str()));
+	CGL::PushCommand(new UpdateTexturePathCommand(texture, API->object->str(path)));
 
 	RETURN->v_string = path;
 }
@@ -282,7 +282,7 @@ CK_DLL_CTOR(cgl_texture_rawdata_ctor)
 	CGL::PushCommand(
         new CreateSceneGraphNodeCommand(
             new DataTexture2D,
-            &CGL::mainScene, SELF, CGL::GetTextureDataOffset()
+            &CGL::mainScene, SELF, CGL::GetTextureDataOffset(), API
         )
     );
 }
@@ -290,11 +290,17 @@ CK_DLL_CTOR(cgl_texture_rawdata_ctor)
 CK_DLL_MFUN(cgl_texture_rawdata_set_data)
 {
 	auto* texture = dynamic_cast<DataTexture2D*>(CGL::GetTexture(SELF));
-	Chuck_ArrayFloat *data = (Chuck_ArrayFloat *)GET_NEXT_OBJECT(ARGS);
+	Chuck_ArrayFloat *ckarray = (Chuck_ArrayFloat *)GET_NEXT_OBJECT(ARGS);
 	t_CKINT width = GET_NEXT_INT(ARGS);
 	t_CKINT height = GET_NEXT_INT(ARGS);
 
-	CGL::PushCommand(new UpdateTextureDataCommand(texture, data->m_vector, width, height));
+    // TODO: extra round of copying here, can avoid if it matters
+    t_CKINT vsize = API->object->array_float_size(ckarray);
+    std::vector<t_CKFLOAT> theVec; theVec.reserve(vsize);
+    for( t_CKINT idx = 0; idx < vsize; idx++ )
+    { theVec.emplace_back(API->object->array_float_get_idx(ckarray,idx)); }
+
+	CGL::PushCommand(new UpdateTextureDataCommand(texture, theVec, width, height));
 }
 
 // CubeMapTexture impl =====================================================
@@ -303,7 +309,7 @@ CK_DLL_CTOR(cgl_texture_cubemap_ctor)
 	CGL::PushCommand(
 		new CreateSceneGraphNodeCommand(
 			new CGL_CubeMap,
-			&CGL::mainScene, SELF, CGL::GetTextureDataOffset()
+			&CGL::mainScene, SELF, CGL::GetTextureDataOffset(), API
 		)
 	);
 }
@@ -320,6 +326,10 @@ CK_DLL_MFUN(cgl_texture_cubemap_set_filepaths)
 
 	CGL::PushCommand(new UpdateCubeMapPathsCommand(
 		cubeMap, 
-		{right->str(), left->str(), top->str(), bottom->str(), front->str(), back->str()}
+		{
+			API->object->str(right), API->object->str(left),
+			API->object->str(top), API->object->str(bottom), 
+			API->object->str(front), API->object->str(back)
+		}
 	));
 }

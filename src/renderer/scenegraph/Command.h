@@ -113,7 +113,8 @@ public:
         SceneGraphNode* node,
         Scene* audioThreadScene,
         Chuck_Object* ckobj,
-        t_CKUINT data_offset
+        t_CKUINT data_offset,
+        CK_DL_API API
     );
     virtual void execute(Scene* scene) override;
 private:
@@ -540,7 +541,7 @@ private:
 class UpdateTextureDataCommand : public SceneGraphCommand
 {
 public:
-    UpdateTextureDataCommand(DataTexture2D* tex, std::vector<double>& ck_array, int w, int h) 
+    UpdateTextureDataCommand(DataTexture2D* tex, std::vector<t_CKFLOAT>& ck_array, int w, int h) 
     : m_TexID(tex->GetID()), width(w), height(h) {
         // copy tex params
         m_DataBuffer.reserve(ck_array.size());
@@ -691,6 +692,7 @@ public:
     DestroySceneGraphNodeCommand(
         Chuck_Object* ckobj,
         t_CKUINT data_offset,
+        CK_DL_API API,
         Scene* audioThreadScene
     );
 

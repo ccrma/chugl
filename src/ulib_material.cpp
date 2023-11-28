@@ -402,7 +402,7 @@ CK_DLL_CTOR(cgl_mat_ctor)
 
 CK_DLL_DTOR(cgl_mat_dtor) // all geos can share this base destructor
 {
-	CGL::PushCommand(new DestroySceneGraphNodeCommand(SELF, CGL::GetMaterialDataOffset(), &CGL::mainScene));
+	CGL::PushCommand(new DestroySceneGraphNodeCommand(SELF, CGL::GetMaterialDataOffset(), API, &CGL::mainScene));
 }
 
 
@@ -501,7 +501,7 @@ CK_DLL_MFUN(cgl_mat_set_uniform_float)
 	Chuck_String *name = GET_NEXT_STRING(ARGS);
 	float value = static_cast<float>(GET_NEXT_FLOAT(ARGS));
 
-	MaterialUniform uniform = MaterialUniform::Create(name->str(), value);
+	MaterialUniform uniform = MaterialUniform::Create(API->object->str(name), value);
 
 	mat->SetUniform(uniform);
 
@@ -515,7 +515,7 @@ CK_DLL_MFUN(cgl_mat_set_uniform_float2)
 	float value0 = static_cast<float>(GET_NEXT_FLOAT(ARGS));
 	float value1 = static_cast<float>(GET_NEXT_FLOAT(ARGS));
 
-	MaterialUniform uniform = MaterialUniform::Create(name->str(), value0, value1);
+	MaterialUniform uniform = MaterialUniform::Create(API->object->str(name), value0, value1);
 
 	mat->SetUniform(uniform);
 
@@ -530,7 +530,7 @@ CK_DLL_MFUN(cgl_mat_set_uniform_float3)
 	float value1 = static_cast<float>(GET_NEXT_FLOAT(ARGS));
 	float value2 = static_cast<float>(GET_NEXT_FLOAT(ARGS));
 
-	MaterialUniform uniform = MaterialUniform::Create(name->str(), value0, value1, value2);
+	MaterialUniform uniform = MaterialUniform::Create(API->object->str(name), value0, value1, value2);
 
 	mat->SetUniform(uniform);
 
@@ -546,7 +546,7 @@ CK_DLL_MFUN(cgl_mat_set_uniform_float4)
 	float value2 = static_cast<float>(GET_NEXT_FLOAT(ARGS));
 	float value3 = static_cast<float>(GET_NEXT_FLOAT(ARGS));
 
-	MaterialUniform uniform = MaterialUniform::Create(name->str(), value0, value1, value2, value3);
+	MaterialUniform uniform = MaterialUniform::Create(API->object->str(name), value0, value1, value2, value3);
 
 	mat->SetUniform(uniform);
 
@@ -559,7 +559,7 @@ CK_DLL_MFUN(cgl_mat_set_uniform_int)
 	Chuck_String *name = GET_NEXT_STRING(ARGS);
 	int value = static_cast<int>(GET_NEXT_INT(ARGS));
 
-	MaterialUniform uniform = MaterialUniform::Create(name->str(), value);
+	MaterialUniform uniform = MaterialUniform::Create(API->object->str(name), value);
 
 	mat->SetUniform(uniform);
 
@@ -573,7 +573,7 @@ CK_DLL_MFUN(cgl_mat_set_uniform_int2)
 	int value0 = static_cast<int>(GET_NEXT_INT(ARGS));
 	int value1 = static_cast<int>(GET_NEXT_INT(ARGS));
 
-	MaterialUniform uniform = MaterialUniform::Create(name->str(), value0, value1);
+	MaterialUniform uniform = MaterialUniform::Create(API->object->str(name), value0, value1);
 
 	mat->SetUniform(uniform);
 
@@ -588,7 +588,7 @@ CK_DLL_MFUN(cgl_mat_set_uniform_int3)
 	int value1 = static_cast<int>(GET_NEXT_INT(ARGS));
 	int value2 = static_cast<int>(GET_NEXT_INT(ARGS));
 
-	MaterialUniform uniform = MaterialUniform::Create(name->str(), value0, value1, value2);
+	MaterialUniform uniform = MaterialUniform::Create(API->object->str(name), value0, value1, value2);
 
 	mat->SetUniform(uniform);
 
@@ -604,7 +604,7 @@ CK_DLL_MFUN(cgl_mat_set_uniform_int4)
 	int value2 = static_cast<int>(GET_NEXT_INT(ARGS));
 	int value3 = static_cast<int>(GET_NEXT_INT(ARGS));
 
-	MaterialUniform uniform = MaterialUniform::Create(name->str(), value0, value1, value2, value3);
+	MaterialUniform uniform = MaterialUniform::Create(API->object->str(name), value0, value1, value2, value3);
 
 	mat->SetUniform(uniform);
 
@@ -617,7 +617,7 @@ CK_DLL_MFUN(cgl_mat_set_uniform_bool)
 	Chuck_String *name = GET_NEXT_STRING(ARGS);
 	bool value = static_cast<bool>(GET_NEXT_INT(ARGS));
 
-	MaterialUniform uniform = MaterialUniform::Create(name->str(), value);
+	MaterialUniform uniform = MaterialUniform::Create(API->object->str(name), value);
 
 	mat->SetUniform(uniform);
 
@@ -630,7 +630,7 @@ CK_DLL_MFUN(cgl_mat_set_uniform_texID)
 	Chuck_String *name = GET_NEXT_STRING(ARGS);
 	CGL_Texture *tex = CGL::GetTexture(GET_NEXT_OBJECT(ARGS));
 
-	MaterialUniform uniform = MaterialUniform::Create(name->str(), tex->GetID());
+	MaterialUniform uniform = MaterialUniform::Create(API->object->str(name), tex->GetID());
 
 	mat->SetUniform(uniform);
 
@@ -640,7 +640,7 @@ CK_DLL_MFUN(cgl_mat_set_uniform_texID)
 CK_DLL_CTOR(cgl_mat_norm_ctor)
 {
 	NormalMaterial *normMat = new NormalMaterial;
-	CGL::PushCommand(new CreateSceneGraphNodeCommand(normMat, &CGL::mainScene, SELF, CGL::GetMaterialDataOffset()));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(normMat, &CGL::mainScene, SELF, CGL::GetMaterialDataOffset(), API));
 }
 
 CK_DLL_MFUN(cgl_set_use_local_normals)
@@ -666,7 +666,7 @@ CK_DLL_MFUN(cgl_set_use_world_normals)
 CK_DLL_CTOR(cgl_mat_flat_ctor)
 {
 	FlatMaterial *flatMat = new FlatMaterial;
-	CGL::PushCommand(new CreateSceneGraphNodeCommand(flatMat, &CGL::mainScene, SELF, CGL::GetMaterialDataOffset()));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(flatMat, &CGL::mainScene, SELF, CGL::GetMaterialDataOffset(), API));
 }
 
 
@@ -674,7 +674,7 @@ CK_DLL_CTOR(cgl_mat_flat_ctor)
 CK_DLL_CTOR(cgl_mat_phong_ctor)
 {
 	PhongMaterial *phongMat = new PhongMaterial;
-	CGL::PushCommand(new CreateSceneGraphNodeCommand(phongMat, &CGL::mainScene, SELF, CGL::GetMaterialDataOffset()));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(phongMat, &CGL::mainScene, SELF, CGL::GetMaterialDataOffset(), API));
 }
 
 CK_DLL_MFUN(cgl_mat_phong_set_diffuse_map)
@@ -815,7 +815,7 @@ CK_DLL_MFUN(cgl_mat_phong_get_env_map_ratio)
 CK_DLL_CTOR(cgl_mat_custom_shader_ctor)
 {
 	ShaderMaterial *shaderMat = new ShaderMaterial("", "");
-	CGL::PushCommand(new CreateSceneGraphNodeCommand(shaderMat, &CGL::mainScene, SELF, CGL::GetMaterialDataOffset()));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(shaderMat, &CGL::mainScene, SELF, CGL::GetMaterialDataOffset(), API));
 }
 
 CK_DLL_MFUN(cgl_mat_custom_shader_set_shaders)
@@ -830,8 +830,8 @@ CK_DLL_MFUN(cgl_mat_custom_shader_set_shaders)
 	Chuck_String *vertPath = GET_NEXT_STRING(ARGS);
 	Chuck_String *fragPath = GET_NEXT_STRING(ARGS);
 
-	mat->SetFragShader(fragPath->str(), true);
-	mat->SetVertShader(vertPath->str(), true);
+	mat->SetFragShader(API->object->str(fragPath), true);
+	mat->SetVertShader(API->object->str(vertPath), true);
 
 	CGL::PushCommand(new UpdateMaterialShadersCommand((ShaderMaterial *)mat));
 }
@@ -847,7 +847,7 @@ CK_DLL_MFUN(cgl_mat_custom_shader_set_vert_shader)
 
 	Chuck_String *vertPath = GET_NEXT_STRING(ARGS);
 
-	mat->SetVertShader(vertPath->str(), true);
+	mat->SetVertShader(API->object->str(vertPath), true);
 
 	CGL::PushCommand(new UpdateMaterialShadersCommand((ShaderMaterial *)mat));
 }
@@ -863,7 +863,7 @@ CK_DLL_MFUN(cgl_mat_custom_shader_set_frag_shader)
 
 	Chuck_String *fragPath = GET_NEXT_STRING(ARGS);
 
-	mat->SetFragShader(fragPath->str(), true);
+	mat->SetFragShader(API->object->str(fragPath), true);
 
 	CGL::PushCommand(new UpdateMaterialShadersCommand((ShaderMaterial *)mat));
 }
@@ -879,7 +879,7 @@ CK_DLL_MFUN(cgl_mat_custom_shader_set_vert_string)
 
 	Chuck_String *vertString = GET_NEXT_STRING(ARGS);
 
-	mat->SetVertShader(vertString->str(), false);
+	mat->SetVertShader(API->object->str(vertString), false);
 
 	CGL::PushCommand(new UpdateMaterialShadersCommand((ShaderMaterial *)mat));
 }
@@ -895,7 +895,7 @@ CK_DLL_MFUN(cgl_mat_custom_shader_set_frag_string)
 
 	Chuck_String *fragString = GET_NEXT_STRING(ARGS);
 
-	mat->SetFragShader(fragString->str(), false);
+	mat->SetFragShader(API->object->str(fragString), false);
 
 	CGL::PushCommand(new UpdateMaterialShadersCommand((ShaderMaterial *)mat));
 }
@@ -905,7 +905,7 @@ CK_DLL_MFUN(cgl_mat_custom_shader_set_frag_string)
 CK_DLL_CTOR(cgl_mat_points_ctor)
 {
 	PointsMaterial *pointsMat = new PointsMaterial;
-	CGL::PushCommand(new CreateSceneGraphNodeCommand(pointsMat, &CGL::mainScene, SELF, CGL::GetMaterialDataOffset()));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(pointsMat, &CGL::mainScene, SELF, CGL::GetMaterialDataOffset(), API));
 }
 
 CK_DLL_MFUN(cgl_mat_points_set_size_attenuation)
@@ -941,7 +941,7 @@ CK_DLL_MFUN(cgl_mat_points_set_sprite)
 CK_DLL_CTOR(cgl_mat_mango_ctor)
 {
 	MangoMaterial *mangoMat = new MangoMaterial;
-	CGL::PushCommand(new CreateSceneGraphNodeCommand(mangoMat, &CGL::mainScene, SELF, CGL::GetMaterialDataOffset()));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(mangoMat, &CGL::mainScene, SELF, CGL::GetMaterialDataOffset(), API));
 }
 
 // line mat fns ---------------------------------
@@ -949,7 +949,7 @@ CK_DLL_CTOR(cgl_mat_mango_ctor)
 CK_DLL_CTOR(cgl_mat_line_ctor)
 {
 	LineMaterial *lineMat = new LineMaterial;
-	CGL::PushCommand(new CreateSceneGraphNodeCommand(lineMat, &CGL::mainScene, SELF, CGL::GetMaterialDataOffset()));
+	CGL::PushCommand(new CreateSceneGraphNodeCommand(lineMat, &CGL::mainScene, SELF, CGL::GetMaterialDataOffset(), API));
 }
 
 

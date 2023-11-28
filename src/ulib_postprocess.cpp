@@ -36,6 +36,14 @@ CK_DLL_GFUN(chugl_pp_op_gruck);	  // add next effect to chain
 CK_DLL_CTOR(cgl_pp_passthrough_ctor);
 
 //-----------------------------------------------------------------------------
+// PP_Effect --> PP_Invert 
+//-----------------------------------------------------------------------------
+CK_DLL_CTOR(chugl_pp_invert_ctor);
+
+CK_DLL_MFUN(chugl_pp_invert_get_mix);
+CK_DLL_MFUN(chugl_pp_invert_set_mix);
+
+//-----------------------------------------------------------------------------
 // PP_Effect --> PP_Output
 //-----------------------------------------------------------------------------
 CK_DLL_CTOR(chugl_pp_output_ctor);
@@ -82,6 +90,7 @@ CK_DLL_MFUN(chugl_pp_bloom_get_karis_enabled);
 
 t_CKBOOL init_chugl_pp_effect(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_pp_passthrough(Chuck_DL_Query *QUERY);
+t_CKBOOL init_chugl_pp_invert(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_pp_output(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_pp_bloom(Chuck_DL_Query *QUERY);
 
@@ -94,6 +103,7 @@ t_CKBOOL init_chugl_postprocess(Chuck_DL_Query *QUERY)
     
     if (!init_chugl_pp_effect(QUERY)) return FALSE;
     if (!init_chugl_pp_passthrough(QUERY)) return FALSE;
+    if (!init_chugl_pp_invert(QUERY)) return FALSE;
     if (!init_chugl_pp_output(QUERY)) return FALSE;
     if (!init_chugl_pp_bloom(QUERY)) return FALSE;
 
@@ -131,8 +141,8 @@ t_CKBOOL init_chugl_pp_effect(Chuck_DL_Query *QUERY)
     QUERY->doc_func(QUERY, "Get the bypass flag");
 
 
-	// QUERY->add_op_overload_binary(QUERY, chugl_pp_op_gruck, Effect::CKName(Type::Base), "-->",
-	// 							  Effect::CKName(Type::Base), "lhs", Effect::CKName(Type::Base), "rhs");
+	QUERY->add_op_overload_binary(QUERY, chugl_pp_op_gruck, Effect::CKName(Type::Base), "-->",
+								  Effect::CKName(Type::Base), "lhs", Effect::CKName(Type::Base), "rhs");
 
     // Custom GUI Element
     // QUERY->add_mfun(QUERY, cgl_pp_effect_create_gui, GUI::Manager::GetCkName(GUI::Type::Element), "UI");
@@ -277,7 +287,7 @@ CK_DLL_GFUN(chugl_pp_op_gruck)
 // }
 
 //-----------------------------------------------------------------------------
-// PP_Effect
+// Passthrough
 //-----------------------------------------------------------------------------
 t_CKBOOL init_chugl_pp_passthrough(Chuck_DL_Query *QUERY)
 {
@@ -300,7 +310,65 @@ CK_DLL_CTOR(cgl_pp_passthrough_ctor)
 	CGL::PushCommand(
         new CreateSceneGraphNodeCommand(
             new PassThroughEffect,
-            &CGL::mainScene, SELF, CGL::GetPPEffectDataOffset()
+            &CGL::mainScene, SELF, CGL::GetPPEffectDataOffset(), API
+        )
+    );
+}
+
+//-----------------------------------------------------------------------------
+// Invert 
+//-----------------------------------------------------------------------------
+t_CKBOOL init_chugl_pp_invert(Chuck_DL_Query *QUERY)
+{
+    QUERY->begin_class(QUERY, Effect::CKName(Type::Invert), Effect::CKName(Type::Base));
+    QUERY->doc_class(QUERY, 
+        "An effect that inverts the colors of the input texture. inverseColor = 1.0 - inputColor"
+        "Place this AFTER the Output pass, when Tonemapping has already been applied and colors have been mapped into the range [0, 1]."
+    );
+
+    QUERY->add_ctor(QUERY, chugl_pp_invert_ctor);
+
+    QUERY->add_mfun(QUERY, chugl_pp_invert_get_mix, "float", "mix");
+    QUERY->doc_func(QUERY, "Get the mix factor for the invert effect.");
+
+    QUERY->add_mfun(QUERY, chugl_pp_invert_set_mix, "float", "mix");
+    QUERY->add_arg(QUERY, "float", "mix");
+    QUERY->doc_func(QUERY, 
+        "Set the mix factor for the invert effect."
+        "0 = no invert, 1 = full invert. Interpolates between input texture and inverted texture."
+    );
+
+    QUERY->end_class(QUERY);
+
+    return TRUE;
+}
+
+CK_DLL_CTOR(chugl_pp_invert_ctor)
+{
+    CGL::PushCommand(
+        new CreateSceneGraphNodeCommand(
+            new InverseEffect,
+            &CGL::mainScene, SELF, CGL::GetPPEffectDataOffset(), API
+        )
+    );
+}
+
+CK_DLL_MFUN(chugl_pp_invert_get_mix)
+{
+    InverseEffect* effect = (InverseEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    RETURN->v_float = effect->GetMix();
+}
+
+CK_DLL_MFUN(chugl_pp_invert_set_mix)
+{
+    InverseEffect* effect = (InverseEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    float mix = GET_NEXT_FLOAT(ARGS);
+
+    RETURN->v_float = mix;
+
+    CGL::PushCommand(
+        new UpdateEffectUniformCommand(
+            effect, MaterialUniform::CreateFloat(InverseEffect::U_MIX, mix)
         )
     );
 }
@@ -390,7 +458,7 @@ CK_DLL_CTOR(chugl_pp_output_ctor)
 	CGL::PushCommand(
         new CreateSceneGraphNodeCommand(
             new OutputEffect,
-            &CGL::mainScene, SELF, CGL::GetPPEffectDataOffset()
+            &CGL::mainScene, SELF, CGL::GetPPEffectDataOffset(), API
         )
     );
 }
@@ -556,7 +624,7 @@ CK_DLL_CTOR(chugl_pp_bloom_ctor)
     CGL::PushCommand(
         new CreateSceneGraphNodeCommand(
             new BloomEffect,
-            &CGL::mainScene, SELF, CGL::GetPPEffectDataOffset()
+            &CGL::mainScene, SELF, CGL::GetPPEffectDataOffset(), API
         )
     );
 }

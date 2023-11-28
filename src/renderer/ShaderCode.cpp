@@ -576,6 +576,24 @@ const std::string ShaderCode::PP_PASS_THROUGH = R"glsl(
     }
 )glsl";
 
+const std::string ShaderCode::PP_INVERT = R"glsl(
+    #version 330 core
+    out vec4 FragColor;
+
+    in vec2 TexCoords;
+
+    uniform sampler2D screenTexture;
+    uniform float u_Mix = 1.0;
+
+    void main()
+    { 
+        vec4 srcColor = texture(screenTexture, TexCoords);
+        vec3 inverseColor = vec3(1.0) - srcColor.rgb;
+
+        FragColor = mix(srcColor, vec4(inverseColor, 1.0), u_Mix);
+    }
+)glsl";
+
 const std::string ShaderCode::PP_OUTPUT = R"glsl(
     #version 330 core
     out vec4 FragColor;
