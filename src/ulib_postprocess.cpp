@@ -141,8 +141,8 @@ t_CKBOOL init_chugl_pp_effect(Chuck_DL_Query *QUERY)
     QUERY->doc_func(QUERY, "Get the bypass flag");
 
 
-	QUERY->add_op_overload_binary(QUERY, chugl_pp_op_gruck, Effect::CKName(Type::Base), "-->",
-								  Effect::CKName(Type::Base), "lhs", Effect::CKName(Type::Base), "rhs");
+	// QUERY->add_op_overload_binary(QUERY, chugl_pp_op_gruck, Effect::CKName(Type::Base), "-->",
+	// 							  Effect::CKName(Type::Base), "lhs", Effect::CKName(Type::Base), "rhs");
 
     // Custom GUI Element
     // QUERY->add_mfun(QUERY, cgl_pp_effect_create_gui, GUI::Manager::GetCkName(GUI::Type::Element), "UI");

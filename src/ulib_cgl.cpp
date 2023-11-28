@@ -438,7 +438,7 @@ t_CKBOOL init_chugl_static_fns(Chuck_DL_Query *QUERY)
     QUERY->doc_func(QUERY, "FPS of current window, averaged over sliding window of 30 frames");
 
 	// Post Processing
-	QUERY->add_sfun(QUERY, cgl_get_pp_root, PP::Effect::CKName(PP::Type::Base), "renderPass");
+	QUERY->add_sfun(QUERY, cgl_get_pp_root, PP::Effect::CKName(PP::Type::Base), "fx");
 	QUERY->doc_func(QUERY, "Returns the root of the post processing chain. See the ChuGL post processing tutorial for more information.");
 
 	QUERY->end_class(QUERY);

@@ -14,7 +14,7 @@ GCube cube --> GG.scene();
 PassThroughFX passthrough;
 BloomFX bloom; OutputFX output;
 
-GG.renderPass().next(passthrough).next(bloom).next(output);
+GG.fx().next(passthrough).next(bloom).next(output);
 
 // UI =====================================================================
 UI_Window window;
@@ -124,7 +124,7 @@ fun void KarisEnabledListener(UI_Checkbox @ karisCheckbox, BloomFX @ bloom) {
     }
 }
 
-GG.renderPass().next() @=> FX @ effect;
+GG.fx().next() @=> FX @ effect;
 
 0 => int effectIndex;
 while (effect != null) {
