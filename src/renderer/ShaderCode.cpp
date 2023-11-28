@@ -576,6 +576,31 @@ const std::string ShaderCode::PP_PASS_THROUGH = R"glsl(
     }
 )glsl";
 
+const std::string ShaderCode::PP_MONOCHROME = R"glsl(
+    #version 330 core
+    out vec4 FragColor;
+
+    in vec2 TexCoords;
+
+    uniform sampler2D screenTexture;
+    uniform float u_Mix = 1.0;
+    uniform vec3 u_MonoColor = vec3(1.0);
+
+    float grayscale(vec3 rgb) {
+        return dot(rgb, vec3(0.2126, 0.7152, 0.0722));
+    }
+
+    void main()
+    { 
+        vec4 srcColor = texture(screenTexture, TexCoords);
+
+        float gray = grayscale(srcColor.rgb);
+        vec3 monoColor = u_MonoColor * gray;
+
+        FragColor = vec4(mix(srcColor.rgb, monoColor, u_Mix), srcColor.a);
+    }
+)glsl";
+
 const std::string ShaderCode::PP_INVERT = R"glsl(
     #version 330 core
     out vec4 FragColor;
@@ -590,7 +615,7 @@ const std::string ShaderCode::PP_INVERT = R"glsl(
         vec4 srcColor = texture(screenTexture, TexCoords);
         vec3 inverseColor = vec3(1.0) - srcColor.rgb;
 
-        FragColor = mix(srcColor, vec4(inverseColor, 1.0), u_Mix);
+        FragColor = vec4(mix(srcColor.rgb, inverseColor, u_Mix), srcColor.a);
     }
 )glsl";
 

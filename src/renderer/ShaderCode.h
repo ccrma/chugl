@@ -33,6 +33,7 @@ static const std::string FLAT_FRAG;
 static const std::string PP_VERT;               // vertex shared by all post process shaders
 static const std::string PP_PASS_THROUGH;       // passthrough effect
 static const std::string PP_INVERT;             // invert colors
+static const std::string PP_MONOCHROME;         // monochrome effect 
 static const std::string PP_OUTPUT;             // output effect
 static const std::string PP_BLOOM_DOWNSAMPLE;              // bloom effect downsampling
 static const std::string PP_BLOOM_UPSAMPLE;                // bloom effect upsampling

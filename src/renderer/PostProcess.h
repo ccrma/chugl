@@ -166,6 +166,13 @@ private:  // internal methods
     }
 
     void GenerateMipChain(unsigned int viewportWidth, unsigned int viewportHeight) {
+        // Clear existing mip chain
+        for (int i = 0; i < m_MipChain.size(); i++) {
+            glDeleteTextures(1, &m_MipChain[i].texID);
+            // m_MipChain[i].texID = 0;
+        }
+        m_MipChain.clear();
+
         glm::vec2 mipSize((float)viewportWidth, (float)viewportHeight);
         glm::ivec2 mipIntSize((int)viewportWidth, (int)viewportHeight);
 
@@ -196,7 +203,7 @@ private:  // internal methods
             m_MipChain.emplace_back(mip);
 
             // out if we've reached the smallest size
-            if (mipIntSize.x == 1 && mipIntSize.y == 1) break;
+            if (mipIntSize.x <= 1 && mipIntSize.y <= 1) break;
         }
 
         // TODO: can we reuse ping/pong frame buffers?
@@ -226,7 +233,7 @@ private:  // internal methods
     }
 
     int GetChainLength() {
-        return glm::clamp<int>(GetChuglBloom()->GetLevels(), 1, m_MipChain.size() - 1);
+        return glm::clamp<int>(GetChuglBloom()->GetLevels(), 0, m_MipChain.size() - 1);
     }
 
     void RenderDownsamples() {

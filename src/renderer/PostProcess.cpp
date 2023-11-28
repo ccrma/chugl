@@ -34,6 +34,11 @@ PostProcessEffect* PostProcessEffect::Create(PP::Effect* chugl_effect, unsigned 
 			chugl_effect,
 			new Shader(screenShaderVert, ShaderCode::PP_INVERT, false, false)
 		);
+    case PP::Type::Monochrome:
+        return new BasicEffect(
+            chugl_effect,
+            new Shader(screenShaderVert, ShaderCode::PP_MONOCHROME, false, false)
+        );
 	case PP::Type::Bloom:
 		return new BloomEffect(chugl_effect, viewportWidth, viewportHeight);
 		break;

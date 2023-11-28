@@ -12,6 +12,7 @@ Effect::CkTypeMap Effect::s_CkTypeMap = {
     { Type::PassThrough, "PassThroughFX" },
     { Type::Output, "OutputFX" },
     { Type::Invert, "InvertFX"},
+    { Type::Monochrome, "MonochromeFX"},
     { Type::Bloom, "BloomFX" }
 };
 
@@ -61,6 +62,12 @@ Effect *PP::Effect::NextEnabled()
 // Color Invert Effect 
 // =================================================================================================
 const std::string InverseEffect::U_MIX = "u_Mix";
+
+// =================================================================================================
+// MonoChrome Effect 
+// =================================================================================================
+const std::string MonoChromeEffect::U_MIX = "u_Mix";
+const std::string MonoChromeEffect::U_COLOR = "u_MonoColor";
 
 // =================================================================================================
 // Output Effect 

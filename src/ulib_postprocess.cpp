@@ -44,6 +44,17 @@ CK_DLL_MFUN(chugl_pp_invert_get_mix);
 CK_DLL_MFUN(chugl_pp_invert_set_mix);
 
 //-----------------------------------------------------------------------------
+// PP_Effect --> MonochromeFX 
+//-----------------------------------------------------------------------------
+CK_DLL_CTOR(chugl_pp_monochrome_ctor);
+
+CK_DLL_MFUN(chugl_pp_monochrome_get_mix);
+CK_DLL_MFUN(chugl_pp_monochrome_set_mix);
+CK_DLL_MFUN(chugl_pp_monochrome_get_color);
+CK_DLL_MFUN(chugl_pp_monochrome_set_color);
+
+
+//-----------------------------------------------------------------------------
 // PP_Effect --> PP_Output
 //-----------------------------------------------------------------------------
 CK_DLL_CTOR(chugl_pp_output_ctor);
@@ -91,6 +102,7 @@ CK_DLL_MFUN(chugl_pp_bloom_get_karis_enabled);
 t_CKBOOL init_chugl_pp_effect(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_pp_passthrough(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_pp_invert(Chuck_DL_Query *QUERY);
+t_CKBOOL init_chugl_pp_monochrome(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_pp_output(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_pp_bloom(Chuck_DL_Query *QUERY);
 
@@ -104,6 +116,7 @@ t_CKBOOL init_chugl_postprocess(Chuck_DL_Query *QUERY)
     if (!init_chugl_pp_effect(QUERY)) return FALSE;
     if (!init_chugl_pp_passthrough(QUERY)) return FALSE;
     if (!init_chugl_pp_invert(QUERY)) return FALSE;
+    if (!init_chugl_pp_monochrome(QUERY)) return FALSE;
     if (!init_chugl_pp_output(QUERY)) return FALSE;
     if (!init_chugl_pp_bloom(QUERY)) return FALSE;
 
@@ -141,8 +154,8 @@ t_CKBOOL init_chugl_pp_effect(Chuck_DL_Query *QUERY)
     QUERY->doc_func(QUERY, "Get the bypass flag");
 
 
-	// QUERY->add_op_overload_binary(QUERY, chugl_pp_op_gruck, Effect::CKName(Type::Base), "-->",
-	// 							  Effect::CKName(Type::Base), "lhs", Effect::CKName(Type::Base), "rhs");
+	QUERY->add_op_overload_binary(QUERY, chugl_pp_op_gruck, Effect::CKName(Type::Base), "-->",
+								  Effect::CKName(Type::Base), "lhs", Effect::CKName(Type::Base), "rhs");
 
     // Custom GUI Element
     // QUERY->add_mfun(QUERY, cgl_pp_effect_create_gui, GUI::Manager::GetCkName(GUI::Type::Element), "UI");
@@ -373,6 +386,95 @@ CK_DLL_MFUN(chugl_pp_invert_set_mix)
     );
 }
 
+//-----------------------------------------------------------------------------
+// Monochrome 
+//-----------------------------------------------------------------------------
+t_CKBOOL init_chugl_pp_monochrome(Chuck_DL_Query *QUERY)
+{
+    QUERY->begin_class(QUERY, Effect::CKName(Type::Monochrome), Effect::CKName(Type::Base));
+    QUERY->doc_class(QUERY, 
+        "An effect that converts colors of the input texture to grayscale, and then multiplies by a color."
+        "Can be placed before or after the Output pass."
+    );
+
+    QUERY->add_ctor(QUERY, chugl_pp_monochrome_ctor);
+
+    QUERY->add_mfun(QUERY, chugl_pp_monochrome_get_mix, "float", "mix");
+    QUERY->doc_func(QUERY, "Get the mix factor for the monochrome effect.");
+
+    QUERY->add_mfun(QUERY, chugl_pp_monochrome_set_mix, "float", "mix");
+    QUERY->add_arg(QUERY, "float", "mix");
+    QUERY->doc_func(QUERY, 
+        "Set the mix factor for the effect."
+        "0 = no monochrome, 1 = full monochrome. Interpolates between input texture and monochrome texture."
+    );
+
+    QUERY->add_mfun(QUERY, chugl_pp_monochrome_get_color, "vec3", "color");
+    QUERY->doc_func(QUERY, "Get the color for the monochrome effect.");
+
+    QUERY->add_mfun(QUERY, chugl_pp_monochrome_set_color, "vec3", "color");
+    QUERY->add_arg(QUERY, "vec3", "color");
+    QUERY->doc_func(QUERY, 
+        "Set the color for the effect."
+        "The color will be multiplied by the grayscale value of the input texture."
+    );
+
+    QUERY->end_class(QUERY);
+
+    return TRUE;
+}
+
+CK_DLL_CTOR(chugl_pp_monochrome_ctor)
+{
+    CGL::PushCommand(
+        new CreateSceneGraphNodeCommand(
+            new MonoChromeEffect,
+            &CGL::mainScene, SELF, CGL::GetPPEffectDataOffset(), API
+        )
+    );
+}
+
+CK_DLL_MFUN(chugl_pp_monochrome_get_mix)
+{
+    MonoChromeEffect* effect = (MonoChromeEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    RETURN->v_float = effect->GetMix();
+}
+
+CK_DLL_MFUN(chugl_pp_monochrome_set_mix)
+{
+    MonoChromeEffect* effect = (MonoChromeEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    float mix = GET_NEXT_FLOAT(ARGS);
+
+    RETURN->v_float = mix;
+
+    CGL::PushCommand(
+        new UpdateEffectUniformCommand(
+            effect, MaterialUniform::CreateFloat(MonoChromeEffect::U_MIX, mix)
+        )
+    );
+}
+
+CK_DLL_MFUN(chugl_pp_monochrome_get_color)
+{
+    MonoChromeEffect* effect = (MonoChromeEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    auto& color = effect->GetColor();
+    RETURN->v_vec3 = {color.r, color.g, color.b};
+}
+
+CK_DLL_MFUN(chugl_pp_monochrome_set_color)
+{
+    MonoChromeEffect* effect = (MonoChromeEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
+
+    RETURN->v_vec3 = color;
+
+    CGL::PushCommand(
+        new UpdateEffectUniformCommand(
+            effect, MaterialUniform::CreateFloat3(MonoChromeEffect::U_COLOR, color.x, color.y, color.z)
+        )
+    );
+
+}
 //-----------------------------------------------------------------------------
 // Output
 //-----------------------------------------------------------------------------

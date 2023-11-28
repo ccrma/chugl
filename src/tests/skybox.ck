@@ -149,14 +149,14 @@ cube.posX(2);
 sphere.mat() @=> Material @ mat;
 
 // Post Processing =======================================================
-PP_PassThrough pass1, pass2, pass3, pass4;
-PP_Output output;
-PP_Bloom bloom;
-// GG.renderPass().next(pass1); // .next(pass2).next(pass3).next(pass4);
-PP_Invert invert;  // want to do AFTER tonemapping.
-GG.renderPass().next(bloom).next(output).next(invert);
+PassThroughFX pass1, pass2, pass3, pass4;
+OutputFX output;
+BloomFX bloom;
+InvertFX invert;  // want to do AFTER tonemapping.
+MonochromeFX monochrome;
+GG.fx().next(bloom).next(output).next(invert).next(monochrome);
 
-fun void CheckboxListener(UI_Checkbox @ checkbox, PP_Effect @ effect)
+fun void CheckboxListener(UI_Checkbox @ checkbox, FX @ effect)
 {
     while (true)
     {
@@ -165,7 +165,7 @@ fun void CheckboxListener(UI_Checkbox @ checkbox, PP_Effect @ effect)
     }
 }
 
-fun void GammaListener(UI_SliderFloat @ gammaSlider, PP_Output @ output) {
+fun void GammaListener(UI_SliderFloat @ gammaSlider, OutputFX @ output) {
     while (true) {
         gammaSlider => now;
         gammaSlider.val() => output.gamma;
@@ -173,7 +173,7 @@ fun void GammaListener(UI_SliderFloat @ gammaSlider, PP_Output @ output) {
     }
 }
 
-fun void ExposureListener(UI_SliderFloat @ exposureSlider, PP_Output @ output) {
+fun void ExposureListener(UI_SliderFloat @ exposureSlider, OutputFX @ output) {
     while (true) {
         exposureSlider => now;
         exposureSlider.val() => output.exposure;
@@ -189,27 +189,27 @@ fun void ExposureListener(UI_SliderFloat @ exposureSlider, PP_Output @ output) {
     "Uncharted"
 ] @=> string tonemapOptions[];
 
-fun void TonemapListener(UI_Dropdown @ tonemapDropdown, PP_Output @ output) {
+fun void TonemapListener(UI_Dropdown @ tonemapDropdown, OutputFX @ output) {
     while (true) {
         tonemapDropdown => now;
         tonemapDropdown.val() => int val;
         if (val == 0) {
-            output.toneMap(PP_Output.TONEMAP_NONE);
+            output.toneMap(OutputFX.TONEMAP_NONE);
         } else if (val == 1) {
-            output.toneMap(PP_Output.TONEMAP_LINEAR);
+            output.toneMap(OutputFX.TONEMAP_LINEAR);
         } else if (val == 2) {
-            output.toneMap(PP_Output.TONEMAP_REINHARD);
+            output.toneMap(OutputFX.TONEMAP_REINHARD);
         } else if (val == 3) {
-            output.toneMap(PP_Output.TONEMAP_CINEON);
+            output.toneMap(OutputFX.TONEMAP_CINEON);
         } else if (val == 4) {
-            output.toneMap(PP_Output.TONEMAP_ACES);
+            output.toneMap(OutputFX.TONEMAP_ACES);
         } else if (val == 5) {
-            output.toneMap(PP_Output.TONEMAP_UNCHARTED);
+            output.toneMap(OutputFX.TONEMAP_UNCHARTED);
         }
     }
 }
 
-fun void BloomStrengthListener(UI_SliderFloat @ strengthSlider, PP_Bloom @ bloom) {
+fun void BloomStrengthListener(UI_SliderFloat @ strengthSlider, BloomFX @ bloom) {
     while (true) {
         strengthSlider => now;
         strengthSlider.val() => bloom.strength;
@@ -217,7 +217,7 @@ fun void BloomStrengthListener(UI_SliderFloat @ strengthSlider, PP_Bloom @ bloom
     }
 }
 
-fun void BloomRadiusListener(UI_SliderFloat @ radiusSlider, PP_Bloom @ bloom) {
+fun void BloomRadiusListener(UI_SliderFloat @ radiusSlider, BloomFX @ bloom) {
     while (true) {
         radiusSlider => now;
         radiusSlider.val() => bloom.radius;
@@ -225,7 +225,7 @@ fun void BloomRadiusListener(UI_SliderFloat @ radiusSlider, PP_Bloom @ bloom) {
     }
 }
 
-fun void BloomThresholdListener(UI_SliderFloat @ thresholdSlider, PP_Bloom @ bloom) {
+fun void BloomThresholdListener(UI_SliderFloat @ thresholdSlider, BloomFX @ bloom) {
     while (true) {
         thresholdSlider => now;
         thresholdSlider.val() => bloom.threshold;
@@ -233,7 +233,7 @@ fun void BloomThresholdListener(UI_SliderFloat @ thresholdSlider, PP_Bloom @ blo
     }
 }
 
-fun void BloomLevelsListener(UI_SliderInt @ levelsSlider, PP_Bloom @ bloom) {
+fun void BloomLevelsListener(UI_SliderInt @ levelsSlider, BloomFX @ bloom) {
     while (true) {
         levelsSlider => now;
         levelsSlider.val() => bloom.levels;
@@ -241,27 +241,27 @@ fun void BloomLevelsListener(UI_SliderInt @ levelsSlider, PP_Bloom @ bloom) {
     }
 }
 
-fun void BloomBlendListener(UI_Dropdown @ blendDropdown, PP_Bloom @ bloom) {
+fun void BloomBlendListener(UI_Dropdown @ blendDropdown, BloomFX @ bloom) {
     while (true) {
         blendDropdown => now;
         blendDropdown.val() => int val;
         if (val == 0) {
-            bloom.blend(PP_Bloom.BLEND_MIX);
+            bloom.blend(BloomFX.BLEND_MIX);
         } else if (val == 1) {
-            bloom.blend(PP_Bloom.BLEND_ADD);
+            bloom.blend(BloomFX.BLEND_ADD);
         } 
     }
 }
 
 
-fun void KarisEnabledListener(UI_Checkbox @ karisCheckbox, PP_Bloom @ bloom) {
+fun void KarisEnabledListener(UI_Checkbox @ karisCheckbox, BloomFX @ bloom) {
     while (true) {
         karisCheckbox => now;
         karisCheckbox.val() => bloom.karisAverage;
     }
 }
 
-fun void InvertMixSlider(UI_SliderFloat @ mixSlider, PP_Invert @ invert) {
+fun void InvertMixSlider(UI_SliderFloat @ mixSlider, InvertFX @ invert) {
     while (true) {
         mixSlider => now;
         mixSlider.val() => invert.mix;
@@ -269,8 +269,24 @@ fun void InvertMixSlider(UI_SliderFloat @ mixSlider, PP_Invert @ invert) {
     }
 }
 
+fun void MonochromeMixSlider(UI_SliderFloat @ mixSlider, MonochromeFX @ monochrome) {
+    while (true) {
+        mixSlider => now;
+        mixSlider.val() => monochrome.mix;
+        <<< "monochrome mix set to", monochrome.mix() >>>;
+    }
+}
+
+fun void MonochromeColorListener(UI_Color3 @ colorPicker, MonochromeFX @ monochrome) {
+    while (true) {
+        colorPicker => now;
+        colorPicker.val() => monochrome.color;
+        <<< "monochrome color set to", monochrome.color() >>>;
+    }
+}
+
 // create UI
-GG.renderPass().next() @=> PP_Effect @ effect;
+GG.fx().next() @=> FX @ effect;
 0 => int effectIndex;
 while (effect != null) {
     // effect.UI() @=> UI_Element @ effectUI;
@@ -287,15 +303,15 @@ while (effect != null) {
 
     // create UI based on type
     Type.of(effect).baseName() => string baseName;
-    if (baseName == "PP_Output") {
+    if (baseName == "OutputFX") {
         // gamma
         UI_SliderFloat gammaSlider;
         gammaSlider.text("Gamma");
-        gammaSlider.val((effect$PP_Output).gamma());
-        <<< "init gamma: ", (effect$PP_Output).gamma() >>>;
+        gammaSlider.val((effect$OutputFX).gamma());
+        <<< "init gamma: ", (effect$OutputFX).gamma() >>>;
         gammaSlider.range(0.1, 10);
         window.add(gammaSlider);
-        spork ~ GammaListener(gammaSlider, effect$PP_Output);
+        spork ~ GammaListener(gammaSlider, effect$OutputFX);
 
         // exposure
         UI_SliderFloat exposureSlider;
@@ -303,7 +319,7 @@ while (effect != null) {
         exposureSlider.val(1);
         exposureSlider.range(0.01, 16);
         window.add(exposureSlider);
-        spork ~ ExposureListener(exposureSlider, effect$PP_Output);
+        spork ~ ExposureListener(exposureSlider, effect$OutputFX);
         
         // tonemap
         UI_Dropdown tonemapDropdown;
@@ -311,40 +327,40 @@ while (effect != null) {
         tonemapDropdown.options(tonemapOptions);
         tonemapDropdown.val(output.toneMap());
         window.add(tonemapDropdown);
-        spork ~ TonemapListener(tonemapDropdown, effect$PP_Output);
+        spork ~ TonemapListener(tonemapDropdown, effect$OutputFX);
 
-    } else if (baseName == "PP_Bloom") {
+    } else if (baseName == "BloomFX") {
         // strength
         UI_SliderFloat strengthSlider;
         strengthSlider.text("Bloom Strength");
-        strengthSlider.val((effect$PP_Bloom).strength());
+        strengthSlider.val((effect$BloomFX).strength());
         strengthSlider.range(0, 2);
         window.add(strengthSlider);
-        spork ~ BloomStrengthListener(strengthSlider, effect$PP_Bloom);
+        spork ~ BloomStrengthListener(strengthSlider, effect$BloomFX);
 
         // radius
         UI_SliderFloat radiusSlider;
         radiusSlider.text("Bloom Radius");
-        radiusSlider.val((effect$PP_Bloom).radius());
+        radiusSlider.val((effect$BloomFX).radius());
         radiusSlider.range(0.001, 4);
         window.add(radiusSlider);
-        spork ~ BloomRadiusListener(radiusSlider, effect$PP_Bloom);
+        spork ~ BloomRadiusListener(radiusSlider, effect$BloomFX);
 
         // threshold
         UI_SliderFloat thresholdSlider;
         thresholdSlider.text("Bloom Threshold");
-        thresholdSlider.val((effect$PP_Bloom).threshold());
+        thresholdSlider.val((effect$BloomFX).threshold());
         thresholdSlider.range(0, 2);
         window.add(thresholdSlider);
-        spork ~ BloomThresholdListener(thresholdSlider, effect$PP_Bloom);
+        spork ~ BloomThresholdListener(thresholdSlider, effect$BloomFX);
 
         // levels
         UI_SliderInt levelsSlider;
         levelsSlider.text("Bloom #Passes");
-        levelsSlider.val((effect$PP_Bloom).levels());
+        levelsSlider.val((effect$BloomFX).levels());
         levelsSlider.range(1, 10);
         window.add(levelsSlider);
-        spork ~ BloomLevelsListener(levelsSlider, effect$PP_Bloom);
+        spork ~ BloomLevelsListener(levelsSlider, effect$BloomFX);
 
         // blend mode
         UI_Dropdown blendDropdown;
@@ -353,22 +369,36 @@ while (effect != null) {
         blendDropdown.options(blendOptions);
         blendDropdown.val(0);
         window.add(blendDropdown);
-        spork ~ BloomBlendListener(blendDropdown, effect$PP_Bloom);
+        spork ~ BloomBlendListener(blendDropdown, effect$BloomFX);
 
         // karis enabled
         UI_Checkbox karisCheckbox;
         karisCheckbox.text("Karis Bloom");
         window.add(karisCheckbox);
-        spork ~ KarisEnabledListener(karisCheckbox, effect$PP_Bloom);
+        spork ~ KarisEnabledListener(karisCheckbox, effect$BloomFX);
 
-    } else if (baseName == "PP_Invert") {
+    } else if (baseName == "InvertFX") {
         // mix
         UI_SliderFloat mixSlider;
         mixSlider.text("Invert Mix");
-        mixSlider.val((effect$PP_Invert).mix());
+        mixSlider.val((effect$InvertFX).mix());
         mixSlider.range(0, 1);
         window.add(mixSlider);
-        spork ~ InvertMixSlider(mixSlider, effect$PP_Invert);
+        spork ~ InvertMixSlider(mixSlider, effect$InvertFX);
+    } else if (baseName == "MonochromeFX") {
+        // mix
+        UI_SliderFloat mixSlider;
+        mixSlider.text("Monochrome Mix");
+        mixSlider.range(0, 1);
+        mixSlider.val((effect$MonochromeFX).mix());
+        window.add(mixSlider);
+        spork ~ MonochromeMixSlider(mixSlider, effect$MonochromeFX);
+
+        // color
+        UI_Color3 colorPicker;
+        colorPicker.text("Monochrome Color");
+        window.add(colorPicker);
+        spork ~ MonochromeColorListener(colorPicker, effect$MonochromeFX);
     }
 
     effect.next() @=> effect;

@@ -1,20 +1,22 @@
 // Scene setup ============================================================
-
+GCube cubeL --> GG.scene();
 GSphere sphere --> GG.scene();
-GCube cube --> GG.scene();
+GCube cubeR --> GG.scene();
 
-@(-1, 0, 0) => sphere.translate;
-@(1, 0, 0) => cube.translate;
+@(-1.5, 0, 0) => cubeL.translate;
+@(0, 0, 0) => sphere.translate;
+@(1.5, 0, 0) => cubeR.translate;
 
-@(5, 5, 5) => sphere.mat().color;
-@(0, 5, 0) => cube.mat().color;
+5 => float intensity;
+
+intensity * Color.RED => cubeL.mat().color;
+intensity * Color.GREEN => sphere.mat().color;
+intensity * Color.BLUE => cubeR.mat().color;
 
 // FX Chain ===============================================================
-// GG.renderPass() --> BloomFX bloom --> OutputFX output;
-PassThroughFX passthrough;
-BloomFX bloom; OutputFX output;
-
-GG.fx().next(passthrough).next(bloom).next(output);
+GG.fx() --> BloomFX bloom --> OutputFX output;
+// BloomFX bloom; OutputFX output;
+// GG.fx().next(passthrough).next(bloom).next(output);
 
 // UI =====================================================================
 UI_Window window;
@@ -146,17 +148,17 @@ while (effect != null) {
         // gamma
         UI_SliderFloat gammaSlider;
         gammaSlider.text("Gamma");
-        gammaSlider.val((effect$OutputFX).gamma());
         <<< "init gamma: ", (effect$OutputFX).gamma() >>>;
         gammaSlider.range(0.1, 10);
+        gammaSlider.val((effect$OutputFX).gamma());
         window.add(gammaSlider);
         spork ~ GammaListener(gammaSlider, effect$OutputFX);
 
         // exposure
         UI_SliderFloat exposureSlider;
         exposureSlider.text("Exposure");
-        exposureSlider.val(1);
         exposureSlider.range(0.01, 16);
+        exposureSlider.val(1);
         window.add(exposureSlider);
         spork ~ ExposureListener(exposureSlider, effect$OutputFX);
         
@@ -181,7 +183,7 @@ while (effect != null) {
         UI_SliderFloat radiusSlider;
         radiusSlider.text("Bloom Radius");
         radiusSlider.val((effect$BloomFX).radius());
-        radiusSlider.range(0.001, .01);
+        radiusSlider.range(0.001, .5);
         window.add(radiusSlider);
         spork ~ BloomRadiusListener(radiusSlider, effect$BloomFX);
 
@@ -197,7 +199,7 @@ while (effect != null) {
         UI_SliderInt levelsSlider;
         levelsSlider.text("Bloom #Passes");
         levelsSlider.val((effect$BloomFX).levels());
-        levelsSlider.range(1, 10);
+        levelsSlider.range(0, 16);
         window.add(levelsSlider);
         spork ~ BloomLevelsListener(levelsSlider, effect$BloomFX);
 
@@ -206,7 +208,7 @@ while (effect != null) {
         blendDropdown.text("Bloom Blend Mode");
         ["mix", "add"] @=> string blendOptions[];
         blendDropdown.options(blendOptions);
-        blendDropdown.val(0);
+        blendDropdown.val((effect$BloomFX).blend());
         window.add(blendDropdown);
         spork ~ BloomBlendListener(blendDropdown, effect$BloomFX);
 

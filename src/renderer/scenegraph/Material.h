@@ -68,7 +68,13 @@ struct MaterialUniform {
 	static MaterialUniform Create(std::string s, float f0, float f1, float f2) {
 		MaterialUniform m; m.type = UniformType::Float3; m.name = s; m.f3[0] = f0; m.f3[1] = f1; m.f3[2] = f2; return m;
 	}
+	static MaterialUniform CreateFloat3(std::string s, float f0, float f1, float f2) {
+		MaterialUniform m; m.type = UniformType::Float3; m.name = s; m.f3[0] = f0; m.f3[1] = f1; m.f3[2] = f2; return m;
+	}
 	static MaterialUniform Create(std::string s, glm::vec3 v) {
+		MaterialUniform m; m.type = UniformType::Float3; m.name = s; m.f3[0] = v.x; m.f3[1] = v.y; m.f3[2] = v.z; return m;
+	}
+	static MaterialUniform CreateFloat3(std::string s, glm::vec3 v) {
 		MaterialUniform m; m.type = UniformType::Float3; m.name = s; m.f3[0] = v.x; m.f3[1] = v.y; m.f3[2] = v.z; return m;
 	}
 	static MaterialUniform Create(std::string s, float f0, float f1, float f2, float f3) {

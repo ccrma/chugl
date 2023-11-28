@@ -13,6 +13,7 @@ enum class Type : t_CKUINT
     PassThrough,
     Output,
     Invert,
+    Monochrome,
     Bloom
 };
 
@@ -89,6 +90,28 @@ public:
     static const std::string U_MIX;
 };
 
+class MonoChromeEffect : public Effect
+{
+public:
+    MonoChromeEffect() : Effect() {
+        // set mix
+        SetUniform(MaterialUniform::CreateFloat(U_MIX, 1.0f));
+        // set color
+        SetUniform(MaterialUniform::CreateFloat3(U_COLOR, 1.0f, 1.0f, 1.0f));
+    };
+    virtual Type GetType() override { return Type::Monochrome; }
+    virtual MonoChromeEffect* Clone() override { return new MonoChromeEffect(*this); }
+
+    float GetMix() { return GetUniform(U_MIX).f; }
+    glm::vec3 GetColor() { 
+        auto& color = GetUniform(U_COLOR); 
+        return glm::vec3(color.f3[0], color.f3[1], color.f3[2]);
+    }
+public:
+    static const std::string U_MIX;
+    static const std::string U_COLOR;
+};
+
 // Output effect
 class OutputEffect : public Effect
 {
@@ -100,7 +123,7 @@ public:
         // if not the ChuGL API impl at least the DLL query and UI auto-gen
 
         // tone mapping
-        SetUniform(MaterialUniform::CreateInt(U_TONEMAP, TONEMAP_LINEAR));
+        SetUniform(MaterialUniform::CreateInt(U_TONEMAP, TONEMAP_REINHARD));
 
         // exposure
         SetUniform(MaterialUniform::CreateFloat(U_EXPOSURE, 1.0f));
