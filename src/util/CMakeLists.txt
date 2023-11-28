@@ -8,3 +8,7 @@ add_library(chugl_util
     ${CHUGL_UTIL_SOURCES}
     ${CHUGL_UTIL_HEADERS}
 )
+
+target_link_libraries(chugl_util
+    PRIVATE chugl_compiler_flags
+)

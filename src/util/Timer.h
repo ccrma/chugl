@@ -40,9 +40,7 @@ public:
     // bump call count
     s_CallCounts[label]++;
 
-
-
-    std::sprintf(buf, "%-20s %12.4f ms", label.data(), elapsed_ms); // NOLINT
+    std::snprintf(buf, sizeof(buf), "%-20s %12.4f ms", label.data(), elapsed_ms); // NOLINT
     std::cerr << buf << '\n';                                       // NOLINT
 
     // print average
