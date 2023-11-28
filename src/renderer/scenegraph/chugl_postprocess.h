@@ -14,6 +14,7 @@ enum class Type : t_CKUINT
     Output,
     Invert,
     Monochrome,
+    Custom,
     Bloom
 };
 
@@ -34,6 +35,9 @@ public:
     UniformMap& GetUniforms() { return m_Uniforms; }
     MaterialUniform& GetUniform(const std::string& name) {
         return m_Uniforms[name];
+    }
+    bool HasUniform(const std::string& name) {
+        return m_Uniforms.find(name) != m_Uniforms.end();
     }
     void SetUniform(const MaterialUniform& uniform);
 
@@ -112,6 +116,29 @@ public:
     static const std::string U_COLOR;
 };
 
+// Custom
+class CustomEffect : public Effect
+{
+private:
+    std::string m_ScreenShaderString;
+    bool m_IsPath;
+    bool m_NeedsUpdate;
+public:
+    CustomEffect() : Effect(), m_ScreenShaderString(""), m_IsPath(true), m_NeedsUpdate(false) {};
+    virtual Type GetType() override { return Type::Custom; }
+    virtual CustomEffect* Clone() override { return new CustomEffect(*this); }
+
+    void SetScreenShader(const std::string& screenShaderString, bool isPath) { 
+        m_ScreenShaderString = screenShaderString; 
+        m_IsPath = isPath;
+        m_NeedsUpdate = true;
+    }
+    const std::string& GetScreenShader() { return m_ScreenShaderString; }
+    bool IsPath() { return m_IsPath; }
+    bool NeedsUpdate() { return m_NeedsUpdate; }
+public:
+};
+
 // Output effect
 class OutputEffect : public Effect
 {
@@ -123,7 +150,7 @@ public:
         // if not the ChuGL API impl at least the DLL query and UI auto-gen
 
         // tone mapping
-        SetUniform(MaterialUniform::CreateInt(U_TONEMAP, TONEMAP_REINHARD));
+        SetUniform(MaterialUniform::CreateInt(U_TONEMAP, TONEMAP_ACES));
 
         // exposure
         SetUniform(MaterialUniform::CreateFloat(U_EXPOSURE, 1.0f));
