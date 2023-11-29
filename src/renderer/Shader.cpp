@@ -68,7 +68,6 @@ void Shader::Validate()
         std::cout << "vertex shader:\n" << m_VertexSource << std::endl;
         std::cout << "fragment shader:\n" << m_FragmentSource << std::endl;
     }
-    Unbind();
 }
 
 void Shader::Reload()
@@ -202,6 +201,7 @@ unsigned int Shader::CreateShaderProgram(const std::string& vertexCode, const st
 
     // Program Linking =======================================
     unsigned int programID = glCreateProgram();
+    m_RendererID = programID;
     
     glAttachShader(programID, vertexShader);
     glAttachShader(programID, fragmentShader);

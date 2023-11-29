@@ -100,7 +100,7 @@ fun void reset() {
     GG.scene().skyboxEnabled(false);
 
     // reset FX
-    // GG.renderPass().removeNext();
+    GG.fx().removeNext();
 
     // reset default light
     GG.scene().light() @=> GLight light;

@@ -405,8 +405,9 @@ void Renderer::BuildFramebuffer(unsigned int width, unsigned int height) {
 	// We can cover the entire screen with a single triangle
 	// requires only 3 vertices instead of 6, and prevents redundant fragment processing
 	// along pixels that would bridge the edge between two triangles in a quad
-	// See the link below for more info
+	// See the links below for more info
 	// https://catlikecoding.com/unity/tutorials/custom-srp/post-processing/
+	// https://wallisc.github.io/rendering/2021/04/18/Fullscreen-Pass.html
 
 	float positions[] = {
 		-1.0f, 3.0f, 0.0f,   // top left
