@@ -139,14 +139,15 @@ R"glsl(
 {
 "TEXTURE_UNIFORMS",
 R"glsl(
+    // skybox
+    // TODO: maybe this should go in its own section?
+    uniform samplerCube u_Skybox;
+
     // textures
     uniform sampler2D u_DiffuseMap;
     uniform sampler2D u_SpecularMap;
     // TODO add others
 
-    // skybox
-    // TODO: maybe this should go in its own section?
-    uniform samplerCube u_Skybox;
 )glsl"
 },
 {
@@ -908,7 +909,7 @@ const std::string ShaderCode::PP_BLOOM_UPSAMPLE = R"glsl(
     // Remember to use edge clamping for this texture!  
 
     // output ====================================================================
-    layout (location = 0) out vec4 output;
+    layout (location = 0) out vec4 bloomOutput;
 
     // input varyings ============================================================
     in vec2 TexCoords;
@@ -950,7 +951,7 @@ const std::string ShaderCode::PP_BLOOM_UPSAMPLE = R"glsl(
         upsample += (a+c+g+i);
         upsample *= 1.0 / 16.0;
 
-        output = vec4(upsample, 1.0);
+        bloomOutput = vec4(upsample, 1.0);
     }
 )glsl";
 
