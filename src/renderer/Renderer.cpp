@@ -732,7 +732,15 @@ void Renderer::ProcessDeletionQueue(Scene *scene)
 		// delete texture
 		if (DeleteTexture(id)) continue;
 
+		// delete text
+		if (DeleteText(id)) continue;
+
 		// TODO: delete PP effect
+
+		// a type that can't be deleted?
+		// ASSERT(false);
+
+		__debugbreak;
 	}
 
 	// clear queue

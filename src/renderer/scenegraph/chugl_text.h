@@ -16,6 +16,7 @@ public:
     };
 public:
     CHGL_Text() {}
+    virtual ~CHGL_Text() {}
 
     virtual bool IsText() override { return true; }
 

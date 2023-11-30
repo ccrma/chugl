@@ -135,7 +135,7 @@ private:  // member vars
     std::vector<int32_t> m_Indices;
 public:
     RendererText(CHGL_Text* chugl_text);
-    ~RendererText();
+	virtual ~RendererText();
 
     static Shader* GetFontShader();
 
