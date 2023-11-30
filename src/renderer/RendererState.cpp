@@ -86,6 +86,18 @@ void RendererState::PrepareScene(Scene *scene)
 
 	// TODO sort opaque meshes front to back
 
+	// sort text front to back b/c it's gpu intensive
+	std::sort(
+		m_Texts.begin(), m_Texts.end(),
+		[&](const CHGL_Text* lhs, const CHGL_Text* rhs) {
+			// sort by distance from camera
+			auto l_dist = glm::distance2(lhs->GetWorldPosition(), m_ViewPos);
+			auto r_dist = glm::distance2(rhs->GetWorldPosition(), m_ViewPos);
+			// farther away comes first, so that closer objects are rendered on top
+			return l_dist < r_dist;
+		}
+	);
+
 	// Cache skybox texture
 	if (scene->GetSkyboxEnabled()) {
 		m_SkyboxTexture = m_Renderer->GetOrCreateTexture(scene->GetSkyboxID(), CubeMapTexture::GetDefaultWhiteCubeMap());

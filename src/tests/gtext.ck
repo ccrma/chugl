@@ -18,6 +18,7 @@ for (NUM_TEXT => int i; i >= 0; i--)
     GText text --> GG.scene();
     text.text("Hello World!");
     text.translate(@(0, 0, -i));
+    text.sca(i);
 }
 // GG.scene().backgroundColor( @(115.0, 193.0, 245.0) / 255.0 );
 GG.font(me.dir() + "../../examples/assets/fonts/SourceSerifPro-Regular.otf");
