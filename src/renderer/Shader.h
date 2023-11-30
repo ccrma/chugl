@@ -50,6 +50,7 @@ public:
 	void setFloat3(const std::string& name, float x, float y, float z) const;
 	void setFloat3(const std::string& name, const glm::vec3 pos) const;
 	void setFloat4(const std::string& name, float x, float y, float z, float w) const;
+	void setFloat4(const std::string& name, const glm::vec4& vec) const;
 	void setTextureUnits(unsigned int n = 8);
 	void setMat4f(const std::string& name, const glm::mat4& mat);
 

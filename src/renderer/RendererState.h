@@ -8,6 +8,7 @@ class Scene;
 class Mesh;
 class Renderer;
 class Texture;
+class CHGL_Text;
 
 // used to track state while rendering the scenegraph
 class RendererState  
@@ -51,6 +52,7 @@ private:
 	// opaque and transparent meshes
 	std::vector<Mesh*> m_OpaqueMeshes;
 	std::vector<Mesh*> m_TransparentMeshes;
+	std::vector<CHGL_Text*> m_Texts;
 
 	// cache camera data
 	glm::mat4 m_ProjMat, m_ViewMat, m_CameraTransform;
@@ -69,4 +71,5 @@ private:
 public:
 	std::vector<Mesh*>& GetOpaqueMeshes() { return m_OpaqueMeshes; }
 	std::vector<Mesh*>& GetTransparentMeshes() { return m_TransparentMeshes; }
+	std::vector<CHGL_Text*>& GetTexts() { return m_Texts; }
 };

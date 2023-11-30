@@ -45,5 +45,9 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
+// freetype font library =================================
+#include <ft2build.h>
+#include FT_FREETYPE_H
+
 // ChuGL includes ========================================
 #include "util/Timer.h"

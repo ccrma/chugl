@@ -30,6 +30,7 @@
 Renderer Window::renderer;
 Scene Window::scene;
 
+FT_Library FTLibrary;
 
 /* =============================================================================
 						    * GLFW callbacks *	
@@ -287,6 +288,12 @@ Window::Window(int windowWidth, int windowHeight)
         throw std::runtime_error("Failed to initialize GLAD");
     }
 
+    // Initialize FT =========================================
+    FT_Error error = FT_Init_FreeType(&FTLibrary);
+    if (error) {
+        throw std::runtime_error("Failed to initialize FreeType");
+    }
+
     // Print Context Info =================================================
     std::cerr << "============================= ChuGL =================================" << std::endl;
     std::cerr << "ChuGL version: " << CHUGL_VERSION_STRING << std::endl;
@@ -488,6 +495,9 @@ void Window::DisplayLoop()
 
     // builds skybox buffers and cubemap texture
     renderer.BuildSkybox();
+
+    // Provide FreeType library
+    renderer.SetFTLibrary(&FTLibrary);
 
     // Copy from CGL scenegraph ====================================    
     // TODO should just clone these

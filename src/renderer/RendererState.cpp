@@ -44,9 +44,14 @@ void RendererState::PrepareScene(Scene *scene)
 			{
 				m_OpaqueMeshes.push_back(mesh);
 			}
+		} else if (obj->IsText())
+		{
+			CHGL_Text* text = dynamic_cast<CHGL_Text*>(obj);
+			assert(text);
+			m_Texts.push_back(text);
 		}
 		
-		// TODO: can precompute world matrices here
+		// TODO: can precompute world matrices here, store along with mesh pointers
 
 		// add children to stack
 		for (auto child : obj->GetChildren())
@@ -54,6 +59,18 @@ void RendererState::PrepareScene(Scene *scene)
 			queue.push_back(child);
 		}
 	}
+
+	// sort text by font types
+	// std::sort(
+	// 	m_Texts.begin(), m_Texts.end(),
+	// 	[&](const CHGL_Text* lhs, const CHGL_Text* rhs) {
+	// 		// sort by font type
+	// 		auto& l_font = lhs->GetFontPath();
+	// 		auto& r_font = rhs->GetFontPath();
+	// 		// farther away comes first, so that closer objects are rendered on top
+	// 		return l_font < r_font;
+	// 	}
+	// );
 
 	// sort transparent meshes by distance from camera
 	std::sort(
@@ -106,4 +123,8 @@ void RendererState::Reset()
 	int transparentCapacity = m_TransparentMeshes.capacity();
 	m_TransparentMeshes.clear();
 	m_TransparentMeshes.reserve(transparentCapacity);
+
+	int textCapacity = m_Texts.capacity();
+	m_Texts.clear();
+	m_Texts.reserve(textCapacity);
 }

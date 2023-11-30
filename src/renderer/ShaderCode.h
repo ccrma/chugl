@@ -43,6 +43,10 @@ static const std::string PP_BLOOM_BLEND;                // bloom effect upsampli
 static const std::string SKYBOX_VERT_CODE;
 static const std::string SKYBOX_FRAG_CODE;
 
+// font shading
+static const std::string FONT_TEXT_VERT;
+static const std::string FONT_TEXT_FRAG;
+
 // map of names to shader code components
 typedef std::unordered_map<std::string, const std::string> ShaderMap;
 static ShaderMap s_CodeMap;

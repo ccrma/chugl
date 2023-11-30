@@ -71,6 +71,7 @@ public:
 	virtual bool IsMaterial() { return false; }
 	virtual bool IsGeometry() { return false; }
 	virtual bool IsTexture() { return false; }
+	virtual bool IsText() { return false; }
 
 protected:
     // reference to chugins runtime API
