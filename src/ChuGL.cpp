@@ -48,6 +48,7 @@ CK_DLL_QUERY(ChuGL)
     QUERY->setinfo( QUERY, CHUGIN_INFO_CHUGIN_VERSION, CHUGL_VERSION_STRING );
     QUERY->setinfo( QUERY, CHUGIN_INFO_DESCRIPTION, "ChuGL (ChucK Graphics Library) is a unified audiovisual programming framework built into the ChucK programming language." );
     QUERY->setinfo( QUERY, CHUGIN_INFO_URL, "https://chuck.stanford.edu/chugl/" );
+    QUERY->setinfo( QUERY, CHUGIN_INFO_EMAIL, "azaday@ccrma.stanford.edu" );
 
     // set up for main thread hook, for running ChuGL on the main thread
     CGL::hook = QUERY->create_main_thread_hook(QUERY, chugl_main_loop_hook, chugl_main_loop_quit, NULL);
