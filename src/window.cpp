@@ -490,8 +490,6 @@ void Window::DisplayLoop()
     // Render initialization ==================================
     // This setup must happen *after* OpenGL context is created
     renderer.BuildFramebuffer(m_FrameWidth, m_FrameHeight);
-    std::cout << "framebuffer width " << m_FrameWidth << std::endl;
-    std::cout << "framebuffer height " << m_FrameHeight << std::endl; 
 
     // builds skybox buffers and cubemap texture
     renderer.BuildSkybox();

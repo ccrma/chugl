@@ -405,7 +405,11 @@ void Font::convertContour(std::vector<BufferCurve> &curves, const FT_Outline *ou
 
 }
 
-void Font::RebuildBuffers(const std::string &mainText, float x, float y, std::vector<BufferVertex> &vertices, std::vector<int32_t> &indices)
+// TODO: this is redoing the work of BB calculation, can we reuse that?
+void Font::RebuildBuffers(
+    const std::string &mainText, float x, float y, std::vector<BufferVertex> &vertices, std::vector<int32_t> &indices,
+    float verticalScale
+)
 {
     float originalX = x;
 
@@ -421,7 +425,7 @@ void Font::RebuildBuffers(const std::string &mainText, float x, float y, std::ve
 
         if (charcode == '\n') {
             x = originalX;
-            y -= (float)face->height / (float)face->units_per_EM * worldSize;
+            y -= verticalScale * ((float)face->height / (float)face->units_per_EM * worldSize);
             if (hinting) y = std::round(y);
             continue;
         }
@@ -521,7 +525,9 @@ void Font::BindTextures(Shader *fontShader)
     GLCall(glActiveTexture(GL_TEXTURE0));
 }
 
-Font::BoundingBox Font::measure(float x, float y, const std::string &text)
+Font::BoundingBox Font::measure(
+    float x, float y, const std::string &text, float verticalScale
+)
 {
     BoundingBox bb;
     bb.minX = +std::numeric_limits<float>::infinity();
@@ -539,7 +545,7 @@ Font::BoundingBox Font::measure(float x, float y, const std::string &text)
 
         if (charcode == '\n') {
             x = originalX;
-            y -= (float)face->height / (float)face->units_per_EM * worldSize;
+            y -= verticalScale * ( (float)face->height / (float)face->units_per_EM * worldSize );
             if (hinting) y = std::round(y);
             continue;
         }
@@ -630,27 +636,25 @@ void RendererText::Draw(Font* font)
     // if dirty, rebuild geo
     auto& mainText = m_chugl_text->GetText();
     if (m_chugl_text->GetDirty()) {
-
-        std::cout << "Rebuilding text: " << mainText << "\n"; 
-
         m_chugl_text->SetDirty(false);
         // compute new glyphs
         font->prepareGlyphsForText(mainText);
         // compute new bounding box
-        bb = font->measure(0, 0, mainText);
+        bb = font->measure(0, 0, mainText, m_chugl_text->GetLineSpacing());
 
         // rebuild buffers
         {
             // set control points
-            float cx = 0.5f * (bb.minX + bb.maxX);
-            float cy = 0.5f * (bb.minY + bb.maxY);
+            auto controlPoint = m_chugl_text->GetControlPoints();
+            float cx = controlPoint.x * (bb.minX + bb.maxX);
+            float cy = controlPoint.y * (bb.minY + bb.maxY);
 
             // font->draw(-cx, -cy, mainText);   // control point centered
             // mainFont->draw(0, 0, mainText);    // control point top-left
             float x = -cx;
             float y = -cy;
 
-            font->RebuildBuffers(mainText, x, y, m_Vertices, m_Indices);
+            font->RebuildBuffers(mainText, x, y, m_Vertices, m_Indices, m_chugl_text->GetLineSpacing());
 
             glBindBuffer(GL_ARRAY_BUFFER, vbo);
             // glBufferData(GL_ARRAY_BUFFER, sizeof(Font::BufferVertex) * m_Vertices.size(), m_Vertices.data(), GL_STREAM_DRAW);

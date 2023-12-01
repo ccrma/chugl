@@ -11,8 +11,10 @@ public:
         std::string fontPath;
         bool dirty;
         glm::vec4 color;
+        glm::vec2 controlPoints;
+        float lineSpacing;
 
-        Params() : text(""), fontPath(""), dirty(false), color(1.0) {}
+        Params() : text(""), fontPath(""), dirty(false), color(1.0), controlPoints(0.5f), lineSpacing(1.0f) {}
     };
 public:
     CHGL_Text() {}
@@ -36,6 +38,12 @@ public:
 
     const glm::vec4& GetColor() { return m_Params.color; }
     void SetColor(const glm::vec4& color) { m_Params.color = color; }
+
+    const glm::vec2& GetControlPoints() { return m_Params.controlPoints; }
+    void SetControlPoints(const glm::vec2& controlPoints) { m_Params.controlPoints = controlPoints; }
+
+    float GetLineSpacing() { return m_Params.lineSpacing; }
+    void SetLineSpacing(float lineSpacing) { m_Params.lineSpacing = lineSpacing; }
 
 private:
     Params m_Params;

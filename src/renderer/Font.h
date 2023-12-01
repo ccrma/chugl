@@ -63,7 +63,8 @@ public:
     // (used to batch draw a single GText object)
     void RebuildBuffers(
         const std::string& mainText, float x, float y,
-        std::vector<BufferVertex>& vertices, std::vector<int32_t>& indices
+        std::vector<BufferVertex>& vertices, std::vector<int32_t>& indices,
+        float verticalScale = 1.0f
     );
 
 	// Decodes the first Unicode code point from the null-terminated UTF-8 string *text and advances *text to point at the next code point.
@@ -77,7 +78,9 @@ public:
 		float minX, minY, maxX, maxY;
 	};
 
-	BoundingBox measure(float x, float y, const std::string& text);
+	BoundingBox measure(
+        float x, float y, const std::string& text, float verticalScale = 1.0f
+    );
 
 private:
 	FT_Face face;

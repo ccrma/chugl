@@ -2,6 +2,7 @@
 
 #include "chugl_pch.h"
 #include "imgui.h"
+#include "imgui/misc/cpp/imgui_stdlib.h"
 
 /*=====================================================
 
@@ -100,6 +101,7 @@ enum class Type : t_CKUINT
     Color3,
     Dropdown,
     Text,
+    InputText,
     Custom
 };
 
@@ -330,13 +332,25 @@ public:
     }
 
     float GetMin() { return m_Min; }
-    void SetMin(float min) { m_Min = min; }
+    void SetMin(float min) { 
+        // lock
+        std::lock_guard<std::mutex> lock(Manager::GetWindowLock());
+        m_Min = min; 
+    }
 
     float GetMax() { return m_Max; }
-    void SetMax(float max) { m_Max = max; }
+    void SetMax(float max) { 
+        // lock
+        std::lock_guard<std::mutex> lock(Manager::GetWindowLock());
+        m_Max = max; 
+    }
 
     float GetPower() { return m_Power; }
-    void SetPower(float power) { m_Power = power; }
+    void SetPower(float power) { 
+        // lock
+        std::lock_guard<std::mutex> lock(Manager::GetWindowLock());
+        m_Power = power; 
+    }
 
 private:
     float m_Min;
@@ -388,10 +402,18 @@ public:
     }
 
     float GetMin() { return m_Min; }
-    void SetMin(float min) { m_Min = min; }
+    void SetMin(float min) { 
+        // lock
+        std::lock_guard<std::mutex> lock(Manager::GetWindowLock());
+        m_Min = min; 
+    }
 
     float GetMax() { return m_Max; }
-    void SetMax(float max) { m_Max = max; }
+    void SetMax(float max) { 
+        // lock
+        std::lock_guard<std::mutex> lock(Manager::GetWindowLock());
+        m_Max = max; 
+    }
 
 private:
     int m_Min;
@@ -690,6 +712,97 @@ private:
     // custom draw function which takes current Custom element as argument
     std::function<void(Custom*, T&)> m_DrawFn;
     T m_Data;
+};
+
+class InputText : public Element
+{
+public:
+    InputText(
+        Chuck_Object* event
+    ) : Element(event), m_ReadData(" "), m_WriteData(" "),
+    m_MultiLineInputSize(-1.0, 16.0f),
+    m_IsMultiLine(false), m_BroadcastOnEnter(false)
+    {}
+
+    virtual Type GetType() override { return Type::InputText; }
+
+    virtual void Draw() override {
+        // draw label
+        ImGui::Text("%s", m_Label.c_str());
+
+        ImGuiInputTextFlags input_text_flags = (
+            m_BroadcastOnEnter ? ImGuiInputTextFlags_EnterReturnsTrue : 0
+            // | ImGuiInputTextFlags_AllowTabInput  // TODO: tabs are bugged on GText rendering
+            // | ImGuiInputTextFlags_EscapeClearsAll
+        );
+        // draw text
+        bool inputTextReturn = false;
+        if (m_IsMultiLine) {
+			// get input box size as multiple of text line height
+            float inputWidth = m_MultiLineInputSize.x <= 0 ? ImGui::GetWindowWidth() : ImGui::GetTextLineHeight() * m_MultiLineInputSize.x;
+            float inputHeight = m_MultiLineInputSize.y <= 0 ? ImGui::GetWindowHeight() : ImGui::GetTextLineHeight() * m_MultiLineInputSize.y;
+            inputTextReturn = ImGui::InputTextMultiline(
+                m_Label.c_str(), &m_WriteData, ImVec2(inputWidth, inputHeight), input_text_flags
+            );
+        } else {
+            inputTextReturn = ImGui::InputText(m_Label.c_str(), &m_WriteData, input_text_flags);
+        }
+
+        if (inputTextReturn) {
+            // lock
+            std::unique_lock<std::mutex> lock(m_ReadDataLock);
+            // copy
+            m_ReadData = m_WriteData;
+            // unlock
+            lock.unlock();
+            // broadcast chuck event
+            Broadcast();
+        }
+    }
+
+    const std::string& GetData() {
+        // lock
+        std::lock_guard<std::mutex> lock(m_ReadDataLock);
+        // return
+        return m_ReadData;
+    }
+
+    void SetData(const std::string& text) {
+        // lock
+        std::lock_guard<std::mutex> lock(Manager::GetWindowLock());
+        // set new text
+        m_WriteData = text.empty() ? " " : text;
+        // copy to read data
+        m_ReadData = m_WriteData;
+    }
+
+    // only ever read by render thread, safe to read without lock by audio thread
+    bool GetMultiLine() { return m_IsMultiLine; }
+
+    // set by audio thread, read by render thread, therefore needs lock
+    void SetMultiLine(bool multiLine) { 
+        std::lock_guard<std::mutex> lock(Manager::GetWindowLock());
+        m_IsMultiLine = multiLine; 
+    }
+
+    glm::vec2 GetMultiLineInputSize() { return m_MultiLineInputSize; }
+    void SetMultiLineInputSize(const glm::vec2& size) { 
+        std::lock_guard<std::mutex> lock(Manager::GetWindowLock());
+        m_MultiLineInputSize = size; 
+    }
+
+    bool GetBroadcastOnEnter() { return m_BroadcastOnEnter; }
+    void SetBroadcastOnEnter(bool broadcastOnEnter) { 
+        std::lock_guard<std::mutex> lock(Manager::GetWindowLock());
+        m_BroadcastOnEnter = broadcastOnEnter; 
+    }
+
+private:
+    glm::vec2 m_MultiLineInputSize;  // size of text input if in multiline mode
+    bool m_IsMultiLine;
+    bool m_BroadcastOnEnter;
+    std::string m_ReadData;
+    std::string m_WriteData;
 };
 
 };  // end namespace GUI
