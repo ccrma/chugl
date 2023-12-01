@@ -48,6 +48,7 @@ doc.addGroup(
         "GPointLight", 
         "GDirLight", 
         "GCamera",
+        "GText"
     ],
     // group name
     "Graphics Generators",
@@ -104,13 +105,31 @@ doc.addGroup(
 // add group
 doc.addGroup(
     // class names
-    [ "Texture", "FileTexture", "DataTexture" ],
+    [ "Texture", "FileTexture", "DataTexture", "CubeTexture" ],
     // group name
     "ChuGL Textures",
     // file name
     "chugl-tex", 
     // group description
     "Textures can be loaded from file, created dynamically from data; they are passed into materials and mapped onto 2D and 3D surfaces."
+);
+
+doc.addGroup(
+    // class names
+    [
+        "FX",
+        "PassThroughFX",
+        "OutputFX",
+        "InvertFX",
+        "MonochromeFX",
+        "BloomFX"
+    ],
+    // group name
+    "ChuGL Post Processing FX",
+    // file name
+    "chugl-fx", 
+    // group description
+    "Post Processing FX are applied to the final output of the scene, GG.fx()"
 );
 
 // add GUI group
@@ -125,7 +144,8 @@ doc.addGroup(
         "UI_Checkbox",
         "UI_Color3",
         "UI_Dropdown",
-        "UI_Text"
+        "UI_Text",
+        "UI_Input"
     ],
     // group name
     "ChuGL GUI",

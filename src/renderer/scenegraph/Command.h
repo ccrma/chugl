@@ -9,6 +9,7 @@
 #include "CGL_Texture.h"
 #include "Camera.h"
 #include "chugl_postprocess.h"
+#include "chugl_text.h"
 
 
 // Forward Declarations =========================================
@@ -802,4 +803,43 @@ public:
 private:
     size_t m_ID;
     MaterialUniform m_Uniform;
+};
+
+//========================= GText Commands =========================//
+
+class UpdateGTextCommand : public SceneGraphCommand
+{
+public:
+    UpdateGTextCommand(CHGL_Text* chugl_text) 
+        : m_ID(chugl_text->GetID()), m_Params(chugl_text->GetParams())
+    {
+        // assumes updated params have already been set
+    }
+
+    virtual void execute(Scene* renderThreadScene) override {
+        CHGL_Text* effect = dynamic_cast<CHGL_Text*>(renderThreadScene->GetNode(m_ID));
+        assert(effect);
+
+        effect->SetParams(m_Params);
+        effect->SetDirty(true);
+    }
+
+private:
+    size_t m_ID;
+    CHGL_Text::Params m_Params;
+};
+
+class UpdateDefaultFontCommand : public SceneGraphCommand
+{
+public:
+    UpdateDefaultFontCommand(Scene* audioThreadScene, const std::string& path) 
+        : m_Path(path) {
+        audioThreadScene->SetDefaultFontPath(m_Path);
+    }
+
+    virtual void execute(Scene* renderThreadScene) override {
+        renderThreadScene->SetDefaultFontPath(m_Path);
+    }
+private:
+    std::string m_Path;
 };

@@ -116,6 +116,25 @@ FetchContent_Declare (
 # make available
 FetchContent_MakeAvailable (assimp)
 
+# FreeType font rendering
+# set default freetype options
+set(FT_DISABLE_BROTLI   ON  CACHE BOOL "" FORCE)
+set(FT_DISABLE_BZIP2    ON  CACHE BOOL "" FORCE)
+set(FT_DISABLE_HARFBUZZ ON  CACHE BOOL "" FORCE)
+set(FT_DISABLE_PNG      ON  CACHE BOOL "" FORCE)
+set(FT_DISABLE_ZLIB     ON  CACHE BOOL "" FORCE)
+set(FT_ENABLE_ERROR_STRINGS ON CACHE BOOL "" FORCE)
+# add_subdirectory("dependencies/freetype")
+# fetch freetype
+FetchContent_Declare (
+    freetype 
+    GIT_REPOSITORY https://github.com/freetype/freetype.git
+    GIT_TAG VER-2-13-2
+)
+# make available
+FetchContent_MakeAvailable (freetype)
+
+
 # =================================================================================
 # interface library for compiler flags
 # =================================================================================
@@ -150,7 +169,7 @@ target_precompile_headers(chugl_pch INTERFACE chugl_pch.h)
 
 # add libraries to interface
 target_link_libraries(chugl_pch INTERFACE
-    TracyClient glm assimp 
+    TracyClient glm assimp  freetype
     chugl_util
 )
 

@@ -13,6 +13,7 @@
 #include "ulib_scene.h"
 #include "ulib_assimp.h"
 #include "ulib_postprocess.h"
+#include "ulib_text.h"
 
 #include "renderer/scenegraph/Camera.h"
 #include "renderer/scenegraph/Command.h"
@@ -96,6 +97,11 @@ CK_DLL_SFUN(cgl_get_fps);
 // Get root of post processing chain
 CK_DLL_SFUN(cgl_get_pp_root);
 
+// set default font
+CK_DLL_SFUN(cgl_set_default_font);
+CK_DLL_SFUN(cgl_get_default_font);
+
+
 
 // exports =========================================
 
@@ -139,6 +145,7 @@ t_CKBOOL init_chugl(Chuck_DL_Query *QUERY)
 	init_chugl_obj(QUERY);
 	init_chugl_camera(QUERY);
 	init_chugl_mesh(QUERY);
+	init_chugl_text(QUERY);
 	init_chugl_light(QUERY);
 	init_chugl_scene(QUERY);
     init_chugl_assimp(QUERY);
@@ -441,6 +448,14 @@ t_CKBOOL init_chugl_static_fns(Chuck_DL_Query *QUERY)
 	QUERY->add_sfun(QUERY, cgl_get_pp_root, PP::Effect::CKName(PP::Type::Base), "fx");
 	QUERY->doc_func(QUERY, "Returns the root of the post processing chain. See the ChuGL post processing tutorial for more information.");
 
+	// Default font
+	QUERY->add_sfun(QUERY, cgl_set_default_font, "string", "font");
+	QUERY->add_arg(QUERY, "string", "fontPath");
+	QUERY->doc_func(QUERY, "Sets the default font for all text rendering.");
+
+	QUERY->add_sfun(QUERY, cgl_get_default_font, "string", "font");
+	QUERY->doc_func(QUERY, "Gets the path to the default font file for all text rendering.");
+
 	QUERY->end_class(QUERY);
 
 	return true;
@@ -576,6 +591,24 @@ CK_DLL_SFUN(cgl_get_pp_root)
 {
 	Scene *scene = (Scene *)CGL::GetSGO(CGL::GetMainScene(SHRED, API, VM));
 	RETURN->v_object = scene->GetRootEffect()->m_ChuckObject;
+}
+
+CK_DLL_SFUN(cgl_set_default_font) 
+{ 
+	Scene *scene = (Scene *)CGL::GetSGO(CGL::GetMainScene(SHRED, API, VM));
+	Chuck_String *fontPath = GET_NEXT_STRING(ARGS);
+
+	CGL::PushCommand(new UpdateDefaultFontCommand(scene, API->object->str(fontPath)));
+
+	RETURN->v_string = fontPath;
+}
+
+CK_DLL_SFUN(cgl_get_default_font) 
+{ 
+	Scene *scene = (Scene *)CGL::GetSGO(CGL::GetMainScene(SHRED, API, VM));
+	RETURN->v_string = (Chuck_String *)API->object->create_string(
+		VM, scene->GetDefaultFontPath().c_str(), false
+	);
 }
 
 //-----------------------------------------------------------------------------

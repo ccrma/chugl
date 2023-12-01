@@ -148,6 +148,11 @@ void Shader::setFloat4(const std::string& name, float x, float y, float z, float
     GLCall(glUniform4f(GetUniformLocation(name), x, y, z, w));
 }
 
+void Shader::setFloat4(const std::string& name, const glm::vec4& vec) const
+{
+    GLCall(glUniform4f(GetUniformLocation(name), vec.x, vec.y, vec.z, vec.w));
+}
+
 // maps texture unit slots to texture uniforms
 void Shader::setTextureUnits(unsigned int n)
 {
