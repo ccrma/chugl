@@ -716,6 +716,16 @@ RendererText *Renderer::GetOrCreateText(size_t ID)
 	return newText;
 }
 
+bool Renderer::DeleteText(size_t ID)
+{
+	if (m_RendererTexts.find(ID) != m_RendererTexts.end()) {
+		delete m_RendererTexts[ID];
+		m_RendererTexts.erase(ID);
+		return true;
+	}
+	return false;
+}
+
 void Renderer::ProcessDeletionQueue(Scene *scene)
 {
 	auto& deletionQueue = scene->GetDeletionQueue();
@@ -739,8 +749,6 @@ void Renderer::ProcessDeletionQueue(Scene *scene)
 
 		// a type that can't be deleted?
 		// ASSERT(false);
-
-		__debugbreak;
 	}
 
 	// clear queue

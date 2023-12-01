@@ -432,14 +432,7 @@ public:  // memory management
 		return false;
 	}
 
-	bool DeleteText(size_t ID) {
-		if (m_RendererTexts.find(ID) != m_RendererTexts.end()) {
-			delete m_RendererTexts[ID];
-			m_RendererTexts.erase(ID);
-			return true;
-		}
-		return false;
-	}
+	bool DeleteText(size_t ID);
 
 	void ProcessDeletionQueue(Scene* scene);
 
