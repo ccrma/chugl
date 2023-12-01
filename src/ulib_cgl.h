@@ -3,7 +3,7 @@
 #include "chugl_pch.h"
 
 // ChuGL version string
-#define CHUGL_VERSION_STRING "0.1.4 (alpha)"
+#define CHUGL_VERSION_STRING "0.1.5-dev (alpha)"
 
 // ChuGL query interface
 t_CKBOOL init_chugl( Chuck_DL_Query * QUERY );
