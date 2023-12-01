@@ -139,14 +139,15 @@ R"glsl(
 {
 "TEXTURE_UNIFORMS",
 R"glsl(
+    // skybox
+    // TODO: maybe this should go in its own section?
+    uniform samplerCube u_Skybox;
+
     // textures
     uniform sampler2D u_DiffuseMap;
     uniform sampler2D u_SpecularMap;
     // TODO add others
 
-    // skybox
-    // TODO: maybe this should go in its own section?
-    uniform samplerCube u_Skybox;
 )glsl"
 },
 {
@@ -908,7 +909,7 @@ const std::string ShaderCode::PP_BLOOM_UPSAMPLE = R"glsl(
     // Remember to use edge clamping for this texture!  
 
     // output ====================================================================
-    layout (location = 0) out vec4 output;
+    layout (location = 0) out vec4 bloomOutput;
 
     // input varyings ============================================================
     in vec2 TexCoords;
@@ -950,7 +951,7 @@ const std::string ShaderCode::PP_BLOOM_UPSAMPLE = R"glsl(
         upsample += (a+c+g+i);
         upsample *= 1.0 / 16.0;
 
-        output = vec4(upsample, 1.0);
+        bloomOutput = vec4(upsample, 1.0);
     }
 )glsl";
 
@@ -1002,6 +1003,169 @@ const std::string ShaderCode::PP_BLOOM_BLEND = R"glsl(
 )glsl";
 
 
+// ====================================================================================================
+//  Text Shaders
+// ====================================================================================================
+
+// source: https://github.com/GreenLightning/gpu-font-rendering
+const std::string ShaderCode::FONT_TEXT_VERT = R"glsl(
+    #version 330 core
+
+    uniform mat4 u_Projection;
+    uniform mat4 u_View;
+    uniform mat4 u_Model;
+
+    layout (location = 0) in vec2 vertexPosition;
+    layout (location = 1) in vec2 vertexUV;
+    layout (location = 2) in int  vertexIndex;
+
+    out vec2 uv;
+    flat out int bufferIndex;
+
+    void main() {
+        gl_Position = u_Projection * u_View * u_Model * vec4(vertexPosition, 0, 1);
+        uv = vertexUV;
+        bufferIndex = vertexIndex;
+    }
+)glsl";
+
+// source: https://github.com/GreenLightning/gpu-font-rendering
+const std::string ShaderCode::FONT_TEXT_FRAG = R"glsl(
+    #version 330 core
+
+    // Based on: http://wdobbie.com/post/gpu-text-rendering-with-vector-textures/
+
+    struct Glyph {
+        int start, count;
+    };
+
+    struct Curve {
+        vec2 p0, p1, p2;
+    };
+
+    uniform isamplerBuffer u_Glyphs;
+    uniform samplerBuffer u_Curves;
+    uniform vec4 u_Color;
+
+
+    // Controls for debugging and exploring:
+
+    // Size of the window (in pixels) used for 1-dimensional anti-aliasing along each rays.
+    //   0 - no anti-aliasing
+    //   1 - normal anti-aliasing
+    // >=2 - exaggerated effect 
+    uniform float antiAliasingWindowSize = 1.0;
+
+    // Enable a second ray along the y-axis to achieve 2-dimensional anti-aliasing.
+    uniform bool enableSuperSamplingAntiAliasing = true;
+
+
+    in vec2 uv;
+    flat in int bufferIndex;
+
+    out vec4 result;
+
+    Glyph loadGlyph(int index) {
+        Glyph result;
+        ivec2 data = texelFetch(u_Glyphs, index).xy;
+        result.start = data.x;
+        result.count = data.y;
+        return result;
+    }
+
+    Curve loadCurve(int index) {
+        Curve result;
+        result.p0 = texelFetch(u_Curves, 3*index+0).xy;
+        result.p1 = texelFetch(u_Curves, 3*index+1).xy;
+        result.p2 = texelFetch(u_Curves, 3*index+2).xy;
+        return result;
+    }
+
+    float computeCoverage(float inverseDiameter, vec2 p0, vec2 p1, vec2 p2) {
+        if (p0.y > 0 && p1.y > 0 && p2.y > 0) return 0.0;
+        if (p0.y < 0 && p1.y < 0 && p2.y < 0) return 0.0;
+
+        // Note: Simplified from abc formula by extracting a factor of (-2) from b.
+        vec2 a = p0 - 2*p1 + p2;
+        vec2 b = p0 - p1;
+        vec2 c = p0;
+
+        float t0, t1;
+        if (abs(a.y) >= 1e-5) {
+            // Quadratic segment, solve abc formula to find roots.
+            float radicand = b.y*b.y - a.y*c.y;
+            if (radicand <= 0) return 0.0;
+        
+            float s = sqrt(radicand);
+            t0 = (b.y - s) / a.y;
+            t1 = (b.y + s) / a.y;
+        } else {
+            // Linear segment, avoid division by a.y, which is near zero.
+            // There is only one root, so we have to decide which variable to
+            // assign it to based on the direction of the segment, to ensure that
+            // the ray always exits the shape at t0 and enters at t1. For a
+            // quadratic segment this works 'automatically', see readme.
+            float t = p0.y / (p0.y - p2.y);
+            if (p0.y < p2.y) {
+                t0 = -1.0;
+                t1 = t;
+            } else {
+                t0 = t;
+                t1 = -1.0;
+            }
+        }
+
+        float alpha = 0;
+        
+        if (t0 >= 0 && t0 < 1) {
+            float x = (a.x*t0 - 2.0*b.x)*t0 + c.x;
+            alpha += clamp(x * inverseDiameter + 0.5, 0, 1);
+        }
+
+        if (t1 >= 0 && t1 < 1) {
+            float x = (a.x*t1 - 2.0*b.x)*t1 + c.x;
+            alpha -= clamp(x * inverseDiameter + 0.5, 0, 1);
+        }
+
+        return alpha;
+    }
+
+    vec2 rotate(vec2 v) {
+        return vec2(v.y, -v.x);
+    }
+
+    void main() {
+        float alpha = 0;
+
+        // Inverse of the diameter of a pixel in uv units for anti-aliasing.
+        vec2 inverseDiameter = 1.0 / (antiAliasingWindowSize * fwidth(uv));
+
+        Glyph glyph = loadGlyph(bufferIndex);
+        for (int i = 0; i < glyph.count; i++) {
+            Curve curve = loadCurve(glyph.start + i);
+
+            vec2 p0 = curve.p0 - uv;
+            vec2 p1 = curve.p1 - uv;
+            vec2 p2 = curve.p2 - uv;
+
+            alpha += computeCoverage(inverseDiameter.x, p0, p1, p2);
+            if (enableSuperSamplingAntiAliasing) {
+                alpha += computeCoverage(inverseDiameter.y, rotate(p0), rotate(p1), rotate(p2));
+            }
+        }
+
+        if (enableSuperSamplingAntiAliasing) {
+            alpha *= 0.5;
+        }
+
+        alpha = clamp(alpha, 0.0, 1.0);
+        result = u_Color * alpha;
+
+        if (result.a < 0.001) {
+            discard;
+        }
+    }
+)glsl";
 
 
 // ====================================================================================================

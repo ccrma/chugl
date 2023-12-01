@@ -28,6 +28,9 @@ public:
 		const std::string& vertex, const std::string& fragment,
 		bool vertexFromFile, bool fragmentFromFile
 	);
+	
+	// validate the shader program
+	void Validate();
 
 	// hot reloading!
 	void Reload();
@@ -47,6 +50,7 @@ public:
 	void setFloat3(const std::string& name, float x, float y, float z) const;
 	void setFloat3(const std::string& name, const glm::vec3 pos) const;
 	void setFloat4(const std::string& name, float x, float y, float z, float w) const;
+	void setFloat4(const std::string& name, const glm::vec4& vec) const;
 	void setTextureUnits(unsigned int n = 8);
 	void setMat4f(const std::string& name, const glm::mat4& mat);
 
@@ -54,6 +58,7 @@ public:
 	// getters/setters
 	std::string GetVertPath() const { return m_VertexPath; }
 	std::string GetFragPath() const { return m_FragmentPath; }
+
 private:
 	mutable std::unordered_map<std::string, int> m_UniformLocationCache;
 	static unsigned int CompileShader(const std::string& source, unsigned int type);

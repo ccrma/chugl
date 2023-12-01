@@ -3,6 +3,7 @@
     // TODO re-enable after resolving Machine.remove() not clearing children
     // which are sporked via Machine.add()
     // TODO: gc test causes segfault
+    "gtext",
     "bloom",
     "skybox",
     "lights",
@@ -100,7 +101,7 @@ fun void reset() {
     GG.scene().skyboxEnabled(false);
 
     // reset FX
-    // GG.renderPass().removeNext();
+    GG.fx().removeNext();
 
     // reset default light
     GG.scene().light() @=> GLight light;

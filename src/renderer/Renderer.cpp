@@ -2,6 +2,7 @@
 #include "Shader.h"
 #include "ShaderCode.h"
 #include "VertexArray.h"
+#include "Font.h"
 
 #include "scenegraph/Geometry.h"
 #include "scenegraph/Light.h"
@@ -405,8 +406,9 @@ void Renderer::BuildFramebuffer(unsigned int width, unsigned int height) {
 	// We can cover the entire screen with a single triangle
 	// requires only 3 vertices instead of 6, and prevents redundant fragment processing
 	// along pixels that would bridge the edge between two triangles in a quad
-	// See the link below for more info
+	// See the links below for more info
 	// https://catlikecoding.com/unity/tutorials/custom-srp/post-processing/
+	// https://wallisc.github.io/rendering/2021/04/18/Fullscreen-Pass.html
 
 	float positions[] = {
 		-1.0f, 3.0f, 0.0f,   // top left
@@ -668,6 +670,62 @@ PostProcessEffect *Renderer::GetOrCreateEffect(size_t ID)
 	return newEffect;
 }
 
+Font* Renderer::GetOrCreateFont(const std::string &fontPath)
+{
+	if (fontPath.empty()) return nullptr;
+
+	// return cached font if it exists
+	if (m_Fonts.find(fontPath) != m_Fonts.end()) {
+		return m_Fonts[fontPath];
+	}	
+	
+	// try to load the font
+	std::string error;
+	FT_Face face = Font::loadFace(*m_FT, fontPath, error);
+	if (error != "") {
+		std::cerr << "[ChuGL::Font] failed to load " << fontPath << ": " << error << std::endl;
+		return nullptr;
+	}
+
+	// not found, create it
+	// TODO: hinting and worldsize currently unsupported
+	// what does changing worldsize do?
+	Font* newFont = new Font(face);
+
+	// cache it
+	m_Fonts[fontPath] = newFont;
+	return newFont;
+}
+
+RendererText *Renderer::GetOrCreateText(size_t ID)
+{
+	// return cached text if it exists
+	if (m_RendererTexts.find(ID) != m_RendererTexts.end()) {
+		return m_RendererTexts[ID];
+	}
+
+	// lookup text in scenegraph
+	auto* chugl_text = dynamic_cast<CHGL_Text*>(m_RenderState.GetScene()->GetNode(ID));
+	if (!chugl_text) return nullptr;
+
+	// not found, create it
+	RendererText* newText = new RendererText(chugl_text);
+
+	// cache it
+	m_RendererTexts[ID] = newText;
+	return newText;
+}
+
+bool Renderer::DeleteText(size_t ID)
+{
+	if (m_RendererTexts.find(ID) != m_RendererTexts.end()) {
+		delete m_RendererTexts[ID];
+		m_RendererTexts.erase(ID);
+		return true;
+	}
+	return false;
+}
+
 void Renderer::ProcessDeletionQueue(Scene *scene)
 {
 	auto& deletionQueue = scene->GetDeletionQueue();
@@ -684,7 +742,13 @@ void Renderer::ProcessDeletionQueue(Scene *scene)
 		// delete texture
 		if (DeleteTexture(id)) continue;
 
+		// delete text
+		if (DeleteText(id)) continue;
+
 		// TODO: delete PP effect
+
+		// a type that can't be deleted?
+		// ASSERT(false);
 	}
 
 	// clear queue
@@ -714,6 +778,9 @@ void Renderer::RenderScene(Scene* scene, Camera* camera)
 	m_RenderState.PrepareScene(scene);
 
 	OpaquePass();
+
+	// Text pass (assuming opaque + discard)
+	TextPass();
 
 	// draw skybox last to avoid overdraw
 	SkyboxPass();
@@ -767,6 +834,59 @@ void Renderer::SkyboxPass(int textureUnit)
 
 	// restore default depth func
 	glDepthFunc(GL_LESS);  
+}
+
+void Renderer::TextPass()
+{
+	// get default font from scene
+	auto* scene = m_RenderState.GetScene();
+
+	// early out if font library not initialized
+	if (!m_FT) return;
+
+	// get default font
+	auto* defaultFont = GetOrCreateFont(scene->GetDefaultFontPath());
+
+	// bind font shader
+	Shader* fontShader = RendererText::GetFontShader();
+	fontShader->Bind();
+
+	// last bound font (so we don't have to rebind font textures when font doesn't change)
+	Font* lastFont = nullptr;
+
+	// set shared uniforms
+	fontShader->setMat4f("u_View", m_RenderState.GetViewMat());
+	fontShader->setMat4f("u_Projection", m_RenderState.GetProjMat());
+
+	// set draw mode
+	GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
+
+	for (auto* text: m_RenderState.GetTexts()) {
+		// // TODO: access cached world matrix here
+		// RenderMesh(mesh, mesh->GetWorldMatrix());
+
+		// if empty string do nothing
+		if (text->GetText().empty()) continue;
+
+		// if no default font AND no font specified, do nothing
+		if (!defaultFont && text->GetFontPath().empty()) continue;
+
+		// get specified font, default to default font if not specified
+		auto* font = text->GetFontPath().empty() ? defaultFont : GetOrCreateFont(text->GetFontPath());
+
+		// set textures if new font
+		if (font != lastFont) {
+			font->BindTextures(fontShader);
+			lastFont = font;
+		}
+
+		
+		// get renderer font impl
+		RendererText* rendererText = GetOrCreateText(text->GetID());
+
+		// draw, what could go wrong
+		rendererText->Draw(font);
+	}
 }
 
 // deprecating this function for now, bc we want different materials of the 

@@ -48,7 +48,9 @@ public:
 		// skybox
 		skyboxEnabled(false),
 		// post processing
-		m_RootEffectID(0)   // base pp effect
+		m_RootEffectID(0),   // base pp effect
+		// fonts
+		m_DefaultFontPath("")
 	{}
 	virtual ~Scene() {}
 	virtual bool IsScene() override { return true; }
@@ -156,6 +158,12 @@ private: // post processing
 public:
 	PP::Effect* GetRootEffect() { return (PP::Effect*)GetNode(m_RootEffectID); }
 	void SetRootEffect(size_t id) { m_RootEffectID = id; }
+
+private: // fonts
+	std::string m_DefaultFontPath;
+public:
+	const std::string& GetDefaultFontPath() { return m_DefaultFontPath; }
+	void SetDefaultFontPath(const std::string& path) { m_DefaultFontPath = path; }
 
 public: // background color ie clear color
 	glm::vec3 m_BackgroundColor;

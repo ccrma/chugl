@@ -494,7 +494,7 @@ CK_DLL_MFUN(chugl_pp_monochrome_set_mix)
 CK_DLL_MFUN(chugl_pp_monochrome_get_color)
 {
     MonoChromeEffect* effect = (MonoChromeEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
-    auto& color = effect->GetColor();
+    auto color = effect->GetColor();
     RETURN->v_vec3 = {color.r, color.g, color.b};
 }
 

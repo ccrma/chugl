@@ -21,6 +21,9 @@
 class Shader;
 class Geometry;
 class Renderer;
+class Font;
+class RendererText;
+class CHGL_Text;
 
 namespace PP { class Effect; }
 
@@ -148,7 +151,8 @@ public: // constructor
 	m_ScreenVA(nullptr), m_ScreenPositionsVB(nullptr), m_ScreenTexCoordsVB(nullptr),
 	m_SkyboxVA(nullptr), m_SkyboxVB(nullptr), m_SkyboxShader(nullptr),
 	m_FrameBufferPing(nullptr), m_FrameBufferPong(nullptr), m_SceneFrameBufferMS(nullptr),
-	m_ViewportWidth(0), m_ViewportHeight(0)
+	m_ViewportWidth(0), m_ViewportHeight(0), 
+	m_FT(nullptr)
 	{
 		// TODO: initialize this after window is created 
 		// and openGL context is initialized.
@@ -157,6 +161,11 @@ public: // constructor
 
 	// friend class
 	friend class RendererState;
+
+private: // text rendering
+	FT_Library* m_FT;
+public:
+	void SetFTLibrary(FT_Library* ft) { m_FT = ft; }
 
 public:  // framebuffer setup
 	FrameBuffer* m_SceneFrameBufferMS;  // multisampled framebuffer for scene rendering
@@ -243,6 +252,8 @@ public:
 		// reenable depth writes
 		glDepthMask(GL_TRUE);
 	}
+
+	void TextPass();
 
 	void RenderNodeAndChildren(SceneGraphObject* sgo) {
 		// TODO add matrix caching
@@ -382,6 +393,9 @@ public:
 
 	PostProcessEffect* GetOrCreateEffect(size_t ID);
 
+	Font* GetOrCreateFont(const std::string& fontPath);
+	RendererText* GetOrCreateText(size_t ID); 
+
 	// deprecating for now
 	// sharing shaders between materials requires Materials to know how to unset uniforms/attributes
 	// TODO: come back to this when trying to implement batching, how to accomodate uniforms...
@@ -418,6 +432,8 @@ public:  // memory management
 		return false;
 	}
 
+	bool DeleteText(size_t ID);
+
 	void ProcessDeletionQueue(Scene* scene);
 
 
@@ -431,6 +447,10 @@ private:  // private member vars
 	std::unordered_map<size_t, Texture*> m_Textures;
 	std::unordered_map<size_t, PostProcessEffect*> m_Effects;
 
+	// font cache
+	std::unordered_map<std::string, Font*> m_Fonts;
+	// GText cache
+	std::unordered_map<size_t, RendererText*> m_RendererTexts;
 
 	// viewport sizes
 	unsigned int m_ViewportWidth, m_ViewportHeight;

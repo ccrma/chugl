@@ -22,7 +22,8 @@ Manager::CkTypeMap Manager::s_CkTypeMap = {
     {Type::Checkbox, "UI_Checkbox"},
     {Type::Color3, "UI_Color3"},
     {Type::Dropdown, "UI_Dropdown"},
-    {Type::Text, "UI_Text"}
+    {Type::Text, "UI_Text"},
+    {Type::InputText, "UI_InputText"}
 };
 
 void Manager::DrawGUI()
@@ -147,7 +148,20 @@ t_CKBOOL init_chugl_gui_slider_int(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_gui_color3(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_gui_dropdown(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_gui_text(Chuck_DL_Query *QUERY);
+t_CKBOOL init_chugl_gui_input_text(Chuck_DL_Query *QUERY);
 
+//-----------------------------------------------------------------------------
+// InputText 
+//-----------------------------------------------------------------------------
+CK_DLL_CTOR( chugl_gui_input_text_ctor );
+CK_DLL_MFUN( chugl_gui_input_text_val_get );
+CK_DLL_MFUN( chugl_gui_input_text_val_set );
+CK_DLL_MFUN( chugl_gui_input_text_is_multiline_get );
+CK_DLL_MFUN( chugl_gui_input_text_is_multiline_set );
+CK_DLL_MFUN( chugl_gui_input_text_multiline_size_get );
+CK_DLL_MFUN( chugl_gui_input_text_multiline_size_set );
+CK_DLL_MFUN( chugl_gui_input_text_broadcast_on_enter_get );
+CK_DLL_MFUN( chugl_gui_input_text_broadcast_on_enter_set );
 
 
 t_CKBOOL init_chugl_gui(Chuck_DL_Query *QUERY)
@@ -172,6 +186,7 @@ t_CKBOOL init_chugl_gui(Chuck_DL_Query *QUERY)
     if (!init_chugl_gui_color3(QUERY)) return FALSE;
     if (!init_chugl_gui_dropdown(QUERY)) return FALSE;
     if (!init_chugl_gui_text(QUERY)) return FALSE;
+    if (!init_chugl_gui_input_text(QUERY)) return FALSE;
 
     return TRUE;
 }
@@ -825,4 +840,128 @@ CK_DLL_MFUN( chugl_gui_text_mode_set )
     t_CKINT mode = GET_NEXT_INT(ARGS);
     text->SetMode( static_cast<Text::Mode>(mode) );
     RETURN->v_int = mode;
+}
+
+//-----------------------------------------------------------------------------
+// name: init_chugl_gui_input_text()
+// desc: Text input field
+//-----------------------------------------------------------------------------
+t_CKBOOL init_chugl_gui_input_text(Chuck_DL_Query *QUERY)
+{
+    QUERY->begin_class(QUERY, Manager::GetCkName(Type::InputText), Manager::GetCkName(Type::Element));
+	QUERY->doc_class(QUERY, 
+        "Input Text widget"
+        "Get user text input"
+        "Supports options such as multi-line mode, and whether to broadcast on every edit or only on <enter>"
+    );
+    QUERY->add_ex(QUERY, "basic/gtext.ck");
+
+    QUERY->add_ctor(QUERY, chugl_gui_input_text_ctor);
+
+    QUERY->add_mfun(QUERY, chugl_gui_input_text_val_get, "string", "input");
+    QUERY->doc_func(QUERY, "Get the current input to the text box");
+
+    QUERY->add_mfun(QUERY, chugl_gui_input_text_val_set, "string", "input");
+    QUERY->add_arg( QUERY, "string", "text");
+    QUERY->doc_func(QUERY, "Set the current input to the text box");
+
+    QUERY->add_mfun(QUERY, chugl_gui_input_text_is_multiline_get, "int", "multiline");
+    QUERY->doc_func(QUERY, "Get whether the text box is in multi-line mode");
+
+    QUERY->add_mfun(QUERY, chugl_gui_input_text_is_multiline_set, "int", "multiline");
+    QUERY->add_arg( QUERY, "int", "multiline");
+    QUERY->doc_func(QUERY, 
+        "If true, sets the input field to multi-line mode. Else sets it to single-line mode"
+        "In multi-line mode you can set the size of the input box with .size()"
+        "In multi-line mode, <enter> will insert a newline, while <ctrl+enter> will broadcast this UI event if broadcastOnEnter() is set"
+    );
+
+    QUERY->add_mfun(QUERY, chugl_gui_input_text_multiline_size_get, "vec2", "size");
+    QUERY->doc_func(QUERY, "Get the size of the input box in multi-line mode");
+
+    QUERY->add_mfun(QUERY, chugl_gui_input_text_multiline_size_set, "vec2", "size");
+    QUERY->add_arg( QUERY, "vec2", "size");
+    QUERY->doc_func(QUERY, 
+        "Set the size of the input box in multi-line mode."
+        "Values are in the units of font height in pixels"
+        "Setting the x-dimension <= 0 will set the width to the window width"
+        "The y-dimension defaults to 16 * fontHeight"
+        "Settings the y-dmension <= 0 will set the height to the window height"
+    );
+
+    QUERY->add_mfun(QUERY, chugl_gui_input_text_broadcast_on_enter_get, "int", "broadcastOnEnter");
+    QUERY->doc_func(QUERY, "Get whether the text box broadcasts on every edit or only on <enter>");
+
+    QUERY->add_mfun(QUERY, chugl_gui_input_text_broadcast_on_enter_set, "int", "broadcastOnEnter");
+    QUERY->add_arg( QUERY, "int", "broadcastOnEnter");
+    QUERY->doc_func(QUERY, 
+        "If true, sets the input field to broadcast on every edit. Else sets it to broadcast only on <enter>"
+        "In multi-line mode, <enter> will insert a newline, while <ctrl+enter> will broadcast this UI event if broadcastOnEnter() is set"
+    );
+
+    QUERY->end_class(QUERY);
+
+    return TRUE;
+}
+
+
+CK_DLL_CTOR( chugl_gui_input_text_ctor )
+{
+    OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset()) = (t_CKINT) new InputText(SELF);
+}
+CK_DLL_MFUN( chugl_gui_input_text_val_get )
+{
+    InputText* input_text = (InputText*) OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
+    RETURN->v_string = (Chuck_String*)API->object->create_string(VM, input_text->GetData().c_str(), false);
+}
+
+CK_DLL_MFUN( chugl_gui_input_text_val_set )
+{
+    InputText* input_text = (InputText*) OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
+    Chuck_String * s = GET_NEXT_STRING(ARGS);
+    input_text->SetData( API->object->str(s) );
+    RETURN->v_string = s;
+}
+
+CK_DLL_MFUN( chugl_gui_input_text_is_multiline_get )
+{
+    InputText* input_text = (InputText*) OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
+    RETURN->v_int = input_text->GetMultiLine() ? 1 : 0;
+}
+
+CK_DLL_MFUN( chugl_gui_input_text_is_multiline_set )
+{
+    InputText* input_text = (InputText*) OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
+    t_CKINT multiline = GET_NEXT_INT(ARGS);
+    input_text->SetMultiLine( multiline ? true : false );
+    RETURN->v_int = multiline;
+}
+
+CK_DLL_MFUN( chugl_gui_input_text_multiline_size_get )
+{
+    InputText* input_text = (InputText*) OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
+    glm::vec2 size = input_text->GetMultiLineInputSize();
+    RETURN->v_vec2 = {size.x, size.y};
+}
+
+CK_DLL_MFUN( chugl_gui_input_text_multiline_size_set )
+{
+    InputText* input_text = (InputText*) OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
+    t_CKVEC2 size = GET_NEXT_VEC2(ARGS);
+    input_text->SetMultiLineInputSize( {size.x, size.y} );
+    RETURN->v_vec2 = size;
+}
+
+CK_DLL_MFUN( chugl_gui_input_text_broadcast_on_enter_get )
+{
+    InputText* input_text = (InputText*) OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
+    RETURN->v_int = input_text->GetBroadcastOnEnter() ? 1 : 0;
+}
+
+CK_DLL_MFUN( chugl_gui_input_text_broadcast_on_enter_set )
+{
+    InputText* input_text = (InputText*) OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
+    t_CKINT broadcast_on_enter = GET_NEXT_INT(ARGS);
+    input_text->SetBroadcastOnEnter( broadcast_on_enter ? true : false );
+    RETURN->v_int = broadcast_on_enter;
 }
