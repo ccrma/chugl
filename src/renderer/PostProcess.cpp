@@ -12,6 +12,7 @@ PostProcessEffect* PostProcessEffect::Create(PP::Effect* chugl_effect, unsigned 
 	std::string screenShaderFrag;
 
 	// get fragment shader code based on pp type
+    PP::CustomEffect* customEffect;
 	switch (chugl_effect->GetType()) {
 	case PP::Type::Base:
 		throw std::runtime_error("Cannot create PostProcessEffect from base class");
@@ -42,6 +43,17 @@ PostProcessEffect* PostProcessEffect::Create(PP::Effect* chugl_effect, unsigned 
 	case PP::Type::Bloom:
 		return new BloomEffect(chugl_effect, viewportWidth, viewportHeight);
 		break;
+    case PP::Type::Custom:
+        customEffect = dynamic_cast<PP::CustomEffect*>(chugl_effect);
+        return new BasicEffect(
+            customEffect,
+            new Shader(
+                screenShaderVert, 
+                // default to pass through if no shader code is provided
+                customEffect->GetScreenShader().empty() ? ShaderCode::PP_PASS_THROUGH  : customEffect->GetScreenShader(), 
+                false, customEffect->IsPath()
+            )
+        );
 	default:
 		throw std::runtime_error("Unknown PP::Type");
 	}

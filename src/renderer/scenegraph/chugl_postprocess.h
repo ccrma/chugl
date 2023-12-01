@@ -40,6 +40,7 @@ public:
         return m_Uniforms.find(name) != m_Uniforms.end();
     }
     void SetUniform(const MaterialUniform& uniform);
+    void ClearUniforms() { m_Uniforms.clear(); }
 
     // bypass
     bool GetBypass() { return m_Bypass; }
@@ -122,21 +123,26 @@ class CustomEffect : public Effect
 private:
     std::string m_ScreenShaderString;
     bool m_IsPath;
-    bool m_NeedsUpdate;
+    bool m_RebuildShader;
 public:
-    CustomEffect() : Effect(), m_ScreenShaderString(""), m_IsPath(true), m_NeedsUpdate(false) {};
+    CustomEffect() 
+        : Effect(), 
+        m_ScreenShaderString(""),  // default to passthrough shader 
+        m_IsPath(false), 
+        m_RebuildShader(false) 
+    {};
     virtual Type GetType() override { return Type::Custom; }
     virtual CustomEffect* Clone() override { return new CustomEffect(*this); }
 
     void SetScreenShader(const std::string& screenShaderString, bool isPath) { 
         m_ScreenShaderString = screenShaderString; 
         m_IsPath = isPath;
-        m_NeedsUpdate = true;
+        m_RebuildShader = true;
     }
     const std::string& GetScreenShader() { return m_ScreenShaderString; }
     bool IsPath() { return m_IsPath; }
-    bool NeedsUpdate() { return m_NeedsUpdate; }
-public:
+    bool GetRebuildShader() { return m_RebuildShader; }
+    void SetRebuildShader(bool rebuildShader) { m_RebuildShader = rebuildShader; }
 };
 
 // Output effect

@@ -65,6 +65,9 @@ struct MaterialUniform {
 	static MaterialUniform Create(std::string s, float f0, float f1) {
 		MaterialUniform m; m.type = UniformType::Float2; m.name = s; m.f2[0] = f0; m.f2[1] = f1; return m;
 	}
+	static MaterialUniform CreateFloat2(std::string s, float f0, float f1) {
+		MaterialUniform m; m.type = UniformType::Float2; m.name = s; m.f2[0] = f0; m.f2[1] = f1; return m;
+	}
 	static MaterialUniform Create(std::string s, float f0, float f1, float f2) {
 		MaterialUniform m; m.type = UniformType::Float3; m.name = s; m.f3[0] = f0; m.f3[1] = f1; m.f3[2] = f2; return m;
 	}
@@ -80,6 +83,9 @@ struct MaterialUniform {
 	static MaterialUniform Create(std::string s, float f0, float f1, float f2, float f3) {
 		MaterialUniform m; m.type = UniformType::Float4; m.name = s; m.f4[0] = f0; m.f4[1] = f1; m.f4[2] = f2; m.f4[3] = f3; return m;
 	}
+	static MaterialUniform CreateFloat4(std::string s, float f0, float f1, float f2, float f3) {
+		MaterialUniform m; m.type = UniformType::Float4; m.name = s; m.f4[0] = f0; m.f4[1] = f1; m.f4[2] = f2; m.f4[3] = f3; return m;
+	}
 	static MaterialUniform Create(std::string s, glm::vec4 v) {
 		MaterialUniform m; m.type = UniformType::Float4; m.name = s; m.f4[0] = v.x; m.f4[1] = v.y; m.f4[2] = v.z; m.f4[3] = v.w; return m;
 	}
@@ -92,10 +98,19 @@ struct MaterialUniform {
 	static MaterialUniform Create(std::string s, int i0, int i1) {
 		MaterialUniform m; m.type = UniformType::Int2; m.name = s; m.i2[0] = i0; m.i2[1] = i1; return m;
 	}
+	static MaterialUniform CreateInt2(std::string s, int i0, int i1) {
+		MaterialUniform m; m.type = UniformType::Int2; m.name = s; m.i2[0] = i0; m.i2[1] = i1; return m;
+	}
 	static MaterialUniform Create(std::string s, int i0, int i1, int i2) {
 		MaterialUniform m; m.type = UniformType::Int3; m.name = s; m.i3[0] = i0; m.i3[1] = i1; m.i3[2] = i2; return m;
 	}
+	static MaterialUniform CreateInt3(std::string s, int i0, int i1, int i2) {
+		MaterialUniform m; m.type = UniformType::Int3; m.name = s; m.i3[0] = i0; m.i3[1] = i1; m.i3[2] = i2; return m;
+	}
 	static MaterialUniform Create(std::string s, int i0, int i1, int i2, int i3) {
+		MaterialUniform m; m.type = UniformType::Int4; m.name = s; m.i4[0] = i0; m.i4[1] = i1; m.i4[2] = i2; m.i4[3] = i3; return m;
+	}
+	static MaterialUniform CreateInt4(std::string s, int i0, int i1, int i2, int i3) {
 		MaterialUniform m; m.type = UniformType::Int4; m.name = s; m.i4[0] = i0; m.i4[1] = i1; m.i4[2] = i2; m.i4[3] = i3; return m;
 	}
 	static MaterialUniform Create(std::string s, bool b0) {
@@ -105,6 +120,9 @@ struct MaterialUniform {
 		MaterialUniform m; m.type = UniformType::Bool; m.name = s; m.b = b0; return m;
 	}
 	static MaterialUniform Create(std::string s, size_t texID) {
+		MaterialUniform m; m.type = UniformType::Texture; m.name = s; m.texID = texID; return m;
+	}
+	static MaterialUniform CreateTexture(std::string s, size_t texID) {
 		MaterialUniform m; m.type = UniformType::Texture; m.name = s; m.texID = texID; return m;
 	}
 };

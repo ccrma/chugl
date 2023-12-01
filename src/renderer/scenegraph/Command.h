@@ -805,6 +805,27 @@ private:
     MaterialUniform m_Uniform;
 };
 
+class UpdateEffectCustomScreenShaderCommand : public SceneGraphCommand
+{
+public:
+    UpdateEffectCustomScreenShaderCommand(PP::CustomEffect* effect, const std::string& shaderString, bool isPath) 
+        : m_ID(effect->GetID()), m_ShaderString(shaderString), m_IsPath(isPath)
+    {
+        effect->SetScreenShader(shaderString, isPath);
+    }
+
+    virtual void execute(Scene* renderThreadScene) override {
+        PP::CustomEffect* effect = dynamic_cast<PP::CustomEffect*>(renderThreadScene->GetNode(m_ID));
+        assert(effect);
+
+        effect->SetScreenShader(m_ShaderString, m_IsPath);
+    }
+private:
+    size_t m_ID;
+    std::string m_ShaderString;
+    bool m_IsPath;
+};
+
 //========================= GText Commands =========================//
 
 class UpdateGTextCommand : public SceneGraphCommand

@@ -524,6 +524,10 @@ void Renderer::PostProcessPass()
 
 	while (chugl_effect) {
 		PostProcessEffect* effect = GetOrCreateEffect(chugl_effect->GetID());
+
+		// update shaders if necessary (only used rn by CustomEffect)
+		effect->Update();
+
 		// std::cout << "effect num: " << effectCount++ << std::endl;
 		// if last effect, unbind framebuffer
 		unsigned int writeFrameBufferID {0};

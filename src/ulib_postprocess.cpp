@@ -1,9 +1,10 @@
 #include "ulib_postprocess.h"
 #include "ulib_cgl.h"
-#include "ulib_gui.h"
+// #include "ulib_gui.h"
 #include "scenegraph/Command.h"
 #include "scenegraph/chugl_postprocess.h"
 #include "scenegraph/Locator.h"
+#include "scenegraph/CGL_Texture.h"
 
 using namespace PP;
 
@@ -60,10 +61,11 @@ CK_DLL_CTOR(chugl_pp_custom_ctor);
 
 // set screen shader path
 CK_DLL_MFUN(chugl_pp_custom_set_screen_shader_path);
-CK_DLL_MFUN(chugl_pp_custom_get_screen_shader_path);
 // set screen shader string
 CK_DLL_MFUN(chugl_pp_custom_set_screen_shader_string);
-CK_DLL_MFUN(chugl_pp_custom_get_screen_shader_string);
+// get shader string
+CK_DLL_MFUN(chugl_pp_custom_get_screen_shader);
+// set screen shader string
 
 // uniform setters
 CK_DLL_MFUN(chugl_pp_set_uniform_float);
@@ -82,12 +84,12 @@ CK_DLL_MFUN(chugl_pp_get_uniform_float);
 CK_DLL_MFUN(chugl_pp_get_uniform_float2);
 CK_DLL_MFUN(chugl_pp_get_uniform_float3);
 CK_DLL_MFUN(chugl_pp_get_uniform_float4);
-// CK_DLL_MFUN(chugl_pp_get_uniform_int);
-// CK_DLL_MFUN(chugl_pp_get_uniform_int2);
-// CK_DLL_MFUN(chugl_pp_get_uniform_int3);
-// CK_DLL_MFUN(chugl_pp_get_uniform_int4);
-// CK_DLL_MFUN(chugl_pp_get_uniform_bool);
-// CK_DLL_MFUN(chugl_pp_get_uniform_texID);
+CK_DLL_MFUN(chugl_pp_get_uniform_int);
+CK_DLL_MFUN(chugl_pp_get_uniform_int2);
+CK_DLL_MFUN(chugl_pp_get_uniform_int3);
+CK_DLL_MFUN(chugl_pp_get_uniform_int4);
+CK_DLL_MFUN(chugl_pp_get_uniform_bool);
+CK_DLL_MFUN(chugl_pp_get_uniform_texID);
 
 //-----------------------------------------------------------------------------
 // PP_Effect --> PP_Output
@@ -522,6 +524,7 @@ t_CKBOOL init_chugl_pp_custom(Chuck_DL_Query *QUERY)
     QUERY->doc_class(QUERY, 
         "Create a custom Post-Processing effect by supplying your own screen shader"
     );
+    QUERY->add_ex(QUERY, "fx/custom-fx.ck");
 
     QUERY->add_ctor(QUERY, chugl_pp_custom_ctor);
 
@@ -532,60 +535,90 @@ t_CKBOOL init_chugl_pp_custom(Chuck_DL_Query *QUERY)
         "The screen shader is a glsl fragment shader that will be applied to the input of the previous effect."
     );
 
-    QUERY->add_mfun(QUERY, chugl_pp_custom_get_screen_shader_path, "string", "shaderPath");
-    QUERY->doc_func(QUERY, "Get the path to the screen shader file.");
-
     QUERY->add_mfun(QUERY, chugl_pp_custom_set_screen_shader_string, "string", "shaderString");
     QUERY->add_arg(QUERY, "string", "shaderString");
     QUERY->doc_func(QUERY, 
         "Set the screen shader string."
     );
 
-    QUERY->add_mfun(QUERY, chugl_pp_custom_get_screen_shader_string, "string", "shaderString");
-    QUERY->doc_func(QUERY, "Get the screen shader string.");
+    QUERY->add_mfun(QUERY, chugl_pp_custom_get_screen_shader, "string", "shader");
+    QUERY->doc_func(QUERY, 
+        "Get the screen shader string, passed in via either shaderPath() or shaderString()"
+    );
 
     // uniform setters
-    QUERY->add_mfun(QUERY, chugl_pp_set_uniform_float, "float", "setFloat");
+
+    // calling setters "setXXXX" because "float()" keyword is reserved
+    QUERY->add_mfun(QUERY, chugl_pp_set_uniform_float, "void", "setFloat");
     QUERY->add_arg(QUERY, "string", "name");
     QUERY->add_arg(QUERY, "float", "value");
 
-    // QUERY->add_mfun(QUERY, chugl_pp_set_uniform_float2, "float", "setFloat2");
-    // QUERY->add_arg(QUERY, "string", "name");
-    // QUERY->add_arg(QUERY, "vec2", "float2");
+    QUERY->add_mfun(QUERY, chugl_pp_set_uniform_float2, "void", "setFloat2");
+    QUERY->add_arg(QUERY, "string", "name");
+    QUERY->add_arg(QUERY, "vec2", "float2");
 
-    // QUERY->add_mfun(QUERY, chugl_pp_set_uniform_float3, "float", "setFloat3");
-    // QUERY->add_arg(QUERY, "string", "name");
-    // QUERY->add_arg(QUERY, "vec3", "float3");
+    QUERY->add_mfun(QUERY, chugl_pp_set_uniform_float3, "void", "setFloat3");
+    QUERY->add_arg(QUERY, "string", "name");
+    QUERY->add_arg(QUERY, "vec3", "float3");
 
-    // QUERY->add_mfun(QUERY, chugl_pp_set_uniform_float4, "float", "setFloat4");
-    // QUERY->add_arg(QUERY, "string", "name");
-    // QUERY->add_arg(QUERY, "vec4", "float4");
+    QUERY->add_mfun(QUERY, chugl_pp_set_uniform_float4, "void", "setFloat4");
+    QUERY->add_arg(QUERY, "string", "name");
+    QUERY->add_arg(QUERY, "vec4", "float4");
+
+    QUERY->add_mfun(QUERY, chugl_pp_set_uniform_int, "void", "setInt");
+    QUERY->add_arg(QUERY, "string", "name");
+    QUERY->add_arg(QUERY, "int", "value");
+
+    QUERY->add_mfun(QUERY, chugl_pp_set_uniform_int2, "void", "setInt2");
+    QUERY->add_arg(QUERY, "string", "name");
+    QUERY->add_arg(QUERY, "vec2", "int2");
+
+    QUERY->add_mfun(QUERY, chugl_pp_set_uniform_int3, "void", "setInt3");
+    QUERY->add_arg(QUERY, "string", "name");
+    QUERY->add_arg(QUERY, "vec3", "int3");
+
+    QUERY->add_mfun(QUERY, chugl_pp_set_uniform_int4, "void", "setInt4");
+    QUERY->add_arg(QUERY, "string", "name");
+    QUERY->add_arg(QUERY, "vec4", "int4");
+
+    QUERY->add_mfun(QUERY, chugl_pp_set_uniform_bool, "void", "setBool");
+    QUERY->add_arg(QUERY, "string", "name");
+    QUERY->add_arg(QUERY, "int", "value");
+
+    QUERY->add_mfun(QUERY, chugl_pp_set_uniform_texID, "void", "setTexture");
+    QUERY->add_arg(QUERY, "string", "name");
+    QUERY->add_arg(QUERY, CGL_Texture::CKName(CGL_TextureType::Base), "texID");
 
     // uniform getters
     QUERY->add_mfun(QUERY, chugl_pp_get_uniform_float, "float", "getFloat");
     QUERY->add_arg(QUERY, "string", "name");
 
-    // QUERY->add_mfun(QUERY, chugl_pp_get_uniform_float2, "vec2", "getFloat2");
-    // QUERY->add_arg(QUERY, "string", "name");
+    QUERY->add_mfun(QUERY, chugl_pp_get_uniform_float2, "vec2", "getFloat2");
+    QUERY->add_arg(QUERY, "string", "name");
 
-    // QUERY->add_mfun(QUERY, chugl_pp_get_uniform_float3, "vec3", "getFloat3");
-    // QUERY->add_arg(QUERY, "string", "name");
+    QUERY->add_mfun(QUERY, chugl_pp_get_uniform_float3, "vec3", "getFloat3");
+    QUERY->add_arg(QUERY, "string", "name");
 
-    // QUERY->add_mfun(QUERY, chugl_pp_get_uniform_float4, "vec4", "getFloat4");
-    // QUERY->add_arg(QUERY, "string", "name");
+    QUERY->add_mfun(QUERY, chugl_pp_get_uniform_float4, "vec4", "getFloat4");
+    QUERY->add_arg(QUERY, "string", "name");
 
+    QUERY->add_mfun(QUERY, chugl_pp_get_uniform_int, "int", "getInt");
+    QUERY->add_arg(QUERY, "string", "name");
 
+    QUERY->add_mfun(QUERY, chugl_pp_get_uniform_int2, "vec2", "getInt2");
+    QUERY->add_arg(QUERY, "string", "name");
 
-// CK_DLL_MFUN(chugl_pp_set_uniform_float);
-// CK_DLL_MFUN(chugl_pp_set_uniform_float2);
-// CK_DLL_MFUN(chugl_pp_set_uniform_float3);
-// CK_DLL_MFUN(chugl_pp_set_uniform_float4);
-// CK_DLL_MFUN(chugl_pp_set_uniform_int);
-// CK_DLL_MFUN(chugl_pp_set_uniform_int2);
-// CK_DLL_MFUN(chugl_pp_set_uniform_int3);
-// CK_DLL_MFUN(chugl_pp_set_uniform_int4);
-// CK_DLL_MFUN(chugl_pp_set_uniform_bool);
-// CK_DLL_MFUN(chugl_pp_set_uniform_texID);
+    QUERY->add_mfun(QUERY, chugl_pp_get_uniform_int3, "vec3", "getInt3");
+    QUERY->add_arg(QUERY, "string", "name");
+
+    QUERY->add_mfun(QUERY, chugl_pp_get_uniform_int4, "vec4", "getInt4");
+    QUERY->add_arg(QUERY, "string", "name");
+
+    QUERY->add_mfun(QUERY, chugl_pp_get_uniform_bool, "int", "getBool");
+    QUERY->add_arg(QUERY, "string", "name");
+
+    QUERY->add_mfun(QUERY, chugl_pp_get_uniform_texID, CGL_Texture::CKName(CGL_TextureType::Base), "getTexture");
+    QUERY->add_arg(QUERY, "string", "name");
 
     QUERY->end_class(QUERY);
 
@@ -605,23 +638,32 @@ CK_DLL_CTOR(chugl_pp_custom_ctor)
 CK_DLL_MFUN(chugl_pp_custom_set_screen_shader_path)
 {
     CustomEffect* effect = (CustomEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
-    std::string name = API->object->str(GET_NEXT_STRING(ARGS));
+    std::string shaderString= API->object->str(GET_NEXT_STRING(ARGS));
+
+    CGL::PushCommand(
+        new UpdateEffectCustomScreenShaderCommand(
+            effect, shaderString, true
+        )
+    );
 }
 
-CK_DLL_MFUN(chugl_pp_custom_get_screen_shader_path)
+CK_DLL_MFUN(chugl_pp_custom_get_screen_shader)
 {
-
+    CustomEffect* effect = (CustomEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    RETURN->v_string = API->object->create_string(VM, effect->GetScreenShader().c_str(), false);
 }
 
 // set screen shader string
 CK_DLL_MFUN(chugl_pp_custom_set_screen_shader_string)
 {
+    CustomEffect* effect = (CustomEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    std::string shaderString= API->object->str(GET_NEXT_STRING(ARGS));
 
-}
-
-CK_DLL_MFUN(chugl_pp_custom_get_screen_shader_string)
-{
-
+    CGL::PushCommand(
+        new UpdateEffectCustomScreenShaderCommand(
+            effect, shaderString, false
+        )
+    );
 }
 
 CK_DLL_MFUN(chugl_pp_set_uniform_float)
@@ -636,6 +678,132 @@ CK_DLL_MFUN(chugl_pp_set_uniform_float)
         )
     );
 }
+
+CK_DLL_MFUN(chugl_pp_set_uniform_float2)
+{
+    CustomEffect* effect = (CustomEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    std::string name = API->object->str(GET_NEXT_STRING(ARGS));
+    t_CKVEC2 value = GET_NEXT_VEC2(ARGS);
+
+    CGL::PushCommand(
+        new UpdateEffectUniformCommand(
+            effect, MaterialUniform::CreateFloat2(name, value.x, value.y)
+        )
+    );
+}
+
+CK_DLL_MFUN(chugl_pp_set_uniform_float3)
+{
+    CustomEffect* effect = (CustomEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    std::string name = API->object->str(GET_NEXT_STRING(ARGS));
+    t_CKVEC3 value = GET_NEXT_VEC3(ARGS);
+
+    CGL::PushCommand(
+        new UpdateEffectUniformCommand(
+            effect, MaterialUniform::CreateFloat3(name, value.x, value.y, value.z)
+        )
+    );
+}
+
+CK_DLL_MFUN(chugl_pp_set_uniform_float4)
+{
+    CustomEffect* effect = (CustomEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    std::string name = API->object->str(GET_NEXT_STRING(ARGS));
+    t_CKVEC4 value = GET_NEXT_VEC4(ARGS);
+
+    CGL::PushCommand(
+        new UpdateEffectUniformCommand(
+            effect, MaterialUniform::CreateFloat4(name, value.x, value.y, value.z, value.w)
+        )
+    );
+}
+
+CK_DLL_MFUN(chugl_pp_set_uniform_int)
+{
+    CustomEffect* effect = (CustomEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    std::string name = API->object->str(GET_NEXT_STRING(ARGS));
+    int value = GET_NEXT_INT(ARGS);
+
+    CGL::PushCommand(
+        new UpdateEffectUniformCommand(
+            effect, MaterialUniform::CreateInt(name, value)
+        )
+    );
+}
+
+CK_DLL_MFUN(chugl_pp_set_uniform_int2)
+{
+    CustomEffect* effect = (CustomEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    std::string name = API->object->str(GET_NEXT_STRING(ARGS));
+    t_CKVEC2 value = GET_NEXT_VEC2(ARGS);
+
+    CGL::PushCommand(
+        new UpdateEffectUniformCommand(
+            effect, MaterialUniform::CreateInt2(name, value.x, value.y)
+        )
+    );
+}
+
+CK_DLL_MFUN(chugl_pp_set_uniform_int3)
+{
+    CustomEffect* effect = (CustomEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    std::string name = API->object->str(GET_NEXT_STRING(ARGS));
+    t_CKVEC3 value = GET_NEXT_VEC3(ARGS);
+
+    CGL::PushCommand(
+        new UpdateEffectUniformCommand(
+            effect, MaterialUniform::CreateInt3(name, value.x, value.y, value.z)
+        )
+    );
+}
+
+CK_DLL_MFUN(chugl_pp_set_uniform_int4)
+{
+    CustomEffect* effect = (CustomEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    std::string name = API->object->str(GET_NEXT_STRING(ARGS));
+    t_CKVEC4 value = GET_NEXT_VEC4(ARGS);
+
+    CGL::PushCommand(
+        new UpdateEffectUniformCommand(
+            effect, MaterialUniform::CreateInt4(name, value.x, value.y, value.z, value.w)
+        )
+    );
+}
+
+CK_DLL_MFUN(chugl_pp_set_uniform_bool)
+{
+    CustomEffect* effect = (CustomEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    std::string name = API->object->str(GET_NEXT_STRING(ARGS));
+    int value = GET_NEXT_INT(ARGS);
+
+    CGL::PushCommand(
+        new UpdateEffectUniformCommand(
+            effect, MaterialUniform::CreateBool(name, value)
+        )
+    );
+}
+
+CK_DLL_MFUN(chugl_pp_set_uniform_texID)
+{
+    CustomEffect* effect = (CustomEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
+    std::string name = API->object->str(GET_NEXT_STRING(ARGS));
+    CGL_Texture* tex = CGL::GetTexture(GET_NEXT_OBJECT(ARGS));
+
+    if (!tex) {
+        std::string errMsg = "Texture not found: " + name;
+        API->vm->throw_exception(
+            "CustomFXTextureNotFound", errMsg.c_str(), SHRED
+        );
+        return;
+    }
+
+    CGL::PushCommand(
+        new UpdateEffectUniformCommand(
+            effect, MaterialUniform::CreateTexture(name, tex->GetID())
+        )
+    );
+}
+
 
 static bool IsUniformDefined(CustomEffect* effect, std::string name, CK_DL_API API, Chuck_VM_Shred* SHRED)
 {
@@ -657,7 +825,13 @@ static void GetUniform(
     CustomEffect* effect = (CustomEffect*) OBJ_MEMBER_INT(SELF, CGL::GetPPEffectDataOffset());
     std::string name = API->object->str(GET_NEXT_STRING(ARGS));
 
-    if (!IsUniformDefined(effect, name, API, SHRED)) return;
+    if (!IsUniformDefined(effect, name, API, SHRED)) {
+        std::string errMsg = "Uniform not defined: " + name;
+        API->vm->throw_exception(
+            "CustomFXUniformUndefined", errMsg.c_str(), SHRED
+        );
+        return;
+    }
 
     auto& uniform = effect->GetUniform(name);
 
@@ -675,16 +849,22 @@ static void GetUniform(
         RETURN->v_float = uniform.f;
         return;
     case UniformType::Float2:
-    case UniformType::Int2:
         RETURN->v_vec2 = {uniform.f2[0], uniform.f2[1]};
         return;
+    case UniformType::Int2:
+        RETURN->v_vec2 = {1.0 * uniform.i2[0], 1.0 * uniform.i2[1]};
+        return;
     case UniformType::Float3:
-    case UniformType::Int3:
         RETURN->v_vec3 = {uniform.f3[0], uniform.f3[1], uniform.f3[2]};
         return;
+    case UniformType::Int3:
+        RETURN->v_vec3 = {1.0 * uniform.i3[0], 1.0 * uniform.i3[1], 1.0 * uniform.i3[2]};
+        return;
     case UniformType::Float4:
-    case UniformType::Int4:
         RETURN->v_vec4 = {uniform.f4[0], uniform.f4[1], uniform.f4[2], uniform.f4[3]};
+        return;
+    case UniformType::Int4:
+        RETURN->v_vec4 = {1.0 * uniform.i4[0], 1.0 * uniform.i4[1], 1.0 * uniform.i4[2], 1.0 * uniform.i4[3]};
         return;
     case UniformType::Int:
         RETURN->v_int = uniform.i;
@@ -693,9 +873,8 @@ static void GetUniform(
         RETURN->v_int = uniform.b ? 1 : 0;
         return;
     case UniformType::Texture:
-        API->vm->throw_exception(
-            "CustomFXTextureNotImplemented", "Texture support not added yet to CustomFX", SHRED
-        );
+        // get chuck object from texture id
+        RETURN->v_object = Locator::GetNode(uniform.texID, true) ? Locator::GetNode(uniform.texID, true)->m_ChuckObject : nullptr;
         return;
     default:
         API->vm->throw_exception(
@@ -706,6 +885,16 @@ static void GetUniform(
 }
 
 CK_DLL_MFUN(chugl_pp_get_uniform_float) { GetUniform(SELF, ARGS, RETURN, VM, SHRED, API, UniformType::Float); }
+CK_DLL_MFUN(chugl_pp_get_uniform_float2) { GetUniform(SELF, ARGS, RETURN, VM, SHRED, API, UniformType::Float2); }
+CK_DLL_MFUN(chugl_pp_get_uniform_float3) { GetUniform(SELF, ARGS, RETURN, VM, SHRED, API, UniformType::Float3); }
+CK_DLL_MFUN(chugl_pp_get_uniform_float4) { GetUniform(SELF, ARGS, RETURN, VM, SHRED, API, UniformType::Float4); }
+CK_DLL_MFUN(chugl_pp_get_uniform_int) { GetUniform(SELF, ARGS, RETURN, VM, SHRED, API, UniformType::Int); }
+CK_DLL_MFUN(chugl_pp_get_uniform_int2) { GetUniform(SELF, ARGS, RETURN, VM, SHRED, API, UniformType::Int2); }
+CK_DLL_MFUN(chugl_pp_get_uniform_int3) { GetUniform(SELF, ARGS, RETURN, VM, SHRED, API, UniformType::Int3); }
+CK_DLL_MFUN(chugl_pp_get_uniform_int4) { GetUniform(SELF, ARGS, RETURN, VM, SHRED, API, UniformType::Int4); }
+CK_DLL_MFUN(chugl_pp_get_uniform_bool) { GetUniform(SELF, ARGS, RETURN, VM, SHRED, API, UniformType::Bool); }
+CK_DLL_MFUN(chugl_pp_get_uniform_texID) { GetUniform(SELF, ARGS, RETURN, VM, SHRED, API, UniformType::Texture); }
+
 
 //-----------------------------------------------------------------------------
 // Output
@@ -875,6 +1064,7 @@ t_CKBOOL init_chugl_pp_bloom(Chuck_DL_Query *QUERY)
         "Physically-based Bloom effect. Combines input texture with a blurred version of itself to create a glow effect."
         "Recommended to use with Output effect, for gamma correction and tone mapping."
     );
+    QUERY->add_ex(QUERY, "fx/bloom.ck");
 
     QUERY->add_ctor(QUERY, chugl_pp_bloom_ctor);
 

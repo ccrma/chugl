@@ -95,8 +95,16 @@ enum class Type : t_CKUINT
     Element = 0,
     Window,
     Button,
+    FloatSliderBase,
     FloatSlider,
+    FloatSlider2,
+    FloatSlider3,
+    FloatSlider4,
+    IntSliderBase,
     IntSlider,
+    IntSlider2,
+    IntSlider3,
+    IntSlider4,
     Checkbox,
     Color3,
     Dropdown,
@@ -294,19 +302,55 @@ class FloatSlider : public Element
 public:
     FloatSlider(
         Chuck_Object* event,
+        unsigned int N = 1,
         float min = 0.0f,
         float max = 1.0f,
         float power = 1.0f
-    ) : Element(event), m_Min(min), m_Max(max), m_Power(power), m_ReadData(min), m_WriteData(min) {
+    ) : Element(event), m_Min(min), m_Max(max), m_Power(power), m_NumSliders(N) {
+        assert(N >= 1 && N <= 4);
+        m_ReadData.resize(N, min);
+        m_WriteData.resize(N, min);
     }
 
-    virtual Type GetType() override { return Type::FloatSlider; }
+    virtual Type GetType() override { 
+        switch (m_NumSliders) {
+        case 1:
+            return Type::FloatSlider;
+        case 2:
+            return Type::FloatSlider2;
+        case 3:
+            return Type::FloatSlider3;
+        case 4:
+            return Type::FloatSlider4;
+        default:
+            throw std::runtime_error("Unsupported slider size");
+        }
+    }
 
     virtual void Draw() override {
-        if (ImGui::SliderFloat(m_Label.c_str(), &m_WriteData, m_Min, m_Max, "%.3f", m_Power)) {
+        // use template int to select which slider Float, Float2, Float3, Float4
+        bool changed = false;
+        switch (m_NumSliders) {
+        case 1:
+            changed = ImGui::SliderFloat(m_Label.c_str(), &m_WriteData[0], m_Min, m_Max, "%.3f", m_Power);
+            break;
+        case 2:
+            changed = ImGui::SliderFloat2(m_Label.c_str(), &m_WriteData[0], m_Min, m_Max, "%.3f", m_Power);
+            break;
+        case 3:
+            changed = ImGui::SliderFloat3(m_Label.c_str(), &m_WriteData[0], m_Min, m_Max, "%.3f", m_Power);
+            break;
+        case 4:
+            changed = ImGui::SliderFloat4(m_Label.c_str(), &m_WriteData[0], m_Min, m_Max, "%.3f", m_Power);
+            break;
+        default:
+            throw std::runtime_error("Unsupported slider size");
+        }
+
+        if (changed) {
             // lock
             std::unique_lock<std::mutex> lock(m_ReadDataLock);
-            // copy
+            // copy vectors
             m_ReadData = m_WriteData;
             // unlock
             lock.unlock();
@@ -315,20 +359,23 @@ public:
         }
     }
 
-    float GetData() {
+    const std::vector<float>& GetData() {
         // lock
         std::lock_guard<std::mutex> lock(m_ReadDataLock);
         // return
         return m_ReadData;
     }
 
-    void SetData(float data) {
+    // data is pointer to float array
+    void SetData(const std::vector<t_CKFLOAT>& data) {
         // lock
         std::lock_guard<std::mutex> lock(Manager::GetWindowLock());
-        // set with bounds check
-        m_WriteData = glm::clamp(data, m_Min, m_Max);
-        // copy to read data
-        m_ReadData = m_WriteData;
+        for (int i = 0; i < m_NumSliders; i++) {
+            // set with bounds check
+            m_WriteData[i] = glm::clamp(static_cast<float>(data[i]), m_Min, m_Max);
+            // copy to read data
+            m_ReadData[i] = m_WriteData[i];
+        }
     }
 
     float GetMin() { return m_Min; }
@@ -356,8 +403,9 @@ private:
     float m_Min;
     float m_Max;
     float m_Power;
-    float m_ReadData;
-    float m_WriteData;
+    std::vector<float> m_ReadData;
+    std::vector<float> m_WriteData;
+    const unsigned int m_NumSliders;
 };
 
 class IntSlider : public Element
@@ -365,15 +413,49 @@ class IntSlider : public Element
 public:
     IntSlider(
         Chuck_Object* event,
+        unsigned int N = 1,
         int min = 0,
         int max = 10
-    ) : Element(event), m_Min(min), m_Max(max), m_ReadData(min), m_WriteData(min) {
+    ) : Element(event), m_Min(min), m_Max(max), m_NumSliders(N) {
+        assert(N >= 1 && N <= 4);
+        m_ReadData.resize(N, min);
+        m_WriteData.resize(N, min);
     }
 
-    virtual Type GetType() override { return Type::FloatSlider; }
+    virtual Type GetType() override { 
+        switch (m_NumSliders) {
+        case 1:
+            return Type::IntSlider;
+        case 2:
+            return Type::IntSlider2;
+        case 3:
+            return Type::IntSlider3;
+        case 4:
+            return Type::IntSlider4;
+        default:
+            throw std::runtime_error("Unsupported slider size");
+        }
+    }
 
     virtual void Draw() override {
-        if (ImGui::SliderInt(m_Label.c_str(), &m_WriteData, m_Min, m_Max)) {
+        bool changed = false;
+        switch (m_NumSliders) {
+        case 1:
+            changed = ImGui::SliderInt(m_Label.c_str(), &m_WriteData[0], m_Min, m_Max);
+            break;
+        case 2:
+            changed = ImGui::SliderInt2(m_Label.c_str(), &m_WriteData[0], m_Min, m_Max);
+            break;
+        case 3:
+            changed = ImGui::SliderInt3(m_Label.c_str(), &m_WriteData[0], m_Min, m_Max);
+            break;
+        case 4:
+            changed = ImGui::SliderInt4(m_Label.c_str(), &m_WriteData[0], m_Min, m_Max);
+            break;
+        default:
+            throw std::runtime_error("Unsupported slider size");
+        }
+        if (changed) {
             // lock
             std::unique_lock<std::mutex> lock(m_ReadDataLock);
             // copy
@@ -385,30 +467,32 @@ public:
         }
     }
 
-    float GetData() {
+    const std::vector<int>& GetData() {
         // lock
         std::lock_guard<std::mutex> lock(m_ReadDataLock);
         // return
         return m_ReadData;
     }
 
-    void SetData(int data) {
+    void SetData(const std::vector<t_CKFLOAT> data) {
         // lock
         std::lock_guard<std::mutex> lock(Manager::GetWindowLock());
-        // set with bounds check
-        m_WriteData = glm::clamp(data, m_Min, m_Max);
-        // copy to read data
-        m_ReadData = m_WriteData;
+        for (int i = 0; i < m_NumSliders; i++) {
+            // set with bounds check
+            m_WriteData[i] = glm::clamp(static_cast<int>(data[i]), m_Min, m_Max);
+            // copy to read data
+            m_ReadData[i] = m_WriteData[i];
+        }
     }
 
-    float GetMin() { return m_Min; }
+    int GetMin() { return m_Min; }
     void SetMin(float min) { 
         // lock
         std::lock_guard<std::mutex> lock(Manager::GetWindowLock());
         m_Min = min; 
     }
 
-    float GetMax() { return m_Max; }
+    int GetMax() { return m_Max; }
     void SetMax(float max) { 
         // lock
         std::lock_guard<std::mutex> lock(Manager::GetWindowLock());
@@ -418,8 +502,9 @@ public:
 private:
     int m_Min;
     int m_Max;
-    int m_ReadData;
-    int m_WriteData;
+    std::vector<int> m_ReadData;
+    std::vector<int> m_WriteData;
+    const unsigned int m_NumSliders;
 };
 
 

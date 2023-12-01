@@ -33,6 +33,9 @@ public:
 
     // handle window resize
     virtual void Resize(unsigned int viewportWidth, unsigned int viewportHeight) = 0;
+    
+    // handle any changes to underlying chugl effect no capture via uniforms
+    virtual void Update() {}
 
     PP::Effect* GetChuglEffect() { return m_Effect; }
 
@@ -57,6 +60,27 @@ public:
     virtual ~BasicEffect() { if (m_Shader) delete m_Shader; }
     virtual void Apply(Renderer& renderer, unsigned int srcTexture, unsigned int writeFrameBufferID) override;
     virtual void Resize(unsigned int viewportWidth, unsigned int viewportHeight) override { /* nothing */ }
+    virtual void Update() override { 
+        if (m_Effect->GetType() == PP::Type::Custom) {
+            PP::CustomEffect* customEffect = dynamic_cast<PP::CustomEffect*>(m_Effect);
+            if (customEffect->GetRebuildShader()) {
+                // TODO: refactor this once we have an actual shader management system
+                delete m_Shader;
+                m_Shader = new Shader(
+                    ShaderCode::PP_VERT, customEffect->GetScreenShader(), 
+                    false, customEffect->IsPath()
+                );
+
+                // new shader, clear old uniforms
+                // customEffect->ClearUniforms();
+                // actually don't clear, because this invalidates uniforms that were set at the same frame as shader switch
+                
+
+                // reset flag
+                customEffect->SetRebuildShader(false);
+            }
+        }
+    }
 };
 
 
