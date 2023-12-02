@@ -243,7 +243,7 @@ t_CKBOOL init_chugl_material(Chuck_DL_Query *QUERY)
 	QUERY->add_mfun(QUERY, cgl_mat_phong_get_env_map_method, "int", "envMapMethod");
 	QUERY->doc_func(QUERY, "For PhongMaterial: returns environment map method");
 
-	QUERY->add_mfun(QUERY, cgl_mat_phong_get_env_map_ratio, "float", "envMapRatio");
+	QUERY->add_mfun(QUERY, cgl_mat_phong_get_env_map_ratio, "float", "envMapRefractionRatio");
 	QUERY->doc_func(QUERY, "For PhongMaterial: returns environment map refactive ratio");
 
 	// shader mat fns  (TODO allow setting vert and frag separately)

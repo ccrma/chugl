@@ -122,7 +122,8 @@ doc.addGroup(
         "OutputFX",
         "InvertFX",
         "MonochromeFX",
-        "BloomFX"
+        "BloomFX",
+        "CustomFX"
     ],
     // group name
     "ChuGL Post Processing FX",
@@ -139,8 +140,16 @@ doc.addGroup(
         "UI_Element",
         "UI_Window",
         "UI_Button",
+        "UI_SliderFloatBase",
         "UI_SliderFloat",
+        "UI_SliderFloat2",
+        "UI_SliderFloat3",
+        "UI_SliderFloat4",
+        "UI_SliderIntBase",
         "UI_SliderInt",
+        "UI_SliderInt2",
+        "UI_SliderInt3",
+        "UI_SliderInt4",
         "UI_Checkbox",
         "UI_Color3",
         "UI_Dropdown",

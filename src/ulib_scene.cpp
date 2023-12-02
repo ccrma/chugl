@@ -45,6 +45,7 @@ t_CKBOOL init_chugl_scene(Chuck_DL_Query *QUERY)
 	QUERY->begin_class(QUERY, "GScene", "GGen");
 	QUERY->doc_class(QUERY, "Scene class. Static--all instances point to the same underlying ChuGL main scene. GGens must be added to a scene to be rendered");
     QUERY->add_ex(QUERY, "basic/fog.ck");
+	QUERY->add_ex(QUERY, "basic/skybox.ck");
 	
 	QUERY->add_ctor(QUERY, cgl_scene_ctor);
 

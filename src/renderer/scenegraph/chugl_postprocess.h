@@ -14,6 +14,7 @@ enum class Type : t_CKUINT
     Output,
     Invert,
     Monochrome,
+    Custom,
     Bloom
 };
 
@@ -35,7 +36,11 @@ public:
     MaterialUniform& GetUniform(const std::string& name) {
         return m_Uniforms[name];
     }
+    bool HasUniform(const std::string& name) {
+        return m_Uniforms.find(name) != m_Uniforms.end();
+    }
     void SetUniform(const MaterialUniform& uniform);
+    void ClearUniforms() { m_Uniforms.clear(); }
 
     // bypass
     bool GetBypass() { return m_Bypass; }
@@ -112,6 +117,34 @@ public:
     static const std::string U_COLOR;
 };
 
+// Custom
+class CustomEffect : public Effect
+{
+private:
+    std::string m_ScreenShaderString;
+    bool m_IsPath;
+    bool m_RebuildShader;
+public:
+    CustomEffect() 
+        : Effect(), 
+        m_ScreenShaderString(""),  // default to passthrough shader 
+        m_IsPath(false), 
+        m_RebuildShader(false) 
+    {};
+    virtual Type GetType() override { return Type::Custom; }
+    virtual CustomEffect* Clone() override { return new CustomEffect(*this); }
+
+    void SetScreenShader(const std::string& screenShaderString, bool isPath) { 
+        m_ScreenShaderString = screenShaderString; 
+        m_IsPath = isPath;
+        m_RebuildShader = true;
+    }
+    const std::string& GetScreenShader() { return m_ScreenShaderString; }
+    bool IsPath() { return m_IsPath; }
+    bool GetRebuildShader() { return m_RebuildShader; }
+    void SetRebuildShader(bool rebuildShader) { m_RebuildShader = rebuildShader; }
+};
+
 // Output effect
 class OutputEffect : public Effect
 {
@@ -123,7 +156,7 @@ public:
         // if not the ChuGL API impl at least the DLL query and UI auto-gen
 
         // tone mapping
-        SetUniform(MaterialUniform::CreateInt(U_TONEMAP, TONEMAP_REINHARD));
+        SetUniform(MaterialUniform::CreateInt(U_TONEMAP, TONEMAP_ACES));
 
         // exposure
         SetUniform(MaterialUniform::CreateFloat(U_EXPOSURE, 1.0f));

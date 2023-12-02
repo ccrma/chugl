@@ -13,6 +13,7 @@ Effect::CkTypeMap Effect::s_CkTypeMap = {
     { Type::Output, "OutputFX" },
     { Type::Invert, "InvertFX"},
     { Type::Monochrome, "MonochromeFX"},
+    { Type::Custom, "CustomFX" },
     { Type::Bloom, "BloomFX" }
 };
 
