@@ -14,7 +14,10 @@ fun void spawnAndGC() {
     // GGen `b` is sent to external reference, should be cleaned up when that reference gets replaced
     // GGen `c` is attacheed but then immediately detached from scenegraph
     // ALL should be cleaned up by GC
-    GSphere a, b, c;
+    GSphere a;
+    GText b, c;
+    b.text("hello world");
+    c.text("gc text");
     b @=> out_of_shred_ref;
     c --> GG.scene();
     GG.nextFrame() => now;
