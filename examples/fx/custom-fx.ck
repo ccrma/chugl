@@ -56,6 +56,15 @@ fun void SliderTesselationListener() {
 }
 spork ~ SliderTesselationListener();
 
+// fps =======================================================
+
+fun void fpser() {
+    while (true) {
+        1::second => now;
+        <<< GG.fps() >>>;
+    }
+} spork ~ fpser();
+
 // Game loop =================================================
 while (true) { 
     cube.rotateOnWorldAxis(@(0, 1, 0), .2 * GG.dt());
