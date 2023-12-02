@@ -85,7 +85,11 @@ textLineSpacingSlider.range(0.01, 3.0);
 UI_SliderFloat textScaleSlider;
 textScaleSlider.text("Text Scale");
 textScaleSlider.val(1.0);
-textScaleSlider.range(0.1, 5.0);
+textScaleSlider.range(0.1, 15.0);
+
+UI_Checkbox textRotateCheckbox;
+textRotateCheckbox.text("Rotate Text");
+textRotateCheckbox.val(false);
 
 window.add(input);
 window.add(fontDropdown);
@@ -94,6 +98,7 @@ window.add(textControlPointXSlider);
 window.add(textControlPointYSlider);
 window.add(textLineSpacingSlider);
 window.add(textScaleSlider);
+window.add(textRotateCheckbox);
 
 // UI Listeners =================================================================
 fun void InputListener() {
@@ -167,6 +172,6 @@ fun void fpser() {
 // Game Loop ===================================================================
 while (true) {
     // rotate
-    .2 * GG.dt() => text.rotateY;
+    if (textRotateCheckbox.val()) { .2 * GG.dt() => text.rotateY; }
     GG.nextFrame() => now; 
 }

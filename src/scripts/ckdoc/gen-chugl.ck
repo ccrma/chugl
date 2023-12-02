@@ -122,7 +122,8 @@ doc.addGroup(
         "OutputFX",
         "InvertFX",
         "MonochromeFX",
-        "BloomFX"
+        "BloomFX",
+        "CustomFX"
     ],
     // group name
     "ChuGL Post Processing FX",

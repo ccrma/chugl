@@ -4,7 +4,6 @@
     // which are sporked via Machine.add()
     // TODO: gc test causes segfault
     "gtext",
-    "bloom",
     "skybox",
     "lights",
     "alpha",
@@ -25,7 +24,12 @@
 ] @=> string unit_test_paths[];
 
 [   
+    // fx
+    "./fx/bloom",
+    "./fx/custom-fx",
     // basic
+    "./basic/skybox",
+    "./basic/gtext",
     "./basic/circles",
     "./basic/gameloop",
     "./basic/mousecast",

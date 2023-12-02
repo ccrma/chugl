@@ -371,8 +371,7 @@ public:
         // lock
         std::lock_guard<std::mutex> lock(Manager::GetWindowLock());
         for (int i = 0; i < m_NumSliders; i++) {
-            // set with bounds check
-            m_WriteData[i] = glm::clamp(static_cast<float>(data[i]), m_Min, m_Max);
+            m_WriteData[i] = data[i];
             // copy to read data
             m_ReadData[i] = m_WriteData[i];
         }

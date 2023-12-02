@@ -1,3 +1,14 @@
+//-----------------------------------------------------------------------------
+// name: bloom.ck
+// desc: Showcases BloomFX in the ChuGL Post Processing Pipeline
+//       
+// requires: ChuGL 0.1.6 + chuck-1.5.2.0 or higher
+//
+// author: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
+//         Ge Wang (https://ccrma.stanford.edu/~ge/)
+// date: Fall 2023
+//-----------------------------------------------------------------------------
+
 // Scene setup ============================================================
 GCube cubeL --> GG.scene();
 GSphere sphere --> GG.scene();
@@ -7,6 +18,7 @@ GCube cubeR --> GG.scene();
 @(0, 0, 0) => sphere.translate;
 @(1.5, 0, 0) => cubeR.translate;
 
+// take advantage of HDR colors be setting intensity > 1
 5 => float intensity;
 
 intensity * Color.RED => cubeL.mat().color;
@@ -14,13 +26,14 @@ intensity * Color.GREEN => sphere.mat().color;
 intensity * Color.BLUE => cubeR.mat().color;
 
 // FX Chain ===============================================================
-GG.fx() --> BloomFX bloom --> OutputFX output;
-// BloomFX bloom; OutputFX output;
-// GG.fx().next(passthrough).next(bloom).next(output);
+GG.fx() --> BloomFX bloom --> OutputFX output;  // wasn't that simple?
+2.0 => bloom.strength;
+10 => bloom.levels;
 
 // UI =====================================================================
 UI_Window window;
-window.text("bloom test");
+window.text("Bloom Example");
+
 fun void CheckboxListener(UI_Checkbox @ checkbox, FX @ effect)
 {
     while (true)
@@ -126,24 +139,28 @@ fun void KarisEnabledListener(UI_Checkbox @ karisCheckbox, BloomFX @ bloom) {
     }
 }
 
+// Generate UI based on FX chain =============================================
 GG.fx().next() @=> FX @ effect;
-
 0 => int effectIndex;
 while (effect != null) {
-    // effect.UI() @=> UI_Element @ effectUI;
-    // effectUI.text("pass " + effectIndex);
-    // window.add(effectUI);
 
-    <<< "Creating UI for pass", effectIndex, "Type:", Type.of(effect).baseName() >>>;
+    // get class name of effect
+    Type.of(effect).baseName() => string baseName;
+
+    <<< "Creating UI for pass", effectIndex, " | Type:", baseName >>>;
+
+    UI_Text header;
+    header.mode(UI_Text.MODE_SEPARATOR);
+    header.text(baseName + " Pass: " + effectIndex);
+    window.add(header);
 
     UI_Checkbox checkbox;
-    checkbox.text("pass " + effectIndex);
+    checkbox.text("Bypass " + baseName);
     checkbox.val(false);    
     window.add(checkbox);
     spork ~ CheckboxListener(checkbox, effect);
 
     // create UI based on type
-    Type.of(effect).baseName() => string baseName;
     if (baseName == "OutputFX") {
         // gamma
         UI_SliderFloat gammaSlider;
@@ -174,32 +191,32 @@ while (effect != null) {
         // strength
         UI_SliderFloat strengthSlider;
         strengthSlider.text("Bloom Strength");
-        strengthSlider.val((effect$BloomFX).strength());
         strengthSlider.range(0, 2);
+        strengthSlider.val((effect$BloomFX).strength());
         window.add(strengthSlider);
         spork ~ BloomStrengthListener(strengthSlider, effect$BloomFX);
 
         // radius
         UI_SliderFloat radiusSlider;
         radiusSlider.text("Bloom Radius");
-        radiusSlider.val((effect$BloomFX).radius());
         radiusSlider.range(0.001, .5);
+        radiusSlider.val((effect$BloomFX).radius());
         window.add(radiusSlider);
         spork ~ BloomRadiusListener(radiusSlider, effect$BloomFX);
 
         // threshold
         UI_SliderFloat thresholdSlider;
         thresholdSlider.text("Bloom Threshold");
-        thresholdSlider.val((effect$BloomFX).threshold());
         thresholdSlider.range(0, 2);
+        thresholdSlider.val((effect$BloomFX).threshold());
         window.add(thresholdSlider);
         spork ~ BloomThresholdListener(thresholdSlider, effect$BloomFX);
 
         // levels
         UI_SliderInt levelsSlider;
         levelsSlider.text("Bloom #Passes");
-        levelsSlider.val((effect$BloomFX).levels());
         levelsSlider.range(0, 16);
+        levelsSlider.val((effect$BloomFX).levels());
         window.add(levelsSlider);
         spork ~ BloomLevelsListener(levelsSlider, effect$BloomFX);
 

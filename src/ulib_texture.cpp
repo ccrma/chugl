@@ -153,7 +153,7 @@ t_CKBOOL init_chugl_texture(Chuck_DL_Query *QUERY)
 	QUERY->doc_class(QUERY, 
 		"Class for loading cubemap textures from external files or chuck arrays."
 	);
-	// QUERY->add_ex(QUERY, "textures/cubemap.ck");
+	QUERY->add_ex(QUERY, "basic/skybox.ck");
 
 	QUERY->add_ctor(QUERY, cgl_texture_cubemap_ctor);
 
