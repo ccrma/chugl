@@ -10,6 +10,7 @@
 //-----------------------------------------------------------------------------
 
 // Setup FX chain ============================================
+GG.windowTitle( "ChuGL Custom-FX Example" );
 GG.fx() --> CustomFX colorSeparator --> CustomFX tesselator;
 colorSeparator.shaderPath(me.dir() + "./color-separation.glsl");
 tesselator.shaderPath(me.dir() + "./tesselate.glsl");

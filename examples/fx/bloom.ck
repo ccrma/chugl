@@ -10,6 +10,7 @@
 //-----------------------------------------------------------------------------
 
 // Scene setup ============================================================
+GG.windowTitle( "ChuGL Bloom Example" );
 GCube cubeL --> GG.scene();
 GSphere sphere --> GG.scene();
 GCube cubeR --> GG.scene();

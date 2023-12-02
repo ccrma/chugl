@@ -168,6 +168,7 @@ t_CKBOOL init_chugl_postprocess(Chuck_DL_Query *QUERY)
 t_CKBOOL init_chugl_pp_effect(Chuck_DL_Query *QUERY)
 {
     QUERY->begin_class(QUERY, Effect::CKName(Type::Base), "Object");
+    QUERY->doc_class(QUERY, "Abstract base class for all post-processing effects.");
 
     QUERY->add_ctor(QUERY, cgl_pp_effect_ctor);
     QUERY->add_dtor(QUERY, cgl_pp_effect_dtor);
