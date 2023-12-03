@@ -295,16 +295,20 @@ Window::Window(int windowWidth, int windowHeight)
     }
 
     // Print Context Info =================================================
-    std::cerr << "============================= ChuGL =================================" << std::endl;
+    std::cerr << "================= ChuGL => ChucK Graphics Library ===================" << std::endl;
     std::cerr << "ChuGL version: " << CHUGL_VERSION_STRING << std::endl;
-    std::cerr << "ChucK compatibility: " << CHUCK_VERSION_STRING << std::endl;
-    std::cerr << "===================== OpenGL context info ===========================" << std::endl;
+    std::cerr << "chugin runtime API version: " << CHUGIN_API_VERSION_MAJOR << "." << CHUGIN_API_VERSION_MINOR << std::endl;
+    std::cerr << "ChucK language compatibility: " << CHUCK_VERSION_STRING << " or higher" << std::endl;
+    std::cerr << "====================== OpenGL context info ==========================" << std::endl;
     std::cerr << "OpenGL version: " << glGetString(GL_VERSION) << std::endl;
     std::cerr << "OpenGL vendor: " << glGetString(GL_VENDOR) << std::endl;
     std::cerr << "OpenGL renderer: " << glGetString(GL_RENDERER) << std::endl;
     std::cerr << "OpenGL shading language version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
     std::cerr << "=========================== GLFW info ===============================" << std::endl;
     std::cerr << "GLFW version: " << glfwGetVersionString() << std::endl;
+    std::cerr << "=====================================================================" << std::endl;
+    std::cerr << "ChuGL homepage (documentation and examples):" << std::endl;
+    std::cerr << "    https://chuck.stanford.edu/chugl/" << std::endl;
     std::cerr << "=====================================================================" << std::endl;
 
     // OpenGL Debug callback ==================================
