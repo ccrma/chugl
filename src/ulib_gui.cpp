@@ -1401,10 +1401,10 @@ void GUI::GGenTree::DrawMesh(Mesh *node)
     // material info
     Material* material = node->GetMaterial();
     std::string materialLabel = "Material: [" + std::string(material->myCkName()) + " " + std::to_string(material->GetID()) + "] " + material->GetName();
-    ImGui::Text(materialLabel.c_str());
+    ImGui::Text("%s", materialLabel.c_str());
 
     // geometry info
     Geometry* geometry = node->GetGeometry();
     std::string geometryLabel = "Geometry: [" + std::string(geometry->myCkName()) + " " + std::to_string(geometry->GetID()) + "] " + geometry->GetName();
-    ImGui::Text(geometryLabel.c_str());
+    ImGui::Text("%s", geometryLabel.c_str());
 }
