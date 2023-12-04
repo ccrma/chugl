@@ -1,6 +1,12 @@
 #include "ulib_gui.h"
 #include "ulib_cgl.h"
 
+#include "renderer/scenegraph/SceneGraphObject.h"
+#include "renderer/scenegraph/Locator.h"
+#include "renderer/scenegraph/Mesh.h"
+#include "renderer/scenegraph/Material.h"
+#include "renderer/scenegraph/Geometry.h"
+
 using namespace GUI;
 
 // GUI Static Initialization ==============================================================
@@ -31,6 +37,7 @@ Manager::CkTypeMap Manager::s_CkTypeMap = {
     {Type::Color3, "UI_Color3"},
     {Type::Dropdown, "UI_Dropdown"},
     {Type::Text, "UI_Text"},
+    {Type::GGenTree, "UI_GGen"},
     {Type::InputText, "UI_InputText"}
 };
 
@@ -214,6 +221,7 @@ t_CKBOOL init_chugl_gui_color3(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_gui_dropdown(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_gui_text(Chuck_DL_Query *QUERY);
 t_CKBOOL init_chugl_gui_input_text(Chuck_DL_Query *QUERY);
+t_CKBOOL init_chugl_gui_ggen_tree(Chuck_DL_Query *QUERY);
 
 //-----------------------------------------------------------------------------
 // InputText 
@@ -227,6 +235,13 @@ CK_DLL_MFUN( chugl_gui_input_text_multiline_size_get );
 CK_DLL_MFUN( chugl_gui_input_text_multiline_size_set );
 CK_DLL_MFUN( chugl_gui_input_text_broadcast_on_enter_get );
 CK_DLL_MFUN( chugl_gui_input_text_broadcast_on_enter_set );
+
+//-----------------------------------------------------------------------------
+// GGen Tree 
+//-----------------------------------------------------------------------------
+CK_DLL_CTOR( chugl_gui_ggen_tree_ctor );
+CK_DLL_MFUN( chugl_gui_ggen_tree_root_get );
+CK_DLL_MFUN( chugl_gui_ggen_tree_root_set );
 
 
 t_CKBOOL init_chugl_gui(Chuck_DL_Query *QUERY)
@@ -252,6 +267,7 @@ t_CKBOOL init_chugl_gui(Chuck_DL_Query *QUERY)
     if (!init_chugl_gui_dropdown(QUERY)) return FALSE;
     if (!init_chugl_gui_text(QUERY)) return FALSE;
     if (!init_chugl_gui_input_text(QUERY)) return FALSE;
+    if (!init_chugl_gui_ggen_tree(QUERY)) return FALSE;
 
     return TRUE;
 }
@@ -1283,4 +1299,112 @@ CK_DLL_MFUN( chugl_gui_input_text_broadcast_on_enter_set )
     t_CKINT broadcast_on_enter = GET_NEXT_INT(ARGS);
     input_text->SetBroadcastOnEnter( broadcast_on_enter ? true : false );
     RETURN->v_int = broadcast_on_enter;
+}
+
+
+//-----------------------------------------------------------------------------
+// name: init_chugl_gui_ggen_tree()
+// desc: Simple GGen Tree view (as one would get in an Editor scenegraph)
+//-----------------------------------------------------------------------------
+
+t_CKBOOL init_chugl_gui_ggen_tree(Chuck_DL_Query* QUERY)
+{
+    QUERY->begin_class(QUERY, Manager::GetCkName(Type::GGenTree), Manager::GetCkName(Type::Element));
+	QUERY->doc_class(QUERY, 
+        "GGen tree widget"
+        "View data about a given GGen and all its children"
+        "A simple version of a typical Editor Scenegraph"
+    );
+    QUERY->add_ex(QUERY, "ui/basic-ui.ck");
+
+    QUERY->add_ctor(QUERY, chugl_gui_ggen_tree_ctor);
+
+    QUERY->add_mfun(QUERY, chugl_gui_ggen_tree_root_get, "GGen", "root");
+    QUERY->doc_func(QUERY, "Get the root GGen of the tree. Will start here when drawing the scene tree");
+
+    QUERY->add_mfun(QUERY, chugl_gui_ggen_tree_root_set, "GGen", "root");
+    QUERY->add_arg( QUERY, "GGen", "root");
+    QUERY->doc_func(QUERY, "Set the root GGen of the tree. Will start here when drawing the scene tree");
+
+    QUERY->end_class(QUERY);
+
+    return TRUE;
+}
+
+CK_DLL_CTOR( chugl_gui_ggen_tree_ctor )
+{
+    OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset()) = (t_CKINT) new GGenTree(SELF);
+}
+
+CK_DLL_MFUN( chugl_gui_ggen_tree_root_get )
+{
+    GGenTree* ggen_tree = (GGenTree*) OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
+    auto* node = Locator::GetNode(ggen_tree->m_RootID, true);
+    RETURN->v_object = node ? node->m_ChuckObject : NULL;
+}
+
+CK_DLL_MFUN( chugl_gui_ggen_tree_root_set )
+{
+    GGenTree* ggen_tree = (GGenTree*) OBJ_MEMBER_INT(SELF, CGL::GetGUIDataOffset());
+    Chuck_Object* ckobj = GET_NEXT_OBJECT(ARGS);
+    if (ckobj) {
+        ggen_tree->m_RootID = CGL::GetSGO(ckobj)->GetID();
+    }
+    RETURN->v_object = ckobj;
+}
+
+void GUI::GGenTree::Draw()
+{       
+    if (!ImGui::CollapsingHeader(m_Label.c_str())) return;
+    DrawImpl(dynamic_cast<SceneGraphObject*>(Locator::GetNode(m_RootID, false)));
+}
+
+void GUI::GGenTree::DrawImpl(SceneGraphObject* node)
+{       
+    if (!node) return;
+    // note: TreeNode(...) needs a unique string label for each node to disambiguate clicks
+    std::string label = "[" + std::string(node->myCkName()) + " " + std::to_string(node->GetID()) + "] " + node->GetName();
+    if (ImGui::TreeNode(label.c_str())) {
+        // transform
+        ImGui::SeparatorText("Transform");
+
+        glm::vec3 pos = node->GetPosition();
+        ImGui::DragFloat3("Position", &pos[0], 0.0f);
+
+        glm::vec3 rot = node->GetEulerRotationRadians();
+        ImGui::DragFloat3("Rotation", &rot[0], 0.0f);
+
+        glm::vec3 scale = node->GetScale();
+        ImGui::DragFloat3("Scale", &scale[0], 0.0f);
+
+        if (node->IsMesh()) { DrawMesh(dynamic_cast<Mesh*>(node)); }
+
+        // children
+        int numChildren = node->GetChildren().size();
+        std::string childrenText = std::string("Children: ") + std::to_string(numChildren);
+        ImGui::SeparatorText(childrenText.c_str());
+        for (auto* child : node->GetChildren()) {
+            DrawImpl(child);
+        }
+
+        // pop tree
+        ImGui::TreePop();
+    }
+}
+
+void GUI::GGenTree::DrawMesh(Mesh *node)
+{
+    if (!node) return;
+
+    ImGui::SeparatorText("Mesh");
+
+    // material info
+    Material* material = node->GetMaterial();
+    std::string materialLabel = "Material: [" + std::string(material->myCkName()) + " " + std::to_string(material->GetID()) + "] " + material->GetName();
+    ImGui::Text(materialLabel.c_str());
+
+    // geometry info
+    Geometry* geometry = node->GetGeometry();
+    std::string geometryLabel = "Geometry: [" + std::string(geometry->myCkName()) + " " + std::to_string(geometry->GetID()) + "] " + geometry->GetName();
+    ImGui::Text(geometryLabel.c_str());
 }

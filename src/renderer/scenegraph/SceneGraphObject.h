@@ -94,6 +94,10 @@ public:
     // disconnect from both parent and children
     void Disconnect( bool sendChildrenToGrandparent = false );
 
+	// CKname ==========================================================
+    virtual const char* myCkName() override { return "GGen"; }
+
+
 	// transform  (making public for now for easier debug)
 	glm::vec3 m_Position;
 	glm::quat m_Rotation;

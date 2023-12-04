@@ -64,7 +64,7 @@ public:  // chuck type names
 	typedef std::unordered_map<Type, const std::string, EnumClassHash> CkTypeMap;
 	static CkTypeMap s_CkTypeMap;
 	static const char * CKName(Type type) { return s_CkTypeMap[type].c_str(); }
-	virtual const char * myCkName() { return CKName(GetType()); }
+	virtual const char * myCkName() override { return CKName(GetType()); }
 
 };
 

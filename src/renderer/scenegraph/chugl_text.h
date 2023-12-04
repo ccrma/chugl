@@ -55,5 +55,5 @@ public:  // chuck type names
 	// virtual const char * myCkName() { return CKName(GetType()); }
 
 	static const char * CKName() { return "GText"; }
-	virtual const char * myCkName() { return "GText"; }
+	virtual const char * myCkName() override { return "GText"; }
 };

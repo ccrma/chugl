@@ -47,6 +47,11 @@ UI_Dropdown dropdown;
 dropdown.text("Dropdown! Select polygon mode");
 dropdown.options(["FILL", "LINE", "POINT"]);
 
+UI_GGen scenegraph;
+scenegraph.text("Scene Graph Viewer");
+scenegraph.root(GG.scene());
+
+
 window.add(button);
 window.add(text);
 window.add(fslider);
@@ -54,6 +59,7 @@ window.add(islider);
 window.add(checkbox);
 window.add(color);
 window.add(dropdown);
+window.add(scenegraph);
 
 
 fun void ButtonListener(UI_Button @ button) {

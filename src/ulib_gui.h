@@ -66,6 +66,9 @@ Such cases should be rare, e.g. a default value will only need to be set once pe
 In this case, the chuck thread has to grab the global lock.
 
 ======================================================*/
+// forward decls
+class SceneGraphObject;
+class Mesh;
 
 t_CKBOOL init_chugl_gui(Chuck_DL_Query *QUERY);
 
@@ -110,6 +113,7 @@ enum class Type : t_CKUINT
     Dropdown,
     Text,
     InputText,
+    GGenTree,
     Custom
 };
 
@@ -890,6 +894,26 @@ private:
     bool m_BroadcastOnEnter;
     std::string m_ReadData;
     std::string m_WriteData;
+};
+
+
+class GGenTree : public Element
+{
+public:
+    size_t m_RootID;
+public:
+    GGenTree(
+        Chuck_Object* event,
+        size_t root = 0 
+    ) :  Element(event), m_RootID(root) {}
+
+    virtual Type GetType() override { return Type::GGenTree; }
+
+    virtual void Draw() override;
+
+private:
+    virtual void DrawImpl(SceneGraphObject* node);
+    virtual void DrawMesh(Mesh* node);
 };
 
 };  // end namespace GUI

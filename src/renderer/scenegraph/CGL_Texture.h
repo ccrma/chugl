@@ -151,7 +151,7 @@ public: // chuck type names
     typedef std::unordered_map<CGL_TextureType, const std::string, EnumClassHash> CkTypeMap;
     static CkTypeMap s_CkTypeMap;
     static const char* CKName(CGL_TextureType type);
-    virtual const char* myCkName() { return CKName(GetTextureType()); }
+    virtual const char* myCkName() override { return CKName(GetTextureType()); }
 // member vars ==========================================================================================================
     
     // sampler options

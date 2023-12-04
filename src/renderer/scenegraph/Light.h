@@ -71,7 +71,7 @@ public: // ck name
 	typedef std::unordered_map<LightType, const std::string, EnumClassHash> CkTypeMap;
 	static CkTypeMap s_CkTypeMap;
 	static const char * CKName(LightType type) { return s_CkTypeMap[type].c_str(); }
-	virtual const char * myCkName() { return CKName(GetLightType()); }
+	virtual const char * myCkName() override { return CKName(GetLightType()); }
 
 public: // shared params
 	LightParams m_Params;

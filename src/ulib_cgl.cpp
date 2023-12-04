@@ -133,8 +133,6 @@ t_CKBOOL init_chugl(Chuck_DL_Query *QUERY)
 	// set API in the locator service
 	Locator::SetCKAPI( api );
 
-	// init GUI
-	if (!init_chugl_gui(QUERY)) return FALSE;
 
     // initialize ChuGL API
 	init_chugl_colors(QUERY);
@@ -152,6 +150,9 @@ t_CKBOOL init_chugl(Chuck_DL_Query *QUERY)
 	init_chugl_postprocess(QUERY);
     create_chugl_default_objs(QUERY);
 	init_chugl_static_fns(QUERY);
+	
+	// init GUI
+	if (!init_chugl_gui(QUERY)) return FALSE;
 
 	return true;
 }

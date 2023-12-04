@@ -29,7 +29,7 @@ public:
 
     // methods
 	SceneGraphNode() 
-	: m_ID(SceneGraphNode::idCounter++), m_ChuckObject(nullptr), m_IsAudioThreadObject(true)
+	: m_ID(SceneGraphNode::idCounter++), m_ChuckObject(nullptr), m_IsAudioThreadObject(true), m_Name(" ")
 	{
 		// std::cout << "created node with id: " + std::to_string(m_ID) << std::endl;
 	}
@@ -49,6 +49,9 @@ public:
 
 	// Creation fns
 	virtual SceneGraphNode* Clone() = 0;
+
+	// ck name
+    virtual const char* myCkName() = 0;
 
     // static
 	static size_t idCounter;

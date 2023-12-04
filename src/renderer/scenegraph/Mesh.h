@@ -24,6 +24,8 @@ public:
 		m->SetID(this->GetID());
 		return m;
 	}
+
+	virtual const char * myCkName() override { return "GMesh"; }
 	
 	virtual bool IsMesh() override { return true; }
 

@@ -62,6 +62,8 @@ public:
 		return c;
 	}
 
+	virtual const char * myCkName() override { return "GCamera"; }
+
 
 	static const t_CKINT MODE_PERSPECTIVE;
 	static const t_CKINT MODE_ORTHO;

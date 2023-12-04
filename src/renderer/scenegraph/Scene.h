@@ -72,6 +72,8 @@ public:
 		// return scene;
 	}
 
+	virtual const char * myCkName() override { return "GScene"; }
+
 	// register new SceneGraphNode
 	void RegisterNode(SceneGraphNode* node);
 	// remove any scene pointers to this node

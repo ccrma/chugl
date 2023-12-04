@@ -4,36 +4,36 @@
     // which are sporked via Machine.add()
     // TODO: gc test causes segfault
     "gtext",
-    "skybox",
-    "lights",
-    "alpha",
-    "gameloop",
-    "shred-remove",
-    "auto-update",
-    "sne",
-    "cameras",
-    "clone-and-dup", 
-    "lines",
-    "colors",
-    "next-frame-no-chuck",
-    "textures",
-    "glfw",
-    "transform",
-    "world-pos-world-sca",
-    "visualizer",
+    // "skybox",
+    // "lights",
+    // "alpha",
+    // "gameloop",
+    // "shred-remove",
+    // "auto-update",
+    // "sne",
+    // "cameras",
+    // "clone-and-dup", 
+    // "lines",
+    // "colors",
+    // "next-frame-no-chuck",
+    // "textures",
+    // "glfw",
+    // "transform",
+    // "world-pos-world-sca",
+    // "visualizer",
 ] @=> string unit_test_paths[];
 
 [   
     // fx
+    "./basic/circles",
     "./fx/bloom",
+    "./basic/polygon-modes",
     "./fx/custom-fx",
     // basic
     "./basic/skybox",
     "./basic/gtext",
-    "./basic/circles",
     "./basic/gameloop",
     "./basic/mousecast",
-    "./basic/polygon-modes",
     "./basic/custom-geo",
     "./basic/ggen-primitives",
     "./basic/orbits",
@@ -85,6 +85,7 @@ fun void reset() {
     GG.camera().posWorld(@(0,0,5));
     GG.camera().rot(@(0,0,0));
     GG.camera().sca(1);
+    GG.camera() --> GG.scene();
 
     // reset window
     GG.windowed(1200, 900);

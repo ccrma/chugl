@@ -173,7 +173,7 @@ public: // chuck type names
 	typedef std::unordered_map<GeometryType, const std::string, EnumClassHash> CkTypeMap;
 	static CkTypeMap s_CkTypeMap;
 	static const char * CKName(GeometryType type);
-	virtual const char * myCkName() { return CKName(GetGeoType()); }
+	virtual const char * myCkName() override { return CKName(GetGeoType()); }
 };
 
 class BoxGeometry : public Geometry
