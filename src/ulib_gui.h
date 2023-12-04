@@ -205,7 +205,11 @@ public:
     virtual void Draw() override {
         if (!m_Open) return;  // window closed
 
-        if (!ImGui::Begin(m_Label.c_str(), &m_Open)) goto cleanup;
+        // window flags
+        ImGuiWindowFlags window_flags = 0;
+        // if (m_Transparent) window_flags |= ImGuiWindowFlags_NoBackground;
+
+        if (!ImGui::Begin(m_Label.c_str(), &m_Open, window_flags)) goto cleanup;
 
         // window is open, draw rest of elements in DFS order
         for (auto& e : m_Elements) {
@@ -226,7 +230,6 @@ cleanup:
         return m_Elements.size();
     }
     
-
 private:
     bool m_Open;
     std::vector<Element*> m_Elements;
