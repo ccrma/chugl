@@ -924,6 +924,8 @@ const std::string ShaderCode::PP_BLOOM_UPSAMPLE = R"glsl(
         // coordinates, so that the radius will vary across mip resolutions.
         float x = u_FilterRadius;
         float y = u_FilterRadius;
+        
+        float alpha = texture(srcTexture, TexCoords).a;
 
         // Take 9 samples around current texel:
         // a - b - c
@@ -951,7 +953,7 @@ const std::string ShaderCode::PP_BLOOM_UPSAMPLE = R"glsl(
         upsample += (a+c+g+i);
         upsample *= 1.0 / 16.0;
 
-        bloomOutput = vec4(upsample, 1.0);
+        bloomOutput = vec4(upsample, alpha);
     }
 )glsl";
 
