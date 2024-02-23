@@ -115,7 +115,7 @@
 // 1.5.0.0 (ge) | moved to chuck.h for at-a-glance visibility
 // 1.5.2.0 (ge) | moved to chuck_def.h for chugins headers streamlining
 //-----------------------------------------------------------------------------
-#define CHUCK_VERSION_STRING        "1.5.2.1 (chai)"
+#define CHUCK_VERSION_STRING        "1.5.2.2-dev (chai)"
 //-----------------------------------------------------------------------------
 
 
@@ -607,7 +607,7 @@ typedef enum {
     ae_op_s_or_chuck, ae_op_s_xor_chuck, ae_op_shift_right_chuck,
     ae_op_shift_left_chuck, ae_op_percent_chuck,
     ae_op_plusplus, ae_op_minusminus, ae_op_tilda, ae_op_exclamation,
-    ae_op_at_chuck, ae_op_unchuck, ae_op_upchuck,
+    ae_op_at_chuck, ae_op_unchuck, ae_op_upchuck, ae_op_downchuck,
     ae_op_assign, ae_op_dollar, ae_op_at_at, ae_op_coloncolon,
     ae_op_spork, ae_op_typeof, ae_op_sizeof, ae_op_new,
     ae_op_arrow_left, ae_op_arrow_right, ae_op_gruck_left, ae_op_gruck_right,
