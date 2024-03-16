@@ -2,6 +2,7 @@
 #include "ulib_cgl.h"
 #include "scenegraph/Command.h"
 #include "renderer/scenegraph/Geometry.h"
+#include <iostream>
 
 //-----------------------------------------------------------------------------
 // Geometry API declarations
@@ -9,6 +10,7 @@
 CK_DLL_CTOR(cgl_geo_ctor);
 CK_DLL_DTOR(cgl_geo_dtor);
 CK_DLL_MFUN(cgl_geo_clone);
+static t_CKUINT Geometry_bypass_offset_data = 0;
 
 // box
 CK_DLL_CTOR(cgl_geo_box_ctor);
@@ -72,6 +74,7 @@ t_CKBOOL init_chugl_geometry(Chuck_DL_Query *QUERY)
 	QUERY->add_ctor(QUERY, cgl_geo_ctor);
 	QUERY->add_dtor(QUERY, cgl_geo_dtor);
     CGL::SetGeometryDataOffset(QUERY->add_mvar(QUERY, "int", "@geometry_data", false));
+    Geometry_bypass_offset_data = QUERY->add_mvar(QUERY, "int", "@geometry_bypass_data", false);
 
 	// attribute locations
 	QUERY->add_svar(QUERY, "int", "POS_ATTRIB_LOC", TRUE, (void *)&Geometry::POSITION_ATTRIB_IDX);
@@ -290,9 +293,26 @@ t_CKBOOL init_chugl_geometry(Chuck_DL_Query *QUERY)
 }
 
 // CGL Geometry =======================
-CK_DLL_CTOR(cgl_geo_ctor) {}
+CK_DLL_CTOR(cgl_geo_ctor)
+{
+    Chuck_DL_Api::Type geoType = API->type->lookup(VM, "Geometry"); // TODO cache this
+    Chuck_DL_Api::Type thisType = API->object->get_type(SELF);
+    // test if this type is explicitly Geometry (subclasses are handled on their own)
+    if( API->type->is_equal( thisType, geoType ) )
+    {
+        // print warning
+        std::cerr << "ChuGL: (warning) Geometry base class instantiated directly..." << std::endl;
+        // mark so no clean up is performed at dtor
+        OBJ_MEMBER_UINT(SELF, Geometry_bypass_offset_data) = TRUE;
+    }
+}
+
 CK_DLL_DTOR(cgl_geo_dtor) // all geos can share this base destructor
 {
+    // check bypass (in case this is explicitly instantiated as Geometry base class)
+    if( OBJ_MEMBER_UINT(SELF, Geometry_bypass_offset_data) )
+        return;
+
 	CGL::PushCommand(
         new DestroySceneGraphNodeCommand(
             SELF, CGL::GetGeometryDataOffset(), API, &CGL::mainScene
