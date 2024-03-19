@@ -115,7 +115,7 @@
 // 1.5.0.0 (ge) | moved to chuck.h for at-a-glance visibility
 // 1.5.2.0 (ge) | moved to chuck_def.h for chugins headers streamlining
 //-----------------------------------------------------------------------------
-#define CHUCK_VERSION_STRING        "1.5.2.2-dev (chai)"
+#define CHUCK_VERSION_STRING        "1.5.2.2 (chai)"
 //-----------------------------------------------------------------------------
 
 
@@ -327,13 +327,13 @@ typedef struct { SAMPLE re ; SAMPLE im ; } t_CKCOMPLEX_SAMPLE;
 // platform: linux
 // related macros: __LINUX_ALSA__ __LINUX_PULSE__ __LINUX_OSS__ __LINUX_JACK__ __UNIX_JACK__
 //-------------------------------------------
-#if defined(__linux__)
+#if defined(__linux__) || defined(__FreeBSD__)
 //-------------------------------------------
   #ifndef __PLATFORM_LINUX__
   #define __PLATFORM_LINUX__
   #endif
 //-------------------------------------------
-#endif // defined(__linux__)
+#endif // defined(__linux__) || defined(__FreeBSD__)
 //-------------------------------------------
 
 
@@ -1153,10 +1153,11 @@ struct a_Program_ { a_Section section; a_Program next; uint32_t line; uint32_t w
 #include <map>
 
 
-// major and minor must be the same between chuck:chugin
-// major version: significant semantic and/or API update
+// major API version: significant semantic and/or API update
+// major API version must be the same between chuck:chugin
 #define CK_DLL_VERSION_MAJOR (10)
-// minor version: revisions
+// minor API version: revisions
+// minor API version of chuck must >= API version of chugin
 #define CK_DLL_VERSION_MINOR (1)
 #define CK_DLL_VERSION_MAKE(maj,min) ((t_CKUINT)(((maj) << 16) | (min)))
 #define CK_DLL_VERSION_GETMAJOR(v) (((v) >> 16) & 0xFFFF)
