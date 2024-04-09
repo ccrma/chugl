@@ -41,9 +41,9 @@
 #include <tracy/Tracy.hpp>
 
 // assimp asset import library ===========================
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
+// #include <assimp/Importer.hpp>
+// #include <assimp/scene.h>
+// #include <assimp/postprocess.h>
 
 // freetype font library =================================
 #include <ft2build.h>

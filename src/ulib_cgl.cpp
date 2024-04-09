@@ -1,26 +1,23 @@
 #include "window.h"
 
 #include "ulib_cgl.h"
-#include "ulib_colors.h"
-#include "ulib_gui.h"
-#include "ulib_geometry.h"
-#include "ulib_texture.h"
-#include "ulib_material.h"
-#include "ulib_ggen.h"
-#include "ulib_camera.h"
-#include "ulib_mesh.h"
-#include "ulib_light.h"
-#include "ulib_scene.h"
-#include "ulib_assimp.h"
-#include "ulib_postprocess.h"
-#include "ulib_text.h"
+// #include "ulib_colors.h"
+// #include "ulib_gui.h"
+// #include "ulib_geometry.h"
+// #include "ulib_texture.h"
+// #include "ulib_material.h"
+// #include "ulib_mesh.h"
+// #include "ulib_light.h"
+// #include "ulib_assimp.h"
+// #include "ulib_postprocess.h"
+// #include "ulib_text.h"
 
 #include "renderer/scenegraph/Camera.h"
 #include "renderer/scenegraph/Command.h"
 #include "renderer/scenegraph/Scene.h"
-#include "renderer/scenegraph/Light.h"
+// #include "renderer/scenegraph/Light.h"
 #include "renderer/scenegraph/Locator.h"
-#include "renderer/scenegraph/chugl_postprocess.h"
+// #include "renderer/scenegraph/chugl_postprocess.h"
 
 #include <queue>
 
@@ -119,6 +116,11 @@ t_CKUINT CGL::gui_data_offset = 0;
 static t_CKUINT cgl_next_frame_event_data_offset = 0;
 static t_CKUINT window_resize_event_data_offset = 0;
 
+// ulib init declarations
+t_CKBOOL init_chugl_ggen(Chuck_DL_Query *QUERY);
+t_CKBOOL init_chugl_camera(Chuck_DL_Query *QUERY);
+t_CKBOOL init_chugl_scene(Chuck_DL_Query *QUERY);
+
 t_CKBOOL init_chugl(Chuck_DL_Query *QUERY)
 {
     // get the VM and API
@@ -133,27 +135,25 @@ t_CKBOOL init_chugl(Chuck_DL_Query *QUERY)
 	// set API in the locator service
 	Locator::SetCKAPI( api );
 
-
     // initialize ChuGL API
-	init_chugl_colors(QUERY);
-    init_chugl_events(QUERY);
-	init_chugl_geometry(QUERY);
-	init_chugl_texture(QUERY);
-	init_chugl_material(QUERY);
-	init_chugl_obj(QUERY);
+	// init_chugl_colors(QUERY);
+	// init_chugl_geometry(QUERY);
+	// init_chugl_texture(QUERY);
+	// init_chugl_material(QUERY);
+	init_chugl_ggen(QUERY);
 	init_chugl_camera(QUERY);
-	init_chugl_mesh(QUERY);
-	init_chugl_text(QUERY);
-	init_chugl_light(QUERY);
+	// init_chugl_mesh(QUERY);
+	// init_chugl_text(QUERY);
+	// init_chugl_light(QUERY);
 	init_chugl_scene(QUERY);
-    init_chugl_assimp(QUERY);
-	init_chugl_postprocess(QUERY);
-    create_chugl_default_objs(QUERY);
-	init_chugl_static_fns(QUERY);
-	
-	// init GUI
-	if (!init_chugl_gui(QUERY)) return FALSE;
+    // init_chugl_assimp(QUERY);
+	// init_chugl_postprocess(QUERY);
+	// init_chugl_gui(QUERY);
 
+    init_chugl_events(QUERY);
+    create_chugl_default_objs(QUERY);  // must happen AFTER registering "GGen" type
+	init_chugl_static_fns(QUERY);  // depends on "Camera" type
+	
 	return true;
 }
 
@@ -427,6 +427,7 @@ t_CKBOOL init_chugl_static_fns(Chuck_DL_Query *QUERY)
     QUERY->doc_func(QUERY, "Gets the GCamera used for rendering the main scene");
 
 	// Main scene
+	// TODO: webgpu-refactor disabled
 	QUERY->add_sfun(QUERY, cgl_get_main_scene, "GScene", "scene");
     QUERY->doc_func(QUERY, "Gets the main scene, which is the root / parent of all GGens. Only the main scene and its connected GGens are rendered.");
 
@@ -446,8 +447,8 @@ t_CKBOOL init_chugl_static_fns(Chuck_DL_Query *QUERY)
     QUERY->doc_func(QUERY, "FPS of current window, averaged over sliding window of 30 frames");
 
 	// Post Processing
-	QUERY->add_sfun(QUERY, cgl_get_pp_root, PP::Effect::CKName(PP::Type::Base), "fx");
-	QUERY->doc_func(QUERY, "Returns the root of the post processing chain. See the ChuGL post processing tutorial for more information.");
+	// QUERY->add_sfun(QUERY, cgl_get_pp_root, PP::Effect::CKName(PP::Type::Base), "fx");
+	// QUERY->doc_func(QUERY, "Returns the root of the post processing chain. See the ChuGL post processing tutorial for more information.");
 
 	// Default font
 	QUERY->add_sfun(QUERY, cgl_set_default_font, "string", "font");
@@ -469,7 +470,7 @@ CK_DLL_SFUN(cgl_next_frame)
 	// TODO: workaround bug where create() object API is not calling preconstructors
 	// https://trello.com/c/JwhVQEpv/48-cglnextframe-now-not-calling-preconstructor-of-cglupdate
 
-	// initialize ckobj for mainScene
+	// initialize ckobj for mainScene 
 	CGL::GetMainScene(SHRED, API, VM);
 
 	if (!CGL::HasShredWaited(SHRED))
@@ -794,7 +795,10 @@ void CGL::DetachGGensFromShred(Chuck_VM_Shred *shred)
 		// edge case: if it's the main scene or camera, don't disconnect, because these static instances are shared across all shreds!
 		// also don't remove if its the default dir light
 		// TODO: why do we still need this check even though I create_without_shred ???
-		if (sgo == &CGL::mainScene || sgo == &CGL::mainCamera || sgo == CGL::mainScene.GetDefaultLight())
+		if (sgo == &CGL::mainScene 
+		|| sgo == &CGL::mainCamera
+		// || sgo == CGL::mainScene.GetDefaultLight()
+		)
 			continue;
 
 		// disconnect
@@ -909,6 +913,7 @@ Chuck_DL_Api::Object CGL::GetMainScene(Chuck_VM_Shred *shred, CK_DL_API API, Chu
         // update camera position command
         CGL::PushCommand(new UpdatePositionCommand(&mainCamera));
 
+#if 0
 		// create default light
 		// TODO create generic create-chuck-obj method
 		Light* defaultLight = new DirLight;
@@ -928,6 +933,7 @@ Chuck_DL_Api::Object CGL::GetMainScene(Chuck_VM_Shred *shred, CK_DL_API API, Chu
 		CGL::PushCommand(new CreateSceneGraphNodeCommand(rootEffect, &CGL::mainScene, effectObj, CGL::GetPPEffectDataOffset(), API));
 		// add to scene command
 		CGL::PushCommand(new SetSceneRootEffectCommand(&CGL::mainScene, rootEffect));
+#endif
 	}
 
 	return CGL::mainScene.m_ChuckObject;

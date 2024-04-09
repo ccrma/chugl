@@ -1,4 +1,3 @@
-#include "ulib_ggen.h"
 #include "ulib_cgl.h"
 #include "scenegraph/Command.h"
 #include "renderer/scenegraph/SceneGraphObject.h"
@@ -99,7 +98,7 @@ CK_DLL_GFUN(ggen_op_ungruck); // remove child
 //-----------------------------------------------------------------------------
 // GGen API Definitions 
 //-----------------------------------------------------------------------------
-t_CKBOOL init_chugl_obj(Chuck_DL_Query *QUERY)
+t_CKBOOL init_chugl_ggen(Chuck_DL_Query *QUERY)
 {
 	QUERY->begin_class(QUERY, "GGen", "Object");
 	QUERY->doc_class(QUERY, "Base class for all Gens. Can be extended to create your own, or initialized as an empty group container");

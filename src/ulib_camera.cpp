@@ -1,4 +1,3 @@
-#include "ulib_camera.h"
 #include "ulib_cgl.h"
 #include "scenegraph/Command.h"
 #include "renderer/scenegraph/Camera.h"

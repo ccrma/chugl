@@ -1,4 +1,3 @@
-#include "ulib_scene.h"
 #include "ulib_cgl.h"
 #include "scenegraph/Command.h"
 #include "renderer/scenegraph/SceneGraphObject.h"
@@ -67,8 +66,8 @@ t_CKBOOL init_chugl_scene(Chuck_DL_Query *QUERY)
 	QUERY->doc_func(QUERY, "Get the background color of the scene");
 
 	// light --------------------------------------------------------
-	QUERY->add_mfun(QUERY, cgl_scene_get_default_light, Light::CKName(LightType::Base), "light");
-	QUERY->doc_func(QUERY, "Get the default directional light of the scene");
+	// QUERY->add_mfun(QUERY, cgl_scene_get_default_light, Light::CKName(LightType::Base), "light");
+	// QUERY->doc_func(QUERY, "Get the default directional light of the scene");
 
 	QUERY->add_mfun(QUERY, cgl_scene_get_num_lights, "int", "numLights");
 	QUERY->doc_func(QUERY, "Get the number of instantiated lights");
@@ -103,24 +102,24 @@ t_CKBOOL init_chugl_scene(Chuck_DL_Query *QUERY)
 	QUERY->doc_func(QUERY, "disable fog for the scene");
 
 	// skybox --------------------------------------------------------
-	QUERY->add_mfun(
-		QUERY, 
-		cgl_scene_set_skybox_cubemap, 
-		CGL_Texture::CKName(CGL_TextureType::CubeMap), 
-		"skybox"
-	);
-	QUERY->add_arg(
-		QUERY, 
-		CGL_Texture::CKName(CGL_TextureType::CubeMap), 
-		"cubemap"
-	);
-	QUERY->doc_func(
-		QUERY, 
-		"Set the skybox of the scene. Pass in a cubemap texture. Will enable the skybox."
-	);
+	// QUERY->add_mfun(
+	// 	QUERY, 
+	// 	cgl_scene_set_skybox_cubemap, 
+	// 	CGL_Texture::CKName(CGL_TextureType::CubeMap), 
+	// 	"skybox"
+	// );
+	// QUERY->add_arg(
+	// 	QUERY, 
+	// 	CGL_Texture::CKName(CGL_TextureType::CubeMap), 
+	// 	"cubemap"
+	// );
+	// QUERY->doc_func(
+	// 	QUERY, 
+	// 	"Set the skybox of the scene. Pass in a cubemap texture. Will enable the skybox."
+	// );
 
-	QUERY->add_mfun(QUERY, cgl_scene_get_skybox_cubemap, CGL_Texture::CKName(CGL_TextureType::CubeMap), "skybox");
-	QUERY->doc_func(QUERY, "Get the skybox of the scene");
+	// QUERY->add_mfun(QUERY, cgl_scene_get_skybox_cubemap, CGL_Texture::CKName(CGL_TextureType::CubeMap), "skybox");
+	// QUERY->doc_func(QUERY, "Get the skybox of the scene");
 
 	QUERY->add_mfun(QUERY, cgl_scene_set_skybox_enabled, "int", "skyboxEnabled");
 	QUERY->add_arg(QUERY, "int", "enabled");

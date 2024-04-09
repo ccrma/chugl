@@ -455,7 +455,8 @@ static void draw_imgui() {
     // ImGui::ShowDemoWindow();
 
     // Draw the GUI
-    GUI::Manager::DrawGUI();
+    // TODO (azaday webgpu refactor) disabling imgui for now
+    // GUI::Manager::DrawGUI();
 
     // pop transparent background after finishing drawing GUI
     // ImGui::PopStyleColor();

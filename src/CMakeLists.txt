@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-set(CMAKE_VERBOSE_MAKEFILE on)
+set(CMAKE_VERBOSE_MAKE   on)
 
 # force universal binary on osx (must go BEFORE project call)
 set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "" FORCE)
@@ -33,7 +33,23 @@ endif()
 
 
 # all ulib_*.cpp files
-file(GLOB ULIB_SOURCES "ulib_*.cpp")
+# file(GLOB ULIB_SOURCES "ulib_*.cpp")
+set(
+    ULIB_SOURCES 
+    ulib_cgl.h ulib_cgl.cpp
+    ulib_ggen.cpp
+    ulib_camera.cpp
+    # ulib_colors.h ulib_colors.cpp
+    # ulib_geometry.h ulib_geometry.cpp
+    # ulib_gui.h ulib_gui.cpp
+    # ulib_light.h ulib_light.cpp
+    # ulib_material.h ulib_material.cpp
+    # ulib_mesh.h ulib_mesh.cpp
+    # ulib_postprocess.h ulib_postprocess.cpp
+    ulib_scene.cpp
+    # ulib_text.h ulib_text.cpp
+    # ulib_texture.h ulib_texture.cpp
+)
 
 # chugl library
 add_library(
@@ -57,6 +73,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 # library dependencies
 
 # glfw
+# TODO: webgpu-refactor, switch to glfw-minimal if doesn't work with glfw3wegpu
 # -- exclude glfw docs, tests, and examples
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -86,35 +103,35 @@ FetchContent_Declare (
 )
 FetchContent_MakeAvailable (tracy)
 
-# assimp Open Asset Import Library
-# set default assimp options
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "")
-set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "")
-set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "")
-set(ASSIMP_BUILD_SAMPLES OFF CACHE BOOL "")
-set(ASSIMP_INSTALL OFF CACHE BOOL "")
-set(ASSIMP_BUILD_DOCS OFF CACHE BOOL "")
-set(ASSIMP_INJECT_DEBUG_POSTFIX OFF CACHE BOOL "")
-set(ASSIMP_NO_EXPORT ON CACHE BOOL "")  # disable export functionality for now until we add it to the DL API
-set(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT OFF CACHE BOOL "")  # disable all importers by default
-# which importers to build
-set(ASSIMP_BUILD_FBX_IMPORTER ON CACHE BOOL "")       # Autodesk
-set(ASSIMP_BUILD_GLTF_IMPORTER ON CACHE BOOL "")      # .gltf, .glb
-set(ASSIMP_BUILD_COLLADA_IMPORTER ON CACHE BOOL "")   # digital asset exchange (.dae)
-set(ASSIMP_BUILD_BLEND_IMPORTER ON CACHE BOOL "")     # blender
-set(ASSIMP_BUILD_PLY_IMPORTER ON CACHE BOOL "")       # standard polygon library
-set(ASSIMP_BUILD_STL_IMPORTER ON CACHE BOOL "")       # stereolithography
-set(ASSIMP_BUILD_3DS_IMPORTER ON CACHE BOOL "")       # 3ds max
-set(ASSIMP_BUILD_BVH_IMPORTER ON CACHE BOOL "")       # motion capture
-set(ASSIMP_BUILD_OBJ_IMPORTER ON CACHE BOOL "")       # wavefront obj
-# fetch assimp
-FetchContent_Declare (
-    assimp
-    GIT_REPOSITORY https://github.com/assimp/assimp.git
-    GIT_TAG v5.3.1
-)
-# make available
-FetchContent_MakeAvailable (assimp)
+# # assimp Open Asset Import Library
+# # set default assimp options
+# set(BUILD_SHARED_LIBS OFF CACHE BOOL "")
+# set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "")
+# set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "")
+# set(ASSIMP_BUILD_SAMPLES OFF CACHE BOOL "")
+# set(ASSIMP_INSTALL OFF CACHE BOOL "")
+# set(ASSIMP_BUILD_DOCS OFF CACHE BOOL "")
+# set(ASSIMP_INJECT_DEBUG_POSTFIX OFF CACHE BOOL "")
+# set(ASSIMP_NO_EXPORT ON CACHE BOOL "")  # disable export functionality for now until we add it to the DL API
+# set(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT OFF CACHE BOOL "")  # disable all importers by default
+# # which importers to build
+# set(ASSIMP_BUILD_FBX_IMPORTER ON CACHE BOOL "")       # Autodesk
+# set(ASSIMP_BUILD_GLTF_IMPORTER ON CACHE BOOL "")      # .gltf, .glb
+# set(ASSIMP_BUILD_COLLADA_IMPORTER ON CACHE BOOL "")   # digital asset exchange (.dae)
+# set(ASSIMP_BUILD_BLEND_IMPORTER ON CACHE BOOL "")     # blender
+# set(ASSIMP_BUILD_PLY_IMPORTER ON CACHE BOOL "")       # standard polygon library
+# set(ASSIMP_BUILD_STL_IMPORTER ON CACHE BOOL "")       # stereolithography
+# set(ASSIMP_BUILD_3DS_IMPORTER ON CACHE BOOL "")       # 3ds max
+# set(ASSIMP_BUILD_BVH_IMPORTER ON CACHE BOOL "")       # motion capture
+# set(ASSIMP_BUILD_OBJ_IMPORTER ON CACHE BOOL "")       # wavefront obj
+# # fetch assimp
+# FetchContent_Declare (
+#     assimp
+#     GIT_REPOSITORY https://github.com/assimp/assimp.git
+#     GIT_TAG v5.3.1
+# )
+# # make available
+# FetchContent_MakeAvailable (assimp)
 
 # FreeType font rendering
 # set default freetype options
@@ -168,8 +185,12 @@ add_library(chugl_pch INTERFACE)
 target_precompile_headers(chugl_pch INTERFACE chugl_pch.h)
 
 # add libraries to interface
-target_link_libraries(chugl_pch INTERFACE
-    TracyClient glm assimp  freetype
+target_link_libraries(
+    chugl_pch INTERFACE
+    TracyClient 
+    glm 
+    # assimp  
+    freetype
     chugl_util
 )
 
@@ -228,6 +249,8 @@ if ( MSVC )
         # VS_DEBUGGER_COMMAND "${CHUCK_EXECUTABLE_DEBUG}"
         VS_DEBUGGER_COMMAND $<$<CONFIG:Debug>:${CHUCK_EXECUTABLE_DEBUG}>$<$<CONFIG:Release>:${CHUCK_EXECUTABLE_RELEASE}>
         VS_DEBUGGER_COMMAND_ARGUMENTS $<$<CONFIG:Debug>:${CHUGIN_PATH_DEBUG}>$<$<CONFIG:Release>:${CHUGIN_PATH_RELEASE}>
+        VS_DEBUGGER_COMMAND_ARGUMENTS $<$<CONFIG:Debug>:${CHUGIN_PATH_DEBUG}>$<$<CONFIG:Release>:${CHUGIN_PATH_RELEASE}>
+
         VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
     )
 endif()
