@@ -6,7 +6,6 @@
 // CGL includes
 #include "renderer/Renderer.h"
 #include "renderer/Graphics.h"
-
 #include "renderer/scenegraph/SceneGraphObject.h"
 #include "renderer/scenegraph/Camera.h"
 #include "renderer/scenegraph/Scene.h"
@@ -65,6 +64,7 @@ static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     }
 
     CglEvent::Broadcast(CglEventType::CGL_WINDOW_RESIZE);  // doesn't matter if we broadcast this in framebuffer callback or window size callback
+
 }
 
 // window sizs in screen-space coordinates

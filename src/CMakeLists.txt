@@ -1,9 +1,13 @@
 cmake_minimum_required(VERSION 3.16)
 
-set(CMAKE_VERBOSE_MAKE   on)
+# includes
+include(FetchContent)
+
+# set(CMAKE_VERBOSE_MAKE on)
 
 # force universal binary on osx (must go BEFORE project call)
 set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "" FORCE)
+
 # specify minimum support macOS version
 if(APPLE AND NOT CMAKE_OSX_DEPLOYMENT_TARGET)
     # If no deployment target has been set default to the minimum supported
@@ -26,11 +30,13 @@ if(LINUX)
     #set( CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined" )
 endif()
 
+# TODO: -undefined error is deprecated in new XCode 15 Linker
+# TODO: compile with warnings as errors
+# azaday: test compiling without this on macOS
 if(APPLE)
     add_link_options(-undefined error)
     #set( CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-undefined,error" )
 endif()
-
 
 # all ulib_*.cpp files
 # file(GLOB ULIB_SOURCES "ulib_*.cpp")
@@ -51,12 +57,20 @@ set(
     # ulib_texture.h ulib_texture.cpp
 )
 
+set(
+    CORE
+    core/log.h core/log.c
+    core/Timer.h core/Timer.cpp
+)
+
 # chugl library
 add_library(
     ${PROJECT_NAME} SHARED 
     ChuGL.cpp 
     ulib_cgl.cpp 
-    window.cpp
+    chugl_window.cpp
+    # window.cpp
+    ${CORE}
     ${ULIB_SOURCES}
 )
 
@@ -66,8 +80,19 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     SUFFIX ".chug"
     POSITION_INDEPENDENT_CODE ON
     CXX_STANDARD 11
-    CXX_STANDARD_REQUIRED ON
+    # CXX_STANDARD_REQUIRED ON
+
+    # TODO: enable
+    # COMPILE_WARNING_AS_ERROR ON
 )
+
+# TODO: test enabling
+# increasing warning levels
+# if (MSVC)
+#     target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE /W4)
+# else()
+#     target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE -Wall -Wextra -pedantic)
+# endif()
 
 
 # library dependencies
@@ -78,17 +103,33 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-add_subdirectory(./vendor/glfw)  # TODO prob create a top-level CMakeLists.txt too manage all vendor deps
 
-add_subdirectory(./vendor/glad)
-add_subdirectory(./vendor/glm)
-add_subdirectory(./renderer)
-add_subdirectory(./util)
+if (NOT EMSCRIPTEN)
+    add_subdirectory(./vendor/glfw)  # TODO prob create a top-level CMakeLists.txt too manage all vendor deps
+endif()
+
+add_subdirectory(./vendor/glfw3webgpu)
+
+add_subdirectory(./vendor/glad)  # TODO: delete
+
+# add_subdirectory(./renderer)
+
 add_subdirectory(./vendor/imgui)
 
+set(WEBGPU_BACKEND "WGPU" CACHE STRING "Backend implementation of WebGPU. Possible values are WGPU and DAWN (it does not matter when using emcmake)")
+message(STATUS "Using WebGPU backend: ${WEBGPU_BACKEND}")
+
+# Fetch webgpu distribution
+# TODO: host our own distribution on CCRMA
+FetchContent_Declare(
+  webgpu
+  GIT_REPOSITORY https://github.com/eliemichel/WebGPU-distribution
+  GIT_TAG        main  # TODO: use tip of wgpu-static instead
+)
+FetchContent_MakeAvailable(webgpu)
+target_copy_webgpu_binaries(${CMAKE_PROJECT_NAME})
 
 # Tracy profiler
-include(FetchContent)
 # set default tracy options
 set(TRACY_ENABLE OFF CACHE BOOL "")
 set(TRACY_DELAYED_INIT ON CACHE BOOL "" FORCE)
@@ -164,10 +205,15 @@ target_compile_features(chugl_compiler_flags INTERFACE cxx_std_11)
 target_compile_definitions(chugl_compiler_flags INTERFACE
     $<$<CONFIG:Debug>:CHUGL_DEBUG>
     $<$<CONFIG:Release>:CHUGL_RELEASE>
+
+    GLM_FORCE_DEPTH_ZERO_TO_ONE # glm force depth range to 0-1 (standard in webgpu)
+    GLM_ENABLE_EXPERIMENTAL
+    LOG_USE_COLOR # colors log.c output
 )
 
 # add compiler warning flags just when building this project via
 # the BUILD_INTERFACE genex
+# TODO: wtf is this? can we remove? replace with warning system above
 set(gcc_like_cxx "$<COMPILE_LANG_AND_ID:CXX,ARMClang,AppleClang,Clang,GNU,LCC>")
 set(msvc_cxx "$<COMPILE_LANG_AND_ID:CXX,MSVC>")
 target_compile_options(chugl_compiler_flags INTERFACE
@@ -188,10 +234,10 @@ target_precompile_headers(chugl_pch INTERFACE chugl_pch.h)
 target_link_libraries(
     chugl_pch INTERFACE
     TracyClient 
-    glm 
+    # glm # not needed since we include hpp files
     # assimp  
     freetype
-    chugl_util
+    # chugl_core
 )
 
 # set interface include directories
@@ -205,7 +251,9 @@ target_include_directories(chugl_pch INTERFACE
 
 # link libraries to chugl.chug
 target_link_libraries(${PROJECT_NAME} 
-    PRIVATE glfw glad imgui
+    PRIVATE glad imgui
+    # PRIVATE glfw imgui  # remove glad
+    PRIVATE webgpu glfw glfw3webgpu
     PRIVATE chugl_compiler_flags chugl_pch
     PRIVATE renderer
 )
@@ -214,9 +262,9 @@ target_link_libraries(${PROJECT_NAME}
 target_include_directories(${PROJECT_NAME} 
     PRIVATE ./chuck/include
     PRIVATE ./vendor
-    PRIVATE ./vendor/glad/include
-    PRIVATE ./vendor/glfw/include
-    PRIVATE ./vendor/imgui
+    # PRIVATE ./vendor/glad/include
+    # PRIVATE ./vendor/glfw/include
+    # PRIVATE ./vendor/imgui
 )
 
 # set install destination by platform
@@ -232,6 +280,13 @@ if (APPLE)
     target_link_libraries(${PROJECT_NAME} PRIVATE "-framework IOKit")
     target_link_libraries(${PROJECT_NAME} PRIVATE "-framework Cocoa")
     target_link_libraries(${PROJECT_NAME} PRIVATE "-framework OpenGL")
+endif()
+
+# set up XCode scheme
+if(XCODE)
+    set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
+        XCODE_GENERATE_SCHEME ON
+        XCODE_SCHEME_ENABLE_GPU_FRAME_CAPTURE_MODE "Metal")
 endif()
 
 # windows debugging setup for visual studio
@@ -251,6 +306,6 @@ if ( MSVC )
         VS_DEBUGGER_COMMAND_ARGUMENTS $<$<CONFIG:Debug>:${CHUGIN_PATH_DEBUG}>$<$<CONFIG:Release>:${CHUGIN_PATH_RELEASE}>
         VS_DEBUGGER_COMMAND_ARGUMENTS $<$<CONFIG:Debug>:${CHUGIN_PATH_DEBUG}>$<$<CONFIG:Release>:${CHUGIN_PATH_RELEASE}>
 
-        VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     )
 endif()

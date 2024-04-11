@@ -220,7 +220,7 @@ public: // window modes
 
 public: // global main thread hook
 	static Chuck_DL_MainThreadHook* hook;
-	static bool hookActivated;
+	static bool hookActivated;  // TODO delete
 	static void ActivateHook();
 	static void DeactivateHook();
 
