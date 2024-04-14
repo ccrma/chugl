@@ -19,6 +19,7 @@ doc.addGroup(
         "GG", 
         "WindowResizeEvent",
         "Color",
+        "AssLoader"
     ],
     // group name
     "ChuGL Basic Classes",
