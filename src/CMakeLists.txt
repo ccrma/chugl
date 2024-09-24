@@ -33,14 +33,14 @@ endif()
 
 set(
     CORE 
-    src/core/log.c
-    src/core/hashmap.c
-    src/core/memory.cpp
+    core/log.c
+    core/hashmap.c
+    core/memory.cpp
 )
 
 set(
     VENDOR
-    src/implementations.cpp
+    implementations.cpp
     vendor/mikktspace/mikktspace.c
 
     # cimgui (no freetype )
@@ -60,15 +60,14 @@ if (EMSCRIPTEN)
     # emcmake can't handle shared libraries. SIDE_LOAD executable is the only option
     add_executable(
         ${PROJECT_NAME} 
-        src/chugl.cpp 
+        chugl.cpp 
         ${CORE}
         ${VENDOR}
     )
 else()
     add_library(
         ${PROJECT_NAME} SHARED 
-        src/chugl.cpp 
-        # src/ulib_imgui.cpp
+        chugl.cpp 
 
         ${CORE}
         ${VENDOR}
@@ -184,7 +183,7 @@ endif()
 
 # add include path
 target_include_directories(chugl_shared_properties 
-    INTERFACE src
+    INTERFACE .
     INTERFACE vendor
     INTERFACE vendor/cimgui
     INTERFACE vendor/cimgui/imgui
