@@ -6,8 +6,8 @@ cmake_minimum_required(VERSION 3.16)
 
 # force universal binary on osx (must go BEFORE project call)
 # TODO: universal binary not working with webgpu-distribution
-# set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "" FORCE)
-set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "" FORCE)
+set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "" FORCE)
+# set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "" FORCE)
 # # specify minimum support macOS version
 # if(APPLE AND NOT CMAKE_OSX_DEPLOYMENT_TARGET)
 #     # If no deployment target has been set default to the minimum supported
