@@ -7,17 +7,7 @@ cmake_minimum_required(VERSION 3.16)
 
 # force universal binary on osx (must go BEFORE project call)
 set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "" FORCE)
-
-# # specify minimum support macOS version
-if(APPLE AND NOT CMAKE_OSX_DEPLOYMENT_TARGET)
-    # If no deployment target has been set default to the minimum supported
-    # OS version (this has to be set before the first project() call)
-    if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
-        set(CMAKE_OSX_DEPLOYMENT_TARGET 12.0 CACHE STRING "iOS Deployment Target")
-    else()
-        set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15 CACHE STRING "macOS Deployment Target")
-    endif()
-endif()
+set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15 CACHE STRING "macOS Deployment Target")
 
 project(
     ChuGL
@@ -33,42 +23,42 @@ endif()
 
 set(
     CORE 
-    src/core/log.c
-    src/core/hashmap.c
-    src/core/memory.cpp
+    core/log.c
+    core/hashmap.c
+    core/memory.cpp
 )
 
 set(
     VENDOR
-    src/implementations.cpp
-    src/vendor/mikktspace/mikktspace.c
+    implementations.cpp
+    vendor/mikktspace/mikktspace.c
 
     # cimgui (no freetype )
-    src/vendor/cimgui/cimgui.cpp
-    src/vendor/cimgui/imgui/imgui.cpp
-    src/vendor/cimgui/imgui/imgui_draw.cpp
-    src/vendor/cimgui/imgui/imgui_demo.cpp
-    src/vendor/cimgui/imgui/imgui_widgets.cpp
-	src/vendor/cimgui/imgui/imgui_tables.cpp
-    src/vendor/cimgui/imgui/misc/cpp/imgui_stdlib.cpp
-    src/vendor/cimgui/imgui/backends/imgui_impl_glfw.cpp
-    src/vendor/cimgui/imgui/backends/imgui_impl_wgpu.cpp
+    vendor/cimgui/cimgui.cpp
+    vendor/cimgui/imgui/imgui.cpp
+    vendor/cimgui/imgui/imgui_draw.cpp
+    vendor/cimgui/imgui/imgui_demo.cpp
+    vendor/cimgui/imgui/imgui_widgets.cpp
+	vendor/cimgui/imgui/imgui_tables.cpp
+    vendor/cimgui/imgui/misc/cpp/imgui_stdlib.cpp
+    vendor/cimgui/imgui/backends/imgui_impl_glfw.cpp
+    vendor/cimgui/imgui/backends/imgui_impl_wgpu.cpp
 )
 
 set(
     RENDERER_TESTS
-    # src/tests/obj.cpp
-    src/tests/gltf.cpp
-    src/tests/imgui_test.cpp
-    src/tests/test_box2d.cpp
-    src/tests/test_lines2d.cpp
+    # tests/obj.cpp
+    tests/gltf.cpp
+    tests/imgui_test.cpp
+    tests/test_box2d.cpp
+    tests/test_lines2d.cpp
 )
 
 if (CHUGL_BUILD_RENDERER_TESTS)
     message(STATUS "Building Renderer Tester")
     add_executable(
         ChuGL-Renderer-Tester
-        src/main.cpp
+        main.cpp
         ${CORE}
         ${VENDOR}
         ${RENDERER_TESTS}
@@ -103,15 +93,15 @@ if (EMSCRIPTEN)
     # emcmake can't handle shared libraries. SIDE_LOAD executable is the only option
     add_executable(
         ${PROJECT_NAME} 
-        src/chugl.cpp 
+        chugl.cpp 
         ${CORE}
         ${VENDOR}
     )
 else()
     add_library(
         ${PROJECT_NAME} SHARED 
-        src/chugl.cpp 
-        # src/ulib_imgui.cpp
+        chugl.cpp 
+        # ulib_imgui.cpp
 
         ${CORE}
         ${VENDOR}
@@ -227,20 +217,20 @@ endif()
 
 # add include path
 target_include_directories(chugl_shared_properties 
-    INTERFACE src
-    INTERFACE src/vendor
-    INTERFACE src/vendor/cimgui
-    INTERFACE src/vendor/cimgui/imgui
-    INTERFACE src/vendor/cimgui/imgui
-    INTERFACE src/vendor/box2d/include
+    INTERFACE .
+    INTERFACE vendor
+    INTERFACE vendor/cimgui
+    INTERFACE vendor/cimgui/imgui
+    INTERFACE vendor/cimgui/imgui
+    INTERFACE vendor/box2d/include
 )
 
 # vendor dependencies ==========================================================
 
 if (NOT EMSCRIPTEN)
-    add_subdirectory(src/vendor/glfw)
+    add_subdirectory(vendor/glfw)
 endif()
-add_subdirectory(src/vendor/glfw3webgpu)
+add_subdirectory(vendor/glfw3webgpu)
 
 # host our own distribution of WebGPU on CCRMA
 # switching to static library instead of dynami b/c
@@ -263,7 +253,7 @@ set(FT_DISABLE_HARFBUZZ ON  CACHE BOOL "" FORCE)
 set(FT_DISABLE_PNG      ON  CACHE BOOL "" FORCE)
 set(FT_DISABLE_ZLIB     ON  CACHE BOOL "" FORCE)
 set(FT_ENABLE_ERROR_STRINGS ON CACHE BOOL "" FORCE)
-add_subdirectory(src/vendor/freetype)
+add_subdirectory(vendor/freetype)
 # # fetch freetype
 # FetchContent_Declare (
 #     freetype 
@@ -292,8 +282,8 @@ endif()
 # set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # The Box2D library uses simde https://github.com/simd-everywhere/simde
-add_subdirectory(src/vendor/simde)
-add_subdirectory(src/vendor/box2d/src)
+add_subdirectory(vendor/simde)
+add_subdirectory(vendor/box2d/src)
 
 # linking
 # target_link_libraries(${PROJECT_NAME} PRIVATE webgpu glfw glfw3webgpu)
@@ -343,7 +333,7 @@ if (EMSCRIPTEN)
         # --preload-file ${CMAKE_CURRENT_SOURCE_DIR}/assets@./assets
 
         # Can specify custom html template
-        # https://github.com/emscripten-core/emscripten/blob/main/src/shell_minimal.html
+        # https://github.com/emscripten-core/emscripten/blob/main/shell_minimal.html
         # --shell-file ${CMAKE_CURRENT_SOURCE_DIR}/${SHELL_FILE}
     )
     set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".wasm")
