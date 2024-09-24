@@ -1,335 +1,670 @@
-#include "ulib_texture.h"
-#include "ulib_cgl.h"
-#include "scenegraph/Command.h"
-#include "renderer/scenegraph/CGL_Texture.h"
+#include <chuck/chugin.h>
 
-//-----------------------------------------------------------------------------
-// Texture API Declarations
-//-----------------------------------------------------------------------------
+#include "sg_command.h"
+#include "sg_component.h"
 
-CK_DLL_CTOR(cgl_texture_ctor);
-CK_DLL_DTOR(cgl_texture_dtor);
+#include "ulib_helper.h"
 
-// sampler wrap mode
-CK_DLL_MFUN(cgl_texture_set_wrap);
-CK_DLL_MFUN(cgl_texture_get_wrap_s);
-CK_DLL_MFUN(cgl_texture_get_wrap_t);
+#include "core/log.h"
 
-// sampler filter mode
-CK_DLL_MFUN(cgl_texture_set_filter);
-CK_DLL_MFUN(cgl_texture_get_filter_min);
-CK_DLL_MFUN(cgl_texture_get_filter_mag);
+#include <stb/stb_image.h>
 
-// color space
-CK_DLL_MFUN(chugl_texture_set_colorspace);
-CK_DLL_MFUN(chugl_texture_get_colorspace);
-
-// Texture --> FileTexture (texture from filepath .png .jpg etc) ==============
-CK_DLL_CTOR(cgl_texture_file_ctor);
-CK_DLL_MFUN(cgl_texture_file_set_filepath);
-CK_DLL_MFUN(cgl_texture_file_get_filepath);
-
-// Texture --> DataTexture (texture from chuck array) ========================
-CK_DLL_CTOR(cgl_texture_rawdata_ctor);
-CK_DLL_MFUN(cgl_texture_rawdata_set_data);
-// CK_DLL_MFUN(cgl_texture_rawdata_get_data);
-
-// Texture --> CubeMapTexture (texture from 6 filepaths) =====================
-CK_DLL_CTOR(cgl_texture_cubemap_ctor);
-CK_DLL_MFUN(cgl_texture_cubemap_set_filepaths);
-// CK_DLL_MFUN(cgl_texture_cubemap_get_filepaths);  // TODO: impl once we can create arrays from chugin
-// TODO: add option to set each face individually, from file or from data
-
-
-
-//-----------------------------------------------------------------------------
-// Texture API Definition
-//-----------------------------------------------------------------------------
-
-t_CKBOOL init_chugl_texture(Chuck_DL_Query *QUERY)
-{
-	QUERY->begin_class(QUERY, CGL_Texture::CKName(CGL_TextureType::Base), "Object");
-    QUERY->doc_class(QUERY, "Base texture class, do not instantiate directly");
-
-	QUERY->add_ctor(QUERY, cgl_texture_ctor);
-	QUERY->add_dtor(QUERY, cgl_texture_dtor);
-	CGL::SetTextureDataOffset(QUERY->add_mvar(QUERY, "int", "@texture_data", false));
-
-	// texture options (static constants) ---------------------------------
-	QUERY->add_svar(QUERY, "int", "WRAP_REPEAT", TRUE, (void *)&CGL_Texture::Repeat);
-    QUERY->doc_var(QUERY, "When passed into Texture.wrap(), sets the texture to repeat for UVs outside of [0,1]");
-	QUERY->add_svar(QUERY, "int", "WRAP_MIRRORED", TRUE, (void *)&CGL_Texture::MirroredRepeat);
-    QUERY->doc_var(QUERY, "When passed into Texture.wrap(), sets the texture to repeat and mirror for UVs outside of [0,1]");
-	QUERY->add_svar(QUERY, "int", "WRAP_CLAMP", TRUE, (void *)&CGL_Texture::ClampToEdge);
-    QUERY->doc_var(QUERY, "When passed into Texture.wrap(), sets the texture to clamp to the border pixel color for UVs outside of [0,1]");
-
-	// not exposing mipmap filter options for simplicity
-	QUERY->add_svar(QUERY, "int", "FILTER_NEAREST", TRUE, (void *)&CGL_Texture::Nearest);
-    QUERY->doc_var(QUERY, "When passed into Texture.filter(), sets texture sampler to use nearest-neighbor filtering");
-	QUERY->add_svar(QUERY, "int", "FILTER_LINEAR", TRUE, (void *)&CGL_Texture::Linear);
-    QUERY->doc_var(QUERY, "When passed into Texture.filter(), sets texture sampler to use bilinear filtering");
-
-	// colorspace options
-	QUERY->add_svar(QUERY, "int", "COLOR_SPACE_LINEAR", TRUE, (void *)&CGL_Texture::ColorSpace_Linear);
-	QUERY->doc_var(QUERY, 
-		"Specifices the texture data to be in linear colorspace."
-		"Textures used for lighting parameters (like specular or normal maps) are typically in this linear space"
-		"Pass into Texture.colorSpace()"
-	);
-	QUERY->add_svar(QUERY, "int", "COLOR_SPACE_SRGB", TRUE, (void *)&CGL_Texture::ColorSpace_sRGB);
-	QUERY->doc_var(QUERY, 
-		"Specifices the colorspace of the texture data to be in gamma-corrected sRGB colorspace."
-		"Textures used for color data (like diffuse maps) are typically in this colorspace"
-		"Pass into Texture.colorSpace()"
-	);
-
-	// member fns -----------------------------------------------------------
-	QUERY->add_mfun(QUERY, cgl_texture_set_wrap, "void", "wrap");
-	QUERY->add_arg(QUERY, "int", "s");
-	QUERY->add_arg(QUERY, "int", "t");
-    QUERY->doc_func(QUERY, "Set texture wrap modes along s and t dimensions");
-
-	QUERY->add_mfun(QUERY, cgl_texture_get_wrap_s, "int", "wrapS");
-    QUERY->doc_func(QUERY, "Set texture wrap modes along s dimensions");
-	QUERY->add_mfun(QUERY, cgl_texture_get_wrap_t, "int", "wrapT");
-    QUERY->doc_func(QUERY, "Set texture wrap modes along t dimensions");
-
-	QUERY->add_mfun(QUERY, cgl_texture_set_filter, "void", "filter");
-	QUERY->add_arg(QUERY, "int", "min");
-	QUERY->add_arg(QUERY, "int", "mag");
-    QUERY->doc_func(QUERY, "Set texture sampler min and mag filter modes Texture.FILTER_NEAREST or Texture.FILTER_LINEAR");
-
-	QUERY->add_mfun(QUERY, cgl_texture_get_filter_min, "int", "filterMin");
-    QUERY->doc_func(QUERY, "Set texture sampler minification filter. Default FILTER_LINEAR");
-	QUERY->add_mfun(QUERY, cgl_texture_get_filter_mag, "int", "filterMag");
-    QUERY->doc_func(QUERY, "Set texture sampler magnification filter. Default FILTER_LINEAR");
-
-	QUERY->add_mfun(QUERY, chugl_texture_set_colorspace, "int", "colorSpace");
-	QUERY->add_arg(QUERY, "int", "colorSpace");
-	QUERY->doc_func(QUERY, "Set the colorspace of the texture data. Default COLOR_SPACE_LINEAR");
-
-	QUERY->add_mfun(QUERY, chugl_texture_get_colorspace, "int", "colorSpace");
-	QUERY->doc_func(QUERY, "Get the colorspace of the texture data. Default COLOR_SPACE_LINEAR");
-
-	QUERY->end_class(QUERY);
-
-	// FileTexture -----------------------------------------------------------
-	QUERY->begin_class(QUERY, CGL_Texture::CKName(CGL_TextureType::File2D), CGL_Texture::CKName(CGL_TextureType::Base));
-    QUERY->doc_class(QUERY, "Class for loading textures from external files");
-    QUERY->add_ex(QUERY, "textures/textures-1.ck");
-    QUERY->add_ex(QUERY, "textures/snowstorm.ck");
-
-	QUERY->add_ctor(QUERY, cgl_texture_file_ctor);
-
-	QUERY->add_mfun(QUERY, cgl_texture_file_set_filepath, "string", "path");
-	QUERY->add_arg(QUERY, "string", "path");
-    QUERY->doc_func(QUERY, "loads texture data from path");
-
-	QUERY->add_mfun(QUERY, cgl_texture_file_get_filepath, "string", "path");
-    QUERY->doc_func(QUERY, "Get the filepath for the currently-loaded texture");
-
-	QUERY->end_class(QUERY);
-
-	// DataTexture -----------------------------------------------------------
-	QUERY->begin_class(QUERY, CGL_Texture::CKName(CGL_TextureType::RawData2D), CGL_Texture::CKName(CGL_TextureType::Base));
-    QUERY->doc_class(QUERY, "Class for dynamically creating textures from chuck arrays");
-    QUERY->add_ex(QUERY, "audioshader/audio-texture.ck");
-
-	QUERY->add_ctor(QUERY, cgl_texture_rawdata_ctor);
-
-	QUERY->add_mfun(QUERY, cgl_texture_rawdata_set_data, "void", "data");
-	QUERY->add_arg(QUERY, "float[]", "data");
-	QUERY->add_arg(QUERY, "int", "width");
-	QUERY->add_arg(QUERY, "int", "height");
-    QUERY->doc_func(QUERY, 
-		"Set the data for this texture. Data is expected to be a float array of length width*height*4, "
-		"where each pixel is represented by 4 floats for r,g,b,a."
-		"Currently only supports unsigned bytes, so each float must be in range [0,255]"
-	);
-	QUERY->end_class(QUERY);
-
-	// CubeMapTexture -----------------------------------------------------------
-	QUERY->begin_class(QUERY, CGL_Texture::CKName(CGL_TextureType::CubeMap), CGL_Texture::CKName(CGL_TextureType::Base));
-	QUERY->doc_class(QUERY, 
-		"Class for loading cubemap textures from external files or chuck arrays."
-	);
-	QUERY->add_ex(QUERY, "basic/skybox.ck");
-
-	QUERY->add_ctor(QUERY, cgl_texture_cubemap_ctor);
-
-	QUERY->add_mfun(QUERY, cgl_texture_cubemap_set_filepaths, "void", "paths");
-	QUERY->add_arg(QUERY, "string", "right");
-	QUERY->add_arg(QUERY, "string", "left");
-	QUERY->add_arg(QUERY, "string", "top");
-	QUERY->add_arg(QUERY, "string", "bottom");
-	QUERY->add_arg(QUERY, "string", "front");
-	QUERY->add_arg(QUERY, "string", "back");
-	QUERY->doc_func(QUERY, 
-		"Pass in paths to the 6 faces of the cubemap"
-		" in the order: right, left, top, bottom, front, back"
-	);
-
-	QUERY->end_class(QUERY);
-
-	return true;
+#if 0
+enum WGPUTextureUsage {
+    WGPUTextureUsage_CopySrc = 0x00000001,
+    WGPUTextureUsage_CopyDst = 0x00000002,
+    WGPUTextureUsage_TextureBinding = 0x00000004,
+    WGPUTextureUsage_StorageBinding = 0x00000008,
+    WGPUTextureUsage_RenderAttachment = 0x00000010,
 }
 
-// CGL_Texture API impl =====================================================
-CK_DLL_CTOR(cgl_texture_ctor)
-{
-	// abstract base texture class, do nothing
-	// chuck DLL will call all constructors in QUERY inheritance chain
+enum WGPUTextureDimension {
+    WGPUTextureDimension_1D = 0x00000000,
+    WGPUTextureDimension_2D = 0x00000001,
+    WGPUTextureDimension_3D = 0x00000002,
 }
 
-CK_DLL_DTOR(cgl_texture_dtor)
-{
-	CGL::PushCommand(new DestroySceneGraphNodeCommand(SELF, CGL::GetTextureDataOffset(), API, &CGL::mainScene));
+struct WGPUExtent3D {
+    uint32_t width;
+    uint32_t height;
+    uint32_t depthOrArrayLayers;
 }
 
-CK_DLL_MFUN(cgl_texture_set_wrap)
-{
-	CGL_Texture *texture = CGL::GetTexture(SELF);
-	auto s = static_cast<CGL_TextureWrapMode>(GET_NEXT_INT(ARGS));
-	auto t = static_cast<CGL_TextureWrapMode>(GET_NEXT_INT(ARGS));
-	texture->SetWrapMode(s, t);
-
-	CGL::PushCommand(new UpdateTextureSamplerCommand(texture));
+struct WGPUTextureFormat {
+    WGPUTextureFormat_RGBA8Unorm = 0x00000012,
+    WGPUTextureFormat_RGBA16Float = 0x00000021,
+    WGPUTextureFormat_Depth24PlusStencil8 = 0x00000028,
 }
 
-CK_DLL_MFUN(cgl_texture_get_wrap_s)
-{
-	CGL_Texture *texture = CGL::GetTexture(SELF);
-	RETURN->v_int = static_cast<t_CKINT>(texture->GetSamplerParams().wrapS);
+struct WGPUTextureDescriptor {
+    WGPUTextureUsageFlags usage;    // 
+    WGPUTextureDimension dimension; //  
+    WGPUExtent3D size;
+    WGPUTextureFormat format;
+    // uint32_t mipLevelCount; // always gen mips
+    // uint32_t sampleCount;   // don't expose for now
 }
 
-CK_DLL_MFUN(cgl_texture_get_wrap_t)
-{
-	CGL_Texture *texture = CGL::GetTexture(SELF);
-	RETURN->v_int = static_cast<t_CKINT>(texture->GetSamplerParams().wrapS);
+typedef struct WGPUOrigin3D {
+    uint32_t x;
+    uint32_t y;
+    uint32_t z;
 }
 
-CK_DLL_MFUN(cgl_texture_set_filter)
-{
-	CGL_Texture *texture = CGL::GetTexture(SELF);
-	auto min = static_cast<CGL_TextureFilterMode>(GET_NEXT_INT(ARGS));
-	auto mag = static_cast<CGL_TextureFilterMode>(GET_NEXT_INT(ARGS));
-	texture->SetFilterMode(min, mag);
-
-	CGL::PushCommand(new UpdateTextureSamplerCommand(texture));
+enum WGPUTextureAspect {
+    WGPUTextureAspect_All = 0x00000000,
+    WGPUTextureAspect_StencilOnly = 0x00000001,
+    WGPUTextureAspect_DepthOnly = 0x00000002,
+    WGPUTextureAspect_Force32 = 0x7FFFFFFF
 }
 
-CK_DLL_MFUN(cgl_texture_get_filter_min)
-{
-	CGL_Texture *texture = CGL::GetTexture(SELF);
-	RETURN->v_int = static_cast<t_CKINT>(texture->GetSamplerParams().filterMin);
+struct WGPUImageCopyTexture {
+    WGPUTexture texture;
+    uint32_t mipLevel;
+    WGPUOrigin3D origin;
+    WGPUTextureAspect aspect; // default to Aspect_All for non-depth textures
 }
 
-CK_DLL_MFUN(cgl_texture_get_filter_mag)
-{
-	CGL_Texture *texture = CGL::GetTexture(SELF);
-	RETURN->v_int = static_cast<t_CKINT>(texture->GetSamplerParams().filterMag);
+struct WGPUTextureDataLayout {
+    uint64_t offset; // offset into CPU-pointer void* data
+    uint32_t bytesPerRow; // minimum value for bytesPerRow that is set to 256 by the API.
+    uint32_t rowsPerImage; // required if there are multiple images (3D or 2D array textures)
 }
 
-CK_DLL_MFUN(chugl_texture_set_colorspace)
+void wgpuQueueWriteTexture(
+    WGPUQueue queue, 
+    WGPUImageCopyTexture* destination, 
+    void* data, 
+    size_t dataSize, 
+    WGPUTextureDataLayout* dataLayout,  // layout of cpu-side void* data
+    WGPUExtent3D* writeSize             // size of destination region in texture
+);
+#endif
+
+#define GET_TEXTURE(ckobj) SG_GetTexture(OBJ_MEMBER_UINT(ckobj, component_offset_id))
+void ulib_texture_createDefaults(CK_DL_API API);
+
+// TextureSampler ---------------------------------------------------------------------
+CK_DLL_CTOR(sampler_ctor);
+
+// TextureDesc -----------------------------------------------------------------
+
+static t_CKUINT texture_desc_format_offset    = 0;
+static t_CKUINT texture_desc_dimension_offset = 0;
+static t_CKUINT texture_desc_width_offset     = 0;
+static t_CKUINT texture_desc_height_offset    = 0;
+static t_CKUINT texture_desc_depth_offset     = 0;
+static t_CKUINT texture_desc_usage_offset     = 0;
+// static t_CKUINT texture_desc_samples_offset   = 0; // not exposing for now
+static t_CKUINT texture_desc_mips_offset = 0; // not exposing for now
+CK_DLL_CTOR(texture_desc_ctor);
+
+// TextureWriteDesc -----------------------------------------------------------------
+CK_DLL_CTOR(texture_write_desc_ctor);
+// dst image location
+static t_CKUINT texture_write_desc_mip_offset      = 0;
+static t_CKUINT texture_write_desc_offset_x_offset = 0;
+static t_CKUINT texture_write_desc_offset_y_offset = 0;
+static t_CKUINT texture_write_desc_offset_z_offset = 0;
+// dst region size
+static t_CKUINT texture_write_desc_width_offset  = 0;
+static t_CKUINT texture_write_desc_height_offset = 0;
+static t_CKUINT texture_write_desc_depth_offset  = 0;
+
+// TextureWriteDesc -----------------------------------------------------------------
+CK_DLL_CTOR(texture_load_desc_ctor);
+
+static t_CKUINT texture_load_desc_flip_y_offset   = 0;
+static t_CKUINT texture_load_desc_gen_mips_offset = 0;
+
+// Texture ---------------------------------------------------------------------
+CK_DLL_CTOR(texture_ctor);
+CK_DLL_CTOR(texture_ctor_with_desc);
+
+CK_DLL_MFUN(texture_get_format);
+CK_DLL_MFUN(texture_get_dimension);
+CK_DLL_MFUN(texture_get_width);
+CK_DLL_MFUN(texture_get_height);
+CK_DLL_MFUN(texture_get_depth);
+CK_DLL_MFUN(texture_get_usage);
+CK_DLL_MFUN(texture_get_mips);
+
+CK_DLL_MFUN(texture_write);
+CK_DLL_MFUN(texture_write_with_desc);
+
+CK_DLL_SFUN(texture_load_2d_file);
+CK_DLL_SFUN(texture_load_2d_file_with_params); // not exposed yet (figure out hdr
+// first)
+
+static void ulib_texture_query(Chuck_DL_Query* QUERY)
 {
-	CGL_Texture *texture = CGL::GetTexture(SELF);
-	t_CKINT colorspace = GET_NEXT_INT(ARGS);
+    { // Sampler (only passed by value)
+        QUERY->begin_class(QUERY, "TextureSampler", "Object");
 
-	RETURN->v_int = colorspace;
+        // static vars
+        static t_CKINT WRAP_REPEAT    = SG_SAMPLER_WRAP_REPEAT;
+        static t_CKINT WRAP_MIRROR    = SG_SAMPLER_WRAP_MIRROR_REPEAT;
+        static t_CKINT WRAP_CLAMP     = SG_SAMPLER_WRAP_CLAMP_TO_EDGE;
+        static t_CKINT FILTER_NEAREST = SG_SAMPLER_FILTER_NEAREST;
+        static t_CKINT FILTER_LINEAR  = SG_SAMPLER_FILTER_LINEAR;
+        QUERY->add_svar(QUERY, "int", "WRAP_REPEAT", true, &WRAP_REPEAT);
+        QUERY->add_svar(QUERY, "int", "WRAP_MIRROR", true, &WRAP_MIRROR);
+        QUERY->add_svar(QUERY, "int", "WRAP_CLAMP", true, &WRAP_CLAMP);
+        QUERY->add_svar(QUERY, "int", "FILTER_NEAREST", true, &FILTER_NEAREST);
+        QUERY->add_svar(QUERY, "int", "FILTER_LINEAR", true, &FILTER_LINEAR);
 
-	CGL::PushCommand(new UpdateTextureColorSpaceCommand(
-		texture, 
-		static_cast<CGL_TextureColorSpace>(colorspace)
-	));
+        // member vars
+        sampler_offset_wrapU     = QUERY->add_mvar(QUERY, "int", "wrapU", false);
+        sampler_offset_wrapV     = QUERY->add_mvar(QUERY, "int", "wrapV", false);
+        sampler_offset_wrapW     = QUERY->add_mvar(QUERY, "int", "wrapW", false);
+        sampler_offset_filterMin = QUERY->add_mvar(QUERY, "int", "filterMin", false);
+        sampler_offset_filterMag = QUERY->add_mvar(QUERY, "int", "filterMag", false);
+        sampler_offset_filterMip = QUERY->add_mvar(QUERY, "int", "filterMip", false);
+
+        // constructor
+        QUERY->add_ctor(QUERY, sampler_ctor); // default constructor
+
+        QUERY->end_class(QUERY); // Sampler
+    }
+
+    { // TextureDesc
+        BEGIN_CLASS("TextureDesc", "Object");
+        DOC_CLASS("Texture Descriptor -- options for creating a texture");
+
+        CTOR(texture_desc_ctor);
+
+        // member vars
+        texture_desc_format_offset    = MVAR("int", "format", false);
+        texture_desc_dimension_offset = MVAR("int", "dimension", false);
+        texture_desc_width_offset     = MVAR("int", "width", false);
+        texture_desc_height_offset    = MVAR("int", "height", false);
+        texture_desc_depth_offset     = MVAR("int", "depth", false);
+        texture_desc_usage_offset     = MVAR("int", "usage", false);
+        // texture_desc_samples_offset   = MVAR("int", "samples");
+        texture_desc_mips_offset = MVAR("int", "mips", false);
+
+        END_CLASS();
+    } // end TextureDesc
+
+    { // TextureWriteDesc
+        BEGIN_CLASS("TextureWriteDesc", "Object");
+        DOC_CLASS("Options for writing to a texture");
+
+        CTOR(texture_write_desc_ctor);
+
+        texture_write_desc_mip_offset = MVAR("int", "mip", false);
+        DOC_VAR("Which mip level to write to. Default is 0 (base level)");
+
+        texture_write_desc_offset_x_offset = MVAR("int", "x", false);
+        DOC_VAR("X offset of write region. Default 0");
+
+        texture_write_desc_offset_y_offset = MVAR("int", "y", false);
+        DOC_VAR("Y offset of write region. Default 0");
+
+        texture_write_desc_offset_z_offset = MVAR("int", "z", false);
+        DOC_VAR("Z offset of write region. Default 0");
+
+        texture_write_desc_width_offset = MVAR("int", "width", false);
+        DOC_VAR("Width of write region. Default 0");
+
+        texture_write_desc_height_offset = MVAR("int", "height", false);
+        DOC_VAR("Height of write region. Default 0");
+
+        texture_write_desc_depth_offset = MVAR("int", "depth", false);
+        DOC_VAR("Depth of write region. Default 0");
+
+        END_CLASS();
+    };
+
+    { // TextureLoadDesc
+        BEGIN_CLASS("TextureLoadDesc", "Object");
+        DOC_CLASS("Options for loading a texture from a file");
+
+        CTOR(texture_load_desc_ctor);
+
+        texture_load_desc_flip_y_offset = MVAR("int", "flip_y", false);
+        DOC_VAR("Flip the image vertically before loading. Default false");
+
+        texture_load_desc_gen_mips_offset = MVAR("int", "gen_mips", false);
+        DOC_VAR("Generate mipmaps for the texture. Default true");
+
+        END_CLASS();
+    }
+
+    // Texture
+    {
+        BEGIN_CLASS(SG_CKNames[SG_COMPONENT_TEXTURE], SG_CKNames[SG_COMPONENT_BASE]);
+
+        // svars ---------------
+        static t_CKINT texture_usage_copy_src        = WGPUTextureUsage_CopySrc;
+        static t_CKINT texture_usage_copy_dst        = WGPUTextureUsage_CopyDst;
+        static t_CKINT texture_usage_texture_binding = WGPUTextureUsage_TextureBinding;
+        static t_CKINT texture_usage_storage_binding = WGPUTextureUsage_StorageBinding;
+        static t_CKINT texture_usage_render_attachment
+          = WGPUTextureUsage_RenderAttachment;
+        static t_CKINT texture_usage_all = WGPUTextureUsage_All;
+        SVAR("int", "Usage_CopySrc", &texture_usage_copy_src);
+        SVAR("int", "Usage_CopyDst", &texture_usage_copy_dst);
+        SVAR("int", "Usage_TextureBinding", &texture_usage_texture_binding);
+        SVAR("int", "Usage_StorageBinding", &texture_usage_storage_binding);
+        SVAR("int", "Usage_RenderAttachment", &texture_usage_render_attachment);
+        SVAR("int", "Usage_All", &texture_usage_all);
+
+        // 1D textures currently unsupported
+        // static t_CKINT texture_dimension_1d = WGPUTextureDimension_1D;
+        static t_CKINT texture_dimension_2d = WGPUTextureDimension_2D;
+        // 3D textures currently unsupported
+        // static t_CKINT texture_dimension_3d = WGPUTextureDimension_3D;
+        // SVAR("int", "Dimension_1D", &texture_dimension_1d);
+        SVAR("int", "Dimension_2D", &texture_dimension_2d);
+        // SVAR("int", "Dimension_3D", &texture_dimension_3d);
+
+        static t_CKINT texture_format_rgba8unorm  = WGPUTextureFormat_RGBA8Unorm;
+        static t_CKINT texture_format_rgba16float = WGPUTextureFormat_RGBA16Float;
+        static t_CKINT texture_format_rgba32float = WGPUTextureFormat_RGBA32Float;
+        static t_CKINT texture_format_r32float    = WGPUTextureFormat_R32Float;
+        // static t_CKINT texture_format_depth24plusstencil8
+        //   = WGPUTextureFormat_Depth24PlusStencil8;
+        SVAR("int", "Format_RGBA8Unorm", &texture_format_rgba8unorm);
+        SVAR("int", "Format_RGBA16Float", &texture_format_rgba16float); // not
+        // supported currently
+        SVAR("int", "Format_RGBA32Float", &texture_format_rgba32float);
+        SVAR("int", "Format_R32Float", &texture_format_r32float);
+        // SVAR("int", "Format_Depth24PlusStencil8",
+        // &texture_format_depth24plusstencil8);
+
+        // sfun ------------------------------------------------------------------
+
+        SFUN(texture_load_2d_file, SG_CKNames[SG_COMPONENT_TEXTURE], "load");
+        ARG("string", "filepath");
+        DOC_FUNC("Load a 2D texture from a file");
+
+        SFUN(texture_load_2d_file_with_params, SG_CKNames[SG_COMPONENT_TEXTURE],
+             "load");
+        ARG("string", "filepath");
+        ARG("TextureLoadDesc", "load_desc");
+        DOC_FUNC("Load a 2D texture from a file with additional parameters");
+
+        // mfun ------------------------------------------------------------------
+
+        CTOR(texture_ctor);
+
+        CTOR(texture_ctor_with_desc);
+        ARG("TextureDesc", "texture_desc");
+
+        MFUN(texture_write, "void", "write");
+        ARG("float[]", "pixel_data");
+        DOC_FUNC(
+          "Convenience function for writing into a texture. Assumes pixel_data is "
+          "being written into the texture origin (0,0,0) with a region equal to the "
+          "full texture dimensions (width, height, depth) at mip level 0");
+
+        MFUN(texture_write_with_desc, "void", "write");
+        ARG("float[]", "pixel_data");
+        ARG("TextureWriteDesc", "write_desc");
+        DOC_FUNC(
+          "Write pixel data to an arbitrary texture region. The input float data is "
+          "automatically converted based on the texture format");
+
+        MFUN(texture_get_format, "int", "format");
+        DOC_FUNC(
+          "Get the texture format (immutable). Returns a value from the "
+          "Texture.Format_XXXXX enum, e.g. Texture.Format_RGBA8Unorm");
+
+        MFUN(texture_get_dimension, "int", "dimension");
+        DOC_FUNC(
+          "Get the texture dimension (immutable). Returns a value from the "
+          "Texture.Dimension_XXXXX enum, e.g. Texture.Dimension_2D");
+
+        MFUN(texture_get_width, "int", "width");
+        DOC_FUNC("Get the texture width (immutable)");
+
+        MFUN(texture_get_height, "int", "height");
+        DOC_FUNC("Get the texture height (immutable)");
+
+        MFUN(texture_get_depth, "int", "depth");
+        DOC_FUNC(
+          "Get the texture depth (immutable). For a 2D texture, depth corresponds to "
+          "the number of array layers (e.g. depth=6 for a cubemap)");
+
+        MFUN(texture_get_usage, "int", "usage");
+        DOC_FUNC(
+          "Get the texture usage flags (immutable). Returns a bitmask of usage flgas "
+          "from the Texture.Usage_XXXXX enum e.g. Texture.Usage_TextureBinding | "
+          "Texture.Usage_RenderAttachment. By default, textures are created with ALL "
+          "usages enabled");
+
+        MFUN(texture_get_mips, "int", "mips");
+        DOC_FUNC(
+          "Get the number of mip levels (immutable). Returns the number of mip levels "
+          "in the texture.");
+
+        // TODO: specify in WGPUImageCopyTexture where in texture to write to ?
+        // e.g. texture.subData()
+
+        END_CLASS();
+    }
+
+    ulib_texture_createDefaults(QUERY->ck_api(QUERY));
 }
 
-CK_DLL_MFUN(chugl_texture_get_colorspace)
+// TextureSampler ------------------------------------------------------------------
+
+Chuck_Object* ulib_texture_ckobj_from_sampler(SG_Sampler sampler, bool add_ref,
+                                              Chuck_VM_Shred* shred)
 {
-	CGL_Texture *texture = CGL::GetTexture(SELF);
-	RETURN->v_int = static_cast<t_CKINT>(texture->GetColorSpace());
+    CK_DL_API API = g_chuglAPI;
+
+    Chuck_Object* ckobj = chugin_createCkObj("TextureSampler", add_ref, shred);
+
+    OBJ_MEMBER_INT(ckobj, sampler_offset_wrapU)     = sampler.wrapU;
+    OBJ_MEMBER_INT(ckobj, sampler_offset_wrapV)     = sampler.wrapV;
+    OBJ_MEMBER_INT(ckobj, sampler_offset_wrapW)     = sampler.wrapW;
+    OBJ_MEMBER_INT(ckobj, sampler_offset_filterMin) = sampler.filterMin;
+    OBJ_MEMBER_INT(ckobj, sampler_offset_filterMag) = sampler.filterMag;
+    OBJ_MEMBER_INT(ckobj, sampler_offset_filterMip) = sampler.filterMip;
+
+    return ckobj;
 }
 
-// FileTexture API impl =====================================================
-CK_DLL_CTOR(cgl_texture_file_ctor)
+CK_DLL_CTOR(sampler_ctor)
 {
-	CGL::PushCommand(
-        new CreateSceneGraphNodeCommand(
-            new FileTexture2D,
-            &CGL::mainScene, SELF, CGL::GetTextureDataOffset(), API
-        )
-    );
+    // default to repeat wrapping and linear filtering
+    OBJ_MEMBER_INT(SELF, sampler_offset_wrapU)     = SG_SAMPLER_WRAP_REPEAT;
+    OBJ_MEMBER_INT(SELF, sampler_offset_wrapV)     = SG_SAMPLER_WRAP_REPEAT;
+    OBJ_MEMBER_INT(SELF, sampler_offset_wrapW)     = SG_SAMPLER_WRAP_REPEAT;
+    OBJ_MEMBER_INT(SELF, sampler_offset_filterMin) = SG_SAMPLER_FILTER_LINEAR;
+    OBJ_MEMBER_INT(SELF, sampler_offset_filterMag) = SG_SAMPLER_FILTER_LINEAR;
+    OBJ_MEMBER_INT(SELF, sampler_offset_filterMip) = SG_SAMPLER_FILTER_LINEAR;
 }
 
-CK_DLL_MFUN(cgl_texture_file_set_filepath)
+// TextureDesc ---------------------------------------------------------------------
+
+CK_DLL_CTOR(texture_desc_ctor)
 {
-	auto* texture = dynamic_cast<FileTexture2D*>(CGL::GetTexture(SELF));
-	Chuck_String *path = GET_NEXT_STRING(ARGS);
-
-	CGL::PushCommand(new UpdateTexturePathCommand(texture, API->object->str(path)));
-
-	RETURN->v_string = path;
+    OBJ_MEMBER_INT(SELF, texture_desc_format_offset)    = WGPUTextureFormat_RGBA8Unorm;
+    OBJ_MEMBER_INT(SELF, texture_desc_dimension_offset) = WGPUTextureDimension_2D;
+    OBJ_MEMBER_INT(SELF, texture_desc_width_offset)     = 1;
+    OBJ_MEMBER_INT(SELF, texture_desc_height_offset)    = 1;
+    OBJ_MEMBER_INT(SELF, texture_desc_depth_offset)     = 1;
+    OBJ_MEMBER_INT(SELF, texture_desc_usage_offset)     = WGPUTextureUsage_All;
+    // OBJ_MEMBER_INT(SELF, texture_desc_samples_offset) = 1;
+    OBJ_MEMBER_INT(SELF, texture_desc_mips_offset) = 0;
 }
 
-CK_DLL_MFUN(cgl_texture_file_get_filepath)
+static SG_TextureDesc ulib_texture_textureDescFromCkobj(Chuck_Object* ckobj)
 {
-	auto* texture = dynamic_cast<FileTexture2D*>(CGL::GetTexture(SELF));
-	RETURN->v_string = (Chuck_String *)API->object->create_string(VM, texture->GetFilePath().c_str(), false);
+    CK_DL_API API = g_chuglAPI;
+
+    SG_TextureDesc desc = {};
+    desc.format = (WGPUTextureFormat)OBJ_MEMBER_INT(ckobj, texture_desc_format_offset);
+    desc.dimension
+      = (WGPUTextureDimension)OBJ_MEMBER_INT(ckobj, texture_desc_dimension_offset);
+    desc.width  = OBJ_MEMBER_INT(ckobj, texture_desc_width_offset);
+    desc.height = OBJ_MEMBER_INT(ckobj, texture_desc_height_offset);
+    desc.depth  = OBJ_MEMBER_INT(ckobj, texture_desc_depth_offset);
+    desc.usage  = OBJ_MEMBER_INT(ckobj, texture_desc_usage_offset);
+    // desc.samples        = OBJ_MEMBER_INT(ckobj, texture_desc_samples_offset);
+    desc.mips = OBJ_MEMBER_INT(ckobj, texture_desc_mips_offset);
+
+    // validation happens at final layer SG_CreateTexture
+    return desc;
 }
 
-// DataTexture API impl =====================================================
-CK_DLL_CTOR(cgl_texture_rawdata_ctor)
+// TextureWriteDesc -----------------------------------------------------------------
+
+CK_DLL_CTOR(texture_write_desc_ctor)
 {
-	CGL::PushCommand(
-        new CreateSceneGraphNodeCommand(
-            new DataTexture2D,
-            &CGL::mainScene, SELF, CGL::GetTextureDataOffset(), API
-        )
-    );
+    OBJ_MEMBER_INT(SELF, texture_write_desc_mip_offset)      = 0;
+    OBJ_MEMBER_INT(SELF, texture_write_desc_offset_x_offset) = 0;
+    OBJ_MEMBER_INT(SELF, texture_write_desc_offset_y_offset) = 0;
+    OBJ_MEMBER_INT(SELF, texture_write_desc_offset_z_offset) = 0;
+    OBJ_MEMBER_INT(SELF, texture_write_desc_width_offset)    = 1;
+    OBJ_MEMBER_INT(SELF, texture_write_desc_height_offset)   = 1;
+    OBJ_MEMBER_INT(SELF, texture_write_desc_depth_offset)    = 1;
 }
 
-CK_DLL_MFUN(cgl_texture_rawdata_set_data)
+static SG_TextureWriteDesc ulib_texture_textureWriteDescFromCkobj(Chuck_Object* ckobj)
 {
-	auto* texture = dynamic_cast<DataTexture2D*>(CGL::GetTexture(SELF));
-	Chuck_ArrayFloat *ckarray = (Chuck_ArrayFloat *)GET_NEXT_OBJECT(ARGS);
-	t_CKINT width = GET_NEXT_INT(ARGS);
-	t_CKINT height = GET_NEXT_INT(ARGS);
+    CK_DL_API API = g_chuglAPI;
 
-    // TODO: extra round of copying here, can avoid if it matters
-    t_CKINT vsize = API->object->array_float_size(ckarray);
-    std::vector<t_CKFLOAT> theVec; theVec.reserve(vsize);
-    for( t_CKINT idx = 0; idx < vsize; idx++ )
-    { theVec.emplace_back(API->object->array_float_get_idx(ckarray,idx)); }
+    SG_TextureWriteDesc desc = {};
+    desc.mip                 = OBJ_MEMBER_INT(ckobj, texture_write_desc_mip_offset);
+    desc.offset_x = OBJ_MEMBER_INT(ckobj, texture_write_desc_offset_x_offset);
+    desc.offset_y = OBJ_MEMBER_INT(ckobj, texture_write_desc_offset_y_offset);
+    desc.offset_z = OBJ_MEMBER_INT(ckobj, texture_write_desc_offset_z_offset);
+    desc.width    = OBJ_MEMBER_INT(ckobj, texture_write_desc_width_offset);
+    desc.height   = OBJ_MEMBER_INT(ckobj, texture_write_desc_height_offset);
+    desc.depth    = OBJ_MEMBER_INT(ckobj, texture_write_desc_depth_offset);
 
-	CGL::PushCommand(new UpdateTextureDataCommand(texture, theVec, width, height));
+    // validation happens at final write
+
+    return desc;
 }
 
-// CubeMapTexture impl =====================================================
-CK_DLL_CTOR(cgl_texture_cubemap_ctor)
+// TextureLoadDesc -----------------------------------------------------------------
+
+CK_DLL_CTOR(texture_load_desc_ctor)
 {
-	CGL::PushCommand(
-		new CreateSceneGraphNodeCommand(
-			new CGL_CubeMap,
-			&CGL::mainScene, SELF, CGL::GetTextureDataOffset(), API
-		)
-	);
+    OBJ_MEMBER_INT(SELF, texture_load_desc_flip_y_offset)   = false;
+    OBJ_MEMBER_INT(SELF, texture_load_desc_gen_mips_offset) = true;
 }
 
-CK_DLL_MFUN(cgl_texture_cubemap_set_filepaths)
+static SG_TextureLoadDesc ulib_texture_textureLoadDescFromCkobj(Chuck_Object* ckobj)
 {
-	CGL_CubeMap* cubeMap = dynamic_cast<CGL_CubeMap*>(CGL::GetTexture(SELF));
-	Chuck_String* right = GET_NEXT_STRING(ARGS);
-	Chuck_String* left = GET_NEXT_STRING(ARGS);
-	Chuck_String* top = GET_NEXT_STRING(ARGS);
-	Chuck_String* bottom = GET_NEXT_STRING(ARGS);
-	Chuck_String* front = GET_NEXT_STRING(ARGS);
-	Chuck_String* back = GET_NEXT_STRING(ARGS);
+    CK_DL_API API = g_chuglAPI;
 
-	CGL::PushCommand(new UpdateCubeMapPathsCommand(
-		cubeMap, 
-		{
-			API->object->str(right), API->object->str(left),
-			API->object->str(top), API->object->str(bottom), 
-			API->object->str(front), API->object->str(back)
-		}
-	));
+    SG_TextureLoadDesc desc = {};
+    desc.flip_y             = OBJ_MEMBER_INT(ckobj, texture_load_desc_flip_y_offset);
+    desc.gen_mips           = OBJ_MEMBER_INT(ckobj, texture_load_desc_gen_mips_offset);
+
+    return desc;
+}
+
+// Texture -----------------------------------------------------------------
+
+// create default pixel textures and samplers
+void ulib_texture_createDefaults(CK_DL_API API)
+{
+    SG_TextureDesc texture_binding_desc = {};
+    texture_binding_desc.usage
+      = WGPUTextureUsage_TextureBinding | WGPUTextureUsage_CopyDst;
+
+    SG_TextureWriteDesc texture_write_desc = {};
+
+    // white pixel
+    {
+        SG_Texture* tex = SG_CreateTexture(&texture_binding_desc, NULL, NULL, true);
+        // upload pixel data
+        CQ_PushCommand_TextureWrite(tex, &texture_write_desc,
+                                    g_builtin_ckobjs.white_pixel_data, API);
+        // set global
+        g_builtin_textures.white_pixel_id = tex->id;
+    }
+    //  default render texture (hdr)
+    {
+        SG_TextureDesc render_texture_desc = {};
+        render_texture_desc.usage          = WGPUTextureUsage_RenderAttachment
+                                    | WGPUTextureUsage_TextureBinding
+                                    | WGPUTextureUsage_StorageBinding;
+        render_texture_desc.format = WGPUTextureFormat_RGBA16Float;
+        // set global
+        g_builtin_textures.default_render_texture_id
+          = SG_CreateTexture(&render_texture_desc, NULL, NULL, true)->id;
+    }
+
+    { // black pixel
+        SG_Texture* tex = SG_CreateTexture(&texture_binding_desc, NULL, NULL, true);
+        // upload pixel data
+        CQ_PushCommand_TextureWrite(tex, &texture_write_desc,
+                                    g_builtin_ckobjs.black_pixel_data, API);
+        // set global
+        g_builtin_textures.black_pixel_id = tex->id;
+    }
+
+    { // default normal map
+        SG_Texture* tex = SG_CreateTexture(&texture_binding_desc, NULL, NULL, true);
+        // upload pixel data
+        CQ_PushCommand_TextureWrite(tex, &texture_write_desc,
+                                    g_builtin_ckobjs.normal_pixel_data, API);
+        // set global
+        g_builtin_textures.normal_pixel_id = tex->id;
+    }
+}
+
+CK_DLL_CTOR(texture_ctor)
+{
+    SG_TextureDesc desc = {};
+    SG_CreateTexture(&desc, SELF, SHRED, false);
+}
+
+CK_DLL_CTOR(texture_ctor_with_desc)
+{
+    SG_TextureDesc desc = ulib_texture_textureDescFromCkobj(GET_NEXT_OBJECT(ARGS));
+    SG_CreateTexture(&desc, SELF, SHRED, false);
+}
+
+CK_DLL_MFUN(texture_get_format)
+{
+    RETURN->v_int = GET_TEXTURE(SELF)->desc.format;
+}
+
+CK_DLL_MFUN(texture_get_dimension)
+{
+    RETURN->v_int = GET_TEXTURE(SELF)->desc.dimension;
+}
+
+CK_DLL_MFUN(texture_get_width)
+{
+    RETURN->v_int = GET_TEXTURE(SELF)->desc.width;
+}
+
+CK_DLL_MFUN(texture_get_height)
+{
+    RETURN->v_int = GET_TEXTURE(SELF)->desc.height;
+}
+
+CK_DLL_MFUN(texture_get_depth)
+{
+    RETURN->v_int = GET_TEXTURE(SELF)->desc.depth;
+}
+
+CK_DLL_MFUN(texture_get_usage)
+{
+    RETURN->v_int = GET_TEXTURE(SELF)->desc.usage;
+}
+
+CK_DLL_MFUN(texture_get_mips)
+{
+    RETURN->v_int = GET_TEXTURE(SELF)->desc.mips;
+}
+
+static void ulib_texture_write(SG_Texture* tex, Chuck_ArrayFloat* ck_arr,
+                               SG_TextureWriteDesc* desc, Chuck_VM_Shred* SHRED)
+{
+    CK_DL_API API = g_chuglAPI;
+
+    int num_texels   = tex->desc.width * tex->desc.height * tex->desc.depth;
+    int expected_len = num_texels * SG_Texture_numComponentsPerTexel(tex->desc.format);
+
+    { // validation
+        char err_msg[256] = {};
+        // check offset within image bounds
+        if (desc->offset_x + desc->width > tex->desc.width
+            || desc->offset_y + desc->height > tex->desc.height
+            || desc->offset_z + desc->depth > tex->desc.depth) {
+            snprintf(err_msg, sizeof(err_msg),
+                     "Texture write region out of bounds. Texture dimensions [%d, %d, "
+                     "%d]. Write offsets [%d, %d, %d]. Write region size [%d, %d, %d]",
+                     tex->desc.width, tex->desc.height, tex->desc.depth, desc->offset_x,
+                     desc->offset_y, desc->offset_z, desc->width, desc->height,
+                     desc->depth);
+            CK_THROW("TextureWriteOutOfBounds", err_msg, SHRED);
+        }
+
+        // check mip level valid
+        if (desc->mip >= tex->desc.mips) {
+            snprintf(err_msg, sizeof(err_msg),
+                     "Invalid mip level. Texture has %d mips, but tried to "
+                     "write to mip level %d",
+                     tex->desc.mips, desc->mip);
+            CK_THROW("TextureWriteInvalidMip", err_msg, SHRED);
+        }
+
+        // check ck_array
+        int ck_arr_len = API->object->array_float_size(ck_arr);
+        if (ck_arr_len < expected_len) {
+            snprintf(
+              err_msg, sizeof(err_msg),
+              "Incorrect number of components in pixel data. Expected %d, got %d",
+              expected_len, ck_arr_len);
+            CK_THROW("TextureWriteInvalidPixelData", err_msg, SHRED);
+        }
+    }
+
+    // convert ck array into byte buffer based on texture format
+    CQ_PushCommand_TextureWrite(tex, desc, ck_arr, API);
+}
+
+CK_DLL_MFUN(texture_write)
+{
+    SG_Texture* tex          = GET_TEXTURE(SELF);
+    SG_TextureWriteDesc desc = {};
+    desc.width               = tex->desc.width;
+    desc.height              = tex->desc.height;
+    desc.depth               = tex->desc.depth;
+
+    ulib_texture_write(tex, GET_NEXT_FLOAT_ARRAY(ARGS), &desc, SHRED);
+}
+
+CK_DLL_MFUN(texture_write_with_desc)
+{
+    SG_Texture* tex          = GET_TEXTURE(SELF);
+    Chuck_ArrayFloat* ck_arr = GET_NEXT_FLOAT_ARRAY(ARGS);
+    SG_TextureWriteDesc desc
+      = ulib_texture_textureWriteDescFromCkobj(GET_NEXT_OBJECT(ARGS));
+
+    ulib_texture_write(tex, ck_arr, &desc, SHRED);
+}
+
+SG_Texture* ulib_texture_load(const char* filepath, SG_TextureLoadDesc* load_desc,
+                              Chuck_VM_Shred* shred)
+{
+    int width, height, num_components;
+    if (!stbi_info(filepath, &width, &height, &num_components)) {
+        log_error("Couldn't load texture file '%s'. Reason: %s", filepath,
+                  stbi_failure_reason());
+    }
+
+    SG_TextureDesc desc = {};
+    desc.width          = width;
+    desc.height         = height;
+    desc.dimension      = WGPUTextureDimension_2D;
+    desc.format         = WGPUTextureFormat_RGBA8Unorm;
+    desc.usage          = WGPUTextureUsage_All;
+
+    SG_Texture* tex = SG_CreateTexture(&desc, NULL, shred, false);
+
+    CQ_PushCommand_TextureFromFile(tex, filepath, load_desc);
+
+    return tex;
+}
+
+CK_DLL_SFUN(texture_load_2d_file)
+{
+    SG_TextureLoadDesc load_desc = {};
+    SG_Texture* tex
+      = ulib_texture_load(API->object->str(GET_NEXT_STRING(ARGS)), &load_desc, SHRED);
+    RETURN->v_object = tex ? tex->ckobj : NULL;
+}
+
+CK_DLL_SFUN(texture_load_2d_file_with_params)
+{
+    const char* filepath = API->object->str(GET_NEXT_STRING(ARGS));
+    SG_TextureLoadDesc load_desc
+      = ulib_texture_textureLoadDescFromCkobj(GET_NEXT_OBJECT(ARGS));
+
+    SG_Texture* tex = ulib_texture_load(filepath, &load_desc, SHRED);
+
+    RETURN->v_object = tex ? tex->ckobj : NULL;
 }

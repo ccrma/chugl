@@ -1,74 +1,51 @@
 # Prerequisites
 *.d
 
-# Common temporary files
-*.swp
-*.orig
-*.bak
-
-# Audio files
-*.wav
-
-# Image files
-src/tests/textures/*
-
 # Compiled Object files
 *.slo
 *.lo
 *.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
 
 # Compiled Dynamic libraries
 *.so
-*.chug
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
 
 # Compiled Static libraries
 *.lai
 *.la
 *.a
+*.lib
 
+# Executables
+*.exe
+*.out
+*.app
+
+# cmake
+build/
+build-*/
+
+# vscode
+.vscode/
+
+# DS_Store
 .DS_Store
 
-*.tgz
-/chugins.opt
-/chugins.ncb
-/chugins-windows-*
-/chugins-mac-*
-
-# Visual Studio artifacts
-*.VC.opendb
-*.sdf
-.vs/
-
-/Release/
-/Debug/
-*/Release/
-*/Debug/
-*/x64/
-*/*.vcxproj.user
-ipch
-
-*/*.xcodeproj/xcuserdata
-
-.vscode/*
-.vscode
-
-# CMake
-src/build
-src/build-debug
-src/build-release
-
-# vim
-*~
-
 # chuck executable
-chuck-1.5.1.4
-src/chuck.exe
-src/chuck-debug.exe
-src/chuck-release.exe
+chuck*.exe
 
 # imgui
 imgui.ini
 
-# Tracy profiler
-Tracy.exe
-
+# assets
+assets/

@@ -1,264 +1,587 @@
-#include "ulib_camera.h"
-#include "ulib_cgl.h"
-#include "scenegraph/Command.h"
-#include "renderer/scenegraph/Camera.h"
+#include <chuck/chugin.h>
 
-//-----------------------------------------------------------------------------
-// Object -> BaseCamera
-//-----------------------------------------------------------------------------
-CK_DLL_CTOR(cgl_cam_ctor);
-CK_DLL_DTOR(cgl_cam_dtor);
+#include "sg_command.h"
+#include "sg_component.h"
 
-CK_DLL_MFUN(cgl_cam_set_mode_persp); // switch to perspective mode
-CK_DLL_MFUN(cgl_cam_set_mode_ortho); // switch to perspective mode
-CK_DLL_MFUN(cgl_cam_get_mode);		 // switch to perspective mode
+#include "ulib_helper.h"
 
-CK_DLL_MFUN(cgl_cam_set_clip);
-CK_DLL_MFUN(cgl_cam_get_clip_near);
-CK_DLL_MFUN(cgl_cam_get_clip_far);
+#define GET_CAMERA(ckobj) SG_GetCamera(OBJ_MEMBER_UINT(ckobj, component_offset_id))
+
+CK_DLL_CTOR(gcamera_ctor);
+
+CK_DLL_MFUN(gcamera_set_mode_persp);
+CK_DLL_MFUN(gcamera_set_mode_ortho);
+CK_DLL_MFUN(gcamera_get_mode);
+
+CK_DLL_MFUN(gcamera_set_clip);
+CK_DLL_MFUN(gcamera_get_clip_near);
+CK_DLL_MFUN(gcamera_get_clip_far);
 
 // perspective camera params
 // (no aspect, that's set automatically by renderer window resize callback)
-CK_DLL_MFUN(cgl_cam_set_pers_fov); // set in degrees
-CK_DLL_MFUN(cgl_cam_get_pers_fov); //
+CK_DLL_MFUN(gcamera_set_pers_fov);
+CK_DLL_MFUN(gcamera_get_pers_fov);
 
 // ortho camera params
-CK_DLL_MFUN(cgl_cam_set_ortho_size); // size of view volume (preserves screen aspect ratio)
-CK_DLL_MFUN(cgl_cam_get_ortho_size); //
+CK_DLL_MFUN(gcamera_set_ortho_size); // view volume size (preserves screen aspect ratio)
+CK_DLL_MFUN(gcamera_get_ortho_size);
 
-// mouse cast from camera
-CK_DLL_MFUN(chugl_cam_screen_coord_to_world_ray);
-CK_DLL_MFUN(chugl_cam_world_pos_to_screen_coord);
+CK_DLL_MFUN(gcamera_screen_coord_to_world_pos);
+CK_DLL_MFUN(gcamera_world_pos_to_screen_coord);
+CK_DLL_MFUN(gcamera_ndc_to_world_pos);
+CK_DLL_MFUN(gcamera_world_pos_to_ndc);
 
-//-----------------------------------------------------------------------------
-// init_chugl_cam()
-//-----------------------------------------------------------------------------
-t_CKBOOL init_chugl_camera(Chuck_DL_Query *QUERY)
+// TODO overridable update(dt) (actualy don't we already get this from GGen?)
+// add mouse click state to GWindow
+// impl arcball Camera
+
+CK_DLL_CTOR(orbit_camera_ctor);
+CK_DLL_MFUN(orbit_camera_update);
+CK_DLL_MFUN(orbit_camera_set_drag_speed);
+CK_DLL_MFUN(orbit_camera_get_drag_speed);
+CK_DLL_MFUN(orbit_camera_set_zoom_speed);
+CK_DLL_MFUN(orbit_camera_get_zoom_speed);
+CK_DLL_MFUN(orbit_camera_set_target);
+CK_DLL_MFUN(orbit_camera_get_target);
+
+CK_DLL_CTOR(fly_camera_ctor);
+CK_DLL_MFUN(fly_camera_update);
+
+CK_DLL_MFUN(fly_camera_set_speed);
+CK_DLL_MFUN(fly_camera_get_speed);
+CK_DLL_MFUN(fly_camera_set_sensitivity);
+CK_DLL_MFUN(fly_camera_get_sensitivity);
+
+static void ulib_camera_query(Chuck_DL_Query* QUERY)
 {
-	// EM_log(CK_LOG_INFO, "ChuGL Camera");
-	// CGL camera
-	QUERY->begin_class(QUERY, "GCamera", "GGen");
-	QUERY->doc_class(QUERY, "Camera class. Static--all instances point to the same underlying ChuGL main camera");
-    QUERY->add_ex(QUERY, "basic/mousecast.ck");
+    BEGIN_CLASS(SG_CKNames[SG_COMPONENT_CAMERA], SG_CKNames[SG_COMPONENT_TRANSFORM]);
 
-	QUERY->add_ctor(QUERY, cgl_cam_ctor);
+    static t_CKINT camera_mode_persp = (t_CKINT)SG_CameraType_PERPSECTIVE;
+    static t_CKINT camera_mode_ortho = (t_CKINT)SG_CameraType_ORTHOGRAPHIC;
+    SVAR("int", "PERSPECTIVE", &camera_mode_persp);
+    SVAR("int", "ORTHOGRAPHIC", &camera_mode_ortho);
 
-	// static vars
-	// perspective mode
-	QUERY->add_svar(QUERY, "int", "PERSPECTIVE", true, (void *)&Camera::MODE_PERSPECTIVE);
-	QUERY->add_svar(QUERY, "int", "ORTHO", true, (void *)&Camera::MODE_ORTHO);
+    CTOR(gcamera_ctor);
 
-	QUERY->add_mfun(QUERY, cgl_cam_set_mode_persp, "void", "perspective");
-	QUERY->doc_func(QUERY, "Set camera to perspective mode");
+    // camera mode
+    MFUN(gcamera_set_mode_persp, "void", "perspective");
+    DOC_FUNC("Set camera mode to perspective.");
+    MFUN(gcamera_set_mode_ortho, "void", "orthographic");
+    DOC_FUNC("Set camera mode to orthographic.");
+    MFUN(gcamera_get_mode, "int", "mode");
+    DOC_FUNC(
+      "Get camera mode. Returns either GCamera.PERSPECTIVE or GCamera.ORTHOGRAPHIC.");
 
-	QUERY->add_mfun(QUERY, cgl_cam_set_mode_ortho, "void", "orthographic");
-	QUERY->doc_func(QUERY, "Set camera to orthographic mode");
+    // clip planes
+    MFUN(gcamera_set_clip, "void", "clip");
+    ARG("float", "near");
+    ARG("float", "far");
+    DOC_FUNC("Set camera clip planes.");
 
-	QUERY->add_mfun(QUERY, cgl_cam_get_mode, "int", "mode");
-	QUERY->doc_func(QUERY, "Get camera mode. Can be GCamera.MODE_PERSP or GCamera.MODE_ORTHO");
+    MFUN(gcamera_get_clip_near, "float", "clipNear");
+    DOC_FUNC("Get camera near clip plane.");
 
+    MFUN(gcamera_get_clip_far, "float", "clipFar");
+    DOC_FUNC("Get camera far clip plane.");
 
-	// clipping planes
-	QUERY->add_mfun(QUERY, cgl_cam_set_clip, "void", "clip");
-	QUERY->add_arg(QUERY, "float", "near");
-	QUERY->add_arg(QUERY, "float", "far");
-	QUERY->doc_func(QUERY, "Set camera clipping planes");
+    // perspective camera params
+    MFUN(gcamera_set_pers_fov, "void", "fov");
+    ARG("float", "fov_radians");
+    DOC_FUNC("Set camera field of view in radians.");
 
-	QUERY->add_mfun(QUERY, cgl_cam_get_clip_near, "float", "clipNear");
-	QUERY->doc_func(QUERY, "get near clipping plane");
+    MFUN(gcamera_get_pers_fov, "float", "fov");
+    DOC_FUNC("Get camera field of view in radians.");
 
+    // ortho camera params
+    MFUN(gcamera_set_ortho_size, "void", "size");
+    ARG("float", "size");
+    DOC_FUNC(
+      "(orthographic mode) set the height of the view volume in world space units. "
+      "Width is automatically calculated based on aspect ratio.");
 
-	QUERY->add_mfun(QUERY, cgl_cam_get_clip_far, "float", "clipFar");
-	QUERY->doc_func(QUERY, "get far clipping plane");
+    MFUN(gcamera_get_ortho_size, "float", "size");
+    DOC_FUNC(
+      "(orthographic mode) get the height of the view volume in world space units.");
 
-	// fov (in degrees)
-	QUERY->add_mfun(QUERY, cgl_cam_set_pers_fov, "float", "fov");
-	QUERY->add_arg(QUERY, "float", "f");
-	QUERY->doc_func(QUERY, "(perspective mode) set the field of view in degrees");
+    // raycast
+    MFUN(gcamera_screen_coord_to_world_pos, "vec3", "screenCoordToWorldPos");
+    ARG("vec2", "screen_pos");
+    ARG("float", "distance");
+    DOC_FUNC(
+      "Returns the world position of a point in screen space at a given distance from "
+      "the camera. "
+      "Useful in combination with GWindow.mousePos() for mouse picking.");
 
-	QUERY->add_mfun(QUERY, cgl_cam_get_pers_fov, "float", "fov");
-	QUERY->doc_func(QUERY, "(perspective mode) get the field of view in degrees");
+    MFUN(gcamera_world_pos_to_screen_coord, "vec2", "worldPosToScreenCoord");
+    ARG("vec3", "world_pos");
+    DOC_FUNC(
+      "Get a screen coordinate from a world position by casting a ray from worldPos "
+      "back to the camera and finding the intersection with the near clipping plane"
+      "world_pos is a vec3 representing a world position."
+      "Returns a vec2 screen coordinate."
+      "Remember, screen coordinates have origin at the top-left corner of the window");
 
+    MFUN(gcamera_ndc_to_world_pos, "vec3", "NDCToWorldPos");
+    ARG("vec3", "clip_pos");
+    DOC_FUNC(
+      "Convert a point in clip space to world space. Clip space x and y should be in "
+      "range [-1, 1], and z in the range [0, 1]. For x and y, 0 is the center of the "
+      "screen. For z, 0 is the near clip plane and 1 is the far clip plane.");
 
-	// ortho view size
-	QUERY->add_mfun(QUERY, cgl_cam_set_ortho_size, "float", "viewSize");
-	QUERY->add_arg(QUERY, "float", "s");
-	QUERY->doc_func(QUERY, "(orthographic mode) set the height of the view in world space units. Width is automatically calculated based on aspect ratio");
+    MFUN(gcamera_world_pos_to_ndc, "vec3", "worldPosToNDC");
+    ARG("vec3", "world_pos");
+    DOC_FUNC("Convert a point in world space to this camera's clip space.");
 
-	QUERY->add_mfun(QUERY, cgl_cam_get_ortho_size, "float", "viewSize");
-	QUERY->doc_func(QUERY, "(orthographic mode) get the height of the view in world space units");
+    END_CLASS();
 
-	// raycast from mousepos
-	QUERY->add_mfun(QUERY, chugl_cam_screen_coord_to_world_ray, "vec3", "screenCoordToWorldRay");
-	QUERY->add_arg(QUERY, "float", "screenX");
-	QUERY->add_arg(QUERY, "float", "screenY");
-	QUERY->doc_func(QUERY, 
-		"Get a ray in world space representing the normalized directional vector from camera world position to screen coordinate"
-		"screenX and screenY are screen coordinates, which you can get from GG.mouseX() and GG.mouseY() or you can pass coordinates directly"
-		"useful if you want to do mouse picking or raycasting"
-	);
+    // orbit camera
+    {
+        BEGIN_CLASS("GOrbitCamera", SG_CKNames[SG_COMPONENT_CAMERA]);
 
-	QUERY->add_mfun(QUERY, chugl_cam_world_pos_to_screen_coord, "vec3", "worldPosToScreenCoord");
-	QUERY->add_arg(QUERY, "vec3", "worldPos");
-	QUERY->doc_func(QUERY, 
-		"Get a screen coordinate from a world position by casting a ray from worldPos back to the camera and finding the intersection with the near clipping plane"
-		"worldPos is a vec3 representing a world position"
-		"returns a vec3. X and Y are screen coordinates, Z is the depth-value of the worldPos"
-		"Remember, screen coordinates have origin at the top-left corner of the window"
-	);
+        CTOR(orbit_camera_ctor);
 
-	QUERY->end_class(QUERY);
+        MFUN(orbit_camera_update, "void", "update");
+        ARG("float", "dt");
 
-	return true;
+        MFUN(orbit_camera_set_drag_speed, "void", "dragSpeed");
+        ARG("float", "speed");
+        DOC_FUNC(
+          "Set the speed of the camera's rotation when dragging with the mouse.");
+
+        MFUN(orbit_camera_get_drag_speed, "float", "dragSpeed");
+        DOC_FUNC(
+          "Get the speed of the camera's rotation when dragging with the mouse.");
+
+        MFUN(orbit_camera_set_zoom_speed, "void", "zoomSpeed");
+        ARG("float", "speed");
+        DOC_FUNC(
+          "Set the speed of the camera's zoom when scrolling with the mouse wheel.");
+
+        MFUN(orbit_camera_get_zoom_speed, "float", "zoomSpeed");
+        DOC_FUNC(
+          "Get the speed of the camera's zoom when scrolling with the mouse wheel.");
+
+        MFUN(orbit_camera_set_target, "void", "target");
+        ARG("vec3", "target");
+        DOC_FUNC("Set the point in world space that the camera orbits around.");
+
+        MFUN(orbit_camera_get_target, "vec3", "target");
+        DOC_FUNC("Get the point in world space that the camera orbits around.");
+
+        END_CLASS();
+    }
+
+    // fly camera
+    {
+        BEGIN_CLASS("GFlyCamera", SG_CKNames[SG_COMPONENT_CAMERA]);
+
+        CTOR(fly_camera_ctor);
+
+        MFUN(fly_camera_update, "void", "update");
+        ARG("float", "dt");
+        DOC_FUNC(
+          "Overrides the GGen.update(dt) method. Called automatically every frame.");
+
+        MFUN(fly_camera_set_speed, "void", "speed");
+        ARG("float", "speed");
+        DOC_FUNC("Set the move speed of the camera");
+
+        MFUN(fly_camera_get_speed, "float", "speed");
+        DOC_FUNC("Get the move speed of the camera");
+
+        MFUN(fly_camera_set_sensitivity, "void", "sensitivity");
+        ARG("float", "sensitivity");
+        DOC_FUNC("Set the mouse look sensitivity of the camera");
+
+        MFUN(fly_camera_get_sensitivity, "float", "sensitivity");
+        DOC_FUNC("Get the mouse look sensitivity of the camera");
+
+        END_CLASS();
+    }
 }
 
-// CGL Camera ===============================================================
-CK_DLL_CTOR(cgl_cam_ctor)
+SG_Camera* ulib_camera_create(Chuck_Object* ckobj)
 {
-	// for now just return the main camera
-	// very important: have to access main scene through CGL::GetMainScene() because
-	// that's where the default camera construction happens
-	Scene *scene = (Scene *)CGL::GetSGO(CGL::GetMainScene(SHRED, API, VM));
-	OBJ_MEMBER_INT(SELF, CGL::GetGGenDataOffset()) = (t_CKINT)(scene->GetMainCamera());
+    CK_DL_API API = g_chuglAPI;
+    // create camera component
+    SG_CameraParams default_cam_params = {}; // passing direclty for now rather than
+                                             // creating separate CameraParams struct
+    SG_Camera* cam = SG_CreateCamera(ckobj, default_cam_params);
+    OBJ_MEMBER_UINT(ckobj, component_offset_id) = cam->id;
+    CQ_PushCommand_CameraCreate(cam);
+
+    return cam;
 }
 
-CK_DLL_DTOR(cgl_cam_dtor)
+CK_DLL_CTOR(gcamera_ctor)
 {
-	// TODO: no destructors for static vars (we don't want one camera handle falling out of scope to delete the only camera)
-
-	// Camera* mainCam = (Camera*) CGL::GetSGO(SELF);
-	// don't call delete! because this is a static var
-	OBJ_MEMBER_INT(SELF, CGL::GetGGenDataOffset()) = 0; // zero out the memory
+    ulib_camera_create(SELF);
 }
 
-CK_DLL_MFUN(cgl_cam_set_mode_persp)
+CK_DLL_MFUN(gcamera_set_mode_persp)
 {
-	Scene *scene = (Scene *)CGL::GetSGO(CGL::GetMainScene(SHRED, API, VM));
-	// Camera *cam = (Camera *) CGL::GetSGO(SELF);
-	Camera * cam = scene->GetMainCamera();
-	cam->SetPerspective();
+    SG_Camera* cam          = GET_CAMERA(SELF);
+    cam->params.camera_type = SG_CameraType_PERPSECTIVE;
 
-	CGL::PushCommand(new UpdateCameraCommand(cam));
+    CQ_PushCommand_CameraSetParams(cam);
 }
 
-CK_DLL_MFUN(cgl_cam_set_mode_ortho)
+CK_DLL_MFUN(gcamera_set_mode_ortho)
 {
-	Camera *cam = (Camera *) CGL::GetSGO(SELF);
-	cam->SetOrtho();
+    SG_Camera* cam          = GET_CAMERA(SELF);
+    cam->params.camera_type = SG_CameraType_ORTHOGRAPHIC;
 
-	CGL::PushCommand(new UpdateCameraCommand(cam));
+    CQ_PushCommand_CameraSetParams(cam);
 }
 
-CK_DLL_MFUN(cgl_cam_get_mode)
+CK_DLL_MFUN(gcamera_get_mode)
 {
-	Camera *cam = (Camera *) CGL::GetSGO(SELF);
-	RETURN->v_int = cam->GetMode();
+    SG_Camera* cam = GET_CAMERA(SELF);
+    RETURN->v_int  = (t_CKINT)cam->params.camera_type;
 }
 
-CK_DLL_MFUN(cgl_cam_set_clip)
+CK_DLL_MFUN(gcamera_set_clip)
 {
-	Camera *cam = (Camera *) CGL::GetSGO(SELF);
-	t_CKFLOAT n = GET_NEXT_FLOAT(ARGS);
-	t_CKFLOAT f = GET_NEXT_FLOAT(ARGS);
-	cam->SetClipPlanes(n, f);
+    SG_Camera* cam         = GET_CAMERA(SELF);
+    cam->params.near_plane = GET_NEXT_FLOAT(ARGS);
+    cam->params.far_plane  = GET_NEXT_FLOAT(ARGS);
 
-	CGL::PushCommand(new UpdateCameraCommand(cam));
+    CQ_PushCommand_CameraSetParams(cam);
 }
 
-CK_DLL_MFUN(cgl_cam_get_clip_near)
+CK_DLL_MFUN(gcamera_get_clip_near)
 {
-	Camera *cam = (Camera *) CGL::GetSGO(SELF);
-	RETURN->v_float = cam->GetClipNear();
+    SG_Camera* cam  = GET_CAMERA(SELF);
+    RETURN->v_float = cam->params.near_plane;
 }
 
-CK_DLL_MFUN(cgl_cam_get_clip_far)
+CK_DLL_MFUN(gcamera_get_clip_far)
 {
-	Camera *cam = (Camera *) CGL::GetSGO(SELF);
-	RETURN->v_float = cam->GetClipFar();
+    SG_Camera* cam  = GET_CAMERA(SELF);
+    RETURN->v_float = cam->params.far_plane;
 }
 
-CK_DLL_MFUN(cgl_cam_set_pers_fov)
+CK_DLL_MFUN(gcamera_set_pers_fov)
 {
-	Camera *cam = (Camera *) CGL::GetSGO(SELF);
-	t_CKFLOAT f = GET_NEXT_FLOAT(ARGS);
-	cam->SetFOV(f);
+    SG_Camera* cam          = GET_CAMERA(SELF);
+    cam->params.fov_radians = GET_NEXT_FLOAT(ARGS);
 
-	RETURN->v_float = f;
-
-	CGL::PushCommand(new UpdateCameraCommand(cam));
+    CQ_PushCommand_CameraSetParams(cam);
 }
 
-CK_DLL_MFUN(cgl_cam_get_pers_fov)
+CK_DLL_MFUN(gcamera_get_pers_fov)
 {
-	Camera *cam = (Camera *) CGL::GetSGO(SELF);
-	RETURN->v_float = cam->GetFOV();
+    SG_Camera* cam  = GET_CAMERA(SELF);
+    RETURN->v_float = cam->params.fov_radians;
 }
 
-CK_DLL_MFUN(cgl_cam_set_ortho_size)
+CK_DLL_MFUN(gcamera_set_ortho_size)
 {
-	Camera *cam = (Camera *) CGL::GetSGO(SELF);
-	t_CKFLOAT s = GET_NEXT_FLOAT(ARGS);
-	cam->SetSize(s);
+    SG_Camera* cam   = GET_CAMERA(SELF);
+    cam->params.size = GET_NEXT_FLOAT(ARGS);
 
-	RETURN->v_float = s;
-
-	CGL::PushCommand(new UpdateCameraCommand(cam));
+    CQ_PushCommand_CameraSetParams(cam);
 }
 
-CK_DLL_MFUN(cgl_cam_get_ortho_size)
+CK_DLL_MFUN(gcamera_get_ortho_size)
 {
-	Camera *cam = (Camera *) CGL::GetSGO(SELF);
-	RETURN->v_float = cam->GetSize();
+    SG_Camera* cam  = GET_CAMERA(SELF);
+    RETURN->v_float = cam->params.size;
 }
 
-CK_DLL_MFUN(chugl_cam_screen_coord_to_world_ray)
+CK_DLL_MFUN(gcamera_screen_coord_to_world_pos)
 {
-	Camera *cam = (Camera *) CGL::GetSGO(SELF);
-	t_CKFLOAT screenX = GET_NEXT_FLOAT(ARGS);
-	t_CKFLOAT screenY = GET_NEXT_FLOAT(ARGS);
+    SG_Camera* cam      = GET_CAMERA(SELF);
+    t_CKVEC2 screen_pos = GET_NEXT_VEC2(ARGS);
+    float distance      = GET_NEXT_FLOAT(ARGS);
 
-	auto windowSize = CGL::GetWindowSize();
-	int screenWidth = windowSize.first;
-	int screenHeight = windowSize.second;
+    t_CKVEC2 windowSize = CHUGL_Window_WindowSize();
+    int screenWidth     = windowSize.x;
+    int screenHeight    = windowSize.y;
+    float aspect        = (float)screenWidth / (float)screenHeight;
 
-	// first convert to normalized device coordinates in range [-1, 1]
-	glm::vec4 lRayStart_NDC(
-		((float)screenX/(float)screenWidth  - 0.5f) * 2.0f, // [0,1024] -> [-1,1]
-		-((float)screenY/(float)screenHeight - 0.5f) * 2.0f, // [0, 768] -> [-1,1]
-		-1.0, // The near plane maps to Z=-1 in Normalized Device Coordinates
-		1.0f
-	);
-	glm::vec4 lRayEnd_NDC(
-		((float)screenX/(float)screenWidth  - 0.5f) * 2.0f,
-		-((float)screenY/(float)screenHeight - 0.5f) * 2.0f,
-		1.0,
-		1.0f
-	);
-	glm::mat4 M = glm::inverse(cam->GetProjectionMatrix() * cam->GetViewMatrix());
-	glm::vec4 lRayStart_world = M * lRayStart_NDC; lRayStart_world/=lRayStart_world.w;
-	glm::vec4 lRayEnd_world   = M * lRayEnd_NDC  ; lRayEnd_world  /=lRayEnd_world.w;
+    if (cam->params.camera_type == SG_CameraType_ORTHOGRAPHIC) {
+        // calculate camera frustrum size in world space
+        float frustrum_height = cam->params.size;
+        float frustrum_width  = frustrum_height * aspect;
 
-	glm::vec3 lRayDir_world(lRayEnd_world - lRayStart_world);
-	lRayDir_world = glm::normalize(lRayDir_world);
-	RETURN->v_vec3 =  { lRayDir_world.x, lRayDir_world.y, lRayDir_world.z };
+        // convert from normalized mouse coords to view space coords
+        // (we negate viewY so that 0,0 is bottom left instead of top left)
+        float view_x = frustrum_width * (screen_pos.x / screenWidth - 0.5f);
+        float view_y = -frustrum_height * (screen_pos.y / screenHeight - 0.5f);
+
+        // convert from view space coords to world space coords
+        glm::vec3 world_pos
+          = SG_Transform::worldMatrix(cam) * glm::vec4(view_x, view_y, -distance, 1.0f);
+
+        RETURN->v_vec3 = { world_pos.x, world_pos.y, world_pos.z };
+        return;
+    } else if (cam->params.camera_type
+               == SG_CameraType_PERPSECTIVE) { // perspective camera
+        glm::vec2 ndc = { (screen_pos.x / screenWidth) * 2.0f - 1.0f,
+                          1.0f - (screen_pos.y / screenHeight) * 2.0f };
+
+        // first convert to normalized device coordinates in range [-1, 1]
+        glm::vec4 lRayEnd_NDC(ndc, 1.0, 1.0f); // The far plane maps to Z=1 in NDC
+
+        glm::mat4 M = glm::inverse(SG_Camera::projectionMatrix(cam, aspect)
+                                   * SG_Camera::viewMatrix(cam));
+
+        glm::vec3 lRayStart_world = SG_Transform::worldPosition(cam);
+        glm::vec4 lRayEnd_world   = M * lRayEnd_NDC;
+        lRayEnd_world /= lRayEnd_world.w; // perspective divide
+
+        glm::vec3 lRayDir_world
+          = glm::normalize(glm::vec3(lRayEnd_world) - lRayStart_world);
+        glm::vec3 world_pos = lRayStart_world + distance * lRayDir_world;
+        RETURN->v_vec3      = { world_pos.x, world_pos.y, world_pos.z };
+        return;
+    }
+    ASSERT(false); // unsupported camera type
 }
 
-CK_DLL_MFUN(chugl_cam_world_pos_to_screen_coord)
+CK_DLL_MFUN(gcamera_ndc_to_world_pos)
 {
-	Camera *cam = (Camera *) CGL::GetSGO(SELF);
-	t_CKVEC3 worldPos = GET_NEXT_VEC3(ARGS);
+    SG_Camera* cam      = GET_CAMERA(SELF);
+    t_CKVEC3 ndc_pos    = GET_NEXT_VEC3(ARGS);
+    t_CKVEC2 windowSize = CHUGL_Window_WindowSize();
+    float aspect        = (float)windowSize.x / (float)windowSize.y;
 
-	// first convert to clip space
-	glm::mat4 view = cam->GetViewMatrix();
-	glm::mat4 proj = cam->GetProjectionMatrix();
-	glm::vec4 clipPos = proj * view * glm::vec4(worldPos.x, worldPos.y, worldPos.z, 1.0f);
+    /*
+    Formula:
+    clip_pos = P * V * world_pos
+    world_pos = inv(P * V) * clip_pos
+    */
 
-	// convert to normalized device coordinates in range [-1, 1]
-	auto windowSize = CGL::GetWindowSize();
-	float x = (clipPos.x / clipPos.w + 1.0f) / 2.0f * windowSize.first;
-	// need to invert y because screen coordinates are top-left origin
-	float y = (1.0f - clipPos.y / clipPos.w) / 2.0f * windowSize.second;
-	// z is depth value
-	float z = clipPos.z / clipPos.w;
-	RETURN->v_vec3 = {x, y, z};
+    glm::mat4 view = SG_Camera::viewMatrix(cam);
+    glm::mat4 proj = SG_Camera::projectionMatrix(cam, aspect);
+    glm::vec4 world
+      = glm::inverse(proj * view) * glm::vec4(ndc_pos.x, ndc_pos.y, ndc_pos.z, 1.0f);
+    world /= world.w; // perspective divide
+
+    RETURN->v_vec3 = { world.x, world.y, world.z };
+}
+
+CK_DLL_MFUN(gcamera_world_pos_to_ndc)
+{
+    SG_Camera* cam      = GET_CAMERA(SELF);
+    t_CKVEC3 world_pos  = GET_NEXT_VEC3(ARGS);
+    t_CKVEC2 windowSize = CHUGL_Window_WindowSize();
+    float aspect        = (float)windowSize.x / (float)windowSize.y;
+
+    /*
+    Formula:
+    clip_pos = P * V * world_pos
+    */
+
+    glm::mat4 view = SG_Camera::viewMatrix(cam);
+    glm::mat4 proj = SG_Camera::projectionMatrix(cam, aspect);
+    glm::vec4 clip
+      = proj * view * glm::vec4(world_pos.x, world_pos.y, world_pos.z, 1.0f);
+    glm::vec4 ndc = clip / clip.w;
+
+    RETURN->v_vec3 = { ndc.x, ndc.y, ndc.z };
+}
+
+CK_DLL_MFUN(gcamera_world_pos_to_screen_coord)
+{
+    SG_Camera* cam    = GET_CAMERA(SELF);
+    t_CKVEC3 worldPos = GET_NEXT_VEC3(ARGS);
+
+    t_CKVEC2 windowSize = CHUGL_Window_WindowSize();
+    float aspect        = windowSize.x / windowSize.y;
+
+    // first convert to clip space
+    glm::mat4 view = SG_Camera::viewMatrix(cam);
+
+    glm::mat4 proj = SG_Camera::projectionMatrix(cam, aspect);
+    glm::vec4 clipPos
+      = proj * view * glm::vec4(worldPos.x, worldPos.y, worldPos.z, 1.0f);
+
+    // convert to screen space
+    float x = (clipPos.x / clipPos.w + 1.0f) / 2.0f * windowSize.x;
+    // need to invert y because screen coordinates are top-left origin
+    float y = (1.0f - clipPos.y / clipPos.w) / 2.0f * windowSize.y;
+    // z is depth value (buggy)
+    // float z        = clipPos.z / clipPos.w;
+    RETURN->v_vec2 = { x, y };
+}
+
+// Orbit Camera =====================================================================
+
+CK_DLL_CTOR(orbit_camera_ctor)
+{
+    SG_Camera* camera       = GET_CAMERA(SELF);
+    camera->controller_type = SG_CameraControllerType_Orbit;
+
+    // initialize orbit params
+    camera->orbit = {};
+
+    // set camera transform to initial spherical coords
+    camera->pos
+      = SphericalCoords::toCartesian(camera->orbit.spherical, camera->orbit.target);
+    SG_Transform::lookAt(camera, VEC_ORIGIN);
+
+    CQ_PushCommand_SetPosition(camera);
+    CQ_PushCommand_SetRotation(camera);
+}
+
+CK_DLL_MFUN(orbit_camera_update)
+{
+    SG_Camera* camera           = GET_CAMERA(SELF);
+    SG_OrbitCameraParams* orbit = &camera->orbit;
+
+    // note: don't need to multiply by dt since it's scaled by mouse deltas (which is a
+    // measure of distance, not time)
+
+    // update spherical coords to current camera position
+    // (length check to avoid NaNs)
+    if (glm::length(camera->pos - orbit->target) > 0.0f)
+        orbit->spherical = SphericalCoords::fromCartesian(camera->pos - orbit->target);
+
+    // update scroll
+    t_CKVEC2 scroll_deltas = CHUGL_scroll_delta();
+    orbit->spherical.radius
+      = MAX(0.1f, orbit->spherical.radius - orbit->zoom_speed * (scroll_deltas.y));
+
+    if (CHUGL_Mouse_LeftButton()) {
+        t_CKVEC2 mouse_deltas = CHUGL_Mouse_Delta();
+        orbit->spherical.theta -= (orbit->speed * mouse_deltas.x);
+        orbit->spherical.phi -= (orbit->speed * mouse_deltas.y);
+
+        // clamp phi
+        orbit->spherical.phi
+          = CLAMP(orbit->spherical.phi, -PI / (2.0f + EPSILON), PI / (2.0f + EPSILON));
+        // clamp theta
+        orbit->spherical.theta = fmod(orbit->spherical.theta, 2.0f * PI);
+    }
+
+    // update camera position from spherical coordinates
+    camera->pos = SphericalCoords::toCartesian(orbit->spherical, orbit->target);
+    SG_Transform::lookAt(camera, orbit->target);
+
+    // log_debug("orbit camera update: radius %f, theta %f, phi %f",
+    //           orbit->spherical.radius, orbit->spherical.theta, orbit->spherical.phi);
+    // log_debug("orbit camera transform: pos %f %f %f", camera->pos.x, camera->pos.y,
+    //           camera->pos.z);
+
+    CQ_PushCommand_SetPosition(camera);
+    CQ_PushCommand_SetRotation(camera);
+}
+
+CK_DLL_MFUN(orbit_camera_set_drag_speed)
+{
+    GET_CAMERA(SELF)->orbit.speed = GET_NEXT_FLOAT(ARGS);
+}
+
+CK_DLL_MFUN(orbit_camera_get_drag_speed)
+{
+    RETURN->v_float = GET_CAMERA(SELF)->orbit.speed;
+}
+
+CK_DLL_MFUN(orbit_camera_set_zoom_speed)
+{
+    GET_CAMERA(SELF)->orbit.zoom_speed = GET_NEXT_FLOAT(ARGS);
+}
+
+CK_DLL_MFUN(orbit_camera_get_zoom_speed)
+{
+    RETURN->v_float = GET_CAMERA(SELF)->orbit.zoom_speed;
+}
+
+CK_DLL_MFUN(orbit_camera_set_target)
+{
+    SG_Camera* camera    = GET_CAMERA(SELF);
+    t_CKVEC3 target      = GET_NEXT_VEC3(ARGS);
+    camera->orbit.target = { target.x, target.y, target.z };
+
+    // update camera position
+    camera->pos
+      = SphericalCoords::toCartesian(camera->orbit.spherical, camera->orbit.target);
+    SG_Transform::lookAt(camera, camera->orbit.target);
+
+    CQ_PushCommand_SetPosition(camera);
+    CQ_PushCommand_SetRotation(camera);
+}
+
+CK_DLL_MFUN(orbit_camera_get_target)
+{
+    glm::vec3 target = GET_CAMERA(SELF)->orbit.target;
+    RETURN->v_vec3   = { target.x, target.y, target.z };
+}
+
+// GFlyCamera =====================================================================
+
+CK_DLL_CTOR(fly_camera_ctor)
+{
+    SG_Camera* camera = GET_CAMERA(SELF);
+    // initialize orbit params
+    camera->fly             = {};
+    camera->controller_type = SG_CameraControllerType_Fly;
+}
+
+CK_DLL_MFUN(fly_camera_update)
+{
+    /*
+    TODO:
+    - scroll change camera fov
+    */
+
+    SG_Camera* camera = GET_CAMERA(SELF);
+    f32 dt            = GET_NEXT_FLOAT(ARGS);
+
+    if (CHUGL_Kb_key(GLFW_KEY_W).down)
+        SG_Transform::translate(camera,
+                                camera->fly.speed * dt * SG_Transform::forward(camera));
+
+    if (CHUGL_Kb_key(GLFW_KEY_S).down)
+        SG_Transform::translate(camera, -camera->fly.speed * dt
+                                          * SG_Transform::forward(camera));
+
+    if (CHUGL_Kb_key(GLFW_KEY_D).down)
+        SG_Transform::translate(camera,
+                                camera->fly.speed * dt * SG_Transform::right(camera));
+
+    if (CHUGL_Kb_key(GLFW_KEY_A).down)
+        SG_Transform::translate(camera,
+                                -camera->fly.speed * dt * SG_Transform::right(camera));
+
+    if (CHUGL_Kb_key(GLFW_KEY_E).down)
+        SG_Transform::translate(camera, camera->fly.speed * dt * VEC_UP);
+
+    if (CHUGL_Kb_key(GLFW_KEY_Q).down)
+        SG_Transform::translate(camera, -camera->fly.speed * dt * VEC_UP);
+
+    // mouse lookaround
+    t_CKVEC2 mouse_deltas = CHUGL_Mouse_Delta();
+
+    // for mouse deltaY, rotate around right axis
+    SG_Transform::rotateOnLocalAxis(camera, VEC_RIGHT,
+                                    camera->fly.mouse_sensitivity * -mouse_deltas.y);
+    // for mouse deltaX, rotate around (0,1,0)
+    SG_Transform::rotateOnWorldAxis(camera, VEC_UP,
+                                    camera->fly.mouse_sensitivity * -mouse_deltas.x);
+
+    CQ_PushCommand_SetPosition(camera);
+    CQ_PushCommand_SetRotation(camera);
+}
+
+CK_DLL_MFUN(fly_camera_set_speed)
+{
+    GET_CAMERA(SELF)->fly.speed = GET_NEXT_FLOAT(ARGS);
+}
+
+CK_DLL_MFUN(fly_camera_get_speed)
+{
+    RETURN->v_float = GET_CAMERA(SELF)->fly.speed;
+}
+
+CK_DLL_MFUN(fly_camera_set_sensitivity)
+{
+    GET_CAMERA(SELF)->fly.mouse_sensitivity = GET_NEXT_FLOAT(ARGS);
+}
+
+CK_DLL_MFUN(fly_camera_get_sensitivity)
+{
+    RETURN->v_float = GET_CAMERA(SELF)->fly.mouse_sensitivity;
 }

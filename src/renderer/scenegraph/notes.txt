@@ -1,7 +1,0 @@
-This folder contains all classes related to implementing
-a scene graph.
-Should be kept COMPLETELY independent of the rendering engine
-
-The Renderer reads in a scene and camera to render,
-but nothing in the scenegraph needs to know about the renderer
-
