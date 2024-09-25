@@ -4,7 +4,7 @@ T.assert(shader_desc.vertexString == "", "shader desc vertexString");
 T.assert(shader_desc.fragmentString == "", "shader desc fragmentString");
 T.assert(shader_desc.vertexFilepath == "", "shader desc vertexFilepath");
 T.assert(shader_desc.fragmentFilepath == "", "shader desc fragmentFilepath");
-T.assert(shader_desc.vertexLayout == null, "shader desc vertexLayout");
+T.assert(T.arrayEquals(shader_desc.vertexLayout, [VertexFormat.Float3, VertexFormat.Float3, VertexFormat.Float2, VertexFormat.Float4]), "shader desc default vertexLayout");
 T.assert(!shader_desc.lit, "shader desc lit");
 
 "vertex_string" => shader_desc.vertexString;
@@ -24,6 +24,7 @@ T.assert(T.arrayEquals(shader.vertexLayout(), shader_desc.vertexLayout), "shader
 T.assert(shader.lit(), "shader lit");
 
 ShaderDesc shader_desc2;
+null @=> shader_desc2.vertexLayout;
 Shader shader2(shader_desc2);
 T.assert(shader2.fragmentString() == shader_desc2.fragmentString, "shader2 fragmentString");
 T.assert(shader2.vertexString() == shader_desc2.vertexString, "shader2 vertexString");

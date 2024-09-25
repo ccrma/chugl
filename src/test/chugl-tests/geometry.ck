@@ -9,7 +9,7 @@ T.assert(Geometry.AttributeLocation_Tangent == 3, "TANGENT_ATTRIBUTE_LOCATION");
 
 Geometry custom_geo;
 
-T.assert(custom_geo.vertexAttributeNumComponents(0) == 0, "default vertexAttributeNumComponents");
+T.assert(custom_geo.vertexAttributeNumComponents()[0] == 0, "default vertexAttributeNumComponents");
 T.assert(custom_geo.vertexAttributeData(0).size() == 0, "default vertexAttributeData");
 
 // CK_DLL_MFUN(geo_set_vertex_attribute);
@@ -17,7 +17,7 @@ T.assert(custom_geo.vertexAttributeData(0).size() == 0, "default vertexAttribute
 custom_geo.vertexAttribute(0, 3, vertex_attrib_data);
 
 // CK_DLL_MFUN(geo_get_vertex_attribute_num_components);
-T.assert(custom_geo.vertexAttributeNumComponents(0) == 3, "vertexAttributeNumComponents");
+T.assert(custom_geo.vertexAttributeNumComponents()[0] == 3, "vertexAttributeNumComponents");
 // CK_DLL_MFUN(geo_get_vertex_attribute_data);
 custom_geo.vertexAttributeData(0) @=> float copied_vertex_attrib_data[];
 T.assert(vertex_attrib_data.size() == copied_vertex_attrib_data.size(), "vertexAttributeData size");
@@ -41,7 +41,7 @@ for (0 => int i; i < indices.size(); ++i) {
 // CK_DLL_MFUN(geo_get_vertex_attribute_data_int);
 [6, 7, 8, 9] @=> int vertex_attrib_data_int[];
 custom_geo.vertexAttribute(0, 4, vertex_attrib_data_int);
-T.assert(custom_geo.vertexAttributeNumComponents(0) == 4, "int vertexAttributeNumComponents");
+T.assert(custom_geo.vertexAttributeNumComponents()[0] == 4, "int vertexAttributeNumComponents");
 // custom_geo.vertexAttributeData(0) @=> float copied_vertex_attrib_data[];
 T.assert(T.arrayEquals(vertex_attrib_data_int, custom_geo.vertexAttributeDataInt(0)), "get vertexAttribInt");
 

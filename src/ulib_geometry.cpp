@@ -27,7 +27,6 @@ CK_DLL_MFUN(geo_get_uvs);
 CK_DLL_MFUN(geo_get_tangents);
 
 CK_DLL_MFUN(geo_get_vertex_attribute_num_components);
-CK_DLL_MFUN(geo_get_vertex_attribute_num_components_all);
 
 CK_DLL_MFUN(geo_get_vertex_attribute_data);
 CK_DLL_MFUN(geo_get_vertex_attribute_data_int);
@@ -207,14 +206,9 @@ static void ulib_geometry_query(Chuck_DL_Query* QUERY)
     DOC_FUNC(
       "Get the tangents for a geometry. Equivalent to getVertexAttributeData(3)");
 
-    MFUN(geo_get_vertex_attribute_num_components, "int",
+    MFUN(geo_get_vertex_attribute_num_components, "int[]",
          "vertexAttributeNumComponents");
-    ARG("int", "location");
-    DOC_FUNC("Get the number of components for a vertex attribute. Default 0.");
-
-    MFUN(geo_get_vertex_attribute_num_components_all, "int[]",
-         "vertexAttributeNumComponents");
-    DOC_FUNC("Get the number of components for all vertex attributes.");
+    DOC_FUNC("Get the component count for all vertex attributes on this geometry.");
 
     MFUN(geo_get_vertex_attribute_data, "float[]", "vertexAttributeData");
     ARG("int", "location");
@@ -872,14 +866,6 @@ CK_DLL_MFUN(geo_get_tangents)
 }
 
 CK_DLL_MFUN(geo_get_vertex_attribute_num_components)
-{
-    t_CKINT location = GET_NEXT_INT(ARGS);
-    SG_Geometry* geo = SG_GetGeometry(OBJ_MEMBER_UINT(SELF, component_offset_id));
-
-    RETURN->v_int = geo->vertex_attribute_num_components[location];
-}
-
-CK_DLL_MFUN(geo_get_vertex_attribute_num_components_all)
 {
     SG_Geometry* geo = SG_GetGeometry(OBJ_MEMBER_UINT(SELF, component_offset_id));
 

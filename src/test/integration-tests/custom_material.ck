@@ -24,7 +24,7 @@ adc => g;
     time: f32,
 };
 
-@group(0) @binding(0) var<uniform> u_Frame: FrameUniforms;
+@group(0) @binding(0) var<uniform> u_frame: FrameUniforms;
 
 // our custom material uniforms
 @group(1) @binding(0) var<uniform> u_grayscale: f32;
@@ -67,7 +67,7 @@ fn vs_main(in : VertexInput) -> VertexOutput
         u_Draw.modelMat[2].xyz
     );
 
-    var worldPos : vec4f = u_Frame.projViewMat * u_Draw.modelMat * vec4f(in.position, 1.0f);
+    var worldPos : vec4f = u_frame.projViewMat * u_Draw.modelMat * vec4f(in.position, 1.0f);
     out.v_worldPos = worldPos.xyz;
     out.v_normal = (u_Draw.modelMat * vec4f(in.normal, 0.0)).xyz;
     out.v_tangent = vec4f(modelMat3 * in.tangent.xyz, in.tangent.w);
@@ -89,7 +89,7 @@ fn fs_main(in : VertexOutput, @builtin(front_facing) is_front: bool) -> @locatio
 
     // valve half-lambert
     // https://developer.valvesoftware.com/wiki/Half_Lambert
-    var diffuse : f32 = 0.5 * dot(normal, -u_Frame.dirLight) + 0.5;
+    var diffuse : f32 = 0.5 * dot(normal, -u_frame.dirLight) + 0.5;
     diffuse = diffuse * diffuse;
     let u_color_len : u32 = arrayLength(&u_color);
     return vec4f(diffuse * u_grayscale * vec3f(u_color[u_color_len - 3u], u_color[u_color_len - 2u], u_color[u_color_len - 1u]), 1.0);

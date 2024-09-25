@@ -72,7 +72,7 @@ static std::unordered_map<std::string, std::string> shader_table = {
             num_lights: i32,
         };
 
-        @group(0) @binding(0) var<uniform> u_Frame: FrameUniforms;
+        @group(0) @binding(0) var<uniform> u_frame: FrameUniforms;
 
         )glsl"
     },
@@ -164,11 +164,11 @@ static std::unordered_map<std::string, std::string> shader_table = {
             );
 
             let worldpos = u_Draw.model * vec4f(in.position, 1.0f);
-            out.position = (u_Frame.projection * u_Frame.view) * worldpos;
+            out.position = (u_frame.projection * u_frame.view) * worldpos;
             out.v_worldpos = worldpos.xyz;
 
             // TODO: after wgsl adds matrix inverse, calculate normal matrix here
-            // out.v_normal = (transpose(inverse(u_Frame.viewMat * u_Draw.model)) * vec4f(in.normal, 0.0)).xyz;
+            // out.v_normal = (transpose(inverse(u_frame.viewMat * u_Draw.model)) * vec4f(in.normal, 0.0)).xyz;
             out.v_normal = (u_Draw.model * vec4f(in.normal, 0.0)).xyz;
 
             // tangent vectors aren't impacted by non-uniform scaling or translation
@@ -238,7 +238,7 @@ fn vs_main(in : VertexInput) -> VertexOutput
     var out : VertexOutput;
     var u_Draw : DrawUniforms = u_draw_instances[in.instance];
 
-    out.position = (u_Frame.projection * u_Frame.view) * u_Draw.model * vec4f(in.position, 1.0f);
+    out.position = (u_frame.projection * u_frame.view) * u_Draw.model * vec4f(in.position, 1.0f);
     out.v_uv = in.uv;
 
     return out;
@@ -268,9 +268,9 @@ fn vs_main(in : VertexInput) -> VertexOutput
     var out : VertexOutput;
     var u_Draw : DrawUniforms = u_draw_instances[in.instance];
 
-    out.position = (u_Frame.projection * u_Frame.view) * u_Draw.model * vec4f(in.position, 1.0f);
+    out.position = (u_frame.projection * u_frame.view) * u_Draw.model * vec4f(in.position, 1.0f);
     // TODO: after wgsl adds matrix inverse, calculate normal matrix here
-    // out.v_normal = (transpose(inverse(u_Frame.viewMat * u_Draw.model)) * vec4f(in.normal, 0.0)).xyz;
+    // out.v_normal = (transpose(inverse(u_frame.viewMat * u_Draw.model)) * vec4f(in.normal, 0.0)).xyz;
     out.v_world_normal = (u_Draw.model * vec4f(in.normal, 0.0)).xyz;
     out.v_local_normal = in.normal;
 
@@ -323,7 +323,7 @@ fn vs_main(in : VertexInput) -> VertexOutput
         u_Draw.model[2].xyz
     );
 
-    out.position = (u_Frame.projection * u_Frame.view) * u_Draw.model * vec4f(in.position, 1.0f);
+    out.position = (u_frame.projection * u_frame.view) * u_Draw.model * vec4f(in.position, 1.0f);
 
     // tangent vectors aren't impacted by non-uniform scaling or translation
     out.v_world_tangent = vec4f(modelMat3 * in.tangent.xyz, in.tangent.w);
@@ -446,7 +446,7 @@ static const char* phong_shader_string = R"glsl(
     {
         var normal = calculateNormal(in.v_normal, in.v_uv, in.v_tangent, u_normal_factor, is_front);
 
-        let viewDir = normalize(u_Frame.camera_pos - in.v_worldpos);  // direction from camera to this frag
+        let viewDir = normalize(u_frame.camera_pos - in.v_worldpos);  // direction from camera to this frag
 
         // material color properties (ignore alpha channel for now)
         let diffuseTex = textureSample(u_diffuse_map, texture_sampler, in.v_uv);
@@ -459,7 +459,7 @@ static const char* phong_shader_string = R"glsl(
         let specular_color : vec3f = (specularTex.rgb * u_specular_color);
 
         var lighting = vec3f(0.0); // accumulate lighting
-        for (var i = 0; i < u_Frame.num_lights; i++) {
+        for (var i = 0; i < u_frame.num_lights; i++) {
             let light = u_lights[i];
             var L : vec3f = vec3(0.0);
             var radiance : vec3f = vec3(0.0);
@@ -501,7 +501,7 @@ static const char* phong_shader_string = R"glsl(
         }  // end light loop
 
         // ambient light
-        lighting += u_Frame.ambient_light * diffuse_color;
+        lighting += u_frame.ambient_light * diffuse_color;
 
         // emissive
         lighting += srgbToLinear(emissiveTex.rgb) * u_emission_color;
@@ -634,7 +634,7 @@ fn vs_main(
     var u_Draw : DrawUniforms = u_draw_instances[in.instance];
 
     let worldpos = u_Draw.model * vec4f(calculate_line_pos(vertex_id), 0.0, 1.0);
-    out.position = (u_Frame.projection * u_Frame.view) * worldpos;
+    out.position = (u_frame.projection * u_frame.view) * worldpos;
 
     // color
     out.v_color = vec3f(1.0);
@@ -730,7 +730,7 @@ fn vs_main(
         u_point_positions[3 * point_idx + 2]
     );
 
-    out.position = (u_Frame.projection * u_Frame.view * u_Draw.model) * vec4f(point_pos, 1.0);
+    out.position = (u_frame.projection * u_frame.view * u_Draw.model) * vec4f(point_pos, 1.0);
     out.v_color = point_color;
     out.v_uv = point_uv;
 
@@ -847,7 +847,7 @@ static const char* pbr_shader_string = R"glsl(
     ) -> @location(0) vec4f
     {
         let N : vec3f = calculateNormal(in.v_normal, in.v_uv, in.v_tangent, u_normalFactor, is_front);
-        let V : vec3f = normalize(u_Frame.camera_pos - in.v_worldpos);
+        let V : vec3f = normalize(u_frame.camera_pos - in.v_worldpos);
 
         // linear-space albedo (normally authored in sRGB space so we have to convert to linear space)
         // transparency not supported
@@ -864,7 +864,7 @@ static const char* pbr_shader_string = R"glsl(
 
         var Lo : vec3f = vec3(0.0);
         // loop over all lights
-        for (var i = 0; i < u_Frame.num_lights; i++) {
+        for (var i = 0; i < u_frame.num_lights; i++) {
             let light = u_lights[i];
             var L : vec3f = vec3(0.0);
             var radiance : vec3f = vec3(0.0);
@@ -909,7 +909,7 @@ static const char* pbr_shader_string = R"glsl(
         }  // end light loop
 
         // // ambient occlusion (hardcoded for now) (ambient should only be applied to direct lighting, not indirect lighting)
-        let ambient : vec3f = u_Frame.ambient_light * albedo * textureSample(aoMap, texture_sampler, in.v_uv).r * u_aoFactor;
+        let ambient : vec3f = u_frame.ambient_light * albedo * textureSample(aoMap, texture_sampler, in.v_uv).r * u_aoFactor;
         var finalColor : vec3f = Lo + ambient;  // TODO: update ao calculation after adding IBL
 
         // add emission
@@ -1000,7 +1000,7 @@ const char* gtext_shader_string = R"glsl(
     {
         var out : VertexOutput;
         var u_Draw : DrawUniforms = u_draw_instances[in.instance];
-        out.position = (u_Frame.projection * u_Frame.view) * u_Draw.model * vec4f(in.position, 0.0f, 1.0f);
+        out.position = (u_frame.projection * u_frame.view) * u_Draw.model * vec4f(in.position, 0.0f, 1.0f);
         out.v_uv     = in.uv;
         out.v_buffer_index = in.glyph_index;
 

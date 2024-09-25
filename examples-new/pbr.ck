@@ -13,6 +13,10 @@ N point lights on rotating around central cube. able to inc/dec number of lights
 - each inc/dec is random color
 */
 
+// Use an orbit camera
+GOrbitCamera camera --> GG.scene(); // attach set camera to scene
+GG.scene().camera(camera); // set as main camera
+
 // scenegraph setup
 
 7 => int NUM_ROWS;
@@ -56,12 +60,7 @@ UI_Float dir_light_intensity(GG.scene().light().intensity());
 
 // material properties
 UI_Float3 color(material[0][0].color());
-// UI_Float metallic(material.metallic());
-// UI_Float roughness(material.roughness());
-UI_Float normal_factor(material[0][0].normalFactor());
 
-
-GG.scene().camera() $ GOrbitCamera @=> GOrbitCamera camera;
 UI_Float3 camera_target(camera.target());
 
 fun void ui() {
@@ -73,22 +72,6 @@ fun void ui() {
                 for (int i; i < NUM_ROWS; i++) {
                     for (int j; j < NUM_ROWS; j++) {
                         color.val() => material[i][j].color;
-                    }
-                }
-            }
-
-            // if (UI.slider("material metallic", metallic, 0, 1)) {
-            //     metallic.val() => material.metallic;
-            // }
-
-            // if (UI.slider("material roughness", roughness, 0, 1)) {
-            //     roughness.val() => material.roughness;
-            // }
-
-            if (UI.slider("material normal factor", normal_factor, 0, 1)) {
-                for (int i; i < NUM_ROWS; i++) {
-                    for (int j; j < NUM_ROWS; j++) {
-                        normal_factor.val() => material[i][j].normalFactor;
                     }
                 }
             }
@@ -143,8 +126,6 @@ fun void ui() {
                     ));
                 }
             }
-
-            UI.scenegraph(GG.scene());
 
             if (UI.drag("camera target", camera_target, 0.01, 0, 0, "%0.2f", 0)) {
                 camera_target.val() => camera.target;

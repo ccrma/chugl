@@ -267,6 +267,7 @@ bool GraphicsContext::init(GraphicsContext* context, GLFWwindow* window)
     log_trace("adapter created");
 
     // set required limits to max supported
+    WGPURequiredLimits requiredLimits = {};
 #ifdef WEBGPU_BACKEND_WGPU
     WGPUSupportedLimits supportedLimits = {};
     bool success = wgpuAdapterGetLimits(context->adapter, &supportedLimits);
@@ -275,12 +276,17 @@ bool GraphicsContext::init(GraphicsContext* context, GLFWwindow* window)
     context->limits = supportedLimits.limits;
     logWGPULimits(&context->limits);
 
-    WGPURequiredLimits requiredLimits = {};
-    requiredLimits.limits             = context->limits;
+    requiredLimits.limits = context->limits;
 
+    // clang-format off
     WGPUFeatureName requiredFeatures[] = {
         (WGPUFeatureName)WGPUNativeFeature_VertexWritableStorage,
+(WGPUFeatureName) WGPUNativeFeature_TextureAdapterSpecificFormatFeatures  // allows passing 32-bit float textures to texture_2d<f32> in shaders
+
+        // enabling this feature still doesn't work
+        // WGPUFeatureName_Float32Filterable // needed to sample 32-bit float textures in shaders
     };
+    // clang-format on
     const u32 requiredFeaturesCount = ARRAY_LENGTH(requiredFeatures);
     log_trace("required features: %d", ARRAY_LENGTH(requiredFeatures));
 #else
@@ -288,6 +294,7 @@ bool GraphicsContext::init(GraphicsContext* context, GLFWwindow* window)
     WGPUFeatureName* requiredFeatures = NULL;
 #endif
 
+    // see your machine's supported features here: https://webgpureport.org/
     WGPUDeviceDescriptor deviceDescriptor = {
         NULL,                    // nextInChain
         "ChuGL Device",          // label

@@ -119,7 +119,6 @@ PlaneGeometry plane_geo;
 ShaderDesc shader_desc;
 game_of_life_shader => shader_desc.vertexString;
 game_of_life_shader => shader_desc.fragmentString;
-[VertexFormat.FLOAT3, VertexFormat.FLOAT3, VertexFormat.FLOAT2, VertexFormat.FLOAT4] @=> shader_desc.vertexLayout; // TODO make this default to builtin geometry layout
 
 Shader custom_shader(shader_desc); // create shader from shader_desc
 custom_shader => material.shader; // connect shader to material

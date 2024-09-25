@@ -165,7 +165,7 @@ fn vs_main(
     @builtin(instance_index) instanceIndex : u32
 ) -> VertexOutput {
     var out : VertexOutput;
-    var model_mat : mat4x4f = drawInstances[instanceIndex].model;
+    var model_mat : mat4x4f = u_draw_instances[instanceIndex].model;
 
     // 3 vertices per boid
     var boid : Boid = boids[vertexIndex / 3u];
@@ -175,7 +175,7 @@ fn vs_main(
     let rot_matrix = mat2x2f(cos(angle), sin(angle), -sin(angle), cos(angle));
     let pos = rot_matrix * vertex;
 
-    out.position = u_Frame.projection * u_Frame.view * model_mat * vec4f(boid.pos + pos, 0.0f, 1.0f);
+    out.position = u_frame.projection * u_frame.view * model_mat * vec4f(boid.pos + pos, 0.0f, 1.0f);
     return out;
 }
 
@@ -199,6 +199,7 @@ compute_pass.shader(compute_shader);
 ShaderDesc shader_desc;
 shader_code => shader_desc.vertexString;
 shader_code => shader_desc.fragmentString;
+null => shader_desc.vertexLayout; // no vertex layout
 Shader material_shader(shader_desc);
 
 Material boids_material;

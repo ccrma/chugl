@@ -1,5 +1,7 @@
 
 // Scene Setup =================================================================
+GOrbitCamera cam --> GG.scene();
+GG.scene().camera(cam);
 
 GText text --> GG.scene();
 text.sca(.1);

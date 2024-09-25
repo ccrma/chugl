@@ -216,14 +216,14 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
     static t_CKINT format_int3   = WGPUVertexFormat_Sint32x3;
     static t_CKINT format_int4   = WGPUVertexFormat_Sint32x4;
 
-    SVAR("int", "FLOAT", &format_float);
-    SVAR("int", "FLOAT2", &format_float2);
-    SVAR("int", "FLOAT3", &format_float3);
-    SVAR("int", "FLOAT4", &format_float4);
-    SVAR("int", "INT", &format_int);
-    SVAR("int", "INT2", &format_int2);
-    SVAR("int", "INT3", &format_int3);
-    SVAR("int", "INT4", &format_int4);
+    SVAR("int", "Float", &format_float);
+    SVAR("int", "Float2", &format_float2);
+    SVAR("int", "Float3", &format_float3);
+    SVAR("int", "Float4", &format_float4);
+    SVAR("int", "Int", &format_int);
+    SVAR("int", "Int2", &format_int2);
+    SVAR("int", "Int3", &format_int3);
+    SVAR("int", "Int4", &format_int4);
 
     END_CLASS();
 
@@ -245,7 +245,12 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
     DOC_VAR(
       "Array of VertexFormat enums describing the vertex data layout."
       "E.g. if your vertex shader takes a vec3 position and a vec2 uv, set "
-      "`vertexLayout` to [VertexFormat.FLOAT3, VertexFormat.FLOAT2].");
+      "`vertexLayout` to [VertexFormat.Float3, VertexFormat.Float2]. "
+      "By default this field is set to the standard vertex layout, "
+      "[VertexFormat.Float3, "
+      "VertexFormat.Float3, VertexFormat.Float2, VertexFormat.Float4]. "
+      "This corresponds to position, normal, uv, tangent.");
+
     shader_desc_compute_string_offset   = MVAR("string", "computeString", false);
     shader_desc_compute_filepath_offset = MVAR("string", "computeFilepath", false);
     shader_desc_is_lit                  = MVAR("int", "lit", false);
@@ -710,6 +715,14 @@ CK_DLL_CTOR(shader_desc_ctor)
       = chugin_createCkString("");
     OBJ_MEMBER_STRING(SELF, shader_desc_compute_filepath_offset)
       = chugin_createCkString("");
+
+    WGPUVertexFormat default_format[]
+      = { WGPUVertexFormat_Float32x3, WGPUVertexFormat_Float32x3,
+          WGPUVertexFormat_Float32x2, WGPUVertexFormat_Float32x4 };
+
+    OBJ_MEMBER_INT_ARRAY(SELF, shader_desc_vertex_layout_offset)
+      = chugin_createCkIntArray((int*)default_format, ARRAY_LENGTH(default_format),
+                                true);
 }
 
 CK_DLL_CTOR(shader_ctor_default)

@@ -552,13 +552,15 @@ CK_DLL_QUERY(ChuGL)
         SG_Transform::lookAt(dir_light, glm::vec3(0.0f, -1.0f, -1.0f));
         CQ_PushCommand_SetRotation(dir_light);
 
-        // default orbit camera
+        // default camera
         SG_Camera* default_camera = ulib_camera_create(
           chugin_createCkObj(SG_CKNames[SG_COMPONENT_CAMERA], false));
         CQ_PushCommand_AddChild(scene, default_camera);
         SG_Scene::setMainCamera(scene, default_camera);
         CQ_PushCommand_SceneUpdate(scene);
         gg_config.mainCamera = default_camera->id;
+        default_camera->pos  = glm::vec3(0.0f, 0.0f, 5.0f);
+        CQ_PushCommand_SetPosition(default_camera);
 
         // passRoot()
         gg_config.root_pass_id = ulib_pass_createPass(SG_PassType_Root);
