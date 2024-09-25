@@ -370,32 +370,32 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
     MFUN(material_get_uniform_float, "float", "uniformFloat");
     ARG("int", "location");
 
+    MFUN(material_set_uniform_float2, "void", "uniformFloat2");
+    ARG("int", "location");
+    ARG("vec2", "uniform_value");
+
+    MFUN(material_get_uniform_float2, "vec2", "uniformFloat2");
+    ARG("int", "location");
+
+    MFUN(material_set_uniform_float3, "void", "uniformFloat3");
+    ARG("int", "location");
+    ARG("vec3", "uniform_value");
+
+    MFUN(material_get_uniform_float3, "vec3", "uniformFloat3");
+    ARG("int", "location");
+
+    MFUN(material_set_uniform_float4, "void", "uniformFloat4");
+    ARG("int", "location");
+    ARG("vec4", "uniform_value");
+
+    MFUN(material_get_uniform_float4, "vec4", "uniformFloat4");
+    ARG("int", "location");
+
     MFUN(material_set_uniform_int, "void", "uniformInt");
     ARG("int", "location");
     ARG("int", "uniform_value");
 
     MFUN(material_get_uniform_int, "int", "uniformInt");
-    ARG("int", "location");
-
-    MFUN(material_set_uniform_float2, "void", "uniformVec2");
-    ARG("int", "location");
-    ARG("vec2", "uniform_value");
-
-    MFUN(material_get_uniform_float2, "vec2", "uniformVec2");
-    ARG("int", "location");
-
-    MFUN(material_set_uniform_float3, "void", "uniformVec3");
-    ARG("int", "location");
-    ARG("vec3", "uniform_value");
-
-    MFUN(material_get_uniform_float3, "vec3", "uniformVec3");
-    ARG("int", "location");
-
-    MFUN(material_set_uniform_float4, "void", "uniformVec4");
-    ARG("int", "location");
-    ARG("vec4", "uniform_value");
-
-    MFUN(material_get_uniform_float4, "vec4", "uniformVec4");
     ARG("int", "location");
 
     MFUN(material_set_uniform_int2, "void", "uniformInt2");
