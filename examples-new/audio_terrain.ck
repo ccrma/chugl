@@ -1,7 +1,7 @@
 // window size
 1024 => int WINDOW_SIZE;
-// 1024 => int WATERFALL_DEPTH;
-512 => int WATERFALL_DEPTH;
+1024 => int WATERFALL_DEPTH;
+// 512 => int WATERFALL_DEPTH;
 // accumulate samples from mic
 adc => Flip accum => blackhole;
 // take the FFT
@@ -55,9 +55,77 @@ fun void map2spectrum( complex in[], float out[] )
     for (int i; i < in.size(); i++)
     {
         // map frequency bin magnitude
-        25 * Math.sqrt( (in[i]$polar).mag ) => out[i];
+        25 * Math.pow( (in[i]$polar).mag, .5 ) => out[i];
     }
 }
+
+// our custom audio terrain shader
+"
+#include FRAME_UNIFORMS
+#include DRAW_UNIFORMS
+#include STANDARD_VERTEX_INPUT
+
+struct VertexOutput {
+    @builtin(position) position : vec4<f32>,
+    @location(0) v_height : f32,
+};
+
+// our custom material uniforms
+// @group(1) @binding(0) var u_sampler : sampler;
+@group(1) @binding(0) var u_height_map : texture_2d<f32>;
+@group(1) @binding(1) var<uniform> u_playhead : i32;
+@group(1) @binding(2) var<uniform> u_color : vec3f;
+@group(1) @binding(3) var<uniform> u_repetitions : f32;
+@group(1) @binding(4) var<uniform> u_mirror: i32;
+
+@vertex 
+fn vs_main(in : VertexInput) -> VertexOutput
+{
+    var out : VertexOutput;
+    let u_draw : DrawUniforms = u_draw_instances[in.instance];
+
+    let heightmap_dim = textureDimensions(u_height_map);
+
+    var mirrored_uv = in.uv;
+    mirrored_uv.x = fract(in.uv.x * u_repetitions);
+    if (bool(u_mirror)) {
+        mirrored_uv.x = abs(mirrored_uv.x * 2.0 - 1.0);
+    }
+    var sample_coords = vec2i(mirrored_uv * vec2f(heightmap_dim));
+    sample_coords.y = u_playhead - sample_coords.y; // scroll the heightmap
+    if (sample_coords.y < 0) {
+        sample_coords.y += i32(heightmap_dim.y);
+    }
+    if (sample_coords.y >= i32(heightmap_dim.y)) {
+        sample_coords.y = sample_coords.y % i32(heightmap_dim.y);
+    }
+
+    // mirror the uv.x
+
+    let heightmap = textureLoad(u_height_map, sample_coords, 0).r;
+    let heightmap_scaled_pos = in.position + (heightmap * in.normal);
+    let worldpos = u_draw.model * vec4f(heightmap_scaled_pos, 1.0f);
+
+    out.v_height = heightmap;
+
+    // let worldpos = u_draw.model * vec4f(in.position, 1.0f);
+
+    out.position = (u_frame.projection * u_frame.view) * worldpos;
+    // out.v_worldpos = worldpos.xyz;
+
+    return out;
+}
+
+// don't actually need normals/tangents
+@fragment 
+fn fs_main(in : VertexOutput) -> @location(0) vec4f
+{
+    let color_scale = pow((in.v_height / 8.0), .5) + .05;
+
+    let alpha = clamp(color_scale, 0.0, 1.0);
+    return vec4f(vec3f(u_color * color_scale), alpha);
+}
+" @=> string audio_terrain_shader_string;
 
 // Initialize our spectrum height map texture
 TextureDesc spectrum_texture_desc;
@@ -74,8 +142,8 @@ WINDOW_SIZE => write_desc.width;
 
 // Create our custom audio shader
 ShaderDesc shader_desc;
-me.dir() + "/audio_terrain.wgsl" => shader_desc.vertexFilepath;
-me.dir() + "/audio_terrain.wgsl" => shader_desc.fragmentFilepath;
+audio_terrain_shader_string => shader_desc.vertexString;
+audio_terrain_shader_string => shader_desc.fragmentString;
 Shader terrain_shader(shader_desc); // create shader from shader_desc
 
 // Apply the shader to a material
@@ -84,16 +152,18 @@ terrain_shader => terrain_material.shader;
 // assign the spectrum texture to the material
 terrain_material.texture(0, spectrum_texture);
 terrain_material.uniformInt(1, 0); // initialize playhead to 0
-terrain_material.uniformVec3(2, Color.WHITE);
+terrain_material.uniformFloat3(2, Color.WHITE);
+terrain_material.uniformFloat2(3, @(1,1));
+terrain_material.uniformInt(4, false);
 terrain_material.topology(Material.Topology_LineList);
 
 // create our terrain mesh
-// PlaneGeometry plane_geo(
-//     10,  // width
-//     10,  // height
-//     spectrum_texture.width(), // width segments
-//     spectrum_texture.height()// height segments
-// );
+PlaneGeometry plane_geo(
+    10,  // width
+    10,  // height
+    spectrum_texture.width(), // width segments
+    spectrum_texture.height()// height segments
+);
 TorusGeometry torus_geo(
     5,  // radius
     2,  // tube radius
@@ -102,21 +172,28 @@ TorusGeometry torus_geo(
     Math.PI * 2 // arc length
 );
 
+[torus_geo, plane_geo] @=> Geometry geometries[];
+["Torus", "Plane"] @=> string geo_names[];
+
+
 // GMesh terrain_mesh(plane_geo, terrain_material) --> GG.scene();
-// terrain_mesh.rotateX(-Math.PI/2);
 GMesh terrain_mesh(torus_geo, terrain_material) --> GG.scene();
+terrain_mesh.rotateX(-Math.PI/2);
 
 // camera
-// GWindow.mouseMode(GWindow.MouseMode_Disabled);
-// GFlyCamera cam --> GG.scene();
 GOrbitCamera cam --> GG.scene();
 GG.scene().camera(cam);
-cam.posZ(10);
+cam.posZ(15);
 cam.posY(10);
+
+// UI variables
+UI_Int geo_index;
+UI_Float3 terrain_color(Color.WHITE);
+UI_Float repetitions(1);
+UI_Bool mirrored(false);
 
 // game loop (runs at frame rate) ============================================
 
-UI_Float3 terrain_color(Color.WHITE);
 while (true) {
     GG.nextFrame() => now;
     // map FFT response to scalar values
@@ -132,11 +209,24 @@ while (true) {
         (write_desc.y + 1) % WATERFALL_DEPTH => write_desc.y;
     }
 
+    // UI
     if (UI.begin("Audio Terrain")) {
         UI.scenegraph(GG.scene());
 
+        if (UI.listBox("Geometry", geo_index, geo_names)) {
+            terrain_mesh.geometry(geometries[geo_index.val()]);
+        }
+
+        if (UI.drag("Repetitions", repetitions, 0.01, 0.1, 0, "%.2f", 0)) {
+            terrain_material.uniformFloat(3, repetitions.val());
+        }
+
+        if (UI.checkbox("Mirrored", mirrored)) {
+            terrain_material.uniformInt(4, mirrored.val());
+        }
+
         if (UI.colorEdit("Terrain Color", terrain_color, 0)) {
-            terrain_material.uniformVec3(2, terrain_color.val());
+            terrain_material.uniformFloat3(2, terrain_color.val());
         }
     }
     UI.end();
