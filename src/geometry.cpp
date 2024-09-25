@@ -865,6 +865,7 @@ void Geometry_buildTorus(GeometryArenaBuilder* gab, TorusParams* params)
     glm::vec3* positions = ARENA_PUSH_COUNT(gab->pos_arena, glm::vec3, num_vertices);
     glm::vec3* normals   = ARENA_PUSH_COUNT(gab->norm_arena, glm::vec3, num_vertices);
     gvec2f* uvs          = ARENA_PUSH_COUNT(gab->uv_arena, gvec2f, num_vertices);
+    gvec4f* tangents     = ARENA_PUSH_COUNT(gab->tangent_arena, gvec4f, num_vertices);
     gvec3i* indices      = ARENA_PUSH_COUNT(gab->indices_arena, gvec3i, num_indices);
 
     int index = 0;
@@ -889,6 +890,12 @@ void Geometry_buildTorus(GeometryArenaBuilder* gab, TorusParams* params)
             uvs[index] = { (float)i / (float)params->tubularSegments,
                            (float)j / (float)params->radialSegments };
 
+            // tangent
+            // the direction of the uv is tangent to the torus at this point
+            // we can use this to calculate the tangent
+            // glm::vec3 uv_dir = glm::vec3(-center.y, center.x, 0);
+            tangents[index] = { -center.y, center.x, 0, 1 };
+
             index++;
         }
     }
@@ -909,7 +916,7 @@ void Geometry_buildTorus(GeometryArenaBuilder* gab, TorusParams* params)
     }
 
     // build tangents
-    Geometry_computeTangents(gab);
+    // Geometry_computeTangents(gab);
 }
 
 // Cylinder ============================================================================

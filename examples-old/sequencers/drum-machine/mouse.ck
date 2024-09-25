@@ -10,7 +10,7 @@ public class Mouse
     1.0 => float SPP;  // framebuffer to screen pixel ratio 
     
     // workaround for mac retina displays
-    if (GG.frameWidth() != GG.windowWidth()) {
+    if (GWindow.frameWidth() != GWindow.windowWidth()) {
         2.0 => SPP;
         <<< "retina display detected, SPP = " + SPP >>>;
     }
@@ -60,10 +60,10 @@ public class Mouse
     // update mouse world position
     fun void selfUpdate() {
         while (true) {
-            GG.mouseX() => float x;
-            GG.mouseY() => float y;
-            GG.frameWidth() / SPP => float screenWidth;
-            GG.frameHeight() / SPP => float screenHeight;
+            GWindow.mousePos().x => float x;
+            GWindow.mousePos().y => float y;
+            GWindow.frameWidth() / SPP => float screenWidth;
+            GWindow.frameHeight() / SPP => float screenHeight;
 
             // calculate mouse world X and Y coords
             if (GG.camera().mode() == GCamera.ORTHO) {

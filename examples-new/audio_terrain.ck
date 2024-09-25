@@ -1,6 +1,7 @@
 // window size
 1024 => int WINDOW_SIZE;
-1024 => int WATERFALL_DEPTH;
+// 1024 => int WATERFALL_DEPTH;
+512 => int WATERFALL_DEPTH;
 // accumulate samples from mic
 adc => Flip accum => blackhole;
 // take the FFT
@@ -87,15 +88,23 @@ terrain_material.uniformVec3(2, Color.WHITE);
 terrain_material.topology(Material.Topology_LineList);
 
 // create our terrain mesh
-PlaneGeometry plane_geo(
-    10,  // width
-    10,  // height
-    spectrum_texture.width(), // width segments
-    spectrum_texture.height() // height segments
+// PlaneGeometry plane_geo(
+//     10,  // width
+//     10,  // height
+//     spectrum_texture.width(), // width segments
+//     spectrum_texture.height()// height segments
+// );
+TorusGeometry torus_geo(
+    5,  // radius
+    2,  // tube radius
+    spectrum_texture.height(), // radial segments
+    spectrum_texture.width(), // tubular segments
+    Math.PI * 2 // arc length
 );
-GMesh terrain_mesh(plane_geo, terrain_material) --> GG.scene();
-terrain_mesh.rotateX(-Math.PI/2);
-// GMesh terrain_mesh(plane_geo, flat_material) --> GG.scene();
+
+// GMesh terrain_mesh(plane_geo, terrain_material) --> GG.scene();
+// terrain_mesh.rotateX(-Math.PI/2);
+GMesh terrain_mesh(torus_geo, terrain_material) --> GG.scene();
 
 // camera
 // GWindow.mouseMode(GWindow.MouseMode_Disabled);
@@ -116,11 +125,11 @@ while (true) {
     {
         spectrum_texture.write( spectrum, write_desc );
 
-        // bump the row we write to next frame
-        (write_desc.y + 1) % WATERFALL_DEPTH => write_desc.y;
-
         // update the playhead
         terrain_material.uniformInt(1, write_desc.y);
+
+        // bump the row we write to next frame
+        (write_desc.y + 1) % WATERFALL_DEPTH => write_desc.y;
     }
 
     if (UI.begin("Audio Terrain")) {

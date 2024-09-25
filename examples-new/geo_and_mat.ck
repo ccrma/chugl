@@ -4,6 +4,9 @@ Add builtin textures to apply to materials
 Add builtin skybox + IBL lighting
 */
 
+GOrbitCamera cam --> GG.scene();
+GG.scene().camera(cam);
+
 GMesh mesh --> GG.scene();
 
 [
@@ -53,6 +56,10 @@ UI_Int material_index;
 for (1 => int i; i < materials.size(); i++) {
     builtin_materials << Type.of(materials[i]).name();
 }
+
+Texture.load(me.dir() + "./brickwall_normal.png") @=> Texture normal_map;
+
+phong_material.normalMap(normal_map);
 
 
 // Material params

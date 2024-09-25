@@ -10,7 +10,6 @@ Ideas
 struct VertexOutput {
     @builtin(position) position : vec4<f32>,
     @location(0) v_height : f32,
-    // @location(1) v_uv : vec2<f32>,
 };
 
 // our custom material uniforms
@@ -18,10 +17,6 @@ struct VertexOutput {
 @group(1) @binding(0) var u_height_map : texture_2d<f32>;
 @group(1) @binding(1) var<uniform> u_playhead : i32;
 @group(1) @binding(2) var<uniform> u_color : vec3f;
-// @group(1) @binding(0) var u_height_map : texture_storage_2d<f32, read>;
-// var my_storage_image: texture_storage_2d<f32, read>;
-
-
 
 @vertex 
 fn vs_main(in : VertexInput) -> VertexOutput
@@ -29,13 +24,21 @@ fn vs_main(in : VertexInput) -> VertexOutput
     var out : VertexOutput;
     let u_draw : DrawUniforms = u_draw_instances[in.instance];
 
-    let heightmap_dim = vec2f(textureDimensions(u_height_map));
+    let heightmap_dim = textureDimensions(u_height_map);
 
-    var sample_coords = vec2i(in.uv * heightmap_dim);
+    var mirrored_uv = in.uv;
+    // mirrored_uv.x = fract(in.uv.x * 2.0);
+    // mirrored_uv.x = abs(mirrored_uv.x * 2.0 - 1.0);
+    var sample_coords = vec2i(mirrored_uv * vec2f(heightmap_dim));
     sample_coords.y = u_playhead - sample_coords.y; // scroll the heightmap
     if (sample_coords.y < 0) {
         sample_coords.y += i32(heightmap_dim.y);
     }
+    if (sample_coords.y >= i32(heightmap_dim.y)) {
+        sample_coords.y = sample_coords.y % i32(heightmap_dim.y);
+    }
+
+    // mirror the uv.x
 
     let heightmap = textureLoad(u_height_map, sample_coords, 0).r;
     let heightmap_scaled_pos = in.position + (heightmap * in.normal);
@@ -47,7 +50,6 @@ fn vs_main(in : VertexInput) -> VertexOutput
 
     out.position = (u_frame.projection * u_frame.view) * worldpos;
     // out.v_worldpos = worldpos.xyz;
-    // out.v_uv     = in.uv;
 
     return out;
 }
@@ -56,6 +58,8 @@ fn vs_main(in : VertexInput) -> VertexOutput
 @fragment 
 fn fs_main(in : VertexOutput) -> @location(0) vec4f
 {
-    let color_scale = (in.v_height / 8.0) + .05;
-    return vec4f(u_color * color_scale, color_scale);   
+    let color_scale = pow((in.v_height / 8.0), .5) + .05;
+
+    let alpha = clamp(color_scale, 0.0, 1.0);
+    return vec4f(vec3f(u_color * color_scale), alpha);
 }
