@@ -36,7 +36,7 @@ struct DrawUniforms {
     // normalMat: mat4x4f,  // needed to account for non-uniform scaling
 };
 
-@group(2) @binding(0) var<storage> drawInstances: array<DrawUniforms>;
+@group(2) @binding(0) var<storage> u_draw_instances: array<DrawUniforms>;
 
 
 struct VertexOutput {
@@ -59,7 +59,7 @@ struct VertexInput {
 fn vs_main(in : VertexInput) -> VertexOutput
 {
     var out : VertexOutput;
-    var u_Draw : DrawUniforms = drawInstances[in.instance];
+    var u_Draw : DrawUniforms = u_draw_instances[in.instance];
 
     let modelMat3 : mat3x3<f32> = mat3x3(
         u_Draw.modelMat[0].xyz,

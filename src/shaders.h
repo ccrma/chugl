@@ -113,7 +113,7 @@ static std::unordered_map<std::string, std::string> shader_table = {
             id: u32
         };
 
-        @group(2) @binding(0) var<storage> drawInstances: array<DrawUniforms>;
+        @group(2) @binding(0) var<storage> u_draw_instances: array<DrawUniforms>;
 
         )glsl"
     },
@@ -155,7 +155,7 @@ static std::unordered_map<std::string, std::string> shader_table = {
         fn vs_main(in : VertexInput) -> VertexOutput
         {
             var out : VertexOutput;
-            var u_Draw : DrawUniforms = drawInstances[in.instance];
+            var u_Draw : DrawUniforms = u_draw_instances[in.instance];
 
             let modelMat3 : mat3x3<f32> = mat3x3(
                 u_Draw.model[0].xyz,
@@ -236,7 +236,7 @@ struct VertexOutput {
 fn vs_main(in : VertexInput) -> VertexOutput
 {
     var out : VertexOutput;
-    var u_Draw : DrawUniforms = drawInstances[in.instance];
+    var u_Draw : DrawUniforms = u_draw_instances[in.instance];
 
     out.position = (u_Frame.projection * u_Frame.view) * u_Draw.model * vec4f(in.position, 1.0f);
     out.v_uv = in.uv;
@@ -266,7 +266,7 @@ struct VertexOutput {
 fn vs_main(in : VertexInput) -> VertexOutput
 {
     var out : VertexOutput;
-    var u_Draw : DrawUniforms = drawInstances[in.instance];
+    var u_Draw : DrawUniforms = u_draw_instances[in.instance];
 
     out.position = (u_Frame.projection * u_Frame.view) * u_Draw.model * vec4f(in.position, 1.0f);
     // TODO: after wgsl adds matrix inverse, calculate normal matrix here
@@ -315,7 +315,7 @@ struct VertexOutput {
 fn vs_main(in : VertexInput) -> VertexOutput
 {
     var out : VertexOutput;
-    var u_Draw : DrawUniforms = drawInstances[in.instance];
+    var u_Draw : DrawUniforms = u_draw_instances[in.instance];
 
     let modelMat3 : mat3x3<f32> = mat3x3(
         u_Draw.model[0].xyz,
@@ -631,7 +631,7 @@ fn vs_main(
 ) -> VertexOutput
 {
     var out : VertexOutput;
-    var u_Draw : DrawUniforms = drawInstances[in.instance];
+    var u_Draw : DrawUniforms = u_draw_instances[in.instance];
 
     let worldpos = u_Draw.model * vec4f(calculate_line_pos(vertex_id), 0.0, 1.0);
     out.position = (u_Frame.projection * u_Frame.view) * worldpos;
@@ -690,7 +690,7 @@ fn vs_main(
 ) -> VertexOutput
 {
     var out : VertexOutput;
-    var u_Draw : DrawUniforms = drawInstances[instance_id];
+    var u_Draw : DrawUniforms = u_draw_instances[instance_id];
 
     let point_idx = i32(vertex_id / 6u); // 6 vertices per point plane
     let vertex_idx = i32(vertex_id % 6u); // 6 vertices per point plane
@@ -999,7 +999,7 @@ const char* gtext_shader_string = R"glsl(
     fn vs_main(in : VertexInput) -> VertexOutput
     {
         var out : VertexOutput;
-        var u_Draw : DrawUniforms = drawInstances[in.instance];
+        var u_Draw : DrawUniforms = u_draw_instances[in.instance];
         out.position = (u_Frame.projection * u_Frame.view) * u_Draw.model * vec4f(in.position, 0.0f, 1.0f);
         out.v_uv     = in.uv;
         out.v_buffer_index = in.glyph_index;

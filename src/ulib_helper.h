@@ -338,7 +338,6 @@ struct SG_Material;
 
 void ulib_component_set_name(SG_Component* component, const char* name);
 SG_Transform* ulib_ggen_create(Chuck_Object* ckobj, Chuck_VM_Shred* shred);
-
 SG_Mesh* ulib_mesh_create(Chuck_Object* mesh_ckobj, SG_Geometry* geo, SG_Material* mat,
                           Chuck_VM_Shred* shred);
 

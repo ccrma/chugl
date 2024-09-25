@@ -526,9 +526,9 @@ CK_DLL_QUERY(ChuGL)
         DOC_FUNC(
           "Shorthand for GWindow.fullscreen(). Added for backwards compatibility");
 
-        SFUN(chugl_get_default_camera, "GOrbitCamera", "camera");
+        SFUN(chugl_get_default_camera, SG_CKNames[SG_COMPONENT_CAMERA], "camera");
         DOC_FUNC(
-          "Shorthand for getting the default GOrbitCamera that is created upon "
+          "Shorthand for getting the default Camera that is created upon "
           "startup");
 
         END_CLASS();
@@ -553,8 +553,8 @@ CK_DLL_QUERY(ChuGL)
         CQ_PushCommand_SetRotation(dir_light);
 
         // default orbit camera
-        SG_Camera* default_camera
-          = ulib_camera_create(chugin_createCkObj("GOrbitCamera", false));
+        SG_Camera* default_camera = ulib_camera_create(
+          chugin_createCkObj(SG_CKNames[SG_COMPONENT_CAMERA], false));
         CQ_PushCommand_AddChild(scene, default_camera);
         SG_Scene::setMainCamera(scene, default_camera);
         CQ_PushCommand_SceneUpdate(scene);

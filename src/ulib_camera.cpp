@@ -144,11 +144,12 @@ static void ulib_camera_query(Chuck_DL_Query* QUERY)
         ARG("float", "dt");
 
         MFUN(orbit_camera_set_drag_speed, "void", "dragSpeed");
-        ARG("float", "speed");
+        ARG("vec2", "speed");
         DOC_FUNC(
-          "Set the speed of the camera's rotation when dragging with the mouse.");
+          "Set the horizontal and vertical speed of the camera's rotation when "
+          "dragging with the mouse.");
 
-        MFUN(orbit_camera_get_drag_speed, "float", "dragSpeed");
+        MFUN(orbit_camera_get_drag_speed, "vec2", "dragSpeed");
         DOC_FUNC(
           "Get the speed of the camera's rotation when dragging with the mouse.");
 
@@ -446,12 +447,13 @@ CK_DLL_MFUN(orbit_camera_update)
 
     if (CHUGL_Mouse_LeftButton()) {
         t_CKVEC2 mouse_deltas = CHUGL_Mouse_Delta();
-        orbit->spherical.theta -= (orbit->speed * mouse_deltas.x);
-        orbit->spherical.phi -= (orbit->speed * mouse_deltas.y);
+        orbit->spherical.theta -= (orbit->speed.x * mouse_deltas.x);
+        orbit->spherical.phi += (orbit->speed.y * mouse_deltas.y);
 
         // clamp phi
         orbit->spherical.phi
           = CLAMP(orbit->spherical.phi, -PI / (2.0f + EPSILON), PI / (2.0f + EPSILON));
+
         // clamp theta
         orbit->spherical.theta = fmod(orbit->spherical.theta, 2.0f * PI);
     }
@@ -471,12 +473,12 @@ CK_DLL_MFUN(orbit_camera_update)
 
 CK_DLL_MFUN(orbit_camera_set_drag_speed)
 {
-    GET_CAMERA(SELF)->orbit.speed = GET_NEXT_FLOAT(ARGS);
+    GET_CAMERA(SELF)->orbit.speed = GET_NEXT_VEC2(ARGS);
 }
 
 CK_DLL_MFUN(orbit_camera_get_drag_speed)
 {
-    RETURN->v_float = GET_CAMERA(SELF)->orbit.speed;
+    RETURN->v_vec2 = GET_CAMERA(SELF)->orbit.speed;
 }
 
 CK_DLL_MFUN(orbit_camera_set_zoom_speed)

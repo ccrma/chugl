@@ -16,9 +16,10 @@ CK_DLL_SFUN(assloader_load_obj_flip_y);
 
 #define RAPID_FLOAT3_TO_GLM_VEC3(f3) glm::vec3(f3[0], f3[1], f3[2])
 
-static void logRapidobjError(const rapidobj::Error& error)
+static void logRapidobjError(const rapidobj::Error& error, const char* filepath)
 {
-    log_error("RapidObj error: %s", error.code.message().c_str());
+    log_error("Error loading OBJ model \"%s\": %s", filepath,
+              error.code.message().c_str());
     if (!error.line.empty()) {
         log_error("On line %d: \"%s\"", error.line_num, error.line.c_str());
     }
@@ -103,15 +104,15 @@ static SG_Transform* ulib_assloader_load_obj(const char* filepath,
     rapidobj::Result result = rapidobj::ParseFile(filepath);
 
     if (result.error) {
-        logRapidobjError(result.error);
-        return NULL;
+        logRapidobjError(result.error, filepath);
+        return ulib_ggen_create(NULL, SHRED); // on error return empty ggen
     }
 
     rapidobj::Triangulate(result);
 
     if (result.error) {
-        logRapidobjError(result.error);
-        return NULL;
+        logRapidobjError(result.error, filepath);
+        return ulib_ggen_create(NULL, SHRED); // on error return empty ggen
     }
 
     // first create all unique materials

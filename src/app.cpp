@@ -26,7 +26,6 @@
 #include "r_component.h"
 #include "sg_command.h"
 #include "sg_component.h"
-#include "tests/test_base.h"
 
 #include "core/hashmap.h"
 

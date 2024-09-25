@@ -43,8 +43,8 @@ T.assert(T.veq(camera.worldPosToNDC(ndc_to_world_pos), ndc), "ortho camera NDCTo
 
 GOrbitCamera orbit_camera;
 
-orbit_camera.dragSpeed(0.123);
-T.assert(T.feq(orbit_camera.dragSpeed(), 0.123), "orbit camera drag speed");
+orbit_camera.dragSpeed(@(0.123, 0.456));
+T.assert(T.veq(orbit_camera.dragSpeed(), @(0.123, 0.456)), "orbit camera drag speed");
 
 orbit_camera.zoomSpeed(0.456);
 T.assert(T.feq(orbit_camera.zoomSpeed(), 0.456), "orbit camera zoom speed");

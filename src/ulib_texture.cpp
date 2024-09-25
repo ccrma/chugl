@@ -564,7 +564,7 @@ static void ulib_texture_write(SG_Texture* tex, Chuck_ArrayFloat* ck_arr,
 {
     CK_DL_API API = g_chuglAPI;
 
-    int num_texels   = tex->desc.width * tex->desc.height * tex->desc.depth;
+    int num_texels   = desc->width * desc->height * desc->depth;
     int expected_len = num_texels * SG_Texture_numComponentsPerTexel(tex->desc.format);
 
     { // validation

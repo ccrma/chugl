@@ -616,9 +616,9 @@ struct SphericalCoords {
 
 struct SG_OrbitCameraParams {
     SphericalCoords spherical = { 6.0f, 0.0f, 0.0f }; // *relative to target*
-    f32 speed                 = 0.01f;
     f32 zoom_speed            = 0.5f;
     glm::vec3 target          = glm::vec3(0.0f); // point to look at
+    t_CKVEC2 speed            = { 0.01f, 0.01f };
 };
 
 struct SG_FlyCameraParams {
