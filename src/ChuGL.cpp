@@ -24,7 +24,7 @@
 // clang-format on
 
 // ChuGL version string
-#define CHUGL_VERSION_STRING "0.1.5 (alpha)"
+#define CHUGL_VERSION_STRING "0.2.0 (alpha)"
 
 static Chuck_DL_MainThreadHook* hook = NULL;
 static bool hookActivated            = false;

@@ -12,127 +12,171 @@ CKDoc doc; // documentation orchestra
 // set the examples root
 "../examples/" => doc.examplesRoot;
 
-// // add group
-// doc.addGroup(
-//     // class names
-//     [
-//         "GG", 
-//         "WindowResizeEvent",
-//         "Color",
-//         "AssLoader"
-//     ],
-//     // group name
-//     "ChuGL Basic Classes",
-//     // file name
-//     "chugl-basic", 
-//     // group description
-//     "Basic classes for ChuGL: strongly-timed audiovisual programming in ChucK."
-// );
+// add group
+doc.addGroup(
+    // class names
+    [
+        "GG", 
+        "NextFrameEvent",
+        "WindowResizeEvent",
+        "WindowResizeEvent",                                             
+        "WindowCloseEvent",                                               
+        "ContentScaleChangedEvent",
+        "SG_Component",
+        "Color",
+        "AssLoader"
+    ],
+    // group name
+    "Basic Classes",
+    // file name
+    "chugl-basic", 
+    // group description
+    "Basic classes for ChuGL: strongly-timed audiovisual programming in ChucK."
+);
 
-// // add group
-// doc.addGroup(
-//     // class names
-//     [
-//         "GGen", 
-//         "GScene", 
-//         "GPoints", 
-//         "GLines", 
-//         "GMesh", 
-//         "GTriangle",
-//         "GCircle", 
-//         "GPlane", 
-//         "GCube", 
-//         "GSphere", 
-//         "GTorus",
-//         "GCylinder",
-//         "GLight", 
-//         "GPointLight", 
-//         "GDirLight", 
-//         "GCamera",
-//         "GText"
-//     ],
-//     // group name
-//     "Graphics Generators",
-//     // file name
-//     "chugl-ggens", 
-//     // group description
-//     "Graphics generators (GGens) that can be composed together in a scene graph."
-// );
+doc.addGroup(
+    // class names
+    [
+        "StorageBuffer",
+    ],
+    // group name
+    "GPU Buffers",
+    // file name
+    "chugl-buffers", 
+    // group description
+    "GPU Buffer wrappers for ChuGL"
+);
 
-// // add group
-// doc.addGroup(
-//     // class names
-//     [
-//         "Geometry", 
-//         "CubeGeometry", 
-//         "SphereGeometry", 
-//         "TriangleGeometry",
-//         "CircleGeometry", 
-//         "LatheGeometry", 
-//         "PlaneGeometry", 
-//         "TorusGeometry", 
-//         "CylinderGeometry",
-//         "CustomGeometry",
-//     ],
-//     // group name
-//     "ChuGL Geometries",
-//     // file name
-//     "chugl-geo", 
-//     // group description
-//     "ChuGL geometries contain vertex data such as positions, normals, and UV coordinates."
-// );
+// add group
+doc.addGroup(
+    // class names
+    [
+        "GGen", 
+        "GScene", 
+        "GPoints", 
+        "GLines", 
+        "GMesh", 
+        "GCircle", 
+        "GPlane", 
+        "GCube", 
+        "GSphere", 
+        "GTorus",
+        "GCylinder",
+        "GKnot",
+        "GSuzanne",
+        "GLight", 
+        "GPointLight", 
+        "GDirLight", 
+        "GCamera",
+        "GOrbitCamera",
+        "GFlyCamera",
+        "GText"
+    ],
+    // group name
+    "Graphics Generators",
+    // file name
+    "chugl-ggens", 
+    // group description
+    "Graphics generators (GGens) that can be composed together in a scene graph."
+);
 
-// // add group
-// doc.addGroup(
-//     // class names
-//     [ 
-//         "Material", 
-//         "NormalsMaterial", 
-//         "FlatMaterial", 
-//         "PhongMaterial", 
-//         "PointMaterial", 
-//         "LineMaterial", 
-//         "MangoUVMaterial", 
-//         "ShaderMaterial",
-//     ],
-//     // group name
-//     "ChuGL Materials",
-//     // file name
-//     "chugl-mat", 
-//     // group description
-//     "ChuGL materials describe appearance of geometries, including color and shading properties."
-// );
+// add group
+doc.addGroup(
+    // class names
+    [
+        "Geometry", 
+        "CubeGeometry", 
+        "SphereGeometry", 
+        "CircleGeometry", 
+        "PlaneGeometry", 
+        "TorusGeometry", 
+        "CylinderGeometry",
+        "KnotGeometry",
+        "SuzanneGeometry",
+        "LinesGeometry",
+    ],
+    // group name
+    "ChuGL Geometries",
+    // file name
+    "chugl-geo", 
+    // group description
+    "ChuGL geometries for assigning vertex data such as positions, normals, UV coordinates, and tangents to a GMesh."
+);
 
-// // add group
-// doc.addGroup(
-//     // class names
-//     [ "Texture", "FileTexture", "DataTexture", "CubeTexture" ],
-//     // group name
-//     "ChuGL Textures",
-//     // file name
-//     "chugl-tex", 
-//     // group description
-//     "Textures can be loaded from file, created dynamically from data; they are passed into materials and mapped onto 2D and 3D surfaces."
-// );
 
-// doc.addGroup(
-//     // class names
-//     [
-//         "FX",
-//         "PassThroughFX",
-//         "OutputFX",
-//         "InvertFX",
-//         "MonochromeFX",
-//         "BloomFX",
-//         "CustomFX"
-//     ],
-//     // group name
-//     "ChuGL Post Processing FX",
-//     // file name
-//     "chugl-fx", 
-//     // group description
-//     "Post Processing FX are applied to the final output of the scene, GG.fx()"
-// );
+// add group
+doc.addGroup(
+    // class names
+    [ 
+        // shader stuff
+        "VertexFormat",
+        "ShaderDesc",
+        "Shader",
+    ],
+    // group name
+    "ChuGL Shaders",
+    // file name
+    "chugl-shader", 
+    // group description
+    "ChuGL classes for creating shaders via shader source code and layout descriptions."
+);
+
+// add group
+doc.addGroup(
+    // class names
+    [ 
+        // material stuff
+        "Material", 
+        "NormalMaterial", 
+        "TangentMaterial", 
+        "FlatMaterial", 
+        "PhongMaterial", 
+        "LinesMaterial", 
+        "UVMaterial", 
+        "PBRMaterial", 
+    ],
+    // group name
+    "ChuGL Materials",
+    // file name
+    "chugl-mat", 
+    // group description
+    "ChuGL materials wrap and supply parameters to a ChuGL shader, describing the appearance of geometries."
+);
+
+doc.addGroup(
+    // class names
+    [ 
+        "GPass",
+        "RenderPass",
+        "ScreenPass",
+        "OutputPass",
+        "ComputePass",
+        "BloomPass",
+    ],
+    // group name
+    "ChuGL Passes",
+    // file name
+    "chugl-pass", 
+    // group description
+    "Render/Compute pass abstraction for creating custom render graphs"
+);
+
+doc.addGroup(
+    // class names
+    [ 
+        "Texture",
+        "TextureSampler",
+        "TextureDesc",
+        "TextureWriteDesc",
+        "TextureLoadDesc",
+    ],
+    // group name
+    "ChuGL Textures",
+    // file name
+    "chugl-tex", 
+    // group description
+    "Textures can be loaded from file, created dynamically from data; they are passed into materials and mapped onto 2D and 3D surfaces."
+);
 
 // add GUI group
 doc.addGroup(
@@ -193,9 +237,7 @@ doc.addGroup(
     and fine-tuning values. Also usable for building application user-interfaces."
 );
 
-<<< doc.disableSort() >>>;
-doc.disableSort(true);
-<<< doc.disableSort() >>>;
+doc.sort(false);
 
 // generate
-doc.outputToDir( ".", "ChuGL [alpha] API Reference (v0.1.5)" );
+doc.outputToDir( ".", "ChuGL [alpha] API Reference (v0.2.0)" );

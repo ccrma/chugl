@@ -1,0 +1,337 @@
+html
+{
+    margin: 0;
+    padding: 0;
+}
+
+body
+{
+    margin-left: 2em;
+    margin-right: 2em;
+    font-family: Helvetica, sans-serif;
+    font-size: 14px;
+}
+
+a
+{
+    scroll-margin-top: 80px;
+}
+
+
+.index_group
+{
+    clear: both;
+    background-color: #eee;
+    padding: 1em 1em 1em 1em;
+    margin-bottom: 2em;
+    vertical-align: top;
+}
+
+.index_group_title
+{
+    float: left;
+    margin: 0;
+    width: 15%;
+    padding-right: 3em;
+    border-right: 4px solid #fcfcfc;
+}
+
+.index_group_classes
+{
+    padding-top: 0.15em;
+    padding-left: 1em;
+    padding-bottom: 0.15em;
+
+    margin: 0;
+    margin-left: 20%;
+    width: 75%;
+}
+
+.index_group_classes a
+{
+    margin-right: 0.5em;
+    line-height: 1.5em;
+}
+
+.index_group_external
+{
+    padding-top: 0.15em;
+    padding-left: 1em;
+    padding-bottom: 0.15em;
+
+    margin: 0;
+    margin-left: 20%;
+    width: 75%;
+}
+
+.index_group_external a
+{
+    margin-right: 0;
+    line-height: 1.5em;
+}
+
+.index_group_desc
+{
+    color: #555;
+}
+
+.group_desc
+{
+    color: #000;
+}
+
+.index_group_title a
+{
+    color: black;
+}
+
+#title
+{
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    border-bottom: 1px solid black;
+    padding: 0.5em 2em;
+    margin-bottom: 1.5em;
+    background-color: white;
+    float: left;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.titleL
+{
+    float: left;
+    width: auto;
+    /* vertically center */
+    line-height: 48px;
+    height: 48px;
+}
+
+.gray
+{
+    color: gray;
+}
+
+.inline
+{
+    display: inline;
+}
+
+
+.titleR
+{
+    float: right;
+    width: initial;
+    clear: none;
+}
+
+.titleLogo
+{
+    width: 48px;
+    height: 48px;
+    padding-right: 8px;
+}
+
+.titleLogo img
+{
+    width: 48px;
+    height: 48px;
+}
+
+h1
+{
+    font-size: 28px;
+    margin: 0;
+}
+
+h1 a
+{
+    color: black;
+    text-decoration: none;
+}
+
+h1 a:hover
+{
+    color: blue;
+    text-decoration: underline;
+}
+
+#body
+{
+    clear: both;
+    margin-top: 80px;
+}
+
+.toc
+{
+    float: left;
+    position: fixed;
+    top: 80px;
+    clear: both;
+    background-color: #eee;
+    padding: 0.25em 0.5em 1em 0.75em;
+    margin: 0;
+    width: 12.5em;
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: calc(100% - 100px);
+    margin-bottom: 20px;
+}
+
+.toc_class
+{
+    font-size: 12px;
+    margin-top: 0.5em;
+    margin-bottom: 0.25em;
+}
+
+.classes
+{
+    clear: right;
+    margin-left: 15em;
+    margin-right: 0em;
+    margin-top: 80px;
+}
+
+.class
+{
+    background-color: #eee;
+    padding: 0.025em 0.5em 0.25em 1em;
+}
+
+.class_title
+{
+    font-family: Menlo, Monaco, Courier;
+    font-size: 18px;
+}
+
+.class_inherits
+{
+    font-weight: normal;
+}
+
+.class_hierarchy
+{
+    font-family: Menlo, Monaco, Courier;
+    font-size: 14px;
+    /* margin-right: 4em; */
+}
+
+.class_section_header
+{}
+
+.class_description
+{
+    font-family: Helvetica;
+    font-size: 14px;
+    margin-right: 4em;
+}
+
+.empty_class_description
+{
+    font-family: Helvetica;
+    font-size: 12px;
+    font-style: italic;
+    color: grey;
+    margin-right: 4em;
+}
+
+.members
+{
+    font-family: Menlo, Monaco, Courier;
+    font-size: 13px;
+}
+
+.member
+{
+    margin-left: 0em;
+    padding-left: 0.85em;
+    padding-top: 0.85em;
+    border-top: 4px solid #fcfcfc;
+    border-left: 4px solid #fcfcfc;
+
+    padding-bottom: 0.85em;
+    padding-left: 0.85em;
+    margin-bottom: 1.5em;
+
+    margin-right: 4em;
+    padding-right: 0;
+}
+
+.member_declaration
+{
+    margin-top: 0;
+    margin-bottom: 0.5em;
+}
+
+.member_description
+{
+    font-family: Helvetica;
+    font-size: 14px;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.empty_member_description
+{
+    font-family: Helvetica;
+    font-size: 12px;
+    font-style: italic;
+    color: grey;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.ckdoc_typename
+{
+    font-family: Menlo, Monaco, Courier;
+    font-size: 13px;
+}
+
+.membername
+{
+    font-weight: bold;
+}
+
+.top_link
+{
+    text-align: right;
+    margin-top: 2em;
+    margin-right: 1em;
+}
+
+.top_link a
+{
+    color: #44F;
+}
+
+.examples ul
+{
+    margin-top: -1em;
+}
+
+.examples ul li a
+{
+    text-decoration: none;
+}
+
+.clear
+{
+    clear: both;
+}
+
+.ckdoc_type_primitive
+{
+    color: blue;
+}
+
+.ckdoc_type_ugen
+{
+    color: #A200EC;
+}
+
+.ckdoc_type_object
+{
+    color: #800023;
+}
