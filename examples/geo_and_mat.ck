@@ -57,11 +57,6 @@ for (1 => int i; i < materials.size(); i++) {
     builtin_materials << Type.of(materials[i]).name();
 }
 
-Texture.load(me.dir() + "./brickwall_normal.png") @=> Texture normal_map;
-
-phong_material.normalMap(normal_map);
-
-
 // Material params
 UI_Int material_topology_index(3); // default to triangle list
 [
