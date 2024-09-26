@@ -35,8 +35,11 @@ struct CHUGL_Window {
 
     // window size (in screen coordinates)
     int window_width = 1280, window_height = 960;
+
+    // last window params before going fullscreen
     int last_window_width  = 1280,
         last_window_height = 960; // last window size before going fullscreen
+    int last_window_x = 0, last_window_y = 0;
 
     // framebuffer size (in pixels)
     int framebuffer_width, framebuffer_height;
@@ -175,22 +178,27 @@ void CHUGL_Window_Size(int window_width, int window_height, int framebuffer_widt
     spinlock::unlock(&chugl_window.window_lock);
 }
 
-void CHUGL_Window_LastWindowSize(int window_width, int window_height)
+void CHUGL_Window_LastWindowParamsBeforeFullscreen(int window_width, int window_height,
+                                                   int x, int y)
 {
     spinlock::lock(&chugl_window.window_lock);
     chugl_window.last_window_width  = window_width;
     chugl_window.last_window_height = window_height;
+    chugl_window.last_window_x      = x;
+    chugl_window.last_window_y      = y;
     spinlock::unlock(&chugl_window.window_lock);
 }
 
-t_CKVEC2 CHUGL_Window_LastWindowSize()
+t_CKVEC4 CHUGL_Window_LastWindowParamsBeforeFullscreen()
 {
-    t_CKVEC2 size;
+    t_CKVEC4 params;
     spinlock::lock(&chugl_window.window_lock);
-    size.x = chugl_window.last_window_width;
-    size.y = chugl_window.last_window_height;
+    params.x = chugl_window.last_window_width;
+    params.y = chugl_window.last_window_height;
+    params.z = chugl_window.last_window_x;
+    params.w = chugl_window.last_window_y;
     spinlock::unlock(&chugl_window.window_lock);
-    return size;
+    return params;
 }
 
 t_CKVEC2 CHUGL_Window_WindowSize()

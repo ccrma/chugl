@@ -49,10 +49,6 @@ struct GraphicsContext {
     WGPUSwapChain swapChain;
     WGPUTextureFormat swapChainFormat;
 
-    WGPUTexture depthTexture;
-    WGPUTextureDescriptor depthTextureDesc;
-    WGPUTextureView depthTextureView;
-
     WGPUTexture multisampled_texture;
     WGPUTextureView multisampled_texture_view;
 
@@ -70,8 +66,6 @@ struct GraphicsContext {
 
     // Device limits --------
     WGPULimits limits;
-
-    // Default Resources
 
     // Methods --------
     static bool init(GraphicsContext* context, GLFWwindow* window);

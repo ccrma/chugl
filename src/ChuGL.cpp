@@ -570,6 +570,14 @@ CK_DLL_QUERY(ChuGL)
         DOC_FUNC(
           "Shorthand for GWindow.fullscreen(). Added for backwards compatibility");
 
+        SFUN(gwindow_windowed, "void", "windowed");
+        ARG("int", "width");
+        ARG("int", "height");
+        DOC_FUNC("Shorthand for GWindow.windowed(). Added for backwards compatibility");
+
+        SFUN(gwindow_windowed_prev_size, "void", "windowed");
+        DOC_FUNC("Shorthand for GWindow.windowed(). Added for backwards compatibility");
+
         SFUN(chugl_get_default_camera, SG_CKNames[SG_COMPONENT_CAMERA], "camera");
         DOC_FUNC(
           "Shorthand for getting the default Camera that is created upon "
