@@ -541,68 +541,36 @@ spork ~ switchColorMode();
 
 
 // ----------------------- KEYBOARD INPUT ------------------------- //
-Hid hi;
-HidMsg msg;
-
-// which keyboard
-1 => int device;
-// get from command line
-if( me.args() ) me.arg(0) => Std.atoi => device;
-
-// open keyboard (get device number from command line)
-if( !hi.openKeyboard( device ) ) me.exit();
-<<< "keyboard '" + hi.name() + "' ready", "" >>>;
-
-fun void listenInput()
+false => int fullscreen;
+fun void keyboardInput()
 {
-    // infinite event loop
-    while( true )
-    {
-        // wait on event
-        hi => now;
-
-        // get one or more messages
-        while( hi.recv( msg ) )
-        {
-            // check for action type
-            if( msg.isButtonDown() )
-            {
-                // print
-                <<< "down:", msg.which, "(code)", msg.key, "(usb key)", msg.ascii, "(ascii)" >>>;
-                // check which key
-                if( msg.ascii == 49 ) // 1
-                {
-                    0 => COLOR_MODE;
-                }
-                else if( msg.ascii == 50 ) // 2
-                {
-                    1 => COLOR_MODE;
-                }
-                else if( msg.ascii == 51 ) // 3
-                {
-                    2 => COLOR_MODE;
-                }
-                else if( msg.ascii == 52 ) // 4
-                {
-                    3 => COLOR_MODE;
-                }
-                else if( msg.ascii == 53 ) // 5
-                {
-                    4 => COLOR_MODE;
-                }
-                else if( msg.ascii == 32 ) // space
-                {
-                    GG.fullscreen();
-                }
-            }
+    if( GWindow.keyDown(GWindow.Key_1))
+        0 => COLOR_MODE;
+    else if( GWindow.keyDown(GWindow.Key_2))
+        1 => COLOR_MODE;
+    else if( GWindow.keyDown(GWindow.Key_3))
+        2 => COLOR_MODE;
+    else if( GWindow.keyDown(GWindow.Key_4))
+        3 => COLOR_MODE;
+    else if( GWindow.keyDown(GWindow.Key_5))
+        4 => COLOR_MODE;
+    else if( GWindow.keyDown(GWindow.Key_Space)) {
+        if (fullscreen) {
+            false => fullscreen;
+            GG.windowed();
+        }
+        else {
+            true => fullscreen;
+            GG.fullscreen();
         }
     }
 }
-spork ~ listenInput();
 
 // ***************** graphics render loop ***************** //
 while( true )
 {
+    // handle input
+    keyboardInput();
     // map to interleaved format
     map2waveform( samples, positions );
     // set the mesh position
