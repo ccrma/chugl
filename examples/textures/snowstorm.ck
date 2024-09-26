@@ -97,7 +97,6 @@ while (true) {
         if (UI.slider("Snowflake Size", pointSize, 0.01, 2.0)) {
             pointSize.val() => snowflakes[0].size;
         }
-
     }
     UI.end();
 

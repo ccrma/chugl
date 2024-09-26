@@ -93,13 +93,13 @@ static void ulib_camera_query(Chuck_DL_Query* QUERY)
     DOC_FUNC("Get camera field of view in radians.");
 
     // ortho camera params
-    MFUN(gcamera_set_ortho_size, "void", "size");
+    MFUN(gcamera_set_ortho_size, "void", "viewSize");
     ARG("float", "size");
     DOC_FUNC(
       "(orthographic mode) set the height of the view volume in world space units. "
       "Width is automatically calculated based on aspect ratio.");
 
-    MFUN(gcamera_get_ortho_size, "float", "size");
+    MFUN(gcamera_get_ortho_size, "float", "viewSize");
     DOC_FUNC(
       "(orthographic mode) get the height of the view volume in world space units.");
 
@@ -452,7 +452,7 @@ CK_DLL_MFUN(orbit_camera_update)
 
         // clamp phi
         orbit->spherical.phi
-          = CLAMP(orbit->spherical.phi, -PI / (2.0f + EPSILON), PI / (2.0f + EPSILON));
+          = CLAMP(orbit->spherical.phi, -PI / (2.01f), PI / (2.01f + EPSILON));
 
         // clamp theta
         orbit->spherical.theta = fmod(orbit->spherical.theta, 2.0f * PI);

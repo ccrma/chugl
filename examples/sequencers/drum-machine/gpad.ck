@@ -52,7 +52,7 @@ public class GPad extends GGen {
 
     // set color
     fun void color(vec3 c) {
-        pad.mat().color(c);
+        mat.color(c);
     }
 
     // returns true if mouse is hovering over pad
@@ -83,12 +83,11 @@ public class GPad extends GGen {
     fun void clickListener() {
         now => time lastClick;
         while (true) {
-            mouse.mouseDownEvents[Mouse.LEFT_CLICK] => now;
-            if (isHovered()) {
+            GG.nextFrame() => now;
+            if (GWindow.mouseLeftDown() && isHovered()) {
                 onClickEvent.broadcast();
                 handleInput(MOUSE_CLICK);
             }
-            100::ms => now; // cooldown
         }
     }
 

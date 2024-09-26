@@ -22,7 +22,7 @@ compute_pass.workgroup(work_group_count, 1, 1);
 // camera
 GCamera camera --> GG.scene();
 camera.orthographic();
-camera.size(5.0);
+camera.viewSize(5.0);
 camera.posZ(5.0);
 GG.scene().camera(camera);
 

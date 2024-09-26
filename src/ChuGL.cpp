@@ -373,6 +373,16 @@ CK_DLL_SFUN(chugl_get_mouse_y)
     RETURN->v_float = CHUGL_Mouse_Position().y;
 }
 
+CK_DLL_SFUN(chugl_get_frame_width)
+{
+    RETURN->v_float = CHUGL_Window_FramebufferSize().x;
+}
+
+CK_DLL_SFUN(chugl_get_frame_height)
+{
+    RETURN->v_float = CHUGL_Window_FramebufferSize().y;
+}
+
 // ============================================================================
 // Chugin entry point
 // ============================================================================
@@ -570,6 +580,16 @@ CK_DLL_QUERY(ChuGL)
 
         SFUN(chugl_get_mouse_y, "float", "mouseY");
         DOC_FUNC("Get the y position of the mouse cursor in screen coordinates");
+
+        SFUN(chugl_get_frame_width, "float", "frameWidth");
+        DOC_FUNC(
+          "Get the width of the current window's framebuffer in pixels. Shorthand for "
+          "GWindow.framebufferSize().x, added for backwards compatibility");
+
+        SFUN(chugl_get_frame_height, "float", "frameHeight");
+        DOC_FUNC(
+          "Get the height of the current window's framebuffer in pixels. Shorthand for "
+          "GWindow.framebufferSize().y, added for backwards compatibility");
 
         END_CLASS();
     } // GG

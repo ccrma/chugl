@@ -8601,20 +8601,28 @@ CK_DLL_SFUN(ui_DrawList_PathRect)
 
 CK_DLL_SFUN(ui_begin)
 {
-    const char* name = API->object->str(GET_NEXT_STRING(ARGS));
+    const char* name      = API->object->str(GET_NEXT_STRING(ARGS));
+    const char* safe_name = name;
+    if (!name || strlen(name) == 0) {
+        safe_name = "##empty";
+    }
 
     bool* p_open = CHUGL_UI_VAL_PTR(bool, GET_NEXT_OBJECT(ARGS), ui_bool_val_offset);
 
     int flags = GET_NEXT_INT(ARGS);
 
-    bool ret      = cimgui::ImGui_Begin(name, p_open, flags);
+    bool ret      = cimgui::ImGui_Begin(safe_name, p_open, flags);
     RETURN->v_int = ret;
 }
 
 CK_DLL_SFUN(ui_begin_no_options)
 {
-    const char* name = API->object->str(GET_NEXT_STRING(ARGS));
-    RETURN->v_int    = (t_CKINT)cimgui::ImGui_Begin(name, NULL, 0);
+    const char* name      = API->object->str(GET_NEXT_STRING(ARGS));
+    const char* safe_name = name;
+    if (!name || strlen(name) == 0) {
+        safe_name = "##empty";
+    }
+    RETURN->v_int = (t_CKINT)cimgui::ImGui_Begin(safe_name, NULL, 0);
 }
 
 CK_DLL_SFUN(ui_end)

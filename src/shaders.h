@@ -667,6 +667,7 @@ static const char* points_shader_string  = R"glsl(
 @group(1) @binding(1) var<uniform> u_point_global_size : f32;
 @group(1) @binding(2) var u_point_sampler : sampler;
 @group(1) @binding(3) var u_point_texture : texture_2d<f32>;
+@group(1) @binding(4) var<uniform> u_billboard : i32;
 
 #include DRAW_UNIFORMS
 
@@ -716,21 +717,29 @@ fn vs_main(
         point_size *= u_point_sizes[point_idx % num_sizes];
     }
 
-    // first apply scale
-    var point_pos = point_size * vec3f(
-        u_point_vertices[5 * vertex_idx + 0],
-        u_point_vertices[5 * vertex_idx + 1],
-        u_point_vertices[5 * vertex_idx + 2],
-    );
-
-    // then translation
-    point_pos += vec3f(
+    let center_point_pos = vec3f(
         u_point_positions[3 * point_idx + 0],
         u_point_positions[3 * point_idx + 1],
         u_point_positions[3 * point_idx + 2]
     );
 
-    out.position = (u_frame.projection * u_frame.view * u_Draw.model) * vec4f(point_pos, 1.0);
+    let vertex_pos = point_size * vec3f(
+        u_point_vertices[5 * vertex_idx + 0],
+        u_point_vertices[5 * vertex_idx + 1],
+        u_point_vertices[5 * vertex_idx + 2],
+    );
+
+    if (bool(u_billboard)) {
+        // in billboard mode the point plane always faces the camera
+        // so add the vertex position *after* computing the point position in view space
+        var point_pos_view_space = u_frame.view * u_Draw.model * vec4f(center_point_pos, 1.0);
+        point_pos_view_space += vec4f(vertex_pos, 0.0);
+        out.position = u_frame.projection * point_pos_view_space;
+    } else {
+        // transform normally
+        out.position = (u_frame.projection * u_frame.view * u_Draw.model) * vec4f(center_point_pos + vertex_pos, 1.0);
+    }
+
     out.v_color = point_color;
     out.v_uv = point_uv;
 

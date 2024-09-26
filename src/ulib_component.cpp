@@ -1101,6 +1101,8 @@ CK_DLL_MFUN(gpoints_mat_get_color);
 CK_DLL_MFUN(gpoints_mat_get_size);
 CK_DLL_MFUN(gpoints_mat_get_sampler);
 CK_DLL_MFUN(gpoints_mat_get_texture);
+CK_DLL_MFUN(gpoints_mat_get_billboard);
+CK_DLL_MFUN(gpoints_mat_set_billboard);
 
 CK_DLL_CTOR(gplane_ctor);
 CK_DLL_MFUN(gplane_get_geo);
@@ -1290,6 +1292,15 @@ static void ulib_mesh_query(Chuck_DL_Query* QUERY)
 
         MFUN(gpoints_mat_get_texture, "Texture", "texture");
         DOC_FUNC("Get the texture applied to each point ");
+
+        MFUN(gpoints_mat_set_billboard, "void", "billboard");
+        ARG("int", "billboard");
+        DOC_FUNC(
+          "Set whether the points should always face the camera (billboard mode). 0 "
+          "for no, 1 for yes");
+
+        MFUN(gpoints_mat_get_billboard, "int", "billboard");
+        DOC_FUNC("Get whether the points should always face the camera");
 
         END_CLASS();
     }
@@ -1652,6 +1663,7 @@ CK_DLL_CTOR(gpoints_ctor)
         SG_Material::setTexture(
           material, 3,
           SG_GetTexture(g_builtin_textures.white_pixel_id)); // point texture
+        SG_Material::uniformInt(material, 4, true);          // billboard mode
 
         ulib_material_cq_update_all_uniforms(material);
     }
@@ -1734,6 +1746,18 @@ CK_DLL_MFUN(gpoints_mat_get_texture)
 {
     SG_Texture* tex = SG_GetTexture(GET_MESH_MATERIAL(SELF)->uniforms[3].as.texture_id);
     RETURN->v_object = tex ? tex->ckobj : NULL;
+}
+
+CK_DLL_MFUN(gpoints_mat_get_billboard)
+{
+    RETURN->v_int = GET_MESH_MATERIAL(SELF)->uniforms[4].as.i;
+}
+
+CK_DLL_MFUN(gpoints_mat_set_billboard)
+{
+    SG_Material* material = GET_MESH_MATERIAL(SELF);
+    SG_Material::uniformInt(material, 4, GET_NEXT_INT(ARGS) ? 1 : 0);
+    CQ_PushCommand_MaterialSetUniform(material, 4);
 }
 
 // GShapes ===============================================================

@@ -17,7 +17,7 @@ Add audio waveform to gameboard via storage buffer
 
 GCamera camera --> GG.scene();
 camera.orthographic();
-camera.size(10.0 / 16);
+camera.viewSize(10.0 / 16);
 camera.posZ(1.0);
 camera => GG.scene().camera;
 

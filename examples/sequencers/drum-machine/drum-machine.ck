@@ -1,6 +1,5 @@
 // Initialize Mouse Manager ===================================================
 Mouse mouse;
-spork ~ mouse.start(0);  // start listening for mouse events
 spork ~ mouse.selfUpdate(); // start updating mouse position
 
 // Global Sequencer Params ====================================================
@@ -35,7 +34,6 @@ GPad closedHatPads[NUM_STEPS];
 
 // update pad positions on window resize
 fun void resizeListener() {
-    placePads();
     WindowResizeEvent e;  // now listens to the window resize event
     while (true) {
         e => now;  // window has been resized!
@@ -66,6 +64,7 @@ fun void placePads() {
         frustrumHeight / 2.0 - padSpacing / 2.0
     );
 
+
     // place relative to first kick pad
     kickPads[0].posWorld().x => float openHatX;
     (snarePads[0].posWorld() - kickPads[0].posWorld()).y - padSpacing => float hatHeight;
@@ -74,6 +73,7 @@ fun void placePads() {
         hatHeight,
         openHatX
     );
+
 
     kickPads[kickPads.size()-1].posWorld().x => float closedHatX;
     placePadsVertical(
@@ -100,6 +100,7 @@ fun void placePads() {
 
 // places along horizontal axis
 fun void placePadsHorizontal(GPad pads[], GGen @ parent, float width, float y) {
+    <<< width, " , ", y >>>;
     width / pads.size() => float padSpacing;
     for (0 => int i; i < pads.size(); i++) {
         pads[i] @=> GPad pad;
@@ -258,9 +259,10 @@ class Hat extends Instrument {
 
 
 // Sequencer ===================================================================
-Gain main => JCRev rev => dac;  // main bus
+// Gain main => JCRev rev => dac;  // main bus
+// 0.1 => rev.mix;
+Gain main => dac;  // main bus
 .1 => main.gain;
-0.1 => rev.mix;
 
 // initialzie lead instrument
 AcidBass acidBasses[SCALE.size()];
@@ -349,4 +351,16 @@ fun void sequenceLead(AcidBass leads[], GPad pads[][], int scale[], int root, du
 }
 
 // Game loop ==================================================================
-while (true) { GG.nextFrame() => now; }
+while (true) { 
+    GG.nextFrame() => now; 
+
+    // place pads *after* GG.nextFrame() is called and window is created
+    placePads();
+
+    if (UI.begin(""))
+    {
+        UI.scenegraph(scene);
+
+    }
+    UI.end();
+}

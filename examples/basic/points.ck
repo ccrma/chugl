@@ -1,9 +1,12 @@
 // Scene setup ===================
 GG.scene().backgroundColor(@(0,0,0));
 GPoints points --> GG.scene();
-// GG.camera().lookAt(@(1, 1, 1));
-GG.camera().pos(15 * @(0, 0, 1));
-GG.camera().lookAt(@(0, 0, 0));
+
+
+GWindow.mouseMode(GWindow.MouseMode_Disabled);
+GFlyCamera cam --> GG.scene();
+GG.scene().camera(cam);
+cam.posZ(10);
 
 // points stress test
 100 => int POINTS_PER_AXIS;
@@ -46,31 +49,13 @@ for (int k; k < POINTS_PER_AXIS; k++) {
 points.positions(pointPos);  // set vertex position data
 points.colors(pointColor);   // set vertex color data
 
-// camera update
-fun void updateCamera(float dt) {
-    // calculate position of mouse relative to center of window
-    (GG.windowWidth() / 2.0 - GG.mouseX()) / 100.0 => float mouseX;
-    (GG.windowHeight() / 2.0 - GG.mouseY()) / 100.0 => float mouseY;
-
-    // update camera position
-    10 * Math.cos(-.18 * (now/second)) + 10 => float radius; 
-    radius => GG.camera().posZ;
-    -mouseX * radius * .07   => GG.camera().posX;
-    mouseY * radius * .07  => GG.camera().posY;
-
-    // look at origin
-    GG.camera().lookAt( @(0,0,0) ); 
-}
-
-
 // Game loop =====================
 while (true) { 
-    // camera controls
-    updateCamera(GG.dt());
-
-    // rotate points
-    GG.dt() * .11 => points.rotX;
-
-    // draw!
     GG.nextFrame() => now; 
+
+    // UI
+    if (UI.begin("Points")) {
+        UI.text("WASD to move");
+    }
+    UI.end();
 }

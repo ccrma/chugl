@@ -18,8 +18,8 @@ T.assert(T.feq(camera.fov(), Math.PI / 4.0), "default camera fov");
 camera.fov(Math.PI);
 T.assert(T.feq(camera.fov(), Math.PI), "camera fov");
 
-camera.size(5.0);
-T.assert(T.feq(camera.size(), 5.0), "camera size");
+camera.viewSize(5.0);
+T.assert(T.feq(camera.viewSize(), 5.0), "camera size");
 
 // mouse picking / ray casting
 camera.perspective();
