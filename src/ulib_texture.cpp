@@ -140,6 +140,7 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
 {
     { // Sampler (only passed by value)
         QUERY->begin_class(QUERY, "TextureSampler", "Object");
+        DOC_CLASS("Texture Sampler -- options for sampling a texture");
 
         // static vars
         static t_CKINT WRAP_REPEAT    = SG_SAMPLER_WRAP_REPEAT;
@@ -147,19 +148,37 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
         static t_CKINT WRAP_CLAMP     = SG_SAMPLER_WRAP_CLAMP_TO_EDGE;
         static t_CKINT FILTER_NEAREST = SG_SAMPLER_FILTER_NEAREST;
         static t_CKINT FILTER_LINEAR  = SG_SAMPLER_FILTER_LINEAR;
-        QUERY->add_svar(QUERY, "int", "WRAP_REPEAT", true, &WRAP_REPEAT);
-        QUERY->add_svar(QUERY, "int", "WRAP_MIRROR", true, &WRAP_MIRROR);
-        QUERY->add_svar(QUERY, "int", "WRAP_CLAMP", true, &WRAP_CLAMP);
-        QUERY->add_svar(QUERY, "int", "FILTER_NEAREST", true, &FILTER_NEAREST);
-        QUERY->add_svar(QUERY, "int", "FILTER_LINEAR", true, &FILTER_LINEAR);
+        QUERY->add_svar(QUERY, "int", "Wrap_Repeat", true, &WRAP_REPEAT);
+        QUERY->add_svar(QUERY, "int", "Wrap_Mirror", true, &WRAP_MIRROR);
+        QUERY->add_svar(QUERY, "int", "Wrap_Clamp", true, &WRAP_CLAMP);
+        QUERY->add_svar(QUERY, "int", "Filter_Nearest", true, &FILTER_NEAREST);
+        QUERY->add_svar(QUERY, "int", "Filter_Linear", true, &FILTER_LINEAR);
 
         // member vars
-        sampler_offset_wrapU     = QUERY->add_mvar(QUERY, "int", "wrapU", false);
-        sampler_offset_wrapV     = QUERY->add_mvar(QUERY, "int", "wrapV", false);
-        sampler_offset_wrapW     = QUERY->add_mvar(QUERY, "int", "wrapW", false);
+        sampler_offset_wrapU = QUERY->add_mvar(QUERY, "int", "wrapU", false);
+        DOC_VAR(
+          "U-axis (horizontal) wrap mode. Valid values are TextureSampler.Wrap_Repeat, "
+          "TextureSampler.Wrap_Mirror, TextureSampler.Wrap_Clamp");
+        sampler_offset_wrapV = QUERY->add_mvar(QUERY, "int", "wrapV", false);
+        DOC_VAR(
+          "V-axis (vertical) wrap mode. Valid values are TextureSampler.Wrap_Repeat, "
+          "TextureSampler.Wrap_Mirror, TextureSampler.Wrap_Clamp");
+        sampler_offset_wrapW = QUERY->add_mvar(QUERY, "int", "wrapW", false);
+        DOC_VAR(
+          "W-axis wrap mode. Valid values are TextureSampler.Wrap_Repeat, "
+          "TextureSampler.Wrap_Mirror, TextureSampler.Wrap_Clamp");
         sampler_offset_filterMin = QUERY->add_mvar(QUERY, "int", "filterMin", false);
+        DOC_VAR(
+          "Minification filter. Valid values are TextureSampler.Filter_Nearest, "
+          "TextureSampler.Filter_Linear");
         sampler_offset_filterMag = QUERY->add_mvar(QUERY, "int", "filterMag", false);
+        DOC_VAR(
+          "Magnification filter. Valid values are TextureSampler.Filter_Nearest, "
+          "TextureSampler.Filter_Linear");
         sampler_offset_filterMip = QUERY->add_mvar(QUERY, "int", "filterMip", false);
+        DOC_VAR(
+          "Mip level filter. Valid values are TextureSampler.Filter_Nearest, "
+          "TextureSampler.Filter_Linear");
 
         // constructor
         QUERY->add_ctor(QUERY, sampler_ctor); // default constructor
@@ -174,14 +193,33 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
         CTOR(texture_desc_ctor);
 
         // member vars
-        texture_desc_format_offset    = MVAR("int", "format", false);
+        texture_desc_format_offset = MVAR("int", "format", false);
+        DOC_VAR(
+          "Texture format. Valid options are defined in the Texture.Format_* enum. "
+          "Default is Texture.Format_RGBA8Unorm");
+
         texture_desc_dimension_offset = MVAR("int", "dimension", false);
-        texture_desc_width_offset     = MVAR("int", "width", false);
-        texture_desc_height_offset    = MVAR("int", "height", false);
-        texture_desc_depth_offset     = MVAR("int", "depth", false);
-        texture_desc_usage_offset     = MVAR("int", "usage", false);
+        DOC_VAR(
+          "Texture dimension. Valid options are defined in the Texture.Dimension_* "
+          "enum. Default is Texture.Dimension_2D");
+
+        texture_desc_width_offset = MVAR("int", "width", false);
+        DOC_VAR("Width in texels. Default is 1");
+
+        texture_desc_height_offset = MVAR("int", "height", false);
+        DOC_VAR("Height in texels. Default is 1");
+
+        texture_desc_depth_offset = MVAR("int", "depth", false);
+        DOC_VAR("Depth in texels. Default is 1");
+
+        texture_desc_usage_offset = MVAR("int", "usage", false);
+        DOC_VAR(
+          "Bit mask of texture usage flags. Valid flags are defined in the "
+          "Texture.Usage_* enum. Default is Texture.Usage_All, which enables all "
+          "usages");
         // texture_desc_samples_offset   = MVAR("int", "samples");
         texture_desc_mips_offset = MVAR("int", "mips", false);
+        DOC_VAR("Number of mip levels. Default is 1");
 
         END_CLASS();
     } // end TextureDesc
@@ -234,6 +272,11 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
     // Texture
     {
         BEGIN_CLASS(SG_CKNames[SG_COMPONENT_TEXTURE], SG_CKNames[SG_COMPONENT_BASE]);
+        DOC_CLASS(
+          "Texture class. Immutable, meaning properties (e.g. format, dimension, size, "
+          "mip levels) "
+          "cannot be changed after creation. You can, however, write data to the "
+          "texture");
 
         // svars ---------------
         static t_CKINT texture_usage_copy_src        = WGPUTextureUsage_CopySrc;
@@ -244,11 +287,22 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
           = WGPUTextureUsage_RenderAttachment;
         static t_CKINT texture_usage_all = WGPUTextureUsage_All;
         SVAR("int", "Usage_CopySrc", &texture_usage_copy_src);
+        DOC_VAR(
+          "Texture usage flag: can be used as a source for copy/write operations");
         SVAR("int", "Usage_CopyDst", &texture_usage_copy_dst);
+        DOC_VAR(
+          "Texture usage flag: can be used destination for copy/write operations");
         SVAR("int", "Usage_TextureBinding", &texture_usage_texture_binding);
+        DOC_VAR("Texture usage flag: texture can be bound to a shader");
         SVAR("int", "Usage_StorageBinding", &texture_usage_storage_binding);
+        DOC_VAR(
+          "Texture usage flag: texture can be bound as a storage texture to a shader");
         SVAR("int", "Usage_RenderAttachment", &texture_usage_render_attachment);
+        DOC_VAR(
+          "Texture usage flag: texture can be used as a render attachment, i.e. "
+          "written to by a render pass");
         SVAR("int", "Usage_All", &texture_usage_all);
+        DOC_VAR("Texture usage flag: all usages enabled");
 
         // 1D textures currently unsupported
         // static t_CKINT texture_dimension_1d = WGPUTextureDimension_1D;

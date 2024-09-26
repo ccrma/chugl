@@ -60,8 +60,8 @@ GG.scene().camera().posZ( 10 );
 
 // ------ BLOOM ------ //
 GG.renderPass() --> BloomPass bloom_pass --> GG.outputPass();
-bloom_pass.input( GG.renderPass().target() );
-GG.outputPass().input( bloom_pass.output() );
+bloom_pass.input( GG.renderPass().colorOutput() );
+GG.outputPass().input( bloom_pass.colorOutput() );
 
 bloom_pass.intensity(0.71);
 bloom_pass.radius(0.68);

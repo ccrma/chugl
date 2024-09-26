@@ -124,6 +124,13 @@ struct {
     Chuck_ArrayFloat* white_pixel_data;  // {1.0, 1.0, 1.0, 1.0}
     Chuck_ArrayFloat* black_pixel_data;  // {0.0, 0.0, 0.0, 0.0}
     Chuck_ArrayFloat* normal_pixel_data; // {0.5, 0.5, 1.0, 1.0}
+
+    Chuck_String* FRAME_UNIFORMS;
+    Chuck_String* LIGHTING_UNIFORMS;
+    Chuck_String* DRAW_UNIFORMS;
+    Chuck_String* STANDARD_VERTEX_INPUT;
+    Chuck_String* STANDARD_VERTEX_OUTPUT;
+    Chuck_String* STANDARD_VERTEX_SHADER;
 } g_builtin_ckobjs;
 
 // map from ckobj to shred
@@ -180,9 +187,9 @@ const char* chugin_copyCkString(Chuck_String* ck_str)
     return strdup(g_chuglAPI->object->str(ck_str));
 }
 
-Chuck_String* chugin_createCkString(const char* str)
+Chuck_String* chugin_createCkString(const char* str, bool add_ref = false)
 {
-    return g_chuglAPI->object->create_string(g_chuglVM, str, false);
+    return g_chuglAPI->object->create_string(g_chuglVM, str, add_ref);
 }
 
 // copies up to count elements from ck_arr to arr

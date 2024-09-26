@@ -77,14 +77,23 @@ CK_DLL_MFUN(component_set_name)
 static void ulib_component_query(Chuck_DL_Query* QUERY)
 {
     QUERY->begin_class(QUERY, SG_CKNames[SG_COMPONENT_BASE], "Object");
+    DOC_CLASS(
+      "Base class for ALL chugl scenegraph components. Don't instantiate "
+      "directly. Contains methods for setting and getting the name of the component "
+      "(useful for debugging) and the unique id which chugl assigns");
     // member vars
     component_offset_id = QUERY->add_mvar(QUERY, "int", "@component_ptr", false);
 
     // member functions
     QUERY->add_mfun(QUERY, component_get_id, "int", "id");
+    DOC_FUNC("Get the unique chugl id of this component");
+
     QUERY->add_mfun(QUERY, component_get_name, "string", "name");
+    DOC_FUNC("Get the name of this component");
+
     QUERY->add_mfun(QUERY, component_set_name, "string", "name");
     QUERY->add_arg(QUERY, "string", "name");
+    DOC_FUNC("Set the name of this component");
 
     QUERY->end_class(QUERY); // Component
 }
@@ -188,6 +197,10 @@ static void ulib_ggen_query(Chuck_DL_Query* QUERY)
     { // GGen
         QUERY->begin_class(QUERY, SG_CKNames[SG_COMPONENT_TRANSFORM],
                            SG_CKNames[SG_COMPONENT_BASE]);
+        DOC_CLASS(
+          "Chugl graphics generator. Can be grucked to the scenegraph. Contains "
+          "methods for transform manipulation");
+
         QUERY->add_ctor(QUERY, ggen_ctor);
         QUERY->add_dtor(QUERY, ggen_dtor);
 
@@ -1142,6 +1155,8 @@ static void ulib_mesh_query(Chuck_DL_Query* QUERY)
     // GMesh -----------------------------------------------------
     QUERY->begin_class(QUERY, SG_CKNames[SG_COMPONENT_MESH],
                        SG_CKNames[SG_COMPONENT_TRANSFORM]);
+    DOC_CLASS(
+      "Mesh class for renderables. Can be assigned Geometry and Material components");
 
     QUERY->add_ctor(QUERY, gmesh_ctor);
     QUERY->add_ctor(QUERY, gmesh_ctor_params);
@@ -1187,6 +1202,7 @@ static void ulib_mesh_query(Chuck_DL_Query* QUERY)
     // GLines2D -----------------------------------------------------
     {
         BEGIN_CLASS("GLines", SG_CKNames[SG_COMPONENT_MESH]);
+        DOC_CLASS("Class for creating 2D lines");
 
         CTOR(glines2d_ctor);
 

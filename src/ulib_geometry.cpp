@@ -127,6 +127,9 @@ static void ulib_geometry_query(Chuck_DL_Query* QUERY)
 {
     // Geometry -----------------------------------------------------
     BEGIN_CLASS(SG_CKNames[SG_COMPONENT_GEOMETRY], SG_CKNames[SG_COMPONENT_BASE]);
+    DOC_CLASS(
+      "Geometry component. Can contain vertex attribute data, indices data, and pulled "
+      "vertex buffers");
 
     // contants
     static t_CKINT sg_geometry_max_attributes{ SG_GEOMETRY_MAX_VERTEX_ATTRIBUTES };
@@ -378,6 +381,7 @@ static void ulib_geometry_query(Chuck_DL_Query* QUERY)
     // Suzanne ----------
     BEGIN_CLASS(SG_GeometryTypeNames[SG_GEOMETRY_SUZANNE],
                 SG_CKNames[SG_COMPONENT_GEOMETRY]);
+    DOC_CLASS("Blender Suzanne monkey head");
 
     CTOR(suzanne_geo_ctor);
     END_CLASS();
@@ -385,6 +389,7 @@ static void ulib_geometry_query(Chuck_DL_Query* QUERY)
     // lines2d
     BEGIN_CLASS(SG_GeometryTypeNames[SG_GEOMETRY_LINES2D],
                 SG_CKNames[SG_COMPONENT_GEOMETRY]);
+    DOC_CLASS("Geometry for GLines. You probably don't need to create this directly.");
 
     CTOR(lines2d_geo_ctor);
 

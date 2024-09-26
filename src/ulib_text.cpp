@@ -45,8 +45,10 @@ void ulib_text_query(Chuck_DL_Query* QUERY)
 
     MFUN(gtext_set_color, "void", "color");
     ARG("vec4", "color");
+    DOC_FUNC("Set text color");
 
     MFUN(gtext_get_color, "vec4", "color");
+    DOC_FUNC("Get text color");
 
     MFUN(gtext_set_text, "void", "text");
     ARG("string", "text");
@@ -70,6 +72,7 @@ void ulib_text_query(Chuck_DL_Query* QUERY)
     DOC_FUNC("Set vertical line spacing. Default is 1.0.");
 
     MFUN(gtext_get_vertical_spacing, "float", "spacing");
+    DOC_FUNC("Get vertical line spacing");
 
     MFUN(gtext_set_control_points, "void", "controlPoints");
     ARG("vec2", "control_points");
@@ -83,6 +86,9 @@ void ulib_text_query(Chuck_DL_Query* QUERY)
       "the top-right of the text.");
 
     MFUN(gtext_get_control_points, "vec2", "controlPoints");
+    DOC_FUNC(
+      "Get control points for text. Default is (0.5, 0.5), meaning the center of the "
+      "text string is at the position of the text transform");
 
     MFUN(gtext_set_texture, "void", "texture");
     ARG(SG_CKNames[SG_COMPONENT_TEXTURE], "texture");

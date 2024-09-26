@@ -18,8 +18,8 @@ GMesh sphere(sphere_geo, mat3) --> GG.scene();
 // render graph
 GG.outputPass() @=> OutputPass output_pass;
 GG.renderPass() --> BloomPass bloom_pass --> output_pass;
-bloom_pass.input(GG.renderPass().target());
-output_pass.input(bloom_pass.output());
+bloom_pass.input(GG.renderPass().colorOutput());
+output_pass.input(bloom_pass.colorOutput());
 
 // GG.renderPass() --> output_pass; // uncomment to bypass bloom
 
@@ -40,8 +40,21 @@ UI_Float exposure(output_pass.exposure());
 UI_Float color_intensity(intensity);
 UI_Float threshold(bloom_pass.threshold());
 
+false => int fullscreen;
+
 while (true) {
     GG.nextFrame() => now;
+
+    if (GWindow.keyDown(GWindow.Key_1)) {
+        if (fullscreen) {
+            GWindow.windowed(400, 400);
+            false => fullscreen;
+        } else {
+            GWindow.fullscreen();
+            true => fullscreen;
+        }
+    }
+
 
     UI.setNextWindowSize(@(400, 600), UI_Cond.Once);
     if (UI.begin("Bloom Example", null, 0)) {

@@ -9,7 +9,6 @@
 
 // external API
 SG_ID ulib_pass_createPass(SG_PassType pass_type);
-SG_ID ulib_pass_createOutputPass();
 
 SG_Material* chugl_createInternalMaterial(SG_MaterialType material_type,
                                           SG_Shader* shader)
@@ -69,9 +68,12 @@ CK_DLL_MFUN(outputpass_get_exposure);
 CK_DLL_CTOR(computepass_ctor); // don't send creation CQ Command until shader is set
 CK_DLL_MFUN(computepass_set_shader);
 CK_DLL_MFUN(computepass_set_uniform_float);
-CK_DLL_MFUN(computepass_set_storage_buffer);
-CK_DLL_MFUN(computepass_set_uniform_int);
 CK_DLL_MFUN(computepass_set_uniform_float2);
+CK_DLL_MFUN(computepass_set_uniform_float3);
+CK_DLL_MFUN(computepass_set_uniform_float4);
+CK_DLL_MFUN(computepass_set_storage_buffer);
+CK_DLL_MFUN(computepass_set_storage_texture);
+CK_DLL_MFUN(computepass_set_uniform_int);
 CK_DLL_MFUN(computepass_set_workgroup);
 
 // BloomPass
@@ -119,6 +121,7 @@ const char* ulib_pass_classname(SG_PassType pass_type)
 void ulib_pass_query(Chuck_DL_Query* QUERY)
 {
     BEGIN_CLASS(SG_CKNames[SG_COMPONENT_PASS], SG_CKNames[SG_COMPONENT_BASE]);
+    DOC_CLASS("Base class for all passes, used to describe a render graph");
 
     CTOR(pass_ctor);
 
@@ -143,18 +146,19 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
         DOC_CLASS(
           " Render pass for drawing a GScene. If RenderPass.scene() is not set, will "
           "default to the main scene, GG.scene()"
-          " If RenderPass.target() is not set, will default to the screen. "
+          " If RenderPass.colorOutput() is not set, will default to the screen. "
           " If RenderPass.camera() is not set, will default to the scene's main "
           "camera: "
           "GG.scene().camera()");
 
         CTOR(renderpass_ctor);
 
-        MFUN(renderpass_set_resolve_target, "void", "target");
-        ARG(SG_CKNames[SG_COMPONENT_TEXTURE], "target");
+        MFUN(renderpass_set_resolve_target, "void", "colorOutput");
+        ARG(SG_CKNames[SG_COMPONENT_TEXTURE], "color_texture");
         DOC_FUNC("Set the target texture to draw the scene to.");
 
-        MFUN(renderpass_get_resolve_target, SG_CKNames[SG_COMPONENT_TEXTURE], "target");
+        MFUN(renderpass_get_resolve_target, SG_CKNames[SG_COMPONENT_TEXTURE],
+             "colorOutput");
         DOC_FUNC("Get the target texture to draw the scene to.");
 
         MFUN(renderpass_set_color_target_clear_on_load, "void", "autoClearColor");
@@ -173,17 +177,25 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
     {
         BEGIN_CLASS(ulib_pass_classname(SG_PassType_Screen),
                     SG_CKNames[SG_COMPONENT_PASS]);
+        DOC_CLASS(
+          "Screen pass for applying screen shaders and visual effects to the entire "
+          "screen");
 
         CTOR(screenpass_ctor);
 
         CTOR(screenpass_ctor_with_params);
         ARG(SG_CKNames[SG_COMPONENT_SHADER], "screen_shader");
 
-        MFUN(screenpass_set_target, "void", "target");
-        ARG(SG_CKNames[SG_COMPONENT_TEXTURE], "target");
+        MFUN(screenpass_set_target, "void", "colorOutput");
+        ARG(SG_CKNames[SG_COMPONENT_TEXTURE], "texture");
+        DOC_FUNC("Set the color attachment output texture of this screen pass");
 
         MFUN(screenpass_set_shader, "void", "shader");
         ARG(SG_CKNames[SG_COMPONENT_SHADER], "shader");
+        DOC_FUNC(
+          "Set the screen shader to apply to the screen. In your screen shader be sure "
+          "to #include SCREEN_PASS_VERTEX_SHADER which supplies your fragment shader "
+          "with a full-screen quad");
 
         END_CLASS();
     }
@@ -191,16 +203,38 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
     // OutputPass ----------------------------------------------------------------
     {
         BEGIN_CLASS("OutputPass", SG_CKNames[SG_COMPONENT_PASS]);
+        DOC_FUNC(
+          "Default ChuGL output pass; place at end of render graph. Applies "
+          "tonemapping and gamma correction to the final image and outputs to the "
+          "window");
+
+        static t_CKUINT TONEMAP_NONE      = 0;
+        static t_CKUINT TONEMAP_LINEAR    = 1;
+        static t_CKUINT TONEMAP_REINHARD  = 2;
+        static t_CKUINT TONEMAP_CINEON    = 3;
+        static t_CKUINT TONEMAP_ACES      = 4;
+        static t_CKUINT TONEMAP_UNCHARTED = 5;
+        SVAR("int", "ToneMap_None", &TONEMAP_NONE);
+        SVAR("int", "ToneMap_Linear", &TONEMAP_LINEAR);
+        SVAR("int", "ToneMap_Reinhard", &TONEMAP_REINHARD);
+        SVAR("int", "ToneMap_Cineon", &TONEMAP_CINEON);
+        SVAR("int", "ToneMap_ACES", &TONEMAP_ACES);
+        SVAR("int", "ToneMap_Uncharted", &TONEMAP_UNCHARTED);
 
         CTOR(outputpass_ctor);
 
         MFUN(outputpass_set_input_texture, "void", "input");
         ARG(SG_CKNames[SG_COMPONENT_TEXTURE], "input_texture");
+        DOC_FUNC("Set the input texture to apply tonemapping and gamma correction to");
 
         MFUN(outputpass_set_tonemap, "void", "tonemap");
         ARG("int", "tonemap_type");
+        DOC_FUNC(
+          "Set the tonemapping algorithm to apply to the input texture. Choose a value "
+          "from the OutputPass.ToneMap_* enum");
 
         MFUN(outputpass_get_tonemap, "int", "tonemap");
+        DOC_FUNC("Get the tonemapping algorithm applied to the input texture");
 
         // Note: removing gamma correction, swapchain output view is already srgb
         // MFUN(outputpass_set_gamma, "void", "gamma");
@@ -210,8 +244,10 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
 
         MFUN(outputpass_set_exposure, "void", "exposure");
         ARG("float", "exposure");
+        DOC_FUNC("Set the exposure value for the tonemapping algorithm");
 
         MFUN(outputpass_get_exposure, "float", "exposure");
+        DOC_FUNC("Get the exposure value for the tonemapping algorithm");
 
         END_CLASS();
     }
@@ -219,11 +255,13 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
     // ComputePass --------------------------------------------------------------
     {
         BEGIN_CLASS("ComputePass", SG_CKNames[SG_COMPONENT_PASS]);
+        DOC_CLASS("Compute pass for running compute shaders");
 
         CTOR(computepass_ctor);
 
         MFUN(computepass_set_shader, "void", "shader");
         ARG(SG_CKNames[SG_COMPONENT_SHADER], "shader");
+        DOC_FUNC("Set the compute shader to run");
 
         MFUN(computepass_set_uniform_float, "void", "uniformFloat");
         ARG("int", "location");
@@ -233,9 +271,21 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
         ARG("int", "location");
         ARG("vec2", "uniform_value");
 
+        MFUN(computepass_set_uniform_float3, "void", "uniformFloat3");
+        ARG("int", "location");
+        ARG("vec3", "uniform_value");
+
+        MFUN(computepass_set_uniform_float4, "void", "uniformFloat4");
+        ARG("int", "location");
+        ARG("vec4", "uniform_value");
+
         MFUN(computepass_set_storage_buffer, "void", "storageBuffer");
         ARG("int", "location");
         ARG("StorageBuffer", "buffer");
+
+        // MFUN(computepass_set_storage_texture, "void", "storageTexture");
+        // ARG("int", "location");
+        // ARG(SG_CKNames[SG_COMPONENT_TEXTURE], "texture");
 
         MFUN(computepass_set_uniform_int, "void", "uniformInt");
         ARG("int", "location");
@@ -245,11 +295,15 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
         ARG("int", "x");
         ARG("int", "y");
         ARG("int", "z");
+        DOC_FUNC(
+          "Set the workgroup size for the compute shader. Used to determine the "
+          "dimensions of the compute pass dispatch");
 
         END_CLASS();
 
         { // BloomPass
             BEGIN_CLASS("BloomPass", SG_CKNames[SG_COMPONENT_PASS]);
+            DOC_FUNC("Bloom pass for applying bloom to a render texture");
 
             CTOR(bloompass_ctor);
 
@@ -258,7 +312,7 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
             DOC_FUNC("Set the render texture to apply bloom to");
 
             MFUN(bloompass_get_output_render_texture, SG_CKNames[SG_COMPONENT_TEXTURE],
-                 "output");
+                 "colorOutput");
             DOC_FUNC("Get the render texture that the bloom pass writes to");
 
             MFUN(bloompass_set_internal_blend, "void", "radius");
@@ -687,6 +741,43 @@ CK_DLL_MFUN(computepass_set_uniform_float2)
     CQ_PushCommand_MaterialSetUniform(material, location);
 }
 
+CK_DLL_MFUN(computepass_set_uniform_float3)
+{
+    SG_Pass* pass = GET_PASS(SELF);
+    ASSERT(pass->pass_type == SG_PassType_Compute);
+
+    t_CKINT location       = GET_NEXT_INT(ARGS);
+    t_CKVEC3 uniform_value = GET_NEXT_VEC3(ARGS);
+
+    SG_Material* material = (pass->compute_material_id == 0) ?
+                              chugl_createInternalMaterial(SG_MATERIAL_COMPUTE, NULL) :
+                              SG_GetMaterial(pass->compute_material_id);
+
+    // set uniform
+    SG_Material::uniformVec3f(material, location,
+                              { uniform_value.x, uniform_value.y, uniform_value.z });
+    CQ_PushCommand_MaterialSetUniform(material, location);
+}
+
+CK_DLL_MFUN(computepass_set_uniform_float4)
+{
+    SG_Pass* pass = GET_PASS(SELF);
+    ASSERT(pass->pass_type == SG_PassType_Compute);
+
+    t_CKINT location       = GET_NEXT_INT(ARGS);
+    t_CKVEC4 uniform_value = GET_NEXT_VEC4(ARGS);
+
+    SG_Material* material = (pass->compute_material_id == 0) ?
+                              chugl_createInternalMaterial(SG_MATERIAL_COMPUTE, NULL) :
+                              SG_GetMaterial(pass->compute_material_id);
+
+    // set uniform
+    SG_Material::uniformVec4f(
+      material, location,
+      { uniform_value.x, uniform_value.y, uniform_value.z, uniform_value.w });
+    CQ_PushCommand_MaterialSetUniform(material, location);
+}
+
 CK_DLL_MFUN(computepass_set_storage_buffer)
 {
     SG_Pass* pass = GET_PASS(SELF);
@@ -753,9 +844,9 @@ CK_DLL_CTOR(bloompass_ctor)
 
     // create default output render texture
     SG_TextureDesc output_render_texture_desc = {};
-    output_render_texture_desc.usage = WGPUTextureUsage_RenderAttachment
-                                             | WGPUTextureUsage_TextureBinding
-                                             | WGPUTextureUsage_StorageBinding;
+    output_render_texture_desc.usage          = WGPUTextureUsage_RenderAttachment
+                                       | WGPUTextureUsage_TextureBinding
+                                       | WGPUTextureUsage_StorageBinding;
     output_render_texture_desc.format = WGPUTextureFormat_RGBA16Float;
     SG_Texture* output_render_texture
       = SG_CreateTexture(&output_render_texture_desc, NULL, SHRED, false);

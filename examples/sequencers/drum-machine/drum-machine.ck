@@ -100,7 +100,6 @@ fun void placePads() {
 
 // places along horizontal axis
 fun void placePadsHorizontal(GPad pads[], GGen @ parent, float width, float y) {
-    <<< width, " , ", y >>>;
     width / pads.size() => float padSpacing;
     for (0 => int i; i < pads.size(); i++) {
         pads[i] @=> GPad pad;

@@ -18,6 +18,7 @@ CK_DLL_MFUN(storage_buffer_write_with_offset);
 void ulib_buffer_query(Chuck_DL_Query* QUERY)
 {
     BEGIN_CLASS("StorageBuffer", SG_CKNames[SG_COMPONENT_BASE]);
+    DOC_CLASS("Class representing a GPU Storage Buffer");
 
     CTOR(storage_buffer_ctor);
 

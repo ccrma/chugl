@@ -231,17 +231,28 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
     BEGIN_CLASS("ShaderDesc", "Object");
     DOC_CLASS(
       "Shader description object. Used to create a Shader component."
-      "Set either vertexString or vertexFilepath, and either fragmentString or "
+      "If creating a material shader, set either vertexString or vertexFilepath, and "
+      "either fragmentString or "
       "fragmentFilepath. `vertexLayout` field describes the vertex data layout "
-      "of buffers going into the vertex shader--use the VertexFormat enum.");
+      "of buffers going into the vertex shader--use the VertexFormat enum. "
+      "For compute shaders, set either computeString or computeFilepath.");
 
     CTOR(shader_desc_ctor);
 
-    shader_desc_vertex_string_offset     = MVAR("string", "vertexString", false);
-    shader_desc_fragment_string_offset   = MVAR("string", "fragmentString", false);
-    shader_desc_vertex_filepath_offset   = MVAR("string", "vertexFilepath", false);
+    shader_desc_vertex_string_offset = MVAR("string", "vertexString", false);
+    DOC_VAR("Vertex shader string. Set if passing a raw shader code (not a filepath)");
+
+    shader_desc_fragment_string_offset = MVAR("string", "fragmentString", false);
+    DOC_VAR(
+      "Fragment shader string. Set if passing a raw shader code (not a filepath)");
+
+    shader_desc_vertex_filepath_offset = MVAR("string", "vertexFilepath", false);
+    DOC_VAR("Vertex shader filepath. Set if passing a filepath to a shader file");
+
     shader_desc_fragment_filepath_offset = MVAR("string", "fragmentFilepath", false);
-    shader_desc_vertex_layout_offset     = MVAR("int[]", "vertexLayout", false);
+    DOC_VAR("Fragment shader filepath. Set if passing a filepath to a shader file");
+
+    shader_desc_vertex_layout_offset = MVAR("int[]", "vertexLayout", false);
     DOC_VAR(
       "Array of VertexFormat enums describing the vertex data layout."
       "E.g. if your vertex shader takes a vec3 position and a vec2 uv, set "
@@ -251,9 +262,13 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
       "VertexFormat.Float3, VertexFormat.Float2, VertexFormat.Float4]. "
       "This corresponds to position, normal, uv, tangent.");
 
-    shader_desc_compute_string_offset   = MVAR("string", "computeString", false);
+    shader_desc_compute_string_offset = MVAR("string", "computeString", false);
+    DOC_VAR("Compute shader string. Set if passing a raw shader code (not a filepath)");
+
     shader_desc_compute_filepath_offset = MVAR("string", "computeFilepath", false);
-    shader_desc_is_lit                  = MVAR("int", "lit", false);
+    DOC_VAR("Compute shader filepath. Set if passing a filepath to a shader file");
+
+    shader_desc_is_lit = MVAR("int", "lit", false);
     DOC_VAR(
       "set to true if the shader is lit (uses lighting calculations). If set, the "
       "renderer will pass in lighting information as part of the per-frame uniforms");
@@ -262,6 +277,43 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
 
     // Shader -----------------------------------------------------
     BEGIN_CLASS(SG_CKNames[SG_COMPONENT_SHADER], SG_CKNames[SG_COMPONENT_BASE]);
+    DOC_CLASS(
+      "Shader component. Immutable. Create by passing a ShaderDesc. E.g. new "
+      "Shader(ShaderDesc)");
+
+    // svars -----------------------------------------------------
+    // cannot declare static non-primitive objects
+    // SVAR("string", "FRAME_UNIFORMS", g_builtin_ckobjs.FRAME_UNIFORMS);
+    // DOC_VAR(
+    //   "Frame uniforms string. Can be included in a shader via #include
+    //   FRAME_UNIFORMS");
+
+    // SVAR("string", "LIGHTING_UNIFORMS", g_builtin_ckobjs.LIGHTING_UNIFORMS);
+    // DOC_VAR(
+    //   "Lighting uniforms string. Can be included in a shader via #include "
+    //   "LIGHTING_UNIFORMS");
+
+    // SVAR("string", "DRAW_UNIFORMS", g_builtin_ckobjs.DRAW_UNIFORMS);
+    // DOC_VAR(
+    //   "Draw uniforms string. Can be included in a shader via #include
+    //   DRAW_UNIFORMS");
+
+    // SVAR("string", "STANDARD_VERTEX_INPUT", g_builtin_ckobjs.STANDARD_VERTEX_INPUT);
+    // DOC_VAR(
+    //   "Standard vertex input string. Can be included in a shader via #include "
+    //   "STANDARD_VERTEX_INPUT");
+
+    // SVAR("string", "STANDARD_VERTEX_OUTPUT",
+    // g_builtin_ckobjs.STANDARD_VERTEX_OUTPUT); DOC_VAR(
+    //   "Standard vertex output string. Can be included in a shader via #include "
+    //   "STANDARD_VERTEX_OUTPUT");
+
+    // SVAR("string", "STANDARD_VERTEX_SHADER",
+    // g_builtin_ckobjs.STANDARD_VERTEX_SHADER); DOC_VAR(
+    //   "Standard vertex shader string. Can be included in a shader via #include "
+    //   "STANDARD_VERTEX_SHADER");
+
+    // ctors -----------------------------------------------------
 
     CTOR(shader_ctor_default);
 
@@ -291,6 +343,9 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
 
     // Material -----------------------------------------------------
     BEGIN_CLASS(SG_CKNames[SG_COMPONENT_MATERIAL], SG_CKNames[SG_COMPONENT_BASE]);
+    DOC_CLASS(
+      "Chugl material types. Represents uniforms/textures/buffers that are passed into "
+      "a given shader");
 
     CTOR(material_ctor);
 
@@ -328,9 +383,11 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
     // pso modifiers (shouldn't be set often, so we lump all together in a single
     // command that copies the entire PSO struct)
     MFUN(material_get_shader, SG_CKNames[SG_COMPONENT_SHADER], "shader");
+    DOC_FUNC("Get the shader of the material.");
 
     MFUN(material_set_shader, "void", "shader");
     ARG(SG_CKNames[SG_COMPONENT_SHADER], "shader");
+    DOC_FUNC("Set the shader of the material.");
 
     MFUN(material_get_cullmode, "int", "cullMode");
     DOC_FUNC(
@@ -358,62 +415,81 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
       "Material.Topology_TriangleList, or Material.Topology_TriangleStrip.");
 
     // uniforms
-    MFUN(material_uniform_remove, "void", "removeUniform");
-    ARG("int", "location");
+
+    // TODO
+    // MFUN(material_uniform_remove, "void", "removeUniform");
+    // ARG("int", "location");
 
     MFUN(material_uniform_active_locations, "int[]", "activeUniformLocations");
+    DOC_FUNC(
+      "Get list of active uniform locations, i.e. uniform locations that have been set "
+      "(bind group entry locations)");
 
     MFUN(material_set_uniform_float, "void", "uniformFloat");
     ARG("int", "location");
     ARG("float", "uniform_value");
+    DOC_FUNC("Set a float uniform value at the given location.");
 
     MFUN(material_get_uniform_float, "float", "uniformFloat");
     ARG("int", "location");
+    DOC_FUNC("Get a float uniform value at the given location.");
 
     MFUN(material_set_uniform_float2, "void", "uniformFloat2");
     ARG("int", "location");
     ARG("vec2", "uniform_value");
+    DOC_FUNC("Set a vec2 uniform value at the given location.");
 
     MFUN(material_get_uniform_float2, "vec2", "uniformFloat2");
     ARG("int", "location");
+    DOC_FUNC("Get a vec2 uniform value at the given location.");
 
     MFUN(material_set_uniform_float3, "void", "uniformFloat3");
     ARG("int", "location");
     ARG("vec3", "uniform_value");
+    DOC_FUNC("Set a vec3 uniform value at the given location.");
 
     MFUN(material_get_uniform_float3, "vec3", "uniformFloat3");
     ARG("int", "location");
+    DOC_FUNC("Get a vec3 uniform value at the given location.");
 
     MFUN(material_set_uniform_float4, "void", "uniformFloat4");
     ARG("int", "location");
     ARG("vec4", "uniform_value");
+    DOC_FUNC("Set a vec4 uniform value at the given location.");
 
     MFUN(material_get_uniform_float4, "vec4", "uniformFloat4");
     ARG("int", "location");
+    DOC_FUNC("Get a vec4 uniform value at the given location.");
 
     MFUN(material_set_uniform_int, "void", "uniformInt");
     ARG("int", "location");
     ARG("int", "uniform_value");
+    DOC_FUNC("Set an int uniform value at the given location.");
 
     MFUN(material_get_uniform_int, "int", "uniformInt");
     ARG("int", "location");
+    DOC_FUNC("Get an int uniform value at the given location.");
 
     MFUN(material_set_uniform_int2, "void", "uniformInt2");
     ARG("int", "location");
     ARG("int", "x");
     ARG("int", "y");
+    DOC_FUNC("Set an vec2<i32> uniform value at the given location.");
 
     MFUN(material_get_uniform_int2, "int[]", "uniformInt2");
     ARG("int", "location");
+    DOC_FUNC("Get an vec2<i32> uniform value at the given location.");
 
     MFUN(material_set_uniform_int3, "void", "uniformInt3");
     ARG("int", "location");
     ARG("int", "x");
     ARG("int", "y");
     ARG("int", "z");
+    DOC_FUNC("Set an vec3<i32> uniform value at the given location.");
 
     MFUN(material_get_uniform_int3, "int[]", "uniformInt3");
     ARG("int", "location");
+    DOC_FUNC("Get an vec3<i32> uniform value at the given location.");
 
     MFUN(material_set_uniform_int4, "void", "uniformInt4");
     ARG("int", "location");
@@ -421,33 +497,41 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
     ARG("int", "y");
     ARG("int", "z");
     ARG("int", "w");
+    DOC_FUNC("Set an vec4<i32> uniform value at the given location.");
 
     MFUN(material_get_uniform_int4, "int[]", "uniformInt4");
     ARG("int", "location");
+    DOC_FUNC("Get an vec4<i32> uniform value at the given location.");
 
     // storage buffers
     MFUN(material_set_storage_buffer, "void", "storageBuffer");
     ARG("int", "location");
     ARG("float[]", "storageBuffer");
+    DOC_FUNC("Bind the given array data as a storage buffer at the given location.");
 
     // external storage buffer
     MFUN(material_set_storage_buffer_external, "void", "storageBuffer");
     ARG("int", "location");
     ARG("StorageBuffer", "storageBuffer");
+    DOC_FUNC("Bind a storage buffer at the given location.");
 
     MFUN(material_set_sampler, "void", "sampler");
     ARG("int", "location");
     ARG("TextureSampler", "sampler");
+    DOC_FUNC("Bind a sampler at the given location.");
 
     MFUN(material_get_sampler, "TextureSampler", "sampler");
     ARG("int", "location");
+    DOC_FUNC("Get the sampler at the given location.");
 
     MFUN(material_set_texture, "void", "texture");
     ARG("int", "location");
     ARG("Texture", "texture");
+    DOC_FUNC("Bind a texture at the given location.");
 
     MFUN(material_get_texture, "Texture", "texture");
     ARG("int", "location");
+    DOC_FUNC("Get the texture at the given location.");
 
     MFUN(material_set_storage_texture, "void", "storageTexture");
     ARG("int", "location");
@@ -462,6 +546,9 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
     // Lines2DMaterial -----------------------------------------------------
     BEGIN_CLASS(SG_MaterialTypeNames[SG_MATERIAL_LINES2D],
                 SG_CKNames[SG_COMPONENT_MATERIAL]);
+    DOC_CLASS(
+      "2D line material. You probably don't need to instantiate this directly. Use "
+      "GLines instead");
 
     CTOR(lines2d_material_ctor);
 

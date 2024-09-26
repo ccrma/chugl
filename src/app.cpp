@@ -214,6 +214,7 @@ static void _R_glfwErrorCallback(int error, const char* description)
 
 static int frame_buffer_width  = 0;
 static int frame_buffer_height = 0;
+static bool resized_this_frame = false;
 struct App {
     GLFWwindow* window;
     GraphicsContext gctx; // pass as pointer?
@@ -284,23 +285,6 @@ struct App {
 
             app->dt       = currentTime - app->lastTime;
             app->lastTime = currentTime;
-        }
-
-        // handle window resize (special case b/c needs to happen before
-        // GraphicsContext::prepareFrame, unlike the rest of glfwPollEvents())
-        // Doing window resize AFTER surface is already prepared causes crash.
-        // Normally you glfwPollEvents() at the start of the frame, but
-        // dearImGUI hooks into glfwPollEvents, and modifies imgui state, so
-        // glfwPollEvents() must happen in the critial region, after
-        // GraphicsContext::prepareFrame
-        {
-            int width, height;
-            glfwGetFramebufferSize(app->window, &width, &height);
-            if (width != frame_buffer_width || height != frame_buffer_height) {
-                frame_buffer_width  = width;
-                frame_buffer_height = height;
-                _onFramebufferResize(app->window, width, height);
-            }
         }
 
         _mainLoop(app); // chuck loop
@@ -598,8 +582,26 @@ struct App {
                                           app->default_font);
         }
 
-        // process any glfw options passed from chuck
-        // UpdateState(scene);
+        // handle window resize (special case b/c needs to happen before
+        // GraphicsContext::prepareFrame, unlike the rest of glfwPollEvents())
+        // Doing window resize AFTER surface is already prepared causes crash.
+        // Normally you glfwPollEvents() at the start of the frame, but
+        // dearImGUI hooks into glfwPollEvents, and modifies imgui state, so
+        // glfwPollEvents() must happen in the critial region, after
+        // GraphicsContext::prepareFrame
+        // Also resize check neds to happen after command queue is flushed
+        // because some commands may resize the window
+        {
+            resized_this_frame = false;
+            int width, height;
+            glfwGetFramebufferSize(app->window, &width, &height);
+            if (width != frame_buffer_width || height != frame_buffer_height) {
+                frame_buffer_width  = width;
+                frame_buffer_height = height;
+                resized_this_frame  = true;
+                _onFramebufferResize(app->window, width, height);
+            }
+        }
 
         // garbage collection! delete GPU-side data for any scenegraph objects
         // that were deleted in chuck
@@ -999,7 +1001,7 @@ struct App {
         }
 
         // imgui render pass
-        if (do_ui) {
+        if (do_ui && !resized_this_frame) {
             WGPURenderPassColorAttachment imgui_color_attachment = {};
             imgui_color_attachment.view = app->gctx.backbufferView;
 #ifdef __EMSCRIPTEN__
@@ -1440,6 +1442,14 @@ static void _R_HandleCommand(App* app, SG_Command* command)
             SG_Command_WindowMode* cmd = (SG_Command_WindowMode*)command;
             switch (cmd->mode) {
                 case SG_WINDOW_MODE_FULLSCREEN: {
+                    // save previous window size
+                    int windowed_width, windowed_height;
+                    glfwGetWindowSize(app->window, &windowed_width, &windowed_height);
+                    CHUGL_Window_LastWindowSize(windowed_width, windowed_height);
+
+                    log_trace("saving last window dim: %d, %d", windowed_width,
+                              windowed_height);
+
                     GLFWmonitor* monitor    = getCurrentMonitor(app->window);
                     const GLFWvidmode* mode = glfwGetVideoMode(monitor);
                     glfwSetWindowMonitor(app->window, monitor, 0, 0, mode->width,
@@ -1454,8 +1464,20 @@ static void _R_HandleCommand(App* app, SG_Command* command)
                     // get previous position
                     int xpos, ypos;
                     glfwGetWindowPos(app->window, &xpos, &ypos);
-                    glfwSetWindowMonitor(app->window, NULL, xpos, ypos, cmd->width,
-                                         cmd->height, GLFW_DONT_CARE);
+
+                    // get last known window size if cmd does not specify new dimensions
+                    int width  = cmd->width;
+                    int height = cmd->height;
+                    if (width <= 0 || height <= 0) {
+                        t_CKVEC2 last_size = CHUGL_Window_LastWindowSize();
+                        width              = last_size.x;
+                        height             = last_size.y;
+                    }
+
+                    log_trace("windowed: %d, %d", width, height);
+
+                    glfwSetWindowMonitor(app->window, NULL, xpos, ypos, width, height,
+                                         GLFW_DONT_CARE);
                     break;
                 }
                 case SG_WINDOW_MODE_WINDOWED_FULLSCREEN: {

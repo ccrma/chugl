@@ -44,6 +44,7 @@ SG_Light* ulib_light_create(Chuck_Object* ckobj, SG_LightType type)
 static void ulib_light_query(Chuck_DL_Query* QUERY)
 {
     BEGIN_CLASS(SG_CKNames[SG_COMPONENT_LIGHT], SG_CKNames[SG_COMPONENT_TRANSFORM]);
+    DOC_CLASS("Base class for all light components.");
 
     static t_CKINT light_type_directional = SG_LightType_Directional;
     static t_CKINT light_type_point       = SG_LightType_Point;
@@ -87,6 +88,8 @@ static void ulib_light_query(Chuck_DL_Query* QUERY)
     // point light ------------------------------------------------------------
 
     BEGIN_CLASS("GPointLight", SG_CKNames[SG_COMPONENT_LIGHT]);
+    DOC_CLASS("Point light component.");
+
     CTOR(ulib_point_light_ctor);
 
     MFUN(ulib_point_light_get_radius, "float", "radius");
@@ -114,7 +117,10 @@ static void ulib_light_query(Chuck_DL_Query* QUERY)
     // directional light ------------------------------------------------------
 
     BEGIN_CLASS("GDirLight", SG_CKNames[SG_COMPONENT_LIGHT]);
+    DOC_CLASS("Directional light component.");
+
     CTOR(ulib_dir_light_ctor);
+
     END_CLASS();
 }
 

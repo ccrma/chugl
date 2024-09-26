@@ -35,6 +35,8 @@ struct CHUGL_Window {
 
     // window size (in screen coordinates)
     int window_width = 1280, window_height = 960;
+    int last_window_width  = 1280,
+        last_window_height = 960; // last window size before going fullscreen
 
     // framebuffer size (in pixels)
     int framebuffer_width, framebuffer_height;
@@ -171,6 +173,24 @@ void CHUGL_Window_Size(int window_width, int window_height, int framebuffer_widt
     chugl_window.framebuffer_width  = framebuffer_width;
     chugl_window.framebuffer_height = framebuffer_height;
     spinlock::unlock(&chugl_window.window_lock);
+}
+
+void CHUGL_Window_LastWindowSize(int window_width, int window_height)
+{
+    spinlock::lock(&chugl_window.window_lock);
+    chugl_window.last_window_width  = window_width;
+    chugl_window.last_window_height = window_height;
+    spinlock::unlock(&chugl_window.window_lock);
+}
+
+t_CKVEC2 CHUGL_Window_LastWindowSize()
+{
+    t_CKVEC2 size;
+    spinlock::lock(&chugl_window.window_lock);
+    size.x = chugl_window.last_window_width;
+    size.y = chugl_window.last_window_height;
+    spinlock::unlock(&chugl_window.window_lock);
+    return size;
 }
 
 t_CKVEC2 CHUGL_Window_WindowSize()

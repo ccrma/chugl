@@ -248,7 +248,8 @@ struct R_Texture : public R_Component {
     // used for auto-resizing framebuffer attachments
     static void resize(GraphicsContext* gctx, R_Texture* r_tex, u32 width, u32 height)
     {
-        bool needs_resize = r_tex->desc.width != (int) width || r_tex->desc.height != (int) height
+        bool needs_resize = r_tex->desc.width != (int)width
+                            || r_tex->desc.height != (int)height
                             || r_tex->gpu_texture == NULL;
 
         if (needs_resize) {
@@ -713,7 +714,8 @@ struct Framebuffer {
         bool sample_count_changed = fb->sample_count != sample_count;
         // todo support change in resolve target SG_ID
         if (texture_resized || sample_count_changed) {
-            log_debug("rebuilding framebuffer");
+            log_debug("rebuilding framebuffer, %dx%d, %d samples", width, height,
+                      sample_count);
             fb->width        = width;
             fb->height       = height;
             fb->sample_count = sample_count;

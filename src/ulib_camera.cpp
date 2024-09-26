@@ -55,6 +55,9 @@ CK_DLL_MFUN(fly_camera_get_sensitivity);
 static void ulib_camera_query(Chuck_DL_Query* QUERY)
 {
     BEGIN_CLASS(SG_CKNames[SG_COMPONENT_CAMERA], SG_CKNames[SG_COMPONENT_TRANSFORM]);
+    DOC_CLASS(
+      "ChuGL Camera class. Can be used to create perspective or orthographic "
+      "cameras. Also comes with builtin OrbitCamera and FlyCamera controllers.");
 
     static t_CKINT camera_mode_persp = (t_CKINT)SG_CameraType_PERPSECTIVE;
     static t_CKINT camera_mode_ortho = (t_CKINT)SG_CameraType_ORTHOGRAPHIC;
@@ -137,11 +140,17 @@ static void ulib_camera_query(Chuck_DL_Query* QUERY)
     // orbit camera
     {
         BEGIN_CLASS("GOrbitCamera", SG_CKNames[SG_COMPONENT_CAMERA]);
+        DOC_CLASS(
+          "Built-in orbit camera controller. Click and drag to rotate the camera. "
+          "Scroll to zoom.");
 
         CTOR(orbit_camera_ctor);
 
         MFUN(orbit_camera_update, "void", "update");
         ARG("float", "dt");
+        DOC_FUNC(
+          "Overrides the GGen.update(float dt) method. Called automatically every "
+          "frame.");
 
         MFUN(orbit_camera_set_drag_speed, "void", "dragSpeed");
         ARG("vec2", "speed");
@@ -175,6 +184,9 @@ static void ulib_camera_query(Chuck_DL_Query* QUERY)
     // fly camera
     {
         BEGIN_CLASS("GFlyCamera", SG_CKNames[SG_COMPONENT_CAMERA]);
+        DOC_CLASS(
+          "Built-in fly camera controller. Use WASD to move and mouse to look. Use QE "
+          "to move up and down.");
 
         CTOR(fly_camera_ctor);
 

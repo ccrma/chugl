@@ -29,6 +29,7 @@ CK_DLL_SFUN(gwindow_close);
 CK_DLL_SFUN(gwindow_fullscreen);
 CK_DLL_SFUN(gwindow_fullscreen_width_height);
 CK_DLL_SFUN(gwindow_windowed);
+CK_DLL_SFUN(gwindow_windowed_prev_size);
 CK_DLL_SFUN(gwindow_maximize);
 
 CK_DLL_SFUN(gwindow_get_window_size);
@@ -390,17 +391,19 @@ void ulib_window_query(Chuck_DL_Query* QUERY)
 
     // callbacks ------------------------------------------------------
     SFUN(gwindow_close_event, CHUGL_EventTypeNames[WINDOW_CLOSE], "closeEvent");
-    DOC_FUNC("Event triggered whenever the user attempts to close the ChuGL window");
+    DOC_FUNC(
+      "Returns the event triggered whenever the user attempts to close this ChuGL "
+      "window");
 
     SFUN(gwindow_window_resize_event, CHUGL_EventTypeNames[WINDOW_RESIZE],
          "resizeEvent");
     DOC_FUNC(
-      "Event triggered whenever the ChuGL window is resized, either by the "
+      "Returns the event triggered whenever the ChuGL window is resized, either by the "
       "user or programmatically");
 
     SFUN(gwindow_window_content_scale_event, "Event", "contentScaleEvent");
     DOC_FUNC(
-      "Event triggered whenever the content scale of the window changes."
+      "Returns the event triggered whenever the content scale of the window changes."
       "The content scale is the ratio between the current DPI and the "
       "platform's default DPI.");
 
@@ -431,6 +434,11 @@ void ulib_window_query(Chuck_DL_Query* QUERY)
     ARG("int", "width");
     ARG("int", "height");
     DOC_FUNC("Set the window to windowed mode with the specified width and height");
+
+    SFUN(gwindow_windowed_prev_size, "void", "windowed");
+    DOC_FUNC(
+      "Set the window to windowed mode with the last size before going fullscreen. "
+      "Default 1280 x 960");
 
     SFUN(gwindow_get_window_size, "vec2", "windowSize");
     DOC_FUNC("Get the window size in screen coordinates");
@@ -695,6 +703,11 @@ CK_DLL_SFUN(gwindow_windowed)
     t_CKINT width  = GET_NEXT_INT(ARGS);
     t_CKINT height = GET_NEXT_INT(ARGS);
     CQ_PushCommand_WindowMode(SG_WINDOW_MODE_WINDOWED, width, height);
+}
+
+CK_DLL_SFUN(gwindow_windowed_prev_size)
+{
+    CQ_PushCommand_WindowMode(SG_WINDOW_MODE_WINDOWED, -1, -1);
 }
 
 CK_DLL_SFUN(gwindow_maximize)

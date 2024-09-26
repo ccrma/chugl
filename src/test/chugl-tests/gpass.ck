@@ -11,12 +11,12 @@ T.assert(pass0.next() == null, "ungruck pass is null");
 
 
 RenderPass rpass;
-T.assert(rpass.target() == null, "default target is null");
+T.assert(rpass.colorOutput() == null, "default target is null");
 Texture target;
-rpass.target(target);
-T.assert(rpass.target() == target, "target is target");
-rpass.target(null);
-T.assert(rpass.target() == null, "target is null again");
+rpass.colorOutput(target);
+T.assert(rpass.colorOutput() == target, "target is target");
+rpass.colorOutput(null);
+T.assert(rpass.colorOutput() == null, "target is null again");
 
 T.assert(rpass.autoClearColor(), "default auto clear color is true");
 rpass.autoClearColor(false);

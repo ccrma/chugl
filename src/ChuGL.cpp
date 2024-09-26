@@ -450,6 +450,20 @@ CK_DLL_QUERY(ChuGL)
         float normal_pixel_data[4]         = { 0.5f, 0.5f, 1.0f, 1.0f };
         g_builtin_ckobjs.normal_pixel_data = chugin_createCkFloatArray(
           normal_pixel_data, ARRAY_LENGTH(normal_pixel_data), true);
+
+        // builtin shader includes
+        g_builtin_ckobjs.FRAME_UNIFORMS
+          = chugin_createCkString(shader_table["FRAME_UNIFORMS"].c_str(), true);
+        g_builtin_ckobjs.LIGHTING_UNIFORMS
+          = chugin_createCkString(shader_table["LIGHTING_UNIFORMS"].c_str(), true);
+        g_builtin_ckobjs.DRAW_UNIFORMS
+          = chugin_createCkString(shader_table["DRAW_UNIFORMS"].c_str(), true);
+        g_builtin_ckobjs.STANDARD_VERTEX_INPUT
+          = chugin_createCkString(shader_table["STANDARD_VERTEX_INPUT"].c_str(), true);
+        g_builtin_ckobjs.STANDARD_VERTEX_OUTPUT
+          = chugin_createCkString(shader_table["STANDARD_VERTEX_OUTPUT"].c_str(), true);
+        g_builtin_ckobjs.STANDARD_VERTEX_SHADER
+          = chugin_createCkString(shader_table["STANDARD_VERTEX_SHADER"].c_str(), true);
     }
 
     ulib_color_query(QUERY);
