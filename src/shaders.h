@@ -675,7 +675,7 @@ static const char* points_shader_string  = R"glsl(
 // (r,g,b)
 @group(3) @binding(1) var<storage, read> u_point_colors: array<f32>; // per-point color (for now rgb)
 @group(3) @binding(2) var<storage, read> u_point_sizes: array<f32>; // per-point size (single f32)
-@group(3) @binding(3) var<storage, read> u_point_positions: array<f32>; // per-point positoins (x, y, z)
+@group(3) @binding(3) var<storage, read> u_point_positions: array<f32>; // per-point positions (x, y, z)
 
 struct VertexOutput {
     @builtin(position) position : vec4f,

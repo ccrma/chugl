@@ -353,6 +353,26 @@ CK_DLL_SFUN(chugl_set_log_level)
     log_set_level(GET_NEXT_INT(ARGS));
 }
 
+CK_DLL_SFUN(chugl_get_window_width)
+{
+    RETURN->v_float = CHUGL_Window_WindowSize().x;
+}
+
+CK_DLL_SFUN(chugl_get_window_height)
+{
+    RETURN->v_float = CHUGL_Window_WindowSize().y;
+}
+
+CK_DLL_SFUN(chugl_get_mouse_x)
+{
+    RETURN->v_float = CHUGL_Mouse_Position().x;
+}
+
+CK_DLL_SFUN(chugl_get_mouse_y)
+{
+    RETURN->v_float = CHUGL_Mouse_Position().y;
+}
+
 // ============================================================================
 // Chugin entry point
 // ============================================================================
@@ -530,6 +550,26 @@ CK_DLL_QUERY(ChuGL)
         DOC_FUNC(
           "Shorthand for getting the default Camera that is created upon "
           "startup");
+
+        SFUN(gwindow_set_title, "void", "windowTitle");
+        ARG("string", "title");
+        DOC_FUNC("Shorthand for GWindow.title(). Added for backwards compatibility");
+
+        SFUN(chugl_get_window_width, "float", "windowWidth");
+        DOC_FUNC(
+          "Get the width of the current window. Shorthand for GWindow.size().x, added "
+          "for backwards compatibility");
+
+        SFUN(chugl_get_window_height, "float", "windowHeight");
+        DOC_FUNC(
+          "Get the height of the current window. Shorthand for GWindow.size().y, added "
+          "for backwards compatibility");
+
+        SFUN(chugl_get_mouse_x, "float", "mouseX");
+        DOC_FUNC("Get the x position of the mouse cursor in screen coordinates");
+
+        SFUN(chugl_get_mouse_y, "float", "mouseY");
+        DOC_FUNC("Get the y position of the mouse cursor in screen coordinates");
 
         END_CLASS();
     } // GG

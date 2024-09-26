@@ -17,8 +17,13 @@ CK_DLL_MFUN(ulib_light_get_color);
 CK_DLL_MFUN(ulib_light_set_intensity);
 CK_DLL_MFUN(ulib_light_get_intensity);
 
-CK_DLL_CTOR(ulib_point_light_ctor);
 CK_DLL_CTOR(ulib_dir_light_ctor);
+
+CK_DLL_CTOR(ulib_point_light_ctor);
+CK_DLL_MFUN(ulib_point_light_get_radius);
+CK_DLL_MFUN(ulib_point_light_set_radius);
+CK_DLL_MFUN(ulib_point_light_get_falloff_exponent);
+CK_DLL_MFUN(ulib_point_light_set_falloff_exponent);
 
 #define GET_LIGHT(ckobj) SG_GetLight(OBJ_MEMBER_UINT(ckobj, component_offset_id))
 
@@ -83,6 +88,27 @@ static void ulib_light_query(Chuck_DL_Query* QUERY)
 
     BEGIN_CLASS("GPointLight", SG_CKNames[SG_COMPONENT_LIGHT]);
     CTOR(ulib_point_light_ctor);
+
+    MFUN(ulib_point_light_get_radius, "float", "radius");
+    DOC_FUNC("Get the point light radius.");
+
+    MFUN(ulib_point_light_set_radius, "void", "radius");
+    ARG("float", "radius");
+    DOC_FUNC("Set the point light radius.");
+
+    MFUN(ulib_point_light_get_falloff_exponent, "float", "falloff");
+    DOC_FUNC(
+      "Get the point light falloff exponent, i.e. how quickly the light intensity "
+      "ramps down to 0. A value of 1.0 means linear, 2.0 means quadratic. Default "
+      "is 2.0");
+
+    MFUN(ulib_point_light_set_falloff_exponent, "void", "falloff");
+    ARG("float", "falloff_exponent");
+    DOC_FUNC(
+      "Set the point light falloff exponent, i.e. how quickly the light intensity "
+      "ramps down to 0. A value of 1.0 means linear, 2.0 means quadratic. Default "
+      "is 2.0");
+
     END_CLASS();
 
     // directional light ------------------------------------------------------
@@ -153,6 +179,34 @@ CK_DLL_MFUN(ulib_light_get_intensity)
 CK_DLL_CTOR(ulib_point_light_ctor)
 {
     ulib_light_create(SELF, SG_LightType_Point);
+}
+
+CK_DLL_MFUN(ulib_point_light_get_radius)
+{
+    RETURN->v_float = GET_LIGHT(SELF)->desc.point_radius;
+}
+
+CK_DLL_MFUN(ulib_point_light_set_radius)
+{
+    SG_Light* light          = GET_LIGHT(SELF);
+    t_CKFLOAT radius         = GET_NEXT_FLOAT(ARGS);
+    light->desc.point_radius = radius;
+
+    CQ_PushCommand_LightUpdate(light);
+}
+
+CK_DLL_MFUN(ulib_point_light_get_falloff_exponent)
+{
+    RETURN->v_float = GET_LIGHT(SELF)->desc.point_falloff;
+}
+
+CK_DLL_MFUN(ulib_point_light_set_falloff_exponent)
+{
+    SG_Light* light           = GET_LIGHT(SELF);
+    t_CKFLOAT falloff         = GET_NEXT_FLOAT(ARGS);
+    light->desc.point_falloff = falloff;
+
+    CQ_PushCommand_LightUpdate(light);
 }
 
 CK_DLL_CTOR(ulib_dir_light_ctor)

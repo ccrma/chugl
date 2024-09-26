@@ -10,8 +10,8 @@ GG.camera().lookAt(@(0, 0, 0));
 
 // prepare vertex data for 1,000,000 points!
 POINTS_PER_AXIS * POINTS_PER_AXIS * POINTS_PER_AXIS => int numPoints;
-float pointPos[numPoints * 3];
-float pointColor[numPoints * 4];
+vec3 pointPos[numPoints];
+vec3 pointColor[numPoints];
 
 // populate within a 10x10x10 cube
 for (int i; i < POINTS_PER_AXIS; i++) {
@@ -28,27 +28,23 @@ for (int k; k < POINTS_PER_AXIS; k++) {
     k / colorScale => float z;
 
     // set position of this vertex
-    (posScale * x) - (posScale / 2.0) => pointPos[3*index + 0];
-    (posScale * y) - (posScale / 2.0) => pointPos[3*index + 1];
-    (posScale * z) - (posScale / 2.0) => pointPos[3*index + 2];
+    @(
+        posScale * x - posScale / 2.0, 
+        posScale * y - posScale / 2.0, 
+        posScale * z - posScale / 2.0
+    ) => pointPos[index];
     
     // set color of this vertex
     // (same as position, so have 1:1 mapping between xyz physical space and rgb color space) 
-    x => pointColor[4*index + 0];
-    y => pointColor[4*index + 1];
-    z => pointColor[4*index + 2];
-    1 => pointColor[4*index + 3];  // alpha always 1
+    @(
+        x, 
+        y, 
+        z
+    ) => pointColor[index];
 }}}
 
-points.geo().positions(pointPos);  // set vertex position data
-points.geo().colors(pointColor);   // set vertex color data
-
-// toggle size attentuation (do points get smaller as they get further away?)
-fun void toggleAttenuation() {
-    while (1::second => now)
-        1 - points.mat().attenuatePoints() => points.mat().attenuatePoints;
-} 
-// spork ~ toggleAttenuation();
+points.positions(pointPos);  // set vertex position data
+points.colors(pointColor);   // set vertex color data
 
 // camera update
 fun void updateCamera(float dt) {
