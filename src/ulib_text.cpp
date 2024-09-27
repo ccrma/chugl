@@ -36,6 +36,7 @@ void ulib_text_query(Chuck_DL_Query* QUERY)
       "Builtin fonts are \"chugl:cousine-regular\", \"chugl:karla-regular\", "
       "\"chugl:proggy-tiny\", \"chugl:proggy-clean\" which can be assigned to "
       "GText.font(string)");
+    ADD_EX("basic/gtext.ck");
 
     SFUN(gtext_set_default_font, "void", "defaultFont");
     ARG("string", "default_font");

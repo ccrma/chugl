@@ -420,6 +420,8 @@ CK_DLL_QUERY(ChuGL)
         DOC_CLASS(
           "Don't instantiate this class directly. Use GG.nextFrame() => now; "
           "instead.");
+        ADD_EX("basic/gameloop.ck");
+
         // no destructor for singleton
         chugl_next_frame_event_data_offset
           = QUERY->add_mvar(QUERY, "int", "@next_frame_event_data", false);
@@ -487,6 +489,7 @@ CK_DLL_QUERY(ChuGL)
 
     { // GG static functions
         QUERY->begin_class(QUERY, "GG", "Object");
+        ADD_EX("basic/gameloop.ck");
 
         // svars
         static t_CKUINT gg_log_level_trace = LOG_TRACE;

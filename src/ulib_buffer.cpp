@@ -19,6 +19,7 @@ void ulib_buffer_query(Chuck_DL_Query* QUERY)
 {
     BEGIN_CLASS("StorageBuffer", SG_CKNames[SG_COMPONENT_BASE]);
     DOC_CLASS("Class representing a GPU Storage Buffer");
+    ADD_EX("rendergraph/boids_compute.ck");
 
     CTOR(storage_buffer_ctor);
 

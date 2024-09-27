@@ -200,6 +200,8 @@ static void ulib_ggen_query(Chuck_DL_Query* QUERY)
         DOC_CLASS(
           "Chugl graphics generator. Can be grucked to the scenegraph. Contains "
           "methods for transform manipulation");
+        ADD_EX("basic/orbits.ck");
+        ADD_EX("deep/ik.ck");
 
         QUERY->add_ctor(QUERY, ggen_ctor);
         QUERY->add_dtor(QUERY, ggen_dtor);
@@ -1203,6 +1205,11 @@ static void ulib_mesh_query(Chuck_DL_Query* QUERY)
     {
         BEGIN_CLASS("GLines", SG_CKNames[SG_COMPONENT_MESH]);
         DOC_CLASS("Class for creating 2D lines");
+        ADD_EX("basic/circles.ck");
+        ADD_EX("basic/glines.ck");
+        ADD_EX("deep/sndpeek.ck");
+        ADD_EX("deep/sndpeek-minimal.ck");
+        ADD_EX("deep/soundbulb.ck");
 
         CTOR(glines2d_ctor);
 
@@ -1258,6 +1265,8 @@ static void ulib_mesh_query(Chuck_DL_Query* QUERY)
     { // Gpoints -------------------------------------------------
         BEGIN_CLASS("GPoints", SG_CKNames[SG_COMPONENT_MESH]);
         DOC_CLASS("Class for creating instanced points in 3D space");
+        ADD_EX("basic/gpoints.ck");
+        ADD_EX("basic/points.ck");
 
         CTOR(gpoints_ctor);
 
@@ -1325,6 +1334,8 @@ static void ulib_mesh_query(Chuck_DL_Query* QUERY)
         BEGIN_CLASS("GPlane", SG_CKNames[SG_COMPONENT_MESH]);
         DOC_CLASS(
           "Convenience class for creating a GMesh(PlaneGeometry, PhongMaterial)");
+        ADD_EX("basic/ggen_primitives.ck");
+        ADD_EX("sequencers/drum-machine/drum-machine.ck");
 
         CTOR(gplane_ctor);
 
@@ -1337,6 +1348,7 @@ static void ulib_mesh_query(Chuck_DL_Query* QUERY)
         BEGIN_CLASS("GCircle", SG_CKNames[SG_COMPONENT_MESH]);
         DOC_CLASS(
           "Convenience class for creating a GMesh(CircleGeometry, PhongMaterial)");
+        ADD_EX("basic/ggen_primitives.ck");
 
         CTOR(gcircle_ctor);
 
@@ -1349,6 +1361,8 @@ static void ulib_mesh_query(Chuck_DL_Query* QUERY)
         BEGIN_CLASS("GSphere", SG_CKNames[SG_COMPONENT_MESH]);
         DOC_CLASS(
           "Convenience class for creating a GMesh(SphereGeometry, PhongMaterial)");
+        ADD_EX("basic/ggen_primitives.ck");
+        ADD_EX("basic/orbits.ck");
 
         CTOR(gsphere_ctor);
 
@@ -1361,6 +1375,7 @@ static void ulib_mesh_query(Chuck_DL_Query* QUERY)
         BEGIN_CLASS("GTorus", SG_CKNames[SG_COMPONENT_MESH]);
         DOC_CLASS(
           "Convenience class for creating a GMesh(TorusGeometry, PhongMaterial)");
+        ADD_EX("basic/ggen_primitives.ck");
 
         CTOR(gtorus_ctor);
 
@@ -1373,6 +1388,7 @@ static void ulib_mesh_query(Chuck_DL_Query* QUERY)
         BEGIN_CLASS("GCylinder", SG_CKNames[SG_COMPONENT_MESH]);
         DOC_CLASS(
           "Convenience class for creating a GMesh(CylinderGeometry, PhongMaterial)");
+        ADD_EX("basic/ggen_primitives.ck");
 
         CTOR(gcylinder_ctor);
 
@@ -1385,6 +1401,7 @@ static void ulib_mesh_query(Chuck_DL_Query* QUERY)
         BEGIN_CLASS("GKnot", SG_CKNames[SG_COMPONENT_MESH]);
         DOC_CLASS(
           "Convenience class for creating a GMesh(KnotGeometry, PhongMaterial)");
+        ADD_EX("basic/ggen_primitives.ck");
 
         CTOR(gknot_ctor);
 
@@ -1397,6 +1414,7 @@ static void ulib_mesh_query(Chuck_DL_Query* QUERY)
         BEGIN_CLASS("GSuzanne", SG_CKNames[SG_COMPONENT_MESH]);
         DOC_CLASS(
           "Convenience class for creating a GMesh(SuzanneGeometry, PhongMaterial)");
+        ADD_EX("basic/ggen_primitives.ck");
 
         CTOR(gsuzanne_ctor);
 
@@ -1409,6 +1427,8 @@ static void ulib_mesh_query(Chuck_DL_Query* QUERY)
         BEGIN_CLASS("GCube", SG_CKNames[SG_COMPONENT_MESH]);
         DOC_CLASS(
           "Convenience class for creating a GMesh(CubeGeometry, PhongMaterial)");
+        ADD_EX("basic/ggen_primitives.ck");
+        ADD_EX("basic/jello.ck");
 
         CTOR(gcube_ctor);
 

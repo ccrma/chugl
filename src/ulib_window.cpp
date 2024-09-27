@@ -141,7 +141,8 @@ void ulib_window_query(Chuck_DL_Query* QUERY)
 
     // GWindow ========================================================
     BEGIN_CLASS("GWindow", "Object");
-    DOC_CLASS("All the properties and methods window management");
+    DOC_CLASS("All the properties and methods for window management");
+    ADD_EX("basic/gwindow.ck");
 
     // monitor --------------------------------------------------------
     // SFUN(gwindow_monitor_info, "MonitorInfo", "monitorInfo");

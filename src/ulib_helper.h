@@ -24,6 +24,7 @@
 #define DOC_FUNC(doc) QUERY->doc_func(QUERY, doc)
 #define DOC_CLASS(doc) QUERY->doc_class(QUERY, doc)
 #define DOC_VAR(doc) QUERY->doc_var(QUERY, doc)
+#define ADD_EX(path) QUERY->add_ex(QUERY, path)
 
 #define GET_NEXT_INT_ARRAY(ptr) (*((Chuck_ArrayInt**&)ptr)++)
 #define GET_NEXT_FLOAT_ARRAY(ptr) (*((Chuck_ArrayFloat**&)ptr)++)

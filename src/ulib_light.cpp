@@ -45,6 +45,8 @@ static void ulib_light_query(Chuck_DL_Query* QUERY)
 {
     BEGIN_CLASS(SG_CKNames[SG_COMPONENT_LIGHT], SG_CKNames[SG_COMPONENT_TRANSFORM]);
     DOC_CLASS("Base class for all light components.");
+    ADD_EX("basic/light.ck");
+    ADD_EX("basic/pbr.ck");
 
     static t_CKINT light_type_directional = SG_LightType_Directional;
     static t_CKINT light_type_point       = SG_LightType_Point;

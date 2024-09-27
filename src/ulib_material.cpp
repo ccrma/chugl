@@ -320,6 +320,7 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
     CTOR(shader_ctor);
     ARG("ShaderDesc", "shader_desc");
     DOC_FUNC("Create a Shader component. Immutable.");
+    ADD_EX("textures/audio_terrain.ck");
 
     MFUN(shader_get_vertex_string, "string", "vertexString");
     DOC_FUNC("Get the vertex shader string passed in the ShaderDesc at creation.");
@@ -346,6 +347,7 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
     DOC_CLASS(
       "Chugl material types. Represents uniforms/textures/buffers that are passed into "
       "a given shader");
+    ADD_EX("basic/geo_and_mat.ck");
 
     CTOR(material_ctor);
 
@@ -691,6 +693,7 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
     {
         BEGIN_CLASS(SG_MaterialTypeNames[SG_MATERIAL_PBR],
                     SG_CKNames[SG_COMPONENT_MATERIAL]);
+        ADD_EX("basic/pbr.ck");
 
         CTOR(pbr_material_ctor);
 

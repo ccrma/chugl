@@ -257,6 +257,7 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
     {
         BEGIN_CLASS("ComputePass", SG_CKNames[SG_COMPONENT_PASS]);
         DOC_CLASS("Compute pass for running compute shaders");
+        ADD_EX("rendergraph/boids_compute.ck");
 
         CTOR(computepass_ctor);
 
@@ -309,6 +310,8 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
         { // BloomPass
             BEGIN_CLASS("BloomPass", SG_CKNames[SG_COMPONENT_PASS]);
             DOC_FUNC("Bloom pass for applying bloom to a render texture");
+            ADD_EX("deep/soundbulb.ck");
+            ADD_EX("rendergraph/bloom.ck");
 
             CTOR(bloompass_ctor);
 

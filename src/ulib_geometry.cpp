@@ -130,6 +130,8 @@ static void ulib_geometry_query(Chuck_DL_Query* QUERY)
     DOC_CLASS(
       "Geometry component. Can contain vertex attribute data, indices data, and pulled "
       "vertex buffers");
+    ADD_EX("basic/custom_geometry.ck");
+    ADD_EX("basic/geo_and_mat.ck");
 
     // contants
     static t_CKINT sg_geometry_max_attributes{ SG_GEOMETRY_MAX_VERTEX_ATTRIBUTES };

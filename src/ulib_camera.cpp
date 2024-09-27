@@ -58,6 +58,7 @@ static void ulib_camera_query(Chuck_DL_Query* QUERY)
     DOC_CLASS(
       "ChuGL Camera class. Can be used to create perspective or orthographic "
       "cameras. Also comes with builtin OrbitCamera and FlyCamera controllers.");
+    ADD_EX("basic/mousepick.ck");
 
     static t_CKINT camera_mode_persp = (t_CKINT)SG_CameraType_PERPSECTIVE;
     static t_CKINT camera_mode_ortho = (t_CKINT)SG_CameraType_ORTHOGRAPHIC;
