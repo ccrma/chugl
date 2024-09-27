@@ -1332,12 +1332,8 @@ void R_RenderPipeline::init(GraphicsContext* gctx, R_RenderPipeline* pipeline,
     WGPUMultisampleState multisampleState = G_createMultisampleState(msaa_sample_count);
 
     char pipeline_label[64] = {};
-    snprintf(pipeline_label, sizeof(pipeline_label), "RenderPipeline %ld %s",
-             (i64)shader->id, shader->name.c_str());
-    // snprintf(pipeline_label, sizeof(pipeline_label), "RenderPipeline %lld %s",
-    //          (i64)shader->id, shader->name.c_str());
-    snprintf(pipeline_label, sizeof(pipeline_label), "RenderPipeline %lld %s",
-             (i64)shader->id, shader->name);
+    snprintf(pipeline_label, sizeof(pipeline_label), "RenderPipeline %d %s",
+             shader->id, shader->name);
     WGPURenderPipelineDescriptor pipeline_desc = {};
     pipeline_desc.label                        = pipeline_label;
     pipeline_desc.layout                       = NULL; // Using layout: auto
@@ -2951,13 +2947,8 @@ R_ScreenPassPipeline R_GetScreenPassPipeline(GraphicsContext* gctx,
 
     char pipeline_label[64] = {};
     if (shader) {
-        // snprintf(pipeline_label, sizeof(pipeline_label),
-        //          "ScreenPass RenderPipeline %lld %s", (i64)shader->id,
-        //          shader->name.c_str());
         snprintf(pipeline_label, sizeof(pipeline_label),
-                 "ScreenPass RenderPipeline %ld %s", (i64)shader->id,
-                 shader->name.c_str());
-                 "ScreenPass RenderPipeline %lld %s", (i64)shader->id,
+                 "ScreenPass RenderPipeline %d %s", shader->id,
                  shader->name);
     }
     WGPURenderPipelineDescriptor pipeline_desc = {};
@@ -2998,12 +2989,8 @@ R_ComputePassPipeline R_GetComputePassPipeline(GraphicsContext* gctx, R_Shader* 
     desc.compute.entryPoint            = "main";
 
     char pipeline_label[64] = {};
-    snprintf(pipeline_label, sizeof(pipeline_label), "ComputePass Pipeline %ld %s",
-             (i64)shader->id, shader->name.c_str());
-    // snprintf(pipeline_label, sizeof(pipeline_label), "ComputePass Pipeline %lld %s",
-    //          (i64)shader->id, shader->name.c_str());
-    snprintf(pipeline_label, sizeof(pipeline_label), "ComputePass Pipeline %lld %s",
-             (i64)shader->id, shader->name);
+    snprintf(pipeline_label, sizeof(pipeline_label), "ComputePass Pipeline %d %s",
+             shader->id, shader->name);
     desc.label = pipeline_label;
 
     R_ComputePassPipeline* pipeline
