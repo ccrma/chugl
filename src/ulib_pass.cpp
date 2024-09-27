@@ -71,6 +71,7 @@ CK_DLL_MFUN(computepass_set_uniform_float);
 CK_DLL_MFUN(computepass_set_uniform_float2);
 CK_DLL_MFUN(computepass_set_uniform_float3);
 CK_DLL_MFUN(computepass_set_uniform_float4);
+CK_DLL_MFUN(computepass_set_texture);
 CK_DLL_MFUN(computepass_set_storage_buffer);
 CK_DLL_MFUN(computepass_set_storage_texture);
 CK_DLL_MFUN(computepass_set_uniform_int);
@@ -279,13 +280,17 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
         ARG("int", "location");
         ARG("vec4", "uniform_value");
 
+        MFUN(computepass_set_texture, "void", "texture");
+        ARG("int", "location");
+        ARG(SG_CKNames[SG_COMPONENT_TEXTURE], "texture");
+
         MFUN(computepass_set_storage_buffer, "void", "storageBuffer");
         ARG("int", "location");
         ARG("StorageBuffer", "buffer");
 
-        // MFUN(computepass_set_storage_texture, "void", "storageTexture");
-        // ARG("int", "location");
-        // ARG(SG_CKNames[SG_COMPONENT_TEXTURE], "texture");
+        MFUN(computepass_set_storage_texture, "void", "storageTexture");
+        ARG("int", "location");
+        ARG(SG_CKNames[SG_COMPONENT_TEXTURE], "texture");
 
         MFUN(computepass_set_uniform_int, "void", "uniformInt");
         ARG("int", "location");
@@ -778,6 +783,25 @@ CK_DLL_MFUN(computepass_set_uniform_float4)
     CQ_PushCommand_MaterialSetUniform(material, location);
 }
 
+CK_DLL_MFUN(computepass_set_texture)
+{
+    SG_Pass* pass = GET_PASS(SELF);
+    ASSERT(pass->pass_type == SG_PassType_Compute);
+
+    t_CKINT location        = GET_NEXT_INT(ARGS);
+    Chuck_Object* tex_ckobj = GET_NEXT_OBJECT(ARGS);
+    if (!tex_ckobj) return;
+
+    SG_Texture* tex = SG_GetTexture(OBJ_MEMBER_UINT(tex_ckobj, component_offset_id));
+    SG_Material* material = (pass->compute_material_id == 0) ?
+                              chugl_createInternalMaterial(SG_MATERIAL_COMPUTE, NULL) :
+                              SG_GetMaterial(pass->compute_material_id);
+
+    SG_Material::setTexture(material, location, tex);
+
+    CQ_PushCommand_MaterialSetUniform(material, location);
+}
+
 CK_DLL_MFUN(computepass_set_storage_buffer)
 {
     SG_Pass* pass = GET_PASS(SELF);
@@ -794,6 +818,25 @@ CK_DLL_MFUN(computepass_set_storage_buffer)
 
     // set storage buffer
     SG_Material::storageBuffer(material, location, sg_buffer);
+    CQ_PushCommand_MaterialSetUniform(material, location);
+}
+
+CK_DLL_MFUN(computepass_set_storage_texture)
+{
+    SG_Pass* pass = GET_PASS(SELF);
+    ASSERT(pass->pass_type == SG_PassType_Compute);
+
+    t_CKINT location        = GET_NEXT_INT(ARGS);
+    Chuck_Object* tex_ckobj = GET_NEXT_OBJECT(ARGS);
+    if (!tex_ckobj) return;
+
+    SG_Texture* tex = SG_GetTexture(OBJ_MEMBER_UINT(tex_ckobj, component_offset_id));
+    SG_Material* material = (pass->compute_material_id == 0) ?
+                              chugl_createInternalMaterial(SG_MATERIAL_COMPUTE, NULL) :
+                              SG_GetMaterial(pass->compute_material_id);
+
+    SG_Material::setStorageTexture(material, location, tex);
+
     CQ_PushCommand_MaterialSetUniform(material, location);
 }
 

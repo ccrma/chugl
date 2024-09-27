@@ -209,7 +209,7 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
 
 static void _R_glfwErrorCallback(int error, const char* description)
 {
-    log_error("GLFW Error[%i]: %s\n", error, description);
+    log_warn("GLFW Error[%i]: %s\n", error, description);
 }
 
 static int frame_buffer_width  = 0;
@@ -285,35 +285,6 @@ struct App {
 
             app->dt       = currentTime - app->lastTime;
             app->lastTime = currentTime;
-        }
-
-        // handle window resize (special case b/c needs to happen before
-        // GraphicsContext::prepareFrame, unlike the rest of glfwPollEvents())
-        // Doing window resize AFTER surface is already prepared causes crash.
-        // Normally you glfwPollEvents() at the start of the frame, but
-        // dearImGUI hooks into glfwPollEvents, and modifies imgui state, so
-        // glfwPollEvents() must happen in the critial region, after
-        // GraphicsContext::prepareFrame
-        {
-            resized_this_frame = false;
-            int width, height;
-            glfwGetFramebufferSize(app->window, &width, &height);
-            if (width != frame_buffer_width || height != frame_buffer_height) {
-                frame_buffer_width  = width;
-                frame_buffer_height = height;
-                resized_this_frame  = true;
-
-                _onFramebufferResize(app->window, width, height);
-
-                // imgui bs (on resize need to clear old imgui state and rebuild imgui
-                // framebuffer)
-                if (!app->imgui_disabled) {
-                    ImGui::Render();
-                    ImGui_ImplWGPU_NewFrame();
-                    ImGui_ImplGlfw_NewFrame();
-                    ImGui::NewFrame();
-                }
-            }
         }
 
         _mainLoop(app); // chuck loop
@@ -609,6 +580,35 @@ struct App {
             // tasks to do after command queue is flushed (batched)
             Material_batchUpdatePipelines(&app->gctx, app->FTLibrary,
                                           app->default_font);
+        }
+
+        // handle window resize (special case b/c needs to happen before
+        // GraphicsContext::prepareFrame, unlike the rest of glfwPollEvents())
+        // Doing window resize AFTER surface is already prepared causes crash.
+        // Normally you glfwPollEvents() at the start of the frame, but
+        // dearImGUI hooks into glfwPollEvents, and modifies imgui state, so
+        // glfwPollEvents() must happen in the critial region, after
+        // GraphicsContext::prepareFrame
+        {
+            resized_this_frame = false;
+            int width, height;
+            glfwGetFramebufferSize(app->window, &width, &height);
+            if (width != frame_buffer_width || height != frame_buffer_height) {
+                frame_buffer_width  = width;
+                frame_buffer_height = height;
+                resized_this_frame  = true;
+
+                _onFramebufferResize(app->window, width, height);
+
+                // imgui bs (on resize need to clear old imgui state and rebuild imgui
+                // framebuffer)
+                if (!app->imgui_disabled) {
+                    ImGui::Render();
+                    ImGui_ImplWGPU_NewFrame();
+                    ImGui_ImplGlfw_NewFrame();
+                    ImGui::NewFrame();
+                }
+            }
         }
 
         // garbage collection! delete GPU-side data for any scenegraph objects
