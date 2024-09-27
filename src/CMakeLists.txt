@@ -93,14 +93,14 @@ if (EMSCRIPTEN)
     # emcmake can't handle shared libraries. SIDE_LOAD executable is the only option
     add_executable(
         ${PROJECT_NAME} 
-        chugl.cpp 
+        ChuGL.cpp 
         ${CORE}
         ${VENDOR}
     )
 else()
     add_library(
         ${PROJECT_NAME} SHARED 
-        chugl.cpp 
+        ChuGL.cpp 
         # ulib_imgui.cpp
 
         ${CORE}
@@ -160,6 +160,22 @@ else()
         -Wno-sign-compare
         -Wno-unused-but-set-variable
     )
+
+    if (LINUX)
+        # target_compile_options(chugl_shared_properties INTERFACE
+        #    -Wno-compound-token-split-by-macro
+        #    -Wno-unused-value
+        #    -Wno-strict-aliasing
+        #    -Wno-stringop-truncation
+        #    -Wno-type-limits
+        #    -Wno-sequence-point
+        #    -Wno-uninitialized
+        #    -Wno-unused-variable
+        #    -Wno-implicit-fallthrough
+        # )
+        # -Wno-implicit-const-int-float-conversion 
+    
+    endif()
 endif()
 
 # Ignore Windows warnings

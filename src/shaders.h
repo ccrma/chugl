@@ -5,6 +5,7 @@
 #include "core/macros.h"
 
 #include <unordered_map>
+#include <algorithm>
 
 struct ShaderEntry {
     const char* name;

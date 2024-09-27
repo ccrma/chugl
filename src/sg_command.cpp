@@ -264,12 +264,13 @@ void CQ_PushCommand_UI_Disabled(bool disabled)
 
 void CQ_PushCommand_ComponentUpdateName(SG_Component* component)
 {
+    int max_name_len = sizeof(component->name);
     BEGIN_COMMAND_ADDITIONAL_MEMORY_ZERO(SG_Command_ComponentUpdateName,
                                          SG_COMMAND_COMPONENT_UPDATE_NAME,
-                                         sizeof(component->name));
+                                         max_name_len);
 
     // copy string
-    strncpy((char*)memory, component->name, sizeof(component->name));
+    strncpy((char*)memory, component->name, max_name_len);
     command->sg_id       = component->id;
     command->name_offset = Arena::offsetOf(cq.write_q, memory);
     END_COMMAND();
