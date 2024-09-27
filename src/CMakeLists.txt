@@ -109,7 +109,7 @@ else()
 endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
-    CXX_STANDARD 17
+    CXX_STANDARD 20
     CXX_EXTENSIONS OFF
     COMPILE_WARNING_AS_ERROR ON
     VS_DEBUGGER_ENVIRONMENT "DAWN_DEBUG_BREAK_ON_ERROR=1"
@@ -162,18 +162,22 @@ else()
     )
 
     if (LINUX)
-        # target_compile_options(chugl_shared_properties INTERFACE
-        #    -Wno-compound-token-split-by-macro
-        #    -Wno-unused-value
-        #    -Wno-strict-aliasing
-        #    -Wno-stringop-truncation
-        #    -Wno-type-limits
-        #    -Wno-sequence-point
-        #    -Wno-uninitialized
-        #    -Wno-unused-variable
-        #    -Wno-implicit-fallthrough
-        # )
-        # -Wno-implicit-const-int-float-conversion 
+        target_compile_options(chugl_shared_properties INTERFACE
+            -Wno-compound-token-split-by-macro
+            -Wno-unused-value
+            -Wno-strict-aliasing
+            -Wno-stringop-truncation
+            -Wno-type-limits
+            -Wno-sequence-point
+            -Wno-uninitialized
+            -Wno-unused-variable
+            -Wno-implicit-fallthrough
+            -Wno-format-truncation
+        
+        # clang ignores
+        -Wno-implicit-const-int-float-conversion
+        )
+         
     
     endif()
 endif()
