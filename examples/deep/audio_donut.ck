@@ -164,7 +164,7 @@ terrain_material.texture(0, spectrum_texture);
 terrain_material.uniformInt(1, 0); // initialize playhead to 0
 terrain_material.uniformFloat3(2, Color.WHITE);
 terrain_material.uniformFloat2(3, @(1,1));
-terrain_material.uniformInt(4, false);
+terrain_material.uniformInt(4, true);
 terrain_material.topology(Material.Topology_LineList);
 
 // create our terrain mesh
@@ -189,6 +189,7 @@ TorusGeometry torus_geo(
 // GMesh terrain_mesh(plane_geo, terrain_material) --> GG.scene();
 GMesh terrain_mesh(torus_geo, terrain_material) --> GG.scene();
 terrain_mesh.rotateX(-Math.PI/2);
+terrain_mesh.rotateZ(-Math.PI/2);
 
 // camera
 GOrbitCamera cam --> GG.scene();
@@ -200,7 +201,7 @@ cam.posY(10);
 UI_Int geo_index;
 UI_Float3 terrain_color(Color.WHITE);
 UI_Float repetitions(1);
-UI_Bool mirrored(false);
+UI_Bool mirrored(true);
 
 // game loop (runs at frame rate) ============================================
 
