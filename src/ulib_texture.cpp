@@ -278,8 +278,8 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
           "cannot be changed after creation. You can, however, write data to the "
           "texture");
         ADD_EX("deep/game_of_life.ck");
-        ADD_EX("textures/audio_terrain.ck");
-        ADD_EX("textures/snowstorm.ck");
+        ADD_EX("deep/audio_donut.ck");
+        ADD_EX("deep/snowstorm.ck");
 
         // svars ---------------
         static t_CKINT texture_usage_copy_src        = WGPUTextureUsage_CopySrc;

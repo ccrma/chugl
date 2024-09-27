@@ -1208,7 +1208,7 @@ static void ulib_mesh_query(Chuck_DL_Query* QUERY)
         ADD_EX("basic/circles.ck");
         ADD_EX("basic/glines.ck");
         ADD_EX("deep/sndpeek.ck");
-        ADD_EX("deep/sndpeek-minimal.ck");
+        ADD_EX("deep/sndpeek_minimal.ck");
         ADD_EX("deep/soundbulb.ck");
 
         CTOR(glines2d_ctor);
@@ -1335,7 +1335,7 @@ static void ulib_mesh_query(Chuck_DL_Query* QUERY)
         DOC_CLASS(
           "Convenience class for creating a GMesh(PlaneGeometry, PhongMaterial)");
         ADD_EX("basic/ggen_primitives.ck");
-        ADD_EX("sequencers/drum-machine/drum-machine.ck");
+        ADD_EX("sequencers/drum_machine.ck");
 
         CTOR(gplane_ctor);
 

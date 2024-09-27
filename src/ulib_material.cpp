@@ -320,7 +320,7 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
     CTOR(shader_ctor);
     ARG("ShaderDesc", "shader_desc");
     DOC_FUNC("Create a Shader component. Immutable.");
-    ADD_EX("textures/audio_terrain.ck");
+    ADD_EX("deep/audio_donut.ck");
 
     MFUN(shader_get_vertex_string, "string", "vertexCode");
     DOC_FUNC("Get the vertex shader string passed in the ShaderDesc at creation.");

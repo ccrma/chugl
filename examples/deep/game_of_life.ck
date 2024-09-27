@@ -119,8 +119,8 @@ Material material;
 PlaneGeometry plane_geo;
 
 ShaderDesc shader_desc;
-game_of_life_shader => shader_desc.vertexString;
-game_of_life_shader => shader_desc.fragmentString;
+game_of_life_shader => shader_desc.vertexCode;
+game_of_life_shader => shader_desc.fragmentCode;
 
 Shader custom_shader(shader_desc); // create shader from shader_desc
 custom_shader => material.shader; // connect shader to material

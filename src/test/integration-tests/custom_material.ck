@@ -96,8 +96,8 @@ fn fs_main(in : VertexOutput, @builtin(front_facing) is_front: bool) -> @locatio
 }" => string lambert_shader_string;
 
 ShaderDesc shader_desc;
-lambert_shader_string => shader_desc.vertexString;
-lambert_shader_string => shader_desc.fragmentString;
+lambert_shader_string => shader_desc.vertexCode;
+lambert_shader_string => shader_desc.fragmentCode;
 sphere_geo.vertexAttributeNumComponents() @=> shader_desc.vertexLayout;
 
 Shader custom_shader(shader_desc); // create shader from shader_desc

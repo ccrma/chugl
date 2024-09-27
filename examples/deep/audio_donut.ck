@@ -152,8 +152,8 @@ WINDOW_SIZE => write_desc.width;
 
 // Create our custom audio shader
 ShaderDesc shader_desc;
-audio_terrain_shader_string => shader_desc.vertexString;
-audio_terrain_shader_string => shader_desc.fragmentString;
+audio_terrain_shader_string => shader_desc.vertexCode;
+audio_terrain_shader_string => shader_desc.fragmentCode;
 Shader terrain_shader(shader_desc); // create shader from shader_desc
 
 // Apply the shader to a material
