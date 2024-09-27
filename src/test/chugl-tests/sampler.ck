@@ -5,30 +5,30 @@ Tests for TextureSampler
 TextureSampler defaultSampler;
 
 T.assert(
-    TextureSampler.WRAP_REPEAT == 0
+    TextureSampler.Wrap_Repeat == 0
     &&
-    TextureSampler.WRAP_MIRROR == 1
+    TextureSampler.Wrap_Mirror == 1
     &&
-    TextureSampler.WRAP_CLAMP == 2
+    TextureSampler.Wrap_Clamp == 2
     &&
-    TextureSampler.FILTER_NEAREST == 0
+    TextureSampler.Filter_Nearest == 0
     &&
-    TextureSampler.FILTER_LINEAR == 1,
+    TextureSampler.Filter_Linear == 1,
     "TextureSampler constants incorrect"
 );
 
 T.assert(
-    defaultSampler.wrapU == TextureSampler.WRAP_REPEAT
+    defaultSampler.wrapU == TextureSampler.Wrap_Repeat
     &&
-    defaultSampler.wrapV == TextureSampler.WRAP_REPEAT
+    defaultSampler.wrapV == TextureSampler.Wrap_Repeat
     &&
-    defaultSampler.wrapW == TextureSampler.WRAP_REPEAT
+    defaultSampler.wrapW == TextureSampler.Wrap_Repeat
     &&
-    defaultSampler.filterMin == TextureSampler.FILTER_LINEAR
+    defaultSampler.filterMin == TextureSampler.Filter_Linear
     &&
-    defaultSampler.filterMag == TextureSampler.FILTER_LINEAR
+    defaultSampler.filterMag == TextureSampler.Filter_Linear
     &&
-    defaultSampler.filterMip == TextureSampler.FILTER_LINEAR,
+    defaultSampler.filterMip == TextureSampler.Filter_Linear,
     "defaultSampler values incorrect"
 );
 

@@ -231,25 +231,25 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
     BEGIN_CLASS("ShaderDesc", "Object");
     DOC_CLASS(
       "Shader description object. Used to create a Shader component."
-      "If creating a material shader, set either vertexString or vertexFilepath, and "
-      "either fragmentString or "
-      "fragmentFilepath. `vertexLayout` field describes the vertex data layout "
+      "If creating a material shader, set either vertexCode or vertexPath, and "
+      "either fragmentCode or "
+      "fragmentPath. `vertexLayout` field describes the vertex data layout "
       "of buffers going into the vertex shader--use the VertexFormat enum. "
-      "For compute shaders, set either computeString or computeFilepath.");
+      "For compute shaders, set either computeCode or computePath.");
 
     CTOR(shader_desc_ctor);
 
-    shader_desc_vertex_string_offset = MVAR("string", "vertexString", false);
+    shader_desc_vertex_string_offset = MVAR("string", "vertexCode", false);
     DOC_VAR("Vertex shader string. Set if passing a raw shader code (not a filepath)");
 
-    shader_desc_fragment_string_offset = MVAR("string", "fragmentString", false);
+    shader_desc_fragment_string_offset = MVAR("string", "fragmentCode", false);
     DOC_VAR(
       "Fragment shader string. Set if passing a raw shader code (not a filepath)");
 
-    shader_desc_vertex_filepath_offset = MVAR("string", "vertexFilepath", false);
+    shader_desc_vertex_filepath_offset = MVAR("string", "vertexPath", false);
     DOC_VAR("Vertex shader filepath. Set if passing a filepath to a shader file");
 
-    shader_desc_fragment_filepath_offset = MVAR("string", "fragmentFilepath", false);
+    shader_desc_fragment_filepath_offset = MVAR("string", "fragmentPath", false);
     DOC_VAR("Fragment shader filepath. Set if passing a filepath to a shader file");
 
     shader_desc_vertex_layout_offset = MVAR("int[]", "vertexLayout", false);
@@ -262,10 +262,10 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
       "VertexFormat.Float3, VertexFormat.Float2, VertexFormat.Float4]. "
       "This corresponds to position, normal, uv, tangent.");
 
-    shader_desc_compute_string_offset = MVAR("string", "computeString", false);
+    shader_desc_compute_string_offset = MVAR("string", "computeCode", false);
     DOC_VAR("Compute shader string. Set if passing a raw shader code (not a filepath)");
 
-    shader_desc_compute_filepath_offset = MVAR("string", "computeFilepath", false);
+    shader_desc_compute_filepath_offset = MVAR("string", "computePath", false);
     DOC_VAR("Compute shader filepath. Set if passing a filepath to a shader file");
 
     shader_desc_is_lit = MVAR("int", "lit", false);
@@ -322,16 +322,16 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
     DOC_FUNC("Create a Shader component. Immutable.");
     ADD_EX("textures/audio_terrain.ck");
 
-    MFUN(shader_get_vertex_string, "string", "vertexString");
+    MFUN(shader_get_vertex_string, "string", "vertexCode");
     DOC_FUNC("Get the vertex shader string passed in the ShaderDesc at creation.");
 
-    MFUN(shader_get_fragment_string, "string", "fragmentString");
+    MFUN(shader_get_fragment_string, "string", "fragmentCode");
     DOC_FUNC("Get the fragment shader string passed in the ShaderDesc at creation.");
 
-    MFUN(shader_get_vertex_filepath, "string", "vertexFilepath");
+    MFUN(shader_get_vertex_filepath, "string", "vertexPath");
     DOC_FUNC("Get the vertex shader filepath passed in the ShaderDesc at creation.");
 
-    MFUN(shader_get_fragment_filepath, "string", "fragmentFilepath");
+    MFUN(shader_get_fragment_filepath, "string", "fragmentPath");
     DOC_FUNC("Get the fragment shader filepath passed in the ShaderDesc at creation.");
 
     MFUN(shader_get_vertex_layout, "int[]", "vertexLayout");
