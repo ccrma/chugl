@@ -13,7 +13,6 @@ namespace cimgui
 
 void ulib_cimgui_query(Chuck_DL_Query* QUERY)
 {
-
     QUERY->begin_class(QUERY, "UI_WindowFlags", "Object");
     QUERY->doc_class(
       QUERY,
