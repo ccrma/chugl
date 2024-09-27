@@ -4,7 +4,7 @@
 // 
 // author: Ge Wang (https://ccrma.stanford.edu/~ge/)
 //         Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
-//         Kunwoo Kim
+//         Kunwoo Kim (https://https://kunwookim.com/)
 // date: Fall 2023
 //-----------------------------------------------------------------------------
 

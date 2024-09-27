@@ -1,15 +1,13 @@
 //-----------------------------------------------------------------------------
 // name: snowstorm.ck
-// desc: Snowstorm example demoing the use of point sprites, transparency, 
+// desc: example demoing the use of point sprites, transparency, 
 //       and UI controls.
-//
-// source: Inspired and adapted from the following three.js example
-//         https://github.com/mrdoob/three.js/blob/master/examples/webgl_points_sprites.html
-//
 // requires: ChuGL + chuck-1.5.2.5 or higher
 //
 // author: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
-// date: Fall 2023
+// source: inspired and adapted from the following three.js example
+//         https://github.com/mrdoob/three.js/blob/master/examples/webgl_points_sprites.html
+//   date: Fall 2023
 //-----------------------------------------------------------------------------
 
 // setup scene ====================================================
@@ -26,14 +24,8 @@ GPoints snowflakes[6];
 // setup textures ======================================
 Texture@ sprites[6];
 for (int i; i < 6; i++) {
-    Texture.load(me.dir() + "data/snowflake" + (i+1) + ".png") @=> sprites[i];
+    Texture.load(me.dir() + "../data/textures/snowflake" + (i+1) + ".png") @=> sprites[i];
 }
-
-/*
-UI options
-- point size
-- alpha
-*/
 
 // default simulation params
 @(.741, .894, 1.0) => vec3 DEFAULT_COLOR;
@@ -72,7 +64,7 @@ UI_Float rotationRate(0.05);
 UI_Float pointSize(snowflakes[0].size());
 UI_Float3 color(DEFAULT_COLOR);
 
-
+// render loop
 while (true) {
     GG.nextFrame() => now;
 
@@ -94,10 +86,11 @@ while (true) {
             }
         }
 
-        if (UI.slider("Snowflake Size", pointSize, 0.01, 2.0)) {
-            pointSize.val() => snowflakes[0].size;
+        if (UI.slider("Snowflake Size", pointSize, 0.01, 0.15)) {
+            for (int i; i < snowflakes.size(); i++) {
+                pointSize.val() => snowflakes[i].size;
+            }
         }
     }
     UI.end();
-
 }

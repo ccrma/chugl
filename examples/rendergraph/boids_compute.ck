@@ -1,4 +1,14 @@
-// Audio graph
+//-----------------------------------------------------------------------------
+// name: boids_compute.ck
+// desc: boids with compute shaders
+// 
+// author: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
+//   date: Fall 2024
+//-----------------------------------------------------------------------------
+// uncomment for full screen
+// GWindow.fullscreen();
+
+// audio graph
 adc => Gain g => OnePole p => blackhole;
 // square the input
 adc => g;
@@ -17,8 +27,6 @@ GG.rootPass() --> ComputePass compute_pass --> GG.renderPass();
 (NUM_BOIDS / 64) + 1 => int work_group_count;
 compute_pass.workgroup(work_group_count, 1, 1);
 
-// GWindow.fullscreen();
-
 // camera
 GCamera camera --> GG.scene();
 camera.orthographic();
@@ -26,6 +34,7 @@ camera.viewSize(5.0);
 camera.posZ(5.0);
 GG.scene().camera(camera);
 
+// compute/simluation shader code string
 "
 struct Boid {
     pos : vec2f,
@@ -141,6 +150,7 @@ fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) {
 }
 " @=> string compute_shader_code;
 
+// drawing shader code string
 "
 struct Boid {
     pos : vec2f,
@@ -191,19 +201,21 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4f
 }
 " @=> string shader_code;
 
-ShaderDesc compute_shader_desc;
-compute_shader_code => compute_shader_desc.computeString;
-Shader compute_shader(compute_shader_desc);
+// set simulation shader
+ShaderDesc sim;
+compute_shader_code => sim.computeCode;
+Shader compute_shader(sim);
 compute_pass.shader(compute_shader);
 
-ShaderDesc shader_desc;
-shader_code => shader_desc.vertexString;
-shader_code => shader_desc.fragmentString;
-null => shader_desc.vertexLayout; // no vertex layout
-Shader material_shader(shader_desc);
-
+// set drawing shader
+ShaderDesc draw;
+shader_code => draw.vertexCode;
+shader_code => draw.fragmentCode;
+null => draw.vertexLayout; // no vertex layout
+// material shader
+Shader mat(draw);
 Material boids_material;
-boids_material.shader(material_shader);
+boids_material.shader(mat);
 
 Geometry boids_geo;
 boids_geo.vertexCount(3 * NUM_BOIDS); // 1 triangle per boid
@@ -313,7 +325,9 @@ fun void drawCursorAndUpdateVolume()
     }
 } spork ~ drawCursorAndUpdateVolume();
 
-while (true) {
+// main loop
+while (true)
+{
     GG.nextFrame() => now;
 
     compute_pass.storageBuffer(0, boids_buffer_a); // read

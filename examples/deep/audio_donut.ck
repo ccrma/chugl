@@ -1,3 +1,13 @@
+//-----------------------------------------------------------------------------
+// name: audio_donut.ck
+// desc: example of writing to textures:
+//       1) writes audio spectrum data to a height map
+//       2) uses height map to display surface of a donut
+// 
+// author: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
+//   date: Fall 2024
+//-----------------------------------------------------------------------------
+
 // window size
 1024 => int WINDOW_SIZE;
 1024 => int WATERFALL_DEPTH;

@@ -1,19 +1,21 @@
-/*
-Interesting observation:
+//-----------------------------------------------------------------------------
+// name: game_of_life.ck
+// desc: microphone input waveform as seeds for Conway's Game of Life
+// 
+// author: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
+//   date: Fall 2024
+//-----------------------------------------------------------------------------
+/* Interesting observation:
 The fragment shader invocation is not 1:1 with pixels on the quad.
-This means at different resolutions (zoom levels / size of quad) different cells will be updated.
-If the quad is close enough / resolution is high enough, every pixel will cover a single cell and 
-simulation will run "accurately".
-However if the quad is very far away, and each screen pixel covers multiple cells, not all cells 
-will be updated.
-But kinda looks cool?
+This means at different resolutions (zoom levels / size of quad) different
+cells will be updated. If the quad is close enough / resolution is high enough,
+every pixel will cover a single cell and simulation will run "accurately".
+However if the quad is very far away, and each screen pixel covers multiple
+cells, not all cells will be updated. But kinda looks cool?
 
-
-IDEA: wrap repeat, sample OFF The grid with scaling factor n*m for INIFINITE conway!!
-- requires doing as screen shader or pass clip space full-screen quad through custom geo
-
-Add audio waveform to gameboard via storage buffer
-*/
+IDEA: wrap repeat, sample OFF the grid with scaling factor n*m for INFINITE conway!!
+- requires doing as screen shader or pass clip space full-screen quad through custom geo */
+//-----------------------------------------------------------------------------
 
 GCamera camera --> GG.scene();
 camera.orthographic();
@@ -45,8 +47,8 @@ fun void readMicInput()
 spork ~ readMicInput();
 
 
-// graphics stuff --------------------------------------
-
+// ------- graphics stuff -----------
+// shader code string (does the GoL simulation)
 "
 #include FRAME_UNIFORMS
 #include DRAW_UNIFORMS
@@ -136,25 +138,6 @@ float texture_data[4 * WINDOW_SIZE * WINDOW_SIZE];
 // TODO need a better way to specify texture size
 conway_tex_b.write(texture_data); // initialize empty texture
 conway_tex_a.write(texture_data);
-
-// fun void changeColor()
-// {
-//     while (true) {
-//         tex.data([255,0,255,255], 1, 1);
-//         1::second => now;
-//         tex.data([255,255,255,255], 1, 1);
-//         1::second => now;
-//     }
-// } 
-// spork ~ changeColor();
-
-// fun void setTexture()
-// {
-//     tex.data([255,0,255,255], 1, 1);
-//     1.5::second => now;
-//     tex.file(me.dir() + "/../assets/brickwall_albedo.png");
-// }
-// spork ~ setTexture();
 
 fun void simulate() 
 {

@@ -1,19 +1,21 @@
-/*
-name: ckfxr 
-desc: ChucK/ChuGL port of DrPetter's sfxr (https://www.drpetter.se/project_sfxr.html)
-author: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
-date: June 2024
+//-----------------------------------------------------------------------------
+// name: ckfxr.ck
+// desc: ChucK Sound FX synthesizer!
+// 
+// author: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
+//   date: Fall 2024
+//-----------------------------------------------------------------------------
 
-Audio Graph
-[sin|saw|square|noise] -> LP Filter --> HP Filter --> Phasor --> ADSR
-*/
-
+// CKFXR custom Chugraph UGen
 CKFXR ckfxr => dac;
+// for recording
 ckfxr => WvOut wvout => blackhole;
+// synth parameters
 CKFXR_Params p;
 
+// visualizer window size
 512 => int WINDOW_SIZE;
-
+// audio analysis
 ckfxr => Flip accum => blackhole;
 ckfxr => PoleZero dcbloke => FFT fft => blackhole;
 .95 => dcbloke.blockZero;
@@ -128,6 +130,7 @@ class DelayFX extends Chugraph
     fun float delayModDepth() { return lfo_delay_mod.gain(); }
 }
 
+// custom CKFXR UGen
 class CKFXR extends Chugraph
 {
     LPF lpf => HPF hpf => DelayFX delayfx => ADSR adsr => outlet;
@@ -902,4 +905,4 @@ fun void kb()
     }
 } spork ~ kb();
 
-1::eon => now;
+while( true ) 1::eon => now;

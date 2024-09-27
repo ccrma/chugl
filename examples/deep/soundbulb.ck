@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // name: soundbulb.ck
-// desc: soundBulb in ChuGL!
+// desc: SoundBulb (Kunwoo's first 256a design in 2017) in ChuGL!
 // 
 // author: Kunwoo Kim (https://ccrma.stanford.edu/~kunwoo/)
 //         Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)

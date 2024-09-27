@@ -1,3 +1,10 @@
+//-----------------------------------------------------------------------------
+// name: bloom.ck
+// desc: built-in post-processing BLOOM effect!
+// 
+// author: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
+//   date: Fall 2024
+//-----------------------------------------------------------------------------
 PlaneGeometry plane_geo;
 SphereGeometry sphere_geo;
 FlatMaterial mat1, mat2, mat3;
@@ -21,7 +28,8 @@ GG.renderPass() --> BloomPass bloom_pass --> output_pass;
 bloom_pass.input(GG.renderPass().colorOutput());
 output_pass.input(bloom_pass.colorOutput());
 
-// GG.renderPass() --> output_pass; // uncomment to bypass bloom
+// uncomment to bypass bloom
+// GG.renderPass() --> output_pass;
 
 UI_Float bloom_intensity(bloom_pass.intensity());
 UI_Float radius(bloom_pass.radius());
@@ -34,6 +42,7 @@ UI_Float radius(bloom_pass.radius());
     "ACES",
     "UNCHARTED",
 ] @=> string builtin_tonemap_algorithms[];
+
 UI_Int tonemap(output_pass.tonemap());
 UI_Int levels(bloom_pass.levels());
 UI_Float exposure(output_pass.exposure());

@@ -1,4 +1,11 @@
-// http://www.andreasaristidou.com/FABRIK.html
+//-----------------------------------------------------------------------------
+// name: ik.ck
+// desc: inverse kinematics
+//
+// author: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
+// adapted from: http://www.andreasaristidou.com/FABRIK.html
+//   date: Fall 2024
+//-----------------------------------------------------------------------------
 
 SphereGeometry sphere_geo;
 FlatMaterial flat_material;
@@ -17,10 +24,14 @@ for (int i; i < points.size(); i++) {
     .1 => joint.sca;
 }
 
+// add camera to scene graph
 GCamera camera --> GG.scene();
-camera.posZ(5);
+// set main camera
+GG.scene().camera(camera);
+// camera projection
 camera.orthographic();
-GG.scene().camera(camera); // set main camera
+// position camera
+camera.posZ(5);
 
 fun void fabrik(vec3 start_target, vec3 end_target, vec3 points[], float lengths[]) {
     0.01 => float TOLERANCE;
@@ -63,7 +74,6 @@ fun void fabrik(vec3 start_target, vec3 end_target, vec3 points[], float lengths
         }
     }
 }
-
 
 fun void draw() {
     camera.screenCoordToWorldPos(GWindow.mousePos(), 5) => vec3 end_target;

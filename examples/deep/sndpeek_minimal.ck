@@ -1,10 +1,10 @@
 //-----------------------------------------------------------------------------
-// name: sndpeek.ck
-// desc: sndpeek in ChuGL!
+// name: sndpeek-minimal.ck
+// desc: sndpeek in ChuGL (minimal version; no waterfall)
 // 
 // author: Ge Wang (https://ccrma.stanford.edu/~ge/)
 //         Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
-//         Kunwoo Kim (https://ccrma.stanford.edu/~kunwoo/)
+//         (https://https://kunwookim.com/)
 // date: Fall 2024
 //-----------------------------------------------------------------------------
 
