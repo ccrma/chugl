@@ -466,7 +466,8 @@ void R_Transform::print(R_Transform* xform, u32 depth)
     for (u32 i = 0; i < depth; ++i) {
         printf("  ");
     }
-    printf("%s\n", xform->name.c_str());
+    // printf("%s\n", xform->name.c_str());
+    printf("%s\n", xform->name);
     // print position
     for (u32 i = 0; i < depth; ++i) {
         printf("  ");
@@ -651,7 +652,8 @@ void R_Texture::load(GraphicsContext* gctx, R_Texture* texture, const char* file
                      width * height * G_bytesPerTexel(texture->desc.format));
 
     if (gen_mips) {
-        MipMapGenerator_generate(gctx, texture->gpu_texture, texture->name.c_str());
+        // MipMapGenerator_generate(gctx, texture->gpu_texture, texture->name.c_str());
+        MipMapGenerator_generate(gctx, texture->gpu_texture, texture->name);
     }
 }
 
@@ -1330,8 +1332,8 @@ void R_RenderPipeline::init(GraphicsContext* gctx, R_RenderPipeline* pipeline,
     WGPUMultisampleState multisampleState = G_createMultisampleState(msaa_sample_count);
 
     char pipeline_label[64] = {};
-    snprintf(pipeline_label, sizeof(pipeline_label), "RenderPipeline %ld %s",
-             (i64)shader->id, shader->name.c_str());
+    snprintf(pipeline_label, sizeof(pipeline_label), "RenderPipeline %d %s",
+             shader->id, shader->name);
     WGPURenderPipelineDescriptor pipeline_desc = {};
     pipeline_desc.label                        = pipeline_label;
     pipeline_desc.layout                       = NULL; // Using layout: auto
@@ -2946,8 +2948,8 @@ R_ScreenPassPipeline R_GetScreenPassPipeline(GraphicsContext* gctx,
     char pipeline_label[64] = {};
     if (shader) {
         snprintf(pipeline_label, sizeof(pipeline_label),
-                 "ScreenPass RenderPipeline %ld %s", (i64)shader->id,
-                 shader->name.c_str());
+                 "ScreenPass RenderPipeline %d %s", shader->id,
+                 shader->name);
     }
     WGPURenderPipelineDescriptor pipeline_desc = {};
     pipeline_desc.label                        = pipeline_label;
@@ -2987,8 +2989,8 @@ R_ComputePassPipeline R_GetComputePassPipeline(GraphicsContext* gctx, R_Shader* 
     desc.compute.entryPoint            = "main";
 
     char pipeline_label[64] = {};
-    snprintf(pipeline_label, sizeof(pipeline_label), "ComputePass Pipeline %ld %s",
-             (i64)shader->id, shader->name.c_str());
+    snprintf(pipeline_label, sizeof(pipeline_label), "ComputePass Pipeline %d %s",
+             shader->id, shader->name);
     desc.label = pipeline_label;
 
     R_ComputePassPipeline* pipeline

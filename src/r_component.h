@@ -32,7 +32,8 @@ typedef SG_ID R_ID; // negative for R_Components NOT mapped to SG_Components
 struct R_Component {
     SG_ID id; // SG_Component this R_Component is mapped to
     SG_ComponentType type;
-    std::string name = ""; // TODO move off std::string
+    // std::string name = ""; // TODO move off std::string
+    char name[64];
 };
 
 // priority hiearchy for staleness
@@ -212,7 +213,8 @@ struct R_Texture : public R_Component {
 
         // init descriptor
         WGPUTextureDescriptor wgpu_texture_desc = {};
-        wgpu_texture_desc.label                 = texture->name.c_str();
+        // wgpu_texture_desc.label                 = texture->name.c_str();
+        wgpu_texture_desc.label                 = texture->name;
         wgpu_texture_desc.usage                 = desc->usage;
         wgpu_texture_desc.dimension             = desc->dimension;
         wgpu_texture_desc.size
@@ -228,8 +230,10 @@ struct R_Texture : public R_Component {
         // create default texture view for entire mip chain (And 1st array layer)
         // cubemaps are handled differently
         char texture_view_label[256] = {};
+        //snprintf(texture_view_label, sizeof(texture_view_label), "%s default view",
+        //         texture->name.c_str());
         snprintf(texture_view_label, sizeof(texture_view_label), "%s default view",
-                 texture->name.c_str());
+                 texture->name);
         WGPUTextureViewDescriptor wgpu_texture_view_desc = {};
         wgpu_texture_view_desc.label                     = texture_view_label;
         wgpu_texture_view_desc.format                    = desc->format;
