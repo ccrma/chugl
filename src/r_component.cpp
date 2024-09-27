@@ -1332,8 +1332,10 @@ void R_RenderPipeline::init(GraphicsContext* gctx, R_RenderPipeline* pipeline,
     WGPUMultisampleState multisampleState = G_createMultisampleState(msaa_sample_count);
 
     char pipeline_label[64] = {};
-    //snprintf(pipeline_label, sizeof(pipeline_label), "RenderPipeline %lld %s",
-    //         (i64)shader->id, shader->name.c_str());
+    snprintf(pipeline_label, sizeof(pipeline_label), "RenderPipeline %ld %s",
+             (i64)shader->id, shader->name.c_str());
+    // snprintf(pipeline_label, sizeof(pipeline_label), "RenderPipeline %lld %s",
+    //          (i64)shader->id, shader->name.c_str());
     snprintf(pipeline_label, sizeof(pipeline_label), "RenderPipeline %lld %s",
              (i64)shader->id, shader->name);
     WGPURenderPipelineDescriptor pipeline_desc = {};
@@ -1931,8 +1933,10 @@ void Material_batchUpdatePipelines(GraphicsContext* gctx, FT_Library ft_lib,
 
 R_Texture* Component_CreateTexture(GraphicsContext* gctx, SG_Command_TextureCreate* cmd)
 {
+    log_error("here!!!!");
     R_Texture* tex = ARENA_PUSH_TYPE(&textureArena, R_Texture);
     *tex           = {};
+    log_error("here-2!!!!");
 
     // R_Component init
     tex->id   = cmd->sg_id;
@@ -2947,10 +2951,12 @@ R_ScreenPassPipeline R_GetScreenPassPipeline(GraphicsContext* gctx,
 
     char pipeline_label[64] = {};
     if (shader) {
-        //snprintf(pipeline_label, sizeof(pipeline_label),
-        //         "ScreenPass RenderPipeline %lld %s", (i64)shader->id,
-        //         shader->name.c_str());
+        // snprintf(pipeline_label, sizeof(pipeline_label),
+        //          "ScreenPass RenderPipeline %lld %s", (i64)shader->id,
+        //          shader->name.c_str());
         snprintf(pipeline_label, sizeof(pipeline_label),
+                 "ScreenPass RenderPipeline %ld %s", (i64)shader->id,
+                 shader->name.c_str());
                  "ScreenPass RenderPipeline %lld %s", (i64)shader->id,
                  shader->name);
     }
@@ -2992,8 +2998,10 @@ R_ComputePassPipeline R_GetComputePassPipeline(GraphicsContext* gctx, R_Shader* 
     desc.compute.entryPoint            = "main";
 
     char pipeline_label[64] = {};
-    //snprintf(pipeline_label, sizeof(pipeline_label), "ComputePass Pipeline %lld %s",
-    //         (i64)shader->id, shader->name.c_str());
+    snprintf(pipeline_label, sizeof(pipeline_label), "ComputePass Pipeline %ld %s",
+             (i64)shader->id, shader->name.c_str());
+    // snprintf(pipeline_label, sizeof(pipeline_label), "ComputePass Pipeline %lld %s",
+    //          (i64)shader->id, shader->name.c_str());
     snprintf(pipeline_label, sizeof(pipeline_label), "ComputePass Pipeline %lld %s",
              (i64)shader->id, shader->name);
     desc.label = pipeline_label;
