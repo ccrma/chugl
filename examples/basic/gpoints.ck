@@ -1,5 +1,13 @@
+//-----------------------------------------------------------------------------
+// name: gpoints.ck
+// desc: stuff you can do with GPoints!
+// requires: ChuGL + chuck-1.5.3.0 or higher
+//
+// author: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
+//         Ge Wang (https://ccrma.stanford.edu/~ge/)
+// date: Fall 2023
+//-----------------------------------------------------------------------------
 GPoints points --> GG.scene();
-
 
 [@(-1, -1, 0), @(1, -1, 0), @(0, 1, 0)] @=> vec3 point_positions[];
 [Color.WHITE] @=> vec3 point_colors[];

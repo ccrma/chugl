@@ -1,10 +1,13 @@
-// "circles, in numbers, are cool" -- Ge
+//--------------------------------------------------------------------
+// name: circles.ck
+// desc: "circles, in numbers, are cool" -- Ge
 //
 // this example demonstrates:
 //   1) creating a custom GGen class
 //   2) plotting our circle with #math
 //   3) many instances: local independence + global organization
 //      -- design principle from artful design chapter 3
+//--------------------------------------------------------------------
 
 // window title
 GG.windowTitle( "circles in ChuGL" );

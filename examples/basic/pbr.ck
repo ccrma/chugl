@@ -1,30 +1,22 @@
-/*
-- make lighting test
-    - point light
-    - spot light
-    - scene ambient light
-    - scene bg color
-    - material color
-    - both material and lights on parent-child transforms
+//--------------------------------------------------------------------
+// name: pbr.ck
+// desc: physically-based rendering
+// 
+// author: Andrew Zhu Aday
+//   date: Fall 2024
+//--------------------------------------------------------------------
 
-controllable dir-light
-
-N point lights on rotating around central cube. able to inc/dec number of lights
-- each inc/dec is random color
-*/
-
-// Use an orbit camera
+// use an orbit camera
 GOrbitCamera camera --> GG.scene(); // attach set camera to scene
 GG.scene().camera(camera); // set as main camera
 
 // scenegraph setup
-
 7 => int NUM_ROWS;
-
 PBRMaterial material[NUM_ROWS][NUM_ROWS];
 FlatMaterial light_material;
 SphereGeometry geo;
-// SuzanneGeometry geo;
+
+// monkey geometry
 SuzanneGeometry suzanne_geo;
 
 // init pbr meshes
@@ -60,7 +52,6 @@ UI_Float dir_light_intensity(GG.scene().light().intensity());
 
 // material properties
 UI_Float3 color(material[0][0].color());
-
 UI_Float3 camera_target(camera.target());
 
 fun void ui() {
@@ -135,7 +126,7 @@ fun void ui() {
     }
 } spork ~ ui();
 
-
+// time loop
 while (true) {
     GG.nextFrame() => now;
     GG.dt() => point_light_axis.rotateY;

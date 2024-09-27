@@ -1,5 +1,12 @@
+//--------------------------------------------------------------------
+// name: gtext.ck
+// desc: drawing text with GText!
+//
+// author: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
+//   date: Fall 2024
+//--------------------------------------------------------------------
 
-// Scene Setup =================================================================
+// Scene Setup =======================================================
 GOrbitCamera cam --> GG.scene();
 GG.scene().camera(cam);
 
@@ -39,19 +46,20 @@ UI_Float line_spacing(1.0);
 UI_Float text_scale(text.sca().x);
 UI_Bool text_rotate;
 
-while (true) {
+// main loop
+while (true)
+{
     GG.nextFrame() => now;
 
     UI.setNextWindowSize(@(400, 600), UI_Cond.Once);
-    if (UI.begin("GText Example", null, 0)) {
-
+    if (UI.begin("GText Example", null, 0))
+    {
         UI.setNextItemWidth(-1);
         if (UI.inputTextMultiline("##GText Input", text_input, 10000, @(0,0), 0)) {
             text.text(text_input.val());
         }
 
         UI.dummy(@(0.0f, 20.0f)); // vertical spacing
-
         if (UI.listBox("Builtin Fonts", font_index, builtin_fonts, -1)) {
             text.font(builtin_fonts[font_index.val()]);
         }

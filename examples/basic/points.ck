@@ -1,11 +1,22 @@
+//--------------------------------------------------------------------
+// name: points.ck
+// desc: 1,000,000 points with color; use WASD to move through
+// 
+// author: Andrew Zhu Aday
+//  date: Fall 2023
+//--------------------------------------------------------------------
+
 // Scene setup ===================
 GG.scene().backgroundColor(@(0,0,0));
 GPoints points --> GG.scene();
 
-
-GWindow.mouseMode(GWindow.MouseMode_Disabled);
+// choose mouse mode
+GWindow.mouseMode( GWindow.MouseMode_Disabled );
+// set up camera
 GFlyCamera cam --> GG.scene();
+// select camera
 GG.scene().camera(cam);
+// set camera position
 cam.posZ(10);
 
 // points stress test
