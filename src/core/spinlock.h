@@ -4,7 +4,7 @@
 #include <thread>
 
 // include immintrin.h for _mm_pause() on macos x64_64
-#if defined(__APPLE__) && defined(__x86_64__)
+#if defined(__x86_64__)
 #include <immintrin.h>
 #endif
 
