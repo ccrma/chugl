@@ -1673,7 +1673,9 @@ static void _R_HandleCommand(App* app, SG_Command* command)
               = (SG_Command_ComponentUpdateName*)command;
             R_Component* component = Component_GetComponent(cmd->sg_id);
             char* new_name         = (char*)CQ_ReadCommandGetOffset(cmd->name_offset);
-            component->name        = new_name;
+
+            strncpy(component->name, new_name, strlen(new_name));
+            // component->name        = new_name;
 
             // if backed by a wgpu type, update the label
             switch (component->type) {
