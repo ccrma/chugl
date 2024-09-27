@@ -172,6 +172,7 @@ else()
             -Wno-uninitialized
             -Wno-unused-variable
             -Wno-implicit-fallthrough
+            -Wno-format-truncation
         
         # clang ignores
         -Wno-implicit-const-int-float-conversion
