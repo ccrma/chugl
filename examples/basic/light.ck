@@ -1,6 +1,11 @@
-// Note: current max# of supported lights is:
-// 12 point lights
-// 12 directional lights
+//--------------------------------------------------------------------
+// name: light.ck
+// desc: lights (no limit on max # of lights)
+// requires: ChuGL + chuck-1.5.3.0 or higher
+// 
+// author: Andrew Zhu Aday
+//   date: Fall 2024
+//--------------------------------------------------------------------
 
 // window title
 GG.windowTitle( "ChuGL light demo" );
@@ -39,13 +44,17 @@ class LightBulb extends GGen
     }
 }
 
-
 // scene setup
 GG.scene() @=> GScene @ scene;
+// connect camera to scenegraph
 GOrbitCamera cam --> scene;
-scene.camera(cam);
-scene.light().intensity(0);  // disable default directional light
-scene.ambient(@(0,0,0)); // disable default ambient light
+// select as main camera
+scene.camera( cam );
+
+// disable default directional light
+scene.light().intensity(0);
+// disable default ambient light
+scene.ambient(@(0,0,0));
 
 // camera angle
 @(0, 10, 10) => cam.pos;
@@ -61,7 +70,7 @@ LightBulb redLight--> lightGroup;
 LightBulb greenLight--> lightGroup;
 LightBulb blueLight--> lightGroup;
 LightBulb whiteLight--> lightGroup;
-1 => lightGroup.posY;  // lift all lights 1 unit off the ground
+1 => lightGroup.posY; // lift all lights 1 unit off the ground
 
 // set light colors
 2 => redLight.posX;
@@ -74,7 +83,6 @@ blueLight.color(0, 0, 1);
 whiteLight.color(1, 1, 1);
 
 // Gameloop ==================================
-
 UI_Float light_radius(2);
 UI_Float light_falloff(2);
 

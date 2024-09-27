@@ -1,3 +1,10 @@
+//--------------------------------------------------------------------
+// name: mousepick.ck
+// desc: mouse picking with different projections
+// 
+// author: Andrew Zhu Aday
+//   date: Fall 2024
+//--------------------------------------------------------------------
 FlatMaterial material;
 SphereGeometry sphere_geo;
 

@@ -1,12 +1,13 @@
-// TODO
-/*
-Add builtin textures to apply to materials
-Add builtin skybox + IBL lighting
-*/
-
+//-----------------------------------------------------------------------------
+// name: geo_and_mat.ck
+// desc: UI-driven example for geometry + material
+// requires: ChuGL + chuck-1.5.3.0 or higher
+//-----------------------------------------------------------------------------
+// camera
 GOrbitCamera cam --> GG.scene();
-GG.scene().camera(cam);
-
+// select main camera
+GG.scene().camera( cam );
+// mesh
 GMesh mesh --> GG.scene();
 
 [
@@ -214,7 +215,6 @@ fun void buildKnot() {
     );
 }
 
-
 UI_Bool rotate;
 fun void ui() {
     while (true) {
@@ -307,9 +307,7 @@ fun void ui() {
                 if (UI.slider("normal factor", pbr_normal_factor, 0, 1)) {
                     pbr_normal_factor.val() => pbr_material.normalFactor;
                 }
-
             }
-
 
             UI.separatorText("Geometry Params");
 
@@ -392,3 +390,9 @@ while (true) {
         GG.dt() * .3 => mesh.rotateY;
     }
 }
+
+// TODO
+/*
+Add builtin textures to apply to materials
+Add builtin skybox + IBL lighting
+*/

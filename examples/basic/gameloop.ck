@@ -7,13 +7,15 @@
 //         Ge Wang (https://ccrma.stanford.edu/~ge/)
 // date: Fall 2023
 //-----------------------------------------------------------------------------
-
 // uncomment to run in fullscreen
+// GG.fullscreen();
 
-// some variables for printing time; not needed for game loop
-0 => int fc;
-now => time lastTime;
+// for printing only
+int fc;
+// start time
+now => time startTime;
 
+// a second graphics shred
 fun void gameloop()
 {
     while (true) {
@@ -21,12 +23,15 @@ fun void gameloop()
     }
 } spork ~ gameloop();
 
-
-// infinite time loop
+// infinite time loop; main graphics shred
 while( true )
 {
     // IMPORTANT: synchronization point with next frame to render
     // must be called at the beginning of every frame,
     // so the chuck VM can properly mark this shred as a graphics shred
     GG.nextFrame() => now;
+    // print frame count, time since start, FPS
+    <<< "main loop frames:", fc,
+        "seconds since start:", (now-startTime)/second,
+        "FPS:", fc/((now-startTime)/second)>>>; fc++;
 }

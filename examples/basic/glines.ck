@@ -1,4 +1,11 @@
-
+//--------------------------------------------------------------------
+// name: glines.ck
+// desc: drawing lines with GLines
+// 
+// author: Andrew Zhu Aday
+//   date: Fall 2024
+//--------------------------------------------------------------------
+// add GLines GGen to scene
 GLines lines --> GG.scene();
 
 [@(-0.5, -0.5), @(0.0, 0.0), @(0.5, -0.5)] @=> vec2 line_positions[];

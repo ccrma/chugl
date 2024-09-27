@@ -1,25 +1,28 @@
-/*
-gwindow.ck
-Window management demo.
+//--------------------------------------------------------------------
+// name: gwindow.ck
+// desc: window management demo
+//       (the screen is blank; see below for interactions)
+// requires: ChuGL + chuck-1.5.3.0 or higher
+//
+// press '1' to go fullscreen.
+// press '2' to go windowed.
+// press '3' to maximize (windowed fullscreen).
+// press '4' to iconify / restore
+// press '5' to toggle window opacity
+// press '6' to toggle mouse mode (normal - hidden - disabled)
+//
+// listens for keyboard input on space key
+// 
+// author: Andrew Zhu Aday
+//   date: June 2024
+//--------------------------------------------------------------------
 
-Press '1' to go fullscreen.
-Press '2' to go windowed.
-Press '3' to maximize (windowed fullscreen).
-Press '4' to iconify / restore
-press '5' to toggle window opacity
-press '6' to toggle mouse mode (normal - hidden - disabled)
+// disable <esc> and close button; allows you to manually handle close
+// events and perform any necessary cleanup, e.g. saving game state
+GWindow.closeable( false ); 
 
-Listens for keyboard input on space key
-
-Author: Andrew Zhu Aday (azaday) June 2024
-*/
-
-// disable <esc> and close button 
-// allows you to manually handle close events and perform any necessary cleanup 
-// e.g. saving game state
-GWindow.closeable(false); 
-
-// GWindow.sizeLimits(100, 100, 1920, 1080, @(16, 9));  // uncomment to set size limits
+// uncomment to set size limits
+// GWindow.sizeLimits(100, 100, 1920, 1080, @(16, 9));
 
 GWindow.windowed(1200, 675);
 GWindow.center(); // center window on screen

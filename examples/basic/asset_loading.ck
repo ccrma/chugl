@@ -1,17 +1,26 @@
+//--------------------------------------------------------------------
+// name: asset_loading.ck
+// desc: example of loading assets (e.g., 3D models) from file
+//--------------------------------------------------------------------
+
+// asset loader
 AssLoader ass_loader;
 
-// ass_loader.loadObj(me.dir() + "../assets/obj/suzanne.obj") @=> GGen@ model;
-ass_loader.loadObj(me.dir() + "../assets/obj/backpack/backpack.obj") @=> GGen@ model;
+// load from file, returns a GGen as the root of a model graph
+ass_loader.loadObj( me.dir() + "../data/obj/suzanne.obj" ) @=> GGen@ model;
 
+// download this asset and unzip into ../data/obj/
+// https://chuck.stanford.edu/chugl/examples/data/obj/
+// ass_loader.loadObj( me.dir() + "../data/obj/backpack/backpack.obj" ) @=> GGen@ model;
+
+// connect model to scene
 model --> GG.scene();
 
-// GG.scene().light().intensity(0);
-
-while (true) {
+// render loop
+while( true )
+{
+    // sync with next graphics frame
     GG.nextFrame() => now;
-    if (UI.begin("Asset Loading")) {
-        UI.scenegraph(GG.scene());
-    }
-    UI.end();
-    // GG.dt() => model.rotateY;
+    // rotate
+    -GG.dt() => model.rotateY;
 }

@@ -55,7 +55,4 @@ while (true) {
 	sun.rotateY(-1 * dt);
 	earth.rotateY(.4 * dt);
 	moon.rotateY(.9 * dt);
-
 }
-
-
