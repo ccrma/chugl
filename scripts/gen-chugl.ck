@@ -34,19 +34,6 @@ doc.addGroup(
     "Basic classes for ChuGL: strongly-timed audiovisual programming in ChucK."
 );
 
-doc.addGroup(
-    // class names
-    [
-        "StorageBuffer",
-    ],
-    // group name
-    "GPU Buffers",
-    // file name
-    "chugl-buffers", 
-    // group description
-    "GPU Buffer wrappers for ChuGL"
-);
-
 // add group
 doc.addGroup(
     // class names
@@ -237,6 +224,20 @@ doc.addGroup(
     and fine-tuning values. Also usable for building application user-interfaces."
 );
 
+doc.addGroup(
+    // class names
+    [
+        "StorageBuffer",
+    ],
+    // group name
+    "GPU Buffers",
+    // file name
+    "chugl-buffers", 
+    // group description
+    "GPU Buffer wrappers for ChuGL"
+);
+
+// don't sort
 doc.sort(false);
 
 // generate
