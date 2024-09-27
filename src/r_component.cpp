@@ -1332,8 +1332,8 @@ void R_RenderPipeline::init(GraphicsContext* gctx, R_RenderPipeline* pipeline,
     WGPUMultisampleState multisampleState = G_createMultisampleState(msaa_sample_count);
 
     char pipeline_label[64] = {};
-    snprintf(pipeline_label, sizeof(pipeline_label), "RenderPipeline %d %s",
-             shader->id, shader->name);
+    snprintf(pipeline_label, sizeof(pipeline_label), "RenderPipeline %d %s", shader->id,
+             shader->name);
     WGPURenderPipelineDescriptor pipeline_desc = {};
     pipeline_desc.label                        = pipeline_label;
     pipeline_desc.layout                       = NULL; // Using layout: auto
@@ -1929,10 +1929,8 @@ void Material_batchUpdatePipelines(GraphicsContext* gctx, FT_Library ft_lib,
 
 R_Texture* Component_CreateTexture(GraphicsContext* gctx, SG_Command_TextureCreate* cmd)
 {
-    log_error("here!!!!");
     R_Texture* tex = ARENA_PUSH_TYPE(&textureArena, R_Texture);
     *tex           = {};
-    log_error("here-2!!!!");
 
     // R_Component init
     tex->id   = cmd->sg_id;
@@ -2948,8 +2946,7 @@ R_ScreenPassPipeline R_GetScreenPassPipeline(GraphicsContext* gctx,
     char pipeline_label[64] = {};
     if (shader) {
         snprintf(pipeline_label, sizeof(pipeline_label),
-                 "ScreenPass RenderPipeline %d %s", shader->id,
-                 shader->name);
+                 "ScreenPass RenderPipeline %d %s", shader->id, shader->name);
     }
     WGPURenderPipelineDescriptor pipeline_desc = {};
     pipeline_desc.label                        = pipeline_label;
