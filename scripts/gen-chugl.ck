@@ -17,6 +17,7 @@ doc.addGroup(
     // class names
     [
         "GG", 
+        "GWindow", 
         "NextFrameEvent",
         "WindowResizeEvent",
         "WindowResizeEvent",                                             
