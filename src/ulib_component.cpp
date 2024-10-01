@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -1234,6 +1234,7 @@ static void ulib_mesh_query(Chuck_DL_Query* QUERY)
         DOC_CLASS("Class for creating 2D lines");
         ADD_EX("basic/circles.ck");
         ADD_EX("basic/glines.ck");
+        ADD_EX("basic/lissajous.ck");
         ADD_EX("deep/sndpeek.ck");
         ADD_EX("deep/sndpeek_minimal.ck");
         ADD_EX("deep/soundbulb.ck");
@@ -1363,6 +1364,7 @@ static void ulib_mesh_query(Chuck_DL_Query* QUERY)
           "Convenience class for creating a GMesh(PlaneGeometry, PhongMaterial)");
         ADD_EX("basic/ggen_primitives.ck");
         ADD_EX("sequencers/drum_machine.ck");
+        ADD_EX("sequencers/music_for_airports.ck");
 
         CTOR(gplane_ctor);
 

@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -156,7 +156,7 @@ static void ulib_geometry_query(Chuck_DL_Query* QUERY)
     DOC_CLASS(
       "Geometry component. Can contain vertex attribute data, indices data, and pulled "
       "vertex buffers");
-    ADD_EX("basic/custom_geometry.ck");
+    ADD_EX("basic/custom_geo.ck");
     ADD_EX("basic/geo_and_mat.ck");
 
     // contants
