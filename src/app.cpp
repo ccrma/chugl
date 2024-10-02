@@ -1405,6 +1405,7 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
                 // removed
                 int num_instances = ARENA_LENGTH(&g2x->xform_ids, SG_ID);
                 if (num_instances == 0) continue;
+                ASSERT(g2x->xform_bind_group); // shouldn't be null if we have non-zero instances
 
                 // debug group
                 //                snprintf(debug_group_label, sizeof(debug_group_label),
