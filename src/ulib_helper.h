@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -89,6 +89,10 @@
     type* obj = (type*)OBJ_MEMBER_UINT(SELF, data_offset);                             \
     if (obj) delete obj;                                                               \
     OBJ_MEMBER_UINT(SELF, data_offset) = 0;
+
+// global main hook
+Chuck_DL_MainThreadHook* hook = NULL;
+bool hookActivated            = false;
 
 // references to VM and API
 Chuck_VM* g_chuglVM  = NULL;

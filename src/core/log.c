@@ -53,10 +53,10 @@ static void stdout_callback(log_Event* ev)
 #ifdef LOG_USE_COLOR
 #ifdef CHUGL_RELEASE
     // remove file, time, and line number from logs in release mode
-    fprintf(ev->udata, "[ChuGL]: %s%-5s\x1b[0m ", level_colors[ev->level],
+    fprintf(ev->udata, "[ChuGL]: %s%-5s\x1b[0m", level_colors[ev->level],
             level_strings[ev->level]);
 #else  // CHUGL_RELEASE
-    fprintf(ev->udata, "[ChuGL]: %s %s%-5s\x1b[0m \x1b[90m%s:%d:\x1b[0m ", buf,
+    fprintf(ev->udata, "[ChuGL]: %s %s%-5s\x1b[0m \x1b[90m%s:%d:\x1b[0m", buf,
             level_colors[ev->level], level_strings[ev->level], ev->file, ev->line);
 #endif // CHUGL_RELEASE
 #else
