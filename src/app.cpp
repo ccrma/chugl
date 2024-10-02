@@ -650,7 +650,6 @@ struct App {
 
         bool minimized = glfwGetWindowAttrib(app->window, GLFW_ICONIFIED);
         if (minimized || !GraphicsContext::prepareFrame(&app->gctx)) {
-            log_trace("window minimized, skipping frame");
             return;
         }
 
