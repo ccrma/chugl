@@ -551,7 +551,7 @@ const char* Event_GetName(CHUGL_EventType type)
 // TODO: prob want to put syncer and SG_component managers into single
 // ChuGL_Context struct
 
-static bool Sync_IsShredRegistered(Chuck_VM_Shred* shred)
+bool Sync_IsShredRegistered(Chuck_VM_Shred* shred)
 {
     return registeredShreds.find(shred) != registeredShreds.end();
 }
