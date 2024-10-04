@@ -163,6 +163,7 @@ else()
 
     if (LINUX)
         target_compile_options(chugl_shared_properties INTERFACE
+            # gcc ignores
             -Wno-compound-token-split-by-macro
             -Wno-unused-value
             -Wno-strict-aliasing
@@ -173,9 +174,10 @@ else()
             -Wno-unused-variable
             -Wno-implicit-fallthrough
             -Wno-format-truncation
+            -Wno-stringop-overflow
         
-        # clang ignores
-        -Wno-implicit-const-int-float-conversion
+            # clang ignores
+            -Wno-implicit-const-int-float-conversion
         )
          
     

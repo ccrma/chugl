@@ -1014,8 +1014,11 @@ void GeometryToXforms::rebuildBindGroup(GraphicsContext* gctx, R_Scene* scene,
 
     WGPU_RELEASE_RESOURCE(BindGroup, g2x->xform_bind_group);
 
-    g2x->xform_bind_group = wgpuDeviceCreateBindGroup(gctx->device, &desc);
-    ASSERT(g2x->xform_bind_group);
+    // only recreate bind group if we have nonzero instances
+    if (numInstances > 0) {
+		g2x->xform_bind_group = wgpuDeviceCreateBindGroup(gctx->device, &desc);
+		ASSERT(g2x->xform_bind_group);
+    }
 }
 
 void R_Scene::removeSubgraphFromRenderState(R_Scene* scene, R_Transform* root)

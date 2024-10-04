@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -292,9 +292,8 @@ void CQ_PushCommand_UI_Disabled(bool disabled)
 void CQ_PushCommand_ComponentUpdateName(SG_Component* component)
 {
     int max_name_len = sizeof(component->name);
-    BEGIN_COMMAND_ADDITIONAL_MEMORY_ZERO(SG_Command_ComponentUpdateName,
-                                         SG_COMMAND_COMPONENT_UPDATE_NAME,
-                                         max_name_len);
+    BEGIN_COMMAND_ADDITIONAL_MEMORY_ZERO(
+      SG_Command_ComponentUpdateName, SG_COMMAND_COMPONENT_UPDATE_NAME, max_name_len);
 
     // copy string
     strncpy((char*)memory, component->name, max_name_len);
@@ -590,20 +589,25 @@ void CQ_PushCommand_TextureFromFile(SG_Texture* texture, const char* filepath,
 
 void CQ_PushCommand_ShaderCreate(SG_Shader* shader)
 {
-    size_t vertex_filepath_len
-      = shader->vertex_filepath_owned ? strlen(shader->vertex_filepath_owned) + 1 : 1;
-    size_t fragment_filepath_len = shader->fragment_filepath_owned ?
-                                     strlen(shader->fragment_filepath_owned) + 1 :
-                                     1;
-    size_t vertex_string_len
-      = shader->vertex_string_owned ? strlen(shader->vertex_string_owned) + 1 : 1;
-    size_t fragment_string_len
-      = shader->fragment_string_owned ? strlen(shader->fragment_string_owned) + 1 : 1;
+    const char* safe_vertex_filepath
+      = shader->vertex_filepath_owned ? shader->vertex_filepath_owned : "";
+    const char* safe_fragment_filepath
+      = shader->fragment_filepath_owned ? shader->fragment_filepath_owned : "";
+    const char* safe_vertex_string
+      = shader->vertex_string_owned ? shader->vertex_string_owned : "";
+    const char* safe_fragment_string
+      = shader->fragment_string_owned ? shader->fragment_string_owned : "";
+    const char* safe_compute_string
+      = shader->compute_string_owned ? shader->compute_string_owned : "";
+    const char* safe_compute_filepath
+      = shader->compute_filepath_owned ? shader->compute_filepath_owned : "";
 
-    size_t compute_string_len
-      = shader->compute_string_owned ? strlen(shader->compute_string_owned) + 1 : 1;
-    size_t compute_filepath_len
-      = shader->compute_filepath_owned ? strlen(shader->compute_filepath_owned) + 1 : 1;
+    size_t vertex_filepath_len   = strlen(safe_vertex_filepath) + 1;
+    size_t fragment_filepath_len = strlen(safe_fragment_filepath) + 1;
+    size_t vertex_string_len     = strlen(safe_vertex_string) + 1;
+    size_t fragment_string_len   = strlen(safe_fragment_string) + 1;
+    size_t compute_string_len    = strlen(safe_compute_string) + 1;
+    size_t compute_filepath_len  = strlen(safe_compute_filepath) + 1;
 
     size_t additional_memory = vertex_filepath_len + fragment_filepath_len
                                + vertex_string_len + fragment_string_len
@@ -622,13 +626,12 @@ void CQ_PushCommand_ShaderCreate(SG_Shader* shader)
     char* compute_filepath  = compute_string + compute_string_len;
 
     // copy strings (leaving space for null terminators)
-    strncpy(vertex_filepath, shader->vertex_filepath_owned, vertex_filepath_len - 1);
-    strncpy(fragment_filepath, shader->fragment_filepath_owned,
-            fragment_filepath_len - 1);
-    strncpy(vertex_string, shader->vertex_string_owned, vertex_string_len - 1);
-    strncpy(fragment_string, shader->fragment_string_owned, fragment_string_len - 1);
-    strncpy(compute_string, shader->compute_string_owned, compute_string_len - 1);
-    strncpy(compute_filepath, shader->compute_filepath_owned, compute_filepath_len - 1);
+    strncpy(vertex_filepath, safe_vertex_filepath, vertex_filepath_len - 1);
+    strncpy(fragment_filepath, safe_fragment_filepath, fragment_filepath_len - 1);
+    strncpy(vertex_string, safe_vertex_string, vertex_string_len - 1);
+    strncpy(fragment_string, safe_fragment_string, fragment_string_len - 1);
+    strncpy(compute_string, safe_compute_string, compute_string_len - 1);
+    strncpy(compute_filepath, safe_compute_filepath, compute_filepath_len - 1);
 
     // set offsets
     command->vertex_filepath_offset   = Arena::offsetOf(cq.write_q, vertex_filepath);

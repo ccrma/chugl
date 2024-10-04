@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -37,6 +37,17 @@ namespace cimgui
 #include "sg_command.h"
 #include "sg_component.h"
 #include "ulib_helper.h"
+
+static bool verifyInitialization()
+{
+    static bool printed = false;
+    if (!hookActivated && !printed) {
+        printed = true;
+        log_warn("UI function called without initialization");
+        log_warn(" |- (hint: are you missing a call to GG.nextFrame() => now?)");
+    }
+    return hookActivated;
+}
 
 // ============================================================================
 // Declarations
@@ -186,6 +197,8 @@ static void ui_scenegraph_draw_impl(SG_Transform* node)
 // ChuGL Custom Widgets
 CK_DLL_SFUN(ui_scenegraph)
 {
+    if (!verifyInitialization()) return;
+
     // get the root node
     Chuck_Object* root_ckobj = GET_NEXT_OBJECT(ARGS);
     SG_Transform* node
@@ -6689,11 +6702,13 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
 
 CK_DLL_SFUN(ui_want_capture_mouse)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_GetIO()->WantCaptureMouse;
 }
 
 CK_DLL_SFUN(ui_want_capture_keyboard)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_GetIO()->WantCaptureKeyboard;
 }
 
@@ -6703,6 +6718,8 @@ CK_DLL_SFUN(ui_want_capture_keyboard)
 
 CK_DLL_SFUN(ui_get_style)
 {
+    if (!verifyInitialization()) return;
+
     Chuck_Object* style_obj = chugin_createCkObj("UI_Style", false, SHRED);
     OBJ_MEMBER_UINT(style_obj, ui_style_ptr_offset)
       = (t_CKUINT)cimgui::ImGui_GetStyle();
@@ -6714,58 +6731,68 @@ CK_DLL_SFUN(ui_get_style)
 // ============================================================================
 CK_DLL_SFUN(ui_ShowDemoWindow)
 {
+    if (!verifyInitialization()) return;
     bool* p_open = CHUGL_UI_VAL_PTR(bool, GET_NEXT_OBJECT(ARGS), ui_bool_val_offset);
     cimgui::ImGui_ShowDemoWindow(p_open);
 }
 
 CK_DLL_SFUN(ui_ShowMetricsWindow)
 {
+    if (!verifyInitialization()) return;
     bool* p_open = CHUGL_UI_VAL_PTR(bool, GET_NEXT_OBJECT(ARGS), ui_bool_val_offset);
     cimgui::ImGui_ShowMetricsWindow(p_open);
 }
 
 CK_DLL_SFUN(ui_ShowDebugLogWindow)
 {
+    if (!verifyInitialization()) return;
     bool* p_open = CHUGL_UI_VAL_PTR(bool, GET_NEXT_OBJECT(ARGS), ui_bool_val_offset);
     cimgui::ImGui_ShowDebugLogWindow(p_open);
 }
 
 CK_DLL_SFUN(ui_showStyleEditor)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_ShowStyleEditor(NULL);
 }
 
 CK_DLL_SFUN(ui_ShowIDStackToolWindowEx)
 {
+    if (!verifyInitialization()) return;
     bool* p_open = CHUGL_UI_VAL_PTR(bool, GET_NEXT_OBJECT(ARGS), ui_bool_val_offset);
     cimgui::ImGui_ShowIDStackToolWindowEx(p_open);
 }
 
 CK_DLL_SFUN(ui_ShowAboutWindow)
 {
+    if (!verifyInitialization()) return;
     bool* p_open = CHUGL_UI_VAL_PTR(bool, GET_NEXT_OBJECT(ARGS), ui_bool_val_offset);
     cimgui::ImGui_ShowAboutWindow(p_open);
 }
 
 CK_DLL_SFUN(ui_ShowStyleSelector)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     RETURN->v_int     = cimgui::ImGui_ShowStyleSelector(label);
 }
 
 CK_DLL_SFUN(ui_ShowFontSelector)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     cimgui::ImGui_ShowFontSelector(label);
 }
 
 CK_DLL_SFUN(ui_ShowUserGuide)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_ShowUserGuide();
 }
 
 CK_DLL_SFUN(ui_GetVersion)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_string
       = API->object->create_string(VM, cimgui::ImGui_GetVersion(), false);
 }
@@ -8030,6 +8057,7 @@ CK_DLL_MFUN(ui_style_set_hover_flags_for_tooltip_nav)
 
 CK_DLL_SFUN(ui_DrawList_PushClipRect)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list         = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 clip_rect_min                = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 clip_rect_max                = GET_NEXT_VEC2(ARGS);
@@ -8042,18 +8070,21 @@ CK_DLL_SFUN(ui_DrawList_PushClipRect)
 
 CK_DLL_SFUN(ui_DrawList_PushClipRectFullScreen)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     cimgui::ImDrawList_PushClipRectFullScreen(draw_list);
 }
 
 CK_DLL_SFUN(ui_DrawList_PopClipRect)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     cimgui::ImDrawList_PopClipRect(draw_list);
 }
 
 CK_DLL_SFUN(ui_DrawList_GetClipRectMin)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     cimgui::ImVec2 clip_rect_min  = cimgui::ImDrawList_GetClipRectMin(draw_list);
     RETURN->v_vec2                = { clip_rect_min.x, clip_rect_min.y };
@@ -8061,6 +8092,7 @@ CK_DLL_SFUN(ui_DrawList_GetClipRectMin)
 
 CK_DLL_SFUN(ui_DrawList_GetClipRectMax)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     cimgui::ImVec2 clip_rect_max  = cimgui::ImDrawList_GetClipRectMax(draw_list);
     RETURN->v_vec2                = { clip_rect_max.x, clip_rect_max.y };
@@ -8068,6 +8100,7 @@ CK_DLL_SFUN(ui_DrawList_GetClipRectMax)
 
 CK_DLL_SFUN(ui_DrawList_AddLine)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 p1                   = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 p2                   = GET_NEXT_VEC2(ARGS);
@@ -8079,6 +8112,7 @@ CK_DLL_SFUN(ui_DrawList_AddLine)
 
 CK_DLL_SFUN(ui_DrawList_AddLineEx)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 p1                   = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 p2                   = GET_NEXT_VEC2(ARGS);
@@ -8091,6 +8125,7 @@ CK_DLL_SFUN(ui_DrawList_AddLineEx)
 
 CK_DLL_SFUN(ui_DrawList_AddRect)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 p_min                = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 p_max                = GET_NEXT_VEC2(ARGS);
@@ -8102,6 +8137,7 @@ CK_DLL_SFUN(ui_DrawList_AddRect)
 
 CK_DLL_SFUN(ui_DrawList_AddRectEx)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 p_min                = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 p_max                = GET_NEXT_VEC2(ARGS);
@@ -8117,6 +8153,7 @@ CK_DLL_SFUN(ui_DrawList_AddRectEx)
 
 CK_DLL_SFUN(ui_DrawList_AddRectFilled)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 p_min                = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 p_max                = GET_NEXT_VEC2(ARGS);
@@ -8128,6 +8165,7 @@ CK_DLL_SFUN(ui_DrawList_AddRectFilled)
 
 CK_DLL_SFUN(ui_DrawList_AddRectFilledEx)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 p_min                = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 p_max                = GET_NEXT_VEC2(ARGS);
@@ -8142,6 +8180,7 @@ CK_DLL_SFUN(ui_DrawList_AddRectFilledEx)
 
 CK_DLL_SFUN(ui_DrawList_AddRectFilledMultiColor)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 p_min                = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 p_max                = GET_NEXT_VEC2(ARGS);
@@ -8158,6 +8197,7 @@ CK_DLL_SFUN(ui_DrawList_AddRectFilledMultiColor)
 
 CK_DLL_SFUN(ui_DrawList_AddQuad)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 p1                   = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 p2                   = GET_NEXT_VEC2(ARGS);
@@ -8172,6 +8212,7 @@ CK_DLL_SFUN(ui_DrawList_AddQuad)
 
 CK_DLL_SFUN(ui_DrawList_AddQuadEx)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 p1                   = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 p2                   = GET_NEXT_VEC2(ARGS);
@@ -8187,6 +8228,7 @@ CK_DLL_SFUN(ui_DrawList_AddQuadEx)
 
 CK_DLL_SFUN(ui_DrawList_AddQuadFilled)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 p1                   = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 p2                   = GET_NEXT_VEC2(ARGS);
@@ -8201,6 +8243,7 @@ CK_DLL_SFUN(ui_DrawList_AddQuadFilled)
 
 CK_DLL_SFUN(ui_DrawList_AddTriangle)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 p1                   = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 p2                   = GET_NEXT_VEC2(ARGS);
@@ -8214,6 +8257,7 @@ CK_DLL_SFUN(ui_DrawList_AddTriangle)
 
 CK_DLL_SFUN(ui_DrawList_AddTriangleEx)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 p1                   = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 p2                   = GET_NEXT_VEC2(ARGS);
@@ -8228,6 +8272,7 @@ CK_DLL_SFUN(ui_DrawList_AddTriangleEx)
 
 CK_DLL_SFUN(ui_DrawList_AddTriangleFilled)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 p1                   = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 p2                   = GET_NEXT_VEC2(ARGS);
@@ -8241,6 +8286,7 @@ CK_DLL_SFUN(ui_DrawList_AddTriangleFilled)
 
 CK_DLL_SFUN(ui_DrawList_AddCircle)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 center               = GET_NEXT_VEC2(ARGS);
     float radius                  = GET_NEXT_FLOAT(ARGS);
@@ -8252,6 +8298,7 @@ CK_DLL_SFUN(ui_DrawList_AddCircle)
 
 CK_DLL_SFUN(ui_DrawList_AddCircleEx)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 center               = GET_NEXT_VEC2(ARGS);
     float radius                  = GET_NEXT_FLOAT(ARGS);
@@ -8265,6 +8312,7 @@ CK_DLL_SFUN(ui_DrawList_AddCircleEx)
 
 CK_DLL_SFUN(ui_DrawList_AddCircleFilled)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 center               = GET_NEXT_VEC2(ARGS);
     float radius                  = GET_NEXT_FLOAT(ARGS);
@@ -8277,6 +8325,7 @@ CK_DLL_SFUN(ui_DrawList_AddCircleFilled)
 
 CK_DLL_SFUN(ui_DrawList_AddNgon)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 center               = GET_NEXT_VEC2(ARGS);
     float radius                  = GET_NEXT_FLOAT(ARGS);
@@ -8289,6 +8338,7 @@ CK_DLL_SFUN(ui_DrawList_AddNgon)
 
 CK_DLL_SFUN(ui_DrawList_AddNgonEx)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 center               = GET_NEXT_VEC2(ARGS);
     float radius                  = GET_NEXT_FLOAT(ARGS);
@@ -8302,6 +8352,7 @@ CK_DLL_SFUN(ui_DrawList_AddNgonEx)
 
 CK_DLL_SFUN(ui_DrawList_AddNgonFilled)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 center               = GET_NEXT_VEC2(ARGS);
     float radius                  = GET_NEXT_FLOAT(ARGS);
@@ -8314,6 +8365,7 @@ CK_DLL_SFUN(ui_DrawList_AddNgonFilled)
 
 CK_DLL_SFUN(ui_DrawList_AddEllipse)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 center               = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 radius               = GET_NEXT_VEC2(ARGS);
@@ -8325,6 +8377,7 @@ CK_DLL_SFUN(ui_DrawList_AddEllipse)
 
 CK_DLL_SFUN(ui_DrawList_AddEllipseEx)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 center               = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 radius               = GET_NEXT_VEC2(ARGS);
@@ -8340,6 +8393,7 @@ CK_DLL_SFUN(ui_DrawList_AddEllipseEx)
 
 CK_DLL_SFUN(ui_DrawList_AddEllipseFilled)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 center               = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 radius               = GET_NEXT_VEC2(ARGS);
@@ -8351,6 +8405,7 @@ CK_DLL_SFUN(ui_DrawList_AddEllipseFilled)
 
 CK_DLL_SFUN(ui_DrawList_AddEllipseFilledEx)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 center               = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 radius               = GET_NEXT_VEC2(ARGS);
@@ -8365,6 +8420,7 @@ CK_DLL_SFUN(ui_DrawList_AddEllipseFilledEx)
 
 CK_DLL_SFUN(ui_DrawList_AddText)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 pos                  = GET_NEXT_VEC2(ARGS);
     t_CKVEC4 col                  = GET_NEXT_VEC4(ARGS);
@@ -8376,6 +8432,7 @@ CK_DLL_SFUN(ui_DrawList_AddText)
 
 CK_DLL_SFUN(ui_DrawList_AddTextEx)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 pos                  = GET_NEXT_VEC2(ARGS);
     t_CKVEC4 col                  = GET_NEXT_VEC4(ARGS);
@@ -8396,6 +8453,7 @@ CK_DLL_SFUN(ui_DrawList_AddTextEx)
 
 CK_DLL_SFUN(ui_DrawList_AddBezierCubic)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 p1                   = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 p2                   = GET_NEXT_VEC2(ARGS);
@@ -8412,6 +8470,7 @@ CK_DLL_SFUN(ui_DrawList_AddBezierCubic)
 
 CK_DLL_SFUN(ui_DrawList_AddBezierQuadratic)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 p1                   = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 p2                   = GET_NEXT_VEC2(ARGS);
@@ -8427,6 +8486,7 @@ CK_DLL_SFUN(ui_DrawList_AddBezierQuadratic)
 
 CK_DLL_SFUN(ui_DrawList_AddPolyline)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     Chuck_ArrayVec2* points       = (Chuck_ArrayVec2*)GET_NEXT_OBJECT(ARGS);
     t_CKVEC4 col                  = GET_NEXT_VEC4(ARGS);
@@ -8448,6 +8508,7 @@ CK_DLL_SFUN(ui_DrawList_AddPolyline)
 
 CK_DLL_SFUN(ui_DrawList_AddConvexPolyFilled)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     Chuck_ArrayVec2* points       = (Chuck_ArrayVec2*)GET_NEXT_OBJECT(ARGS);
     t_CKVEC4 col                  = GET_NEXT_VEC4(ARGS);
@@ -8467,6 +8528,7 @@ CK_DLL_SFUN(ui_DrawList_AddConvexPolyFilled)
 
 CK_DLL_SFUN(ui_DrawList_AddConcavePolyFilled)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     Chuck_ArrayVec2* points       = (Chuck_ArrayVec2*)GET_NEXT_OBJECT(ARGS);
     t_CKVEC4 col                  = GET_NEXT_VEC4(ARGS);
@@ -8486,12 +8548,14 @@ CK_DLL_SFUN(ui_DrawList_AddConcavePolyFilled)
 
 CK_DLL_SFUN(ui_DrawList_PathClear)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     cimgui::ImDrawList_PathClear(draw_list);
 }
 
 CK_DLL_SFUN(ui_DrawList_PathLineTo)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 pos                  = GET_NEXT_VEC2(ARGS);
 
@@ -8500,6 +8564,7 @@ CK_DLL_SFUN(ui_DrawList_PathLineTo)
 
 CK_DLL_SFUN(ui_DrawList_PathLineToMergeDuplicate)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 pos                  = GET_NEXT_VEC2(ARGS);
 
@@ -8508,6 +8573,7 @@ CK_DLL_SFUN(ui_DrawList_PathLineToMergeDuplicate)
 
 CK_DLL_SFUN(ui_DrawList_PathFillConvex)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC4 col                  = GET_NEXT_VEC4(ARGS);
 
@@ -8516,6 +8582,7 @@ CK_DLL_SFUN(ui_DrawList_PathFillConvex)
 
 CK_DLL_SFUN(ui_DrawList_PathFillConcave)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC4 col                  = GET_NEXT_VEC4(ARGS);
 
@@ -8524,6 +8591,7 @@ CK_DLL_SFUN(ui_DrawList_PathFillConcave)
 
 CK_DLL_SFUN(ui_DrawList_PathStroke)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC4 col                  = GET_NEXT_VEC4(ARGS);
     int flags                     = GET_NEXT_INT(ARGS);
@@ -8534,6 +8602,7 @@ CK_DLL_SFUN(ui_DrawList_PathStroke)
 
 CK_DLL_SFUN(ui_DrawList_PathArcTo)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 center               = GET_NEXT_VEC2(ARGS);
     float radius                  = GET_NEXT_FLOAT(ARGS);
@@ -8547,6 +8616,7 @@ CK_DLL_SFUN(ui_DrawList_PathArcTo)
 
 CK_DLL_SFUN(ui_DrawList_PathArcToFast)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 center               = GET_NEXT_VEC2(ARGS);
     float radius                  = GET_NEXT_FLOAT(ARGS);
@@ -8559,6 +8629,7 @@ CK_DLL_SFUN(ui_DrawList_PathArcToFast)
 
 CK_DLL_SFUN(ui_DrawList_PathEllipticalArcTo)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 center               = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 radius               = GET_NEXT_VEC2(ARGS);
@@ -8573,6 +8644,7 @@ CK_DLL_SFUN(ui_DrawList_PathEllipticalArcTo)
 
 CK_DLL_SFUN(ui_DrawList_PathEllipticalArcToEx)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 center               = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 radius               = GET_NEXT_VEC2(ARGS);
@@ -8588,6 +8660,7 @@ CK_DLL_SFUN(ui_DrawList_PathEllipticalArcToEx)
 
 CK_DLL_SFUN(ui_DrawList_PathBezierCubicCurveTo)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 p2                   = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 p3                   = GET_NEXT_VEC2(ARGS);
@@ -8601,6 +8674,7 @@ CK_DLL_SFUN(ui_DrawList_PathBezierCubicCurveTo)
 
 CK_DLL_SFUN(ui_DrawList_PathBezierQuadraticCurveTo)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 p2                   = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 p3                   = GET_NEXT_VEC2(ARGS);
@@ -8612,6 +8686,7 @@ CK_DLL_SFUN(ui_DrawList_PathBezierQuadraticCurveTo)
 
 CK_DLL_SFUN(ui_DrawList_PathRect)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImDrawList* draw_list = cimgui::ImGui_GetWindowDrawList();
     t_CKVEC2 rect_min             = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 rect_max             = GET_NEXT_VEC2(ARGS);
@@ -8629,6 +8704,7 @@ CK_DLL_SFUN(ui_DrawList_PathRect)
 
 CK_DLL_SFUN(ui_begin)
 {
+    if (!verifyInitialization()) return;
     const char* name      = API->object->str(GET_NEXT_STRING(ARGS));
     const char* safe_name = name;
     if (!name || strlen(name) == 0) {
@@ -8645,6 +8721,8 @@ CK_DLL_SFUN(ui_begin)
 
 CK_DLL_SFUN(ui_begin_no_options)
 {
+    if (!verifyInitialization()) return;
+
     const char* name      = API->object->str(GET_NEXT_STRING(ARGS));
     const char* safe_name = name;
     if (!name || strlen(name) == 0) {
@@ -8655,6 +8733,7 @@ CK_DLL_SFUN(ui_begin_no_options)
 
 CK_DLL_SFUN(ui_end)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_End();
 }
 
@@ -8663,6 +8742,7 @@ CK_DLL_SFUN(ui_end)
 // ============================================================================
 CK_DLL_SFUN(ui_BeginChild)
 {
+    if (!verifyInitialization()) return;
 
     const char* str_id = API->object->str(GET_NEXT_STRING(ARGS));
     t_CKVEC2 size      = GET_NEXT_VEC2(ARGS);
@@ -8675,6 +8755,7 @@ CK_DLL_SFUN(ui_BeginChild)
 
 CK_DLL_SFUN(ui_EndChild)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_EndChild();
 }
 
@@ -8684,53 +8765,63 @@ CK_DLL_SFUN(ui_EndChild)
 
 CK_DLL_SFUN(ui_IsWindowAppearing)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_IsWindowAppearing();
 }
 
 CK_DLL_SFUN(ui_IsWindowCollapsed)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_IsWindowCollapsed();
 }
 
 CK_DLL_SFUN(ui_IsWindowFocused)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_IsWindowFocused(GET_NEXT_INT(ARGS));
 }
 
 CK_DLL_SFUN(ui_IsWindowHovered)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_IsWindowHovered(GET_NEXT_INT(ARGS));
 }
 
 CK_DLL_SFUN(ui_GetWindowDpiScale)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_float = cimgui::ImGui_GetWindowDpiScale();
 }
 
 CK_DLL_SFUN(ui_GetWindowPos)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImVec2 pos = cimgui::ImGui_GetWindowPos();
     RETURN->v_vec2     = { pos.x, pos.y };
 }
 
 CK_DLL_SFUN(ui_GetWindowSize)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImVec2 size = cimgui::ImGui_GetWindowSize();
     RETURN->v_vec2      = { size.x, size.y };
 }
 
 CK_DLL_SFUN(ui_GetWindowWidth)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_float = cimgui::ImGui_GetWindowWidth();
 }
 
 CK_DLL_SFUN(ui_GetWindowHeight)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_float = cimgui::ImGui_GetWindowHeight();
 }
 
 CK_DLL_SFUN(ui_GetWindowViewport)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGuiViewport* vp = cimgui::ImGui_GetWindowViewport();
     if (vp) {
         Chuck_Object* ui_vp = chugin_createCkObj("UI_Viewport", false, SHRED);
@@ -8746,6 +8837,7 @@ CK_DLL_SFUN(ui_GetWindowViewport)
 // ============================
 CK_DLL_SFUN(ui_SetNextWindowPos)
 {
+    if (!verifyInitialization()) return;
     t_CKVEC2 pos = GET_NEXT_VEC2(ARGS);
     t_CKINT cond = GET_NEXT_INT(ARGS);
     cimgui::ImGui_SetNextWindowPos({ (float)pos.x, (float)pos.y }, cond);
@@ -8753,6 +8845,7 @@ CK_DLL_SFUN(ui_SetNextWindowPos)
 
 CK_DLL_SFUN(ui_SetNextWindowPosEx)
 {
+    if (!verifyInitialization()) return;
     t_CKVEC2 pos   = GET_NEXT_VEC2(ARGS);
     t_CKINT cond   = GET_NEXT_INT(ARGS);
     t_CKVEC2 pivot = GET_NEXT_VEC2(ARGS);
@@ -8762,6 +8855,7 @@ CK_DLL_SFUN(ui_SetNextWindowPosEx)
 
 CK_DLL_SFUN(ui_SetNextWindowSize)
 {
+    if (!verifyInitialization()) return;
     t_CKVEC2 size = GET_NEXT_VEC2(ARGS);
     t_CKINT cond  = GET_NEXT_INT(ARGS);
     cimgui::ImGui_SetNextWindowSize({ (float)size.x, (float)size.y }, cond);
@@ -8793,6 +8887,7 @@ static void uiSizeCallbackHandler(cimgui::ImGuiSizeCallbackData* data)
 
 CK_DLL_SFUN(ui_SetNextWindowSizeConstraints)
 {
+    if (!verifyInitialization()) return;
     t_CKVEC2 size_min              = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 size_max              = GET_NEXT_VEC2(ARGS);
     Chuck_Object* ui_size_callback = GET_NEXT_OBJECT(ARGS);
@@ -8805,12 +8900,14 @@ CK_DLL_SFUN(ui_SetNextWindowSizeConstraints)
 
 CK_DLL_SFUN(ui_SetNextWindowContentSize)
 {
+    if (!verifyInitialization()) return;
     t_CKVEC2 size = GET_NEXT_VEC2(ARGS);
     cimgui::ImGui_SetNextWindowContentSize({ (float)size.x, (float)size.y });
 }
 
 CK_DLL_SFUN(ui_SetNextWindowCollapsed)
 {
+    if (!verifyInitialization()) return;
     t_CKINT collapsed = GET_NEXT_INT(ARGS);
     t_CKINT cond      = GET_NEXT_INT(ARGS);
     cimgui::ImGui_SetNextWindowCollapsed(collapsed, cond);
@@ -8818,17 +8915,20 @@ CK_DLL_SFUN(ui_SetNextWindowCollapsed)
 
 CK_DLL_SFUN(ui_SetNextWindowFocus)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_SetNextWindowFocus();
 }
 
 CK_DLL_SFUN(ui_SetNextWindowScroll)
 {
+    if (!verifyInitialization()) return;
     t_CKVEC2 scroll = GET_NEXT_VEC2(ARGS);
     cimgui::ImGui_SetNextWindowScroll({ (float)scroll.x, (float)scroll.y });
 }
 
 CK_DLL_SFUN(ui_SetNextWindowBgAlpha)
 {
+    if (!verifyInitialization()) return;
     t_CKFLOAT alpha = GET_NEXT_FLOAT(ARGS);
     cimgui::ImGui_SetNextWindowBgAlpha(alpha);
 }
@@ -8846,23 +8946,27 @@ CK_DLL_SFUN(ui_SetNextWindowBgAlpha)
 
 CK_DLL_SFUN(ui_GetContentRegionAvail)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImVec2 avail = cimgui::ImGui_GetContentRegionAvail();
     RETURN->v_vec2       = { avail.x, avail.y };
 }
 
 CK_DLL_SFUN(ui_GetContentRegionMax)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImVec2 max = cimgui::ImGui_GetContentRegionMax();
     RETURN->v_vec2     = { max.x, max.y };
 }
 CK_DLL_SFUN(ui_GetWindowContentRegionMin)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImVec2 min = cimgui::ImGui_GetWindowContentRegionMin();
     RETURN->v_vec2     = { min.x, min.y };
 }
 
 CK_DLL_SFUN(ui_GetWindowContentRegionMax)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImVec2 max = cimgui::ImGui_GetWindowContentRegionMax();
     RETURN->v_vec2     = { max.x, max.y };
 }
@@ -8873,46 +8977,55 @@ CK_DLL_SFUN(ui_GetWindowContentRegionMax)
 
 CK_DLL_SFUN(ui_GetScrollX)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_float = cimgui::ImGui_GetScrollX();
 }
 
 CK_DLL_SFUN(ui_GetScrollY)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_float = cimgui::ImGui_GetScrollY();
 }
 
 CK_DLL_SFUN(ui_SetScrollX)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_SetScrollX((float)GET_NEXT_FLOAT(ARGS));
 }
 
 CK_DLL_SFUN(ui_SetScrollY)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_SetScrollY((float)GET_NEXT_FLOAT(ARGS));
 }
 
 CK_DLL_SFUN(ui_GetScrollMaxX)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_float = cimgui::ImGui_GetScrollMaxX();
 }
 
 CK_DLL_SFUN(ui_GetScrollMaxY)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_float = cimgui::ImGui_GetScrollMaxY();
 }
 
 CK_DLL_SFUN(ui_SetScrollHereX)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_SetScrollHereX((float)GET_NEXT_FLOAT(ARGS));
 }
 
 CK_DLL_SFUN(ui_SetScrollHereY)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_SetScrollHereY((float)GET_NEXT_FLOAT(ARGS));
 }
 
 CK_DLL_SFUN(ui_SetScrollFromPosX)
 {
+    if (!verifyInitialization()) return;
     float local_x        = (float)GET_NEXT_FLOAT(ARGS);
     float center_x_ratio = (float)GET_NEXT_FLOAT(ARGS);
     cimgui::ImGui_SetScrollFromPosX(local_x, center_x_ratio);
@@ -8920,6 +9033,7 @@ CK_DLL_SFUN(ui_SetScrollFromPosX)
 
 CK_DLL_SFUN(ui_SetScrollFromPosY)
 {
+    if (!verifyInitialization()) return;
     float local_y        = (float)GET_NEXT_FLOAT(ARGS);
     float center_y_ratio = (float)GET_NEXT_FLOAT(ARGS);
     cimgui::ImGui_SetScrollFromPosY(local_y, center_y_ratio);
@@ -8931,6 +9045,7 @@ CK_DLL_SFUN(ui_SetScrollFromPosY)
 
 CK_DLL_SFUN(ui_PushStyleColorImVec4)
 {
+    if (!verifyInitialization()) return;
     int idx        = GET_NEXT_INT(ARGS);
     t_CKVEC4 color = GET_NEXT_VEC4(ARGS);
     cimgui::ImGui_PushStyleColorImVec4(
@@ -8939,6 +9054,7 @@ CK_DLL_SFUN(ui_PushStyleColorImVec4)
 
 CK_DLL_SFUN(ui_PushStyleColorImVec3)
 {
+    if (!verifyInitialization()) return;
     int idx        = GET_NEXT_INT(ARGS);
     t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
     cimgui::ImGui_PushStyleColorImVec4(
@@ -8947,15 +9063,18 @@ CK_DLL_SFUN(ui_PushStyleColorImVec3)
 
 CK_DLL_SFUN(ui_PopStyleColor)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_PopStyleColor();
 }
 CK_DLL_SFUN(ui_PopStyleColorEx)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_PopStyleColorEx(GET_NEXT_INT(ARGS));
 }
 
 CK_DLL_SFUN(ui_PushStyleVar)
 {
+    if (!verifyInitialization()) return;
     int idx   = GET_NEXT_INT(ARGS);
     float val = GET_NEXT_FLOAT(ARGS);
     cimgui::ImGui_PushStyleVar(idx, val);
@@ -8963,6 +9082,7 @@ CK_DLL_SFUN(ui_PushStyleVar)
 
 CK_DLL_SFUN(ui_PushStyleVarImVec2)
 {
+    if (!verifyInitialization()) return;
     int idx      = GET_NEXT_INT(ARGS);
     t_CKVEC2 val = GET_NEXT_VEC2(ARGS);
     cimgui::ImGui_PushStyleVarImVec2(idx, { (float)val.x, (float)val.y });
@@ -8970,30 +9090,36 @@ CK_DLL_SFUN(ui_PushStyleVarImVec2)
 
 CK_DLL_SFUN(ui_PopStyleVar)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_PopStyleVar();
 }
 
 CK_DLL_SFUN(ui_PopStyleVarEx)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_PopStyleVarEx(GET_NEXT_INT(ARGS));
 }
 
 CK_DLL_SFUN(ui_PushTabStop)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_PushTabStop(GET_NEXT_INT(ARGS));
 }
 
 CK_DLL_SFUN(ui_PopTabStop)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_PopTabStop();
 }
 
 CK_DLL_SFUN(ui_PushButtonRepeat)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_PushButtonRepeat(GET_NEXT_INT(ARGS));
 }
 CK_DLL_SFUN(ui_PopButtonRepeat)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_PopButtonRepeat();
 }
 
@@ -9003,31 +9129,37 @@ CK_DLL_SFUN(ui_PopButtonRepeat)
 
 CK_DLL_SFUN(ui_PushItemWidth)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_PushItemWidth((float)GET_NEXT_FLOAT(ARGS));
 }
 
 CK_DLL_SFUN(ui_PopItemWidth)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_PopItemWidth();
 }
 
 CK_DLL_SFUN(ui_SetNextItemWidth)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_SetNextItemWidth((float)GET_NEXT_FLOAT(ARGS));
 }
 
 CK_DLL_SFUN(ui_CalcItemWidth)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_float = cimgui::ImGui_CalcItemWidth();
 }
 
 CK_DLL_SFUN(ui_PushTextWrapPos)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_PushTextWrapPos((float)GET_NEXT_FLOAT(ARGS));
 }
 
 CK_DLL_SFUN(ui_PopTextWrapPos)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_PopTextWrapPos();
 }
 
@@ -9036,22 +9168,26 @@ CK_DLL_SFUN(ui_PopTextWrapPos)
 // ============================================================================
 CK_DLL_SFUN(ui_GetFontSize)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_float = cimgui::ImGui_GetFontSize();
 }
 
 CK_DLL_SFUN(ui_GetFontTexUvWhitePixel)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImVec2 uv = cimgui::ImGui_GetFontTexUvWhitePixel();
     RETURN->v_vec2    = { uv.x, uv.y };
 }
 
 CK_DLL_SFUN(ui_GetColorU32)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_GetColorU32(GET_NEXT_INT(ARGS));
 }
 
 CK_DLL_SFUN(ui_GetColorU32Ex)
 {
+    if (!verifyInitialization()) return;
     t_CKINT idx     = GET_NEXT_INT(ARGS);
     t_CKFLOAT alpha = GET_NEXT_FLOAT(ARGS);
     RETURN->v_int   = cimgui::ImGui_GetColorU32Ex(idx, (float)alpha);
@@ -9059,6 +9195,7 @@ CK_DLL_SFUN(ui_GetColorU32Ex)
 
 CK_DLL_SFUN(ui_GetColorU32ImVec4)
 {
+    if (!verifyInitialization()) return;
     t_CKVEC4 col  = GET_NEXT_VEC4(ARGS);
     RETURN->v_int = cimgui::ImGui_GetColorU32ImVec4(
       { (float)col.x, (float)col.y, (float)col.z, (float)col.w });
@@ -9066,6 +9203,7 @@ CK_DLL_SFUN(ui_GetColorU32ImVec4)
 
 CK_DLL_SFUN(ui_GetStyleColorVec4)
 {
+    if (!verifyInitialization()) return;
     t_CKINT idx               = GET_NEXT_INT(ARGS);
     const cimgui::ImVec4* col = cimgui::ImGui_GetStyleColorVec4(idx);
     RETURN->v_vec4            = { col->x, col->y, col->z, col->w };
@@ -9076,50 +9214,59 @@ CK_DLL_SFUN(ui_GetStyleColorVec4)
 // ============================================================================
 CK_DLL_SFUN(ui_GetCursorScreenPos)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImVec2 pos = cimgui::ImGui_GetCursorScreenPos();
     RETURN->v_vec2     = { pos.x, pos.y };
 }
 
 CK_DLL_SFUN(ui_SetCursorScreenPos)
 {
+    if (!verifyInitialization()) return;
     t_CKVEC2 pos = GET_NEXT_VEC2(ARGS);
     cimgui::ImGui_SetCursorScreenPos({ (float)pos.x, (float)pos.y });
 }
 
 CK_DLL_SFUN(ui_GetCursorPos)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImVec2 pos = cimgui::ImGui_GetCursorPos();
     RETURN->v_vec2     = { pos.x, pos.y };
 }
 
 CK_DLL_SFUN(ui_GetCursorPosX)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_GetCursorPosX();
 }
 
 CK_DLL_SFUN(ui_GetCursorPosY)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_GetCursorPosY();
 }
 
 CK_DLL_SFUN(ui_SetCursorPos)
 {
+    if (!verifyInitialization()) return;
     t_CKVEC2 local_pos = GET_NEXT_VEC2(ARGS);
     cimgui::ImGui_SetCursorPos({ (float)local_pos.x, (float)local_pos.y });
 }
 
 CK_DLL_SFUN(ui_SetCursorPosX)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_SetCursorPosX((float)GET_NEXT_FLOAT(ARGS));
 }
 
 CK_DLL_SFUN(ui_SetCursorPosY)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_SetCursorPosY((float)GET_NEXT_FLOAT(ARGS));
 }
 
 CK_DLL_SFUN(ui_GetCursorStartPos)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImVec2 pos = cimgui::ImGui_GetCursorStartPos();
     RETURN->v_vec2     = { pos.x, pos.y };
 }
@@ -9129,16 +9276,19 @@ CK_DLL_SFUN(ui_GetCursorStartPos)
 // ============================================================================
 CK_DLL_SFUN(ui_Separator)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_Separator();
 }
 
 CK_DLL_SFUN(ui_SameLine)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_SameLine();
 }
 
 CK_DLL_SFUN(ui_SameLineEx)
 {
+    if (!verifyInitialization()) return;
     float offset_from_start_x = (float)GET_NEXT_FLOAT(ARGS);
     float spacing             = (float)GET_NEXT_FLOAT(ARGS);
     cimgui::ImGui_SameLineEx(offset_from_start_x, spacing);
@@ -9146,72 +9296,86 @@ CK_DLL_SFUN(ui_SameLineEx)
 
 CK_DLL_SFUN(ui_NewLine)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_NewLine();
 }
 
 CK_DLL_SFUN(ui_Spacing)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_Spacing();
 }
 
 CK_DLL_SFUN(ui_Dummy)
 {
+    if (!verifyInitialization()) return;
     t_CKVEC2 size = GET_NEXT_VEC2(ARGS);
     cimgui::ImGui_Dummy({ (float)size.x, (float)size.y });
 }
 
 CK_DLL_SFUN(ui_Indent)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_Indent();
 }
 
 CK_DLL_SFUN(ui_IndentEx)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_IndentEx((float)GET_NEXT_FLOAT(ARGS));
 }
 
 CK_DLL_SFUN(ui_Unindent)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_Unindent();
 }
 
 CK_DLL_SFUN(ui_UnindentEx)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_UnindentEx((float)GET_NEXT_FLOAT(ARGS));
 }
 
 CK_DLL_SFUN(ui_BeginGroup)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_BeginGroup();
 }
 
 CK_DLL_SFUN(ui_EndGroup)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_EndGroup();
 }
 
 CK_DLL_SFUN(ui_AlignTextToFramePadding)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_AlignTextToFramePadding();
 }
 
 CK_DLL_SFUN(ui_GetTextLineHeight)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_float = cimgui::ImGui_GetTextLineHeight();
 }
 
 CK_DLL_SFUN(ui_GetTextLineHeightWithSpacing)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_float = cimgui::ImGui_GetTextLineHeightWithSpacing();
 }
 
 CK_DLL_SFUN(ui_GetFrameHeight)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_float = cimgui::ImGui_GetFrameHeight();
 }
 
 CK_DLL_SFUN(ui_GetFrameHeightWithSpacing)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_float = cimgui::ImGui_GetFrameHeightWithSpacing();
 }
 
@@ -9221,12 +9385,14 @@ CK_DLL_SFUN(ui_GetFrameHeightWithSpacing)
 
 CK_DLL_SFUN(ui_PushID)
 {
+    if (!verifyInitialization()) return;
     Chuck_String* ck_string = GET_NEXT_STRING(ARGS);
     cimgui::ImGui_PushID(API->object->str(ck_string));
 }
 
 CK_DLL_SFUN(ui_PushIDStr)
 {
+    if (!verifyInitialization()) return;
     Chuck_String* ck_string_begin = GET_NEXT_STRING(ARGS);
     Chuck_String* ck_string_end   = GET_NEXT_STRING(ARGS);
     cimgui::ImGui_PushIDStr(API->object->str(ck_string_begin),
@@ -9235,22 +9401,26 @@ CK_DLL_SFUN(ui_PushIDStr)
 
 CK_DLL_SFUN(ui_PushIDInt)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_PushIDInt(GET_NEXT_INT(ARGS));
 }
 
 CK_DLL_SFUN(ui_PopID)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_PopID();
 }
 
 CK_DLL_SFUN(ui_GetID)
 {
+    if (!verifyInitialization()) return;
     Chuck_String* ck_string = GET_NEXT_STRING(ARGS);
     RETURN->v_int           = cimgui::ImGui_GetID(API->object->str(ck_string));
 }
 
 CK_DLL_SFUN(ui_GetIDStr)
 {
+    if (!verifyInitialization()) return;
     Chuck_String* ck_string_begin = GET_NEXT_STRING(ARGS);
     Chuck_String* ck_string_end   = GET_NEXT_STRING(ARGS);
     RETURN->v_int = cimgui::ImGui_GetIDStr(API->object->str(ck_string_begin),
@@ -9263,12 +9433,14 @@ CK_DLL_SFUN(ui_GetIDStr)
 
 CK_DLL_SFUN(ui_TextUnformatted)
 {
+    if (!verifyInitialization()) return;
     const char* text = API->object->str(GET_NEXT_STRING(ARGS));
     cimgui::ImGui_TextUnformatted(text);
 }
 
 CK_DLL_SFUN(ui_TextUnformattedEx)
 {
+    if (!verifyInitialization()) return;
     const char* text     = API->object->str(GET_NEXT_STRING(ARGS));
     const char* text_end = API->object->str(GET_NEXT_STRING(ARGS));
     cimgui::ImGui_TextUnformattedEx(text, text_end);
@@ -9276,6 +9448,7 @@ CK_DLL_SFUN(ui_TextUnformattedEx)
 
 CK_DLL_SFUN(ui_TextColoredUnformatted)
 {
+    if (!verifyInitialization()) return;
     t_CKVEC4 col     = GET_NEXT_VEC4(ARGS);
     const char* text = API->object->str(GET_NEXT_STRING(ARGS));
     cimgui::ImGui_TextColoredUnformatted(
@@ -9284,18 +9457,21 @@ CK_DLL_SFUN(ui_TextColoredUnformatted)
 
 CK_DLL_SFUN(ui_TextDisabledUnformatted)
 {
+    if (!verifyInitialization()) return;
     const char* text = API->object->str(GET_NEXT_STRING(ARGS));
     cimgui::ImGui_TextDisabledUnformatted(text);
 }
 
 CK_DLL_SFUN(ui_TextWrappedUnformatted)
 {
+    if (!verifyInitialization()) return;
     const char* text = API->object->str(GET_NEXT_STRING(ARGS));
     cimgui::ImGui_TextWrappedUnformatted(text);
 }
 
 CK_DLL_SFUN(ui_LabelTextUnformatted)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     const char* text  = API->object->str(GET_NEXT_STRING(ARGS));
     cimgui::ImGui_LabelTextUnformatted(label, text);
@@ -9303,12 +9479,14 @@ CK_DLL_SFUN(ui_LabelTextUnformatted)
 
 CK_DLL_SFUN(ui_BulletTextUnformatted)
 {
+    if (!verifyInitialization()) return;
     const char* text = API->object->str(GET_NEXT_STRING(ARGS));
     cimgui::ImGui_BulletTextUnformatted(text);
 }
 
 CK_DLL_SFUN(ui_SeparatorText)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     cimgui::ImGui_SeparatorText(label);
 }
@@ -9377,12 +9555,14 @@ CK_DLL_MFUN(ui_combo_callback)
 
 CK_DLL_SFUN(ui_Button)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     RETURN->v_int     = cimgui::ImGui_Button(label);
 }
 
 CK_DLL_SFUN(ui_ButtonEx)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     t_CKVEC2 size     = GET_NEXT_VEC2(ARGS);
     RETURN->v_int     = cimgui::ImGui_ButtonEx(label, { (float)size.x, (float)size.y });
@@ -9390,12 +9570,14 @@ CK_DLL_SFUN(ui_ButtonEx)
 
 CK_DLL_SFUN(ui_SmallButton)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     RETURN->v_int     = cimgui::ImGui_SmallButton(label);
 }
 
 CK_DLL_SFUN(ui_InvisibleButton)
 {
+    if (!verifyInitialization()) return;
     const char* str_id = API->object->str(GET_NEXT_STRING(ARGS));
     t_CKVEC2 size      = GET_NEXT_VEC2(ARGS);
     int flags          = GET_NEXT_INT(ARGS);
@@ -9405,6 +9587,7 @@ CK_DLL_SFUN(ui_InvisibleButton)
 
 CK_DLL_SFUN(ui_ArrowButton)
 {
+    if (!verifyInitialization()) return;
     const char* str_id = API->object->str(GET_NEXT_STRING(ARGS));
     int direction      = GET_NEXT_INT(ARGS);
     RETURN->v_int      = cimgui::ImGui_ArrowButton(str_id, direction);
@@ -9412,6 +9595,7 @@ CK_DLL_SFUN(ui_ArrowButton)
 
 CK_DLL_SFUN(ui_Checkbox)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
 
     bool* b = CHUGL_UI_VAL_PTR(bool, GET_NEXT_OBJECT(ARGS), ui_bool_val_offset);
@@ -9421,6 +9605,7 @@ CK_DLL_SFUN(ui_Checkbox)
 
 CK_DLL_SFUN(ui_CheckboxFlagsIntPtr)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
 
     Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
@@ -9433,6 +9618,7 @@ CK_DLL_SFUN(ui_CheckboxFlagsIntPtr)
 
 CK_DLL_SFUN(ui_RadioButton)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     int active        = GET_NEXT_INT(ARGS);
     RETURN->v_int     = cimgui::ImGui_RadioButton(label, active);
@@ -9440,6 +9626,7 @@ CK_DLL_SFUN(ui_RadioButton)
 
 CK_DLL_SFUN(ui_RadioButtonIntPtr)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
 
     Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
@@ -9452,6 +9639,7 @@ CK_DLL_SFUN(ui_RadioButtonIntPtr)
 
 CK_DLL_SFUN(ui_ProgressBar)
 {
+    if (!verifyInitialization()) return;
     float fraction      = GET_NEXT_FLOAT(ARGS);
     t_CKVEC2 size       = GET_NEXT_VEC2(ARGS);
     const char* overlay = API->object->str(GET_NEXT_STRING(ARGS)); // NULL = no overlay
@@ -9460,6 +9648,7 @@ CK_DLL_SFUN(ui_ProgressBar)
 
 CK_DLL_SFUN(ui_Bullet)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_Bullet();
 }
 
@@ -9468,6 +9657,7 @@ CK_DLL_SFUN(ui_Bullet)
 // ============================================================================
 CK_DLL_SFUN(ui_BeginCombo)
 {
+    if (!verifyInitialization()) return;
     const char* label         = API->object->str(GET_NEXT_STRING(ARGS));
     const char* preview_value = API->object->str(GET_NEXT_STRING(ARGS));
     int flags                 = GET_NEXT_INT(ARGS);
@@ -9476,11 +9666,13 @@ CK_DLL_SFUN(ui_BeginCombo)
 
 CK_DLL_SFUN(ui_EndCombo)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_EndCombo();
 }
 
 CK_DLL_SFUN(ui_ComboChar)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
 
     Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
@@ -9502,6 +9694,7 @@ CK_DLL_SFUN(ui_ComboChar)
 
 CK_DLL_SFUN(ui_ComboCharEx)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
 
     Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
@@ -9526,6 +9719,7 @@ CK_DLL_SFUN(ui_ComboCharEx)
 
 CK_DLL_SFUN(ui_Combo)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
 
     Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
@@ -9539,6 +9733,7 @@ CK_DLL_SFUN(ui_Combo)
 
 CK_DLL_SFUN(ui_ComboEx)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
 
     Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
@@ -9592,26 +9787,31 @@ CK_DLL_SFUN(ui_ComboEx)
 
 CK_DLL_SFUN(ui_DragFloat)
 {
+    if (!verifyInitialization()) return;
     UI_DRAG_IMPL(ImGui_DragFloat, float, ui_float_ptr_offset);
 }
 
 CK_DLL_SFUN(ui_DragFloatEx)
 {
+    if (!verifyInitialization()) return;
     UI_DRAG_EX_IMPL_FLOAT(ImGui_DragFloatEx, float, ui_float_ptr_offset);
 }
 
 CK_DLL_SFUN(ui_DragFloat2)
 {
+    if (!verifyInitialization()) return;
     UI_DRAG_IMPL(ImGui_DragFloat2, float, ui_float2_ptr_offset);
 }
 
 CK_DLL_SFUN(ui_DragFloat2Ex)
 {
+    if (!verifyInitialization()) return;
     UI_DRAG_EX_IMPL_FLOAT(ImGui_DragFloat2Ex, float, ui_float2_ptr_offset);
 }
 
 CK_DLL_SFUN(ui_DragFloat2Speed)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
     float* v          = (float*)OBJ_MEMBER_UINT(obj, ui_float2_ptr_offset);
@@ -9622,16 +9822,19 @@ CK_DLL_SFUN(ui_DragFloat2Speed)
 
 CK_DLL_SFUN(ui_DragFloat3)
 {
+    if (!verifyInitialization()) return;
     UI_DRAG_IMPL(ImGui_DragFloat3, float, ui_float3_ptr_offset);
 }
 
 CK_DLL_SFUN(ui_DragFloat3Ex)
 {
+    if (!verifyInitialization()) return;
     UI_DRAG_EX_IMPL_FLOAT(ImGui_DragFloat3Ex, float, ui_float3_ptr_offset);
 }
 
 CK_DLL_SFUN(ui_DragFloat3Speed)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
     float* v          = (float*)OBJ_MEMBER_UINT(obj, ui_float3_ptr_offset);
@@ -9642,16 +9845,19 @@ CK_DLL_SFUN(ui_DragFloat3Speed)
 
 CK_DLL_SFUN(ui_DragFloat4)
 {
+    if (!verifyInitialization()) return;
     UI_DRAG_IMPL(ImGui_DragFloat4, float, ui_float4_ptr_offset);
 }
 
 CK_DLL_SFUN(ui_DragFloat4Ex)
 {
+    if (!verifyInitialization()) return;
     UI_DRAG_EX_IMPL_FLOAT(ImGui_DragFloat4Ex, float, ui_float4_ptr_offset);
 }
 
 CK_DLL_SFUN(ui_DragFloatRange2)
 {
+    if (!verifyInitialization()) return;
     const char* label     = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_Object* obj_min = GET_NEXT_OBJECT(ARGS);
     float* v_current_min  = (float*)OBJ_MEMBER_UINT(obj_min, ui_float2_ptr_offset);
@@ -9663,6 +9869,7 @@ CK_DLL_SFUN(ui_DragFloatRange2)
 
 CK_DLL_SFUN(ui_DragFloatRange2Ex)
 {
+    if (!verifyInitialization()) return;
     const char* label     = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_Object* obj_min = GET_NEXT_OBJECT(ARGS);
     float* v_current_min  = (float*)OBJ_MEMBER_UINT(obj_min, ui_float2_ptr_offset);
@@ -9682,46 +9889,55 @@ CK_DLL_SFUN(ui_DragFloatRange2Ex)
 
 CK_DLL_SFUN(ui_DragInt)
 {
+    if (!verifyInitialization()) return;
     UI_DRAG_IMPL(ImGui_DragInt, int, ui_int_ptr_offset);
 }
 
 CK_DLL_SFUN(ui_DragIntEx)
 {
+    if (!verifyInitialization()) return;
     UI_DRAG_EX_IMPL_INT(ImGui_DragIntEx, int, ui_int_ptr_offset);
 }
 
 CK_DLL_SFUN(ui_DragInt2)
 {
+    if (!verifyInitialization()) return;
     UI_DRAG_IMPL(ImGui_DragInt2, int, ui_int2_ptr_offset);
 }
 
 CK_DLL_SFUN(ui_DragInt2Ex)
 {
+    if (!verifyInitialization()) return;
     UI_DRAG_EX_IMPL_INT(ImGui_DragInt2Ex, int, ui_int2_ptr_offset);
 }
 
 CK_DLL_SFUN(ui_DragInt3)
 {
+    if (!verifyInitialization()) return;
     UI_DRAG_IMPL(ImGui_DragInt3, int, ui_int3_ptr_offset);
 }
 
 CK_DLL_SFUN(ui_DragInt3Ex)
 {
+    if (!verifyInitialization()) return;
     UI_DRAG_EX_IMPL_INT(ImGui_DragInt3Ex, int, ui_int3_ptr_offset);
 }
 
 CK_DLL_SFUN(ui_DragInt4)
 {
+    if (!verifyInitialization()) return;
     UI_DRAG_IMPL(ImGui_DragInt4, int, ui_int4_ptr_offset);
 }
 
 CK_DLL_SFUN(ui_DragInt4Ex)
 {
+    if (!verifyInitialization()) return;
     UI_DRAG_EX_IMPL_INT(ImGui_DragInt4Ex, int, ui_int4_ptr_offset);
 }
 
 CK_DLL_SFUN(ui_DragIntRange2)
 {
+    if (!verifyInitialization()) return;
     const char* label     = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_Object* obj_min = GET_NEXT_OBJECT(ARGS);
     int* v_current_min    = (int*)OBJ_MEMBER_UINT(obj_min, ui_int2_ptr_offset);
@@ -9733,6 +9949,7 @@ CK_DLL_SFUN(ui_DragIntRange2)
 
 CK_DLL_SFUN(ui_DragIntRange2Ex)
 {
+    if (!verifyInitialization()) return;
     const char* label     = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_Object* obj_min = GET_NEXT_OBJECT(ARGS);
     int* v_current_min    = (int*)OBJ_MEMBER_UINT(obj_min, ui_int2_ptr_offset);
@@ -9752,6 +9969,7 @@ CK_DLL_SFUN(ui_DragIntRange2Ex)
 
 CK_DLL_SFUN(ui_DragScalarN_CKINT)
 {
+    if (!verifyInitialization()) return;
     const char* label        = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_ArrayInt* ck_array = (Chuck_ArrayInt*)GET_NEXT_OBJECT(ARGS);
 
@@ -9776,6 +9994,7 @@ CK_DLL_SFUN(ui_DragScalarN_CKINT)
 
 CK_DLL_SFUN(ui_DragScalarNEx_CKINT)
 {
+    if (!verifyInitialization()) return;
     const char* label        = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_ArrayInt* ck_array = (Chuck_ArrayInt*)GET_NEXT_OBJECT(ARGS);
 
@@ -9806,6 +10025,7 @@ CK_DLL_SFUN(ui_DragScalarNEx_CKINT)
 
 CK_DLL_SFUN(ui_DragScalarN_CKFLOAT)
 {
+    if (!verifyInitialization()) return;
     const char* label          = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_ArrayFloat* ck_array = (Chuck_ArrayFloat*)GET_NEXT_OBJECT(ARGS);
 
@@ -9830,6 +10050,7 @@ CK_DLL_SFUN(ui_DragScalarN_CKFLOAT)
 
 CK_DLL_SFUN(ui_DragScalarNEx_CKFLOAT)
 {
+    if (!verifyInitialization()) return;
     const char* label          = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_ArrayFloat* ck_array = (Chuck_ArrayFloat*)GET_NEXT_OBJECT(ARGS);
 
@@ -9865,6 +10086,7 @@ CK_DLL_SFUN(ui_DragScalarNEx_CKFLOAT)
 
 CK_DLL_SFUN(ui_SliderFloat)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
 
     Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
@@ -9878,6 +10100,7 @@ CK_DLL_SFUN(ui_SliderFloat)
 
 CK_DLL_SFUN(ui_SliderFloatEx)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
 
     Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
@@ -9893,6 +10116,7 @@ CK_DLL_SFUN(ui_SliderFloatEx)
 
 CK_DLL_SFUN(ui_SliderAngle)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
 
     Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
@@ -9903,6 +10127,7 @@ CK_DLL_SFUN(ui_SliderAngle)
 
 CK_DLL_SFUN(ui_SliderAngleEx)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
 
     Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
@@ -9921,6 +10146,7 @@ CK_DLL_SFUN(ui_SliderAngleEx)
 
 CK_DLL_SFUN(ui_SliderInt)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
 
     Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
@@ -9934,6 +10160,7 @@ CK_DLL_SFUN(ui_SliderInt)
 
 CK_DLL_SFUN(ui_SliderIntEx)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
 
     Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
@@ -9949,6 +10176,7 @@ CK_DLL_SFUN(ui_SliderIntEx)
 
 CK_DLL_SFUN(ui_SliderScalarN_CKINT)
 {
+    if (!verifyInitialization()) return;
     const char* label        = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_ArrayInt* ck_array = (Chuck_ArrayInt*)GET_NEXT_OBJECT(ARGS);
 
@@ -9976,6 +10204,7 @@ CK_DLL_SFUN(ui_SliderScalarN_CKINT)
 
 CK_DLL_SFUN(ui_SliderScalarNEx_CKINT)
 {
+    if (!verifyInitialization()) return;
     const char* label        = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_ArrayInt* ck_array = (Chuck_ArrayInt*)GET_NEXT_OBJECT(ARGS);
 
@@ -10005,6 +10234,7 @@ CK_DLL_SFUN(ui_SliderScalarNEx_CKINT)
 
 CK_DLL_SFUN(ui_SliderScalarN_CKFLOAT)
 {
+    if (!verifyInitialization()) return;
     const char* label          = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_ArrayFloat* ck_array = (Chuck_ArrayFloat*)GET_NEXT_OBJECT(ARGS);
 
@@ -10032,6 +10262,7 @@ CK_DLL_SFUN(ui_SliderScalarN_CKFLOAT)
 
 CK_DLL_SFUN(ui_SliderScalarNEx_CKFLOAT)
 {
+    if (!verifyInitialization()) return;
     const char* label          = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_ArrayFloat* ck_array = (Chuck_ArrayFloat*)GET_NEXT_OBJECT(ARGS);
 
@@ -10061,6 +10292,7 @@ CK_DLL_SFUN(ui_SliderScalarNEx_CKFLOAT)
 
 CK_DLL_SFUN(ui_VSliderFloat)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     t_CKVEC2 size     = GET_NEXT_VEC2(ARGS);
 
@@ -10076,6 +10308,7 @@ CK_DLL_SFUN(ui_VSliderFloat)
 
 CK_DLL_SFUN(ui_VSliderFloatEx)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     t_CKVEC2 size     = GET_NEXT_VEC2(ARGS);
 
@@ -10093,6 +10326,7 @@ CK_DLL_SFUN(ui_VSliderFloatEx)
 
 CK_DLL_SFUN(ui_VSliderInt)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     t_CKVEC2 size     = GET_NEXT_VEC2(ARGS);
 
@@ -10108,6 +10342,7 @@ CK_DLL_SFUN(ui_VSliderInt)
 
 CK_DLL_SFUN(ui_VSliderIntEx)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     t_CKVEC2 size     = GET_NEXT_VEC2(ARGS);
 
@@ -10144,6 +10379,7 @@ static char* UI_String_ResizeBuffer(Chuck_Object* obj, size_t new_cap, CK_DL_API
 
 CK_DLL_SFUN(ui_InputText)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
 
     Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
@@ -10155,6 +10391,7 @@ CK_DLL_SFUN(ui_InputText)
 
 CK_DLL_SFUN(ui_InputTextEx)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
 
     Chuck_Object* obj    = GET_NEXT_OBJECT(ARGS);
@@ -10170,6 +10407,7 @@ CK_DLL_SFUN(ui_InputTextEx)
 
 CK_DLL_SFUN(ui_InputTextMultiline)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
 
@@ -10180,6 +10418,7 @@ CK_DLL_SFUN(ui_InputTextMultiline)
 }
 CK_DLL_SFUN(ui_InputTextMultilineEx)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
 
     Chuck_Object* obj    = GET_NEXT_OBJECT(ARGS);
@@ -10194,6 +10433,7 @@ CK_DLL_SFUN(ui_InputTextMultilineEx)
 }
 CK_DLL_SFUN(ui_InputTextWithHint)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     const char* hint  = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
@@ -10204,6 +10444,7 @@ CK_DLL_SFUN(ui_InputTextWithHint)
 }
 CK_DLL_SFUN(ui_InputTextWithHintEx)
 {
+    if (!verifyInitialization()) return;
     const char* label    = API->object->str(GET_NEXT_STRING(ARGS));
     const char* hint     = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_Object* obj    = GET_NEXT_OBJECT(ARGS);
@@ -10218,6 +10459,7 @@ CK_DLL_SFUN(ui_InputTextWithHintEx)
 
 CK_DLL_SFUN(ui_InputFloat)
 {
+    if (!verifyInitialization()) return;
     const char* label      = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_Object* ui_float = GET_NEXT_OBJECT(ARGS);
     float* v               = (float*)OBJ_MEMBER_UINT(ui_float, ui_float_ptr_offset);
@@ -10227,6 +10469,7 @@ CK_DLL_SFUN(ui_InputFloat)
 
 CK_DLL_SFUN(ui_InputFloatEx)
 {
+    if (!verifyInitialization()) return;
     const char* label      = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_Object* ui_float = GET_NEXT_OBJECT(ARGS);
     float* v               = (float*)OBJ_MEMBER_UINT(ui_float, ui_float_ptr_offset);
@@ -10241,6 +10484,7 @@ CK_DLL_SFUN(ui_InputFloatEx)
 
 CK_DLL_SFUN(ui_InputInt)
 {
+    if (!verifyInitialization()) return;
     const char* label    = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_Object* ui_int = GET_NEXT_OBJECT(ARGS);
     int* v               = (int*)OBJ_MEMBER_UINT(ui_int, ui_int_ptr_offset);
@@ -10250,6 +10494,7 @@ CK_DLL_SFUN(ui_InputInt)
 
 CK_DLL_SFUN(ui_InputIntEx)
 {
+    if (!verifyInitialization()) return;
     const char* label    = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_Object* ui_int = GET_NEXT_OBJECT(ARGS);
     int* v               = (int*)OBJ_MEMBER_UINT(ui_int, ui_int_ptr_offset);
@@ -10261,6 +10506,7 @@ CK_DLL_SFUN(ui_InputIntEx)
 }
 CK_DLL_SFUN(ui_InputScalarN_CKINT)
 {
+    if (!verifyInitialization()) return;
     const char* label        = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_ArrayInt* ck_array = (Chuck_ArrayInt*)GET_NEXT_OBJECT(ARGS);
     int num_components       = API->object->array_int_size(ck_array);
@@ -10282,6 +10528,7 @@ CK_DLL_SFUN(ui_InputScalarN_CKINT)
 
 CK_DLL_SFUN(ui_InputScalarNEx_CKINT)
 {
+    if (!verifyInitialization()) return;
     const char* label        = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_ArrayInt* ck_array = (Chuck_ArrayInt*)GET_NEXT_OBJECT(ARGS);
     int num_components       = API->object->array_int_size(ck_array);
@@ -10309,6 +10556,7 @@ CK_DLL_SFUN(ui_InputScalarNEx_CKINT)
 
 CK_DLL_SFUN(ui_InputScalarN_CKFLOAT)
 {
+    if (!verifyInitialization()) return;
     const char* label          = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_ArrayFloat* ck_array = (Chuck_ArrayFloat*)GET_NEXT_OBJECT(ARGS);
     int num_components         = API->object->array_float_size(ck_array);
@@ -10330,6 +10578,7 @@ CK_DLL_SFUN(ui_InputScalarN_CKFLOAT)
 
 CK_DLL_SFUN(ui_InputScalarNEx_CKFLOAT)
 {
+    if (!verifyInitialization()) return;
     const char* label          = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_ArrayFloat* ck_array = (Chuck_ArrayFloat*)GET_NEXT_OBJECT(ARGS);
     int num_components         = API->object->array_float_size(ck_array);
@@ -10361,6 +10610,7 @@ CK_DLL_SFUN(ui_InputScalarNEx_CKFLOAT)
 
 CK_DLL_SFUN(ui_ColorEdit3)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
     float* col        = (float*)OBJ_MEMBER_UINT(obj, ui_float3_ptr_offset);
@@ -10371,6 +10621,7 @@ CK_DLL_SFUN(ui_ColorEdit3)
 
 CK_DLL_SFUN(ui_ColorEdit4)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
     float* col        = (float*)OBJ_MEMBER_UINT(obj, ui_float4_ptr_offset);
@@ -10381,6 +10632,7 @@ CK_DLL_SFUN(ui_ColorEdit4)
 
 CK_DLL_SFUN(ui_ColorPicker3)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
     float* col        = (float*)OBJ_MEMBER_UINT(obj, ui_float3_ptr_offset);
@@ -10391,6 +10643,7 @@ CK_DLL_SFUN(ui_ColorPicker3)
 
 CK_DLL_SFUN(ui_ColorPicker4)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
     float* col        = (float*)OBJ_MEMBER_UINT(obj, ui_float4_ptr_offset);
@@ -10405,6 +10658,7 @@ CK_DLL_SFUN(ui_ColorPicker4)
 
 CK_DLL_SFUN(ui_ColorPicker4_no_ref_col)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
     float* col        = (float*)OBJ_MEMBER_UINT(obj, ui_float4_ptr_offset);
@@ -10415,6 +10669,7 @@ CK_DLL_SFUN(ui_ColorPicker4_no_ref_col)
 
 CK_DLL_SFUN(ui_ColorButton)
 {
+    if (!verifyInitialization()) return;
     const char* desc = API->object->str(GET_NEXT_STRING(ARGS));
     t_CKVEC4 color   = GET_NEXT_VEC4(ARGS);
     int flags        = GET_NEXT_INT(ARGS);
@@ -10425,6 +10680,7 @@ CK_DLL_SFUN(ui_ColorButton)
 
 CK_DLL_SFUN(ui_ColorButtonEx)
 {
+    if (!verifyInitialization()) return;
     const char* desc = API->object->str(GET_NEXT_STRING(ARGS));
     t_CKVEC4 color   = GET_NEXT_VEC4(ARGS);
     int flags        = GET_NEXT_INT(ARGS);
@@ -10437,6 +10693,7 @@ CK_DLL_SFUN(ui_ColorButtonEx)
 
 CK_DLL_SFUN(ui_SetColorEditOptions)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_SetColorEditOptions(GET_NEXT_INT(ARGS));
 }
 
@@ -10446,12 +10703,14 @@ CK_DLL_SFUN(ui_SetColorEditOptions)
 
 CK_DLL_SFUN(ui_TreeNode)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     RETURN->v_int     = cimgui::ImGui_TreeNode(label);
 }
 
 CK_DLL_SFUN(ui_TreeNodeStrUnformatted)
 {
+    if (!verifyInitialization()) return;
     const char* str_id = API->object->str(GET_NEXT_STRING(ARGS));
     const char* text   = API->object->str(GET_NEXT_STRING(ARGS));
     RETURN->v_int      = cimgui::ImGui_TreeNodeStrUnformatted(str_id, text);
@@ -10459,6 +10718,7 @@ CK_DLL_SFUN(ui_TreeNodeStrUnformatted)
 
 CK_DLL_SFUN(ui_TreeNodeEx)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     int flags         = GET_NEXT_INT(ARGS);
     RETURN->v_int     = cimgui::ImGui_TreeNodeEx(label, flags);
@@ -10466,6 +10726,7 @@ CK_DLL_SFUN(ui_TreeNodeEx)
 
 CK_DLL_SFUN(ui_TreeNodeExStrUnformatted)
 {
+    if (!verifyInitialization()) return;
     const char* str_id = API->object->str(GET_NEXT_STRING(ARGS));
     int flags          = GET_NEXT_INT(ARGS);
     const char* text   = API->object->str(GET_NEXT_STRING(ARGS));
@@ -10474,22 +10735,26 @@ CK_DLL_SFUN(ui_TreeNodeExStrUnformatted)
 
 CK_DLL_SFUN(ui_TreePush)
 {
+    if (!verifyInitialization()) return;
     const char* str_id = API->object->str(GET_NEXT_STRING(ARGS));
     cimgui::ImGui_TreePush(str_id);
 }
 
 CK_DLL_SFUN(ui_TreePop)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_TreePop();
 }
 
 CK_DLL_SFUN(ui_GetTreeNodeToLabelSpacing)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_float = cimgui::ImGui_GetTreeNodeToLabelSpacing();
 }
 
 CK_DLL_SFUN(ui_CollapsingHeader)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     int flags         = GET_NEXT_INT(ARGS);
     RETURN->v_int     = cimgui::ImGui_CollapsingHeader(label, flags);
@@ -10497,6 +10762,7 @@ CK_DLL_SFUN(ui_CollapsingHeader)
 
 CK_DLL_SFUN(ui_CollapsingHeaderBoolPtr)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     bool* v = CHUGL_UI_VAL_PTR(bool, GET_NEXT_OBJECT(ARGS), ui_bool_val_offset);
 
@@ -10506,6 +10772,7 @@ CK_DLL_SFUN(ui_CollapsingHeaderBoolPtr)
 
 CK_DLL_SFUN(ui_SetNextItemOpen)
 {
+    if (!verifyInitialization()) return;
     bool is_open = GET_NEXT_INT(ARGS);
     int cond     = GET_NEXT_INT(ARGS);
     cimgui::ImGui_SetNextItemOpen(is_open, cond);
@@ -10517,12 +10784,14 @@ CK_DLL_SFUN(ui_SetNextItemOpen)
 
 CK_DLL_SFUN(ui_Selectable)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     RETURN->v_int     = cimgui::ImGui_Selectable(label);
 }
 
 CK_DLL_SFUN(ui_SelectableEx)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     bool selected     = GET_NEXT_INT(ARGS);
     int flags         = GET_NEXT_INT(ARGS);
@@ -10534,6 +10803,7 @@ CK_DLL_SFUN(ui_SelectableEx)
 
 CK_DLL_SFUN(ui_SelectableBoolPtr)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
 
     bool* v = CHUGL_UI_VAL_PTR(bool, GET_NEXT_OBJECT(ARGS), ui_bool_val_offset);
@@ -10545,6 +10815,7 @@ CK_DLL_SFUN(ui_SelectableBoolPtr)
 
 CK_DLL_SFUN(ui_SelectableBoolPtrEx)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
 
     bool* v = CHUGL_UI_VAL_PTR(bool, GET_NEXT_OBJECT(ARGS), ui_bool_val_offset);
@@ -10562,6 +10833,7 @@ CK_DLL_SFUN(ui_SelectableBoolPtrEx)
 
 CK_DLL_SFUN(ui_BeginListBox)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     t_CKVEC2 size     = GET_NEXT_VEC2(ARGS);
     RETURN->v_int = cimgui::ImGui_BeginListBox(label, { (float)size.x, (float)size.y });
@@ -10569,11 +10841,13 @@ CK_DLL_SFUN(ui_BeginListBox)
 
 CK_DLL_SFUN(ui_EndListBox)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_EndListBox();
 }
 
 CK_DLL_SFUN(ui_ListBox)
 {
+    if (!verifyInitialization()) return;
     const char* label        = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_Object* ui_int_obj = GET_NEXT_OBJECT(ARGS);
     int* current_item        = (int*)OBJ_MEMBER_UINT(ui_int_obj, ui_int_ptr_offset);
@@ -10596,6 +10870,7 @@ CK_DLL_SFUN(ui_ListBox)
 
 CK_DLL_SFUN(ui_ListBox_default)
 {
+    if (!verifyInitialization()) return;
     const char* label        = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_Object* ui_int_obj = GET_NEXT_OBJECT(ARGS);
     int* current_item        = (int*)OBJ_MEMBER_UINT(ui_int_obj, ui_int_ptr_offset);
@@ -10621,6 +10896,7 @@ CK_DLL_SFUN(ui_ListBox_default)
 
 CK_DLL_SFUN(ui_PlotLines)
 {
+    if (!verifyInitialization()) return;
     const char* label        = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_ArrayFloat* values = (Chuck_ArrayFloat*)GET_NEXT_OBJECT(ARGS);
 
@@ -10636,6 +10912,7 @@ CK_DLL_SFUN(ui_PlotLines)
 
 CK_DLL_SFUN(ui_PlotLinesEx)
 {
+    if (!verifyInitialization()) return;
     const char* label        = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_ArrayFloat* values = (Chuck_ArrayFloat*)GET_NEXT_OBJECT(ARGS);
     int values_offset        = GET_NEXT_INT(ARGS);
@@ -10658,6 +10935,7 @@ CK_DLL_SFUN(ui_PlotLinesEx)
 
 CK_DLL_SFUN(ui_PlotHistogram)
 {
+    if (!verifyInitialization()) return;
     const char* label        = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_ArrayFloat* values = (Chuck_ArrayFloat*)GET_NEXT_OBJECT(ARGS);
 
@@ -10673,6 +10951,7 @@ CK_DLL_SFUN(ui_PlotHistogram)
 
 CK_DLL_SFUN(ui_PlotHistogramEx)
 {
+    if (!verifyInitialization()) return;
     const char* label        = API->object->str(GET_NEXT_STRING(ARGS));
     Chuck_ArrayFloat* values = (Chuck_ArrayFloat*)GET_NEXT_OBJECT(ARGS);
     int values_offset        = GET_NEXT_INT(ARGS);
@@ -10699,32 +10978,38 @@ CK_DLL_SFUN(ui_PlotHistogramEx)
 
 CK_DLL_SFUN(ui_BeginMenuBar)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_BeginMenuBar();
 }
 
 CK_DLL_SFUN(ui_EndMenuBar)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_EndMenuBar();
 }
 
 CK_DLL_SFUN(ui_BeginMainMenuBar)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_BeginMainMenuBar();
 }
 
 CK_DLL_SFUN(ui_EndMainMenuBar)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_EndMainMenuBar();
 }
 
 CK_DLL_SFUN(ui_BeginMenu)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     RETURN->v_int     = cimgui::ImGui_BeginMenu(label);
 }
 
 CK_DLL_SFUN(ui_BeginMenuEx)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     bool enabled      = GET_NEXT_INT(ARGS);
     RETURN->v_int     = cimgui::ImGui_BeginMenuEx(label, enabled);
@@ -10732,17 +11017,20 @@ CK_DLL_SFUN(ui_BeginMenuEx)
 
 CK_DLL_SFUN(ui_EndMenu)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_EndMenu();
 }
 
 CK_DLL_SFUN(ui_MenuItem)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     RETURN->v_int     = cimgui::ImGui_MenuItem(label);
 }
 
 CK_DLL_SFUN(ui_MenuItemBoolPtr)
 {
+    if (!verifyInitialization()) return;
     const char* label    = API->object->str(GET_NEXT_STRING(ARGS));
     const char* shortcut = API->object->str(GET_NEXT_STRING(ARGS));
 
@@ -10758,21 +11046,25 @@ CK_DLL_SFUN(ui_MenuItemBoolPtr)
 
 CK_DLL_SFUN(ui_BeginTooltip)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_BeginTooltip();
 }
 CK_DLL_SFUN(ui_EndTooltip)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_EndTooltip();
 }
 
 CK_DLL_SFUN(ui_SetTooltipUnformatted)
 {
+    if (!verifyInitialization()) return;
     const char* text = API->object->str(GET_NEXT_STRING(ARGS));
     cimgui::ImGui_SetTooltipUnformatted(text);
 }
 
 CK_DLL_SFUN(ui_SetItemTooltipUnformatted)
 {
+    if (!verifyInitialization()) return;
     const char* text = API->object->str(GET_NEXT_STRING(ARGS));
     cimgui::ImGui_SetItemTooltipUnformatted(text);
 }
@@ -10783,6 +11075,7 @@ CK_DLL_SFUN(ui_SetItemTooltipUnformatted)
 
 CK_DLL_SFUN(ui_BeginPopup)
 {
+    if (!verifyInitialization()) return;
     const char* str_id = API->object->str(GET_NEXT_STRING(ARGS));
     int flags          = GET_NEXT_INT(ARGS);
     RETURN->v_int      = cimgui::ImGui_BeginPopup(str_id, flags);
@@ -10790,6 +11083,7 @@ CK_DLL_SFUN(ui_BeginPopup)
 
 CK_DLL_SFUN(ui_BeginPopupModal)
 {
+    if (!verifyInitialization()) return;
     const char* name = API->object->str(GET_NEXT_STRING(ARGS));
 
     bool* p_open = CHUGL_UI_VAL_PTR(bool, GET_NEXT_OBJECT(ARGS), ui_bool_val_offset);
@@ -10801,11 +11095,13 @@ CK_DLL_SFUN(ui_BeginPopupModal)
 
 CK_DLL_SFUN(ui_EndPopup)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_EndPopup();
 }
 
 CK_DLL_SFUN(ui_OpenPopup)
 {
+    if (!verifyInitialization()) return;
     const char* str_id = API->object->str(GET_NEXT_STRING(ARGS));
     int flags          = GET_NEXT_INT(ARGS);
     cimgui::ImGui_OpenPopup(str_id, flags);
@@ -10813,6 +11109,7 @@ CK_DLL_SFUN(ui_OpenPopup)
 
 CK_DLL_SFUN(ui_OpenPopupOnItemClick)
 {
+    if (!verifyInitialization()) return;
     const char* str_id = API->object->str(GET_NEXT_STRING(ARGS));
     int popup_flags    = GET_NEXT_INT(ARGS);
     cimgui::ImGui_OpenPopupOnItemClick(str_id, popup_flags);
@@ -10820,16 +11117,19 @@ CK_DLL_SFUN(ui_OpenPopupOnItemClick)
 
 CK_DLL_SFUN(ui_CloseCurrentPopup)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_CloseCurrentPopup();
 }
 
 CK_DLL_SFUN(ui_BeginPopupContextItem)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_BeginPopupContextItem();
 }
 
 CK_DLL_SFUN(ui_BeginPopupContextItemEx)
 {
+    if (!verifyInitialization()) return;
     const char* str_id = API->object->str(GET_NEXT_STRING(ARGS));
     int popup_flags    = GET_NEXT_INT(ARGS);
     RETURN->v_int      = cimgui::ImGui_BeginPopupContextItemEx(str_id, popup_flags);
@@ -10837,11 +11137,13 @@ CK_DLL_SFUN(ui_BeginPopupContextItemEx)
 
 CK_DLL_SFUN(ui_BeginPopupContextWindow)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_BeginPopupContextWindow();
 }
 
 CK_DLL_SFUN(ui_BeginPopupContextWindowEx)
 {
+    if (!verifyInitialization()) return;
     const char* str_id = API->object->str(GET_NEXT_STRING(ARGS));
     int popup_flags    = GET_NEXT_INT(ARGS);
     RETURN->v_int      = cimgui::ImGui_BeginPopupContextWindowEx(str_id, popup_flags);
@@ -10849,11 +11151,13 @@ CK_DLL_SFUN(ui_BeginPopupContextWindowEx)
 
 CK_DLL_SFUN(ui_BeginPopupContextVoid)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_BeginPopupContextVoid();
 }
 
 CK_DLL_SFUN(ui_BeginPopupContextVoidEx)
 {
+    if (!verifyInitialization()) return;
     const char* str_id = API->object->str(GET_NEXT_STRING(ARGS));
     int popup_flags    = GET_NEXT_INT(ARGS);
     RETURN->v_int      = cimgui::ImGui_BeginPopupContextVoidEx(str_id, popup_flags);
@@ -10861,6 +11165,7 @@ CK_DLL_SFUN(ui_BeginPopupContextVoidEx)
 
 CK_DLL_SFUN(ui_IsPopupOpen)
 {
+    if (!verifyInitialization()) return;
     const char* str_id = API->object->str(GET_NEXT_STRING(ARGS));
     int flags          = GET_NEXT_INT(ARGS);
     RETURN->v_int      = cimgui::ImGui_IsPopupOpen(str_id, flags);
@@ -10872,6 +11177,7 @@ CK_DLL_SFUN(ui_IsPopupOpen)
 
 CK_DLL_SFUN(ui_BeginTable)
 {
+    if (!verifyInitialization()) return;
     const char* str_id = API->object->str(GET_NEXT_STRING(ARGS));
     int column         = GET_NEXT_INT(ARGS);
     int flags          = GET_NEXT_INT(ARGS);
@@ -10881,6 +11187,7 @@ CK_DLL_SFUN(ui_BeginTable)
 
 CK_DLL_SFUN(ui_BeginTableEx)
 {
+    if (!verifyInitialization()) return;
     const char* str_id  = API->object->str(GET_NEXT_STRING(ARGS));
     int column          = GET_NEXT_INT(ARGS);
     int flags           = GET_NEXT_INT(ARGS);
@@ -10893,16 +11200,19 @@ CK_DLL_SFUN(ui_BeginTableEx)
 
 CK_DLL_SFUN(ui_EndTable)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_EndTable();
 }
 
 CK_DLL_SFUN(ui_TableNextRow)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_TableNextRow();
 }
 
 CK_DLL_SFUN(ui_TableNextRowEx)
 {
+    if (!verifyInitialization()) return;
     int row_flags        = GET_NEXT_INT(ARGS);
     float min_row_height = GET_NEXT_FLOAT(ARGS);
     cimgui::ImGui_TableNextRowEx(row_flags, min_row_height);
@@ -10910,17 +11220,20 @@ CK_DLL_SFUN(ui_TableNextRowEx)
 
 CK_DLL_SFUN(ui_TableNextColumn)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_TableNextColumn();
 }
 
 CK_DLL_SFUN(ui_TableSetColumnIndex)
 {
+    if (!verifyInitialization()) return;
     int column_n  = GET_NEXT_INT(ARGS);
     RETURN->v_int = cimgui::ImGui_TableSetColumnIndex(column_n);
 }
 
 CK_DLL_SFUN(ui_TableSetupColumn)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     int flags         = GET_NEXT_INT(ARGS);
 
@@ -10929,6 +11242,7 @@ CK_DLL_SFUN(ui_TableSetupColumn)
 
 CK_DLL_SFUN(ui_TableSetupColumnEx)
 {
+    if (!verifyInitialization()) return;
     const char* label          = API->object->str(GET_NEXT_STRING(ARGS));
     int flags                  = GET_NEXT_INT(ARGS);
     float init_width_or_weight = GET_NEXT_FLOAT(ARGS);
@@ -10939,6 +11253,7 @@ CK_DLL_SFUN(ui_TableSetupColumnEx)
 
 CK_DLL_SFUN(ui_TableSetupScrollFreeze)
 {
+    if (!verifyInitialization()) return;
     int cols = GET_NEXT_INT(ARGS);
     int rows = GET_NEXT_INT(ARGS);
     cimgui::ImGui_TableSetupScrollFreeze(cols, rows);
@@ -10946,48 +11261,57 @@ CK_DLL_SFUN(ui_TableSetupScrollFreeze)
 
 CK_DLL_SFUN(ui_TableHeader)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     cimgui::ImGui_TableHeader(label);
 }
 
 CK_DLL_SFUN(ui_TableHeadersRow)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_TableHeadersRow();
 }
 
 CK_DLL_SFUN(ui_TableAngledHeadersRow)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_TableAngledHeadersRow();
 }
 
 CK_DLL_SFUN(ui_TableGetColumnCount)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_TableGetColumnCount();
 }
 
 CK_DLL_SFUN(ui_TableGetColumnIndex)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_TableGetColumnIndex();
 }
 
 CK_DLL_SFUN(ui_TableGetRowIndex)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_TableGetRowIndex();
 }
 
 CK_DLL_SFUN(ui_TableGetColumnName)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_string = API->object->create_string(
       VM, cimgui::ImGui_TableGetColumnName(GET_NEXT_INT(ARGS)), false);
 }
 
 CK_DLL_SFUN(ui_TableGetColumnFlags)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_TableGetColumnFlags(GET_NEXT_INT(ARGS));
 }
 
 CK_DLL_SFUN(ui_TableSetColumnEnabled)
 {
+    if (!verifyInitialization()) return;
     int column_n = GET_NEXT_INT(ARGS);
     bool enabled = GET_NEXT_INT(ARGS);
     cimgui::ImGui_TableSetColumnEnabled(column_n, enabled);
@@ -10995,6 +11319,7 @@ CK_DLL_SFUN(ui_TableSetColumnEnabled)
 
 CK_DLL_SFUN(ui_TableSetBgColor)
 {
+    if (!verifyInitialization()) return;
     int target     = GET_NEXT_INT(ARGS);
     t_CKVEC4 color = GET_NEXT_VEC4(ARGS);
     int column_n   = GET_NEXT_INT(ARGS);
@@ -11011,6 +11336,7 @@ CK_DLL_SFUN(ui_TableSetBgColor)
 
 CK_DLL_SFUN(ui_BeginTabBar)
 {
+    if (!verifyInitialization()) return;
     const char* str_id = API->object->str(GET_NEXT_STRING(ARGS));
     int flags          = GET_NEXT_INT(ARGS);
     RETURN->v_int      = cimgui::ImGui_BeginTabBar(str_id, flags);
@@ -11018,11 +11344,13 @@ CK_DLL_SFUN(ui_BeginTabBar)
 
 CK_DLL_SFUN(ui_EndTabBar)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_EndTabBar();
 }
 
 CK_DLL_SFUN(ui_BeginTabItem)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
 
     bool* p_open = CHUGL_UI_VAL_PTR(bool, GET_NEXT_OBJECT(ARGS), ui_bool_val_offset);
@@ -11033,11 +11361,13 @@ CK_DLL_SFUN(ui_BeginTabItem)
 
 CK_DLL_SFUN(ui_EndTabItem)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_EndTabItem();
 }
 
 CK_DLL_SFUN(ui_TabItemButton)
 {
+    if (!verifyInitialization()) return;
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
     int flags         = GET_NEXT_INT(ARGS);
     RETURN->v_int     = cimgui::ImGui_TabItemButton(label, flags);
@@ -11045,6 +11375,7 @@ CK_DLL_SFUN(ui_TabItemButton)
 
 CK_DLL_SFUN(ui_SetTabItemClosed)
 {
+    if (!verifyInitialization()) return;
     const char* tab_or_docked_window_label = API->object->str(GET_NEXT_STRING(ARGS));
     cimgui::ImGui_SetTabItemClosed(tab_or_docked_window_label);
 }
@@ -11055,6 +11386,7 @@ CK_DLL_SFUN(ui_SetTabItemClosed)
 
 CK_DLL_SFUN(ui_DockSpaceOverViewport)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_DockSpaceOverViewport();
 }
 
@@ -11064,12 +11396,14 @@ CK_DLL_SFUN(ui_DockSpaceOverViewport)
 
 CK_DLL_SFUN(ui_BeginDisabled)
 {
+    if (!verifyInitialization()) return;
     int disabled = GET_NEXT_INT(ARGS);
     cimgui::ImGui_BeginDisabled(disabled);
 }
 
 CK_DLL_SFUN(ui_EndDisabled)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_EndDisabled();
 }
 
@@ -11079,6 +11413,7 @@ CK_DLL_SFUN(ui_EndDisabled)
 
 CK_DLL_SFUN(ui_PushClipRect)
 {
+    if (!verifyInitialization()) return;
     t_CKVEC2 clip_rect_min                = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 clip_rect_max                = GET_NEXT_VEC2(ARGS);
     bool intersect_with_current_clip_rect = GET_NEXT_INT(ARGS);
@@ -11089,6 +11424,7 @@ CK_DLL_SFUN(ui_PushClipRect)
 
 CK_DLL_SFUN(ui_PopClipRect)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_PopClipRect();
 }
 
@@ -11098,16 +11434,19 @@ CK_DLL_SFUN(ui_PopClipRect)
 
 CK_DLL_SFUN(ui_SetItemDefaultFocus)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_SetItemDefaultFocus();
 }
 
 CK_DLL_SFUN(ui_SetKeyboardFocusHere)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_SetKeyboardFocusHere();
 }
 
 CK_DLL_SFUN(ui_SetKeyboardFocusHereEx)
 {
+    if (!verifyInitialization()) return;
     int offset = GET_NEXT_INT(ARGS);
     cimgui::ImGui_SetKeyboardFocusHereEx(offset);
 }
@@ -11118,6 +11457,7 @@ CK_DLL_SFUN(ui_SetKeyboardFocusHereEx)
 
 CK_DLL_SFUN(ui_SetNextItemAllowOverlap)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_SetNextItemAllowOverlap();
 }
 
@@ -11127,95 +11467,113 @@ CK_DLL_SFUN(ui_SetNextItemAllowOverlap)
 
 CK_DLL_SFUN(ui_IsItemHovered)
 {
+    if (!verifyInitialization()) return;
     int flags     = GET_NEXT_INT(ARGS);
     RETURN->v_int = cimgui::ImGui_IsItemHovered(flags);
 }
 
 CK_DLL_SFUN(ui_IsItemActive)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_IsItemActive();
 }
 
 CK_DLL_SFUN(ui_IsItemFocused)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_IsItemFocused();
 }
 
 CK_DLL_SFUN(ui_IsItemClicked)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_IsItemClicked();
 }
 
 CK_DLL_SFUN(ui_IsItemClickedEx)
 {
+    if (!verifyInitialization()) return;
     int button    = GET_NEXT_INT(ARGS);
     RETURN->v_int = cimgui::ImGui_IsItemClickedEx(button);
 }
 
 CK_DLL_SFUN(ui_IsItemVisible)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_IsItemVisible();
 }
 
 CK_DLL_SFUN(ui_IsItemEdited)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_IsItemEdited();
 }
 
 CK_DLL_SFUN(ui_IsItemActivated)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_IsItemActivated();
 }
 
 CK_DLL_SFUN(ui_IsItemDeactivated)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_IsItemDeactivated();
 }
 
 CK_DLL_SFUN(ui_IsItemDeactivatedAfterEdit)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_IsItemDeactivatedAfterEdit();
 }
 
 CK_DLL_SFUN(ui_IsItemToggledOpen)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_IsItemToggledOpen();
 }
 
 CK_DLL_SFUN(ui_IsAnyItemHovered)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_IsAnyItemHovered();
 }
 
 CK_DLL_SFUN(ui_IsAnyItemActive)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_IsAnyItemActive();
 }
 
 CK_DLL_SFUN(ui_IsAnyItemFocused)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_IsAnyItemFocused();
 }
 
 CK_DLL_SFUN(ui_GetItemID)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_GetItemID();
 }
 
 CK_DLL_SFUN(ui_GetItemRectMin)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImVec2 v = cimgui::ImGui_GetItemRectMin();
     RETURN->v_vec2   = { v.x, v.y };
 }
 
 CK_DLL_SFUN(ui_GetItemRectMax)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImVec2 v = cimgui::ImGui_GetItemRectMax();
     RETURN->v_vec2   = { v.x, v.y };
 }
 
 CK_DLL_SFUN(ui_GetItemRectSize)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImVec2 v = cimgui::ImGui_GetItemRectSize();
     RETURN->v_vec2   = { v.x, v.y };
 }
@@ -11226,6 +11584,7 @@ CK_DLL_SFUN(ui_GetItemRectSize)
 
 CK_DLL_SFUN(ui_GetMainViewport)
 {
+    if (!verifyInitialization()) return;
     Chuck_Object* vp_obj = chugin_createCkObj("UI_Viewport", false, SHRED);
     OBJ_MEMBER_UINT(vp_obj, ui_viewport_ptr_offset)
       = (t_CKUINT)cimgui::ImGui_GetMainViewport();
@@ -11284,16 +11643,19 @@ CK_DLL_SFUN(ui_ColorConvertHSVtoRGB)
 
 CK_DLL_SFUN(ui_IsKeyDown)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_IsKeyDown(GET_NEXT_INT(ARGS));
 }
 
 CK_DLL_SFUN(ui_IsKeyPressed)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_IsKeyPressed(GET_NEXT_INT(ARGS));
 }
 
 CK_DLL_SFUN(ui_IsKeyPressedEx)
 {
+    if (!verifyInitialization()) return;
     int key       = GET_NEXT_INT(ARGS);
     int repeat    = GET_NEXT_INT(ARGS);
     RETURN->v_int = cimgui::ImGui_IsKeyPressedEx(key, repeat);
@@ -11301,17 +11663,20 @@ CK_DLL_SFUN(ui_IsKeyPressedEx)
 
 CK_DLL_SFUN(ui_IsKeyReleased)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_IsKeyReleased(GET_NEXT_INT(ARGS));
 }
 
 CK_DLL_SFUN(ui_IsKeyChordPressed)
 {
+    if (!verifyInitialization()) return;
     int keychord  = GET_NEXT_INT(ARGS);
     RETURN->v_int = cimgui::ImGui_IsKeyChordPressed(keychord);
 }
 
 CK_DLL_SFUN(ui_GetKeyPressedAmount)
 {
+    if (!verifyInitialization()) return;
     int key            = GET_NEXT_INT(ARGS);
     float repeat_delay = GET_NEXT_FLOAT(ARGS);
     float rate         = GET_NEXT_FLOAT(ARGS);
@@ -11320,12 +11685,14 @@ CK_DLL_SFUN(ui_GetKeyPressedAmount)
 
 CK_DLL_SFUN(ui_GetKeyName)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_string = API->object->create_string(
       VM, cimgui::ImGui_GetKeyName(GET_NEXT_INT(ARGS)), false);
 }
 
 CK_DLL_SFUN(ui_SetNextFrameWantCaptureKeyboard)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_SetNextFrameWantCaptureKeyboard(GET_NEXT_INT(ARGS));
 }
 
@@ -11335,16 +11702,19 @@ CK_DLL_SFUN(ui_SetNextFrameWantCaptureKeyboard)
 
 CK_DLL_SFUN(ui_IsMouseDown)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_IsMouseDown(GET_NEXT_INT(ARGS));
 }
 
 CK_DLL_SFUN(ui_IsMouseClicked)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_IsMouseClicked(GET_NEXT_INT(ARGS));
 }
 
 CK_DLL_SFUN(ui_IsMouseClickedEx)
 {
+    if (!verifyInitialization()) return;
     int button    = GET_NEXT_INT(ARGS);
     bool repeat   = GET_NEXT_INT(ARGS);
     RETURN->v_int = cimgui::ImGui_IsMouseClickedEx(button, repeat);
@@ -11352,21 +11722,25 @@ CK_DLL_SFUN(ui_IsMouseClickedEx)
 
 CK_DLL_SFUN(ui_IsMouseReleased)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_IsMouseReleased(GET_NEXT_INT(ARGS));
 }
 
 CK_DLL_SFUN(ui_IsMouseDoubleClicked)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_IsMouseDoubleClicked(GET_NEXT_INT(ARGS));
 }
 
 CK_DLL_SFUN(ui_GetMouseClickedCount)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_GetMouseClickedCount(GET_NEXT_INT(ARGS));
 }
 
 CK_DLL_SFUN(ui_IsMouseHoveringRect)
 {
+    if (!verifyInitialization()) return;
     t_CKVEC2 r_min = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 r_max = GET_NEXT_VEC2(ARGS);
     RETURN->v_int  = cimgui::ImGui_IsMouseHoveringRect(
@@ -11375,6 +11749,7 @@ CK_DLL_SFUN(ui_IsMouseHoveringRect)
 
 CK_DLL_SFUN(ui_IsMouseHoveringRectEx)
 {
+    if (!verifyInitialization()) return;
     t_CKVEC2 r_min = GET_NEXT_VEC2(ARGS);
     t_CKVEC2 r_max = GET_NEXT_VEC2(ARGS);
     bool clip      = GET_NEXT_INT(ARGS);
@@ -11384,23 +11759,27 @@ CK_DLL_SFUN(ui_IsMouseHoveringRectEx)
 
 CK_DLL_SFUN(ui_IsMousePosValid)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_IsMousePosValid(NULL);
 }
 
 CK_DLL_SFUN(ui_GetMousePos)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImVec2 pos = cimgui::ImGui_GetMousePos();
     RETURN->v_vec2     = { pos.x, pos.y };
 }
 
 CK_DLL_SFUN(ui_GetMousePosOnOpeningCurrentPopup)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImVec2 pos = cimgui::ImGui_GetMousePosOnOpeningCurrentPopup();
     RETURN->v_vec2     = { pos.x, pos.y };
 }
 
 CK_DLL_SFUN(ui_IsMouseDragging)
 {
+    if (!verifyInitialization()) return;
     int button           = GET_NEXT_INT(ARGS);
     float lock_threshold = GET_NEXT_FLOAT(ARGS);
     RETURN->v_int        = cimgui::ImGui_IsMouseDragging(button, lock_threshold);
@@ -11408,6 +11787,7 @@ CK_DLL_SFUN(ui_IsMouseDragging)
 
 CK_DLL_SFUN(ui_GetMouseDragDelta)
 {
+    if (!verifyInitialization()) return;
     int button           = GET_NEXT_INT(ARGS);
     float lock_threshold = GET_NEXT_FLOAT(ARGS);
     cimgui::ImVec2 delta = cimgui::ImGui_GetMouseDragDelta(button, lock_threshold);
@@ -11416,28 +11796,33 @@ CK_DLL_SFUN(ui_GetMouseDragDelta)
 
 CK_DLL_SFUN(ui_ResetMouseDragDelta)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_ResetMouseDragDelta();
 }
 
 CK_DLL_SFUN(ui_ResetMouseDragDeltaEx)
 {
+    if (!verifyInitialization()) return;
     int button = GET_NEXT_INT(ARGS);
     cimgui::ImGui_ResetMouseDragDeltaEx(button);
 }
 
 CK_DLL_SFUN(ui_GetMouseCursor)
 {
+    if (!verifyInitialization()) return;
     RETURN->v_int = cimgui::ImGui_GetMouseCursor();
 }
 
 CK_DLL_SFUN(ui_SetMouseCursor)
 {
+    if (!verifyInitialization()) return;
     int cursor_type = GET_NEXT_INT(ARGS);
     cimgui::ImGui_SetMouseCursor(cursor_type);
 }
 
 CK_DLL_SFUN(ui_SetNextFrameWantCaptureMouse)
 {
+    if (!verifyInitialization()) return;
     cimgui::ImGui_SetNextFrameWantCaptureMouse(GET_NEXT_INT(ARGS));
 }
 

@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -332,26 +332,6 @@ bool GraphicsContext::init(GraphicsContext* context, GLFWwindow* window)
     // Create the swap chain
     if (!createSwapChain(context, windowWidth, windowHeight)) return false;
 
-    // defaults for render pass color attachment
-    context->colorAttachment = {};
-
-    // view and resolve set in GraphicsContext::prepareFrame()
-    context->colorAttachment.view          = NULL;
-    context->colorAttachment.resolveTarget = NULL;
-
-#ifdef __EMSCRIPTEN__
-    context->colorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
-#endif
-    context->colorAttachment.loadOp     = WGPULoadOp_Clear;
-    context->colorAttachment.storeOp    = WGPUStoreOp_Store;
-    context->colorAttachment.clearValue = WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f };
-
-    // render pass descriptor
-    context->renderPassDesc.label                  = "My render pass";
-    context->renderPassDesc.colorAttachmentCount   = 1;
-    context->renderPassDesc.colorAttachments       = &context->colorAttachment;
-    context->renderPassDesc.depthStencilAttachment = &context->depthStencilAttachment;
-
     // init mip map generator
     MipMapGenerator_init(context);
 
@@ -361,21 +341,18 @@ bool GraphicsContext::init(GraphicsContext* context, GLFWwindow* window)
 bool GraphicsContext::prepareFrame(GraphicsContext* ctx)
 {
     if (ctx->window_minimized) {
-        ctx->backbufferView                = NULL;
-        ctx->commandEncoder                = NULL;
-        ctx->colorAttachment.view          = NULL;
-        ctx->colorAttachment.resolveTarget = NULL;
+        ctx->backbufferView = NULL;
+        ctx->commandEncoder = NULL;
         return false;
     }
 
     // get target texture view
+    WGPU_RELEASE_RESOURCE(TextureView, ctx->backbufferView);
     ctx->backbufferView = wgpuSwapChainGetCurrentTextureView(ctx->swapChain);
     ASSERT(ctx->backbufferView);
 
-    ctx->colorAttachment.view          = ctx->backbufferView;
-    ctx->colorAttachment.resolveTarget = NULL;
-
     // initialize encoder
+    WGPU_RELEASE_RESOURCE(CommandEncoder, ctx->commandEncoder);
     WGPUCommandEncoderDescriptor encoderDesc = {};
     ctx->commandEncoder = wgpuDeviceCreateCommandEncoder(ctx->device, &encoderDesc);
     return true;
@@ -396,9 +373,7 @@ void GraphicsContext::presentFrame(GraphicsContext* ctx)
     wgpuSwapChainPresent(ctx->swapChain);
 #endif
 
-    wgpuCommandBufferRelease(command);
-    WGPU_RELEASE_RESOURCE(CommandEncoder, ctx->commandEncoder);
-    WGPU_RELEASE_RESOURCE(TextureView, ctx->backbufferView);
+    WGPU_RELEASE_RESOURCE(CommandBuffer, command);
 }
 
 void GraphicsContext::resize(GraphicsContext* ctx, u32 width, u32 height)

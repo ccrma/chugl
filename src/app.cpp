@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -647,7 +647,11 @@ struct App {
         // renderer.RenderScene(&scene, scene.GetMainCamera());
 
         // if window minimized, don't render
-        if (!GraphicsContext::prepareFrame(&app->gctx)) return;
+
+        bool minimized = glfwGetWindowAttrib(app->window, GLFW_ICONIFIED);
+        if (minimized || !GraphicsContext::prepareFrame(&app->gctx)) {
+            return;
+        }
 
         // scene
         // TODO RenderPass
@@ -1062,33 +1066,6 @@ struct App {
         }
 
         GraphicsContext::presentFrame(&app->gctx);
-
-#if 0
-// if window not minimized, render
-if (GraphicsContext::prepareFrame(&app->gctx)) {
-
-    WGPURenderPassEncoder render_pass = NULL;
-    { // render pass
-        render_pass = wgpuCommandEncoderBeginRenderPass(
-          app->gctx.commandEncoder, &app->gctx.renderPassDesc);
-
-        _R_RenderScene(app, render_pass);
-
-        // UI
-        if (do_ui) ImGui_ImplWGPU_RenderDrawData(&snapshot.DrawData, render_pass);
-
-        wgpuRenderPassEncoderEnd(render_pass);
-    }
-
-    // submit and present
-    GraphicsContext::presentFrame(&app->gctx);
-
-    // cleanup
-    // Note: safe to release before submit, immediately after
-    // RenderPassEncoderEnd
-    wgpuRenderPassEncoderRelease(render_pass);
-}
-#endif
     }
 
     static void _calculateFPS(GLFWwindow* window, bool print_to_title)
@@ -1405,6 +1382,8 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
                 // removed
                 int num_instances = ARENA_LENGTH(&g2x->xform_ids, SG_ID);
                 if (num_instances == 0) continue;
+                ASSERT(g2x->xform_bind_group); // shouldn't be null if we have non-zero
+                                               // instances
 
                 // debug group
                 //                snprintf(debug_group_label, sizeof(debug_group_label),
