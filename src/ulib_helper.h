@@ -145,6 +145,7 @@ struct chugl_builtin_textures {
     SG_ID white_pixel_id;
     SG_ID black_pixel_id;
     SG_ID normal_pixel_id;
+    SG_ID magenta_pixel_id;
     SG_ID default_render_texture_id;
 };
 static chugl_builtin_textures g_builtin_textures;
@@ -156,6 +157,7 @@ struct {
     Chuck_ArrayFloat* white_pixel_data;  // {1.0, 1.0, 1.0, 1.0}
     Chuck_ArrayFloat* black_pixel_data;  // {0.0, 0.0, 0.0, 0.0}
     Chuck_ArrayFloat* normal_pixel_data; // {0.5, 0.5, 1.0, 1.0}
+    Chuck_ArrayFloat* magenta_pixel_data; // {1.0, 0.0, 1.0, 1.0}
 
     Chuck_String* FRAME_UNIFORMS;
     Chuck_String* LIGHTING_UNIFORMS;

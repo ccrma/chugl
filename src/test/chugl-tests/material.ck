@@ -113,3 +113,7 @@ T.assert(
     flat_material.sampler().filterMip  == sampler.filterMip,
     "material sampler"
 );
+
+// FlatMaterial default scale and offset
+T.assert( T.veq(flat_material.offset(), @(0, 0)), "flat_material offset default");
+T.assert( T.veq(flat_material.scale(), @(1, 1)), "flat_material scale default");

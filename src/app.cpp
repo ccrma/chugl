@@ -31,6 +31,8 @@
 #include <time.h>
 
 #include <box2d/box2d.h>
+// necessary for copying from command
+static_assert(sizeof(u32) == sizeof(b2WorldId), "b2WorldId != u32");
 
 #include <GLFW/glfw3.h>
 #include <chuck/chugin.h>
@@ -56,8 +58,6 @@
 
 #include "core/hashmap.h"
 
-// necessary for copying from command
-static_assert(sizeof(u32) == sizeof(b2WorldId), "b2WorldId != u32");
 
 // Usage:
 //  static ImDrawDataSnapshot snapshot; // Important: make persistent accross
@@ -265,6 +265,7 @@ struct App {
     bool imgui_disabled = false;
 
     // box2D physics
+
     b2WorldId b2_world_id;
     u32 b2_substep_count = 4;
     // f64 b2_time_step_accum  = 0;

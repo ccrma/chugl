@@ -142,6 +142,10 @@ target_compile_definitions(chugl_shared_properties INTERFACE
     LOG_USE_COLOR
 )
 
+if (CHUGL_FAST_COMPILE)
+    target_compile_definitions(chugl_shared_properties INTERFACE CHUGL_FAST_COMPILE)
+endif()
+
 # increasing warning levels
 if (MSVC)
     target_compile_options(chugl_shared_properties INTERFACE /W4)

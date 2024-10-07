@@ -586,6 +586,15 @@ void ulib_texture_createDefaults(CK_DL_API API)
         g_builtin_textures.black_pixel_id = tex->id;
     }
 
+    { // magenta pixel
+        SG_Texture* tex = SG_CreateTexture(&texture_binding_desc, NULL, NULL, true);
+        // upload pixel data
+        CQ_PushCommand_TextureWrite(tex, &texture_write_desc,
+                                    g_builtin_ckobjs.magenta_pixel_data, API);
+        // set global
+        g_builtin_textures.magenta_pixel_id = tex->id;
+    }
+
     { // default normal map
         SG_Texture* tex = SG_CreateTexture(&texture_binding_desc, NULL, NULL, true);
         // upload pixel data
@@ -716,8 +725,12 @@ SG_Texture* ulib_texture_load(const char* filepath, SG_TextureLoadDesc* load_des
 {
     int width, height, num_components;
     if (!stbi_info(filepath, &width, &height, &num_components)) {
-        log_error("Couldn't load texture file '%s'. Reason: %s", filepath,
-                  stbi_failure_reason());
+        log_warn("Could not load texture file '%s'", filepath);
+        log_warn(" |- Reason: %s", stbi_failure_reason());
+        log_warn(" |- Defaulting to magenta texture");
+
+        // on failure return magenta texture
+        return SG_GetTexture(g_builtin_textures.magenta_pixel_id);
     }
 
     SG_TextureDesc desc = {};

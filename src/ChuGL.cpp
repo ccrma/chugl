@@ -45,7 +45,10 @@
 #include "ulib_pass.cpp"
 #include "ulib_buffer.cpp"
 #include "ulib_light.cpp"
+
+#ifndef CHUGL_FAST_COMPILE
 #include "ulib_assloader.cpp"
+#endif
 
 // vendor
 #include <sokol/sokol_time.h>
@@ -477,6 +480,10 @@ CK_DLL_QUERY(ChuGL)
         float normal_pixel_data[4]         = { 0.5f, 0.5f, 1.0f, 1.0f };
         g_builtin_ckobjs.normal_pixel_data = chugin_createCkFloatArray(
           normal_pixel_data, ARRAY_LENGTH(normal_pixel_data), true);
+        
+        float magenta_pixel_data[4]         = { 1.0f, 0.0f, 1.0f, 1.0f };
+        g_builtin_ckobjs.magenta_pixel_data = chugin_createCkFloatArray(
+          magenta_pixel_data, ARRAY_LENGTH(magenta_pixel_data), true);
 
         // builtin shader includes
         g_builtin_ckobjs.FRAME_UNIFORMS
@@ -510,7 +517,10 @@ CK_DLL_QUERY(ChuGL)
     ulib_mesh_query(QUERY);
     ulib_pass_query(QUERY);
     ulib_text_query(QUERY);
+
+#ifndef CHUGL_FAST_COMPILE
     ulib_assloader_query(QUERY);
+#endif
 
     { // GG static functions
         QUERY->begin_class(QUERY, "GG", "Object");
