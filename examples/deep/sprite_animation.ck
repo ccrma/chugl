@@ -37,6 +37,13 @@ SpriteAnimation cat_laying(
     false // should not loop
 );
 
+// uncomment for a different laying animation
+// SpriteAnimation cat_laying(
+//     Texture.load(me.dir() + "../data/textures/Cat-1/Cat-1-Licking 2.png", tex_load_desc),
+//     5, // 5 frames
+//     true // should not loop
+// );
+
 SpriteAnimation cat_walk(
     Texture.load(me.dir() + "../data/textures/Cat-1/Cat-1-Walk.png", tex_load_desc),
     8, // 8 frames
