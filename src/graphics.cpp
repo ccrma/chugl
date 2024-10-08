@@ -172,6 +172,7 @@ static void on_device_error(WGPUErrorType type, char const* message,
 #endif
 };
 
+#ifdef WGPU_OLD_VERSION
 static bool createSwapChain(GraphicsContext* context, u32 width, u32 height)
 {
     // ensure previous swap chain has been released
@@ -192,6 +193,7 @@ static bool createSwapChain(GraphicsContext* context, u32 width, u32 height)
     if (!context->swapChain) return false;
     return true;
 }
+#endif
 
 static void logWGPULimits(WGPULimits const* limits)
 {
@@ -204,25 +206,80 @@ static void logWGPULimits(WGPULimits const* limits)
               limits->minStorageBufferOffsetAlignment);
 }
 
+static void GraphicsContext_ConfigureSurface(GraphicsContext* gctx, u32 window_width,
+                                             u32 window_height)
+{
+
+    WGPUSurfaceConfiguration surface_config = {};
+    surface_config.device                   = gctx->device;
+    surface_config.format                   = gctx->surface_format;
+    surface_config.usage                    = WGPUTextureUsage_RenderAttachment;
+    surface_config.width                    = window_width;
+    surface_config.height                   = window_height;
+    surface_config.presentMode              = WGPUPresentMode_Fifo; // vsynced
+
+    wgpuSurfaceConfigure(gctx->surface, &surface_config);
+}
+
+static const char* GraphicsContext_BackendTypeToString(WGPUBackendType backend)
+{
+    switch (backend) {
+        case WGPUBackendType_Undefined: return "Undefined";
+        case WGPUBackendType_Null: return "Null";
+        case WGPUBackendType_WebGPU: return "WebGPU";
+        case WGPUBackendType_D3D11: return "D3D11";
+        case WGPUBackendType_D3D12: return "D3D12";
+        case WGPUBackendType_Metal: return "Metal";
+        case WGPUBackendType_Vulkan: return "Vulkan";
+        case WGPUBackendType_OpenGL: return "OpenGL";
+        case WGPUBackendType_OpenGLES: return "OpenGLES";
+        case WGPUBackendType_Force32: return "Force32";
+    }
+    return "Unknown";
+}
+
+static const char* GraphicsContext_AdapterTypeToString(WGPUAdapterType type)
+{
+    switch (type) {
+        case WGPUAdapterType_DiscreteGPU: return "Discrete GPU";
+        case WGPUAdapterType_IntegratedGPU: return "Integrated GPU";
+        case WGPUAdapterType_CPU: return "CPU";
+        case WGPUAdapterType_Unknown: return "Unknown";
+        case WGPUAdapterType_Force32: return "Force32";
+    }
+    return "Unknown";
+}
+
 bool GraphicsContext::init(GraphicsContext* context, GLFWwindow* window)
 {
     log_trace("initializing WebGPU context");
-    ASSERT(context->instance == NULL);
+    ASSERT(context->device == NULL);
 
 #ifdef __EMSCRIPTEN__
     // See
     // https://github.com/emscripten-core/emscripten/blob/main/system/lib/webgpu/webgpu.cpp#L22
     // instance descriptor not implemented yet (as of 4/8/2024)
     // must pass nullptr instead
-    context->instance = wgpuCreateInstance(NULL);
+    WGPUInstance instance = wgpuCreateInstance(NULL);
 #else
-    WGPUInstanceDescriptor instanceDesc = {};
-    context->instance                   = wgpuCreateInstance(&instanceDesc);
+    // WGPU
+    WGPUInstanceExtras instanceExtras = {};
+    instanceExtras.chain.sType        = (WGPUSType)WGPUSType_InstanceExtras;
+    instanceExtras.backends
+      = WGPUInstanceBackend_All; // enables all backends, allows falling back to openGL
+                                 // if vulkan/d3d12/metal not available
+
+    WGPUInstanceDescriptor instanceDescriptor = {};
+    instanceDescriptor.nextInChain            = &instanceExtras.chain;
+
+    WGPUInstance instance = wgpuCreateInstance(&instanceDescriptor);
 #endif
-    if (!context->instance) return false;
+    defer(WGPU_RELEASE_RESOURCE(Instance, instance));
+
+    if (!instance) return false;
     log_trace("WebGPU instance created");
 
-    context->surface = glfwGetWGPUSurface(context->instance, window);
+    context->surface = glfwGetWGPUSurface(instance, window);
     if (!context->surface) return false;
     // context->window = window;
     log_trace("WebGPU surface created");
@@ -230,19 +287,31 @@ bool GraphicsContext::init(GraphicsContext* context, GLFWwindow* window)
     WGPURequestAdapterOptions adapterOpts = {};
     adapterOpts.compatibleSurface         = context->surface;
     adapterOpts.powerPreference           = WGPUPowerPreference_HighPerformance;
-    // NULL,                                // nextInChain
-    // context->surface,                    // compatibleSurface
-    // WGPUPowerPreference_HighPerformance, // powerPreference
-    // false                                // force fallback adapter
-    context->adapter = request_adapter(context->instance, &adapterOpts);
-    if (!context->adapter) return false;
+    WGPUAdapter adapter                   = request_adapter(instance, &adapterOpts);
+    if (!adapter) return false;
+    defer(WGPU_RELEASE_RESOURCE(Adapter, adapter));
     log_trace("adapter created");
+
+    { // log adapter info
+        WGPUAdapterInfo adapter_info;
+        wgpuAdapterGetInfo(adapter, &adapter_info);
+        log_info("Adapter vendor: %s", adapter_info.vendor);
+        log_info("Adapter architecture: %s", adapter_info.architecture);
+        log_info("Adapter device: %s", adapter_info.device);
+        log_info("Adapter description: %s", adapter_info.description);
+        log_info("Adapter backend type: %s",
+                 GraphicsContext_BackendTypeToString(adapter_info.backendType));
+        log_info("Adapter type: %s",
+                 GraphicsContext_AdapterTypeToString(adapter_info.adapterType));
+        log_info("Adapter vendor ID: %d", adapter_info.vendorID);
+        log_info("Adapter device ID: %d", adapter_info.deviceID);
+    }
 
     // set required limits to max supported
     WGPURequiredLimits requiredLimits = {};
 #ifdef WEBGPU_BACKEND_WGPU
     WGPUSupportedLimits supportedLimits = {};
-    bool success = wgpuAdapterGetLimits(context->adapter, &supportedLimits);
+    bool success = wgpuAdapterGetLimits(adapter, &supportedLimits);
     ASSERT(success);
     // copy supported limits into context
     context->limits = supportedLimits.limits;
@@ -253,10 +322,10 @@ bool GraphicsContext::init(GraphicsContext* context, GLFWwindow* window)
     // clang-format off
     WGPUFeatureName requiredFeatures[] = {
         (WGPUFeatureName)WGPUNativeFeature_VertexWritableStorage,
-(WGPUFeatureName) WGPUNativeFeature_TextureAdapterSpecificFormatFeatures  // allows passing 32-bit float textures to texture_2d<f32> in shaders
+        // (WGPUFeatureName) WGPUNativeFeature_TextureAdapterSpecificFormatFeatures,  // allows passing 32-bit float textures to texture_2d<f32> in shaders
 
         // enabling this feature still doesn't work
-        // WGPUFeatureName_Float32Filterable // needed to sample 32-bit float textures in shaders
+        WGPUFeatureName_Float32Filterable // needed to sample 32-bit float textures in shaders
     };
     // clang-format on
     const u32 requiredFeaturesCount = ARRAY_LENGTH(requiredFeatures);
@@ -267,57 +336,60 @@ bool GraphicsContext::init(GraphicsContext* context, GLFWwindow* window)
 #endif
 
     // see your machine's supported features here: https://webgpureport.org/
-    WGPUDeviceDescriptor deviceDescriptor = {
-        NULL,                    // nextInChain
-        "ChuGL Device",          // label
-        requiredFeaturesCount,   // requiredFeaturesCount
-        requiredFeatures,        // requiredFeatures
-        &requiredLimits,         // requiredLimits
-        { NULL, "ChuGL queue" }, // defaultQueue
-        NULL,                    // deviceLostCallback,
-        NULL                     // deviceLostUserdata
+    WGPUDeviceDescriptor deviceDescriptor = {};
+    deviceDescriptor.label                = "ChuGL Device";
+    deviceDescriptor.requiredFeatureCount = requiredFeaturesCount;
+    deviceDescriptor.requiredFeatures     = requiredFeatures;
+    deviceDescriptor.requiredLimits       = &requiredLimits;
+    deviceDescriptor.defaultQueue         = { NULL, "ChuGL queue" };
+    deviceDescriptor.deviceLostCallback
+      = [](WGPUDeviceLostReason reason, char const* message, void* /* pUserData */) {
+            log_error("Device lost: reason %d", reason);
+            if (message) log_error(" (%s)", message);
+        };
+    deviceDescriptor.deviceLostUserdata          = NULL;
+    deviceDescriptor.uncapturedErrorCallbackInfo = {
+        NULL, on_device_error, NULL /* pUserData */
     };
 
-    context->device = request_device(context->adapter, &deviceDescriptor);
+    context->device = request_device(adapter, &deviceDescriptor);
     if (!context->device) return false;
     log_trace("device created");
 
     { // set debug callbacks
-        wgpuDeviceSetUncapturedErrorCallback(context->device, on_device_error,
-                                             NULL /* pUserData */);
-
 #if defined(CHUGL_DEBUG) && defined(WEBGPU_BACKEND_WGPU)
-        wgpuSetLogLevel(WGPULogLevel_Error);
+        wgpuSetLogLevel(WGPULogLevel_Warn);
         wgpuSetLogCallback(
-          [](WGPULogLevel level, char const* message, void* userdata) {
-              log_error("WebGPU log [%d]: %s", level, message);
+          [](WGPULogLevel level, char const* message, void* /* userdata */) {
+              log_error("wgpu log [%d]: %s", level, message);
           },
           NULL);
+
+        log_trace("Using wgpu version %d", wgpuGetVersion());
 #endif
     }
 
     context->queue = wgpuDeviceGetQueue(context->device);
     if (!context->queue) return false;
 
-    int windowWidth = 1, windowHeight = 1;
-    glfwGetWindowSize(window, &windowWidth, &windowHeight);
-
     // determine swapchain format
     // note: we always pick the -srgb version of whatever is preferred
     {
-        WGPUTextureFormat preferred_format
-          = wgpuSurfaceGetPreferredFormat(context->surface, context->adapter);
+        WGPUSurfaceCapabilities surface_capabilities;
+        wgpuSurfaceGetCapabilities(context->surface, adapter, &surface_capabilities);
+        ASSERT(surface_capabilities.formatCount > 0);
+        WGPUTextureFormat preferred_format = surface_capabilities.formats[0];
         switch (preferred_format) {
             case WGPUTextureFormat_BGRA8Unorm: {
-                context->swapChainFormat = WGPUTextureFormat_BGRA8UnormSrgb;
+                context->surface_format = WGPUTextureFormat_BGRA8UnormSrgb;
             } break;
             case WGPUTextureFormat_RGBA8Unorm: {
-                context->swapChainFormat = WGPUTextureFormat_RGBA8UnormSrgb;
+                context->surface_format = WGPUTextureFormat_RGBA8UnormSrgb;
             } break;
             // srgb formats do nothing
             case WGPUTextureFormat_BGRA8UnormSrgb:
             case WGPUTextureFormat_RGBA8UnormSrgb: {
-                context->swapChainFormat = preferred_format;
+                context->surface_format = preferred_format;
             } break;
             // fail otherwise
             default: {
@@ -326,11 +398,17 @@ bool GraphicsContext::init(GraphicsContext* context, GLFWwindow* window)
                 return false;
             } break;
         }
-        log_debug("Preferred swap chain format: %d", context->swapChainFormat);
+        log_debug("Preferred swap chain format: %d", context->surface_format);
     }
 
+    int windowWidth = 1, windowHeight = 1;
+    glfwGetWindowSize(window, &windowWidth, &windowHeight);
+    GraphicsContext_ConfigureSurface(context, (u32)windowWidth, (u32)windowHeight);
+
+#ifdef WGPU_OLD_VERSION
     // Create the swap chain
     if (!createSwapChain(context, windowWidth, windowHeight)) return false;
+#endif
 
     // init mip map generator
     MipMapGenerator_init(context);
@@ -338,21 +416,43 @@ bool GraphicsContext::init(GraphicsContext* context, GLFWwindow* window)
     return true;
 }
 
-bool GraphicsContext::prepareFrame(GraphicsContext* ctx)
+static WGPUTextureView GraphicsContext_GetNextSurfaceTextureView(WGPUSurface surface)
 {
-    if (ctx->window_minimized) {
-        ctx->backbufferView = NULL;
-        ctx->commandEncoder = NULL;
-        return false;
+    // Get the surface texture
+    WGPUSurfaceTexture surfaceTexture;
+    wgpuSurfaceGetCurrentTexture(surface, &surfaceTexture);
+    if (surfaceTexture.status != WGPUSurfaceGetCurrentTextureStatus_Success) {
+        return nullptr;
     }
 
-    // get target texture view
+    // Create a view for this surface texture
+    WGPUTextureViewDescriptor viewDescriptor;
+    viewDescriptor.label           = "Surface texture view";
+    viewDescriptor.format          = wgpuTextureGetFormat(surfaceTexture.texture);
+    viewDescriptor.dimension       = WGPUTextureViewDimension_2D;
+    viewDescriptor.baseMipLevel    = 0;
+    viewDescriptor.mipLevelCount   = 1;
+    viewDescriptor.baseArrayLayer  = 0;
+    viewDescriptor.arrayLayerCount = 1;
+    viewDescriptor.aspect          = WGPUTextureAspect_All;
+    WGPUTextureView targetView
+      = wgpuTextureCreateView(surfaceTexture.texture, &viewDescriptor);
+
+    return targetView;
+}
+
+bool GraphicsContext::prepareFrame(GraphicsContext* ctx)
+{
     WGPU_RELEASE_RESOURCE(TextureView, ctx->backbufferView);
-    ctx->backbufferView = wgpuSwapChainGetCurrentTextureView(ctx->swapChain);
-    ASSERT(ctx->backbufferView);
+    WGPU_RELEASE_RESOURCE(CommandEncoder, ctx->commandEncoder);
+
+    if (ctx->window_minimized) return false;
+
+    // get target texture view
+    ctx->backbufferView = GraphicsContext_GetNextSurfaceTextureView(ctx->surface);
+    if (!ctx->backbufferView) return false;
 
     // initialize encoder
-    WGPU_RELEASE_RESOURCE(CommandEncoder, ctx->commandEncoder);
     WGPUCommandEncoderDescriptor encoderDesc = {};
     ctx->commandEncoder = wgpuDeviceCreateCommandEncoder(ctx->device, &encoderDesc);
     return true;
@@ -370,10 +470,15 @@ void GraphicsContext::presentFrame(GraphicsContext* ctx)
 
     // present
 #ifndef __EMSCRIPTEN__
-    wgpuSwapChainPresent(ctx->swapChain);
+    wgpuSurfacePresent(ctx->surface);
 #endif
 
     WGPU_RELEASE_RESOURCE(CommandBuffer, command);
+
+    // poll device
+#if defined(WEBGPU_BACKEND_WGPU)
+    wgpuDevicePoll(ctx->device, false, nullptr);
+#endif
 }
 
 void GraphicsContext::resize(GraphicsContext* ctx, u32 width, u32 height)
@@ -385,11 +490,7 @@ void GraphicsContext::resize(GraphicsContext* ctx, u32 width, u32 height)
         ctx->window_minimized = false;
     }
 
-    // terminate swap chain
-    WGPU_RELEASE_RESOURCE(SwapChain, ctx->swapChain);
-
-    // recreate swap chain
-    createSwapChain(ctx, width, height);
+    GraphicsContext_ConfigureSurface(ctx, width, height);
 }
 
 void GraphicsContext::release(GraphicsContext* ctx)
@@ -397,11 +498,11 @@ void GraphicsContext::release(GraphicsContext* ctx)
     // mip map gen
     MipMapGenerator_release();
 
-    wgpuSwapChainRelease(ctx->swapChain);
-    wgpuDeviceRelease(ctx->device);
-    wgpuAdapterRelease(ctx->adapter);
-    wgpuInstanceRelease(ctx->instance);
+    wgpuSurfaceUnconfigure(ctx->surface);
     wgpuSurfaceRelease(ctx->surface);
+
+    wgpuQueueRelease(ctx->queue);
+    wgpuDeviceRelease(ctx->device);
 
     *ctx = {};
 }
@@ -698,33 +799,6 @@ WGPUShaderModule G_createShaderModule(GraphicsContext* gctx, const char* code,
 
     return module;
 }
-
-// ============================================================================
-// Render Pipeline
-// ============================================================================
-
-// static WGPUBindGroupLayout
-// createBindGroupLayout(GraphicsContext* ctx, u8 bindingNumber, u64 size,
-//                       WGPUBufferBindingType bufferType)
-//{
-//     UNUSED_VAR(bindingNumber);
-//
-//     // Per frame uniform buffer
-//     WGPUBindGroupLayoutEntry bindGroupLayout = {};
-//     // bindGroupLayout.binding                  = bindingNumber;
-//     bindGroupLayout.binding = 0;
-//     bindGroupLayout.visibility // always both for simplicity
-//       = WGPUShaderStage_Vertex | WGPUShaderStage_Fragment;
-//     bindGroupLayout.buffer.type             = bufferType;
-//     bindGroupLayout.buffer.minBindingSize   = size;
-//     bindGroupLayout.buffer.hasDynamicOffset = false; // TODO
-//
-//     // Create a bind group layout
-//     WGPUBindGroupLayoutDescriptor bindGroupLayoutDesc = {};
-//     bindGroupLayoutDesc.entryCount                    = 1;
-//     bindGroupLayoutDesc.entries                       = &bindGroupLayout;
-//     return wgpuDeviceCreateBindGroupLayout(ctx->device, &bindGroupLayoutDesc);
-// }
 
 // ============================================================================
 // Bind Group
@@ -1103,12 +1177,7 @@ void MipMapGenerator_generate(GraphicsContext* ctx, WGPUTexture texture,
 
             WGPURenderPassColorAttachment colorAttachmentDesc = {};
             colorAttachmentDesc.view                          = views[target_mip];
-#ifdef __EMSCRIPTEN__
-            // depthSlice is new in the new header, not yet supported in
-            // wgpu-native. See
-            // https://github.com/eliemichel/WebGPU-distribution/issues/14
-            colorAttachmentDesc.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
-#endif
+            colorAttachmentDesc.depthSlice    = WGPU_DEPTH_SLICE_UNDEFINED;
             colorAttachmentDesc.resolveTarget = NULL;
             colorAttachmentDesc.loadOp        = WGPULoadOp_Clear;
             colorAttachmentDesc.storeOp       = WGPUStoreOp_Store;

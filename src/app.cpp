@@ -58,7 +58,6 @@ static_assert(sizeof(u32) == sizeof(b2WorldId), "b2WorldId != u32");
 
 #include "core/hashmap.h"
 
-
 // Usage:
 //  static ImDrawDataSnapshot snapshot; // Important: make persistent accross
 //  frames to reuse buffers. snapshot.SnapUsingSwap(ImGui::GetDrawData(),
@@ -434,7 +433,7 @@ struct App {
             ImGui_ImplWGPU_InitInfo init_info;
             init_info.Device             = app->gctx.device;
             init_info.NumFramesInFlight  = 3;
-            init_info.RenderTargetFormat = app->gctx.swapChainFormat;
+            init_info.RenderTargetFormat = app->gctx.surface_format;
             // init_info.DepthStencilFormat = app->gctx.depthTextureDesc.format;
             ImGui_ImplWGPU_Init(&init_info);
         }
@@ -737,7 +736,7 @@ struct App {
 
                     // by default we render to the swapchain backbuffer
                     bool user_supplied_render_texture       = false;
-                    WGPUTextureFormat screen_texture_format = app->gctx.swapChainFormat;
+                    WGPUTextureFormat screen_texture_format = app->gctx.surface_format;
                     WGPUTextureView screen_texture_view     = app->gctx.backbufferView;
                     defer({
                         if (user_supplied_render_texture) {
@@ -934,6 +933,7 @@ struct App {
                             ca.loadOp     = WGPULoadOp_Clear;
                             ca.storeOp    = WGPUStoreOp_Store;
                             ca.clearValue = WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f };
+                            ca.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 
                             WGPURenderPassDescriptor render_pass_desc = {};
                             char render_pass_label[64]                = {};
@@ -1006,6 +1006,7 @@ struct App {
                             ca.loadOp     = WGPULoadOp_Clear;
                             ca.storeOp    = WGPUStoreOp_Store;
                             ca.clearValue = WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f };
+                            ca.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 
                             WGPURenderPassDescriptor render_pass_desc = {};
                             char render_pass_label[64]                = {};
@@ -1043,10 +1044,8 @@ struct App {
         // imgui render pass
         if (do_ui && !resized_this_frame) {
             WGPURenderPassColorAttachment imgui_color_attachment = {};
-            imgui_color_attachment.view = app->gctx.backbufferView;
-#ifdef __EMSCRIPTEN__
+            imgui_color_attachment.view       = app->gctx.backbufferView;
             imgui_color_attachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
-#endif
             imgui_color_attachment.loadOp
               = WGPULoadOp_Load; // DON'T clear the previous frame
             imgui_color_attachment.storeOp = WGPUStoreOp_Store;

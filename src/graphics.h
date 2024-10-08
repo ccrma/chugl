@@ -68,13 +68,10 @@
 struct GraphicsContext {
     void* base; //
     // WebGPU API objects --------
-    WGPUInstance instance;
-    WGPUAdapter adapter;
     WGPUDevice device;
     WGPUQueue queue;
-
-    WGPUSwapChain swapChain;
-    WGPUTextureFormat swapChainFormat;
+    WGPUSurface surface;
+    WGPUTextureFormat surface_format;
 
     WGPUTexture multisampled_texture;
     WGPUTextureView multisampled_texture_view;
@@ -85,8 +82,7 @@ struct GraphicsContext {
     WGPURenderPassDepthStencilAttachment depthStencilAttachment;
     WGPUCommandBuffer commandBuffer;
 
-    // Window and surface --------
-    WGPUSurface surface;
+    // Window --------
     bool window_minimized;
 
     // Device limits --------

@@ -57,6 +57,13 @@ make linux
 ```
 This should build a `ChuGL.chug` executable in `build-release`, which is also copied to the `chugl/src` directory. This file can be installed/used as any other chugin (e.g., install ChuGL.chug by copying it into `~/.chuck/lib`.)
 
+If you are on a linux system, make sure to install the dependencies that GLFW require. By default, it tries to build for both X11 and Wayland so you need both sets of dependencies. If you only want to use/install one of them, turn either GLFW_BUILD_X11 or GLFW_BUILD_WAYLAND off when calling cmake, e.g.:
+
+```shell
+# Build with only X11 support
+cmake -B build -DGLFW_BUILD_WAYLAND=OFF
+```
+
 ## Running ChuGL
 
 **Note:** Currently ChuGL only supports command-line chuck. MiniAudicle support to come soon. 

@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -241,9 +241,9 @@ struct R_Texture : public R_Component {
         // init descriptor
         WGPUTextureDescriptor wgpu_texture_desc = {};
         // wgpu_texture_desc.label                 = texture->name.c_str();
-        wgpu_texture_desc.label                 = texture->name;
-        wgpu_texture_desc.usage                 = desc->usage;
-        wgpu_texture_desc.dimension             = desc->dimension;
+        wgpu_texture_desc.label     = texture->name;
+        wgpu_texture_desc.usage     = desc->usage;
+        wgpu_texture_desc.dimension = desc->dimension;
         wgpu_texture_desc.size
           = { (u32)desc->width, (u32)desc->height, (u32)desc->depth };
         wgpu_texture_desc.format        = desc->format;
@@ -257,8 +257,8 @@ struct R_Texture : public R_Component {
         // create default texture view for entire mip chain (And 1st array layer)
         // cubemaps are handled differently
         char texture_view_label[256] = {};
-        //snprintf(texture_view_label, sizeof(texture_view_label), "%s default view",
-        //         texture->name.c_str());
+        // snprintf(texture_view_label, sizeof(texture_view_label), "%s default view",
+        //          texture->name.c_str());
         snprintf(texture_view_label, sizeof(texture_view_label), "%s default view",
                  texture->name);
         WGPUTextureViewDescriptor wgpu_texture_view_desc = {};
@@ -792,6 +792,7 @@ struct R_Pass : public R_Component {
         ca->loadOp                        = WGPULoadOp_Clear;
         ca->storeOp                       = WGPUStoreOp_Store;
         ca->clearValue                    = WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f };
+        ca->depthSlice                    = WGPU_DEPTH_SLICE_UNDEFINED;
 
         pass->screen_pass_desc                        = {};
         pass->screen_pass_desc.label                  = pass->sg_pass.name;
@@ -845,11 +846,7 @@ struct R_Pass : public R_Component {
             ca->view
               = pass->framebuffer.color_view; // multisampled view, for now lock down
             ca->resolveTarget = resolve_view;
-
-#ifdef __EMSCRIPTEN__
-            ca->depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
-#endif
-            // TODO chugl API to set loadOp
+            ca->depthSlice    = WGPU_DEPTH_SLICE_UNDEFINED;
             ca->loadOp  = pass->sg_pass.color_target_clear_on_load ? WGPULoadOp_Clear :
                                                                      WGPULoadOp_Load;
             ca->storeOp = WGPUStoreOp_Store;

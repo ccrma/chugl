@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -31,8 +31,8 @@
 
 #include "core/macros.h"
 
-#include <unordered_map>
 #include <algorithm>
+#include <unordered_map>
 
 struct ShaderEntry {
     const char* name;
@@ -1211,7 +1211,7 @@ const char* output_pass_shader_string = R"glsl(
     @group(0) @binding(1) var texture_sampler: sampler;
     @group(0) @binding(2) var<uniform> u_Gamma: f32;
     @group(0) @binding(3) var<uniform> u_Exposure: f32;
-    @group(0) @binding(4) var<uniform> u_Tonemap: i32 = TONEMAP_NONE;
+    @group(0) @binding(4) var<uniform> u_Tonemap: i32;
 
     // Helpers ==================================================================
     fn Uncharted2Tonemap(x: vec3<f32>) -> vec3<f32> {
