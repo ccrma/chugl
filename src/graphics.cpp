@@ -416,27 +416,27 @@ bool GraphicsContext::init(GraphicsContext* context, GLFWwindow* window)
     return true;
 }
 
-static WGPUTextureView GraphicsContext_GetNextSurfaceTextureView(WGPUSurface surface)
+static WGPUTextureView GraphicsContext_GetNextSurfaceTextureView(GraphicsContext* gctx)
+
 {
     // Get the surface texture
-    WGPUSurfaceTexture surfaceTexture;
-    wgpuSurfaceGetCurrentTexture(surface, &surfaceTexture);
-    if (surfaceTexture.status != WGPUSurfaceGetCurrentTextureStatus_Success) {
+    wgpuSurfaceGetCurrentTexture(gctx->surface, &gctx->surface_texture);
+    if (gctx->surface_texture.status != WGPUSurfaceGetCurrentTextureStatus_Success) {
         return nullptr;
     }
 
     // Create a view for this surface texture
     WGPUTextureViewDescriptor viewDescriptor;
-    viewDescriptor.label           = "Surface texture view";
-    viewDescriptor.format          = wgpuTextureGetFormat(surfaceTexture.texture);
-    viewDescriptor.dimension       = WGPUTextureViewDimension_2D;
-    viewDescriptor.baseMipLevel    = 0;
-    viewDescriptor.mipLevelCount   = 1;
-    viewDescriptor.baseArrayLayer  = 0;
+    viewDescriptor.label          = "Surface texture view";
+    viewDescriptor.format         = wgpuTextureGetFormat(gctx->surface_texture.texture);
+    viewDescriptor.dimension      = WGPUTextureViewDimension_2D;
+    viewDescriptor.baseMipLevel   = 0;
+    viewDescriptor.mipLevelCount  = 1;
+    viewDescriptor.baseArrayLayer = 0;
     viewDescriptor.arrayLayerCount = 1;
     viewDescriptor.aspect          = WGPUTextureAspect_All;
     WGPUTextureView targetView
-      = wgpuTextureCreateView(surfaceTexture.texture, &viewDescriptor);
+      = wgpuTextureCreateView(gctx->surface_texture.texture, &viewDescriptor);
 
     return targetView;
 }
@@ -449,7 +449,7 @@ bool GraphicsContext::prepareFrame(GraphicsContext* ctx)
     if (ctx->window_minimized) return false;
 
     // get target texture view
-    ctx->backbufferView = GraphicsContext_GetNextSurfaceTextureView(ctx->surface);
+    ctx->backbufferView = GraphicsContext_GetNextSurfaceTextureView(ctx);
     if (!ctx->backbufferView) return false;
 
     // initialize encoder
@@ -472,6 +472,8 @@ void GraphicsContext::presentFrame(GraphicsContext* ctx)
 #ifndef __EMSCRIPTEN__
     wgpuSurfacePresent(ctx->surface);
 #endif
+    // free surface texture (because wgpuSurfaceGetCurrentTexture leaks)
+    WGPU_RELEASE_RESOURCE(Texture, ctx->surface_texture.texture);
 
     WGPU_RELEASE_RESOURCE(CommandBuffer, command);
 

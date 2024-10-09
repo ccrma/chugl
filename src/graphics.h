@@ -71,6 +71,7 @@ struct GraphicsContext {
     WGPUDevice device;
     WGPUQueue queue;
     WGPUSurface surface;
+    WGPUSurfaceTexture surface_texture;
     WGPUTextureFormat surface_format;
 
     WGPUTexture multisampled_texture;
