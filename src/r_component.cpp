@@ -577,7 +577,7 @@ void R_Geometry::rebuildPullBindGroup(GraphicsContext* gctx, R_Geometry* geo,
 
     geo->pull_bind_group_dirty = false;
 
-    WGPUBindGroupEntry entries[SG_GEOMETRY_MAX_VERTEX_PULL_BUFFERS];
+    WGPUBindGroupEntry entries[SG_GEOMETRY_MAX_VERTEX_PULL_BUFFERS] = {};
     int num_entries = 0;
     for (u32 i = 0; i < SG_GEOMETRY_MAX_VERTEX_PULL_BUFFERS; i++) {
         if (geo->pull_buffers[i].buf == NULL) {
