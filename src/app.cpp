@@ -484,9 +484,10 @@ struct App {
         GraphicsContext::release(&app->gctx);
 
         // destroy imgui
-        ImGui_ImplWGPU_Shutdown();
-        ImGui_ImplGlfw_Shutdown();
-        ImGui::DestroyContext();
+        // actually don't do this lol to prevent data race with chuck UI shreds that are
+        // still running
+        // ImGui_ImplWGPU_Shutdown(); ImGui_ImplGlfw_Shutdown();
+        // ImGui::DestroyContext();
 
         // destroy window
         glfwDestroyWindow(app->window);
@@ -626,15 +627,6 @@ struct App {
                 resized_this_frame  = true;
 
                 _onFramebufferResize(app->window, width, height);
-
-                // imgui bs (on resize need to clear old imgui state and rebuild imgui
-                // framebuffer)
-                if (!app->imgui_disabled) {
-                    ImGui::Render();
-                    ImGui_ImplWGPU_NewFrame();
-                    ImGui_ImplGlfw_NewFrame();
-                    ImGui::NewFrame();
-                }
             }
         }
 
