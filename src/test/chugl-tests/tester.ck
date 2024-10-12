@@ -2,7 +2,7 @@
 ChuGL Integration Test Runner
 */
 FileIO dir;
-dir.open(me.dir());
+dir.open(me.dir() + "./unit");
 
 dir.dirList() @=> string tests[];
 
@@ -12,5 +12,5 @@ for (auto test : tests) {
     if (test == "T.ck") continue; // ignore test harness
     // run test
     T.println("Running test: " + test + " --------------------");
-    Machine.add(me.dir() + "/" + test);
+    Machine.add(me.dir() + "./unit/" + test);
 }

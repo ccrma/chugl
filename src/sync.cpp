@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -38,7 +38,6 @@
 #include <glfw/include/GLFW/glfw3.h>
 
 static std::unordered_map<Chuck_VM_Shred*, bool> registeredShreds;
-// static std::unordered_set<Chuck_VM_Shred*> waitingShreds;
 
 static spinlock waitingShredsLock;
 static u64 waitingShreds              = 0; // guarded by waitingShredsLock
@@ -495,7 +494,10 @@ const char* Event_GetName(CHUGL_EventType type);
 // ============================================================================
 
 bool Sync_HasShredWaited(Chuck_VM_Shred* shred);
+void Sync_MarkShredWaited(Chuck_VM_Shred* shred);
 void Sync_RegisterShred(Chuck_VM_Shred* shred);
+void Sync_UnregisterShred(Chuck_VM_Shred* shred);
+int Sync_NumShredsRegistered();
 void Sync_WaitOnUpdateDone();
 void Sync_SignalUpdateDone();
 
@@ -562,9 +564,25 @@ bool Sync_HasShredWaited(Chuck_VM_Shred* shred)
     return registeredShreds[shred];
 }
 
+void Sync_MarkShredWaited(Chuck_VM_Shred* shred)
+{
+    ASSERT(Sync_IsShredRegistered(shred));
+    registeredShreds[shred] = true;
+}
+
 void Sync_RegisterShred(Chuck_VM_Shred* shred)
 {
     registeredShreds[shred] = false;
+}
+
+void Sync_UnregisterShred(Chuck_VM_Shred* shred)
+{
+    registeredShreds.erase(shred);
+}
+
+int Sync_NumShredsRegistered()
+{
+    return registeredShreds.size();
 }
 
 void Sync_WaitOnUpdateDone()

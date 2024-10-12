@@ -172,46 +172,13 @@ static void autoUpdateScenegraph(Arena* arena, SG_Scene* scene, Chuck_VM* VM,
     }
 }
 
-CK_DLL_SFUN(chugl_next_frame)
+// MUST BE CALLED WITH waitingShredsLock LOCKED
+static void chugl_GraphicsShredPerformNextFrameUpdate(Chuck_VM_Shred* SHRED)
 {
-    // extract CglEvent from obj
-    // TODO: workaround bug where create() object API is not calling
-    // preconstructors
-    // https://trello.com/c/JwhVQEpv/48-cglnextframe-now-not-calling-preconstructor-of-cglupdate
+    CK_DL_API API = g_chuglAPI;
+    Chuck_VM* VM  = g_chuglVM;
 
-    if (!Sync_HasShredWaited(SHRED))
-        API->vm->throw_exception(
-          "NextFrameNotWaitedOnViolation",
-          "You are calling .nextFrame() without chucking to now!\n"
-          "Please replace this line with .nextFrame() => now;",
-          SHRED);
-
-    // RETURN->v_object = (Chuck_Object *)CGL::GetShredUpdateEvent(SHRED, API,
-    // VM)->GetEvent();
-    RETURN->v_object = (Chuck_Object*)Event_Get(CHUGL_EventType::NEXT_FRAME, API, VM);
-
-    // register shred and set has-waited flag to false
-    Sync_RegisterShred(SHRED);
-
-    // bugfix: grabbing this lock prevents race with render thread
-    // broadcasting nextFrameEvent and setting waitingShreds to 0.
-    // Unlocked in event_next_frame_waiting_on after shred has
-    // been added to the nextFrameEvent waiting queue.
-    // Render thread holds this lock when broadcasting + setting waitingShreds
-    // to 0
-    spinlock::lock(&waitingShredsLock);
-}
-
-//-----------------------------------------------------------------------------
-// this is called by chuck VM at the earliest point when a shred begins to wait
-// on an Event used to catch GG.nextFrame() => now; on one or more shreds once
-// all expected shreds are waiting on GG.nextFrame(), this function signals the
-// graphics-side
-//-----------------------------------------------------------------------------
-CK_DLL_MFUN(event_next_frame_waiting_on)
-{
     // see comment in chugl_next_frame
-    ++waitingShreds;
     bool allShredsWaiting = waitingShreds == registeredShreds.size();
 
     // when new shreds are sporked, they will have `allShredsWaiting = true`
@@ -225,9 +192,6 @@ CK_DLL_MFUN(event_next_frame_waiting_on)
     }
 
     spinlock::unlock(&waitingShredsLock);
-
-    ASSERT(registeredShreds.find(SHRED) != registeredShreds.end());
-    registeredShreds[SHRED] = true; // mark shred waited
 
     // THIS IS A VERY IMPORTANT FUNCTION. See
     // https://trello.com/c/Gddnu21j/6-chuglrender-refactor-possible-deadlock-between-cglupdate-and-render
@@ -299,6 +263,75 @@ CK_DLL_MFUN(event_next_frame_waiting_on)
         // clear audio frame arena
         Arena::clear(&audio_frame_arena);
     }
+}
+
+// called when shred is taken out of circulation for any reason
+// e.g. reached end, removed, VM cleared, etc.
+CK_DLL_SHREDS_WATCHER(chugl_shred_on_destroy_listener)
+{
+    // double check
+    ASSERT(CODE == ckvm_shreds_watch_REMOVE);
+
+    // do nothing if this is not a graphics shred
+    if (!Sync_IsShredRegistered(SHRED)) return;
+
+    // remove from registered list
+    Sync_UnregisterShred(SHRED);
+
+    // if this is the last graphics shred, close the window
+    if (Sync_NumShredsRegistered() == 0) {
+        CQ_PushCommand_WindowClose();
+    }
+
+    // if this would have been the one to trigger graphics thread wakeup, do it
+    // now
+    {
+        spinlock::lock(&waitingShredsLock);
+        chugl_GraphicsShredPerformNextFrameUpdate(SHRED);
+    }
+}
+
+CK_DLL_SFUN(chugl_next_frame)
+{
+    // extract CglEvent from obj
+    // TODO: workaround bug where create() object API is not calling
+    // preconstructors
+    // https://trello.com/c/JwhVQEpv/48-cglnextframe-now-not-calling-preconstructor-of-cglupdate
+
+    if (!Sync_HasShredWaited(SHRED))
+        API->vm->throw_exception(
+          "NextFrameNotWaitedOnViolation",
+          "You are calling .nextFrame() without chucking to now!\n"
+          "Please replace this line with .nextFrame() => now;",
+          SHRED);
+
+    // RETURN->v_object = (Chuck_Object *)CGL::GetShredUpdateEvent(SHRED, API,
+    // VM)->GetEvent();
+    RETURN->v_object = (Chuck_Object*)Event_Get(CHUGL_EventType::NEXT_FRAME, API, VM);
+
+    // register shred and set has-waited flag to false
+    Sync_RegisterShred(SHRED);
+
+    // bugfix: grabbing this lock prevents race with render thread
+    // broadcasting nextFrameEvent and setting waitingShreds to 0.
+    // Unlocked in event_next_frame_waiting_on after shred has
+    // been added to the nextFrameEvent waiting queue.
+    // Render thread holds this lock when broadcasting + setting waitingShreds
+    // to 0
+    spinlock::lock(&waitingShredsLock);
+}
+
+//-----------------------------------------------------------------------------
+// this is called by chuck VM at the earliest point when a shred begins to wait
+// on an Event used to catch GG.nextFrame() => now; on one or more shreds once
+// all expected shreds are waiting on GG.nextFrame(), this function signals the
+// graphics-side
+//-----------------------------------------------------------------------------
+CK_DLL_MFUN(event_next_frame_waiting_on)
+{
+    ++waitingShreds;
+    chugl_GraphicsShredPerformNextFrameUpdate(SHRED);
+    Sync_MarkShredWaited(SHRED);
 }
 
 CK_DLL_SFUN(chugl_gc)
@@ -437,8 +470,6 @@ CK_DLL_QUERY(ChuGL)
     hook = QUERY->create_main_thread_hook(QUERY, chugl_main_loop_hook,
                                           chugl_main_loop_quit, NULL);
 
-    // TODO: add shred_on_destroy listener
-
     // initialize ChuGL API ========================================
     { // chugl events
         // triggered by main render thread after deepcopy is complete, and safe
@@ -480,7 +511,7 @@ CK_DLL_QUERY(ChuGL)
         float normal_pixel_data[4]         = { 0.5f, 0.5f, 1.0f, 1.0f };
         g_builtin_ckobjs.normal_pixel_data = chugin_createCkFloatArray(
           normal_pixel_data, ARRAY_LENGTH(normal_pixel_data), true);
-        
+
         float magenta_pixel_data[4]         = { 1.0f, 0.0f, 1.0f, 1.0f };
         g_builtin_ckobjs.magenta_pixel_data = chugin_createCkFloatArray(
           magenta_pixel_data, ARRAY_LENGTH(magenta_pixel_data), true);
@@ -653,6 +684,13 @@ CK_DLL_QUERY(ChuGL)
 
         END_CLASS();
     } // GG
+
+    { // chugin listeners
+
+        // shred destroy listener
+        QUERY->register_shreds_watcher(QUERY, chugl_shred_on_destroy_listener,
+                                       ckvm_shreds_watch_REMOVE, NULL);
+    }
 
     { // Default components
         // scene
