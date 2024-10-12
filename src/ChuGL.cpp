@@ -265,13 +265,8 @@ static void chugl_GraphicsShredPerformNextFrameUpdate(Chuck_VM_Shred* SHRED)
     }
 }
 
-// called when shred is taken out of circulation for any reason
-// e.g. reached end, removed, VM cleared, etc.
-CK_DLL_SHREDS_WATCHER(chugl_shred_on_destroy_listener)
+static void chugl_GraphicsShredUnregister(Chuck_VM_Shred* SHRED)
 {
-    // double check
-    ASSERT(CODE == ckvm_shreds_watch_REMOVE);
-
     // do nothing if this is not a graphics shred
     if (!Sync_IsShredRegistered(SHRED)) return;
 
@@ -289,6 +284,15 @@ CK_DLL_SHREDS_WATCHER(chugl_shred_on_destroy_listener)
         spinlock::lock(&waitingShredsLock);
         chugl_GraphicsShredPerformNextFrameUpdate(SHRED);
     }
+}
+
+// called when shred is taken out of circulation for any reason
+// e.g. reached end, removed, VM cleared, etc.
+CK_DLL_SHREDS_WATCHER(chugl_shred_on_destroy_listener)
+{
+    // double check
+    ASSERT(CODE == ckvm_shreds_watch_REMOVE);
+    chugl_GraphicsShredUnregister(SHRED);
 }
 
 CK_DLL_SFUN(chugl_next_frame)
@@ -442,6 +446,11 @@ CK_DLL_SFUN(chugl_get_frame_width)
 CK_DLL_SFUN(chugl_get_frame_height)
 {
     RETURN->v_float = CHUGL_Window_FramebufferSize().y;
+}
+
+CK_DLL_SFUN(chugl_unregister_shred)
+{
+    chugl_GraphicsShredUnregister(SHRED);
 }
 
 // ============================================================================
@@ -681,6 +690,13 @@ CK_DLL_QUERY(ChuGL)
         DOC_FUNC(
           "Get the height of the current window's framebuffer in pixels. Shorthand for "
           "GWindow.framebufferSize().y, added for backwards compatibility");
+
+        SFUN(chugl_unregister_shred, "void", "unregisterShred");
+        DOC_FUNC(
+          "Unregisters the calling shred from ChuGL so that it is no longer marked as "
+          "a graphics shred. Do this if you want a shred to exit a GG.nextFrame() => "
+          "now gameloop and move on to other tasks. Otherwise, the window will hang "
+          "as it waits for this shred to call GG.nextFrame() again.");
 
         END_CLASS();
     } // GG
