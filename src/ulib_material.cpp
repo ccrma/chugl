@@ -393,11 +393,11 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
     static t_CKINT cullmode_none  = WGPUCullMode_None;
     static t_CKINT cullmode_front = WGPUCullMode_Front;
     static t_CKINT cullmode_back  = WGPUCullMode_Back;
-    SVAR("int", "CULL_NONE", &cullmode_none);
+    SVAR("int", "Cull_None", &cullmode_none);
     DOC_VAR("No culling.");
-    SVAR("int", "CULL_FRONT", &cullmode_front);
+    SVAR("int", "Cull_Front", &cullmode_front);
     DOC_VAR("Cull front faces.");
-    SVAR("int", "CULL_BACK", &cullmode_back);
+    SVAR("int", "Cull_Back", &cullmode_back);
     DOC_VAR("Cull back faces.");
 
     static t_CKINT topology_pointlist     = WGPUPrimitiveTopology_PointList;
@@ -431,14 +431,14 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
 
     MFUN(material_get_cullmode, "int", "cullMode");
     DOC_FUNC(
-      "Get the cull mode of the material. Material.CULL_NONE, Material.CULL_FRONT, or "
-      "Material.CULL_BACK.");
+      "Get the cull mode of the material. Material.Cull_None, Material.Cull_Front, or "
+      "Material.Cull_Back.");
 
     MFUN(material_set_cullmode, "void", "cullMode");
     ARG("int", "cullMode");
     DOC_FUNC(
-      "Set the cull mode of the material. valid options: Material.CULL_NONE, "
-      "Material.CULL_FRONT, or Material.CULL_BACK.");
+      "Set the cull mode of the material. valid options: Material.Cull_None, "
+      "Material.Cull_Front, or Material.Cull_Back.");
 
     MFUN(material_set_topology, "void", "topology");
     ARG("int", "topology");

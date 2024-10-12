@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -578,7 +578,7 @@ void R_Geometry::rebuildPullBindGroup(GraphicsContext* gctx, R_Geometry* geo,
     geo->pull_bind_group_dirty = false;
 
     WGPUBindGroupEntry entries[SG_GEOMETRY_MAX_VERTEX_PULL_BUFFERS] = {};
-    int num_entries = 0;
+    int num_entries                                                 = 0;
     for (u32 i = 0; i < SG_GEOMETRY_MAX_VERTEX_PULL_BUFFERS; i++) {
         if (geo->pull_buffers[i].buf == NULL) {
             continue;
@@ -701,12 +701,18 @@ void R_Material::updatePSO(GraphicsContext* gctx, R_Material* mat,
 {
     mat->pso = *pso;
     hashmap_set(materials_with_new_pso, &mat->id);
-    mat->pipeline_stale = true;
 }
 
 void R_Material::rebuildBindGroup(R_Material* mat, GraphicsContext* gctx,
                                   WGPUBindGroupLayout layout)
 {
+    defer(mat->bind_group_stale = false);
+    // check if layout changed (e.g. changing material topology)
+    if (layout != mat->bind_group_layout) {
+        mat->bind_group_layout = layout;
+        mat->bind_group_stale  = true;
+    }
+
     // TODO: can we improve this? maybe assume bindings are consecutive.
     // at first R_BIND_EMPTY can early-out
     // check in chugl example if we can skip @binding() numbers
@@ -731,7 +737,6 @@ void R_Material::rebuildBindGroup(R_Material* mat, GraphicsContext* gctx,
         }
         if (!needs_rebuild) return;
     }
-    mat->bind_group_stale = false;
 
     // log_info("rebuilding bind group\n");
 
@@ -948,6 +953,11 @@ void GeometryToXforms::rebuildBindGroup(GraphicsContext* gctx, R_Scene* scene,
                                         GeometryToXforms* g2x,
                                         WGPUBindGroupLayout layout, Arena* frame_arena)
 {
+    if (g2x->bind_group_layout != layout) {
+        g2x->bind_group_layout = layout;
+        g2x->stale             = true;
+    }
+
     if (!g2x->stale) return;
     defer(g2x->stale = false);
 
@@ -961,16 +971,10 @@ void GeometryToXforms::rebuildBindGroup(GraphicsContext* gctx, R_Scene* scene,
         R_Transform* xform = Component_GetXform(xformIDs[i]);
         // remove NULL xforms and xforms that have been reassigned new mesh params
 
-        // TODO: impl GMesh.geo() and GMesh.mat() to change geo and mat of mesh
-        // - impl needs to set GeometryToXforms.stale = true
-        // - but does NOT need to linear search the xformIDs arena. because lazy
-        // deletion happens right here
-
         bool xform_destroyed = (xform == NULL);
         bool xform_changed_mesh
           = (xform->_geoID != g2x->key.geo_id || xform->_matID != g2x->key.mat_id);
         bool xform_detached_from_scene = (xform->scene_id != scene->id);
-        // TODO use arena macro instead
         if (xform_destroyed || xform_changed_mesh || xform_detached_from_scene) {
             GeometryToXforms::removeXform(g2x, i);
             // decrement to reprocess this index
@@ -1016,8 +1020,8 @@ void GeometryToXforms::rebuildBindGroup(GraphicsContext* gctx, R_Scene* scene,
 
     // only recreate bind group if we have nonzero instances
     if (numInstances > 0) {
-		g2x->xform_bind_group = wgpuDeviceCreateBindGroup(gctx->device, &desc);
-		ASSERT(g2x->xform_bind_group);
+        g2x->xform_bind_group = wgpuDeviceCreateBindGroup(gctx->device, &desc);
+        ASSERT(g2x->xform_bind_group);
     }
 }
 
@@ -1294,8 +1298,6 @@ void R_Scene::initFromSG(GraphicsContext* gctx, R_Scene* r_scene, SG_ID scene_id
 // Render Pipeline Definitions
 // ============================================================================
 
-GPU_Buffer R_RenderPipeline::frame_uniform_buffer = {};
-
 void R_RenderPipeline::init(GraphicsContext* gctx, R_RenderPipeline* pipeline,
                             const SG_MaterialPipelineState* config,
                             int msaa_sample_count)
@@ -1361,9 +1363,10 @@ void R_RenderPipeline::init(GraphicsContext* gctx, R_RenderPipeline* pipeline,
     // multisample state
     WGPUMultisampleState multisampleState = G_createMultisampleState(msaa_sample_count);
 
-    char pipeline_label[64] = {};
-    snprintf(pipeline_label, sizeof(pipeline_label), "RenderPipeline %d %s", shader->id,
-             shader->name);
+    char pipeline_label[128] = {};
+    snprintf(pipeline_label, sizeof(pipeline_label),
+             "RenderPipeline %d %s cm: %d top: %d", shader->id, shader->name,
+             primitiveState.cullMode, primitiveState.topology);
     WGPURenderPipelineDescriptor pipeline_desc = {};
     pipeline_desc.label                        = pipeline_label;
     pipeline_desc.layout                       = NULL; // Using layout: auto
@@ -1610,11 +1613,6 @@ void Component_Init(GraphicsContext* gctx)
                                      RenderPipelineIDTableItem::compare, NULL, NULL);
     materials_with_new_pso
       = hashmap_new(sizeof(SG_ID), 0, seed, seed, hashSGID, compareSGIDs, NULL, NULL);
-
-    // init frame uniform buffer
-    FrameUniforms frame_uniforms = {};
-    GPU_Buffer::write(gctx, &R_RenderPipeline::frame_uniform_buffer,
-                      WGPUBufferUsage_Uniform, &frame_uniforms, sizeof(frame_uniforms));
 }
 
 void Component_Free()
@@ -1918,9 +1916,6 @@ R_Material* Component_CreateMaterial(GraphicsContext* gctx,
 void Material_batchUpdatePipelines(GraphicsContext* gctx, FT_Library ft_lib,
                                    R_Font* default_font)
 {
-    // TODO:
-    // handle xforms changing geo/mat by marking g2m as stale in add subgraph to scene
-    // fn
     size_t hashmap_index_DONT_USE = 0;
     SG_ID* sg_id;
     while (
@@ -1934,9 +1929,6 @@ void Material_batchUpdatePipelines(GraphicsContext* gctx, FT_Library ft_lib,
                 if (mat->pso.exclude_from_render_pass) continue;
 
                 R_RenderPipeline* pipeline = Component_GetPipeline(gctx, &mat->pso);
-
-                ASSERT(mat->pipeline_stale);
-                mat->pipeline_stale = false;
 
                 // add material to pipeline
                 R_RenderPipeline::addMaterial(pipeline, mat);

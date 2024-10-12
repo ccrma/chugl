@@ -1240,18 +1240,10 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
     // update frame-level uniforms (storing on camera because same scene can be
     // rendered from multiple camera angles) every camera belongs to a single scene,
     // but a scene can have multiple cameras
-    if (camera) {
-        bool frame_uniforms_recreated = GPU_Buffer::write(
-          &app->gctx, &camera->frame_uniform_buffer, WGPUBufferUsage_Uniform,
-          &frameUniforms, sizeof(frameUniforms));
-        ASSERT(!frame_uniforms_recreated);
-    } else {
-        // TODO remove after adding camera controller to chugl, disallow null camera
-        bool frame_uniforms_recreated = GPU_Buffer::write(
-          &app->gctx, &R_RenderPipeline::frame_uniform_buffer, WGPUBufferUsage_Uniform,
-          &frameUniforms, sizeof(frameUniforms));
-        ASSERT(!frame_uniforms_recreated);
-    }
+    bool frame_uniforms_recreated = GPU_Buffer::write(
+      &app->gctx, &camera->frame_uniform_buffer, WGPUBufferUsage_Uniform,
+      &frameUniforms, sizeof(frameUniforms));
+    ASSERT(!frame_uniforms_recreated);
 
     // ==optimize== to prevent sparseness, delete render state entries / arena ids
     // if we find SG_ID arenas are empty
@@ -1298,12 +1290,8 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
             frame_group_entry->binding            = 0;
             // TODO remove pipeline->frame_uniform_buffer after adding chugl default
             // camera
-            frame_group_entry->buffer = camera ?
-                                          camera->frame_uniform_buffer.buf :
-                                          render_pipeline->frame_uniform_buffer.buf;
-            frame_group_entry->size   = camera ?
-                                          camera->frame_uniform_buffer.size :
-                                          render_pipeline->frame_uniform_buffer.size;
+            frame_group_entry->buffer = camera->frame_uniform_buffer.buf;
+            frame_group_entry->size   = camera->frame_uniform_buffer.size;
 
             WGPUBindGroupEntry* lighting_entry = &frame_group_entries[1];
             lighting_entry->binding            = 1;
@@ -1373,7 +1361,9 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
                 // check *after* rebuildBindGroup because some xform ids may be
                 // removed
                 int num_instances = ARENA_LENGTH(&g2x->xform_ids, SG_ID);
-                if (num_instances == 0) continue;
+                if (num_instances == 0) {
+                    continue;
+                }
                 ASSERT(g2x->xform_bind_group); // shouldn't be null if we have non-zero
                                                // instances
 

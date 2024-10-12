@@ -408,14 +408,18 @@ struct R_Material : public R_Component {
 
     b32 bind_group_stale; // set if modified by chuck user, need to rebuild bind groups
 
-    R_ID pipelineID = true; // renderpipeline this material belongs to
-    bool pipeline_stale;
+    R_ID pipelineID; // renderpipeline this material belongs to
 
     // bindgroup state (uniforms, storage buffers, textures, samplers)
     R_Binding bindings[SG_MATERIAL_MAX_UNIFORMS];
     GPU_Buffer uniform_buffer; // maps 1:1 with uniform location, initializesd in
                                // Component_MaterialCreate
     WGPUBindGroup bind_group;
+
+    // after updating to webgpu v22.1.0.5, bind_group_layout is now part of bind_group,
+    // so we cache here in order to check if we need to rebuild the bindgroup (e.g. when
+    // changing a material PSO property such as Topology. Same for Geometry bindgroups)
+    WGPUBindGroupLayout bind_group_layout; // render pipeline layout at @group(1)
 
     static void updatePSO(GraphicsContext* gctx, R_Material* mat,
                           SG_MaterialPipelineState* pso);
@@ -549,6 +553,10 @@ struct GeometryToXforms {
     GPU_Buffer xform_storage_buffer;
     bool stale;
 
+    // after updating to webgpu v22.1.0.5, bind_group_layout is now part of bind_group,
+    // so we cache here in order to check if we need to rebuild the bindgroup
+    WGPUBindGroupLayout bind_group_layout; // @group(2) DRAW_UNIFORMS
+
     static bool hasXform(GeometryToXforms* g2x, SG_ID xform_id)
     {
         return hashmap_get(g2x->xform_id_set, &xform_id) != NULL;
@@ -648,15 +656,6 @@ struct R_RenderPipeline /* NOT backed by SG_Component */ {
     // ptrdiff_t offset; // acts as an ID, offset in bytes into pipeline Arena
 
     Arena materialIDs; // array of SG_IDs
-
-    // RenderPass refactor: removing
-    // bindgroup now in App->frame_uniforms_map
-    // frame uniform buffer now stored per R_Camera
-    // keeping these around to handle case of null camera
-    // TODO remove after removing null default camera in chugl (and implementing
-    // camera controllers)
-    WGPUBindGroup frame_group;
-    static GPU_Buffer frame_uniform_buffer;
 
     WGPUBindGroupLayout bind_group_layouts[4];
 

@@ -35,9 +35,9 @@ T.assert(!shader2.lit(), "shader2 lit");
 
 Material material;
 
-T.assert(material.CULL_NONE == 0, "material CULL_NONE");
-T.assert(material.CULL_FRONT == 1, "material CULL_FRONT");
-T.assert(material.CULL_BACK == 2, "material CULL_BACK");
+T.assert(material.Cull_None == 0, "material Cull_None");
+T.assert(material.Cull_Front == 1, "material Cull_Front");
+T.assert(material.Cull_Back == 2, "material Cull_Back");
 
 T.assert(material.Topology_PointList == 0, "material TOPOLOGY_POINTLIST");
 T.assert(material.Topology_LineList == 1, "material TOPOLOGY_LINELIST");
@@ -45,9 +45,9 @@ T.assert(material.Topology_LineStrip == 2, "material TOPOLOGY_LINESTRIP");
 T.assert(material.Topology_TriangleList == 3, "material TOPOLOGY_TRIANGLELIST");
 T.assert(material.Topology_TriangleStrip == 4, "material TOPOLOGY_TRIANGLESTRIP");
 
-T.assert(material.cullMode() == material.CULL_NONE, "material cullMode default"); 
-material.cullMode(material.CULL_BACK);
-T.assert(material.cullMode() == material.CULL_BACK, "material cullMode");
+T.assert(material.cullMode() == material.Cull_None, "material cullMode default"); 
+material.cullMode(material.Cull_Back);
+T.assert(material.cullMode() == material.Cull_Back, "material cullMode");
 
 T.assert(material.topology() == material.Topology_TriangleList, "material topology default");
 material.topology(material.Topology_PointList);

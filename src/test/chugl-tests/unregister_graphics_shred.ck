@@ -8,6 +8,14 @@ by callimng GG.unregisterShred()
 
 Event e1, e2;
 
+fun void B() {
+    repeat (5) {
+        GG.unregisterShred(); // no-op
+        1::samp => now;
+    }
+}
+spork ~ B();
+
 fun void A() {
     repeat (3) GG.nextFrame() => now;
 
