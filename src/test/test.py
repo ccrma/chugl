@@ -2,6 +2,7 @@
 
 import sys
 import os
+import platform
 import subprocess
 import posixpath
 
@@ -9,7 +10,14 @@ failures = 0
 successes = 0
 skipped = 0
 skipTests = {}
+
+# macos path
 chugl_path = "--chugin:./build-release/ChuGL.chug"
+
+if "CYGWIN" in platform.system() or "Windows" in platform.system():
+    chugl_path = "--chugin:./build/Release/ChuGL.chug"
+
+
 exe = 'chuck'
 
 def handle_directory(dir):

@@ -213,6 +213,8 @@ if (MSVC)
         /wd4189
         # ignore uninitialized member variables
         /wd26495 
+        # ignore possible loss of data in integer type conversion
+        /wd4267
     )
     target_compile_options(
         ${PROJECT_NAME} PRIVATE
