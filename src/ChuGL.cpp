@@ -45,10 +45,12 @@
 #include "ulib_pass.cpp"
 #include "ulib_buffer.cpp"
 #include "ulib_light.cpp"
+#include "ulib_video.cpp"
 
 #ifndef CHUGL_FAST_COMPILE
 #include "ulib_assloader.cpp"
 #endif
+
 
 // vendor
 #include <sokol/sokol_time.h>
@@ -557,6 +559,7 @@ CK_DLL_QUERY(ChuGL)
     ulib_mesh_query(QUERY);
     ulib_pass_query(QUERY);
     ulib_text_query(QUERY);
+    ulib_video_query(QUERY);
 
 #ifndef CHUGL_FAST_COMPILE
     ulib_assloader_query(QUERY);

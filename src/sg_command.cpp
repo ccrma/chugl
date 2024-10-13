@@ -836,3 +836,11 @@ void CQ_PushCommand_LightUpdate(SG_Light* light)
     command->desc     = light->desc;
     END_COMMAND();
 }
+
+void CQ_PushCommand_VideoUpdate(SG_Video* video)
+{
+    BEGIN_COMMAND(SG_Command_VideoUpdate, SG_COMMAND_VIDEO_UPDATE);
+    command->video            = *video;
+    command->video.path_OWNED = strdup(video->path_OWNED);
+    END_COMMAND();
+}

@@ -525,11 +525,10 @@ struct App {
         // chuck shreds are on wait queue guaranteeing that when they awake,
         // they'll be using fresh dt data
 
-        { // calculate dt
-            u64 dt_ticks = stm_laptime(&prev_lap_time);
-            f64 dt_sec   = stm_sec(dt_ticks);
-            CHUGL_Window_dt(dt_sec);
-        }
+        // calculate dt
+        u64 dt_ticks = stm_laptime(&prev_lap_time);
+        f64 dt_sec   = stm_sec(dt_ticks);
+        CHUGL_Window_dt(dt_sec);
 
         /* two locks here:
         1 for writing/swapping the command queues
@@ -662,6 +661,19 @@ struct App {
         graph (can test by adding builtin camera controller on chugl side)
         - check window minize still works
         */
+
+        { // decode all current video textures
+            // TODO: handle videos ending / being paused
+            // TODO: handle seek
+            size_t video_idx = 0;
+            R_Video* video   = NULL;
+            while (Component_VideoIter(&video_idx, &video)) {
+                if (video->plm) {
+                    log_info("decoding video %d, dt: %f", video->id, dt_sec);
+                    plm_decode(video->plm, dt_sec);
+                }
+            }
+        }
 
         // begin walking render graph
         R_Pass* root_pass = Component_GetPass(app->root_pass_id);
@@ -1953,6 +1965,12 @@ static void _R_HandleCommand(App* app, SG_Command* command)
             R_Light* light              = Component_GetLight(cmd->light_id);
             if (!light) light = Component_CreateLight(cmd->light_id, &cmd->desc);
             light->desc = cmd->desc; // copy light properties
+        } break;
+        case SG_COMMAND_VIDEO_UPDATE: {
+            SG_Command_VideoUpdate* cmd = (SG_Command_VideoUpdate*)command;
+            R_Video* video              = Component_GetVideo(cmd->video.id);
+            if (!video)
+                video = Component_CreateVideo(&app->gctx, cmd->video.id, &cmd->video);
         } break;
         default: {
             log_error("unhandled command type: %d", command->type);

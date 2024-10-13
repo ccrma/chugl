@@ -1500,6 +1500,7 @@ static Arena _RenderPipelineArena;
 static Arena cameraArena;
 static Arena textArena;
 static Arena lightArena;
+static Arena videoArena;
 
 // default textures
 static Texture opaqueWhitePixel      = {};
@@ -1589,6 +1590,7 @@ void Component_Init(GraphicsContext* gctx)
     Arena::init(&passArena, sizeof(R_Pass) * 16);
     Arena::init(&bufferArena, sizeof(R_Buffer) * 64);
     Arena::init(&lightArena, sizeof(R_Light) * 16);
+    Arena::init(&videoArena, sizeof(R_Video) * 16);
 
     // initialize default textures
     static u8 white[4]  = { 255, 255, 255, 255 };
@@ -2022,6 +2024,102 @@ R_Light* Component_CreateLight(SG_ID id, SG_LightDesc* desc)
     return light;
 }
 
+static void R_Video_OnVideo(plm_t* player, plm_frame_t* frame, void* video_id)
+{
+    R_Video* video = Component_GetVideo((intptr_t)video_id);
+
+    log_info("Video frame: %d x %d, time %f", frame->width, frame->height, frame->time);
+
+    // Hand the decoded data over to OpenGL. For the RGB texture mode, the
+    // YCrCb->RGB conversion is done on the CPU.
+
+    // TODO support YCrCb mode
+    // if (self->texture_mode == APP_TEXTURE_MODE_YCRCB) {
+    //     app_update_texture(self, GL_TEXTURE0, self->texture_y, &frame->y);
+    //     app_update_texture(self, GL_TEXTURE1, self->texture_cb, &frame->cb);
+    //     app_update_texture(self, GL_TEXTURE2, self->texture_cr, &frame->cr);
+    // } else {
+
+    R_Texture* video_texture_rgba
+      = Component_GetTexture(video->sg_video.video_texture_rgba_id);
+
+    { // memory bounds check
+        // check texture
+        ASSERT(video_texture_rgba->desc.width == frame->width);
+        ASSERT(video_texture_rgba->desc.height == frame->height);
+        ASSERT(video_texture_rgba->desc.depth == 1);
+        ASSERT(video_texture_rgba->desc.mips == 1);
+        ASSERT(video_texture_rgba->desc.format
+               == WGPUTextureFormat_RGBA8Unorm); // TODO might need to go srgb
+
+        // check cpu pixel buffer size
+        ASSERT(video->rgba_data_size == frame->width * frame->height * 4);
+        ASSERT(video->rgba_data_OWNED);
+    }
+
+    // convert yCrCb to rgba
+    plm_frame_to_rgba(frame, video->rgba_data_OWNED, frame->width * 4);
+
+    SG_TextureWriteDesc write_desc = {};
+    write_desc.width               = frame->width;
+    write_desc.height              = frame->height;
+    R_Texture::write(video->gctx, video_texture_rgba, &write_desc,
+                     video->rgba_data_OWNED, video->rgba_data_size);
+}
+
+R_Video* Component_CreateVideo(GraphicsContext* gctx, SG_ID id, SG_Video* sg_video)
+{
+    Arena* arena   = &videoArena;
+    R_Video* video = ARENA_PUSH_ZERO_TYPE(arena, R_Video);
+
+    // component init
+    video->id   = id;
+    video->type = SG_COMPONENT_VIDEO;
+    strncpy(video->name, sg_video->name, sizeof(video->name));
+
+    // store offset
+    R_Location loc     = { video->id, Arena::offsetOf(arena, video), arena };
+    const void* result = hashmap_set(r_locator, &loc);
+    ASSERT(result == NULL); // ensure id is unique
+
+    { // video init (TODO move to video Desc struct)
+        video->gctx     = gctx;
+        video->sg_video = *sg_video;
+
+        video->plm = plm_create_with_filename(sg_video->path_OWNED);
+
+        // validation
+        if (video->plm) {
+            if (!plm_probe(video->plm, 5000 * 1024)) {
+                // no audio streams, destroy
+                plm_destroy(video->plm);
+                video->plm = NULL;
+            }
+        }
+
+        if (video->plm) {
+            // allocate pixel memory
+            int num_pixels = plm_get_width(video->plm) * plm_get_height(video->plm);
+            video->rgba_data_OWNED = ALLOCATE_BYTES(u8, num_pixels * 4);
+            video->rgba_data_size  = num_pixels * 4;
+
+            // memset to 256 for alpha
+            memset(video->rgba_data_OWNED, 255, video->rgba_data_size);
+
+            plm_set_video_decode_callback(video->plm, R_Video_OnVideo,
+                                          (void*)(intptr_t)video->id);
+
+            // enable looping (TODO parameterize)
+            plm_set_loop(video->plm, TRUE);
+
+            // don't process audio
+            plm_set_audio_enabled(video->plm, FALSE);
+        }
+    }
+
+    return video;
+}
+
 // linear search by font path, lazily creates if not found
 R_Font* Component_GetFont(GraphicsContext* gctx, FT_Library library,
                           const char* font_path)
@@ -2139,6 +2237,13 @@ R_Light* Component_GetLight(SG_ID id)
     return (R_Light*)comp;
 }
 
+R_Video* Component_GetVideo(SG_ID id)
+{
+    R_Component* comp = Component_GetComponent(id);
+    ASSERT(comp == NULL || comp->type == SG_COMPONENT_VIDEO);
+    return (R_Video*)comp;
+}
+
 bool Component_MaterialIter(size_t* i, R_Material** material)
 {
     if (*i >= ARENA_LENGTH(&materialArena, R_Material)) {
@@ -2168,6 +2273,18 @@ bool Component_RenderPipelineIter(size_t* i, R_RenderPipeline** renderPipeline)
 int Component_RenderPipelineCount()
 {
     return ARENA_LENGTH(&_RenderPipelineArena, R_RenderPipeline);
+}
+
+bool Component_VideoIter(size_t* i, R_Video** video)
+{
+    if (*i >= ARENA_LENGTH(&videoArena, R_Video)) {
+        *video = NULL;
+        return false;
+    }
+
+    *video = ARENA_GET_TYPE(&videoArena, R_Video, *i);
+    ++(*i);
+    return true;
 }
 
 R_RenderPipeline* Component_GetPipeline(GraphicsContext* gctx,

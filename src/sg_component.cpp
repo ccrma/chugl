@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -730,6 +730,7 @@ static Arena SG_TextArena;
 static Arena SG_PassArena;
 static Arena SG_BufferArena;
 static Arena SG_LightArena;
+static Arena SG_VideoArena;
 
 // locators (TODO switch to table)
 static hashmap* locator = NULL;
@@ -813,6 +814,7 @@ void SG_Init(const Chuck_DL_Api* api)
     Arena::init(&SG_PassArena, sizeof(SG_Pass) * 32);
     Arena::init(&SG_BufferArena, sizeof(SG_Pass) * 64);
     Arena::init(&SG_LightArena, sizeof(SG_Light) * 32);
+    Arena::init(&SG_VideoArena, sizeof(SG_Video) * 32);
 
     // init gc state
     Arena::init(&_gc_queue_a, sizeof(SG_ID) * 64);
@@ -1169,6 +1171,29 @@ SG_Light* SG_CreateLight(Chuck_Object* ckobj)
     return light;
 }
 
+SG_Video* SG_CreateVideo(Chuck_Object* ckobj)
+{
+    CK_DL_API API = g_chuglAPI;
+
+    Arena* arena    = &SG_VideoArena;
+    size_t offset   = arena->curr;
+    SG_Video* video = ARENA_PUSH_ZERO_TYPE(arena, SG_Video);
+
+    // init base component
+    video->ckobj = ckobj;
+    video->id    = SG_GetNewComponentID();
+    video->type  = SG_COMPONENT_VIDEO;
+
+    // set ckobj pointer
+    OBJ_MEMBER_UINT(ckobj, component_offset_id) = video->id;
+
+    // store in map
+    SG_Location loc = { video->id, offset, arena };
+    hashmap_set(locator, &loc);
+
+    return video;
+}
+
 SG_Component* SG_GetComponent(SG_ID id)
 {
     SG_Location key     = {};
@@ -1265,6 +1290,13 @@ SG_Light* SG_GetLight(SG_ID id)
     SG_Component* component = SG_GetComponent(id);
     ASSERT(component == NULL || component->type == SG_COMPONENT_LIGHT);
     return (SG_Light*)component;
+}
+
+SG_Video* SG_GetVideo(SG_ID id)
+{
+    SG_Component* component = SG_GetComponent(id);
+    ASSERT(component == NULL || component->type == SG_COMPONENT_VIDEO);
+    return (SG_Video*)component;
 }
 
 // ============================================================================

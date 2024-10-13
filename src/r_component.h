@@ -44,6 +44,8 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
+#include <pl/pl_mpeg.h>
+
 // =============================================================================
 // scenegraph data structures
 // =============================================================================
@@ -326,6 +328,7 @@ struct R_Texture : public R_Component {
             wgpuQueueWriteTexture(gctx->queue, &destination, data, data_size_bytes,
                                   &source, &size);
 
+            // TODO profile
             wgpuQueueSubmit(gctx->queue, 0, NULL); // schedule transfer immediately
         }
     }
@@ -985,6 +988,18 @@ struct R_Font {
 };
 
 // =============================================================================
+// R_Video
+// =============================================================================
+
+struct R_Video : public R_Component {
+    SG_Video sg_video;
+    plm_t* plm;          // plm_destroy(plm) to free
+    u8* rgba_data_OWNED; // free with free(rgba_data)
+    int rgba_data_size;
+    GraphicsContext* gctx; // messy workaround for plm callbacks
+};
+
+// =============================================================================
 // Component Manager API
 // =============================================================================
 
@@ -1015,6 +1030,7 @@ R_Texture* Component_CreateTexture(GraphicsContext* gctx,
 R_Pass* Component_CreatePass(SG_ID pass_id);
 R_Buffer* Component_CreateBuffer(SG_ID id);
 R_Light* Component_CreateLight(SG_ID id, SG_LightDesc* desc);
+R_Video* Component_CreateVideo(GraphicsContext* gctx, SG_ID id, SG_Video* sg_video);
 
 R_Component* Component_GetComponent(SG_ID id);
 R_Transform* Component_GetXform(SG_ID id);
@@ -1031,6 +1047,7 @@ R_Font* Component_GetFont(GraphicsContext* gctx, FT_Library library,
 R_Pass* Component_GetPass(SG_ID id);
 R_Buffer* Component_GetBuffer(SG_ID id);
 R_Light* Component_GetLight(SG_ID id);
+R_Video* Component_GetVideo(SG_ID id);
 
 // lazily created on-demand because of many possible shader variations
 R_RenderPipeline* Component_GetPipeline(GraphicsContext* gctx,
@@ -1046,6 +1063,8 @@ R_RenderPipeline* Component_GetPipeline(R_ID rid);
 bool Component_MaterialIter(size_t* i, R_Material** material);
 bool Component_RenderPipelineIter(size_t* i, R_RenderPipeline** renderPipeline);
 int Component_RenderPipelineCount();
+
+bool Component_VideoIter(size_t* i, R_Video** video);
 
 // component manager initialization
 void Component_Init(GraphicsContext* gctx);
