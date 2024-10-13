@@ -1447,7 +1447,7 @@ static void ulib_material_init_uniforms_and_pso(SG_Material* material)
                 PhongParams::specular(material, glm::vec3(.2f));
                 PhongParams::diffuse(material, glm::vec3(1.0f));
                 PhongParams::shininess(material, 64.0f);
-                PhongParams::emission(material, glm::vec3(0.0f));
+                PhongParams::emission(material, glm::vec3(1.0f));
                 PhongParams::normalFactor(material, 1.0f);
                 PhongParams::aoFactor(material, 1.0f);
 
