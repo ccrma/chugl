@@ -36,6 +36,9 @@ debug: build-debug
 	cmake --build build-debug
 	cp build-debug/ChuGL.chug .
 
+test: build-release
+	test/test.py
+
 # (mac/linux) remove system installed ChuGL and install local ChuGL
 test-install:
 	@echo "[removing installed ChuGL.chug...]"
