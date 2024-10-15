@@ -45,7 +45,10 @@
 #include "ulib_pass.cpp"
 #include "ulib_buffer.cpp"
 #include "ulib_light.cpp"
+
+#ifdef CHUGL_ULIB_VIDEO
 #include "ulib_video.cpp"
+#endif
 
 #ifndef CHUGL_FAST_COMPILE
 #include "ulib_assloader.cpp"
@@ -559,7 +562,10 @@ CK_DLL_QUERY(ChuGL)
     ulib_mesh_query(QUERY);
     ulib_pass_query(QUERY);
     ulib_text_query(QUERY);
+
+#ifdef CHUGL_ULIB_VIDEO
     ulib_video_query(QUERY);
+#endif
 
 #ifndef CHUGL_FAST_COMPILE
     ulib_assloader_query(QUERY);

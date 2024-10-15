@@ -412,6 +412,10 @@ int plm_seek(plm_t* self, double time, int seek_exact);
 
 plm_frame_t* plm_seek_frame(plm_t* self, double time, int seek_exact);
 
+// seek for audio-only streams.
+// out_time is the timestamp of the frame that was found.
+int plm_seek_audio(plm_t* self, double time, double* out_time);
+
 // -----------------------------------------------------------------------------
 // plm_buffer public API
 // Provides the data source for all other plm_* interfaces
@@ -1226,6 +1230,58 @@ plm_frame_t* plm_seek_frame(plm_t* self, double time, int seek_exact)
 
     self->has_ended = FALSE;
     return frame;
+}
+
+// should only be called when audio is enabled and video is disabled
+int plm_seek_audio(plm_t* self, double time, double* out_time)
+{
+    if (!self->audio_packet_type) {
+        return false;
+    }
+
+    if (!plm_init_decoders(self)) {
+        return false;
+    }
+
+    if (!self->video_packet_type) {
+        return false;
+    }
+
+    int type          = self->video_packet_type;
+    double start_time = plm_demux_get_start_time(self->demux, type);
+    double duration   = plm_demux_get_duration(self->demux, type);
+
+    if (time < 0) {
+        time = 0;
+    } else if (time > duration) {
+        time = duration;
+    }
+
+    plm_packet_t* packet = plm_demux_seek(self->demux, time, type, TRUE);
+    if (!packet) {
+        return false;
+    }
+
+    self->time      = packet->pts;
+    self->has_ended = FALSE;
+
+    // Sync up Audio. This demuxes more packets until the first audio packet
+    // with a PTS greater than the current time is found. plm_decode() is then
+    // called to decode enough audio data to satisfy the audio_lead_time.
+
+    plm_audio_rewind(self->audio_decoder);
+    do {
+        if (packet->type == self->audio_packet_type
+            && packet->pts - start_time > self->time - .1) {
+            plm_audio_set_time(self->audio_decoder, packet->pts - start_time);
+            plm_buffer_write(self->audio_buffer, packet->data, packet->length);
+            plm_decode(self, 0);
+            break;
+        }
+    } while ((packet = plm_demux_decode(self->demux)));
+
+    *out_time = self->time;
+    return true;
 }
 
 int plm_seek(plm_t* self, double time, int seek_exact)

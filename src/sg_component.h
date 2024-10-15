@@ -38,6 +38,8 @@
 
 #include <iostream> // std::string
 
+#include <pl/pl_mpeg.h>
+
 // forward decls
 struct SG_Light;
 struct SG_Camera;
@@ -815,8 +817,22 @@ struct SG_Light : public SG_Transform {
 // ============================================================================
 
 struct SG_Video : public SG_Component {
+    plm_t* plm;
     const char* path_OWNED; // malloced, must free
     SG_ID video_texture_rgba_id;
+    float framerate;
+    int samplerate;
+    float duration_secs;
+
+    // audio playback
+    float rate = 1.0;
+    int audio_playhead;     // position in audio frames
+    plm_samples_t* samples; // TODO maybe remove
+
+    static int audioFrames(SG_Video* video)
+    {
+        return (int)(video->duration_secs * video->samplerate);
+    }
 };
 
 // ============================================================================

@@ -669,8 +669,8 @@ struct App {
             R_Video* video   = NULL;
             while (Component_VideoIter(&video_idx, &video)) {
                 if (video->plm) {
-                    log_info("decoding video %d, dt: %f", video->id, dt_sec);
-                    plm_decode(video->plm, dt_sec);
+                    // log_info("decoding video %d, dt: %f", video->id, dt_sec);
+                    plm_decode(video->plm, dt_sec * video->sg_video.rate);
                 }
             }
         }
@@ -1971,6 +1971,16 @@ static void _R_HandleCommand(App* app, SG_Command* command)
             R_Video* video              = Component_GetVideo(cmd->video.id);
             if (!video)
                 video = Component_CreateVideo(&app->gctx, cmd->video.id, &cmd->video);
+        } break;
+        case SG_COMMAND_VIDEO_SEEK: {
+            SG_Command_VideoSeek* cmd = (SG_Command_VideoSeek*)command;
+            R_Video* video            = Component_GetVideo(cmd->video_id);
+            plm_seek(video->plm, cmd->time_secs, false);
+        } break;
+        case SG_COMMAND_VIDEO_RATE: {
+            SG_Command_VideoRate* cmd = (SG_Command_VideoRate*)command;
+            R_Video* video            = Component_GetVideo(cmd->video_id);
+            video->sg_video.rate      = cmd->rate;
         } break;
         default: {
             log_error("unhandled command type: %d", command->type);

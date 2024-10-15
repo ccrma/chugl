@@ -2028,7 +2028,7 @@ static void R_Video_OnVideo(plm_t* player, plm_frame_t* frame, void* video_id)
 {
     R_Video* video = Component_GetVideo((intptr_t)video_id);
 
-    log_info("Video frame: %d x %d, time %f", frame->width, frame->height, frame->time);
+    log_info("Video frame time %f", frame->time);
 
     // Hand the decoded data over to OpenGL. For the RGB texture mode, the
     // YCrCb->RGB conversion is done on the CPU.

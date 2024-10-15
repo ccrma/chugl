@@ -157,6 +157,8 @@ enum SG_CommandType : u32 {
 
     // video
     SG_COMMAND_VIDEO_UPDATE,
+    SG_COMMAND_VIDEO_SEEK,
+    SG_COMMAND_VIDEO_RATE,
 
     SG_COMMAND_COUNT
 };
@@ -478,6 +480,16 @@ struct SG_Command_VideoUpdate : public SG_Command {
     SG_Video video;
 };
 
+struct SG_Command_VideoSeek : public SG_Command {
+    SG_ID video_id;
+    double time_secs;
+};
+
+struct SG_Command_VideoRate : public SG_Command {
+    SG_ID video_id;
+    double rate;
+};
+
 // ============================================================================
 // Command Queue API
 // ============================================================================
@@ -601,3 +613,5 @@ void CQ_PushCommand_LightUpdate(SG_Light* light);
 
 // video
 void CQ_PushCommand_VideoUpdate(SG_Video* video);
+void CQ_PushCommand_VideoSeek(SG_ID video_id, double time);
+void CQ_PushCommand_VideoRate(SG_ID video_id, double rate);

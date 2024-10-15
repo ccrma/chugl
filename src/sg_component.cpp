@@ -1178,6 +1178,7 @@ SG_Video* SG_CreateVideo(Chuck_Object* ckobj)
     Arena* arena    = &SG_VideoArena;
     size_t offset   = arena->curr;
     SG_Video* video = ARENA_PUSH_ZERO_TYPE(arena, SG_Video);
+    *video          = {};
 
     // init base component
     video->ckobj = ckobj;
