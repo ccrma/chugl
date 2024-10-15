@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -43,6 +43,8 @@
 // freetype font library
 #include <ft2build.h>
 #include FT_FREETYPE_H
+
+#include <pl/pl_mpeg.h>
 
 // =============================================================================
 // scenegraph data structures
@@ -241,9 +243,9 @@ struct R_Texture : public R_Component {
         // init descriptor
         WGPUTextureDescriptor wgpu_texture_desc = {};
         // wgpu_texture_desc.label                 = texture->name.c_str();
-        wgpu_texture_desc.label                 = texture->name;
-        wgpu_texture_desc.usage                 = desc->usage;
-        wgpu_texture_desc.dimension             = desc->dimension;
+        wgpu_texture_desc.label     = texture->name;
+        wgpu_texture_desc.usage     = desc->usage;
+        wgpu_texture_desc.dimension = desc->dimension;
         wgpu_texture_desc.size
           = { (u32)desc->width, (u32)desc->height, (u32)desc->depth };
         wgpu_texture_desc.format        = desc->format;
@@ -257,8 +259,8 @@ struct R_Texture : public R_Component {
         // create default texture view for entire mip chain (And 1st array layer)
         // cubemaps are handled differently
         char texture_view_label[256] = {};
-        //snprintf(texture_view_label, sizeof(texture_view_label), "%s default view",
-        //         texture->name.c_str());
+        // snprintf(texture_view_label, sizeof(texture_view_label), "%s default view",
+        //          texture->name.c_str());
         snprintf(texture_view_label, sizeof(texture_view_label), "%s default view",
                  texture->name);
         WGPUTextureViewDescriptor wgpu_texture_view_desc = {};
@@ -326,6 +328,7 @@ struct R_Texture : public R_Component {
             wgpuQueueWriteTexture(gctx->queue, &destination, data, data_size_bytes,
                                   &source, &size);
 
+            // TODO profile
             wgpuQueueSubmit(gctx->queue, 0, NULL); // schedule transfer immediately
         }
     }
@@ -408,14 +411,18 @@ struct R_Material : public R_Component {
 
     b32 bind_group_stale; // set if modified by chuck user, need to rebuild bind groups
 
-    R_ID pipelineID = true; // renderpipeline this material belongs to
-    bool pipeline_stale;
+    R_ID pipelineID; // renderpipeline this material belongs to
 
     // bindgroup state (uniforms, storage buffers, textures, samplers)
     R_Binding bindings[SG_MATERIAL_MAX_UNIFORMS];
     GPU_Buffer uniform_buffer; // maps 1:1 with uniform location, initializesd in
                                // Component_MaterialCreate
     WGPUBindGroup bind_group;
+
+    // after updating to webgpu v22.1.0.5, bind_group_layout is now part of bind_group,
+    // so we cache here in order to check if we need to rebuild the bindgroup (e.g. when
+    // changing a material PSO property such as Topology. Same for Geometry bindgroups)
+    WGPUBindGroupLayout bind_group_layout; // render pipeline layout at @group(1)
 
     static void updatePSO(GraphicsContext* gctx, R_Material* mat,
                           SG_MaterialPipelineState* pso);
@@ -549,6 +556,10 @@ struct GeometryToXforms {
     GPU_Buffer xform_storage_buffer;
     bool stale;
 
+    // after updating to webgpu v22.1.0.5, bind_group_layout is now part of bind_group,
+    // so we cache here in order to check if we need to rebuild the bindgroup
+    WGPUBindGroupLayout bind_group_layout; // @group(2) DRAW_UNIFORMS
+
     static bool hasXform(GeometryToXforms* g2x, SG_ID xform_id)
     {
         return hashmap_get(g2x->xform_id_set, &xform_id) != NULL;
@@ -648,15 +659,6 @@ struct R_RenderPipeline /* NOT backed by SG_Component */ {
     // ptrdiff_t offset; // acts as an ID, offset in bytes into pipeline Arena
 
     Arena materialIDs; // array of SG_IDs
-
-    // RenderPass refactor: removing
-    // bindgroup now in App->frame_uniforms_map
-    // frame uniform buffer now stored per R_Camera
-    // keeping these around to handle case of null camera
-    // TODO remove after removing null default camera in chugl (and implementing
-    // camera controllers)
-    WGPUBindGroup frame_group;
-    static GPU_Buffer frame_uniform_buffer;
 
     WGPUBindGroupLayout bind_group_layouts[4];
 
@@ -792,6 +794,7 @@ struct R_Pass : public R_Component {
         ca->loadOp                        = WGPULoadOp_Clear;
         ca->storeOp                       = WGPUStoreOp_Store;
         ca->clearValue                    = WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f };
+        ca->depthSlice                    = WGPU_DEPTH_SLICE_UNDEFINED;
 
         pass->screen_pass_desc                        = {};
         pass->screen_pass_desc.label                  = pass->sg_pass.name;
@@ -845,11 +848,7 @@ struct R_Pass : public R_Component {
             ca->view
               = pass->framebuffer.color_view; // multisampled view, for now lock down
             ca->resolveTarget = resolve_view;
-
-#ifdef __EMSCRIPTEN__
-            ca->depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
-#endif
-            // TODO chugl API to set loadOp
+            ca->depthSlice    = WGPU_DEPTH_SLICE_UNDEFINED;
             ca->loadOp  = pass->sg_pass.color_target_clear_on_load ? WGPULoadOp_Clear :
                                                                      WGPULoadOp_Load;
             ca->storeOp = WGPUStoreOp_Store;
@@ -989,6 +988,18 @@ struct R_Font {
 };
 
 // =============================================================================
+// R_Video
+// =============================================================================
+
+struct R_Video : public R_Component {
+    SG_Video sg_video;
+    plm_t* plm;          // plm_destroy(plm) to free
+    u8* rgba_data_OWNED; // free with free(rgba_data)
+    int rgba_data_size;
+    GraphicsContext* gctx; // messy workaround for plm callbacks
+};
+
+// =============================================================================
 // Component Manager API
 // =============================================================================
 
@@ -1019,6 +1030,7 @@ R_Texture* Component_CreateTexture(GraphicsContext* gctx,
 R_Pass* Component_CreatePass(SG_ID pass_id);
 R_Buffer* Component_CreateBuffer(SG_ID id);
 R_Light* Component_CreateLight(SG_ID id, SG_LightDesc* desc);
+R_Video* Component_CreateVideo(GraphicsContext* gctx, SG_ID id, SG_Video* sg_video);
 
 R_Component* Component_GetComponent(SG_ID id);
 R_Transform* Component_GetXform(SG_ID id);
@@ -1035,6 +1047,7 @@ R_Font* Component_GetFont(GraphicsContext* gctx, FT_Library library,
 R_Pass* Component_GetPass(SG_ID id);
 R_Buffer* Component_GetBuffer(SG_ID id);
 R_Light* Component_GetLight(SG_ID id);
+R_Video* Component_GetVideo(SG_ID id);
 
 // lazily created on-demand because of many possible shader variations
 R_RenderPipeline* Component_GetPipeline(GraphicsContext* gctx,
@@ -1050,6 +1063,8 @@ R_RenderPipeline* Component_GetPipeline(R_ID rid);
 bool Component_MaterialIter(size_t* i, R_Material** material);
 bool Component_RenderPipelineIter(size_t* i, R_RenderPipeline** renderPipeline);
 int Component_RenderPipelineCount();
+
+bool Component_VideoIter(size_t* i, R_Video** video);
 
 // component manager initialization
 void Component_Init(GraphicsContext* gctx);

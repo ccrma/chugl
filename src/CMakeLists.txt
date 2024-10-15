@@ -142,6 +142,10 @@ target_compile_definitions(chugl_shared_properties INTERFACE
     LOG_USE_COLOR
 )
 
+if (CHUGL_FAST_COMPILE)
+    target_compile_definitions(chugl_shared_properties INTERFACE CHUGL_FAST_COMPILE)
+endif()
+
 # increasing warning levels
 if (MSVC)
     target_compile_options(chugl_shared_properties INTERFACE /W4)
@@ -209,6 +213,8 @@ if (MSVC)
         /wd4189
         # ignore uninitialized member variables
         /wd26495 
+        # ignore possible loss of data in integer type conversion
+        /wd4267
     )
     target_compile_options(
         ${PROJECT_NAME} PRIVATE
@@ -263,7 +269,7 @@ add_subdirectory(vendor/glfw3webgpu)
 FetchContent_Declare(
   webgpu
   GIT_REPOSITORY https://github.com/AndrewAday/webgpu-distribution
-  GIT_TAG        main
+  GIT_TAG        wgpu-static-22.1.0.5
 )
 FetchContent_MakeAvailable(webgpu)
 
@@ -276,22 +282,7 @@ set(FT_DISABLE_PNG      ON  CACHE BOOL "" FORCE)
 set(FT_DISABLE_ZLIB     ON  CACHE BOOL "" FORCE)
 set(FT_ENABLE_ERROR_STRINGS ON CACHE BOOL "" FORCE)
 add_subdirectory(vendor/freetype)
-# # fetch freetype
-# FetchContent_Declare (
-#     freetype 
-#     GIT_REPOSITORY https://github.com/freetype/freetype.git
-#     GIT_TAG VER-2-13-2
-# )
-# make available
-# FetchContent_MakeAvailable (freetype)
 
-# box2d v3.0
-# FetchContent_Declare(
-#   box2d
-#   GIT_REPOSITORY https://github.com/erincatto/box2c
-#   GIT_TAG        main
-# )
-# FetchContent_MakeAvailable(box2d)
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
 	option(BOX2D_AVX2 "Enable AVX2 (faster)" ON)
 endif()

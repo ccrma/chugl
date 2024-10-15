@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -154,6 +154,11 @@ enum SG_CommandType : u32 {
 
     // light
     SG_COMMAND_LIGHT_UPDATE,
+
+    // video
+    SG_COMMAND_VIDEO_UPDATE,
+    SG_COMMAND_VIDEO_SEEK,
+    SG_COMMAND_VIDEO_RATE,
 
     SG_COMMAND_COUNT
 };
@@ -470,6 +475,21 @@ struct SG_Command_LightUpdate : public SG_Command {
     SG_LightDesc desc;
 };
 
+// video commands -----------------------------------------------------
+struct SG_Command_VideoUpdate : public SG_Command {
+    SG_Video video;
+};
+
+struct SG_Command_VideoSeek : public SG_Command {
+    SG_ID video_id;
+    double time_secs;
+};
+
+struct SG_Command_VideoRate : public SG_Command {
+    SG_ID video_id;
+    double rate;
+};
+
 // ============================================================================
 // Command Queue API
 // ============================================================================
@@ -590,3 +610,8 @@ void CQ_PushCommand_BufferWrite(SG_Buffer* buffer, Chuck_ArrayFloat* data,
 
 // light
 void CQ_PushCommand_LightUpdate(SG_Light* light);
+
+// video
+void CQ_PushCommand_VideoUpdate(SG_Video* video);
+void CQ_PushCommand_VideoSeek(SG_ID video_id, double time);
+void CQ_PushCommand_VideoRate(SG_ID video_id, double rate);

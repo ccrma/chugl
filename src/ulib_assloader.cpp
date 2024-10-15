@@ -45,10 +45,10 @@ CK_DLL_SFUN(assloader_load_obj_flip_y);
 
 static void logRapidobjError(const rapidobj::Error& error, const char* filepath)
 {
-    log_error("Error loading OBJ model \"%s\": %s", filepath,
+    log_warn("Could not load OBJ model \"%s\": %s", filepath,
               error.code.message().c_str());
     if (!error.line.empty()) {
-        log_error("On line %d: \"%s\"", error.line_num, error.line.c_str());
+        log_warn("On line %d: \"%s\"", error.line_num, error.line.c_str());
     }
 }
 

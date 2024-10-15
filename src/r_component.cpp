@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -577,8 +577,8 @@ void R_Geometry::rebuildPullBindGroup(GraphicsContext* gctx, R_Geometry* geo,
 
     geo->pull_bind_group_dirty = false;
 
-    WGPUBindGroupEntry entries[SG_GEOMETRY_MAX_VERTEX_PULL_BUFFERS];
-    int num_entries = 0;
+    WGPUBindGroupEntry entries[SG_GEOMETRY_MAX_VERTEX_PULL_BUFFERS] = {};
+    int num_entries                                                 = 0;
     for (u32 i = 0; i < SG_GEOMETRY_MAX_VERTEX_PULL_BUFFERS; i++) {
         if (geo->pull_buffers[i].buf == NULL) {
             continue;
@@ -701,12 +701,18 @@ void R_Material::updatePSO(GraphicsContext* gctx, R_Material* mat,
 {
     mat->pso = *pso;
     hashmap_set(materials_with_new_pso, &mat->id);
-    mat->pipeline_stale = true;
 }
 
 void R_Material::rebuildBindGroup(R_Material* mat, GraphicsContext* gctx,
                                   WGPUBindGroupLayout layout)
 {
+    defer(mat->bind_group_stale = false);
+    // check if layout changed (e.g. changing material topology)
+    if (layout != mat->bind_group_layout) {
+        mat->bind_group_layout = layout;
+        mat->bind_group_stale  = true;
+    }
+
     // TODO: can we improve this? maybe assume bindings are consecutive.
     // at first R_BIND_EMPTY can early-out
     // check in chugl example if we can skip @binding() numbers
@@ -731,7 +737,6 @@ void R_Material::rebuildBindGroup(R_Material* mat, GraphicsContext* gctx,
         }
         if (!needs_rebuild) return;
     }
-    mat->bind_group_stale = false;
 
     // log_info("rebuilding bind group\n");
 
@@ -948,6 +953,11 @@ void GeometryToXforms::rebuildBindGroup(GraphicsContext* gctx, R_Scene* scene,
                                         GeometryToXforms* g2x,
                                         WGPUBindGroupLayout layout, Arena* frame_arena)
 {
+    if (g2x->bind_group_layout != layout) {
+        g2x->bind_group_layout = layout;
+        g2x->stale             = true;
+    }
+
     if (!g2x->stale) return;
     defer(g2x->stale = false);
 
@@ -961,16 +971,10 @@ void GeometryToXforms::rebuildBindGroup(GraphicsContext* gctx, R_Scene* scene,
         R_Transform* xform = Component_GetXform(xformIDs[i]);
         // remove NULL xforms and xforms that have been reassigned new mesh params
 
-        // TODO: impl GMesh.geo() and GMesh.mat() to change geo and mat of mesh
-        // - impl needs to set GeometryToXforms.stale = true
-        // - but does NOT need to linear search the xformIDs arena. because lazy
-        // deletion happens right here
-
         bool xform_destroyed = (xform == NULL);
         bool xform_changed_mesh
           = (xform->_geoID != g2x->key.geo_id || xform->_matID != g2x->key.mat_id);
         bool xform_detached_from_scene = (xform->scene_id != scene->id);
-        // TODO use arena macro instead
         if (xform_destroyed || xform_changed_mesh || xform_detached_from_scene) {
             GeometryToXforms::removeXform(g2x, i);
             // decrement to reprocess this index
@@ -1016,8 +1020,8 @@ void GeometryToXforms::rebuildBindGroup(GraphicsContext* gctx, R_Scene* scene,
 
     // only recreate bind group if we have nonzero instances
     if (numInstances > 0) {
-		g2x->xform_bind_group = wgpuDeviceCreateBindGroup(gctx->device, &desc);
-		ASSERT(g2x->xform_bind_group);
+        g2x->xform_bind_group = wgpuDeviceCreateBindGroup(gctx->device, &desc);
+        ASSERT(g2x->xform_bind_group);
     }
 }
 
@@ -1294,8 +1298,6 @@ void R_Scene::initFromSG(GraphicsContext* gctx, R_Scene* r_scene, SG_ID scene_id
 // Render Pipeline Definitions
 // ============================================================================
 
-GPU_Buffer R_RenderPipeline::frame_uniform_buffer = {};
-
 void R_RenderPipeline::init(GraphicsContext* gctx, R_RenderPipeline* pipeline,
                             const SG_MaterialPipelineState* config,
                             int msaa_sample_count)
@@ -1361,9 +1363,10 @@ void R_RenderPipeline::init(GraphicsContext* gctx, R_RenderPipeline* pipeline,
     // multisample state
     WGPUMultisampleState multisampleState = G_createMultisampleState(msaa_sample_count);
 
-    char pipeline_label[64] = {};
-    snprintf(pipeline_label, sizeof(pipeline_label), "RenderPipeline %d %s", shader->id,
-             shader->name);
+    char pipeline_label[128] = {};
+    snprintf(pipeline_label, sizeof(pipeline_label),
+             "RenderPipeline %d %s cm: %d top: %d", shader->id, shader->name,
+             primitiveState.cullMode, primitiveState.topology);
     WGPURenderPipelineDescriptor pipeline_desc = {};
     pipeline_desc.label                        = pipeline_label;
     pipeline_desc.layout                       = NULL; // Using layout: auto
@@ -1497,6 +1500,7 @@ static Arena _RenderPipelineArena;
 static Arena cameraArena;
 static Arena textArena;
 static Arena lightArena;
+static Arena videoArena;
 
 // default textures
 static Texture opaqueWhitePixel      = {};
@@ -1586,6 +1590,7 @@ void Component_Init(GraphicsContext* gctx)
     Arena::init(&passArena, sizeof(R_Pass) * 16);
     Arena::init(&bufferArena, sizeof(R_Buffer) * 64);
     Arena::init(&lightArena, sizeof(R_Light) * 16);
+    Arena::init(&videoArena, sizeof(R_Video) * 16);
 
     // initialize default textures
     static u8 white[4]  = { 255, 255, 255, 255 };
@@ -1610,11 +1615,6 @@ void Component_Init(GraphicsContext* gctx)
                                      RenderPipelineIDTableItem::compare, NULL, NULL);
     materials_with_new_pso
       = hashmap_new(sizeof(SG_ID), 0, seed, seed, hashSGID, compareSGIDs, NULL, NULL);
-
-    // init frame uniform buffer
-    FrameUniforms frame_uniforms = {};
-    GPU_Buffer::write(gctx, &R_RenderPipeline::frame_uniform_buffer,
-                      WGPUBufferUsage_Uniform, &frame_uniforms, sizeof(frame_uniforms));
 }
 
 void Component_Free()
@@ -1918,9 +1918,6 @@ R_Material* Component_CreateMaterial(GraphicsContext* gctx,
 void Material_batchUpdatePipelines(GraphicsContext* gctx, FT_Library ft_lib,
                                    R_Font* default_font)
 {
-    // TODO:
-    // handle xforms changing geo/mat by marking g2m as stale in add subgraph to scene
-    // fn
     size_t hashmap_index_DONT_USE = 0;
     SG_ID* sg_id;
     while (
@@ -1934,9 +1931,6 @@ void Material_batchUpdatePipelines(GraphicsContext* gctx, FT_Library ft_lib,
                 if (mat->pso.exclude_from_render_pass) continue;
 
                 R_RenderPipeline* pipeline = Component_GetPipeline(gctx, &mat->pso);
-
-                ASSERT(mat->pipeline_stale);
-                mat->pipeline_stale = false;
 
                 // add material to pipeline
                 R_RenderPipeline::addMaterial(pipeline, mat);
@@ -2028,6 +2022,102 @@ R_Light* Component_CreateLight(SG_ID id, SG_LightDesc* desc)
     ASSERT(result == NULL); // ensure id is unique
 
     return light;
+}
+
+static void R_Video_OnVideo(plm_t* player, plm_frame_t* frame, void* video_id)
+{
+    R_Video* video = Component_GetVideo((intptr_t)video_id);
+
+    log_info("Video frame time %f", frame->time);
+
+    // Hand the decoded data over to OpenGL. For the RGB texture mode, the
+    // YCrCb->RGB conversion is done on the CPU.
+
+    // TODO support YCrCb mode
+    // if (self->texture_mode == APP_TEXTURE_MODE_YCRCB) {
+    //     app_update_texture(self, GL_TEXTURE0, self->texture_y, &frame->y);
+    //     app_update_texture(self, GL_TEXTURE1, self->texture_cb, &frame->cb);
+    //     app_update_texture(self, GL_TEXTURE2, self->texture_cr, &frame->cr);
+    // } else {
+
+    R_Texture* video_texture_rgba
+      = Component_GetTexture(video->sg_video.video_texture_rgba_id);
+
+    { // memory bounds check
+        // check texture
+        ASSERT(video_texture_rgba->desc.width == frame->width);
+        ASSERT(video_texture_rgba->desc.height == frame->height);
+        ASSERT(video_texture_rgba->desc.depth == 1);
+        ASSERT(video_texture_rgba->desc.mips == 1);
+        ASSERT(video_texture_rgba->desc.format
+               == WGPUTextureFormat_RGBA8Unorm); // TODO might need to go srgb
+
+        // check cpu pixel buffer size
+        ASSERT(video->rgba_data_size == frame->width * frame->height * 4);
+        ASSERT(video->rgba_data_OWNED);
+    }
+
+    // convert yCrCb to rgba
+    plm_frame_to_rgba(frame, video->rgba_data_OWNED, frame->width * 4);
+
+    SG_TextureWriteDesc write_desc = {};
+    write_desc.width               = frame->width;
+    write_desc.height              = frame->height;
+    R_Texture::write(video->gctx, video_texture_rgba, &write_desc,
+                     video->rgba_data_OWNED, video->rgba_data_size);
+}
+
+R_Video* Component_CreateVideo(GraphicsContext* gctx, SG_ID id, SG_Video* sg_video)
+{
+    Arena* arena   = &videoArena;
+    R_Video* video = ARENA_PUSH_ZERO_TYPE(arena, R_Video);
+
+    // component init
+    video->id   = id;
+    video->type = SG_COMPONENT_VIDEO;
+    strncpy(video->name, sg_video->name, sizeof(video->name));
+
+    // store offset
+    R_Location loc     = { video->id, Arena::offsetOf(arena, video), arena };
+    const void* result = hashmap_set(r_locator, &loc);
+    ASSERT(result == NULL); // ensure id is unique
+
+    { // video init (TODO move to video Desc struct)
+        video->gctx     = gctx;
+        video->sg_video = *sg_video;
+
+        video->plm = plm_create_with_filename(sg_video->path_OWNED);
+
+        // validation
+        if (video->plm) {
+            if (!plm_probe(video->plm, 5000 * 1024)) {
+                // no audio streams, destroy
+                plm_destroy(video->plm);
+                video->plm = NULL;
+            }
+        }
+
+        if (video->plm) {
+            // allocate pixel memory
+            int num_pixels = plm_get_width(video->plm) * plm_get_height(video->plm);
+            video->rgba_data_OWNED = ALLOCATE_BYTES(u8, num_pixels * 4);
+            video->rgba_data_size  = num_pixels * 4;
+
+            // memset to 256 for alpha
+            memset(video->rgba_data_OWNED, 255, video->rgba_data_size);
+
+            plm_set_video_decode_callback(video->plm, R_Video_OnVideo,
+                                          (void*)(intptr_t)video->id);
+
+            // enable looping (TODO parameterize)
+            plm_set_loop(video->plm, TRUE);
+
+            // don't process audio
+            plm_set_audio_enabled(video->plm, FALSE);
+        }
+    }
+
+    return video;
 }
 
 // linear search by font path, lazily creates if not found
@@ -2147,6 +2237,13 @@ R_Light* Component_GetLight(SG_ID id)
     return (R_Light*)comp;
 }
 
+R_Video* Component_GetVideo(SG_ID id)
+{
+    R_Component* comp = Component_GetComponent(id);
+    ASSERT(comp == NULL || comp->type == SG_COMPONENT_VIDEO);
+    return (R_Video*)comp;
+}
+
 bool Component_MaterialIter(size_t* i, R_Material** material)
 {
     if (*i >= ARENA_LENGTH(&materialArena, R_Material)) {
@@ -2176,6 +2273,18 @@ bool Component_RenderPipelineIter(size_t* i, R_RenderPipeline** renderPipeline)
 int Component_RenderPipelineCount()
 {
     return ARENA_LENGTH(&_RenderPipelineArena, R_RenderPipeline);
+}
+
+bool Component_VideoIter(size_t* i, R_Video** video)
+{
+    if (*i >= ARENA_LENGTH(&videoArena, R_Video)) {
+        *video = NULL;
+        return false;
+    }
+
+    *video = ARENA_GET_TYPE(&videoArena, R_Video, *i);
+    ++(*i);
+    return true;
 }
 
 R_RenderPipeline* Component_GetPipeline(GraphicsContext* gctx,

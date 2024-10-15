@@ -67,18 +67,18 @@ static void ui_scenegraph_draw_impl(SG_Transform* node)
     if (cimgui::ImGui_TreeNode(buffer)) {
         cimgui::ImGui_SeparatorText("Transform");
 
-        if (ImGui::DragFloat3("Position", &node->pos[0], .1f)) {
+        if (ImGui::DragFloat3("Position", &node->pos[0], .01f)) {
             CQ_PushCommand_SetPosition(node);
         };
 
         glm::vec3 rot = SG_Transform::eulerRotationRadians(node);
         // if (cimgui::ImGui_DragFloat3("Rotation", &rot[0])) {
-        if (ImGui::DragFloat3("Rotation", &rot[0], .1f)) {
+        if (ImGui::DragFloat3("Rotation", &rot[0], .01f)) {
             node->rot = glm::quat(rot);
             CQ_PushCommand_SetRotation(node);
         }
 
-        if (ImGui::DragFloat3("Scale", &node->sca[0], .1f)) {
+        if (ImGui::DragFloat3("Scale", &node->sca[0], .01f)) {
             CQ_PushCommand_SetScale(node);
         }
 

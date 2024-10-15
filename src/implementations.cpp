@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -38,3 +38,6 @@
 
 #define SOKOL_TIME_IMPL
 #include <sokol/sokol_time.h>
+
+#define PL_MPEG_IMPLEMENTATION
+#include <pl/pl_mpeg.h>

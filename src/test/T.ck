@@ -134,6 +134,14 @@ public class T {
         T.printArray(arr, 1);
     }
 
+    fun static void print(string arr[]) {
+        chout <= "[ ";
+        for (0 => int i; i < arr.size(); ++i) {
+            chout <= arr[i] <= ", ";
+        }
+        chout <= "]" <= IO.nl();
+    }
+
     fun static int arrayEquals(int a[], int b[]) {
         if (a == null && b == null) {
             return 1;

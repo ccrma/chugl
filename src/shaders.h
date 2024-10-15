@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -31,8 +31,8 @@
 
 #include "core/macros.h"
 
-#include <unordered_map>
 #include <algorithm>
+#include <unordered_map>
 
 struct ShaderEntry {
     const char* name;
@@ -386,16 +386,28 @@ static const char* flat_shader_string  = R"glsl(
 @group(1) @binding(0) var<uniform> u_color : vec4f;
 @group(1) @binding(1) var u_sampler : sampler;
 @group(1) @binding(2) var u_color_map : texture_2d<f32>;
+@group(1) @binding(3) var<uniform> u_texture_offset : vec2f;
+@group(1) @binding(4) var<uniform> u_texture_scale : vec2f;
+
+fn srgbToLinear(c : vec4f) -> vec4f {
+    return vec4f(
+        pow(c.r, 2.2),
+        pow(c.g, 2.2),
+        pow(c.b, 2.2),
+        c.a
+    );
+}
 
 // don't actually need normals/tangents
 @fragment 
 fn fs_main(in : VertexOutput) -> @location(0) vec4f
 {
-    let tex = textureSample(u_color_map, u_sampler, in.v_uv);
+    let uv = in.v_uv * u_texture_scale + u_texture_offset;
+    let tex = srgbToLinear(textureSample(u_color_map, u_sampler, uv));
     var ret = u_color * tex;
-    ret.a = clamp(ret.a, 0.0, 1.0);
 
     // alpha test
+    ret.a = clamp(ret.a, 0.0, 1.0);
     if (ret.a < .01) {
         discard;
     }
@@ -1199,7 +1211,7 @@ const char* output_pass_shader_string = R"glsl(
     @group(0) @binding(1) var texture_sampler: sampler;
     @group(0) @binding(2) var<uniform> u_Gamma: f32;
     @group(0) @binding(3) var<uniform> u_Exposure: f32;
-    @group(0) @binding(4) var<uniform> u_Tonemap: i32 = TONEMAP_NONE;
+    @group(0) @binding(4) var<uniform> u_Tonemap: i32;
 
     // Helpers ==================================================================
     fn Uncharted2Tonemap(x: vec3<f32>) -> vec3<f32> {

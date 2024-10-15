@@ -31,6 +31,8 @@
 #include <time.h>
 
 #include <box2d/box2d.h>
+// necessary for copying from command
+static_assert(sizeof(u32) == sizeof(b2WorldId), "b2WorldId != u32");
 
 #include <GLFW/glfw3.h>
 #include <chuck/chugin.h>
@@ -55,9 +57,6 @@
 #include "sg_component.h"
 
 #include "core/hashmap.h"
-
-// necessary for copying from command
-static_assert(sizeof(u32) == sizeof(b2WorldId), "b2WorldId != u32");
 
 // Usage:
 //  static ImDrawDataSnapshot snapshot; // Important: make persistent accross
@@ -265,6 +264,7 @@ struct App {
     bool imgui_disabled = false;
 
     // box2D physics
+
     b2WorldId b2_world_id;
     u32 b2_substep_count = 4;
     // f64 b2_time_step_accum  = 0;
@@ -433,7 +433,7 @@ struct App {
             ImGui_ImplWGPU_InitInfo init_info;
             init_info.Device             = app->gctx.device;
             init_info.NumFramesInFlight  = 3;
-            init_info.RenderTargetFormat = app->gctx.swapChainFormat;
+            init_info.RenderTargetFormat = app->gctx.surface_format;
             // init_info.DepthStencilFormat = app->gctx.depthTextureDesc.format;
             ImGui_ImplWGPU_Init(&init_info);
         }
@@ -484,9 +484,10 @@ struct App {
         GraphicsContext::release(&app->gctx);
 
         // destroy imgui
-        ImGui_ImplWGPU_Shutdown();
-        ImGui_ImplGlfw_Shutdown();
-        ImGui::DestroyContext();
+        // actually don't do this lol to prevent data race with chuck UI shreds that are
+        // still running
+        // ImGui_ImplWGPU_Shutdown(); ImGui_ImplGlfw_Shutdown();
+        // ImGui::DestroyContext();
 
         // destroy window
         glfwDestroyWindow(app->window);
@@ -524,11 +525,10 @@ struct App {
         // chuck shreds are on wait queue guaranteeing that when they awake,
         // they'll be using fresh dt data
 
-        { // calculate dt
-            u64 dt_ticks = stm_laptime(&prev_lap_time);
-            f64 dt_sec   = stm_sec(dt_ticks);
-            CHUGL_Window_dt(dt_sec);
-        }
+        // calculate dt
+        u64 dt_ticks = stm_laptime(&prev_lap_time);
+        f64 dt_sec   = stm_sec(dt_ticks);
+        CHUGL_Window_dt(dt_sec);
 
         /* two locks here:
         1 for writing/swapping the command queues
@@ -626,15 +626,6 @@ struct App {
                 resized_this_frame  = true;
 
                 _onFramebufferResize(app->window, width, height);
-
-                // imgui bs (on resize need to clear old imgui state and rebuild imgui
-                // framebuffer)
-                if (!app->imgui_disabled) {
-                    ImGui::Render();
-                    ImGui_ImplWGPU_NewFrame();
-                    ImGui_ImplGlfw_NewFrame();
-                    ImGui::NewFrame();
-                }
             }
         }
 
@@ -670,6 +661,19 @@ struct App {
         graph (can test by adding builtin camera controller on chugl side)
         - check window minize still works
         */
+
+        { // decode all current video textures
+            // TODO: handle videos ending / being paused
+            // TODO: handle seek
+            size_t video_idx = 0;
+            R_Video* video   = NULL;
+            while (Component_VideoIter(&video_idx, &video)) {
+                if (video->plm) {
+                    // log_info("decoding video %d, dt: %f", video->id, dt_sec);
+                    plm_decode(video->plm, dt_sec * video->sg_video.rate);
+                }
+            }
+        }
 
         // begin walking render graph
         R_Pass* root_pass = Component_GetPass(app->root_pass_id);
@@ -736,7 +740,7 @@ struct App {
 
                     // by default we render to the swapchain backbuffer
                     bool user_supplied_render_texture       = false;
-                    WGPUTextureFormat screen_texture_format = app->gctx.swapChainFormat;
+                    WGPUTextureFormat screen_texture_format = app->gctx.surface_format;
                     WGPUTextureView screen_texture_view     = app->gctx.backbufferView;
                     defer({
                         if (user_supplied_render_texture) {
@@ -933,6 +937,7 @@ struct App {
                             ca.loadOp     = WGPULoadOp_Clear;
                             ca.storeOp    = WGPUStoreOp_Store;
                             ca.clearValue = WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f };
+                            ca.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 
                             WGPURenderPassDescriptor render_pass_desc = {};
                             char render_pass_label[64]                = {};
@@ -1005,6 +1010,7 @@ struct App {
                             ca.loadOp     = WGPULoadOp_Clear;
                             ca.storeOp    = WGPUStoreOp_Store;
                             ca.clearValue = WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f };
+                            ca.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 
                             WGPURenderPassDescriptor render_pass_desc = {};
                             char render_pass_label[64]                = {};
@@ -1042,10 +1048,8 @@ struct App {
         // imgui render pass
         if (do_ui && !resized_this_frame) {
             WGPURenderPassColorAttachment imgui_color_attachment = {};
-            imgui_color_attachment.view = app->gctx.backbufferView;
-#ifdef __EMSCRIPTEN__
+            imgui_color_attachment.view       = app->gctx.backbufferView;
             imgui_color_attachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
-#endif
             imgui_color_attachment.loadOp
               = WGPULoadOp_Load; // DON'T clear the previous frame
             imgui_color_attachment.storeOp = WGPUStoreOp_Store;
@@ -1248,18 +1252,10 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
     // update frame-level uniforms (storing on camera because same scene can be
     // rendered from multiple camera angles) every camera belongs to a single scene,
     // but a scene can have multiple cameras
-    if (camera) {
-        bool frame_uniforms_recreated = GPU_Buffer::write(
-          &app->gctx, &camera->frame_uniform_buffer, WGPUBufferUsage_Uniform,
-          &frameUniforms, sizeof(frameUniforms));
-        ASSERT(!frame_uniforms_recreated);
-    } else {
-        // TODO remove after adding camera controller to chugl, disallow null camera
-        bool frame_uniforms_recreated = GPU_Buffer::write(
-          &app->gctx, &R_RenderPipeline::frame_uniform_buffer, WGPUBufferUsage_Uniform,
-          &frameUniforms, sizeof(frameUniforms));
-        ASSERT(!frame_uniforms_recreated);
-    }
+    bool frame_uniforms_recreated = GPU_Buffer::write(
+      &app->gctx, &camera->frame_uniform_buffer, WGPUBufferUsage_Uniform,
+      &frameUniforms, sizeof(frameUniforms));
+    ASSERT(!frame_uniforms_recreated);
 
     // ==optimize== to prevent sparseness, delete render state entries / arena ids
     // if we find SG_ID arenas are empty
@@ -1306,12 +1302,8 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
             frame_group_entry->binding            = 0;
             // TODO remove pipeline->frame_uniform_buffer after adding chugl default
             // camera
-            frame_group_entry->buffer = camera ?
-                                          camera->frame_uniform_buffer.buf :
-                                          render_pipeline->frame_uniform_buffer.buf;
-            frame_group_entry->size   = camera ?
-                                          camera->frame_uniform_buffer.size :
-                                          render_pipeline->frame_uniform_buffer.size;
+            frame_group_entry->buffer = camera->frame_uniform_buffer.buf;
+            frame_group_entry->size   = camera->frame_uniform_buffer.size;
 
             WGPUBindGroupEntry* lighting_entry = &frame_group_entries[1];
             lighting_entry->binding            = 1;
@@ -1381,7 +1373,9 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
                 // check *after* rebuildBindGroup because some xform ids may be
                 // removed
                 int num_instances = ARENA_LENGTH(&g2x->xform_ids, SG_ID);
-                if (num_instances == 0) continue;
+                if (num_instances == 0) {
+                    continue;
+                }
                 ASSERT(g2x->xform_bind_group); // shouldn't be null if we have non-zero
                                                // instances
 
@@ -1971,6 +1965,22 @@ static void _R_HandleCommand(App* app, SG_Command* command)
             R_Light* light              = Component_GetLight(cmd->light_id);
             if (!light) light = Component_CreateLight(cmd->light_id, &cmd->desc);
             light->desc = cmd->desc; // copy light properties
+        } break;
+        case SG_COMMAND_VIDEO_UPDATE: {
+            SG_Command_VideoUpdate* cmd = (SG_Command_VideoUpdate*)command;
+            R_Video* video              = Component_GetVideo(cmd->video.id);
+            if (!video)
+                video = Component_CreateVideo(&app->gctx, cmd->video.id, &cmd->video);
+        } break;
+        case SG_COMMAND_VIDEO_SEEK: {
+            SG_Command_VideoSeek* cmd = (SG_Command_VideoSeek*)command;
+            R_Video* video            = Component_GetVideo(cmd->video_id);
+            plm_seek(video->plm, cmd->time_secs, false);
+        } break;
+        case SG_COMMAND_VIDEO_RATE: {
+            SG_Command_VideoRate* cmd = (SG_Command_VideoRate*)command;
+            R_Video* video            = Component_GetVideo(cmd->video_id);
+            video->sg_video.rate      = cmd->rate;
         } break;
         default: {
             log_error("unhandled command type: %d", command->type);

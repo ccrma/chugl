@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -38,6 +38,8 @@
 
 #include <iostream> // std::string
 
+#include <pl/pl_mpeg.h>
+
 // forward decls
 struct SG_Light;
 struct SG_Camera;
@@ -59,6 +61,7 @@ struct SG_Camera;
 typedef i32 SG_ID;
 
 // (enum, ckname)
+// TODO resolve GBuffer with StorageBuffer
 #define SG_ComponentTable                                                              \
     X(SG_COMPONENT_INVALID = 0, "Invalid")                                             \
     X(SG_COMPONENT_BASE, "SG_Component")                                               \
@@ -73,7 +76,8 @@ typedef i32 SG_ID;
     X(SG_COMPONENT_TEXT, "GText")                                                      \
     X(SG_COMPONENT_PASS, "GPass")                                                      \
     X(SG_COMPONENT_BUFFER, "GBuffer")                                                  \
-    X(SG_COMPONENT_LIGHT, "GLight") // TODO resolve GBuffer with StorageBuffer
+    X(SG_COMPONENT_LIGHT, "GLight")                                                    \
+    X(SG_COMPONENT_VIDEO, "Video")
 
 enum SG_ComponentType {
 #define X(name, str) name,
@@ -171,9 +175,6 @@ struct SG_TextureWriteDesc {
     int width  = 1;
     int height = 1;
     int depth  = 1;
-
-    // to add later
-    // int offset
 };
 
 struct SG_TextureLoadDesc {
@@ -812,6 +813,29 @@ struct SG_Light : public SG_Transform {
 };
 
 // ============================================================================
+// SG Video
+// ============================================================================
+
+struct SG_Video : public SG_Component {
+    plm_t* plm;
+    const char* path_OWNED; // malloced, must free
+    SG_ID video_texture_rgba_id;
+    float framerate;
+    int samplerate;
+    float duration_secs;
+
+    // audio playback
+    float rate = 1.0;
+    int audio_playhead;     // position in audio frames
+    plm_samples_t* samples; // TODO maybe remove
+
+    static int audioFrames(SG_Video* video)
+    {
+        return (int)(video->duration_secs * video->samplerate);
+    }
+};
+
+// ============================================================================
 // SG Component Manager
 // ============================================================================
 
@@ -838,6 +862,7 @@ SG_Shader* SG_CreateShader(Chuck_Object* ckobj, const char* vertex_string,
 SG_Material* SG_CreateMaterial(Chuck_Object* ckobj, SG_MaterialType material_type);
 SG_Mesh* SG_CreateMesh(Chuck_Object* ckobj, SG_Geometry* sg_geo, SG_Material* sg_mat);
 SG_Light* SG_CreateLight(Chuck_Object* ckobj);
+SG_Video* SG_CreateVideo(Chuck_Object* ckobj);
 
 SG_Component* SG_GetComponent(SG_ID id);
 SG_Transform* SG_GetTransform(SG_ID id);
@@ -852,6 +877,7 @@ SG_Text* SG_GetText(SG_ID id);
 SG_Pass* SG_GetPass(SG_ID id);
 SG_Buffer* SG_GetBuffer(SG_ID id);
 SG_Light* SG_GetLight(SG_ID id);
+SG_Video* SG_GetVideo(SG_ID id);
 
 // ============================================================================
 // SG Garbage Collection

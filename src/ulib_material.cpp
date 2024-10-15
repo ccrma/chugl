@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -32,7 +32,8 @@
 
 #include "shaders.h"
 
-#define GET_SHADER(ckobj) SG_GetShader(OBJ_MEMBER_UINT(ckobj, component_offset_id))
+#define GET_SHADER(ckobj)                                                              \
+    (ckobj ? SG_GetShader(OBJ_MEMBER_UINT(ckobj, component_offset_id)) : NULL)
 #define GET_MATERIAL(ckobj) SG_GetMaterial(OBJ_MEMBER_UINT(ckobj, component_offset_id))
 
 void chugl_initDefaultMaterials();
@@ -57,6 +58,7 @@ CK_DLL_MFUN(shader_get_vertex_layout);
 CK_DLL_MFUN(shader_get_lit);
 
 CK_DLL_CTOR(material_ctor);
+CK_DLL_CTOR(material_ctor_with_shader);
 
 // material pso
 CK_DLL_MFUN(material_get_shader);
@@ -124,6 +126,11 @@ CK_DLL_MFUN(flat_material_get_sampler);
 CK_DLL_MFUN(flat_material_set_sampler);
 CK_DLL_MFUN(flat_material_get_color_map);
 CK_DLL_MFUN(flat_material_set_color_map);
+
+CK_DLL_MFUN(flat_material_set_texture_offset);
+CK_DLL_MFUN(flat_material_set_texture_scale);
+CK_DLL_MFUN(flat_material_get_texture_offset);
+CK_DLL_MFUN(flat_material_get_texture_scale);
 
 CK_DLL_CTOR(uv_material_ctor);
 
@@ -378,15 +385,19 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
 
     CTOR(material_ctor);
 
+    CTOR(material_ctor_with_shader);
+    ARG(SG_CKNames[SG_COMPONENT_SHADER], "shader");
+    DOC_FUNC("Create a Material component with the given Shader.");
+
     // svars
     static t_CKINT cullmode_none  = WGPUCullMode_None;
     static t_CKINT cullmode_front = WGPUCullMode_Front;
     static t_CKINT cullmode_back  = WGPUCullMode_Back;
-    SVAR("int", "CULL_NONE", &cullmode_none);
+    SVAR("int", "Cull_None", &cullmode_none);
     DOC_VAR("No culling.");
-    SVAR("int", "CULL_FRONT", &cullmode_front);
+    SVAR("int", "Cull_Front", &cullmode_front);
     DOC_VAR("Cull front faces.");
-    SVAR("int", "CULL_BACK", &cullmode_back);
+    SVAR("int", "Cull_Back", &cullmode_back);
     DOC_VAR("Cull back faces.");
 
     static t_CKINT topology_pointlist     = WGPUPrimitiveTopology_PointList;
@@ -420,14 +431,14 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
 
     MFUN(material_get_cullmode, "int", "cullMode");
     DOC_FUNC(
-      "Get the cull mode of the material. Material.CULL_NONE, Material.CULL_FRONT, or "
-      "Material.CULL_BACK.");
+      "Get the cull mode of the material. Material.Cull_None, Material.Cull_Front, or "
+      "Material.Cull_Back.");
 
     MFUN(material_set_cullmode, "void", "cullMode");
     ARG("int", "cullMode");
     DOC_FUNC(
-      "Set the cull mode of the material. valid options: Material.CULL_NONE, "
-      "Material.CULL_FRONT, or Material.CULL_BACK.");
+      "Set the cull mode of the material. valid options: Material.Cull_None, "
+      "Material.Cull_Front, or Material.Cull_Back.");
 
     MFUN(material_set_topology, "void", "topology");
     ARG("int", "topology");
@@ -620,36 +631,58 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
     END_CLASS();
 
     // FlatMaterial -----------------------------------------------------
+    {
+        BEGIN_CLASS(SG_MaterialTypeNames[SG_MATERIAL_FLAT],
+                    SG_CKNames[SG_COMPONENT_MATERIAL]);
+        DOC_CLASS("Simple flat-shaded material (not affected by lighting).");
+        ADD_EX("deep/sprite_animation.ck");
 
-    BEGIN_CLASS(SG_MaterialTypeNames[SG_MATERIAL_FLAT],
-                SG_CKNames[SG_COMPONENT_MATERIAL]);
-    DOC_CLASS("Simple flat-shaded material (not affected by lighting).");
+        CTOR(flat_material_ctor);
 
-    CTOR(flat_material_ctor);
+        // color uniform
+        MFUN(flat_material_get_color, "vec3", "color");
+        DOC_FUNC("Get the color of the material.");
 
-    // color uniform
-    MFUN(flat_material_get_color, "vec3", "color");
-    DOC_FUNC("Get the color of the material.");
+        MFUN(flat_material_set_color, "void", "color");
+        ARG("vec3", "color");
+        DOC_FUNC("Set material color uniform as an rgb. Alpha set to 1.0.");
 
-    MFUN(flat_material_set_color, "void", "color");
-    ARG("vec3", "color");
-    DOC_FUNC("Set material color uniform as an rgb. Alpha set to 1.0.");
+        MFUN(flat_material_get_sampler, "TextureSampler", "sampler");
+        DOC_FUNC("Get the sampler of the material.");
 
-    MFUN(flat_material_get_sampler, "TextureSampler", "sampler");
-    DOC_FUNC("Get the sampler of the material.");
+        MFUN(flat_material_set_sampler, "void", "sampler");
+        ARG("TextureSampler", "sampler");
+        DOC_FUNC("Set the sampler of the material.");
 
-    MFUN(flat_material_set_sampler, "void", "sampler");
-    ARG("TextureSampler", "sampler");
-    DOC_FUNC("Set the sampler of the material.");
+        MFUN(flat_material_get_color_map, "Texture", "colorMap");
+        DOC_FUNC("Get the color map of the material.");
 
-    MFUN(flat_material_get_color_map, "Texture", "colorMap");
-    DOC_FUNC("Get the color map of the material.");
+        MFUN(flat_material_set_color_map, "void", "colorMap");
+        ARG("Texture", "colorMap");
+        DOC_FUNC("Set the color map of the material.");
 
-    MFUN(flat_material_set_color_map, "void", "colorMap");
-    ARG("Texture", "colorMap");
-    DOC_FUNC("Set the color map of the material.");
+        MFUN(flat_material_set_texture_offset, "void", "offset");
+        ARG("vec2", "offset");
+        DOC_FUNC(
+          "Set the texture sampler offset of the material. Default (0, 0). Useful for "
+          "scrolling textures or sampling a subregion of a texture atlas. E.g. An "
+          "offset of (0.5, 0.5) will begin sampling from the center of the texture.");
 
-    END_CLASS();
+        MFUN(flat_material_get_texture_offset, "vec2", "offset");
+        DOC_FUNC("Get the texture sampler offset of the material.");
+
+        MFUN(flat_material_set_texture_scale, "void", "scale");
+        ARG("vec2", "scale");
+        DOC_FUNC(
+          "Set the texture sampler scale of the material. Default (1, 1). Useful for "
+          "scaling textures or sampling a subregion of a texture atlas. E.g. A scale "
+          "of (0.5, 0.5) will sample 1/4 of the texture.");
+
+        MFUN(flat_material_get_texture_scale, "vec2", "scale");
+        DOC_FUNC("Get the texture sampler scale of the material.");
+
+        END_CLASS();
+    }
 
     // UV Material -----------------------------------------------------
 
@@ -924,12 +957,28 @@ CK_DLL_MFUN(shader_get_lit)
 
 CK_DLL_CTOR(material_ctor)
 {
+    // we don't use the ulib_material_create here because Material is inherited by
+    // other material types, which need different initizialization
+
     SG_Material* material = SG_CreateMaterial(SELF, SG_MATERIAL_CUSTOM);
     ASSERT(material->type == SG_COMPONENT_MATERIAL);
 
     OBJ_MEMBER_UINT(SELF, component_offset_id) = material->id;
 
     CQ_PushCommand_MaterialCreate(material);
+}
+
+CK_DLL_CTOR(material_ctor_with_shader)
+{
+    Chuck_Object* shader_ckobj = GET_NEXT_OBJECT(ARGS);
+    SG_Shader* shader          = GET_SHADER(shader_ckobj);
+
+    SG_Material* material = SG_CreateMaterial(SELF, SG_MATERIAL_CUSTOM);
+    OBJ_MEMBER_UINT(SELF, component_offset_id) = material->id;
+
+    CQ_PushCommand_MaterialCreate(material);
+
+    chugl_materialSetShader(material, shader);
 }
 
 CK_DLL_MFUN(material_get_shader)
@@ -1353,7 +1402,9 @@ static void ulib_material_init_uniforms_and_pso(SG_Material* material)
             SG_Material::setSampler(material, 1, SG_SAMPLER_DEFAULT);
             SG_Material::setTexture(
               material, 2,
-              SG_GetTexture(g_builtin_textures.white_pixel_id)); // color map
+              SG_GetTexture(g_builtin_textures.white_pixel_id));     // color map
+            SG_Material::uniformVec2f(material, 3, glm::vec4(0.0f)); // texture offset
+            SG_Material::uniformVec2f(material, 4, glm::vec4(1.0f)); // texture scale
 
             ulib_material_cq_update_all_uniforms(material);
         } break;
@@ -1396,7 +1447,7 @@ static void ulib_material_init_uniforms_and_pso(SG_Material* material)
                 PhongParams::specular(material, glm::vec3(.2f));
                 PhongParams::diffuse(material, glm::vec3(1.0f));
                 PhongParams::shininess(material, 64.0f);
-                PhongParams::emission(material, glm::vec3(0.0f));
+                PhongParams::emission(material, glm::vec3(1.0f));
                 PhongParams::normalFactor(material, 1.0f);
                 PhongParams::aoFactor(material, 1.0f);
 
@@ -1595,6 +1646,36 @@ CK_DLL_MFUN(flat_material_set_color_map)
 
     SG_Material::setTexture(material, 2, tex);
     CQ_PushCommand_MaterialSetUniform(material, 2);
+}
+
+CK_DLL_MFUN(flat_material_set_texture_offset)
+{
+    SG_Material* material = GET_MATERIAL(SELF);
+    t_CKVEC2 offset       = GET_NEXT_VEC2(ARGS);
+    SG_Material::uniformVec2f(material, 3, glm::vec2(offset.x, offset.y));
+    CQ_PushCommand_MaterialSetUniform(material, 3);
+}
+
+CK_DLL_MFUN(flat_material_set_texture_scale)
+{
+    SG_Material* material = GET_MATERIAL(SELF);
+    t_CKVEC2 scale        = GET_NEXT_VEC2(ARGS);
+    SG_Material::uniformVec2f(material, 4, glm::vec2(scale.x, scale.y));
+    CQ_PushCommand_MaterialSetUniform(material, 4);
+}
+
+CK_DLL_MFUN(flat_material_get_texture_offset)
+{
+    SG_Material* material = GET_MATERIAL(SELF);
+    RETURN->v_vec2
+      = { material->uniforms[3].as.vec2f.x, material->uniforms[3].as.vec2f.y };
+}
+
+CK_DLL_MFUN(flat_material_get_texture_scale)
+{
+    SG_Material* material = GET_MATERIAL(SELF);
+    RETURN->v_vec2
+      = { material->uniforms[4].as.vec2f.x, material->uniforms[4].as.vec2f.y };
 }
 
 // UVMaterial ===================================================================

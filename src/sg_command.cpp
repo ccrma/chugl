@@ -836,3 +836,27 @@ void CQ_PushCommand_LightUpdate(SG_Light* light)
     command->desc     = light->desc;
     END_COMMAND();
 }
+
+void CQ_PushCommand_VideoUpdate(SG_Video* video)
+{
+    BEGIN_COMMAND(SG_Command_VideoUpdate, SG_COMMAND_VIDEO_UPDATE);
+    command->video            = *video;
+    command->video.path_OWNED = strdup(video->path_OWNED);
+    END_COMMAND();
+}
+
+void CQ_PushCommand_VideoSeek(SG_ID video_id, double time)
+{
+    BEGIN_COMMAND(SG_Command_VideoSeek, SG_COMMAND_VIDEO_SEEK);
+    command->video_id  = video_id;
+    command->time_secs = time;
+    END_COMMAND();
+}
+
+void CQ_PushCommand_VideoRate(SG_ID video_id, double rate)
+{
+    BEGIN_COMMAND(SG_Command_VideoRate, SG_COMMAND_VIDEO_RATE);
+    command->video_id = video_id;
+    command->rate     = rate;
+    END_COMMAND();
+}
