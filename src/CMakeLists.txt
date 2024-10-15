@@ -268,7 +268,7 @@ add_subdirectory(vendor/glfw3webgpu)
 # will need to fix this to implement ChuGLins
 FetchContent_Declare(
   webgpu
-  GIT_REPOSITORY https://github.com/AndrewAday/webgpu-distribution
+  GIT_REPOSITORY https://github.com/ccrma/webgpu-distribution/
   GIT_TAG        wgpu-static-22.1.0.5
 )
 FetchContent_MakeAvailable(webgpu)
