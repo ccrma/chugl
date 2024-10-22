@@ -77,7 +77,8 @@ typedef i32 SG_ID;
     X(SG_COMPONENT_PASS, "GPass")                                                      \
     X(SG_COMPONENT_BUFFER, "GBuffer")                                                  \
     X(SG_COMPONENT_LIGHT, "GLight")                                                    \
-    X(SG_COMPONENT_VIDEO, "Video")
+    X(SG_COMPONENT_VIDEO, "Video")                                                     \
+    X(SG_COMPONENT_WEBCAM, "Webcam")
 
 enum SG_ComponentType {
 #define X(name, str) name,
@@ -839,6 +840,16 @@ struct SG_Video : public SG_Component {
 };
 
 // ============================================================================
+// webcam
+// ============================================================================
+
+struct SG_Webcam : public SG_Component {
+    SG_ID texture_id;
+    int device_id;
+    int fps;
+};
+
+// ============================================================================
 // SG Component Manager
 // ============================================================================
 
@@ -866,6 +877,8 @@ SG_Material* SG_CreateMaterial(Chuck_Object* ckobj, SG_MaterialType material_typ
 SG_Mesh* SG_CreateMesh(Chuck_Object* ckobj, SG_Geometry* sg_geo, SG_Material* sg_mat);
 SG_Light* SG_CreateLight(Chuck_Object* ckobj);
 SG_Video* SG_CreateVideo(Chuck_Object* ckobj);
+SG_Webcam* SG_CreateWebcam(Chuck_Object* ckobj, Chuck_VM_Shred* shred, int device_id,
+                           int width, int height, int fps);
 
 SG_Component* SG_GetComponent(SG_ID id);
 SG_Transform* SG_GetTransform(SG_ID id);
@@ -881,6 +894,7 @@ SG_Pass* SG_GetPass(SG_ID id);
 SG_Buffer* SG_GetBuffer(SG_ID id);
 SG_Light* SG_GetLight(SG_ID id);
 SG_Video* SG_GetVideo(SG_ID id);
+SG_Webcam* SG_GetWebcam(SG_ID id);
 
 // ============================================================================
 // SG Garbage Collection

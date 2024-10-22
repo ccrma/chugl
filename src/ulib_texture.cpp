@@ -108,7 +108,6 @@ void wgpuQueueWriteTexture(
 );
 #endif
 
-#define GET_TEXTURE(ckobj) SG_GetTexture(OBJ_MEMBER_UINT(ckobj, component_offset_id))
 void ulib_texture_createDefaults(CK_DL_API API);
 
 // TextureSampler ---------------------------------------------------------------------

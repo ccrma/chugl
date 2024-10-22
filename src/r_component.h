@@ -1001,6 +1001,19 @@ struct R_Video : public R_Component {
 };
 
 // =============================================================================
+// R_Webcam
+// =============================================================================
+
+struct R_Webcam : public R_Component {
+    SG_ID webcam_texture_id;
+    int device_id;
+    u64 last_frame_count; // last webcame frame count, used to detect new frames and
+                          // prevent reuploading old frames
+
+    static void updateTexture(GraphicsContext* gctx, R_Webcam* webcam);
+};
+
+// =============================================================================
 // Component Manager API
 // =============================================================================
 
@@ -1033,6 +1046,7 @@ R_Buffer* Component_CreateBuffer(SG_ID id);
 R_Light* Component_CreateLight(SG_ID id, SG_LightDesc* desc);
 R_Video* Component_CreateVideo(GraphicsContext* gctx, SG_ID id, const char* filename,
                                SG_ID rgba_texture_id);
+R_Webcam* Component_CreateWebcam(SG_Command_WebcamCreate* cmd);
 
 R_Component* Component_GetComponent(SG_ID id);
 R_Transform* Component_GetXform(SG_ID id);
@@ -1050,6 +1064,7 @@ R_Pass* Component_GetPass(SG_ID id);
 R_Buffer* Component_GetBuffer(SG_ID id);
 R_Light* Component_GetLight(SG_ID id);
 R_Video* Component_GetVideo(SG_ID id);
+R_Webcam* Component_GetWebcam(SG_ID id);
 
 // lazily created on-demand because of many possible shader variations
 R_RenderPipeline* Component_GetPipeline(GraphicsContext* gctx,
@@ -1067,6 +1082,7 @@ bool Component_RenderPipelineIter(size_t* i, R_RenderPipeline** renderPipeline);
 int Component_RenderPipelineCount();
 
 bool Component_VideoIter(size_t* i, R_Video** video);
+bool Component_WebcamIter(size_t* i, R_Webcam** webcam);
 
 // component manager initialization
 void Component_Init(GraphicsContext* gctx);

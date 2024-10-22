@@ -35,10 +35,15 @@
 
 #include "core/file.h"
 #include "core/log.h"
+#include "core/spinlock.h"
 
 #include <stb/stb_image.h>
 
 #include <glm/gtx/matrix_decompose.hpp>
+
+#include <sr_webcam/include/sr_webcam.h>
+
+#include <sokol/sokol_time.h>
 
 static int compareSGIDs(const void* a, const void* b, void* udata)
 {
@@ -1501,6 +1506,7 @@ static Arena cameraArena;
 static Arena textArena;
 static Arena lightArena;
 static Arena videoArena;
+static Arena webcamArena;
 
 // default textures
 static Texture opaqueWhitePixel      = {};
@@ -1516,6 +1522,29 @@ static hashmap* _RenderPipelineMap;               // lookup by rid
 // each font is 600bytes, 128 fonts is 76.8KB
 static R_Font component_fonts[128];
 static int component_font_count = 0;
+
+// webcam
+/*
+set user data to be the device id
+have a stack lock-protected array of 8 webcam data slots
+in callback, webcam thread locks the device id of its bucket and copies rgb data,
+setting has_frame = true
+
+in app, before rendering, check all buckets for has_frame = true and copy data to
+texture
+*/
+
+struct R_WebcamData {
+    sr_webcam_device* webcam;
+    u8* data;
+    size_t size;
+    int count;       // number of ChuGL webcam objects using this device id
+    u64 frame_count; // incremented every time the webcam writes a new frame
+    spinlock lock;
+};
+
+// stores webcam pixel data, device id is the key
+static R_WebcamData _r_webcam_data[8] = {}; // supports up to 8 webcams
 
 struct R_Location {
     SG_ID id;     // key
@@ -1591,6 +1620,7 @@ void Component_Init(GraphicsContext* gctx)
     Arena::init(&bufferArena, sizeof(R_Buffer) * 64);
     Arena::init(&lightArena, sizeof(R_Light) * 16);
     Arena::init(&videoArena, sizeof(R_Video) * 16);
+    Arena::init(&webcamArena, sizeof(R_Webcam) * 8);
 
     // initialize default textures
     static u8 white[4]  = { 255, 255, 255, 255 };
@@ -2119,6 +2149,122 @@ R_Video* Component_CreateVideo(GraphicsContext* gctx, SG_ID id, const char* file
     return video;
 }
 
+void R_Webcam::updateTexture(GraphicsContext* gctx, R_Webcam* webcam)
+{
+    R_WebcamData* webcam_data = &_r_webcam_data[webcam->device_id];
+    R_Texture* texture        = Component_GetTexture(webcam->webcam_texture_id);
+    ASSERT(texture);
+
+    // lock
+    spinlock::lock(&webcam_data->lock);
+    defer(spinlock::unlock(&webcam_data->lock));
+
+    // validate texture dimensions
+    int webcam_width{}, webcam_height{};
+    sr_webcam_get_dimensions(webcam_data->webcam, &webcam_width, &webcam_height);
+    ASSERT(texture->desc.width == webcam_width);
+    ASSERT(texture->desc.height == webcam_height);
+
+    ASSERT(webcam->last_frame_count <= webcam_data->frame_count);
+
+    // check if has_frame
+    if (webcam_data->frame_count == webcam->last_frame_count) {
+        // log_trace("No frame for webcam device %d and texture %d", webcam->device_id,
+        //           webcam->webcam_texture_id);
+        return;
+    }
+
+    // log_trace("Writing webcam device %d to texture %d", webcam->device_id,
+    //           webcam->webcam_texture_id);
+
+    // write to texture
+    SG_TextureWriteDesc write_desc = {};
+    write_desc.width               = texture->desc.width;
+    write_desc.height              = texture->desc.height;
+    R_Texture::write(gctx, texture, &write_desc, webcam_data->data, webcam_data->size);
+
+    // update frame count
+    webcam->last_frame_count = webcam_data->frame_count;
+}
+
+// EXECUTED ON SEPARATE THREAD
+static void R_Webcam_Callback(sr_webcam_device* device, void* data)
+{
+    static u64 last_time{ stm_now() };
+    double time_sec = stm_sec(stm_laptime(&last_time));
+    log_trace("%f sec since last webcam update; framerate: %f", time_sec,
+              1.0 / time_sec);
+
+    int device_id             = (intptr_t)(sr_webcam_get_user(device));
+    R_WebcamData* webcam_data = &_r_webcam_data[device_id];
+
+    // lock
+    spinlock::lock(&webcam_data->lock);
+    defer(spinlock::unlock(&webcam_data->lock));
+
+    // copy data, scaling up size from rgb to rgba
+    int data_size = sr_webcam_get_format_size(device);
+    ASSERT(data_size % 3 == 0);
+    data_size = data_size / 3 * 4;
+    if (webcam_data->size < data_size) {
+        webcam_data->data = (u8*)realloc(webcam_data->data, data_size);
+    }
+    webcam_data->size = data_size;
+    u8* rgb_data      = (u8*)data;
+    // copy data, setting alpha to 255
+    for (int i = 0; i < data_size; i += 4) {
+        webcam_data->data[i]     = rgb_data[i / 4 * 3];
+        webcam_data->data[i + 1] = rgb_data[i / 4 * 3 + 1];
+        webcam_data->data[i + 2] = rgb_data[i / 4 * 3 + 2];
+        webcam_data->data[i + 3] = 255;
+    }
+
+    // bump frame count
+    webcam_data->frame_count++;
+}
+
+R_Webcam* Component_CreateWebcam(SG_Command_WebcamCreate* cmd)
+{
+    Arena* arena     = &webcamArena;
+    R_Webcam* webcam = ARENA_PUSH_TYPE(arena, R_Webcam);
+    *webcam          = {};
+
+    // component init
+    webcam->id   = cmd->webcam_id;
+    webcam->type = SG_COMPONENT_WEBCAM;
+
+    // store offset
+    R_Location loc     = { webcam->id, Arena::offsetOf(arena, webcam), arena };
+    const void* result = hashmap_set(r_locator, &loc);
+    ASSERT(result == NULL); // ensure id is unique
+
+    { // webcam init
+        webcam->device_id         = cmd->device_id;
+        webcam->webcam_texture_id = cmd->webcam_texture_id;
+
+        R_WebcamData* webcam_data = &_r_webcam_data[cmd->device_id];
+        spinlock::lock(&webcam_data->lock);
+        defer(spinlock::unlock(&webcam_data->lock));
+
+        // support multiple ChuGL Webcams using the same device id
+        if (webcam_data->webcam == NULL) {
+            ASSERT(webcam_data->count == 0);
+            sr_webcam_set_user(cmd->device, (void*)(intptr_t)cmd->device_id);
+            sr_webcam_set_callback(cmd->device, R_Webcam_Callback);
+
+            // Start. (already openned on audio thread in SG_CreateWebcam())
+            sr_webcam_start(cmd->device);
+
+            webcam_data->webcam = cmd->device;
+        }
+
+        // update webcam refcount
+        webcam_data->count++;
+    }
+
+    return webcam;
+}
+
 // linear search by font path, lazily creates if not found
 R_Font* Component_GetFont(GraphicsContext* gctx, FT_Library library,
                           const char* font_path)
@@ -2243,6 +2389,13 @@ R_Video* Component_GetVideo(SG_ID id)
     return (R_Video*)comp;
 }
 
+R_Webcam* Component_GetWebcam(SG_ID id)
+{
+    R_Component* comp = Component_GetComponent(id);
+    ASSERT(comp == NULL || comp->type == SG_COMPONENT_WEBCAM);
+    return (R_Webcam*)comp;
+}
+
 bool Component_MaterialIter(size_t* i, R_Material** material)
 {
     if (*i >= ARENA_LENGTH(&materialArena, R_Material)) {
@@ -2282,6 +2435,18 @@ bool Component_VideoIter(size_t* i, R_Video** video)
     }
 
     *video = ARENA_GET_TYPE(&videoArena, R_Video, *i);
+    ++(*i);
+    return true;
+}
+
+bool Component_WebcamIter(size_t* i, R_Webcam** webcam)
+{
+    if (*i >= ARENA_LENGTH(&webcamArena, R_Webcam)) {
+        *webcam = NULL;
+        return false;
+    }
+
+    *webcam = ARENA_GET_TYPE(&webcamArena, R_Webcam, *i);
     ++(*i);
     return true;
 }

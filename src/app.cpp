@@ -662,9 +662,16 @@ struct App {
         - check window minize still works
         */
 
+        { // update webcam textures
+            size_t webcam_idx = 0;
+            R_Webcam* webcam  = NULL;
+            while (Component_WebcamIter(&webcam_idx, &webcam)) {
+                R_Webcam::updateTexture(&app->gctx, webcam);
+            }
+        }
+
         { // decode all current video textures
-            // TODO: handle videos ending / being paused
-            // TODO: handle seek
+            // ==optimize== threadpool for decoding
             size_t video_idx = 0;
             R_Video* video   = NULL;
             while (Component_VideoIter(&video_idx, &video)) {
@@ -1986,6 +1993,10 @@ static void _R_HandleCommand(App* app, SG_Command* command)
             R_Video* video            = Component_GetVideo(cmd->video_id);
             video->rate               = cmd->rate;
             plm_set_loop(video->plm, cmd->loop);
+        } break;
+        case SG_COMMAND_WEBCAM_CREATE: {
+            SG_Command_WebcamCreate* cmd = (SG_Command_WebcamCreate*)command;
+            Component_CreateWebcam(cmd);
         } break;
         default: {
             log_error("unhandled command type: %d", command->type);

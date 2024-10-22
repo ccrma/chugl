@@ -160,6 +160,9 @@ enum SG_CommandType : u32 {
     SG_COMMAND_VIDEO_SEEK,
     SG_COMMAND_VIDEO_RATE,
 
+    // webcam
+    SG_COMMAND_WEBCAM_CREATE,
+
     SG_COMMAND_COUNT
 };
 
@@ -493,6 +496,20 @@ struct SG_Command_VideoRate : public SG_Command {
     bool loop;
 };
 
+// webcam commands -----------------------------------------------------
+
+struct _sr_webcam_device;
+typedef struct _sr_webcam_device sr_webcam_device;
+struct SG_Command_WebcamCreate : public SG_Command {
+    SG_ID webcam_id;
+    SG_ID webcam_texture_id;
+    sr_webcam_device* device;
+    int device_id;
+    int width;
+    int height;
+    int fps;
+};
+
 // ============================================================================
 // Command Queue API
 // ============================================================================
@@ -618,3 +635,6 @@ void CQ_PushCommand_LightUpdate(SG_Light* light);
 void CQ_PushCommand_VideoUpdate(SG_Video* video);
 void CQ_PushCommand_VideoSeek(SG_ID video_id, double time);
 void CQ_PushCommand_VideoRate(SG_ID video_id, double rate, bool loop);
+
+// webcam
+void CQ_PushCommand_WebcamCreate(SG_Webcam* webcam, sr_webcam_device* device);

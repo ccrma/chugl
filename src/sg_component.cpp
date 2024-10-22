@@ -30,9 +30,11 @@
 #include "geometry.h"
 #include "sg_command.h"
 
+#include "core/log.h"
 #include "ulib_helper.h"
 
 #include <glm/gtx/quaternion.hpp>
+#include <sr_webcam/include/sr_webcam.h>
 
 // ============================================================================
 // SG_Transform definitions
@@ -731,6 +733,7 @@ static Arena SG_PassArena;
 static Arena SG_BufferArena;
 static Arena SG_LightArena;
 static Arena SG_VideoArena;
+static Arena SG_WebcamArena;
 
 // locators (TODO switch to table)
 static hashmap* locator = NULL;
@@ -814,7 +817,8 @@ void SG_Init(const Chuck_DL_Api* api)
     Arena::init(&SG_PassArena, sizeof(SG_Pass) * 32);
     Arena::init(&SG_BufferArena, sizeof(SG_Pass) * 64);
     Arena::init(&SG_LightArena, sizeof(SG_Light) * 32);
-    Arena::init(&SG_VideoArena, sizeof(SG_Video) * 32);
+    Arena::init(&SG_VideoArena, sizeof(SG_Video) * 16);
+    Arena::init(&SG_WebcamArena, sizeof(SG_Webcam) * 8);
 
     // init gc state
     Arena::init(&_gc_queue_a, sizeof(SG_ID) * 64);
@@ -1195,6 +1199,77 @@ SG_Video* SG_CreateVideo(Chuck_Object* ckobj)
     return video;
 }
 
+SG_Webcam* SG_CreateWebcam(Chuck_Object* ckobj, Chuck_VM_Shred* shred, int device_id,
+                           int width, int height, int fps)
+{
+    CK_DL_API API = g_chuglAPI;
+
+    Arena* arena      = &SG_WebcamArena;
+    size_t offset     = arena->curr;
+    SG_Webcam* webcam = ARENA_PUSH_TYPE(arena, SG_Webcam);
+    *webcam           = {};
+
+    // init base component
+    webcam->ckobj = ckobj;
+    webcam->id    = SG_GetNewComponentID();
+    webcam->type  = SG_COMPONENT_WEBCAM;
+
+    // set ckobj pointer
+    OBJ_MEMBER_UINT(ckobj, component_offset_id) = webcam->id;
+
+    // store in map
+    SG_Location loc = { webcam->id, offset, arena };
+    hashmap_set(locator, &loc);
+
+    { // webcam init
+        SG_Texture* webcam_texture = SG_GetTexture(g_builtin_textures.magenta_pixel_id);
+        webcam->texture_id         = webcam_texture->id;
+        webcam->device_id          = device_id;
+
+        sr_webcam_device* device;
+        sr_webcam_create(&device, device_id); // default device id 0
+        sr_webcam_set_format(device, width, height, fps);
+        int webcam_open_success = sr_webcam_open(device) == 0;
+
+        /*
+        on macos, sr_webcam_delete causes segfault.
+        furthermore, openning the same webcam multiple times, even if closing the
+        earlier opens, causes webcam framerate to half from 30 -> 15. Probably an
+        implementation bug in sr_webcam. workaround: given a webcam id, only ever open
+        it once on the audio thread, and pass it to the graphics thread over the command
+        queue.
+        */
+
+        if (!webcam_open_success) {
+            log_warn("Could not open webcam device %d. Defaulting to magenta texture",
+                     device_id);
+        } else {
+            // Get back video parameters.
+            int vidW, vidH, vidFps;
+            sr_webcam_get_dimensions(device, &vidW, &vidH);
+            sr_webcam_get_framerate(device, &vidFps);
+            webcam->fps = vidFps;
+
+            // if successful, create webcam texture
+            SG_TextureDesc desc = {};
+            desc.width          = vidW;
+            desc.height         = vidH;
+            desc.dimension      = WGPUTextureDimension_2D;
+            desc.format         = WGPUTextureFormat_RGBA8Unorm;
+            desc.usage          = WGPUTextureUsage_All; // TODO: restrict usage?
+            desc.mips           = 1;                    // no mipmaps for video
+
+            webcam_texture     = SG_CreateTexture(&desc, NULL, shred, true);
+            webcam->texture_id = webcam_texture->id;
+
+            // if successful, create graphics component
+            CQ_PushCommand_WebcamCreate(webcam, device);
+        }
+    }
+
+    return webcam;
+}
+
 SG_Component* SG_GetComponent(SG_ID id)
 {
     SG_Location key     = {};
@@ -1298,6 +1373,13 @@ SG_Video* SG_GetVideo(SG_ID id)
     SG_Component* component = SG_GetComponent(id);
     ASSERT(component == NULL || component->type == SG_COMPONENT_VIDEO);
     return (SG_Video*)component;
+}
+
+SG_Webcam* SG_GetWebcam(SG_ID id)
+{
+    SG_Component* component = SG_GetComponent(id);
+    ASSERT(component == NULL || component->type == SG_COMPONENT_WEBCAM);
+    return (SG_Webcam*)component;
 }
 
 // ============================================================================

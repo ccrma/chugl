@@ -101,8 +101,6 @@ else()
     add_library(
         ${PROJECT_NAME} SHARED 
         ChuGL.cpp 
-        # ulib_imgui.cpp
-
         ${CORE}
         ${VENDOR}
     )
@@ -121,10 +119,31 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 
 if(XCODE)
+
+    # create entitlements file for camera access
+    # file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/ChuGL.entitlements
+    # "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+    # <!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+    # <plist version=\"1.0\">
+    # <dict>
+    #     <key>com.apple.security.device.camera</key>
+    #     <true/>
+    #     <key>com.apple.security.device.audio-input</key>
+    #     <true/>
+    # </dict>
+    # </plist>
+    # ")
+
     set_target_properties(${PROJECT_NAME} PROPERTIES
         XCODE_GENERATE_SCHEME ON
+        # XCODE_ATTRIBUTE_CODE_SIGN_ENTITLEMENTS ${CMAKE_CURRENT_BINARY_DIR}/ChuGL.entitlements
         XCODE_SCHEME_ENABLE_GPU_FRAME_CAPTURE_MODE "Metal"
         XCODE_SCHEME_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        XCODE_SCHEME_EXECUTABLE "/usr/local/bin/chuck"
+        XCODE_SCHEME_ARGUMENTS "--chugin:./build-xcode/Debug/ChuGL.chug"
+        # XCODE_ATTRIBUTE_ENABLE_HARDENED_RUNTIME YES
+        # MACOSX_BUNDLE TRUE
+        # MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/vendor/sr_webcam/Info.plist
     )
 endif()
 
@@ -259,6 +278,7 @@ if (NOT EMSCRIPTEN)
     add_subdirectory(vendor/glfw)
 endif()
 add_subdirectory(vendor/glfw3webgpu)
+add_subdirectory(vendor/sr_webcam)
 
 # host our own distribution of WebGPU on CCRMA
 # switching to static library instead of dynami b/c
@@ -300,7 +320,7 @@ add_subdirectory(vendor/box2d/src)
 
 # linking
 # target_link_libraries(${PROJECT_NAME} PRIVATE webgpu glfw glfw3webgpu)
-target_link_libraries(chugl_shared_properties INTERFACE webgpu glfw glfw3webgpu box2d freetype)
+target_link_libraries(chugl_shared_properties INTERFACE webgpu glfw glfw3webgpu box2d freetype sr_webcam)
 target_link_libraries(${PROJECT_NAME} PRIVATE chugl_shared_properties)
 if (CHUGL_BUILD_RENDERER_TESTS)
     target_link_libraries(ChuGL-Renderer-Tester PRIVATE chugl_shared_properties)

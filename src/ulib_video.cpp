@@ -28,6 +28,7 @@ intermediate frames
 #include <pl/pl_mpeg.h>
 
 #define GET_VIDEO(ckobj) SG_GetVideo(OBJ_MEMBER_UINT(ckobj, component_offset_id))
+#define GET_WEBCAM(ckobj) SG_GetWebcam(OBJ_MEMBER_UINT(ckobj, component_offset_id))
 
 CK_DLL_CTOR(video_ctor);
 CK_DLL_CTOR(video_ctor_with_path);
@@ -52,95 +53,157 @@ CK_DLL_MFUN(video_get_rate);
 CK_DLL_MFUN(video_set_loop);
 CK_DLL_MFUN(video_get_loop);
 
+//
+// webcam
+//
+CK_DLL_CTOR(webcam_ctor);
+CK_DLL_CTOR(webcam_ctor_with_device_id);
+
+CK_DLL_MFUN(webcam_get_width);
+CK_DLL_MFUN(webcam_get_height);
+CK_DLL_MFUN(webcam_get_aspect);
+CK_DLL_MFUN(webcam_get_fps);
+CK_DLL_MFUN(webcam_get_texture);
+
 void ulib_video_query(Chuck_DL_Query* QUERY)
 {
-    BEGIN_CLASS(SG_CKNames[SG_COMPONENT_VIDEO], "UGen_Multi");
-    DOC_CLASS(
-      "ChuGL Video object. Currently supports decoding MPEG1 Video and MP2 Audio. "
-      "Wraps the plmpeg library, which you can find here for more documentation: "
-      "https://github.com/phoboslab/pl_mpeg/ (see link for an example on how to encode "
-      "videos into a supported format with ffmpeg). This is a hybrid graphics/audio "
-      "object. "
-      "Video is a stereo UGen which may be connected dac for audio output. "
-      "The video texture may be accessed with the `texture()` member function, which "
-      "will be updated synchronously with audio. For sample-accurate audio "
-      "manipulation, we recommend controlling the audio data separately with SndBuf.");
+    { // video
+        BEGIN_CLASS(SG_CKNames[SG_COMPONENT_VIDEO], "UGen_Multi");
+        DOC_CLASS(
+          "ChuGL Video object. Currently supports decoding MPEG1 Video and MP2 Audio. "
+          "Wraps the plmpeg library, which you can find here for more documentation: "
+          "https://github.com/phoboslab/pl_mpeg/ (see link for an example on how to "
+          "encode "
+          "videos into a supported format with ffmpeg). This is a hybrid "
+          "graphics/audio "
+          "object. "
+          "Video is a stereo UGen which may be connected dac for audio output. "
+          "The video texture may be accessed with the `texture()` member function, "
+          "which "
+          "will be updated synchronously with audio. For sample-accurate audio "
+          "manipulation, we recommend controlling the audio data separately with "
+          "SndBuf.");
 
-    QUERY->add_ugen_funcf(QUERY, video_tick_multichannel, NULL,
-                          0, // 0 channels in
-                          2  // stereo out
-    );
+        QUERY->add_ugen_funcf(QUERY, video_tick_multichannel, NULL,
+                              0, // 0 channels in
+                              2  // stereo out
+        );
 
-    CTOR(video_ctor);
-    DOC_FUNC(
-      "Default video constructor. Currently videos are not mutable -- i.e. you cannot "
-      "change the video file after creation. This default constructor will create an "
-      "empty video object and default to a static magenta video texture."
-      "Use the alternate constructor Video(string path) instead");
+        CTOR(video_ctor);
+        DOC_FUNC(
+          "Default video constructor. Currently videos are not mutable -- i.e. you "
+          "cannot "
+          "change the video file after creation. This default constructor will create "
+          "an "
+          "empty video object and default to a static magenta video texture."
+          "Use the alternate constructor Video(string path) instead");
 
-    CTOR(video_ctor_with_path);
-    ARG("string", "path");
-    DOC_FUNC(
-      "Alternate video constructor. Opens a video file at the given path. Currently "
-      "only supports MPEG1 video and MP2 audio. If the video file cannot be opened, "
-      "the "
-      "video object will default to a static magenta video texture.");
+        CTOR(video_ctor_with_path);
+        ARG("string", "path");
+        DOC_FUNC(
+          "Alternate video constructor. Opens a video file at the given path. "
+          "Currently "
+          "only supports MPEG1 video and MP2 audio. If the video file cannot be "
+          "opened, "
+          "the "
+          "video object will default to a static magenta video texture.");
 
-    MFUN(video_get_framerate, "float", "framerate");
-    DOC_FUNC("Get the framerate of the video.");
+        MFUN(video_get_framerate, "float", "framerate");
+        DOC_FUNC("Get the framerate of the video.");
 
-    MFUN(video_get_samplerate, "int", "samplerate");
-    DOC_FUNC("Get the samplerate of the video's audio stream");
+        MFUN(video_get_framerate, "float", "fps");
+        DOC_FUNC("Get the framerate of the video.");
 
-    MFUN(video_get_length, "dur", "duration");
-    DOC_FUNC("Get total length of the file as a duration.");
+        MFUN(video_get_samplerate, "int", "samplerate");
+        DOC_FUNC("Get the samplerate of the video's audio stream");
 
-    MFUN(video_get_texture_rgba, SG_CKNames[SG_COMPONENT_TEXTURE], "texture");
-    DOC_FUNC("Get the RGBA texture of the video.");
+        MFUN(video_get_length, "dur", "duration");
+        DOC_FUNC("Get total length of the file as a duration.");
 
-    MFUN(video_get_width_texels, "int", "width");
-    DOC_FUNC("Get the width of the video in texels.");
+        MFUN(video_get_texture_rgba, SG_CKNames[SG_COMPONENT_TEXTURE], "texture");
+        DOC_FUNC("Get the RGBA texture of the video.");
 
-    MFUN(video_get_height_texels, "int", "height");
-    DOC_FUNC("Get the height of the video in texels.");
+        MFUN(video_get_width_texels, "int", "width");
+        DOC_FUNC("Get the width of the video in texels.");
 
-    // MFUN(video_get_aspect_ratio, "float", "aspect");
-    // DOC_FUNC("Get the video pixel aspect ratio");
+        MFUN(video_get_height_texels, "int", "height");
+        DOC_FUNC("Get the height of the video in texels.");
 
-    MFUN(video_get_time, "dur", "timestamp");
-    DOC_FUNC(
-      "Get the current video playhead duration in seconds (time since video start)");
+        // MFUN(video_get_aspect_ratio, "float", "aspect");
+        // DOC_FUNC("Get the video pixel aspect ratio");
 
-    MFUN(video_set_rate, "void", "rate");
-    ARG("float", "rate");
-    DOC_FUNC(
-      "Set the playback rate of the video. 1.0 is normal speed. Due to limitations in "
-      "the MPEG encoding format, rate cannot be set to less than 0.0. Reverse playback "
-      "is NOT supported. Negative rates will be clamped to 0");
+        MFUN(video_get_time, "dur", "timestamp");
+        DOC_FUNC(
+          "Get the current video playhead duration in seconds (time since video "
+          "start)");
 
-    MFUN(video_get_rate, "void", "rate");
-    DOC_FUNC(
-      "Get the playback rate of the video. 1.0 is normal speed. Negative rates are not "
-      "supported and will be clamped to 0");
+        MFUN(video_set_rate, "void", "rate");
+        ARG("float", "rate");
+        DOC_FUNC(
+          "Set the playback rate of the video. 1.0 is normal speed. Due to limitations "
+          "in "
+          "the MPEG encoding format, rate cannot be set to less than 0.0. Reverse "
+          "playback "
+          "is NOT supported. Negative rates will be clamped to 0");
 
-    MFUN(video_get_loop, "int", "loop");
-    DOC_FUNC("Get whether the video is looping. Default false");
+        MFUN(video_get_rate, "void", "rate");
+        DOC_FUNC(
+          "Get the playback rate of the video. 1.0 is normal speed. Negative rates are "
+          "not "
+          "supported and will be clamped to 0");
 
-    MFUN(video_set_loop, "void", "loop");
-    ARG("int", "loop");
-    DOC_FUNC("Set whether the video should loop. Default false");
+        MFUN(video_get_loop, "int", "loop");
+        DOC_FUNC("Get whether the video is looping. Default false");
 
-    MFUN(video_seek, "void", "seek");
-    ARG("dur", "time");
-    DOC_FUNC(
-      "Seek to a specific time in the video. Negative values and values greater than "
-      "the video length will wrap around. Note that seek is *not* sample-accurate; due "
-      "to the nature of MPEG encoding (and the demands of real-time performance), the "
-      "seek will be to the nearest keyframe, which in practice is within a few frames "
-      "of the target time. For sample-accurate seeking and audio manipulation, we "
-      "recommend loading the audio data separately into a SndBuf");
+        MFUN(video_set_loop, "void", "loop");
+        ARG("int", "loop");
+        DOC_FUNC("Set whether the video should loop. Default false");
 
-    END_CLASS();
+        MFUN(video_seek, "void", "seek");
+        ARG("dur", "time");
+        DOC_FUNC(
+          "Seek to a specific time in the video. Negative values and values greater "
+          "than "
+          "the video length will wrap around. Note that seek is *not* sample-accurate; "
+          "due "
+          "to the nature of MPEG encoding (and the demands of real-time performance), "
+          "the "
+          "seek will be to the nearest keyframe, which in practice is within a few "
+          "frames "
+          "of the target time. For sample-accurate seeking and audio manipulation, we "
+          "recommend loading the audio data separately into a SndBuf");
+
+        END_CLASS();
+    }
+
+    { // webcam
+        BEGIN_CLASS(SG_CKNames[SG_COMPONENT_WEBCAM], SG_CKNames[SG_COMPONENT_BASE]);
+
+        CTOR(webcam_ctor);
+
+        CTOR(webcam_ctor_with_device_id);
+        ARG("int", "device_id");
+
+        MFUN(webcam_get_width, "int", "width");
+        DOC_FUNC("Get the width of the webcam in pixels.");
+
+        MFUN(webcam_get_height, "int", "height");
+        DOC_FUNC("Get the height of the webcam in pixels.");
+
+        MFUN(webcam_get_aspect, "float", "aspect");
+        DOC_FUNC("Get the aspect ratio of the webcam.");
+
+        MFUN(webcam_get_fps, "int", "fps");
+        DOC_FUNC("Get the framerate of the webcam in frames per second.");
+
+        MFUN(webcam_get_fps, "int", "framerate");
+        DOC_FUNC("Get the framerate of the webcam in frames per second.");
+
+        MFUN(webcam_get_texture, SG_CKNames[SG_COMPONENT_TEXTURE], "texture");
+        DOC_FUNC("Get the RGBA texture of the webcam.");
+
+        END_CLASS();
+    }
 }
 
 // (Chuck_Object* SELF, SAMPLE* in, SAMPLE* out, t_CKUINT nframes,CK_DL_API API)
@@ -421,4 +484,50 @@ CK_DLL_MFUN(video_seek)
     //           time_seconds, out_seek_time, time_seconds - out_seek_time);
 
     CQ_PushCommand_VideoSeek(video->id, out_seek_time);
+}
+
+// =================================================================================================
+// webcam
+// =================================================================================================
+
+CK_DLL_CTOR(webcam_ctor)
+{
+    SG_CreateWebcam(SELF, SHRED, 0, 640, 480, 60);
+}
+
+CK_DLL_CTOR(webcam_ctor_with_device_id)
+{
+    int device_id = GET_NEXT_INT(ARGS);
+    SG_CreateWebcam(SELF, SHRED, device_id, 640, 480, 60);
+}
+
+CK_DLL_MFUN(webcam_get_width)
+{
+    SG_Texture* tex = SG_GetTexture(GET_WEBCAM(SELF)->texture_id);
+    ASSERT(tex);
+    RETURN->v_int = tex->desc.width;
+}
+
+CK_DLL_MFUN(webcam_get_height)
+{
+    SG_Texture* tex = SG_GetTexture(GET_WEBCAM(SELF)->texture_id);
+    ASSERT(tex);
+    RETURN->v_int = tex->desc.height;
+}
+
+CK_DLL_MFUN(webcam_get_aspect)
+{
+    SG_Texture* tex = SG_GetTexture(GET_WEBCAM(SELF)->texture_id);
+    ASSERT(tex);
+    RETURN->v_float = (float)tex->desc.width / (float)tex->desc.height;
+}
+
+CK_DLL_MFUN(webcam_get_fps)
+{
+    RETURN->v_int = GET_WEBCAM(SELF)->fps;
+}
+
+CK_DLL_MFUN(webcam_get_texture)
+{
+    RETURN->v_object = SG_GetTexture(GET_WEBCAM(SELF)->texture_id)->ckobj;
 }

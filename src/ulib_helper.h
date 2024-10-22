@@ -60,6 +60,8 @@
 #define GET_NEXT_VEC4_ARRAY(ptr) (*((Chuck_ArrayVec4**&)ptr)++)
 #define GET_NEXT_OBJECT_ARRAY(ptr) (*((Chuck_ArrayInt**&)ptr)++)
 
+#define GET_TEXTURE(ckobj) SG_GetTexture(OBJ_MEMBER_UINT(ckobj, component_offset_id))
+
 #define ADVANCE_BY_INT(ptr) (((t_CKINT*&)ptr)++)
 
 #define OBJ_MEMBER_INT_ARRAY(obj, offset)                                              \
@@ -97,7 +99,7 @@ bool hookActivated            = false;
 // references to VM and API
 Chuck_VM* g_chuglVM  = NULL;
 CK_DL_API g_chuglAPI = NULL;
-Arena audio_frame_arena;
+Arena audio_frame_arena = {};
 f64 g_last_dt     = 0.0;
 i64 g_frame_count = 0;
 
@@ -152,11 +154,11 @@ static chugl_builtin_textures g_builtin_textures;
 
 struct {
     Chuck_ArrayFloat* empty_float_array;
-    Chuck_ArrayFloat* init_2d_pos;       // {0.0, 0.0}
-    Chuck_ArrayVec3* init_white_color;   // [@(1,1,1)]
-    Chuck_ArrayFloat* white_pixel_data;  // {1.0, 1.0, 1.0, 1.0}
-    Chuck_ArrayFloat* black_pixel_data;  // {0.0, 0.0, 0.0, 0.0}
-    Chuck_ArrayFloat* normal_pixel_data; // {0.5, 0.5, 1.0, 1.0}
+    Chuck_ArrayFloat* init_2d_pos;        // {0.0, 0.0}
+    Chuck_ArrayVec3* init_white_color;    // [@(1,1,1)]
+    Chuck_ArrayFloat* white_pixel_data;   // {1.0, 1.0, 1.0, 1.0}
+    Chuck_ArrayFloat* black_pixel_data;   // {0.0, 0.0, 0.0, 0.0}
+    Chuck_ArrayFloat* normal_pixel_data;  // {0.5, 0.5, 1.0, 1.0}
     Chuck_ArrayFloat* magenta_pixel_data; // {1.0, 0.0, 1.0, 1.0}
 
     Chuck_String* FRAME_UNIFORMS;
