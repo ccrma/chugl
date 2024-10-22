@@ -329,7 +329,7 @@ struct R_Texture : public R_Component {
                                   &source, &size);
 
             // TODO profile
-            wgpuQueueSubmit(gctx->queue, 0, NULL); // schedule transfer immediately
+            // wgpuQueueSubmit(gctx->queue, 0, NULL); // schedule transfer immediately
         }
     }
 
@@ -992,11 +992,12 @@ struct R_Font {
 // =============================================================================
 
 struct R_Video : public R_Component {
-    SG_Video sg_video;
-    plm_t* plm;          // plm_destroy(plm) to free
+    plm_t* plm;            // plm_destroy(plm) to free
+    GraphicsContext* gctx; // messy workaround for plm callbacks
+    SG_ID video_texture_rgba_id;
     u8* rgba_data_OWNED; // free with free(rgba_data)
     int rgba_data_size;
-    GraphicsContext* gctx; // messy workaround for plm callbacks
+    float rate = 1.0f;
 };
 
 // =============================================================================
@@ -1030,7 +1031,8 @@ R_Texture* Component_CreateTexture(GraphicsContext* gctx,
 R_Pass* Component_CreatePass(SG_ID pass_id);
 R_Buffer* Component_CreateBuffer(SG_ID id);
 R_Light* Component_CreateLight(SG_ID id, SG_LightDesc* desc);
-R_Video* Component_CreateVideo(GraphicsContext* gctx, SG_ID id, SG_Video* sg_video);
+R_Video* Component_CreateVideo(GraphicsContext* gctx, SG_ID id, const char* filename,
+                               SG_ID rgba_texture_id);
 
 R_Component* Component_GetComponent(SG_ID id);
 R_Transform* Component_GetXform(SG_ID id);

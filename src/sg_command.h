@@ -477,7 +477,9 @@ struct SG_Command_LightUpdate : public SG_Command {
 
 // video commands -----------------------------------------------------
 struct SG_Command_VideoUpdate : public SG_Command {
-    SG_Video video;
+    SG_ID video_id;
+    SG_ID rgba_video_texture_id;
+    ptrdiff_t path_offset;
 };
 
 struct SG_Command_VideoSeek : public SG_Command {
@@ -488,6 +490,7 @@ struct SG_Command_VideoSeek : public SG_Command {
 struct SG_Command_VideoRate : public SG_Command {
     SG_ID video_id;
     double rate;
+    bool loop;
 };
 
 // ============================================================================
@@ -614,4 +617,4 @@ void CQ_PushCommand_LightUpdate(SG_Light* light);
 // video
 void CQ_PushCommand_VideoUpdate(SG_Video* video);
 void CQ_PushCommand_VideoSeek(SG_ID video_id, double time);
-void CQ_PushCommand_VideoRate(SG_ID video_id, double rate);
+void CQ_PushCommand_VideoRate(SG_ID video_id, double rate, bool loop);

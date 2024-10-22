@@ -839,9 +839,14 @@ void CQ_PushCommand_LightUpdate(SG_Light* light)
 
 void CQ_PushCommand_VideoUpdate(SG_Video* video)
 {
-    BEGIN_COMMAND(SG_Command_VideoUpdate, SG_COMMAND_VIDEO_UPDATE);
-    command->video            = *video;
-    command->video.path_OWNED = strdup(video->path_OWNED);
+    const char* path = video->path_OWNED ? video->path_OWNED : "";
+    int path_len     = strlen(path) + 1;
+    BEGIN_COMMAND_ADDITIONAL_MEMORY_ZERO(SG_Command_VideoUpdate,
+                                         SG_COMMAND_VIDEO_UPDATE, path_len);
+    command->video_id              = video->id;
+    command->rgba_video_texture_id = video->video_texture_rgba_id;
+    command->path_offset           = Arena::offsetOf(cq.write_q, memory);
+    strncpy((char*)memory, path, path_len);
     END_COMMAND();
 }
 
@@ -853,10 +858,11 @@ void CQ_PushCommand_VideoSeek(SG_ID video_id, double time)
     END_COMMAND();
 }
 
-void CQ_PushCommand_VideoRate(SG_ID video_id, double rate)
+void CQ_PushCommand_VideoRate(SG_ID video_id, double rate, bool loop)
 {
     BEGIN_COMMAND(SG_Command_VideoRate, SG_COMMAND_VIDEO_RATE);
     command->video_id = video_id;
     command->rate     = rate;
+    command->loop     = loop;
     END_COMMAND();
 }

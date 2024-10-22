@@ -826,9 +826,12 @@ struct SG_Video : public SG_Component {
 
     // audio playback
     float rate = 1.0;
-    int audio_playhead;     // position in audio frames
-    plm_samples_t* samples; // TODO maybe remove
+    float audio_playhead; // position in audio frames
+    plm_samples_t* samples;
+    float last_audio_samples[2]; // last audio samples (left/right channel) from
+                                 // previous audio frame. used for interpolation
 
+    // get length of video in samples
     static int audioFrames(SG_Video* video)
     {
         return (int)(video->duration_secs * video->samplerate);

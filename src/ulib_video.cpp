@@ -1,3 +1,23 @@
+/*
+TODO
+- destructor cleanup
+    - what happens when video texture is still referenced, but video itself is not?
+        - don't destroy the texture, just decrement texture refcount.
+        - video texture will no longer be updated, frozen on last decoded video frame
+
+- try to make seek sample-accurate for audio
+- Video.load, allow switching video file dynamically
+    - but what about the texture? what should be behavior if new video has different
+dimensions/aspect?
+- default constructor
+- implement frame-skip in plm_decode so that high playback rates do not decode all
+intermediate frames
+- SIMD optimize decoding
+- Support HAP
+    - https://github.com/keijiro/KlakHap/blob/master/Plugin/Source/KlakHap.cpp
+- Support YCbCr textures
+
+*/
 #include "ulib_helper.h"
 
 #include "sg_command.h"
@@ -9,13 +29,14 @@
 
 #define GET_VIDEO(ckobj) SG_GetVideo(OBJ_MEMBER_UINT(ckobj, component_offset_id))
 
+CK_DLL_CTOR(video_ctor);
 CK_DLL_CTOR(video_ctor_with_path);
 CK_DLL_TICKF(video_tick_multichannel);
 
 // video metadata
 CK_DLL_MFUN(video_get_framerate);
 CK_DLL_MFUN(video_get_samplerate);
-CK_DLL_MFUN(video_get_duration_secs);
+CK_DLL_MFUN(video_get_length);
 
 CK_DLL_MFUN(video_get_texture_rgba);
 CK_DLL_MFUN(video_get_width_texels);
@@ -27,18 +48,43 @@ CK_DLL_MFUN(video_get_time);
 // manipulation
 CK_DLL_MFUN(video_seek);
 CK_DLL_MFUN(video_set_rate);
+CK_DLL_MFUN(video_get_rate);
+CK_DLL_MFUN(video_set_loop);
+CK_DLL_MFUN(video_get_loop);
 
 void ulib_video_query(Chuck_DL_Query* QUERY)
 {
     BEGIN_CLASS(SG_CKNames[SG_COMPONENT_VIDEO], "UGen_Multi");
+    DOC_CLASS(
+      "ChuGL Video object. Currently supports decoding MPEG1 Video and MP2 Audio. "
+      "Wraps the plmpeg library, which you can find here for more documentation: "
+      "https://github.com/phoboslab/pl_mpeg/ (see link for an example on how to encode "
+      "videos into a supported format with ffmpeg). This is a hybrid graphics/audio "
+      "object. "
+      "Video is a stereo UGen which may be connected dac for audio output. "
+      "The video texture may be accessed with the `texture()` member function, which "
+      "will be updated synchronously with audio. For sample-accurate audio "
+      "manipulation, we recommend controlling the audio data separately with SndBuf.");
 
     QUERY->add_ugen_funcf(QUERY, video_tick_multichannel, NULL,
                           0, // 0 channels in
                           2  // stereo out
     );
 
+    CTOR(video_ctor);
+    DOC_FUNC(
+      "Default video constructor. Currently videos are not mutable -- i.e. you cannot "
+      "change the video file after creation. This default constructor will create an "
+      "empty video object and default to a static magenta video texture."
+      "Use the alternate constructor Video(string path) instead");
+
     CTOR(video_ctor_with_path);
     ARG("string", "path");
+    DOC_FUNC(
+      "Alternate video constructor. Opens a video file at the given path. Currently "
+      "only supports MPEG1 video and MP2 audio. If the video file cannot be opened, "
+      "the "
+      "video object will default to a static magenta video texture.");
 
     MFUN(video_get_framerate, "float", "framerate");
     DOC_FUNC("Get the framerate of the video.");
@@ -46,8 +92,8 @@ void ulib_video_query(Chuck_DL_Query* QUERY)
     MFUN(video_get_samplerate, "int", "samplerate");
     DOC_FUNC("Get the samplerate of the video's audio stream");
 
-    MFUN(video_get_duration_secs, "float", "duration");
-    DOC_FUNC("Get the duration of the video in seconds.");
+    MFUN(video_get_length, "dur", "duration");
+    DOC_FUNC("Get total length of the file as a duration.");
 
     MFUN(video_get_texture_rgba, SG_CKNames[SG_COMPONENT_TEXTURE], "texture");
     DOC_FUNC("Get the RGBA texture of the video.");
@@ -58,16 +104,41 @@ void ulib_video_query(Chuck_DL_Query* QUERY)
     MFUN(video_get_height_texels, "int", "height");
     DOC_FUNC("Get the height of the video in texels.");
 
-    MFUN(video_get_time, "time", "timestamp");
-    DOC_FUNC("Get the current time in the video in seconds");
+    // MFUN(video_get_aspect_ratio, "float", "aspect");
+    // DOC_FUNC("Get the video pixel aspect ratio");
+
+    MFUN(video_get_time, "dur", "timestamp");
+    DOC_FUNC(
+      "Get the current video playhead duration in seconds (time since video start)");
 
     MFUN(video_set_rate, "void", "rate");
     ARG("float", "rate");
-    DOC_FUNC("Set the playback rate of the video. 1.0 is normal speed.");
+    DOC_FUNC(
+      "Set the playback rate of the video. 1.0 is normal speed. Due to limitations in "
+      "the MPEG encoding format, rate cannot be set to less than 0.0. Reverse playback "
+      "is NOT supported. Negative rates will be clamped to 0");
+
+    MFUN(video_get_rate, "void", "rate");
+    DOC_FUNC(
+      "Get the playback rate of the video. 1.0 is normal speed. Negative rates are not "
+      "supported and will be clamped to 0");
+
+    MFUN(video_get_loop, "int", "loop");
+    DOC_FUNC("Get whether the video is looping. Default false");
+
+    MFUN(video_set_loop, "void", "loop");
+    ARG("int", "loop");
+    DOC_FUNC("Set whether the video should loop. Default false");
 
     MFUN(video_seek, "void", "seek");
-    ARG("time", "time");
-    DOC_FUNC("Seek to a specific time in the video.");
+    ARG("dur", "time");
+    DOC_FUNC(
+      "Seek to a specific time in the video. Negative values and values greater than "
+      "the video length will wrap around. Note that seek is *not* sample-accurate; due "
+      "to the nature of MPEG encoding (and the demands of real-time performance), the "
+      "seek will be to the nearest keyframe, which in practice is within a few frames "
+      "of the target time. For sample-accurate seeking and audio manipulation, we "
+      "recommend loading the audio data separately into a SndBuf");
 
     END_CLASS();
 }
@@ -75,42 +146,97 @@ void ulib_video_query(Chuck_DL_Query* QUERY)
 // (Chuck_Object* SELF, SAMPLE* in, SAMPLE* out, t_CKUINT nframes,CK_DL_API API)
 CK_DLL_TICKF(video_tick_multichannel)
 {
-    static u64 audio_frame_count{ 0 };
     ASSERT(nframes == 1); // TODO ask Ge/Nick if this is ever not 1?
 
     SG_Video* video = GET_VIDEO(SELF);
 
-    if (video->samples == NULL || video->audio_playhead >= video->samples->count) {
-        video->samples        = plm_decode_audio(video->plm);
-        video->audio_playhead = 0;
-        log_info("decoded 1 audio frame with time %f, count %d", video->samples->time,
-                 video->samples->count);
+    // handle default unitialized video
+    if (!video->plm) {
+        out[0] = 0;
+        out[1] = 0;
+        return TRUE;
     }
 
-    ASSERT(video->audio_playhead < video->samples->count);
+    while (video->samples == NULL
+           || video->audio_playhead >= (float)video->samples->count - 1) {
 
-    out[0] = video->samples->interleaved[video->audio_playhead * 2 + 0];
-    out[1] = video->samples->interleaved[video->audio_playhead * 2 + 1];
+        if (video->samples) {
+            // decrement the playhead by the number of samples in the last audio frame
+            video->audio_playhead -= video->samples->count;
+            // save last audio samples
+            video->last_audio_samples[0]
+              = video->samples->interleaved[video->samples->count * 2 - 2];
+            video->last_audio_samples[1]
+              = video->samples->interleaved[video->samples->count * 2 - 1];
+        }
 
-    video->audio_playhead++;
+        video->samples = plm_decode_audio(video->plm);
+        if (!video->samples) break;
+        // log_info("decoded 1 audio frame with time %f, count %d",
+        // video->samples->time,
+        //          video->samples->count);
+    }
 
-    audio_frame_count++;
+    if (video->samples) {
+        ASSERT(video->audio_playhead <= video->samples->count - 1.0f);
+        // TODO linear interpolation
+        float integer{};
+        float fract = modff(video->audio_playhead, &integer);
+
+        if (video->audio_playhead < 0) {
+            // if less than zero, we interpolate between the last samples of the
+            // previous audio frame, and the first sample of the current one
+            ASSERT(video->audio_playhead >= -1.f);
+
+            out[0] = video->last_audio_samples[0] * -fract
+                     + video->samples->interleaved[0] * (1 + fract);
+            out[1] = video->last_audio_samples[1] * -fract
+                     + video->samples->interleaved[1] * (1 + fract);
+
+        } else {
+            out[0] = video->samples->interleaved[(int)integer * 2 + 0] * (1 - fract)
+                     + video->samples->interleaved[(int)integer * 2 + 2] * fract;
+            out[1] = video->samples->interleaved[(int)integer * 2 + 1] * (1 - fract)
+                     + video->samples->interleaved[(int)integer * 2 + 3] * fract;
+        }
+
+        video->audio_playhead += video->rate;
+    } else {
+        // end of audio stream
+        out[0] = 0;
+        out[1] = 0;
+    }
 
     return TRUE;
 }
 
+// audio decode callback, used by seek
 static void ulib_video_on_audio(plm_t* mpeg, plm_samples_t* samples, void* user)
 {
     // plm_samples_t should be valid until the next audio callback
-
     SG_Video* video = SG_GetVideo((intptr_t)user);
 
-    log_error("decoding audio samples %d", samples->count);
+    // log_error("decoding audio samples %d", samples->count);
 
     { // update the audio samples
         video->samples        = samples;
         video->audio_playhead = 0;
     }
+}
+
+CK_DLL_CTOR(video_ctor)
+{
+    log_warn(
+      "Creating default empty Video object, you probably want to use the `Video(string "
+      "path)` constructor instead");
+
+    SG_Texture* video_texture_rgba = SG_GetTexture(g_builtin_textures.magenta_pixel_id);
+    SG_Video* video                = SG_CreateVideo(SELF);
+
+    video->path_OWNED            = NULL;
+    video->video_texture_rgba_id = video_texture_rgba->id;
+
+    CQ_PushCommand_VideoUpdate(video);
 }
 
 CK_DLL_CTOR(video_ctor_with_path)
@@ -145,8 +271,8 @@ CK_DLL_CTOR(video_ctor_with_path)
         video->framerate     = (float)plm_get_framerate(plm);
         video->samplerate    = plm_get_samplerate(plm);
         video->duration_secs = (float)plm_get_duration(plm);
-        log_info("Opened %s - framerate: %f, samplerate: %d, duration: %f", path,
-                 video->framerate, video->samplerate, video->duration_secs);
+        // log_info("Opened %s - framerate: %f, samplerate: %d, duration: %f", path,
+        //          video->framerate, video->samplerate, video->duration_secs);
     }
 
     // initialize audio
@@ -154,11 +280,9 @@ CK_DLL_CTOR(video_ctor_with_path)
         plm_set_audio_decode_callback(plm, ulib_video_on_audio,
                                       (void*)(intptr_t)video->id);
 
-        // TODO make configurable
-        plm_set_loop(plm, TRUE);
         plm_set_audio_enabled(plm, TRUE);
         plm_set_video_enabled(plm, TRUE);
-        plm_set_audio_stream(plm, 0);
+        plm_set_audio_stream(plm, 0); // TODO support multiple audio streams?
 
         // Adjust the audio lead time according to the audio_spec buffer size
         // TODO hardcoded to 512 samples, change to bufsize when chugin headers adds
@@ -204,9 +328,9 @@ CK_DLL_MFUN(video_get_samplerate)
     RETURN->v_int = GET_VIDEO(SELF)->samplerate;
 }
 
-CK_DLL_MFUN(video_get_duration_secs)
+CK_DLL_MFUN(video_get_length)
 {
-    RETURN->v_float = GET_VIDEO(SELF)->duration_secs;
+    RETURN->v_dur = SG_Video::audioFrames(GET_VIDEO(SELF));
 }
 
 CK_DLL_MFUN(video_get_texture_rgba)
@@ -229,18 +353,42 @@ CK_DLL_MFUN(video_get_height_texels)
     RETURN->v_uint  = tex->desc.height;
 }
 
+// CK_DLL_MFUN(video_get_aspect_ratio)
+// {
+//     SG_Video* video = GET_VIDEO(SELF);
+//     RETURN->v_float = plm_get_pixel_aspect_ratio(video->plm);
+// }
+
 CK_DLL_MFUN(video_get_time)
 {
-    plm_t* plm     = GET_VIDEO(SELF)->plm;
-    RETURN->v_time = plm_get_time(plm) * API->vm->srate(VM);
+    plm_t* plm    = GET_VIDEO(SELF)->plm;
+    RETURN->v_dur = plm_get_time(plm) * API->vm->srate(VM);
 }
 
 CK_DLL_MFUN(video_set_rate)
 {
     SG_Video* video = GET_VIDEO(SELF);
     video->rate     = GET_NEXT_FLOAT(ARGS);
+    video->rate     = MAX(0.0, video->rate);
 
-    CQ_PushCommand_VideoRate(video->id, video->rate);
+    CQ_PushCommand_VideoRate(video->id, video->rate, plm_get_loop(video->plm));
+}
+
+CK_DLL_MFUN(video_get_rate)
+{
+    RETURN->v_float = GET_VIDEO(SELF)->rate;
+}
+
+CK_DLL_MFUN(video_set_loop)
+{
+    SG_Video* video = GET_VIDEO(SELF);
+    plm_set_loop(video->plm, GET_NEXT_INT(ARGS));
+    CQ_PushCommand_VideoRate(video->id, video->rate, plm_get_loop(video->plm));
+}
+
+CK_DLL_MFUN(video_get_loop)
+{
+    RETURN->v_int = plm_get_loop(GET_VIDEO(SELF)->plm);
 }
 
 CK_DLL_MFUN(video_seek)
@@ -248,21 +396,29 @@ CK_DLL_MFUN(video_seek)
     SG_Video* video = GET_VIDEO(SELF);
 
     // get time and wrap around video length (allows negative indexing)
-    int time_samples = (int)GET_NEXT_TIME(ARGS);
+    int time_samples = (int)GET_NEXT_DUR(ARGS);
     while (time_samples < 0) {
         time_samples += SG_Video::audioFrames(video);
     }
     time_samples = time_samples % SG_Video::audioFrames(video);
 
-    double time_seconds = (float)time_samples / API->vm->srate(VM);
+    double time_seconds = (double)time_samples / API->vm->srate(VM);
 
-    log_error("seeking to %f seconds from %f seconds", time_seconds,
-              plm_get_time(video->plm));
+    // log_error("seeking to %f seconds from %f seconds", time_seconds,
+    //           plm_get_time(video->plm));
 
-    // int ret = plm_seek(video->plm, time_seconds, false);
     double out_seek_time = 0;
     int ret              = plm_seek_audio(video->plm, time_seconds, &out_seek_time);
-    ASSERT(ret);
+
+    if (!ret) {
+        log_warn("Could not seek to target time %f in MPG video '%s'", time_seconds,
+                 video->path_OWNED);
+        return;
+    }
+
+    // else seek succeeded, tell video to seek as well
+    // log_error("targeted seek time %f, actual seek time %f, difference: %f",
+    //           time_seconds, out_seek_time, time_seconds - out_seek_time);
 
     CQ_PushCommand_VideoSeek(video->id, out_seek_time);
 }

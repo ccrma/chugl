@@ -2028,7 +2028,7 @@ static void R_Video_OnVideo(plm_t* player, plm_frame_t* frame, void* video_id)
 {
     R_Video* video = Component_GetVideo((intptr_t)video_id);
 
-    log_info("Video frame time %f", frame->time);
+    // log_info("Video frame time %f", frame->time);
 
     // Hand the decoded data over to OpenGL. For the RGB texture mode, the
     // YCrCb->RGB conversion is done on the CPU.
@@ -2040,11 +2040,11 @@ static void R_Video_OnVideo(plm_t* player, plm_frame_t* frame, void* video_id)
     //     app_update_texture(self, GL_TEXTURE2, self->texture_cr, &frame->cr);
     // } else {
 
-    R_Texture* video_texture_rgba
-      = Component_GetTexture(video->sg_video.video_texture_rgba_id);
+    R_Texture* video_texture_rgba = Component_GetTexture(video->video_texture_rgba_id);
 
     { // memory bounds check
         // check texture
+        ASSERT(video_texture_rgba);
         ASSERT(video_texture_rgba->desc.width == frame->width);
         ASSERT(video_texture_rgba->desc.height == frame->height);
         ASSERT(video_texture_rgba->desc.depth == 1);
@@ -2067,15 +2067,17 @@ static void R_Video_OnVideo(plm_t* player, plm_frame_t* frame, void* video_id)
                      video->rgba_data_OWNED, video->rgba_data_size);
 }
 
-R_Video* Component_CreateVideo(GraphicsContext* gctx, SG_ID id, SG_Video* sg_video)
+R_Video* Component_CreateVideo(GraphicsContext* gctx, SG_ID id, const char* filename,
+                               SG_ID rgba_texture_id)
 {
     Arena* arena   = &videoArena;
-    R_Video* video = ARENA_PUSH_ZERO_TYPE(arena, R_Video);
+    R_Video* video = ARENA_PUSH_TYPE(arena, R_Video);
+    *video         = {};
 
     // component init
     video->id   = id;
     video->type = SG_COMPONENT_VIDEO;
-    strncpy(video->name, sg_video->name, sizeof(video->name));
+    strncpy(video->name, filename, sizeof(video->name));
 
     // store offset
     R_Location loc     = { video->id, Arena::offsetOf(arena, video), arena };
@@ -2083,15 +2085,15 @@ R_Video* Component_CreateVideo(GraphicsContext* gctx, SG_ID id, SG_Video* sg_vid
     ASSERT(result == NULL); // ensure id is unique
 
     { // video init (TODO move to video Desc struct)
-        video->gctx     = gctx;
-        video->sg_video = *sg_video;
+        video->gctx                  = gctx;
+        video->video_texture_rgba_id = rgba_texture_id;
 
-        video->plm = plm_create_with_filename(sg_video->path_OWNED);
+        video->plm = plm_create_with_filename(filename);
 
         // validation
         if (video->plm) {
             if (!plm_probe(video->plm, 5000 * 1024)) {
-                // no audio streams, destroy
+                // no streams found, destroy
                 plm_destroy(video->plm);
                 video->plm = NULL;
             }
@@ -2108,9 +2110,6 @@ R_Video* Component_CreateVideo(GraphicsContext* gctx, SG_ID id, SG_Video* sg_vid
 
             plm_set_video_decode_callback(video->plm, R_Video_OnVideo,
                                           (void*)(intptr_t)video->id);
-
-            // enable looping (TODO parameterize)
-            plm_set_loop(video->plm, TRUE);
 
             // don't process audio
             plm_set_audio_enabled(video->plm, FALSE);

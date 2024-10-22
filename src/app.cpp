@@ -670,7 +670,7 @@ struct App {
             while (Component_VideoIter(&video_idx, &video)) {
                 if (video->plm) {
                     // log_info("decoding video %d, dt: %f", video->id, dt_sec);
-                    plm_decode(video->plm, dt_sec * video->sg_video.rate);
+                    plm_decode_last_frame_only(video->plm, dt_sec * video->rate);
                 }
             }
         }
@@ -1968,9 +1968,13 @@ static void _R_HandleCommand(App* app, SG_Command* command)
         } break;
         case SG_COMMAND_VIDEO_UPDATE: {
             SG_Command_VideoUpdate* cmd = (SG_Command_VideoUpdate*)command;
-            R_Video* video              = Component_GetVideo(cmd->video.id);
+            R_Video* video              = Component_GetVideo(cmd->video_id);
+            // TODO handle updating video file path here
             if (!video)
-                video = Component_CreateVideo(&app->gctx, cmd->video.id, &cmd->video);
+                video = Component_CreateVideo(
+                  &app->gctx, cmd->video_id,
+                  (const char*)CQ_ReadCommandGetOffset(cmd->path_offset),
+                  cmd->rgba_video_texture_id);
         } break;
         case SG_COMMAND_VIDEO_SEEK: {
             SG_Command_VideoSeek* cmd = (SG_Command_VideoSeek*)command;
@@ -1980,7 +1984,8 @@ static void _R_HandleCommand(App* app, SG_Command* command)
         case SG_COMMAND_VIDEO_RATE: {
             SG_Command_VideoRate* cmd = (SG_Command_VideoRate*)command;
             R_Video* video            = Component_GetVideo(cmd->video_id);
-            video->sg_video.rate      = cmd->rate;
+            video->rate               = cmd->rate;
+            plm_set_loop(video->plm, cmd->loop);
         } break;
         default: {
             log_error("unhandled command type: %d", command->type);

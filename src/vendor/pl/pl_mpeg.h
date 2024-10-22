@@ -375,6 +375,12 @@ void plm_set_audio_decode_callback(plm_t* self, plm_audio_decode_callback fp,
 
 void plm_decode(plm_t* self, double seconds);
 
+// AZADAY: plm_decode but only decodes the last video frame. Added to improve
+// performance when using high playback rates. Audio is NOT optimized; all
+// intermediate audio frames are processed still (but the graphics thread
+// disables audio decoding, so this should have 0 effect)
+void plm_decode_last_frame_only(plm_t* self, double tick);
+
 // Decode and return one video frame. Returns NULL if no frame could be decoded
 // (either because the source ended or data is corrupt). If you only want to
 // decode video, you should disable audio via plm_set_audio_enabled().
@@ -1032,6 +1038,70 @@ void plm_set_audio_decode_callback(plm_t* self, plm_audio_decode_callback fp,
     self->audio_decode_callback_user_data = user;
 }
 
+void plm_decode_last_frame_only(plm_t* self, double tick)
+{
+    if (!plm_init_decoders(self)) {
+        return;
+    }
+
+    int decode_video = (self->video_decode_callback && self->video_packet_type);
+    int decode_audio = (self->audio_decode_callback && self->audio_packet_type);
+
+    if (!decode_video && !decode_audio) {
+        // Nothing to do here
+        return;
+    }
+
+    int did_decode          = FALSE;
+    int decode_video_failed = FALSE;
+    int decode_audio_failed = FALSE;
+
+    double video_target_time = self->time + tick;
+    double audio_target_time = self->time + tick + self->audio_lead_time;
+
+    do {
+        did_decode = FALSE;
+
+        if (decode_video
+            && plm_video_get_time(self->video_decoder) < video_target_time) {
+            plm_frame_t* frame = plm_video_decode(self->video_decoder);
+
+            // only callback on the final frame of this tick
+            if (frame) {
+                did_decode = TRUE;
+                if (plm_video_get_time(self->video_decoder) + (1.0 / plm_get_framerate(self))
+                    >= video_target_time) {
+                    self->video_decode_callback(self, frame,
+                                                self->video_decode_callback_user_data);
+                }
+            } else {
+                decode_video_failed = TRUE;
+            }
+        }
+
+        if (decode_audio
+            && plm_audio_get_time(self->audio_decoder) < audio_target_time) {
+            plm_samples_t* samples = plm_audio_decode(self->audio_decoder);
+            if (samples) {
+                self->audio_decode_callback(self, samples,
+                                            self->audio_decode_callback_user_data);
+                did_decode = TRUE;
+            } else {
+                decode_audio_failed = TRUE;
+            }
+        }
+    } while (did_decode);
+
+    // Did all sources we wanted to decode fail and the demuxer is at the end?
+    if ((!decode_video || decode_video_failed) && (!decode_audio || decode_audio_failed)
+        && plm_demux_has_ended(self->demux)) {
+        plm_handle_end(self);
+        return;
+    }
+
+    self->time += tick;
+}
+
 void plm_decode(plm_t* self, double tick)
 {
     if (!plm_init_decoders(self)) {
@@ -1233,6 +1303,7 @@ plm_frame_t* plm_seek_frame(plm_t* self, double time, int seek_exact)
 }
 
 // should only be called when audio is enabled and video is disabled
+// param out_time is the actual timestamp of the frame that was found
 int plm_seek_audio(plm_t* self, double time, double* out_time)
 {
     if (!self->audio_packet_type) {
@@ -1974,8 +2045,9 @@ plm_packet_t* plm_demux_seek(plm_demux_t* self, double seek_time, int type,
     long file_size  = plm_buffer_get_size(self->buffer);
     long byterate   = file_size / duration;
 
-    double cur_time  = self->last_decoded_pts;
-    double scan_span = 1;
+    double cur_time = self->last_decoded_pts;
+    // double scan_span = 1;
+    double scan_span = .5; // AZADAY: reduce scan_span to increase seek accuracy
 
     if (seek_time > duration) {
         seek_time = duration;
