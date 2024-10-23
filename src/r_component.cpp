@@ -1538,8 +1538,9 @@ struct R_WebcamData {
     sr_webcam_device* webcam;
     u8* data;
     size_t size;
-    int count;       // number of ChuGL webcam objects using this device id
-    u64 frame_count; // incremented every time the webcam writes a new frame
+    int count;           // number of ChuGL webcam objects using this device id
+    u64 frame_count;     // incremented every time the webcam writes a new frame
+    bool capture = true; // whether to capture frames
     spinlock lock;
 };
 
@@ -1672,6 +1673,15 @@ void Component_Free()
     // free locator
     hashmap_free(r_locator);
     r_locator = NULL;
+
+    // free webcam
+    for (int i = 0; i < ARRAY_LENGTH(_r_webcam_data); i++) {
+        if (_r_webcam_data[i].webcam) {
+            log_info("Closing webcam device %d", i);
+            sr_webcam_delete(_r_webcam_data[i].webcam);
+            _r_webcam_data[i].webcam = NULL;
+        }
+    }
 }
 
 R_Transform* Component_CreateTransform()
@@ -2151,6 +2161,8 @@ R_Video* Component_CreateVideo(GraphicsContext* gctx, SG_ID id, const char* file
 
 void R_Webcam::updateTexture(GraphicsContext* gctx, R_Webcam* webcam)
 {
+    if (webcam->freeze) return;
+
     R_WebcamData* webcam_data = &_r_webcam_data[webcam->device_id];
     R_Texture* texture        = Component_GetTexture(webcam->webcam_texture_id);
     ASSERT(texture);
@@ -2162,6 +2174,10 @@ void R_Webcam::updateTexture(GraphicsContext* gctx, R_Webcam* webcam)
     // validate texture dimensions
     int webcam_width{}, webcam_height{};
     sr_webcam_get_dimensions(webcam_data->webcam, &webcam_width, &webcam_height);
+    // log_trace("Webcam %d dimensions: %d x %d", webcam->device_id, webcam_width,
+    //           webcam_height);
+    // log_trace("texture dimensions: %d x %d", texture->desc.width,
+    // texture->desc.height);
     ASSERT(texture->desc.width == webcam_width);
     ASSERT(texture->desc.height == webcam_height);
 
@@ -2187,13 +2203,27 @@ void R_Webcam::updateTexture(GraphicsContext* gctx, R_Webcam* webcam)
     webcam->last_frame_count = webcam_data->frame_count;
 }
 
+void R_Webcam::update(SG_Command_WebcamUpdate* cmd)
+{
+    R_Webcam* webcam = Component_GetWebcam(cmd->webcam_id);
+    if (!webcam) return;
+
+    webcam->freeze = cmd->freeze;
+
+    // update R_WebcamData
+    R_WebcamData* webcam_data = &_r_webcam_data[webcam->device_id];
+    spinlock::lock(&webcam_data->lock);
+    webcam_data->capture = cmd->capture;
+    spinlock::unlock(&webcam_data->lock);
+}
+
 // EXECUTED ON SEPARATE THREAD
 static void R_Webcam_Callback(sr_webcam_device* device, void* data)
 {
-    static u64 last_time{ stm_now() };
-    double time_sec = stm_sec(stm_laptime(&last_time));
-    log_trace("%f sec since last webcam update; framerate: %f", time_sec,
-              1.0 / time_sec);
+    // static u64 last_time{ stm_now() };
+    // double time_sec = stm_sec(stm_laptime(&last_time));
+    // log_trace("%f sec since last webcam update; framerate: %f", time_sec,
+    //           1.0 / time_sec);
 
     int device_id             = (intptr_t)(sr_webcam_get_user(device));
     R_WebcamData* webcam_data = &_r_webcam_data[device_id];
@@ -2201,6 +2231,9 @@ static void R_Webcam_Callback(sr_webcam_device* device, void* data)
     // lock
     spinlock::lock(&webcam_data->lock);
     defer(spinlock::unlock(&webcam_data->lock));
+
+    // if capture disabled, early exit
+    if (!webcam_data->capture) return;
 
     // copy data, scaling up size from rgb to rgba
     int data_size = sr_webcam_get_format_size(device);
@@ -2225,6 +2258,9 @@ static void R_Webcam_Callback(sr_webcam_device* device, void* data)
 
 R_Webcam* Component_CreateWebcam(SG_Command_WebcamCreate* cmd)
 {
+    // bounds check
+    ASSERT(cmd->device_id < ARRAY_LENGTH(_r_webcam_data));
+
     Arena* arena     = &webcamArena;
     R_Webcam* webcam = ARENA_PUSH_TYPE(arena, R_Webcam);
     *webcam          = {};

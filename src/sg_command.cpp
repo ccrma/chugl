@@ -869,14 +869,19 @@ void CQ_PushCommand_VideoRate(SG_ID video_id, double rate, bool loop)
 
 void CQ_PushCommand_WebcamCreate(SG_Webcam* webcam, sr_webcam_device* device)
 {
-    SG_Texture* texture = SG_GetTexture(webcam->texture_id);
     BEGIN_COMMAND(SG_Command_WebcamCreate, SG_COMMAND_WEBCAM_CREATE);
     command->webcam_id         = webcam->id;
     command->webcam_texture_id = webcam->texture_id;
     command->device            = device;
     command->device_id         = webcam->device_id;
-    command->width             = texture->desc.width;
-    command->height            = texture->desc.height;
-    command->fps               = webcam->fps;
+    END_COMMAND();
+}
+
+void CQ_PushCommand_WebcamUpdate(SG_Webcam* webcam)
+{
+    BEGIN_COMMAND(SG_Command_WebcamUpdate, SG_COMMAND_WEBCAM_UPDATE);
+    command->webcam_id = webcam->id;
+    command->freeze    = webcam->freeze;
+    command->capture   = webcam->capture;
     END_COMMAND();
 }

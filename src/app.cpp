@@ -1998,6 +1998,10 @@ static void _R_HandleCommand(App* app, SG_Command* command)
             SG_Command_WebcamCreate* cmd = (SG_Command_WebcamCreate*)command;
             Component_CreateWebcam(cmd);
         } break;
+        case SG_COMMAND_WEBCAM_UPDATE: {
+            SG_Command_WebcamUpdate* cmd = (SG_Command_WebcamUpdate*)command;
+            R_Webcam::update(cmd);
+        } break;
         default: {
             log_error("unhandled command type: %d", command->type);
             ASSERT(false);

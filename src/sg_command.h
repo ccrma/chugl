@@ -162,6 +162,7 @@ enum SG_CommandType : u32 {
 
     // webcam
     SG_COMMAND_WEBCAM_CREATE,
+    SG_COMMAND_WEBCAM_UPDATE,
 
     SG_COMMAND_COUNT
 };
@@ -505,9 +506,12 @@ struct SG_Command_WebcamCreate : public SG_Command {
     SG_ID webcam_texture_id;
     sr_webcam_device* device;
     int device_id;
-    int width;
-    int height;
-    int fps;
+};
+
+struct SG_Command_WebcamUpdate : public SG_Command {
+    SG_ID webcam_id;
+    bool freeze;
+    bool capture;
 };
 
 // ============================================================================
@@ -638,3 +642,4 @@ void CQ_PushCommand_VideoRate(SG_ID video_id, double rate, bool loop);
 
 // webcam
 void CQ_PushCommand_WebcamCreate(SG_Webcam* webcam, sr_webcam_device* device);
+void CQ_PushCommand_WebcamUpdate(SG_Webcam* webcam);

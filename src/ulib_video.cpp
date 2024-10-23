@@ -17,7 +17,21 @@ intermediate frames
     - https://github.com/keijiro/KlakHap/blob/master/Plugin/Source/KlakHap.cpp
 - Support YCbCr textures
 
+
+webcam todo
+- in destructor of webcam, decrement refcount on R_WebcamData
+- test cleanup sr_webcam_delete in component_free(), see if it still segfaults
+    - if so, never call sr_webcam_delete, in Webcam destructor just remove from R_Webcam
+Arena
+
+behaviour:
+- webcam.freeze() stops updating texture and decrements R_WebcamData refcount
+- if R_WebcamData refcount reaches 0, call sr_webcam_stop()
+- if R_WebcamData refcount goes from 0 to 1, call sr_webcam_start()
+- Webcam destructor decrements R_WebcamData refcount
+- sr_webcam_delete() is neve
 */
+
 #include "ulib_helper.h"
 
 #include "sg_command.h"
@@ -59,11 +73,17 @@ CK_DLL_MFUN(video_get_loop);
 CK_DLL_CTOR(webcam_ctor);
 CK_DLL_CTOR(webcam_ctor_with_device_id);
 
+CK_DLL_MFUN(webcam_set_capture);
+CK_DLL_MFUN(webcam_get_capture);
+CK_DLL_MFUN(webcam_set_freeze);
+CK_DLL_MFUN(webcam_get_freeze);
+
 CK_DLL_MFUN(webcam_get_width);
 CK_DLL_MFUN(webcam_get_height);
 CK_DLL_MFUN(webcam_get_aspect);
 CK_DLL_MFUN(webcam_get_fps);
 CK_DLL_MFUN(webcam_get_texture);
+CK_DLL_MFUN(webcam_get_device_id);
 
 void ulib_video_query(Chuck_DL_Query* QUERY)
 {
@@ -201,6 +221,30 @@ void ulib_video_query(Chuck_DL_Query* QUERY)
 
         MFUN(webcam_get_texture, SG_CKNames[SG_COMPONENT_TEXTURE], "texture");
         DOC_FUNC("Get the RGBA texture of the webcam.");
+
+        MFUN(webcam_get_device_id, "int", "deviceID");
+        DOC_FUNC("Get the device id of this webcam.");
+
+        MFUN(webcam_set_capture, "void", "capture");
+        ARG("int", "capture");
+        DOC_FUNC(
+          "disable or enable webcam capture. If disabled, this webcam corresponding to "
+          "this device id will stop reading new data and the webcam texture will "
+          "not be updated.");
+
+        MFUN(webcam_get_capture, "int", "capture");
+        DOC_FUNC("Get whether the webcam is capturing frames.");
+
+        MFUN(webcam_set_freeze, "void", "freeze");
+        ARG("int", "freeze");
+        DOC_FUNC(
+          "disable or enable webcam texture updates. If enabled, the webcam texture "
+          "will not be updated with new data, but the webcam will continue to capture "
+          "frames. Other webcam objects using the same device id will still be "
+          "updated.");
+
+        MFUN(webcam_get_freeze, "int", "freeze");
+        DOC_FUNC("Get whether the webcam texture is frozen (not updating).");
 
         END_CLASS();
     }
@@ -492,7 +536,9 @@ CK_DLL_MFUN(video_seek)
 
 CK_DLL_CTOR(webcam_ctor)
 {
-    SG_CreateWebcam(SELF, SHRED, 0, 640, 480, 60);
+    // SG_CreateWebcam(SELF, SHRED, 0, 640, 480, 60);
+    // default to really high resolution (should fallback to largest supported)
+    SG_CreateWebcam(SELF, SHRED, 0, 4096, 4096, 60);
 }
 
 CK_DLL_CTOR(webcam_ctor_with_device_id)
@@ -530,4 +576,33 @@ CK_DLL_MFUN(webcam_get_fps)
 CK_DLL_MFUN(webcam_get_texture)
 {
     RETURN->v_object = SG_GetTexture(GET_WEBCAM(SELF)->texture_id)->ckobj;
+}
+
+CK_DLL_MFUN(webcam_get_device_id)
+{
+    RETURN->v_int = GET_WEBCAM(SELF)->device_id;
+}
+
+CK_DLL_MFUN(webcam_set_capture)
+{
+    SG_Webcam* webcam = GET_WEBCAM(SELF);
+    webcam->capture   = GET_NEXT_INT(ARGS);
+    CQ_PushCommand_WebcamUpdate(webcam);
+}
+
+CK_DLL_MFUN(webcam_get_capture)
+{
+    RETURN->v_int = GET_WEBCAM(SELF)->capture;
+}
+
+CK_DLL_MFUN(webcam_set_freeze)
+{
+    SG_Webcam* webcam = GET_WEBCAM(SELF);
+    webcam->freeze    = GET_NEXT_INT(ARGS);
+    CQ_PushCommand_WebcamUpdate(webcam);
+}
+
+CK_DLL_MFUN(webcam_get_freeze)
+{
+    RETURN->v_int = GET_WEBCAM(SELF)->freeze;
 }

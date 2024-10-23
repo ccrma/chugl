@@ -1009,8 +1009,10 @@ struct R_Webcam : public R_Component {
     int device_id;
     u64 last_frame_count; // last webcame frame count, used to detect new frames and
                           // prevent reuploading old frames
+    bool freeze;
 
     static void updateTexture(GraphicsContext* gctx, R_Webcam* webcam);
+    static void update(SG_Command_WebcamUpdate* cmd);
 };
 
 // =============================================================================

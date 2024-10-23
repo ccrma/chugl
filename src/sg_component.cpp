@@ -1226,8 +1226,16 @@ SG_Webcam* SG_CreateWebcam(Chuck_Object* ckobj, Chuck_VM_Shred* shred, int devic
         webcam->texture_id         = webcam_texture->id;
         webcam->device_id          = device_id;
 
+        // bounds check (hardcoded to 8 webcams)
+        if (device_id >= 8) {
+            log_warn(
+              "Only webcam device ids 0-7 are supported. Defaulting to magenta "
+              "texture");
+            return webcam;
+        }
+
         sr_webcam_device* device;
-        sr_webcam_create(&device, device_id); // default device id 0
+        sr_webcam_create(&device, device_id);
         sr_webcam_set_format(device, width, height, fps);
         int webcam_open_success = sr_webcam_open(device) == 0;
 
@@ -1243,7 +1251,7 @@ SG_Webcam* SG_CreateWebcam(Chuck_Object* ckobj, Chuck_VM_Shred* shred, int devic
         if (!webcam_open_success) {
             log_warn("Could not open webcam device %d. Defaulting to magenta texture",
                      device_id);
-        } else {
+        } else { // successful
             // Get back video parameters.
             int vidW, vidH, vidFps;
             sr_webcam_get_dimensions(device, &vidW, &vidH);

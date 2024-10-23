@@ -847,6 +847,8 @@ struct SG_Webcam : public SG_Component {
     SG_ID texture_id;
     int device_id;
     int fps;
+    bool freeze;
+    bool capture = true;
 };
 
 // ============================================================================
