@@ -104,6 +104,7 @@ void ulib_video_query(Chuck_DL_Query* QUERY)
           "will be updated synchronously with audio. For sample-accurate audio "
           "manipulation, we recommend controlling the audio data separately with "
           "SndBuf.");
+        ADD_EX("basic/video.ck");
 
         QUERY->add_ugen_funcf(QUERY, video_tick_multichannel, NULL,
                               0, // 0 channels in
@@ -199,11 +200,22 @@ void ulib_video_query(Chuck_DL_Query* QUERY)
 
     { // webcam
         BEGIN_CLASS(SG_CKNames[SG_COMPONENT_WEBCAM], SG_CKNames[SG_COMPONENT_BASE]);
+        DOC_CLASS(
+          "ChuGL Webcam class. Opens a webcam at any device id 0-7, and "
+          "updates a texture with the webcam feed. The webcam texture may be "
+          "accessed with the `.texture()` member function");
+        ADD_EX("basic/webcam.ck");
 
         CTOR(webcam_ctor);
+        DOC_FUNC(
+          "Create a webcam object with default device id 0. On laptops this is "
+          "usually the built-in webcam.");
 
         CTOR(webcam_ctor_with_device_id);
         ARG("int", "device_id");
+        DOC_FUNC(
+          "Create a webcam object with a specific device id. On laptops, device id 0 "
+          "is usually the built-in webcam.");
 
         CTOR(webcam_ctor_with_device_id_and_format);
         ARG("int", "device_id");

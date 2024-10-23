@@ -225,6 +225,21 @@ doc.addGroup(
     and fine-tuning values. Also usable for building application user-interfaces."
 );
 
+
+doc.addGroup(
+    // class names
+    [
+        "Video",
+        "Webcam",
+    ],
+    // group name
+    "ChuGL Video Objects",
+    // file name
+    "chugl-video", 
+    // group description
+    "Video and webcam access"
+);
+
 doc.addGroup(
     // class names
     [
