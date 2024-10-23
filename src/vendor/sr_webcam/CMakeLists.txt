@@ -6,8 +6,6 @@ set(SR_WEBCAM_SOURCES
 
 # Detect the system and add corresponding source files
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    # On Windows, this should link against mfplat, mf, mfuuid, Mfreadwriteand Shlwapi
-    target_link_libraries(sr_webcam PRIVATE mf mfplat mfuuid Mfreadwrite Shlwapi)
     set(SR_WEBCAM_SOURCES ${SR_WEBCAM_SOURCES} src/sr_webcam_win.cpp)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin") # aka macOS
     set(SR_WEBCAM_SOURCES ${SR_WEBCAM_SOURCES} src/sr_webcam_mac.m)

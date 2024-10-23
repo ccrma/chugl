@@ -1986,13 +1986,17 @@ static void _R_HandleCommand(App* app, SG_Command* command)
         case SG_COMMAND_VIDEO_SEEK: {
             SG_Command_VideoSeek* cmd = (SG_Command_VideoSeek*)command;
             R_Video* video            = Component_GetVideo(cmd->video_id);
-            plm_seek(video->plm, cmd->time_secs, false);
+            if (video && video->plm) {
+                plm_seek(video->plm, cmd->time_secs, false);
+            }
         } break;
         case SG_COMMAND_VIDEO_RATE: {
             SG_Command_VideoRate* cmd = (SG_Command_VideoRate*)command;
             R_Video* video            = Component_GetVideo(cmd->video_id);
-            video->rate               = cmd->rate;
-            plm_set_loop(video->plm, cmd->loop);
+            if (video && video->plm) {
+                video->rate = cmd->rate;
+                plm_set_loop(video->plm, cmd->loop);
+            }
         } break;
         case SG_COMMAND_WEBCAM_CREATE: {
             SG_Command_WebcamCreate* cmd = (SG_Command_WebcamCreate*)command;

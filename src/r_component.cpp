@@ -1674,14 +1674,14 @@ void Component_Free()
     hashmap_free(r_locator);
     r_locator = NULL;
 
-    // free webcam
-    for (int i = 0; i < ARRAY_LENGTH(_r_webcam_data); i++) {
-        if (_r_webcam_data[i].webcam) {
-            log_info("Closing webcam device %d", i);
-            sr_webcam_delete(_r_webcam_data[i].webcam);
-            _r_webcam_data[i].webcam = NULL;
-        }
-    }
+    // free webcam (doesn't crash)
+    // for (int i = 0; i < ARRAY_LENGTH(_r_webcam_data); i++) {
+    //     if (_r_webcam_data[i].webcam) {
+    //         log_info("Closing webcam device %d", i);
+    //         sr_webcam_delete(_r_webcam_data[i].webcam);
+    //         _r_webcam_data[i].webcam = NULL;
+    //     }
+    // }
 }
 
 R_Transform* Component_CreateTransform()
@@ -1959,7 +1959,7 @@ void Material_batchUpdatePipelines(GraphicsContext* gctx, FT_Library ft_lib,
                                    R_Font* default_font)
 {
     size_t hashmap_index_DONT_USE = 0;
-    SG_ID* sg_id;
+    SG_ID* sg_id                  = NULL;
     while (
       hashmap_iter(materials_with_new_pso, &hashmap_index_DONT_USE, (void**)&sg_id)) {
         R_Component* comp = Component_GetComponent(*sg_id);
@@ -2891,7 +2891,7 @@ static void convertContour(std::vector<BufferCurve>& curves, const FT_Outline* o
       = [](const glm::vec2& a, const glm::vec2& b) { return 0.5f * (a + b); };
 
     auto makeCurve = [](const glm::vec2& p0, const glm::vec2& p1, const glm::vec2& p2) {
-        BufferCurve result;
+        BufferCurve result{};
         result.x0 = p0.x;
         result.y0 = p0.y;
         result.x1 = p1.x;
@@ -2993,7 +2993,7 @@ static void convertContour(std::vector<BufferCurve>& curves, const FT_Outline* o
 
 static void R_Font_buildGlyph(R_Font* font, u32 charcode, FT_UInt glyphIndex)
 {
-    BufferGlyph bufferGlyph;
+    BufferGlyph bufferGlyph{};
     bufferGlyph.start = (i32)font->bufferCurves.size();
 
     short start = 0;
@@ -3009,7 +3009,7 @@ static void R_Font_buildGlyph(R_Font* font, u32 charcode, FT_UInt glyphIndex)
     i32 bufferIndex = (i32)font->bufferGlyphs.size();
     font->bufferGlyphs.push_back(bufferGlyph);
 
-    Glyph glyph;
+    Glyph glyph{};
     glyph.index            = glyphIndex;
     glyph.bufferIndex      = bufferIndex;
     glyph.curveCount       = bufferGlyph.count;

@@ -343,7 +343,7 @@ CK_DLL_CTOR(video_ctor)
     video->path_OWNED            = NULL;
     video->video_texture_rgba_id = video_texture_rgba->id;
 
-    CQ_PushCommand_VideoUpdate(video);
+    // intentionally do NOT push this to graphics thread
 }
 
 CK_DLL_CTOR(video_ctor_with_path)
@@ -356,6 +356,7 @@ CK_DLL_CTOR(video_ctor_with_path)
 
     SG_Texture* video_texture_rgba = SG_GetTexture(g_builtin_textures.magenta_pixel_id);
     SG_Video* video                = SG_CreateVideo(SELF);
+    video->video_texture_rgba_id   = video_texture_rgba->id;
 
     // Initialize plmpeg, load the video file, install decode callbacks
     {
@@ -363,6 +364,7 @@ CK_DLL_CTOR(video_ctor_with_path)
         if (!plm) {
             log_warn("Could not open MPG video '%s'", path);
             log_warn(" |- Defaulting to magenta texture");
+            return;
         }
 
         // probe first 5MB of file for video or audio streams
@@ -370,20 +372,23 @@ CK_DLL_CTOR(video_ctor_with_path)
             plm_destroy(plm);
             log_warn("No MPEG video or audio streams found in %s", path);
             plm = NULL;
+            return;
         }
     }
 
-    if (plm) {
-        // save video metadata
-        video->framerate     = (float)plm_get_framerate(plm);
-        video->samplerate    = plm_get_samplerate(plm);
-        video->duration_secs = (float)plm_get_duration(plm);
-        // log_info("Opened %s - framerate: %f, samplerate: %d, duration: %f", path,
-        //          video->framerate, video->samplerate, video->duration_secs);
-    }
+    //
+    // at this point plm is valid
+    //
+
+    // save video metadata
+    video->framerate     = (float)plm_get_framerate(plm);
+    video->samplerate    = plm_get_samplerate(plm);
+    video->duration_secs = (float)plm_get_duration(plm);
+    // log_info("Opened %s - framerate: %f, samplerate: %d, duration: %f", path,
+    //          video->framerate, video->samplerate, video->duration_secs);
 
     // initialize audio
-    if (plm && plm_get_num_audio_streams(plm) > 0) {
+    if (plm_get_num_audio_streams(plm) > 0) {
         plm_set_audio_decode_callback(plm, ulib_video_on_audio,
                                       (void*)(intptr_t)video->id);
 
@@ -406,18 +411,17 @@ CK_DLL_CTOR(video_ctor_with_path)
     }
 
     // create the rgb video texture (TODO support YcbCr later)
-    if (plm) {
-        SG_TextureDesc desc = {};
-        desc.width          = plm_get_width(plm);
-        desc.height         = plm_get_height(plm);
-        desc.dimension      = WGPUTextureDimension_2D;
-        desc.format         = WGPUTextureFormat_RGBA8Unorm;
-        desc.usage          = WGPUTextureUsage_All; // TODO: restrict usage?
-        desc.mips           = 1;                    // no mipmaps for video
+    SG_TextureDesc desc = {};
+    desc.width          = plm_get_width(plm);
+    desc.height         = plm_get_height(plm);
+    desc.dimension      = WGPUTextureDimension_2D;
+    desc.format         = WGPUTextureFormat_RGBA8Unorm;
+    desc.usage          = WGPUTextureUsage_All; // TODO: restrict usage?
+    desc.mips           = 1;                    // no mipmaps for video
 
-        video_texture_rgba = SG_CreateTexture(&desc, NULL, SHRED, true);
-    }
+    video_texture_rgba = SG_CreateTexture(&desc, NULL, SHRED, true);
 
+    // init remaining video fields
     video->plm                   = plm;
     video->path_OWNED            = path;
     video->video_texture_rgba_id = video_texture_rgba->id;
@@ -468,8 +472,12 @@ CK_DLL_MFUN(video_get_height_texels)
 
 CK_DLL_MFUN(video_get_time)
 {
-    plm_t* plm    = GET_VIDEO(SELF)->plm;
-    RETURN->v_dur = plm_get_time(plm) * API->vm->srate(VM);
+    plm_t* plm = GET_VIDEO(SELF)->plm;
+    if (plm) {
+        RETURN->v_dur = plm_get_time(plm) * API->vm->srate(VM);
+    } else {
+        RETURN->v_dur = 0;
+    }
 }
 
 CK_DLL_MFUN(video_set_rate)
@@ -478,7 +486,9 @@ CK_DLL_MFUN(video_set_rate)
     video->rate     = GET_NEXT_FLOAT(ARGS);
     video->rate     = MAX(0.0, video->rate);
 
-    CQ_PushCommand_VideoRate(video->id, video->rate, plm_get_loop(video->plm));
+    if (video->plm) {
+        CQ_PushCommand_VideoRate(video->id, video->rate, plm_get_loop(video->plm));
+    }
 }
 
 CK_DLL_MFUN(video_get_rate)
@@ -489,18 +499,26 @@ CK_DLL_MFUN(video_get_rate)
 CK_DLL_MFUN(video_set_loop)
 {
     SG_Video* video = GET_VIDEO(SELF);
+    if (!video->plm) return;
+
     plm_set_loop(video->plm, GET_NEXT_INT(ARGS));
     CQ_PushCommand_VideoRate(video->id, video->rate, plm_get_loop(video->plm));
 }
 
 CK_DLL_MFUN(video_get_loop)
 {
-    RETURN->v_int = plm_get_loop(GET_VIDEO(SELF)->plm);
+    plm_t* plm = GET_VIDEO(SELF)->plm;
+    if (!plm) {
+        RETURN->v_int = 0;
+    } else {
+        RETURN->v_int = plm_get_loop(plm);
+    }
 }
 
 CK_DLL_MFUN(video_seek)
 {
     SG_Video* video = GET_VIDEO(SELF);
+    if (!video->plm) return;
 
     // get time and wrap around video length (allows negative indexing)
     int time_samples = (int)GET_NEXT_DUR(ARGS);

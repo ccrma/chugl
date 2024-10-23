@@ -234,12 +234,17 @@ if (MSVC)
         /wd26495 
         # ignore possible loss of data in integer type conversion
         /wd4267
+        # ignore signed/unsigned mismatch
+        /wd4389
     )
     target_compile_options(
         ${PROJECT_NAME} PRIVATE
         # allow unused variables for the ChuGin DLL Query
         /wd4100
     )
+
+    # static linking with CRT
+    target_compile_options(${PROJECT_NAME} PRIVATE "/MT$<$<CONFIG:Debug>:d>") 
 endif (MSVC)
 
 
