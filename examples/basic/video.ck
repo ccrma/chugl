@@ -1,6 +1,18 @@
-Video empty_video => dac;
+//-----------------------------------------------------------------------------
+// name: video.ck
+// desc: Video playback example. Currently only supports the MPEG1 video and 
+// MP2 audio.
+// To run, download and place this music video in the same directory: 
+// https://ccrma.stanford.edu/~azaday/music/bjork-all-is-love.mpg
+//
+// authors: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
+//
+// Find more mpeg samples here: https://filesamples.com/formats/mpeg
+//
+// date: Fall 2024
+//-----------------------------------------------------------------------------
+
 Video video(me.dir() + "./bjork-all-is-full-of-love.mpg") => dac; 
-// Video video(me.dir() + "./sample_640x360.mpeg") => dac;
 
 <<< "VM Samplerate: ", 1::second / 1::samp >>>;
 <<< "Framerate: ", video.framerate() >>>;

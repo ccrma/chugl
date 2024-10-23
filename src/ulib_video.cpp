@@ -72,6 +72,7 @@ CK_DLL_MFUN(video_get_loop);
 //
 CK_DLL_CTOR(webcam_ctor);
 CK_DLL_CTOR(webcam_ctor_with_device_id);
+CK_DLL_CTOR(webcam_ctor_with_device_id_and_format);
 
 CK_DLL_MFUN(webcam_set_capture);
 CK_DLL_MFUN(webcam_get_capture);
@@ -203,6 +204,16 @@ void ulib_video_query(Chuck_DL_Query* QUERY)
 
         CTOR(webcam_ctor_with_device_id);
         ARG("int", "device_id");
+
+        CTOR(webcam_ctor_with_device_id_and_format);
+        ARG("int", "device_id");
+        ARG("int", "width");
+        ARG("int", "height");
+        ARG("int", "fps");
+        DOC_FUNC(
+          "Create a webcam object with a specific device id and format. Will fallback "
+          "to the nearest supported width/height/fps. Choose device_id 0 for laptop "
+          "builtin webcam.");
 
         MFUN(webcam_get_width, "int", "width");
         DOC_FUNC("Get the width of the webcam in pixels.");
@@ -563,6 +574,15 @@ CK_DLL_CTOR(webcam_ctor_with_device_id)
 {
     int device_id = GET_NEXT_INT(ARGS);
     SG_CreateWebcam(SELF, SHRED, device_id, 640, 480, 60);
+}
+
+CK_DLL_CTOR(webcam_ctor_with_device_id_and_format)
+{
+    int device_id = GET_NEXT_INT(ARGS);
+    int width     = GET_NEXT_INT(ARGS);
+    int height    = GET_NEXT_INT(ARGS);
+    int fps       = GET_NEXT_INT(ARGS);
+    SG_CreateWebcam(SELF, SHRED, device_id, width, height, fps);
 }
 
 CK_DLL_MFUN(webcam_get_width)

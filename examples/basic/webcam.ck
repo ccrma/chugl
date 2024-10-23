@@ -1,3 +1,12 @@
+//-----------------------------------------------------------------------------
+// name: webcam.ck
+// desc: Webcam example
+//
+// authors: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
+//
+// date: Fall 2024
+//-----------------------------------------------------------------------------
+
 Webcam webcam;
 <<< "webcam width: ", webcam.width() >>>;
 <<< "webcam height: ", webcam.height() >>>;
@@ -12,7 +21,6 @@ plane.scaX(3 * webcam.aspect());
 plane.scaY(-3); // flipping to match webcam orientation
 
 UI_Bool capture(webcam.capture());
-UI_Bool freeze(webcam.freeze());
 
 while (true) {
     GG.nextFrame() => now;
@@ -21,10 +29,6 @@ while (true) {
         if (UI.checkbox("Capture", capture)) {
             webcam.capture(capture.val());
         }
-
-        if (UI.checkbox("Freeze", freeze)) {
-            webcam.freeze(freeze.val());
-        }   
     }
     UI.end();
 }
