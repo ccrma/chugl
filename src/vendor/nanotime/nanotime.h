@@ -310,7 +310,7 @@ void nanotime_yield() {
  */
 #include <mach/mach_time.h>
 uint64_t nanotime_now() {
-	static mach_timebase_info_data_t info = { 0 };
+	static mach_timebase_info_data_t info = {};
 	if (info.denom == UINT32_C(0)) {
 		const kern_return_t status = mach_timebase_info(&info);
 		assert(status == KERN_SUCCESS);
