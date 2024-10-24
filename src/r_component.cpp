@@ -1675,13 +1675,13 @@ void Component_Free()
     r_locator = NULL;
 
     // free webcam (doesn't crash)
-    // for (int i = 0; i < ARRAY_LENGTH(_r_webcam_data); i++) {
-    //     if (_r_webcam_data[i].webcam) {
-    //         log_info("Closing webcam device %d", i);
-    //         sr_webcam_delete(_r_webcam_data[i].webcam);
-    //         _r_webcam_data[i].webcam = NULL;
-    //     }
-    // }
+    for (int i = 0; i < ARRAY_LENGTH(_r_webcam_data); i++) {
+        if (_r_webcam_data[i].webcam) {
+            log_info("Closing webcam device %d", i);
+            sr_webcam_delete(_r_webcam_data[i].webcam);
+            _r_webcam_data[i].webcam = NULL;
+        }
+    }
 }
 
 R_Transform* Component_CreateTransform()

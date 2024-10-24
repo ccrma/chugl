@@ -44,6 +44,7 @@ static_assert(sizeof(u32) == sizeof(b2WorldId), "b2WorldId != u32");
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h> // ImPool<>, ImHashData
 
+#include <nanotime/nanotime.h>
 #include <sokol/sokol_time.h>
 
 #ifdef __EMSCRIPTEN__
@@ -257,6 +258,10 @@ struct App {
     f64 dt;
     bool show_fps_title = true;
 
+    // timer for fixed timestep
+    nanotime_step_data stepper;
+    int stepper_fps = 60; // default to 60fps
+
     // scenegraph state
     SG_ID mainScene;
 
@@ -297,33 +302,11 @@ struct App {
         Arena::init(&app->frameArena, MEGABYTE); // 1MB
     }
 
-    static void gameloop(App* app)
-    {
-
-        // frame metrics ----------------------------
-        {
-            _calculateFPS(app->window, app->show_fps_title);
-
-            ++app->fc;
-            f64 currentTime = glfwGetTime();
-
-            // first frame prevent huge dt
-            if (app->lastTime == 0) app->lastTime = currentTime;
-
-            app->dt       = currentTime - app->lastTime;
-            app->lastTime = currentTime;
-        }
-
-        _mainLoop(app); // chuck loop
-
-        Arena::clear(&app->frameArena);
-    }
-
-    static void emscriptenMainLoop(void* arg)
-    {
-        App* app = (App*)arg;
-        gameloop(app);
-    }
+    // static void emscriptenMainLoop(void* arg)
+    // {
+    //     App* app = (App*)arg;
+    //     gameloop(app);
+    // }
 
     static void start(App* app)
     {
@@ -469,7 +452,35 @@ struct App {
           true // simulate infinite loop (prevents code after this from exiting)
         );
 #else
-        while (!glfwWindowShouldClose(app->window)) gameloop(app);
+
+        nanotime_step_init(&app->stepper,
+                           (u64)(NANOTIME_NSEC_PER_SEC / app->stepper_fps),
+                           nanotime_now_max(), nanotime_now, nanotime_sleep);
+        while (!glfwWindowShouldClose(app->window)) {
+            // frame metrics ----------------------------
+            {
+                _calculateFPS(app->window, app->show_fps_title);
+
+                ++app->fc;
+                f64 currentTime = glfwGetTime();
+
+                // first frame prevent huge dt
+                if (app->lastTime == 0) app->lastTime = currentTime;
+
+                app->dt       = currentTime - app->lastTime;
+                app->lastTime = currentTime;
+            }
+
+            _mainLoop(app); // chuck loop
+
+            Arena::clear(&app->frameArena);
+
+            // fixed timestep (this might be helpful for finishing box2d
+            // integration later)
+            if (app->stepper_fps > 0) {
+                nanotime_step(&app->stepper);
+            }
+        }
 #endif
 
         log_trace("Exiting main loop");
@@ -1449,6 +1460,15 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
 static void _R_HandleCommand(App* app, SG_Command* command)
 {
     switch (command->type) {
+        case SG_COMMAND_SET_FIXED_TIMESTEP: {
+            SG_Command_SetFixedTimestep* cmd = (SG_Command_SetFixedTimestep*)command;
+            app->stepper_fps                 = cmd->fps;
+            if (cmd->fps > 0) {
+                nanotime_step_init(&app->stepper,
+                                   (u64)(NANOTIME_NSEC_PER_SEC / app->stepper_fps),
+                                   nanotime_now_max(), nanotime_now, nanotime_sleep);
+            }
+        } break;
         case SG_COMMAND_WINDOW_CLOSE: {
             glfwSetWindowShouldClose(app->window, GLFW_TRUE);
             break;

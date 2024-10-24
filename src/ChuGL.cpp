@@ -70,6 +70,7 @@ struct GG_Config {
 
     // options
     bool auto_update_scenegraph = true;
+    int fixed_timestep_fps      = 60;
 };
 
 GG_Config gg_config = {};
@@ -370,6 +371,12 @@ CK_DLL_SFUN(chugl_set_scene)
     SG_DecrementRef(prev_scene_id);
 }
 
+CK_DLL_SFUN(chugl_set_fps)
+{
+    gg_config.fixed_timestep_fps = GET_NEXT_INT(ARGS);
+    CQ_PushCommand_SetFixedTimestep(gg_config.fixed_timestep_fps);
+}
+
 CK_DLL_SFUN(chugl_get_fps)
 {
     RETURN->v_float = CHUGL_Window_fps();
@@ -615,6 +622,16 @@ CK_DLL_QUERY(ChuGL)
         SFUN(chugl_get_fps, "float", "fps");
         DOC_FUNC("FPS of current window, updated every second");
 
+        SFUN(chugl_set_fps, "void", "fps");
+        ARG("int", "fps");
+        DOC_FUNC(
+          "Hard-limit the frame rate of the graphics thread. By default this is 60. "
+          "Lowering this value may improve audio performance in chuck, as graphics "
+          "shreds will run less frequently, giving the chuck VM more time to compute "
+          "audio samples. Set to a negative value or 0 to disable frame rate limiting "
+          "and let graphics run as fast as possible (up to the refresh rate of the "
+          "monitor)");
+
         // note: we use window time here instead of ckdt_sec or system_dt_sec
         // (which are laptimes calculated on the audio thread every cycle of
         // nextFrameWaitingOn ) because the latter values are highly unstable, and do
@@ -776,6 +793,11 @@ CK_DLL_QUERY(ChuGL)
         CQ_PushCommand_PassUpdate(root_pass);
         CQ_PushCommand_PassUpdate(render_pass);
         CQ_PushCommand_PassUpdate(output_pass);
+    }
+
+    { // default config
+        // default to 60fps
+        CQ_PushCommand_SetFixedTimestep(gg_config.fixed_timestep_fps);
     }
 
     // wasn't that a breeze?

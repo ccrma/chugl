@@ -164,6 +164,13 @@ void* CQ_ReadCommandGetOffset(u64 byte_offset)
     command->nextCommandOffset = cq.write_q->curr;                                     \
     spinlock::unlock(&cq.write_q_lock);
 
+void CQ_PushCommand_SetFixedTimestep(int fps)
+{
+    BEGIN_COMMAND(SG_Command_SetFixedTimestep, SG_COMMAND_SET_FIXED_TIMESTEP);
+    command->fps = fps;
+    END_COMMAND();
+}
+
 void CQ_PushCommand_WindowClose()
 {
     BEGIN_COMMAND(SG_Command_WindowClose, SG_COMMAND_WINDOW_CLOSE);

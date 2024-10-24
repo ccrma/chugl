@@ -71,6 +71,10 @@ frame arena and then copy over)
 
 enum SG_CommandType : u32 {
     SG_COMMAND_NONE = 0,
+
+    // chugl config
+    SG_COMMAND_SET_FIXED_TIMESTEP,
+
     // window
     SG_COMMAND_WINDOW_CLOSE,
     SG_COMMAND_WINDOW_MODE,
@@ -170,6 +174,12 @@ enum SG_CommandType : u32 {
 struct SG_Command {
     SG_CommandType type;
     u64 nextCommandOffset;
+};
+
+// chugl config --------------------------------------------------------
+
+struct SG_Command_SetFixedTimestep : public SG_Command {
+    int fps;
 };
 
 // Window Commands --------------------------------------------------------
@@ -538,6 +548,9 @@ void* CQ_ReadCommandGetOffset(u64 byte_offset);
 // ============================================================================
 // Commands
 // ============================================================================
+
+// config ---------------------------------------------------------------
+void CQ_PushCommand_SetFixedTimestep(int fps);
 
 // window ---------------------------------------------------------------
 
