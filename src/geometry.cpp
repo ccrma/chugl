@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -26,8 +26,8 @@
  SOFTWARE.
 -----------------------------------------------------------------------------*/
 #include "geometry.h"
-#include "suzanne_geo.cpp"
 #include "core/memory.h"
+#include "suzanne_geo.cpp"
 #include <glm/gtc/epsilon.hpp>
 #include <mikktspace/mikktspace.h>
 #include <vector> // ew
@@ -625,10 +625,16 @@ void Geometry_buildSphere(GeometryArenaBuilder* builder, SphereParams* params)
 
     const f32 thetaEnd = MIN(params->thetaStart + params->thetaLength, PI);
 
-    u32 index = 0;
+    int num_vertices = (params->widthSeg + 1) * (params->heightSeg + 1);
 
+    glm::vec3* positions
+      = ARENA_PUSH_COUNT(builder->pos_arena, glm::vec3, num_vertices);
+    glm::vec3* normals = ARENA_PUSH_COUNT(builder->norm_arena, glm::vec3, num_vertices);
+    gvec2f* uvs        = ARENA_PUSH_COUNT(builder->uv_arena, gvec2f, num_vertices);
+    gvec4f* tangents   = ARENA_PUSH_COUNT(builder->tangent_arena, gvec4f, num_vertices);
+
+    u32 index = 0;
     std::vector<u32> grid;
-    std::vector<Vertex> verts;
     std::vector<u32> indices;
 
     // generate vertices, normals and uvs
@@ -649,28 +655,29 @@ void Geometry_buildSphere(GeometryArenaBuilder* builder, SphereParams* params)
 
             const f32 u = (f32)ix / (f32)params->widthSeg;
 
-            Vertex vert;
-
             // vertex
-            vert.x = -params->radius
-                     * glm::cos(params->phiStart + u * params->phiLength)
-                     * glm::sin(params->thetaStart + v * params->thetaLength);
-            vert.y
+            positions[index].x
+              = -params->radius * glm::cos(params->phiStart + u * params->phiLength)
+                * glm::sin(params->thetaStart + v * params->thetaLength);
+            positions[index].y
               = params->radius * glm::cos(params->thetaStart + v * params->thetaLength);
-            vert.z = params->radius * glm::sin(params->phiStart + u * params->phiLength)
-                     * glm::sin(params->thetaStart + v * params->thetaLength);
+            positions[index].z
+              = params->radius * glm::sin(params->phiStart + u * params->phiLength)
+                * glm::sin(params->thetaStart + v * params->thetaLength);
 
             // normal
-            glm::vec3 normal = glm::normalize(glm::vec3(vert.x, vert.y, vert.z));
-            vert.nx          = normal.x;
-            vert.ny          = normal.y;
-            vert.nz          = normal.z;
+            normals[index] = glm::normalize(positions[index]);
 
             // uv
-            vert.u = u + uOffset;
-            vert.v = 1 - v;
+            uvs[index].x = u + uOffset;
+            uvs[index].y = 1 - v;
 
-            verts.push_back(vert);
+            // tangent
+            // the direction of the uv is tangent to the torus at this point
+            // glm::vec3 uv_dir = glm::vec3(-center.y, center.x, 0);
+            tangents[index] = { glm::sin(params->phiStart + u * params->phiLength), 0,
+                                glm::cos(params->phiStart + u * params->phiLength), 1 };
+
             grid.push_back(index++);
         }
     }
@@ -697,29 +704,19 @@ void Geometry_buildSphere(GeometryArenaBuilder* builder, SphereParams* params)
         }
     }
 
-    size_t vertex_count = verts.size();
-    size_t index_count  = indices.size();
+    size_t index_count = indices.size();
     ASSERT(index_count % 3 == 0); // must be a multiple of 3 triangles only
 
-    gvec3f* positions  = ARENA_PUSH_COUNT(builder->pos_arena, gvec3f, vertex_count);
-    gvec3f* normals    = ARENA_PUSH_COUNT(builder->norm_arena, gvec3f, vertex_count);
-    gvec2f* texcoords  = ARENA_PUSH_COUNT(builder->uv_arena, gvec2f, vertex_count);
-    gvec4f* tangents   = ARENA_PUSH_COUNT(builder->tangent_arena, gvec4f, vertex_count);
     u32* indices_array = ARENA_PUSH_COUNT(builder->indices_arena, u32, index_count);
     UNUSED_VAR(tangents);
 
-    for (u32 i = 0; i < vertex_count; i++) {
-        positions[i] = { verts[i].x, verts[i].y, verts[i].z };
-        normals[i]   = { verts[i].nx, verts[i].ny, verts[i].nz };
-        texcoords[i] = { verts[i].u, verts[i].v };
-    }
-
+    // copy indices
     memcpy(indices_array, indices.data(), indices.size() * sizeof(*indices_array));
     ASSERT(ARENA_LENGTH(builder->indices_arena, u32) == index_count);
 
     // build tangents
-    Geometry_computeTangents(builder);
-    ASSERT(ARENA_LENGTH(builder->tangent_arena, gvec4f) == vertex_count);
+    // Geometry_computeTangents(builder);
+    // ASSERT(ARENA_LENGTH(builder->tangent_arena, gvec4f) == vertex_count);
 }
 
 void Geometry_buildSuzanne(GeometryArenaBuilder* builder)
