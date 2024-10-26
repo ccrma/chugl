@@ -158,9 +158,10 @@ CK_DLL_MFUN(texture_get_mips);
 CK_DLL_MFUN(texture_write);
 CK_DLL_MFUN(texture_write_with_desc);
 
+// loading images
 CK_DLL_SFUN(texture_load_2d_file);
-CK_DLL_SFUN(texture_load_2d_file_with_params); // not exposed yet (figure out hdr
-// first)
+CK_DLL_SFUN(texture_load_2d_file_with_params);
+CK_DLL_SFUN(texture_load_cubemap);
 
 static void ulib_texture_query(Chuck_DL_Query* QUERY)
 {
@@ -367,6 +368,15 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
         ARG("string", "filepath");
         ARG("TextureLoadDesc", "load_desc");
         DOC_FUNC("Load a 2D texture from a file with additional parameters");
+
+        SFUN(texture_load_cubemap, SG_CKNames[SG_COMPONENT_TEXTURE], "load");
+        ARG("string", "right");
+        ARG("string", "left");
+        ARG("string", "top");
+        ARG("string", "bottom");
+        ARG("string", "back");
+        ARG("string", "front");
+        DOC_FUNC("Load a cubemap texture from 6 filepaths, one for each face");
 
         // mfun ------------------------------------------------------------------
 
@@ -602,6 +612,23 @@ void ulib_texture_createDefaults(CK_DL_API API)
         // set global
         g_builtin_textures.normal_pixel_id = tex->id;
     }
+
+    { // default cube map
+        SG_TextureDesc cubemap_desc = {};
+        cubemap_desc.depth          = 6; // 6 faces
+        cubemap_desc.mips           = 1; // no mips for cubemap
+
+        SG_Texture* tex = SG_CreateTexture(&cubemap_desc, NULL, NULL, true);
+
+        // upload pixel data
+        SG_TextureWriteDesc cubemap_write_desc = {};
+        cubemap_write_desc.depth               = 6; // 6 faces
+        CQ_PushCommand_TextureWrite(tex, &cubemap_write_desc,
+                                    g_builtin_ckobjs.default_cube_map_data, API);
+
+        // set global
+        g_builtin_textures.default_cubemap_id = tex->id;
+    }
 }
 
 CK_DLL_CTOR(texture_ctor)
@@ -763,4 +790,75 @@ CK_DLL_SFUN(texture_load_2d_file_with_params)
     SG_Texture* tex = ulib_texture_load(filepath, &load_desc, SHRED);
 
     RETURN->v_object = tex ? tex->ckobj : NULL;
+}
+
+// load cubemap
+SG_Texture* ulib_texture_load_cubemap(const char* right_face, const char* left_face,
+                                      const char* top_face, const char* bottom_face,
+                                      const char* back_face, const char* front_face,
+                                      SG_TextureLoadDesc* load_desc,
+                                      Chuck_VM_Shred* shred)
+{
+    const char* filepaths[6]
+      = { right_face, left_face, top_face, bottom_face, back_face, front_face };
+
+    int cubemap_width{}, cubemap_height{};
+    for (int i = 0; i < 6; i++) {
+        int width{}, height{};
+        if (!stbi_info(filepaths[i], &width, &height, NULL)) {
+            log_warn("Could not load texture file '%s'", filepaths[i]);
+            log_warn(" |- Reason: %s", stbi_failure_reason());
+            log_warn(" |- Defaulting to magenta texture");
+
+            // on failure return default cubemap
+            return SG_GetTexture(g_builtin_textures.default_cubemap_id);
+        }
+
+        if (cubemap_width == 0) cubemap_width = width;
+        if (cubemap_height == 0) cubemap_height = height;
+
+        // check if all faces have same dimensions
+        if (cubemap_width != width || cubemap_height != height) {
+            log_warn(
+              "Cubemap faces have different dimensions %dx%d vs %dx%d on face %d",
+              cubemap_width, cubemap_height, width, height, i);
+            log_warn(" |- Defaulting to magenta texture");
+
+            // on failure return default cubemap
+            return SG_GetTexture(g_builtin_textures.default_cubemap_id);
+        }
+    }
+
+    SG_TextureDesc desc = {};
+    desc.width          = cubemap_width;
+    desc.height         = cubemap_height;
+    desc.depth          = 6; // 6 faces
+    desc.dimension      = WGPUTextureDimension_2D;
+    desc.format         = WGPUTextureFormat_RGBA8Unorm;
+    desc.usage          = WGPUTextureUsage_All;
+    desc.mips           = 1;
+
+    SG_Texture* tex = SG_CreateTexture(&desc, NULL, shred, false);
+
+    CQ_PushCommand_CubemapTextureFromFile(tex, load_desc, right_face, left_face,
+                                          top_face, bottom_face, back_face, front_face);
+
+    return tex;
+}
+
+CK_DLL_SFUN(texture_load_cubemap)
+{
+    SG_TextureLoadDesc load_desc = {};
+    load_desc.gen_mips           = false; // don't generate mips for cubemap
+    const char* right_face       = API->object->str(GET_NEXT_STRING(ARGS));
+    const char* left_face        = API->object->str(GET_NEXT_STRING(ARGS));
+    const char* top_face         = API->object->str(GET_NEXT_STRING(ARGS));
+    const char* bottom_face      = API->object->str(GET_NEXT_STRING(ARGS));
+    const char* back_face        = API->object->str(GET_NEXT_STRING(ARGS));
+    const char* front_face       = API->object->str(GET_NEXT_STRING(ARGS));
+
+    RETURN->v_object
+      = ulib_texture_load_cubemap(right_face, left_face, top_face, bottom_face,
+                                  back_face, front_face, &load_desc, SHRED)
+          ->ckobj;
 }

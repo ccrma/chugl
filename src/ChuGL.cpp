@@ -535,6 +535,16 @@ CK_DLL_QUERY(ChuGL)
         g_builtin_ckobjs.magenta_pixel_data = chugin_createCkFloatArray(
           magenta_pixel_data, ARRAY_LENGTH(magenta_pixel_data), true);
 
+        float default_cubemap_data[4 * 6] = {};
+        for (int i = 0; i < 6; i++) {
+            default_cubemap_data[i * 4 + 0] = 1.0f;
+            default_cubemap_data[i * 4 + 1] = 0.0f;
+            default_cubemap_data[i * 4 + 2] = 1.0f;
+            default_cubemap_data[i * 4 + 3] = 1.0f;
+        }
+        g_builtin_ckobjs.default_cube_map_data = chugin_createCkFloatArray(
+          default_cubemap_data, ARRAY_LENGTH(default_cubemap_data), true);
+
         // builtin shader includes
         g_builtin_ckobjs.FRAME_UNIFORMS
           = chugin_createCkString(shader_table["FRAME_UNIFORMS"].c_str(), true);

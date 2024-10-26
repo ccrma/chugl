@@ -97,11 +97,11 @@ Chuck_DL_MainThreadHook* hook = NULL;
 bool hookActivated            = false;
 
 // references to VM and API
-Chuck_VM* g_chuglVM  = NULL;
-CK_DL_API g_chuglAPI = NULL;
+Chuck_VM* g_chuglVM     = NULL;
+CK_DL_API g_chuglAPI    = NULL;
 Arena audio_frame_arena = {};
-f64 g_last_dt     = 0.0;
-i64 g_frame_count = 0;
+f64 g_last_dt           = 0.0;
+i64 g_frame_count       = 0;
 
 // offset which stores the component's SG_ID.
 static t_CKUINT component_offset_id = 0;
@@ -149,17 +149,19 @@ struct chugl_builtin_textures {
     SG_ID normal_pixel_id;
     SG_ID magenta_pixel_id;
     SG_ID default_render_texture_id;
+    SG_ID default_cubemap_id;
 };
 static chugl_builtin_textures g_builtin_textures;
 
 struct {
     Chuck_ArrayFloat* empty_float_array;
-    Chuck_ArrayFloat* init_2d_pos;        // {0.0, 0.0}
-    Chuck_ArrayVec3* init_white_color;    // [@(1,1,1)]
-    Chuck_ArrayFloat* white_pixel_data;   // {1.0, 1.0, 1.0, 1.0}
-    Chuck_ArrayFloat* black_pixel_data;   // {0.0, 0.0, 0.0, 0.0}
-    Chuck_ArrayFloat* normal_pixel_data;  // {0.5, 0.5, 1.0, 1.0}
-    Chuck_ArrayFloat* magenta_pixel_data; // {1.0, 0.0, 1.0, 1.0}
+    Chuck_ArrayFloat* init_2d_pos;           // {0.0, 0.0}
+    Chuck_ArrayVec3* init_white_color;       // [@(1,1,1)]
+    Chuck_ArrayFloat* white_pixel_data;      // {1.0, 1.0, 1.0, 1.0}
+    Chuck_ArrayFloat* black_pixel_data;      // {0.0, 0.0, 0.0, 0.0}
+    Chuck_ArrayFloat* normal_pixel_data;     // {0.5, 0.5, 1.0, 1.0}
+    Chuck_ArrayFloat* magenta_pixel_data;    // {1.0, 0.0, 1.0, 1.0}
+    Chuck_ArrayFloat* default_cube_map_data; // 6 x {1.0, 0.0, 1.0, 1.0}
 
     Chuck_String* FRAME_UNIFORMS;
     Chuck_String* LIGHTING_UNIFORMS;

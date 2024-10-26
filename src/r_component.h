@@ -237,6 +237,9 @@ struct R_Texture : public R_Component {
             ASSERT(desc->width > 0 && desc->height > 0 && desc->depth > 0);
         }
 
+        // cubemap?
+        const bool is_cubemap = desc->depth == 6;
+
         // copy texture info (immutable)
         texture->desc = *desc;
 
@@ -266,11 +269,12 @@ struct R_Texture : public R_Component {
         WGPUTextureViewDescriptor wgpu_texture_view_desc = {};
         wgpu_texture_view_desc.label                     = texture_view_label;
         wgpu_texture_view_desc.format                    = desc->format;
-        wgpu_texture_view_desc.dimension                 = WGPUTextureViewDimension_2D;
-        wgpu_texture_view_desc.baseMipLevel              = 0;
-        wgpu_texture_view_desc.mipLevelCount             = desc->mips;
-        wgpu_texture_view_desc.baseArrayLayer            = 0;
-        wgpu_texture_view_desc.arrayLayerCount           = desc->depth;
+        wgpu_texture_view_desc.dimension
+          = is_cubemap ? WGPUTextureViewDimension_Cube : WGPUTextureViewDimension_2D;
+        wgpu_texture_view_desc.baseMipLevel    = 0;
+        wgpu_texture_view_desc.mipLevelCount   = desc->mips;
+        wgpu_texture_view_desc.baseArrayLayer  = 0;
+        wgpu_texture_view_desc.arrayLayerCount = desc->depth;
 
         texture->gpu_texture_view
           = wgpuTextureCreateView(texture->gpu_texture, &wgpu_texture_view_desc);
@@ -321,7 +325,8 @@ struct R_Texture : public R_Component {
             source.offset = 0; // where to start reading from the cpu buffer
             source.bytesPerRow
               = write_desc->width * G_bytesPerTexel(texture->desc.format);
-            source.rowsPerImage = write_desc->height * write_desc->depth;
+            // source.rowsPerImage = write_desc->height * write_desc->depth;
+            source.rowsPerImage = write_desc->height;
 
             WGPUExtent3D size = { (u32)write_desc->width, (u32)write_desc->height,
                                   (u32)write_desc->depth };
@@ -335,6 +340,12 @@ struct R_Texture : public R_Component {
 
     static void load(GraphicsContext* gctx, R_Texture* texture, const char* filepath,
                      bool flip_vertically, bool gen_mips);
+
+    static void loadCubemap(GraphicsContext* gctx, R_Texture* texture,
+                            const char* right_face_path, const char* left_face_path,
+                            const char* top_face_path, const char* bottom_face_path,
+                            const char* back_face_path, const char* front_face_path,
+                            bool flip_y);
 };
 
 void Material_batchUpdatePipelines(GraphicsContext* gctx, FT_Library ft_lib,
@@ -804,8 +815,10 @@ struct R_Pass : public R_Component {
     }
 
     // if window size has changed, lazily reconstruct depth/stencil and color
-    // targets update DepthStencilAttachment and ColorAttachment params based on
-    // ChuGL RenderPass params this should be called right before _R_RenderScene()
+    // targets.
+    // update DepthStencilAttachment and ColorAttachment params based on
+    // ChuGL RenderPass params.
+    // this should be called right before _R_RenderScene()
     // for the given pass. R_Pass.sg_pass is assumed to be updated (memcopied in the
     // updatePass Command), but not the gpu-specific parameters of R_Pass
     static void updateRenderPassDesc(GraphicsContext* gctx, R_Pass* pass,

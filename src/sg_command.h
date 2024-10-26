@@ -151,6 +151,7 @@ enum SG_CommandType : u32 {
     SG_COMMAND_TEXTURE_CREATE,
     SG_COMMAND_TEXTURE_WRITE,
     SG_COMMAND_TEXTURE_FROM_FILE,
+    SG_COMMAND_CUBEMAP_TEXTURE_FROM_FILE,
 
     // buffer
     SG_COMMAND_BUFFER_UPDATE,
@@ -369,6 +370,17 @@ struct SG_Command_TextureFromFile : public SG_Command {
     ptrdiff_t filepath_offset;
     bool flip_vertically;
     bool gen_mips;
+};
+
+struct SG_Command_CubemapTextureFromFile : public SG_Command {
+    SG_ID sg_id;
+    ptrdiff_t right_face_offset;
+    ptrdiff_t left_face_offset;
+    ptrdiff_t top_face_offset;
+    ptrdiff_t bottom_face_offset;
+    ptrdiff_t back_face_offset;
+    ptrdiff_t front_face_offset;
+    bool flip_vertically;
 };
 
 struct SG_Command_ShaderCreate : public SG_Command {
@@ -608,6 +620,10 @@ void CQ_PushCommand_TextureWrite(SG_Texture* texture, SG_TextureWriteDesc* desc,
 
 void CQ_PushCommand_TextureFromFile(SG_Texture* texture, const char* filepath,
                                     SG_TextureLoadDesc* desc);
+void CQ_PushCommand_CubemapTextureFromFile(
+  SG_Texture* texture, SG_TextureLoadDesc* desc, const char* right_face,
+  const char* left_face, const char* top_face, const char* bottom_face,
+  const char* back_face, const char* front_face);
 
 // shader
 void CQ_PushCommand_ShaderCreate(SG_Shader* shader);

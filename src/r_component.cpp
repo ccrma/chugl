@@ -623,69 +623,114 @@ void R_Geometry::setPulledVertexAttribute(GraphicsContext* gctx, R_Geometry* geo
 // R_Texture
 // ============================================================================
 
-void R_Texture::load(GraphicsContext* gctx, R_Texture* texture, const char* filepath,
-                     bool flip_vertically, bool gen_mips)
+struct LoadImageResult {
+    void* pixel_data_OWNED; // free with stbi_image_free
+    size_t pixel_data_size; // byte size of pixel data
+    i32 width;
+    i32 height;
+    i32 components; // 4 for rgba
+};
+
+static LoadImageResult R_Texture_LoadImage(const char* filepath,
+                                           WGPUTextureFormat load_format, bool flip_y)
 {
-    i32 width = 0, height = 0;
+    LoadImageResult result = {};
     // Force loading 3 channel images to 4 channel by stb becasue Dawn
     // doesn't support 3 channel formats currently. The group is discussing
     // on whether webgpu shoud support 3 channel format.
     // https://github.com/gpuweb/gpuweb/issues/66#issuecomment-410021505
-    i32 read_comps    = 0;
     i32 desired_comps = STBI_rgb_alpha; // force 4 channels
 
-    stbi_set_flip_vertically_on_load(flip_vertically);
+    stbi_set_flip_vertically_on_load(flip_y);
 
-    // determine if we should load ldr or hdr
-    void* pixelData = NULL;
-    // free pixel data
-    defer(if (pixelData) stbi_image_free(pixelData););
+    // currently only support ldr (TODO add hdr f16 and f32)
+    ASSERT(load_format == WGPUTextureFormat_RGBA8Unorm);
 
-    if (texture->desc.format == WGPUTextureFormat_RGBA16Float) {
-        log_error(
-          "WARNING trying to load texture as RGBA16Float, but this format is not "
-          "supported by chugl image loader\n. Use RGBA32Float or RGBA8Unorm instead");
+    result.pixel_data_OWNED = stbi_load(filepath,           //
+                                        &result.width,      //
+                                        &result.height,     //
+                                        &result.components, //
+                                        desired_comps       //
+    );
+    bool is_hdr             = false;
+    ASSERT(result.components == desired_comps);
+
+    // update byte size
+    if (result.pixel_data_OWNED) {
+        ASSERT(load_format == WGPUTextureFormat_RGBA8Unorm);
+        result.pixel_data_size = result.width * result.height * desired_comps;
     }
 
-    bool is_hdr = false;
-    if (texture->desc.format == WGPUTextureFormat_RGBA32Float) {
-        pixelData = stbi_loadf(filepath,     //
-                               &width,       //
-                               &height,      //
-                               &read_comps,  //
-                               desired_comps //
-        );
-        is_hdr    = true;
-    } else if (texture->desc.format == WGPUTextureFormat_RGBA8Unorm) {
-        pixelData = stbi_load(filepath,     //
-                              &width,       //
-                              &height,      //
-                              &read_comps,  //
-                              desired_comps //
-        );
-        is_hdr    = false;
-    } else {
-        log_error("Unsupported texture format %d\n", texture->desc.format);
-        return;
-    }
+    // if (texture->desc.format == WGPUTextureFormat_RGBA32Float) {
+    //     pixelData = stbi_loadf(filepath,     //
+    //                            &width,       //
+    //                            &height,      //
+    //                            &read_comps,  //
+    //                            desired_comps //
+    //     );
 
-    if (pixelData == NULL) {
+    if (result.pixel_data_OWNED == NULL) {
         log_error("Couldn't load '%s'\n. Reason: %s", filepath, stbi_failure_reason());
-        return;
     } else {
         log_info("Loaded %s image %s (%d, %d, %d / %d)\n", is_hdr ? "HDR" : "LDR",
-                 filepath, width, height, read_comps, desired_comps);
+                 filepath, result.width, result.height, result.components,
+                 desired_comps);
     }
 
+    return result;
+}
+
+void R_Texture::load(GraphicsContext* gctx, R_Texture* texture, const char* filepath,
+                     bool flip_vertically, bool gen_mips)
+{
+    LoadImageResult result
+      = R_Texture_LoadImage(filepath, texture->desc.format, flip_vertically);
+    // free pixel data
+    defer(if (result.pixel_data_OWNED) stbi_image_free(result.pixel_data_OWNED););
+
     SG_TextureWriteDesc write_desc = {};
-    write_desc.width               = width;
-    write_desc.height              = height;
-    R_Texture::write(gctx, texture, &write_desc, pixelData,
-                     width * height * G_bytesPerTexel(texture->desc.format));
+    write_desc.width               = result.width;
+    write_desc.height              = result.height;
+    R_Texture::write(gctx, texture, &write_desc, result.pixel_data_OWNED,
+                     result.width * result.height
+                       * G_bytesPerTexel(texture->desc.format));
 
     if (gen_mips) {
         // MipMapGenerator_generate(gctx, texture->gpu_texture, texture->name.c_str());
         MipMapGenerator_generate(gctx, texture->gpu_texture, texture->name);
+    }
+}
+
+void R_Texture::loadCubemap(GraphicsContext* gctx, R_Texture* texture,
+                            const char* right_face_path, const char* left_face_path,
+                            const char* top_face_path, const char* bottom_face_path,
+                            const char* back_face_path, const char* front_face_path,
+                            bool flip_y)
+{
+    // cubemap validation
+    ASSERT(texture->desc.depth == 6);
+    ASSERT(texture->desc.format == WGPUTextureFormat_RGBA8Unorm);
+    ASSERT(texture->desc.mips == 1);
+
+    const char* faces[6] = { right_face_path,  left_face_path, top_face_path,
+                             bottom_face_path, back_face_path, front_face_path };
+
+    for (int i = 0; i < 6; i++) {
+        LoadImageResult result
+          = R_Texture_LoadImage(faces[i], texture->desc.format, flip_y);
+        // free pixel data
+        defer(if (result.pixel_data_OWNED) stbi_image_free(result.pixel_data_OWNED););
+
+        // validate size
+        ASSERT(texture->desc.width == result.width);
+        ASSERT(texture->desc.height == result.height);
+
+        SG_TextureWriteDesc write_desc = {};
+        write_desc.offset_z            = i; // write to ith cubemap face
+        write_desc.width               = result.width;
+        write_desc.height              = result.height;
+        R_Texture::write(gctx, texture, &write_desc, result.pixel_data_OWNED,
+                         result.pixel_data_size);
     }
 }
 

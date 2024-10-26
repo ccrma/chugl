@@ -1966,6 +1966,26 @@ static void _R_HandleCommand(App* app, SG_Command* command)
             R_Texture::load(&app->gctx, texture, path, cmd->flip_vertically,
                             cmd->gen_mips);
         } break;
+        case SG_COMMAND_CUBEMAP_TEXTURE_FROM_FILE: {
+            SG_Command_CubemapTextureFromFile* cmd
+              = (SG_Command_CubemapTextureFromFile*)command;
+            R_Texture* texture = Component_GetTexture(cmd->sg_id);
+            const char* right_path
+              = (const char*)CQ_ReadCommandGetOffset(cmd->right_face_offset);
+            const char* left_path
+              = (const char*)CQ_ReadCommandGetOffset(cmd->left_face_offset);
+            const char* top_path
+              = (const char*)CQ_ReadCommandGetOffset(cmd->top_face_offset);
+            const char* bottom_path
+              = (const char*)CQ_ReadCommandGetOffset(cmd->bottom_face_offset);
+            const char* back_path
+              = (const char*)CQ_ReadCommandGetOffset(cmd->back_face_offset);
+            const char* front_path
+              = (const char*)CQ_ReadCommandGetOffset(cmd->front_face_offset);
+            R_Texture::loadCubemap(&app->gctx, texture, right_path, left_path, top_path,
+                                   bottom_path, back_path, front_path,
+                                   cmd->flip_vertically);
+        } break;
         // buffers ----------------------
         case SG_COMMAND_BUFFER_UPDATE: {
             SG_Command_BufferUpdate* cmd = (SG_Command_BufferUpdate*)command;

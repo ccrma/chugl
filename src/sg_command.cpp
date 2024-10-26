@@ -580,7 +580,7 @@ void CQ_PushCommand_TextureWrite(SG_Texture* texture, SG_TextureWriteDesc* desc,
 void CQ_PushCommand_TextureFromFile(SG_Texture* texture, const char* filepath,
                                     SG_TextureLoadDesc* desc)
 {
-    size_t filepath_len = strlen(filepath);
+    size_t filepath_len = filepath ? strlen(filepath) : 0;
     BEGIN_COMMAND_ADDITIONAL_MEMORY_ZERO(
       SG_Command_TextureFromFile, SG_COMMAND_TEXTURE_FROM_FILE, filepath_len + 1);
     command->sg_id      = texture->id;
@@ -589,6 +589,47 @@ void CQ_PushCommand_TextureFromFile(SG_Texture* texture, const char* filepath,
     command->filepath_offset = Arena::offsetOf(cq.write_q, filepath_copy);
     command->flip_vertically = desc->flip_y;
     command->gen_mips        = desc->gen_mips;
+    END_COMMAND();
+}
+
+void CQ_PushCommand_CubemapTextureFromFile(
+  SG_Texture* texture, SG_TextureLoadDesc* desc, const char* right_face,
+  const char* left_face, const char* top_face, const char* bottom_face,
+  const char* back_face, const char* front_face)
+{
+    size_t right_face_len  = right_face ? strlen(right_face) : 0;
+    size_t left_face_len   = left_face ? strlen(left_face) : 0;
+    size_t top_face_len    = top_face ? strlen(top_face) : 0;
+    size_t bottom_face_len = bottom_face ? strlen(bottom_face) : 0;
+    size_t back_face_len   = back_face ? strlen(back_face) : 0;
+    size_t front_face_len  = front_face ? strlen(front_face) : 0;
+    BEGIN_COMMAND_ADDITIONAL_MEMORY_ZERO(
+      SG_Command_CubemapTextureFromFile, SG_COMMAND_CUBEMAP_TEXTURE_FROM_FILE,
+      right_face_len + left_face_len + top_face_len + bottom_face_len + back_face_len
+        + front_face_len + 6);
+
+    command->sg_id = texture->id;
+
+    char* right_face_copy  = (char*)memory;
+    char* left_face_copy   = right_face_copy + right_face_len + 1;
+    char* top_face_copy    = left_face_copy + left_face_len + 1;
+    char* bottom_face_copy = top_face_copy + top_face_len + 1;
+    char* back_face_copy   = bottom_face_copy + bottom_face_len + 1;
+    char* front_face_copy  = back_face_copy + back_face_len + 1;
+    strncpy(right_face_copy, right_face, right_face_len);
+    strncpy(left_face_copy, left_face, left_face_len);
+    strncpy(top_face_copy, top_face, top_face_len);
+    strncpy(bottom_face_copy, bottom_face, bottom_face_len);
+    strncpy(back_face_copy, back_face, back_face_len);
+    strncpy(front_face_copy, front_face, front_face_len);
+    command->right_face_offset  = Arena::offsetOf(cq.write_q, right_face_copy);
+    command->left_face_offset   = Arena::offsetOf(cq.write_q, left_face_copy);
+    command->top_face_offset    = Arena::offsetOf(cq.write_q, top_face_copy);
+    command->bottom_face_offset = Arena::offsetOf(cq.write_q, bottom_face_copy);
+    command->back_face_offset   = Arena::offsetOf(cq.write_q, back_face_copy);
+    command->front_face_offset  = Arena::offsetOf(cq.write_q, front_face_copy);
+
+    command->flip_vertically = desc->flip_y;
     END_COMMAND();
 }
 
