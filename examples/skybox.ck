@@ -14,7 +14,7 @@ GOrbitCamera camera --> GG.scene();
 // GFlyCamera camera --> GG.scene();
 GG.scene().camera(camera);
 
-GCube cube --> GG.scene();
+GSuzanne cube --> GG.scene();
 
 UI_Float3 background_color(GG.scene().backgroundColor());
 
@@ -25,6 +25,8 @@ while (true) {
         if (UI.colorEdit("Background Color", background_color, 0)) {
             GG.scene().backgroundColor(background_color.val());
         }
+
+        UI.scenegraph(GG.scene());
     }
     UI.end();
 }

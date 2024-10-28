@@ -1179,6 +1179,16 @@ CK_DLL_MFUN(gshape_phong_material_set_emissive_tex);
 CK_DLL_MFUN(gshape_phong_material_get_normal_tex);
 CK_DLL_MFUN(gshape_phong_material_set_normal_tex);
 
+// phong envmap
+CK_DLL_MFUN(gshape_phong_material_get_envmap_method);
+CK_DLL_MFUN(gshape_phong_material_set_envmap_method);
+CK_DLL_MFUN(gshape_phong_material_get_envmap_refraction_ratio);
+CK_DLL_MFUN(gshape_phong_material_set_envmap_refraction_ratio);
+CK_DLL_MFUN(gshape_phong_material_get_envmap_blend_mode);
+CK_DLL_MFUN(gshape_phong_material_set_envmap_blend_mode);
+CK_DLL_MFUN(gshape_phong_material_get_envmap_intensity);
+CK_DLL_MFUN(gshape_phong_material_set_envmap_intensity);
+
 static void ulib_mesh_query(Chuck_DL_Query* QUERY)
 {
     // GMesh -----------------------------------------------------
@@ -2012,4 +2022,46 @@ CK_DLL_MFUN(gshape_phong_material_set_normal_tex)
     SG_Texture* tex
       = ckobj ? SG_GetTexture(OBJ_MEMBER_UINT(ckobj, component_offset_id)) : NULL;
     PhongParams::normalTex(GET_MESH_MATERIAL(SELF), tex);
+}
+
+CK_DLL_MFUN(gshape_phong_material_get_envmap_method)
+{
+    RETURN->v_int = *PhongParams::envmapMethod(GET_MESH_MATERIAL(SELF));
+}
+
+CK_DLL_MFUN(gshape_phong_material_set_envmap_method)
+{
+    PhongParams::envmapMethod(GET_MESH_MATERIAL(SELF),
+                              (SG_EnvmapSampleMode)GET_NEXT_INT(ARGS));
+}
+
+CK_DLL_MFUN(gshape_phong_material_get_envmap_refraction_ratio)
+{
+    RETURN->v_float = *PhongParams::envmapRefractionRatio(GET_MESH_MATERIAL(SELF));
+}
+
+CK_DLL_MFUN(gshape_phong_material_set_envmap_refraction_ratio)
+{
+    PhongParams::envmapRefractionRatio(GET_MESH_MATERIAL(SELF), GET_NEXT_FLOAT(ARGS));
+}
+
+CK_DLL_MFUN(gshape_phong_material_get_envmap_blend_mode)
+{
+    RETURN->v_int = *PhongParams::envmapBlendMode(GET_MESH_MATERIAL(SELF));
+}
+
+CK_DLL_MFUN(gshape_phong_material_set_envmap_blend_mode)
+{
+    PhongParams::envmapBlendMode(GET_MESH_MATERIAL(SELF),
+                                 (SG_EnvmapBlendMode)GET_NEXT_INT(ARGS));
+}
+
+CK_DLL_MFUN(gshape_phong_material_get_envmap_intensity)
+{
+    RETURN->v_float = *PhongParams::envmapIntensity(GET_MESH_MATERIAL(SELF));
+}
+
+CK_DLL_MFUN(gshape_phong_material_set_envmap_intensity)
+{
+    PhongParams::envmapIntensity(GET_MESH_MATERIAL(SELF), GET_NEXT_FLOAT(ARGS));
 }

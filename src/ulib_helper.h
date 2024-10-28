@@ -536,6 +536,50 @@ struct PhongParams {
     {
         return SG_GetTexture(mat->uniforms[11].as.texture_id);
     }
+
+    static void envmapMethod(SG_Material* mat, SG_EnvmapSampleMode mode)
+    {
+        SG_Material::uniformInt(mat, 12, mode);
+        CQ_PushCommand_MaterialSetUniform(mat, 12);
+    }
+
+    static SG_EnvmapSampleMode* envmapMethod(SG_Material* mat)
+    {
+        return (SG_EnvmapSampleMode*)&mat->uniforms[12].as.i;
+    }
+
+    static void envmapRefractionRatio(SG_Material* mat, float ratio)
+    {
+        SG_Material::uniformFloat(mat, 13, ratio);
+        CQ_PushCommand_MaterialSetUniform(mat, 13);
+    }
+
+    static float* envmapRefractionRatio(SG_Material* mat)
+    {
+        return &mat->uniforms[13].as.f;
+    }
+
+    static void envmapBlendMode(SG_Material* mat, SG_EnvmapBlendMode mode)
+    {
+        SG_Material::uniformInt(mat, 16, mode);
+        CQ_PushCommand_MaterialSetUniform(mat, 16);
+    }
+
+    static SG_EnvmapBlendMode* envmapBlendMode(SG_Material* mat)
+    {
+        return (SG_EnvmapBlendMode*)&mat->uniforms[16].as.i;
+    }
+
+    static void envmapIntensity(SG_Material* mat, float intensity)
+    {
+        SG_Material::uniformFloat(mat, 17, intensity);
+        CQ_PushCommand_MaterialSetUniform(mat, 17);
+    }
+
+    static float* envmapIntensity(SG_Material* mat)
+    {
+        return &mat->uniforms[17].as.f;
+    }
 };
 
 #define PHONG_MATERIAL_METHODS(prefix)                                                 \
@@ -626,4 +670,54 @@ struct PhongParams {
         MFUN(prefix##_material_set_normal_tex, "void", "normalMap");                   \
         ARG(SG_CKNames[SG_COMPONENT_TEXTURE], "normalTexture");                        \
         DOC_FUNC("Set the normal texture of the material.");                           \
+                                                                                       \
+        MFUN(prefix##_material_get_envmap_method, "int", "envmapMethod");              \
+        DOC_FUNC(                                                                      \
+          "Get the environment map sampling method. One of "                           \
+          "PhongMaterial.EnvmapMethod_None, PhongMaterial.EnvmapMethod_Reflect, "      \
+          "PhongMaterial.EnvmapMethod_Refract. Set the environment map via "           \
+          "GScene.envMap(Texture). Default EnvmapMethod_Reflect");                     \
+                                                                                       \
+        MFUN(prefix##_material_set_envmap_method, "void", "envmapMethod");             \
+        ARG("int", "envmapMethod");                                                    \
+        DOC_FUNC(                                                                      \
+          "Set the environment map sampling method. One of "                           \
+          "PhongMaterial.EnvmapMethod_None, PhongMaterial.EnvmapMethod_Reflect, "      \
+          "PhongMaterial.EnvmapMethod_Refract. Default EnvmapMethod_Reflect");         \
+                                                                                       \
+        MFUN(prefix##_material_get_envmap_refraction_ratio, "float",                   \
+             "refractionRatio");                                                       \
+        DOC_FUNC(                                                                      \
+          "Get the refraction ratio of the material. Only used when "                  \
+          "envmapMethod is PhongMaterial.EnvmapMethod_Refract. Default 0.5");          \
+                                                                                       \
+        MFUN(prefix##_material_set_envmap_refraction_ratio, "void",                    \
+             "refractionRatio");                                                       \
+        ARG("float", "ratio");                                                         \
+        DOC_FUNC(                                                                      \
+          "Set the refraction ratio of the material. Only used when "                  \
+          "envmapMethod is PhongMaterial.EnvmapMethod_Refract. Default 1.0");          \
+                                                                                       \
+        MFUN(prefix##_material_get_envmap_blend_mode, "int", "envmapBlend");           \
+        DOC_FUNC(                                                                      \
+          "Get the blend mode of the environment map. One of "                         \
+          "PhongMaterial.EnvmapBlend_None, PhongMaterial.EnvmapBlend_Mix, "            \
+          "PhongMaterial.EnvmapBlend_Add, "                                            \
+          "PhongMaterial.EnvmapBlend_Multiply. Default EnvmapBlend_None");             \
+                                                                                       \
+        MFUN(prefix##_material_set_envmap_blend_mode, "void", "envmapBlend");          \
+        ARG("int", "blendMode");                                                       \
+        DOC_FUNC(                                                                      \
+          "Set the blend mode of the environment map. One of "                         \
+          "PhongMaterial.EnvmapBlend_None, PhongMaterial.EnvmapBlend_Mix, "            \
+          "PhongMaterial.EnvmapBlend_Add, "                                            \
+          "PhongMaterial.EnvmapBlend_Multiply. Set to EnvmapBlend_None to disable "    \
+          "environment lighting");                                                     \
+                                                                                       \
+        MFUN(prefix##_material_get_envmap_intensity, "float", "envmapIntensity");      \
+        DOC_FUNC("Get the intensity of the environment map lighting. Default 1.0");    \
+                                                                                       \
+        MFUN(prefix##_material_set_envmap_intensity, "void", "envmapIntensity");       \
+        ARG("float", "intensity");                                                     \
+        DOC_FUNC("Set the intensity of the environment map lighting. Default 1.0");    \
     }

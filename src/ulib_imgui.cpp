@@ -40,7 +40,7 @@ namespace cimgui
 
 static bool verifyInitialization(Chuck_VM_Shred* shred)
 {
-    static bool printed = false;
+    static bool printed      = false;
     bool is_shred_registered = Sync_IsShredRegistered(shred);
     if (!is_shred_registered && !printed) {
         printed = true;
@@ -165,6 +165,57 @@ static void ui_scenegraph_draw_impl(SG_Transform* node)
                                                       0.0f, 1.0f)) {
                             PhongParams::aoFactor(material,
                                                   *PhongParams::aoFactor(material));
+                        }
+
+                        // phong envmap params
+                        // PhongParams::envmapMethod(material,
+                        // SG_ENVMAP_SAMPLE_REFLECT);
+                        // PhongParams::envmapBlendMode(material, SG_ENVMAP_BLEND_NONE);
+                        static const char* envmapMethods[] = {
+                            "None",
+                            "Reflect",
+                            "Refract",
+                        };
+
+                        static const char* envmapBlendModes[] = {
+                            "None",
+                            "Add",
+                            "Multiply",
+                            "Mix",
+                        };
+
+                        if (cimgui::ImGui_SliderFloat(
+                              "Envmap Intensity",
+                              PhongParams::envmapIntensity(material), 0.0f, 1.0f)) {
+                            PhongParams::envmapIntensity(
+                              material, *PhongParams::envmapIntensity(material));
+                        }
+
+                        if (cimgui::ImGui_SliderFloat(
+                              "Refraction Ratio",
+                              PhongParams::envmapRefractionRatio(material), 0.0f,
+                              1.0f)) {
+                            PhongParams::envmapRefractionRatio(
+                              material, *PhongParams::envmapRefractionRatio(material));
+                        }
+
+                        if (cimgui::ImGui_ListBox(
+                              "Envmap Method",
+                              (int*)PhongParams::envmapMethod(material), envmapMethods,
+                              3, -1)) {
+                            PhongParams::envmapMethod(
+                              material, (SG_EnvmapSampleMode)*PhongParams::envmapMethod(
+                                          material));
+                        }
+
+                        if (cimgui::ImGui_ListBox(
+                              "Envmap Blend Mode",
+                              (int*)PhongParams::envmapBlendMode(material),
+                              envmapBlendModes, 4, -1)) {
+                            PhongParams::envmapBlendMode(
+                              material,
+                              (SG_EnvmapBlendMode)*PhongParams::envmapBlendMode(
+                                material));
                         }
                     } break;
                     default: {

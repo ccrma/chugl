@@ -442,6 +442,19 @@ struct SG_Material_PBR_Params {
     // SG_Sampler baseColorSampler;
 };
 
+enum SG_EnvmapSampleMode : u8 {
+    SG_ENVMAP_SAMPLE_NONE = 0,
+    SG_ENVMAP_SAMPLE_REFLECT,
+    SG_ENVMAP_SAMPLE_REFRACT,
+};
+
+enum SG_EnvmapBlendMode : u8 {
+    SG_ENVMAP_BLEND_NONE = 0,
+    SG_ENVMAP_BLEND_ADD,
+    SG_ENVMAP_BLEND_MULTIPLY,
+    SG_ENVMAP_BLEND_MIX,
+};
+
 #define SG_MATERIAL_MAX_UNIFORMS 32 // @group(1) @binding(0 - 31)
 
 enum SG_MaterialUniformType : u8 {

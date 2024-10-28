@@ -118,7 +118,8 @@ static void ulib_gscene_query(Chuck_DL_Query* QUERY)
       "Set the environment map of the scene. By default this used as a skybox and for "
       "environment lighting calculations on lit materials (PhongMaterial supported, "
       "PBRMaterial not yet supported). The environment color will be multiplied by the "
-      "background color.");
+      "background color set in GScene.backgroundColor(vec3), remember to set the "
+      "background color to Color.WHITE to view the original image colors");
 
     MFUN(gscene_get_environment_map, SG_CKNames[SG_COMPONENT_TEXTURE], "envMap");
     DOC_FUNC("Get the environment map of the scene");
@@ -127,7 +128,7 @@ static void ulib_gscene_query(Chuck_DL_Query* QUERY)
     ARG(SG_CKNames[SG_COMPONENT_MATERIAL], "skybox");
     DOC_FUNC(
       "Set the skybox material of the scene. Will be used in the skybox pass and drawn "
-      "with NO bound vertex attribute buffers and a vertexCount of 6*6=36. The "
+      "with NO bound vertex attribute buffers and a vertexCount of 3. The "
       "default scene already includes an instance of SkyboxMaterial here");
 
     MFUN(gscene_get_skybox_material, SG_CKNames[SG_COMPONENT_MATERIAL], "skybox");

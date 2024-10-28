@@ -434,6 +434,7 @@ static const char* phong_shader_string = R"glsl(
 
     #include FRAME_UNIFORMS
     #include LIGHTING_UNIFORMS
+    #include ENVIRONMENT_MAP_UNIFORMS
     #include DRAW_UNIFORMS
     #include STANDARD_VERTEX_INPUT
     #include STANDARD_VERTEX_OUTPUT
@@ -453,22 +454,41 @@ static const char* phong_shader_string = R"glsl(
     @group(1) @binding(10) var u_emissive_map: texture_2d<f32>;
     @group(1) @binding(11) var u_normal_map: texture_2d<f32>;
 
-    // calculate envmap contribution
-    // vec3 CalcEnvMapContribution(vec3 viewDir, vec3 norm)
-    // {
-    //     // TODO: envmap can be optimized by moving some calculations into vertex shader
-    //     vec3 envMapSampleDir = vec3(0.0);
-    //     if (u_EnvMapParams.method == ENV_MAP_METHOD_REFLECTION) {
-    //         envMapSampleDir = reflect(-viewDir, norm);
-    //     }
-    //     else if (u_EnvMapParams.method == ENV_MAP_METHOD_REFRACTION) {
-    //         envMapSampleDir = refract(-viewDir, norm, u_EnvMapParams.ratio);
-    //     }
-    //     return texture(u_Skybox, envMapSampleDir).rgb;
-    // }
+    // envmap params
+    const ENVMAP_METHOD_NONE = 0;
+    const ENVMAP_METHOD_REFLECTION = 1;
+    const ENVMAP_METHOD_REFRACTION = 2;
+
+    const ENVMAP_BLEND_NONE = 0;
+    const ENVMAP_BLEND_ADDITIVE = 1;
+    const ENVMAP_BLEND_MULTIPLICATIVE = 2;
+    const ENVMAP_BLEND_MIX = 3;
+
+    @group(1) @binding(12) var<uniform> u_envmap_method : i32;
+    @group(1) @binding(13) var<uniform> u_envmap_ratio : f32; // refraction ratio
+    // @group(1) @binding(14) var u_envmap_sampler : sampler;
+    @group(1) @binding(16) var<uniform> u_envmap_blend : i32;
+    @group(1) @binding(17) var<uniform> u_envmap_intensity : f32;
 
     fn srgbToLinear(srgb_in : vec3f) -> vec3f {
         return pow(srgb_in.rgb,vec3f(2.2));
+    }
+
+    // calculate envmap contribution
+    fn envMapContribution(view_dir : vec3f, norm : vec3f) -> vec3f
+    {
+        if (u_envmap_method == ENVMAP_METHOD_NONE) {
+            return vec3f(0.0);
+        }
+
+        var normal = vec3f(0.0);
+        if (u_envmap_method == ENVMAP_METHOD_REFLECTION) {
+            normal = reflect(-view_dir, norm);
+        }
+        else if (u_envmap_method == ENVMAP_METHOD_REFRACTION) {
+            normal = refract(-view_dir, norm, u_envmap_ratio);
+        }
+        return srgbToLinear(textureSample(u_envmap, texture_sampler, normal * vec3f(1, 1, -1)).rgb);
     }
 
     fn calculateNormal(inNormal: vec3f, inUV : vec2f, inTangent: vec4f, scale: f32, is_front : bool) -> vec3f {
@@ -554,23 +574,24 @@ static const char* phong_shader_string = R"glsl(
         // ambient light
         lighting += u_frame.ambient_light * diffuse_color;
 
+        // calculate envmap contribution
+        if (u_envmap_blend != ENVMAP_BLEND_NONE) {
+            let envMapContrib = envMapContribution(viewDir, normal);
+
+            // blending
+            if (u_envmap_blend == ENVMAP_BLEND_ADDITIVE) {
+                lighting += (u_envmap_intensity * envMapContrib);
+            }
+            else if (u_envmap_blend == ENVMAP_BLEND_MULTIPLICATIVE) {
+                lighting *= (u_envmap_intensity * envMapContrib);
+            }
+            else if (u_envmap_blend == ENVMAP_BLEND_MIX) {
+                lighting = mix(lighting, envMapContrib, u_envmap_intensity);
+            }
+        }
+
         // emissive
         lighting += srgbToLinear(emissiveTex.rgb) * u_emission_color;
-
-        // calculate envmap contribution
-        // if (u_EnvMapParams.enabled) {
-        //     vec3 envMapContrib = CalcEnvMapContribution(viewDir, norm);
-        //     // blending
-        //     if (u_EnvMapParams.blendMode == ENV_MAP_BLEND_MODE_ADDITIVE) {
-        //         lighting += (u_EnvMapParams.intensity * envMapContrib);
-        //     }
-        //     else if (u_EnvMapParams.blendMode == ENV_MAP_BLEND_MODE_MULTIPLICATIVE) {
-        //         lighting *= (u_EnvMapParams.intensity * envMapContrib);
-        //     }
-        //     else if (u_EnvMapParams.blendMode == ENV_MAP_BLEND_MODE_MIX) {
-        //         lighting = mix(lighting, envMapContrib, u_EnvMapParams.intensity);
-        //     }
-        // }
 
         // alpha test
         if (diffuseTex.a < .01) {

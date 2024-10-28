@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -283,7 +283,9 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
     // ComputePass --------------------------------------------------------------
     {
         BEGIN_CLASS("ComputePass", SG_CKNames[SG_COMPONENT_PASS]);
-        DOC_CLASS("Compute pass for running compute shaders");
+        DOC_CLASS(
+          "Compute pass for running compute shaders. Note that unlike Materials, "
+          "all Compute Pass bindings must be bound under @group(0), NOT @group(1)");
         ADD_EX("rendergraph/boids_compute.ck");
 
         CTOR(computepass_ctor);

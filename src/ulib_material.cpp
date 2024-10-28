@@ -180,6 +180,16 @@ CK_DLL_MFUN(phong_material_set_emissive_tex);
 CK_DLL_MFUN(phong_material_get_normal_tex);
 CK_DLL_MFUN(phong_material_set_normal_tex);
 
+// envmap
+CK_DLL_MFUN(phong_material_get_envmap_method);
+CK_DLL_MFUN(phong_material_set_envmap_method);
+CK_DLL_MFUN(phong_material_get_envmap_refraction_ratio);
+CK_DLL_MFUN(phong_material_set_envmap_refraction_ratio);
+CK_DLL_MFUN(phong_material_get_envmap_blend_mode);
+CK_DLL_MFUN(phong_material_set_envmap_blend_mode);
+CK_DLL_MFUN(phong_material_get_envmap_intensity);
+CK_DLL_MFUN(phong_material_set_envmap_intensity);
+
 // pbr ---------------------------------------------------------------------
 CK_DLL_CTOR(pbr_material_ctor);
 
@@ -762,6 +772,35 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
         CTOR(phong_material_ctor);
 
         PHONG_MATERIAL_METHODS(phong);
+
+        // static methods
+        static t_CKUINT envmap_method_none       = SG_ENVMAP_SAMPLE_NONE;
+        static t_CKUINT envmap_method_reflection = SG_ENVMAP_SAMPLE_REFLECT;
+        static t_CKUINT envmap_method_refraction = SG_ENVMAP_SAMPLE_REFRACT;
+
+        static t_CKUINT envmap_blend_none     = SG_ENVMAP_BLEND_NONE;
+        static t_CKUINT envmap_blend_add      = SG_ENVMAP_BLEND_ADD;
+        static t_CKUINT envmap_blend_multiply = SG_ENVMAP_BLEND_MULTIPLY;
+        static t_CKUINT envmap_blend_mix      = SG_ENVMAP_BLEND_MIX;
+
+        SVAR("int", "EnvmapMethod_None", &envmap_method_none);
+        DOC_VAR("No environment map sampling.");
+        SVAR("int", "EnvmapMethod_Reflection", &envmap_method_reflection);
+        DOC_VAR("Sample the environment map via reflection (like chrome or a mirror)");
+        SVAR("int", "EnvmapMethod_Refraction", &envmap_method_refraction);
+        DOC_VAR("Sample the environment map via refraction (like glass or water)");
+
+        SVAR("int", "EnvmapBlend_None", &envmap_blend_none);
+        DOC_VAR("No environment map blending.");
+        SVAR("int", "EnvmapBlend_Add", &envmap_blend_add);
+        DOC_VAR("Add the environment map color to the material color.");
+        SVAR("int", "EnvmapBlend_Multiply", &envmap_blend_multiply);
+        DOC_VAR("Multiply the environment map color with the material color.");
+        SVAR("int", "EnvmapBlend_Mix", &envmap_blend_mix);
+        DOC_VAR(
+          "Linearly mix the environment map color with the material color. An "
+          "intensity of 0.0 will show only the material color, 1.0 will show only the "
+          "environment map color.");
 
         END_CLASS();
     }
@@ -1500,6 +1539,12 @@ static void ulib_material_init_uniforms_and_pso(SG_Material* material)
                   material, SG_GetTexture(g_builtin_textures.black_pixel_id));
                 PhongParams::normalTex(
                   material, SG_GetTexture(g_builtin_textures.normal_pixel_id));
+
+                // envmap
+                PhongParams::envmapMethod(material, SG_ENVMAP_SAMPLE_REFLECT);
+                PhongParams::envmapBlendMode(material, SG_ENVMAP_BLEND_NONE);
+                PhongParams::envmapRefractionRatio(material, 0.5f);
+                PhongParams::envmapIntensity(material, 1.0f);
             }
         } break;
         case SG_MATERIAL_PBR: {
@@ -1933,6 +1978,48 @@ CK_DLL_MFUN(phong_material_set_normal_tex)
     PhongParams::normalTex(GET_MATERIAL(SELF), tex);
 }
 
+CK_DLL_MFUN(phong_material_get_envmap_method)
+{
+    RETURN->v_int = *PhongParams::envmapMethod(GET_MATERIAL(SELF));
+}
+
+CK_DLL_MFUN(phong_material_set_envmap_method)
+{
+    PhongParams::envmapMethod(GET_MATERIAL(SELF),
+                              (SG_EnvmapSampleMode)GET_NEXT_INT(ARGS));
+}
+
+CK_DLL_MFUN(phong_material_get_envmap_refraction_ratio)
+{
+    RETURN->v_float = *PhongParams::envmapRefractionRatio(GET_MATERIAL(SELF));
+}
+
+CK_DLL_MFUN(phong_material_set_envmap_refraction_ratio)
+{
+    PhongParams::envmapRefractionRatio(GET_MATERIAL(SELF), GET_NEXT_FLOAT(ARGS));
+}
+
+CK_DLL_MFUN(phong_material_get_envmap_blend_mode)
+{
+    RETURN->v_int = *PhongParams::envmapBlendMode(GET_MATERIAL(SELF));
+}
+
+CK_DLL_MFUN(phong_material_set_envmap_blend_mode)
+{
+    PhongParams::envmapBlendMode(GET_MATERIAL(SELF),
+                                 (SG_EnvmapBlendMode)GET_NEXT_INT(ARGS));
+}
+
+CK_DLL_MFUN(phong_material_get_envmap_intensity)
+{
+    RETURN->v_float = *PhongParams::envmapIntensity(GET_MATERIAL(SELF));
+}
+
+CK_DLL_MFUN(phong_material_set_envmap_intensity)
+{
+    PhongParams::envmapIntensity(GET_MATERIAL(SELF), GET_NEXT_FLOAT(ARGS));
+}
+
 // PBRMaterial ===================================================================
 
 CK_DLL_CTOR(pbr_material_ctor)
@@ -2316,6 +2403,7 @@ void chugl_initDefaultMaterials()
         phong_shader_desc.vertex_layout       = standard_vertex_layout;
         phong_shader_desc.vertex_layout_count = ARRAY_LENGTH(standard_vertex_layout);
         phong_shader_desc.lit                 = true;
+        phong_shader_desc.uses_envmap         = true;
         g_material_builtin_shaders.phong_shader_id
           = chugl_createShader(&phong_shader_desc);
     }
