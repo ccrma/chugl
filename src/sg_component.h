@@ -43,6 +43,7 @@
 // forward decls
 struct SG_Light;
 struct SG_Camera;
+struct SG_Material;
 
 #define QUAT_IDENTITY (glm::quat(1.0, 0.0, 0.0, 0.0))
 #define MAT_IDENTITY (glm::mat4(1.0))
@@ -258,6 +259,11 @@ struct SG_SceneDesc {
     glm::vec4 bg_color      = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
     SG_ID main_camera_id    = 0;
     glm::vec3 ambient_light = glm::vec3(0.04f);
+
+    // environment map
+    SG_ID env_map_id;
+    SG_Sampler env_map_sampler;
+    SG_ID skybox_material_id;
 };
 
 struct SG_Scene : public SG_Transform {
@@ -272,6 +278,11 @@ struct SG_Scene : public SG_Transform {
     static void addLight(SG_Scene* scene, SG_ID light_id);
     static void removeLight(SG_Scene* scene, SG_ID light_id);
     static SG_Light* getLight(SG_Scene* scene, u32 idx);
+
+    // envmap methods
+    static void setEnvMap(SG_Scene* scene, SG_Texture* env_map);
+    static void setEnvMapSampler(SG_Scene* scene, SG_Sampler sampler);
+    static void setSkyboxMaterial(SG_Scene* scene, SG_Material* skybox_material);
 };
 
 // ============================================================================
@@ -365,6 +376,11 @@ struct SG_Geometry : SG_Component {
 // SG_Shader
 // ============================================================================
 
+struct SG_ShaderIncludes {
+    bool lit;          // if true, renderer will pass lighting storage buffer
+    bool uses_env_map; // if true, renderer will pass env map texture
+};
+
 struct SG_Shader : SG_Component {
     const char* vertex_string_owned;
     const char* fragment_string_owned;
@@ -377,7 +393,7 @@ struct SG_Shader : SG_Component {
     const char* compute_filepath_owned;
 
     // material properties
-    bool lit; // if true, renderer will pass lighting storage buffer
+    SG_ShaderIncludes includes;
 };
 
 // ============================================================================
@@ -396,7 +412,8 @@ struct SG_Shader : SG_Component {
     X(SG_MATERIAL_PHONG, "PhongMaterial")                                              \
     X(SG_MATERIAL_PBR, "PBRMaterial")                                                  \
     X(SG_MATERIAL_TEXT3D, "TextMaterial")                                              \
-    X(SG_MATERIAL_COMPUTE, "ComputeMaterial")
+    X(SG_MATERIAL_COMPUTE, "ComputeMaterial")                                          \
+    X(SG_MATERIAL_SKYBOX, "SkyboxMaterial")
 
 enum SG_MaterialType {
 #define X(name, str) name,
@@ -873,7 +890,7 @@ SG_Shader* SG_CreateShader(Chuck_Object* ckobj, const char* vertex_string,
                            const char* fragment_filepath,
                            WGPUVertexFormat* vertex_layout, int vertex_layout_len,
                            const char* compute_string, const char* compute_filepath,
-                           bool lit = false);
+                           SG_ShaderIncludes includes);
 
 SG_Material* SG_CreateMaterial(Chuck_Object* ckobj, SG_MaterialType material_type);
 SG_Mesh* SG_CreateMesh(Chuck_Object* ckobj, SG_Geometry* sg_geo, SG_Material* sg_mat);

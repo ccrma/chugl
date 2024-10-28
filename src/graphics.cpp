@@ -721,8 +721,8 @@ WGPUDepthStencilState G_createDepthStencilState(WGPUTextureFormat format,
     WGPUDepthStencilState depthStencilState = {};
     depthStencilState.depthWriteEnabled     = enableDepthWrite;
     depthStencilState.format                = format;
-    // WGPUCompareFunction_LessEqual vs Less ?
-    depthStencilState.depthCompare        = WGPUCompareFunction_Less;
+    // using WGPUCompareFunction_LessEqual so skybox is rendered correctly
+    depthStencilState.depthCompare        = WGPUCompareFunction_LessEqual;
     depthStencilState.stencilFront        = stencil;
     depthStencilState.stencilBack         = stencil;
     depthStencilState.stencilReadMask     = 0xFFFFFFFF;

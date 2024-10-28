@@ -653,7 +653,6 @@ static LoadImageResult R_Texture_LoadImage(const char* filepath,
                                         desired_comps       //
     );
     bool is_hdr             = false;
-    ASSERT(result.components == desired_comps);
 
     // update byte size
     if (result.pixel_data_OWNED) {
@@ -1348,6 +1347,18 @@ void R_Scene::initFromSG(GraphicsContext* gctx, R_Scene* r_scene, SG_ID scene_id
 // Render Pipeline Definitions
 // ============================================================================
 
+WGPUBindGroupLayout R_RenderPipeline::getBindGroupLayout(R_RenderPipeline* pipeline,
+                                                         u32 index)
+{
+    // lazy evaluation
+    ASSERT(index <= 3);
+    if (pipeline->_bind_group_layouts[index] == NULL) {
+        pipeline->_bind_group_layouts[index]
+          = wgpuRenderPipelineGetBindGroupLayout(pipeline->gpu_pipeline, index);
+    }
+    return pipeline->_bind_group_layouts[index];
+}
+
 void R_RenderPipeline::init(GraphicsContext* gctx, R_RenderPipeline* pipeline,
                             const SG_MaterialPipelineState* config,
                             int msaa_sample_count)
@@ -1431,18 +1442,6 @@ void R_RenderPipeline::init(GraphicsContext* gctx, R_RenderPipeline* pipeline,
     ASSERT(pipeline->gpu_pipeline);
 
     Arena::init(&pipeline->materialIDs, sizeof(SG_ID) * 8);
-
-    // cache the bind group layouts because apparently
-    // wgpuRenderPipelineGetBindGroupLayout freaking leaks...
-
-    for (int i = 0; i < 3; i++) {
-        pipeline->bind_group_layouts[i]
-          = wgpuRenderPipelineGetBindGroupLayout(pipeline->gpu_pipeline, i);
-        // note: we don't compute the pull bind group (@group(3)) here
-        // because not all pipelines use it, and calling this function with
-        // an index of 3 will crash if the pipeline doesn't have a group(3)
-        // instead we lazily evaluate and cache during the renderloop
-    }
 }
 
 /*
@@ -1959,7 +1958,7 @@ R_Shader* Component_CreateShader(GraphicsContext* gctx, SG_Command_ShaderCreate*
     R_Shader::init(gctx, shader, vertex_string, vertex_filepath, fragment_string,
                    fragment_filepath, cmd->vertex_layout,
                    ARRAY_LENGTH(cmd->vertex_layout), compute_string, compute_filepath,
-                   cmd->lit);
+                   &cmd->includes);
 
     // store offset
     R_Location loc
@@ -2375,6 +2374,11 @@ R_Component* Component_GetComponent(SG_ID id)
     return result ? (R_Component*)Arena::get(result->arena, result->offset) : NULL;
 }
 
+WGPUSampler Component_GetSampler(GraphicsContext* gctx, SG_Sampler sampler)
+{
+    return Graphics_GetSampler(gctx, samplerConfigFromSGSampler(sampler));
+}
+
 R_Transform* Component_GetXform(SG_ID id)
 {
     R_Component* comp = Component_GetComponent(id);
@@ -2547,6 +2551,8 @@ R_RenderPipeline* Component_GetPipeline(GraphicsContext* gctx,
     u64 pipelineOffset = Arena::offsetOf(&_RenderPipelineArena, rPipeline);
     R_RenderPipeline::init(gctx, rPipeline, pso);
 
+    log_trace("creating new pipeline %d", rPipeline->rid);
+
     ASSERT(!hashmap_get(_RenderPipelineMap, &rPipeline->rid))
     RenderPipelineIDTableItem new_ri_item = { rPipeline->rid, pipelineOffset };
     hashmap_set(_RenderPipelineMap, &new_ri_item);
@@ -2559,7 +2565,15 @@ R_RenderPipeline* Component_GetPipeline(GraphicsContext* gctx,
 
 R_RenderPipeline* Component_GetPipeline(R_ID rid)
 {
-    return (R_RenderPipeline*)hashmap_get(_RenderPipelineMap, &rid);
+    RenderPipelineIDTableItem* rp_item
+      = (RenderPipelineIDTableItem*)hashmap_get(_RenderPipelineMap, &rid);
+    if (!rp_item) return NULL;
+    R_RenderPipeline* pipeline
+      = (R_RenderPipeline*)Arena::get(&_RenderPipelineArena, rp_item->pipeline_offset);
+    // make sure it's been initialized
+    ASSERT(pipeline->rid == rid);
+    ASSERT(pipeline->gpu_pipeline);
+    return pipeline;
 }
 
 // =============================================================================
@@ -2570,9 +2584,9 @@ void R_Shader::init(GraphicsContext* gctx, R_Shader* shader, const char* vertex_
                     const char* vertex_filepath, const char* fragment_string,
                     const char* fragment_filepath, WGPUVertexFormat* vertex_layout,
                     int vertex_layout_count, const char* compute_string,
-                    const char* compute_filepath, bool lit)
+                    const char* compute_filepath, SG_ShaderIncludes* includes)
 {
-    shader->lit = lit;
+    shader->includes = *includes;
 
     char vertex_shader_label[32] = {};
     snprintf(vertex_shader_label, sizeof(vertex_shader_label), "vertex shader %d",

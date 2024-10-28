@@ -693,7 +693,7 @@ void CQ_PushCommand_ShaderCreate(SG_Shader* shader)
     memcpy(command->vertex_layout, shader->vertex_layout,
            sizeof(shader->vertex_layout));
 
-    command->lit = shader->lit;
+    command->includes = shader->includes;
 
     END_COMMAND();
 }

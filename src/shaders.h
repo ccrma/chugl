@@ -52,14 +52,17 @@ struct ShaderEntry {
 // #define INTERPOLATE(var) STRINGIFY(${##var##})
 
 struct FrameUniforms {
-    glm::mat4x4 projection;  // at byte offset 0
-    glm::mat4x4 view;        // at byte offset 64
-    glm::vec3 camera_pos;    // at byte offset 128
-    float time;              // at byte offset 140
-    glm::vec3 ambient_light; // at byte offset 144
-    int32_t num_lights;      // at byte offset 156
+    glm::mat4x4 projection;                             // at byte offset 0
+    glm::mat4x4 view;                                   // at byte offset 64
+    glm::mat4x4 projection_view_inverse_no_translation; // at byte offset 128
+    glm::vec3 camera_pos;                               // at byte offset 192
+    float time;                                         // at byte offset 204
+    // TODO move ambient light to lighting uniforms
+    glm::vec3 ambient_light;    // at byte offset 208
+    int32_t num_lights;         // at byte offset 220
+    glm::vec4 background_color; // at byte offset 224
 
-    float _pad[256]; // padding to reach webgpu minimum buffer size requirement
+    float _pad[176]; // padding to reach webgpu minimum buffer size requirement
 };
 
 struct LightUniforms {
@@ -94,17 +97,19 @@ static std::unordered_map<std::string, std::string> shader_table = {
         struct FrameUniforms {
             projection: mat4x4f,
             view: mat4x4f,
+            projection_view_inverse_no_translation: mat4x4f,
             camera_pos: vec3f,
             time: f32,
             ambient_light: vec3f,
             num_lights: i32,
+            background_color: vec4f,
         };
 
         @group(0) @binding(0) var<uniform> u_frame: FrameUniforms;
 
         )glsl"
     },
-    {
+    { // for dynamic lights only
         "LIGHTING_UNIFORMS",
         R"glsl(
 
@@ -130,6 +135,12 @@ static std::unordered_map<std::string, std::string> shader_table = {
 
         @group(0) @binding(1) var<storage, read> u_lights: array<LightUniforms>;
 
+        )glsl"
+    },
+    { // for environment mapping
+        "ENVIRONMENT_MAP_UNIFORMS",
+        R"glsl(
+        @group(0) @binding(2) var u_envmap: texture_cube<f32>;
         )glsl"
     },
     {
@@ -1559,39 +1570,103 @@ fn main(
 // Skybox shader -------------------------
 
 const char* skybox_shader_string = R"glsl(
-    struct Uniforms {
-        viewDirectionProjectionInverse: mat4x4f,
-        // TODO: add scene bg color?
-    };
-    
+    #include FRAME_UNIFORMS
+    #include ENVIRONMENT_MAP_UNIFORMS
+
+    // need at least 1 binding so getBindGroupLayout doesn't crash...
+    @group(1) @binding(0) var u_envmap_sampler: sampler;
+
     struct VSOutput {
         @builtin(position) position: vec4f,
         @location(0) pos: vec4f,
+        // @location(0) v_skybox_normal: vec3f,
     };
-    
-    @group(0) @binding(0) var<uniform> uni: Uniforms;
-    @group(0) @binding(1) var ourSampler: sampler;
-    @group(0) @binding(2) var ourTexture: texture_cube<f32>;
+
+    var<private> pos : array<vec2f, 3> = array(
+        vec2f(-1, 3),
+        vec2f(-1,-1),
+        vec2f( 3,-1),
+    );
+
+    // var<private> skybox_positions : array<vec3f, 36> = array(
+    //     vec3f(-1.0f,  1.0f, -1.0f),
+    //     vec3f(-1.0f, -1.0f, -1.0f),
+    //     vec3f(1.0f, -1.0f, -1.0f),
+    //     vec3f(1.0f, -1.0f, -1.0f),
+    //     vec3f(1.0f,  1.0f, -1.0f),
+    //     vec3f(-1.0f,  1.0f, -1.0f),
+
+    //     vec3f(-1.0f, -1.0f,  1.0f),
+    //     vec3f(-1.0f, -1.0f, -1.0f),
+    //     vec3f(-1.0f,  1.0f, -1.0f),
+    //     vec3f(-1.0f,  1.0f, -1.0f),
+    //     vec3f(-1.0f,  1.0f,  1.0f),
+    //     vec3f(-1.0f, -1.0f,  1.0f),
+
+    //     vec3f(1.0f, -1.0f, -1.0f),
+    //     vec3f(1.0f, -1.0f,  1.0f),
+    //     vec3f(1.0f,  1.0f,  1.0f),
+    //     vec3f(1.0f,  1.0f,  1.0f),
+    //     vec3f(1.0f,  1.0f, -1.0f),
+    //     vec3f(1.0f, -1.0f, -1.0f),
+
+    //     vec3f(-1.0f, -1.0f,  1.0f),
+    //     vec3f(-1.0f,  1.0f,  1.0f),
+    //     vec3f(1.0f,  1.0f,  1.0f),
+    //     vec3f(1.0f,  1.0f,  1.0f),
+    //     vec3f(1.0f, -1.0f,  1.0f),
+    //     vec3f(-1.0f, -1.0f,  1.0f),
+
+    //     vec3f(-1.0f,  1.0f, -1.0f),
+    //     vec3f(1.0f,  1.0f, -1.0f),
+    //     vec3f(1.0f,  1.0f,  1.0f),
+    //     vec3f(1.0f,  1.0f,  1.0f),
+    //     vec3f(-1.0f,  1.0f,  1.0f),
+    //     vec3f(-1.0f,  1.0f, -1.0f),
+
+    //     vec3f(-1.0f, -1.0f, -1.0f),
+    //     vec3f(-1.0f, -1.0f,  1.0f),
+    //     vec3f(1.0f, -1.0f, -1.0f),
+    //     vec3f(1.0f, -1.0f, -1.0f),
+    //     vec3f(-1.0f, -1.0f,  1.0f),
+    //     vec3f(1.0f, -1.0f,  1.0f)
+    // );
+
+    fn srgbToLinear(c : vec4f) -> vec4f {
+        return vec4f(
+            pow(c.r, 2.2),
+            pow(c.g, 2.2),
+            pow(c.b, 2.2),
+            c.a
+        );
+    }
     
     @vertex 
-    fn vs_main(@builtin(vertex_index) vNdx: u32) -> VSOutput {
-        let pos = array(
-            vec2f(-1, 3),
-            vec2f(-1,-1),
-            vec2f( 3,-1),
-        );
-        var vsOut: VSOutput;
-        vsOut.position = vec4f(pos[vNdx], 1, 1);
-        vsOut.pos = vsOut.position;
-        return vsOut;
+    fn vs_main(@builtin(vertex_index) vertexIndex: u32) -> VSOutput {
+        var output : VSOutput;
+        output.position = vec4f(pos[vertexIndex], 1, 1);
+        output.pos = output.position;
+
+        // output.v_skybox_normal = skybox_positions[vertexIndex];
+        // var position = u_frame.projection * u_frame.view * vec4f(output.v_skybox_normal, 1.0);
+        // position.z = position.w;  // force z to be 1.0 after perspective division
+        // output.position = position;
+
+        return output;
     }
 
     @fragment
     fn fs_main(vsOut: VSOutput) -> @location(0) vec4f {
-        let t = uni.viewDirectionProjectionInverse * vsOut.pos;
-        return textureSample(ourTexture, ourSampler, normalize(t.xyz / t.w) * vec3f(1, 1, -1));
+        let t = u_frame.projection_view_inverse_no_translation * vsOut.pos;
+        var normal = normalize(t.xyz / t.w) * vec3f(1, 1, -1);
+        return u_frame.background_color * srgbToLinear(textureSample(u_envmap, u_envmap_sampler, normal));
+
+        // let tmp = textureSample(u_envmap, u_envmap_sampler, normalize(t.xyz / t.w) * vec3f(1, 1, -1));
+        // return vec4f(1.0);
+
+        // let color = u_frame.background_color * srgbToLinear(textureSample(u_envmap, u_envmap_sampler, vsOut.v_skybox_normal));
+        // return color;
     }
-    
 )glsl";
 
 // clang-format on

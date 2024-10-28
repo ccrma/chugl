@@ -538,7 +538,7 @@ CK_DLL_QUERY(ChuGL)
         float default_cubemap_data[4 * 6] = {};
         for (int i = 0; i < 6; i++) {
             default_cubemap_data[i * 4 + 0] = 1.0f;
-            default_cubemap_data[i * 4 + 1] = 0.0f;
+            default_cubemap_data[i * 4 + 1] = 1.0f;
             default_cubemap_data[i * 4 + 2] = 1.0f;
             default_cubemap_data[i * 4 + 3] = 1.0f;
         }
@@ -570,10 +570,10 @@ CK_DLL_QUERY(ChuGL)
     ulib_light_query(QUERY);
     ulib_imgui_query(QUERY);
     ulib_camera_query(QUERY);
-    ulib_gscene_query(QUERY);
     ulib_buffer_query(QUERY);
     ulib_geometry_query(QUERY);
     ulib_material_query(QUERY);
+    ulib_gscene_query(QUERY);
     ulib_mesh_query(QUERY);
     ulib_pass_query(QUERY);
     ulib_text_query(QUERY);
@@ -741,12 +741,20 @@ CK_DLL_QUERY(ChuGL)
     }
 
     { // Default components
-        // scene
+        // scene (TODO should all GScenes come with these default components?)
+        // currently if the user instantiates a GScene it will have nothing
         Chuck_Object* scene_ckobj
           = chugin_createCkObj(SG_CKNames[SG_COMPONENT_SCENE], true);
         SG_Scene* scene     = ulib_scene_create(scene_ckobj);
         gg_config.mainScene = scene->id;
         CQ_PushCommand_GG_Scene(scene);
+
+        // default skybox and envmap
+        SG_Material* skybox_material = ulib_material_create(SG_MATERIAL_SKYBOX, NULL);
+        SG_Scene::setSkyboxMaterial(scene, skybox_material);
+        // SG_Scene::setEnvMapSampler(scene, SG_SAMPLER_DEFAULT);
+        SG_Scene::setEnvMap(scene,
+                            SG_GetTexture(g_builtin_textures.default_cubemap_id));
 
         // default directional light
         Chuck_Object* dir_light_ckobj

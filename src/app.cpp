@@ -1228,6 +1228,72 @@ struct App {
     }
 };
 
+static void _R_ScenePassCreateAndBindFrameBindgroup(GraphicsContext* gctx,
+                                                    R_Scene* scene, R_Camera* camera,
+                                                    R_RenderPipeline* render_pipeline,
+                                                    WGPURenderPassEncoder render_pass,
+                                                    u64 fc)
+{
+    // camera frame uniform buffer needs to already be updated
+    ASSERT(camera->frame_uniform_buffer_fc == fc);
+
+    // TODO: try releasing the bindgroup immediately after setting
+    // if wgpu correctly refcounts, we don't need an Arena
+    static Arena frame_bind_group_arena{};
+    { // clear arena bind groups from previous call to _R_RenderScene
+        int num_bindgroups = ARENA_LENGTH(&frame_bind_group_arena, WGPUBindGroup);
+        for (int i = 0; i < num_bindgroups; i++) {
+            WGPUBindGroup bg
+              = *ARENA_GET_TYPE(&frame_bind_group_arena, WGPUBindGroup, i);
+            WGPU_RELEASE_RESOURCE(BindGroup, bg);
+        }
+        Arena::clear(&frame_bind_group_arena);
+    }
+
+    R_Shader* shader = Component_GetShader(render_pipeline->pso.sg_shader_id);
+
+    WGPUBindGroup* frame_bind_group
+      = ARENA_PUSH_ZERO_TYPE(&frame_bind_group_arena, WGPUBindGroup);
+    { // set frame uniforms
+        WGPUBindGroupEntry frame_group_entries[3] = {};
+        int entry_count = 1; // min 1 because we always have frame_uniforms for now
+
+        WGPUBindGroupEntry* frame_group_entry = &frame_group_entries[0];
+        frame_group_entry->binding            = 0;
+        frame_group_entry->buffer             = camera->frame_uniform_buffer.buf;
+        frame_group_entry->size               = camera->frame_uniform_buffer.size;
+
+        if (shader->includes.lit) {
+            WGPUBindGroupEntry* lighting_entry = &frame_group_entries[entry_count++];
+            lighting_entry->binding            = 1;
+            lighting_entry->buffer             = scene->light_info_buffer.buf;
+            lighting_entry->size               = MAX(scene->light_info_buffer.size, 1);
+        }
+
+        if (shader->includes.uses_env_map) {
+            R_Texture* envmap = Component_GetTexture(scene->sg_scene_desc.env_map_id);
+            ASSERT(envmap && envmap->gpu_texture_view)
+            WGPUBindGroupEntry* envmap_entry = &frame_group_entries[entry_count++];
+            envmap_entry->binding            = 2;
+            envmap_entry->textureView        = envmap->gpu_texture_view;
+        }
+
+        // create bind group
+        WGPUBindGroupDescriptor frameGroupDesc;
+        frameGroupDesc = {};
+        frameGroupDesc.layout
+          = R_RenderPipeline::getBindGroupLayout(render_pipeline, PER_FRAME_GROUP);
+        frameGroupDesc.entries    = frame_group_entries;
+        frameGroupDesc.entryCount = entry_count;
+
+        // layout:auto requires a bind group per pipeline
+        *frame_bind_group = wgpuDeviceCreateBindGroup(gctx->device, &frameGroupDesc);
+        ASSERT(*frame_bind_group);
+        wgpuRenderPassEncoderSetBindGroup(render_pass, PER_FRAME_GROUP,
+                                          *frame_bind_group, 0, NULL);
+    }
+}
+
 static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
                            WGPURenderPassEncoder render_pass)
 {
@@ -1241,17 +1307,6 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
     // update lights
     R_Scene::rebuildLightInfoBuffer(&app->gctx, scene, app->fc);
 
-    static Arena frame_bind_group_arena{};
-    { // clear arena bind groups from previous call to _R_RenderScene
-        int num_bindgroups = ARENA_LENGTH(&frame_bind_group_arena, WGPUBindGroup);
-        for (int i = 0; i < num_bindgroups; i++) {
-            WGPUBindGroup bg
-              = *ARENA_GET_TYPE(&frame_bind_group_arena, WGPUBindGroup, i);
-            WGPU_RELEASE_RESOURCE(BindGroup, bg);
-        }
-        Arena::clear(&frame_bind_group_arena);
-    }
-
     // update camera
     i32 width, height;
     glfwGetWindowSize(app->window, &width, &height);
@@ -1262,10 +1317,17 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
     FrameUniforms frameUniforms = {};
     frameUniforms.projection    = R_Camera::projectionMatrix(camera, aspect);
     frameUniforms.view          = R_Camera::viewMatrix(camera);
-    frameUniforms.camera_pos    = camera->_pos;
-    frameUniforms.time          = time;
-    frameUniforms.ambient_light = scene->sg_scene_desc.ambient_light;
-    frameUniforms.num_lights    = R_Scene::numLights(scene);
+
+    // remove translation component from view matrix
+    // so that skybox is always centered around camera
+    frameUniforms.projection_view_inverse_no_translation = glm::inverse(
+      frameUniforms.projection * glm::mat4(glm::mat3(frameUniforms.view)));
+
+    frameUniforms.camera_pos       = camera->_pos;
+    frameUniforms.time             = time;
+    frameUniforms.ambient_light    = scene->sg_scene_desc.ambient_light;
+    frameUniforms.num_lights       = R_Scene::numLights(scene);
+    frameUniforms.background_color = scene->sg_scene_desc.bg_color;
 
     // update frame-level uniforms (storing on camera because same scene can be
     // rendered from multiple camera angles) every camera belongs to a single scene,
@@ -1273,6 +1335,7 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
     bool frame_uniforms_recreated = GPU_Buffer::write(
       &app->gctx, &camera->frame_uniform_buffer, WGPUBufferUsage_Uniform,
       &frameUniforms, sizeof(frameUniforms));
+    camera->frame_uniform_buffer_fc = app->fc;
     ASSERT(!frame_uniforms_recreated);
 
     // ==optimize== to prevent sparseness, delete render state entries / arena ids
@@ -1299,50 +1362,14 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
 
         WGPURenderPipeline gpu_pipeline = render_pipeline->gpu_pipeline;
 
-        // ==optimize== cache layouts in R_RenderPipeline struct upon creation
-        WGPUBindGroupLayout perMaterialLayout
-          = render_pipeline->bind_group_layouts[PER_MATERIAL_GROUP];
-        WGPUBindGroupLayout perDrawLayout
-          = render_pipeline->bind_group_layouts[PER_DRAW_GROUP];
-
-        R_Shader* shader = Component_GetShader(render_pipeline->pso.sg_shader_id);
-
         // set shader
         // ==optimize== only set shader if we actually have anything to render
         wgpuRenderPassEncoderSetPipeline(render_pass, gpu_pipeline);
 
-        WGPUBindGroup* frame_bind_group
-          = ARENA_PUSH_ZERO_TYPE(&frame_bind_group_arena, WGPUBindGroup);
-        { // set frame uniforms
-            WGPUBindGroupEntry frame_group_entries[2] = {};
-
-            WGPUBindGroupEntry* frame_group_entry = &frame_group_entries[0];
-            frame_group_entry->binding            = 0;
-            // TODO remove pipeline->frame_uniform_buffer after adding chugl default
-            // camera
-            frame_group_entry->buffer = camera->frame_uniform_buffer.buf;
-            frame_group_entry->size   = camera->frame_uniform_buffer.size;
-
-            WGPUBindGroupEntry* lighting_entry = &frame_group_entries[1];
-            lighting_entry->binding            = 1;
-            lighting_entry->buffer             = scene->light_info_buffer.buf;
-            lighting_entry->size               = MAX(scene->light_info_buffer.size, 1);
-
-            // create bind group
-            WGPUBindGroupDescriptor frameGroupDesc;
-            frameGroupDesc = {};
-            frameGroupDesc.layout
-              = render_pipeline->bind_group_layouts[PER_FRAME_GROUP];
-            frameGroupDesc.entries    = frame_group_entries;
-            frameGroupDesc.entryCount = shader->lit ? 2 : 1;
-
-            // layout:auto requires a bind group per pipeline
-            *frame_bind_group
-              = wgpuDeviceCreateBindGroup(app->gctx.device, &frameGroupDesc);
-            ASSERT(*frame_bind_group);
-            wgpuRenderPassEncoderSetBindGroup(render_pass, PER_FRAME_GROUP,
-                                              *frame_bind_group, 0, NULL);
-        }
+        // bind per-frame bind group @group(0) (uniforms that are constant for the
+        // entire frame)
+        _R_ScenePassCreateAndBindFrameBindgroup(&app->gctx, scene, camera,
+                                                render_pipeline, render_pass, app->fc);
 
         // per-material render loop
         size_t material_idx    = 0;
@@ -1371,7 +1398,9 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
 
             // set per_material bind group
             // R_Shader* shader = Component_GetShader(r_material->pso.sg_shader_id);
-            R_Material::rebuildBindGroup(r_material, &app->gctx, perMaterialLayout);
+            R_Material::rebuildBindGroup(r_material, &app->gctx,
+                                         R_RenderPipeline::getBindGroupLayout(
+                                           render_pipeline, PER_MATERIAL_GROUP));
             ASSERT(r_material->bind_group);
 
             wgpuRenderPassEncoderSetBindGroup(render_pass, PER_MATERIAL_GROUP,
@@ -1385,8 +1414,10 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
                   = R_Scene::getPrimitive(scene, geo->id, r_material->id);
                 ASSERT(g2x->key.geo_id == geo->id && g2x->key.mat_id == r_material->id);
 
-                GeometryToXforms::rebuildBindGroup(&app->gctx, scene, g2x,
-                                                   perDrawLayout, &app->frameArena);
+                GeometryToXforms::rebuildBindGroup(
+                  &app->gctx, scene, g2x,
+                  R_RenderPipeline::getBindGroupLayout(render_pipeline, PER_DRAW_GROUP),
+                  &app->frameArena);
 
                 // check *after* rebuildBindGroup because some xform ids may be
                 // removed
@@ -1419,15 +1450,10 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
 
                 // set pulled vertex buffers (programmable vertex pulling)
                 if (R_Geometry::usesVertexPulling(geo)) {
-                    if (!render_pipeline->bind_group_layouts[VERTEX_PULL_GROUP]) {
-                        // lazily generate
-                        render_pipeline->bind_group_layouts[VERTEX_PULL_GROUP]
-                          = wgpuRenderPipelineGetBindGroupLayout(
-                            render_pipeline->gpu_pipeline, VERTEX_PULL_GROUP);
-                    }
                     R_Geometry::rebuildPullBindGroup(
                       &app->gctx, geo,
-                      render_pipeline->bind_group_layouts[VERTEX_PULL_GROUP]);
+                      R_RenderPipeline::getBindGroupLayout(render_pipeline,
+                                                           VERTEX_PULL_GROUP));
                     wgpuRenderPassEncoderSetBindGroup(render_pass, VERTEX_PULL_GROUP,
                                                       geo->pull_bind_group, 0, NULL);
                 }
@@ -1454,6 +1480,35 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
             } // foreach geometry
         } // foreach material
     } // foreach pipeline
+
+    { // skybox pass
+        R_Material* skybox_material
+          = Component_GetMaterial(scene->sg_scene_desc.skybox_material_id);
+        if (!skybox_material) goto post_skybox_pass;
+        R_RenderPipeline* skybox_pipeline
+          = Component_GetPipeline(skybox_material->pipelineID);
+        if (!skybox_pipeline) goto post_skybox_pass;
+        ASSERT(skybox_material->pipelineID == skybox_pipeline->rid);
+
+        wgpuRenderPassEncoderSetPipeline(render_pass, skybox_pipeline->gpu_pipeline);
+
+        // bind per-frame bind group @group(0)
+        _R_ScenePassCreateAndBindFrameBindgroup(&app->gctx, scene, camera,
+                                                skybox_pipeline, render_pass, app->fc);
+
+        R_Material::rebuildBindGroup(
+          skybox_material, &app->gctx,
+          R_RenderPipeline::getBindGroupLayout(skybox_pipeline, PER_MATERIAL_GROUP));
+        ASSERT(skybox_material->bind_group);
+
+        wgpuRenderPassEncoderSetBindGroup(render_pass, PER_MATERIAL_GROUP,
+                                          skybox_material->bind_group, 0, NULL);
+
+        wgpuRenderPassEncoderDraw(render_pass, 3, 1, 0, 0);
+        // wgpuRenderPassEncoderDraw(render_pass, 6 * 6, 1, 0, 0);
+    }
+post_skybox_pass:
+    return;
 }
 
 // TODO make sure switch statement is in correct order?

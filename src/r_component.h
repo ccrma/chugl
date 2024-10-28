@@ -361,13 +361,13 @@ struct R_Shader : public R_Component {
     WGPUVertexFormat vertex_layout[R_GEOMETRY_MAX_VERTEX_ATTRIBUTES];
 
     WGPUShaderModule compute_shader_module;
-    bool lit;
+    SG_ShaderIncludes includes;
 
     static void init(GraphicsContext* gctx, R_Shader* shader, const char* vertex_string,
                      const char* vertex_filepath, const char* fragment_string,
                      const char* fragment_filepath, WGPUVertexFormat* vertex_layout,
                      int vertex_layout_count, const char* compute_string,
-                     const char* compute_filepath, bool lit);
+                     const char* compute_filepath, SG_ShaderIncludes* includes);
 
     static void free(R_Shader* shader);
 };
@@ -473,7 +473,10 @@ struct R_Material : public R_Component {
 
 struct R_Camera : public R_Transform {
     SG_CameraParams params;
+
     GPU_Buffer frame_uniform_buffer;
+    u64 frame_uniform_buffer_fc; // frame count of last update, used to make sure buffer
+                                 // is only updated once per frame
 
     static glm::mat4 projectionMatrix(R_Camera* camera, f32 aspect)
     {
@@ -671,7 +674,12 @@ struct R_RenderPipeline /* NOT backed by SG_Component */ {
 
     Arena materialIDs; // array of SG_IDs
 
-    WGPUBindGroupLayout bind_group_layouts[4];
+    // cache the bind group layouts because apparently
+    // wgpuRenderPipelineGetBindGroupLayout freaking leaks...
+    WGPUBindGroupLayout _bind_group_layouts[4];
+    // lazily evaluate bind group layouts
+    static WGPUBindGroupLayout getBindGroupLayout(R_RenderPipeline* pipeline,
+                                                  u32 index);
 
     /*
     possible optimizations:
@@ -1064,6 +1072,7 @@ R_Video* Component_CreateVideo(GraphicsContext* gctx, SG_ID id, const char* file
 R_Webcam* Component_CreateWebcam(SG_Command_WebcamCreate* cmd);
 
 R_Component* Component_GetComponent(SG_ID id);
+WGPUSampler Component_GetSampler(GraphicsContext* gctx, SG_Sampler sampler);
 R_Transform* Component_GetXform(SG_ID id);
 R_Transform* Component_GetMesh(SG_ID id);
 R_Scene* Component_GetScene(SG_ID id);
@@ -1084,6 +1093,8 @@ R_Webcam* Component_GetWebcam(SG_ID id);
 // lazily created on-demand because of many possible shader variations
 R_RenderPipeline* Component_GetPipeline(GraphicsContext* gctx,
                                         SG_MaterialPipelineState* pso);
+
+// this version doesn't actually create the pipeline, just returns the existing one
 R_RenderPipeline* Component_GetPipeline(R_ID rid);
 
 // component iterators

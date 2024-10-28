@@ -140,6 +140,9 @@ struct chugl_MaterialBuiltinShaders {
     // compute shaders
     SG_ID bloom_downsample_shader_id;
     SG_ID bloom_upsample_shader_id;
+
+    // skybox shaders
+    SG_ID skybox_shader_id;
 };
 static chugl_MaterialBuiltinShaders g_material_builtin_shaders;
 

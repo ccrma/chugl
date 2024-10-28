@@ -1050,7 +1050,7 @@ SG_Shader* SG_CreateShader(Chuck_Object* ckobj, const char* vertex_string,
                            const char* fragment_filepath,
                            WGPUVertexFormat* vertex_layout, int vertex_layout_len,
                            const char* compute_string, const char* compute_filepath,
-                           bool lit)
+                           SG_ShaderIncludes includes)
 {
 #define NULL_TO_EMPTY(s) (s ? s : "")
     vertex_string     = NULL_TO_EMPTY(vertex_string);
@@ -1083,7 +1083,7 @@ SG_Shader* SG_CreateShader(Chuck_Object* ckobj, const char* vertex_string,
     shader->compute_string_owned   = strdup(compute_string);
     shader->compute_filepath_owned = strdup(compute_filepath);
 
-    shader->lit = lit;
+    shader->includes = includes;
 
     // store in map
     SG_Location loc = { shader->id, offset, arena };
@@ -1648,4 +1648,35 @@ SG_Light* SG_Scene::getLight(SG_Scene* scene, u32 idx)
     size_t numLights = ARENA_LENGTH(&scene->light_ids, SG_ID);
     if (idx >= numLights) return 0;
     return SG_GetLight(*ARENA_GET_TYPE(&scene->light_ids, SG_ID, idx));
+}
+
+void SG_Scene::setEnvMap(SG_Scene* scene, SG_Texture* env_map)
+{
+    ASSERT(env_map && env_map->desc.depth == 6);
+
+    // refcount new env map
+    SG_AddRef(env_map);
+
+    // deref old env map
+    SG_DecrementRef(scene->desc.env_map_id);
+
+    // update scene
+    scene->desc.env_map_id = env_map ? env_map->id : 0;
+}
+
+void SG_Scene::setEnvMapSampler(SG_Scene* scene, SG_Sampler sampler)
+{
+    scene->desc.env_map_sampler = sampler;
+}
+
+void SG_Scene::setSkyboxMaterial(SG_Scene* scene, SG_Material* skybox_material)
+{
+    // refcount new skybox material
+    SG_AddRef(skybox_material);
+
+    // deref old skybox material
+    SG_DecrementRef(scene->desc.skybox_material_id);
+
+    // update scene
+    scene->desc.skybox_material_id = skybox_material ? skybox_material->id : 0;
 }

@@ -47,6 +47,7 @@ static t_CKUINT shader_desc_vertex_layout_offset     = 0;
 static t_CKUINT shader_desc_compute_string_offset    = 0;
 static t_CKUINT shader_desc_compute_filepath_offset  = 0;
 static t_CKUINT shader_desc_is_lit                   = 0;
+static t_CKUINT shader_desc_uses_envmap              = 0;
 
 CK_DLL_CTOR(shader_ctor_default);
 CK_DLL_CTOR(shader_ctor);
@@ -56,6 +57,7 @@ CK_DLL_MFUN(shader_get_vertex_filepath);
 CK_DLL_MFUN(shader_get_fragment_filepath);
 CK_DLL_MFUN(shader_get_vertex_layout);
 CK_DLL_MFUN(shader_get_lit);
+CK_DLL_MFUN(shader_get_uses_envmap);
 
 CK_DLL_CTOR(material_ctor);
 CK_DLL_CTOR(material_ctor_with_shader);
@@ -214,6 +216,9 @@ CK_DLL_MFUN(pbr_material_set_mr_tex);
 CK_DLL_MFUN(pbr_material_get_emissive_tex);
 CK_DLL_MFUN(pbr_material_set_emissive_tex);
 
+// skybox ---------------------------------------------------------------------
+CK_DLL_CTOR(skybox_material_ctor);
+
 static_assert(sizeof(WGPUVertexFormat) == sizeof(int),
               "WGPUVertexFormat size mismatch");
 
@@ -305,7 +310,16 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
     shader_desc_is_lit = MVAR("int", "lit", false);
     DOC_VAR(
       "set to true if the shader is lit (uses lighting calculations). If set, the "
-      "renderer will pass in lighting information as part of the per-frame uniforms");
+      "renderer will pass in lighting information as part of the per-frame uniforms."
+      "you can access these in your shader via the `#include LIGHTING_UNIFORMS` "
+      "macro.");
+
+    shader_desc_uses_envmap = MVAR("int", "usesEnvMap", false);
+    DOC_VAR(
+      "set to true if the shader uses an environment map. If set, the renderer will "
+      "pass in the environment map (set on GG.scene().envMap()) as part of the "
+      "per-frame uniforms. You can access these in your shader via the `#include "
+      "ENVIRONMENT_MAP_UNIFORMS` macro.");
 
     END_CLASS();
 
@@ -373,6 +387,9 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
 
     MFUN(shader_get_lit, "int", "lit");
     DOC_FUNC("Get whether the shader is lit (uses lighting calculations).");
+
+    MFUN(shader_get_uses_envmap, "int", "usesEnvMap");
+    DOC_FUNC("Get whether the shader uses an environment map.");
 
     END_CLASS();
 
@@ -843,6 +860,16 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
         END_CLASS();
     }
 
+    { // SkyboxMaterial
+
+        BEGIN_CLASS(SG_MaterialTypeNames[SG_MATERIAL_SKYBOX],
+                    SG_CKNames[SG_COMPONENT_MATERIAL]);
+
+        CTOR(skybox_material_ctor);
+
+        END_CLASS();
+    }
+
     // initialize default components
     chugl_initDefaultMaterials();
 }
@@ -891,6 +918,10 @@ CK_DLL_CTOR(shader_ctor)
       OBJ_MEMBER_INT_ARRAY(shader_desc, shader_desc_vertex_layout_offset),
       (int*)vertex_layout, ARRAY_LENGTH(vertex_layout));
 
+    SG_ShaderIncludes includes = {};
+    includes.lit               = OBJ_MEMBER_INT(shader_desc, shader_desc_is_lit);
+    includes.uses_env_map      = OBJ_MEMBER_INT(shader_desc, shader_desc_uses_envmap);
+
     // create shader on audio side
     SG_Shader* shader = SG_CreateShader(
       SELF,
@@ -907,7 +938,7 @@ CK_DLL_CTOR(shader_ctor)
         OBJ_MEMBER_STRING(shader_desc, shader_desc_compute_string_offset)),
       API->object->str(
         OBJ_MEMBER_STRING(shader_desc, shader_desc_compute_filepath_offset)),
-      (bool)OBJ_MEMBER_INT(shader_desc, shader_desc_is_lit));
+      includes);
 
     // save component id
     OBJ_MEMBER_UINT(SELF, component_offset_id) = shader->id;
@@ -950,7 +981,13 @@ CK_DLL_MFUN(shader_get_vertex_layout)
 CK_DLL_MFUN(shader_get_lit)
 {
     SG_Shader* shader = GET_SHADER(SELF);
-    RETURN->v_int     = (t_CKINT)shader->lit;
+    RETURN->v_int     = (t_CKINT)shader->includes.lit ? 1 : 0;
+}
+
+CK_DLL_MFUN(shader_get_uses_envmap)
+{
+    SG_Shader* shader = GET_SHADER(SELF);
+    RETURN->v_int     = (t_CKINT)shader->includes.uses_env_map ? 1 : 0;
 }
 
 // Material ===================================================================
@@ -1500,6 +1537,19 @@ static void ulib_material_init_uniforms_and_pso(SG_Material* material)
 
                 ulib_material_cq_update_all_uniforms(material);
             }
+        } break;
+        case SG_MATERIAL_SKYBOX: {
+            // init shader
+            SG_Shader* shader
+              = SG_GetShader(g_material_builtin_shaders.skybox_shader_id);
+            ASSERT(shader);
+
+            chugl_materialSetShader(material, shader);
+
+            // init uniforms
+            SG_Material::setSampler(material, 0,
+                                    SG_SAMPLER_DEFAULT); // envmap sampler
+            ulib_material_cq_update_all_uniforms(material);
         } break;
         default: ASSERT(false);
     }
@@ -2082,22 +2132,46 @@ CK_DLL_MFUN(pbr_material_set_emissive_tex)
     CQ_PushCommand_MaterialSetUniform(material, 5);
 }
 
+// SkyboxMaterial ===================================================================
+
+CK_DLL_CTOR(skybox_material_ctor)
+{
+    SG_Material* material   = GET_MATERIAL(SELF);
+    material->material_type = SG_MATERIAL_SKYBOX;
+
+    ulib_material_init_uniforms_and_pso(material);
+}
+
 // init default materials ========================================================
 
-static SG_ID
-chugl_createShader(CK_DL_API API, const char* vertex_string,
-                   const char* fragment_string, const char* vertex_filepath,
-                   const char* fragment_filepath, WGPUVertexFormat* vertex_layout,
-                   int vertex_layout_count, const char* compute_string = "",
-                   const char* compute_filepath = "", bool lit = false)
+struct CHUGL_ShaderDesc {
+    const char* vertex_string     = "";
+    const char* fragment_string   = "";
+    const char* vertex_filepath   = "";
+    const char* fragment_filepath = "";
+    WGPUVertexFormat* vertex_layout;
+    int vertex_layout_count;
+    const char* compute_string   = "";
+    const char* compute_filepath = "";
+    bool lit         = false; // if true, renderer will bind dynamic light uniforms
+    bool uses_envmap = false; // if true, renderer will bind envmap uniforms
+};
+
+static SG_ID chugl_createShader(CHUGL_ShaderDesc* shader_desc)
 {
+    CK_DL_API API = g_chuglAPI;
     Chuck_Object* shader_ckobj
       = chugin_createCkObj(SG_CKNames[SG_COMPONENT_SHADER], true);
 
     // create shader on audio side
-    SG_Shader* shader = SG_CreateShader(
-      shader_ckobj, vertex_string, fragment_string, vertex_filepath, fragment_filepath,
-      vertex_layout, vertex_layout_count, compute_string, compute_filepath, lit);
+    SG_ShaderIncludes includes = {};
+    includes.lit               = shader_desc->lit;
+    includes.uses_env_map      = shader_desc->uses_envmap;
+    SG_Shader* shader          = SG_CreateShader(
+      shader_ckobj, shader_desc->vertex_string, shader_desc->fragment_string,
+      shader_desc->vertex_filepath, shader_desc->fragment_filepath,
+      shader_desc->vertex_layout, shader_desc->vertex_layout_count,
+      shader_desc->compute_string, shader_desc->compute_filepath, includes);
 
     // save component id
     OBJ_MEMBER_UINT(shader_ckobj, component_offset_id) = shader->id;
@@ -2111,8 +2185,10 @@ chugl_createShader(CK_DL_API API, const char* vertex_string,
 static SG_ID chugl_createComputeShader(const char* compute_string,
                                        const char* compute_filepath)
 {
-    return chugl_createShader(g_chuglAPI, NULL, NULL, NULL, NULL, NULL, 0,
-                              compute_string, compute_filepath);
+    CHUGL_ShaderDesc desc = {};
+    desc.compute_string   = compute_string;
+    desc.compute_filepath = compute_filepath;
+    return chugl_createShader(&desc);
 }
 
 void chugl_initDefaultMaterials()
@@ -2130,18 +2206,42 @@ void chugl_initDefaultMaterials()
         WGPUVertexFormat_Sint32,    // glyph_index
     };
 
-    g_material_builtin_shaders.lines2d_shader_id = chugl_createShader(
-      g_chuglAPI, lines2d_shader_string, lines2d_shader_string, NULL, NULL, NULL, 0);
-    g_material_builtin_shaders.flat_shader_id = chugl_createShader(
-      g_chuglAPI, flat_shader_string, flat_shader_string, NULL, NULL,
-      standard_vertex_layout, ARRAY_LENGTH(standard_vertex_layout));
-    g_material_builtin_shaders.gtext_shader_id = chugl_createShader(
-      g_chuglAPI, gtext_shader_string, gtext_shader_string, NULL, NULL,
-      gtext_vertex_layout, ARRAY_LENGTH(gtext_vertex_layout));
+    {
+        CHUGL_ShaderDesc lines_2d_shader_desc = {};
+        lines_2d_shader_desc.vertex_string    = lines2d_shader_string;
+        lines_2d_shader_desc.fragment_string  = lines2d_shader_string;
+        g_material_builtin_shaders.lines2d_shader_id
+          = chugl_createShader(&lines_2d_shader_desc);
+    }
 
-    g_material_builtin_shaders.output_pass_shader_id
-      = chugl_createShader(g_chuglAPI, output_pass_shader_string,
-                           output_pass_shader_string, NULL, NULL, NULL, 0);
+    {
+        CHUGL_ShaderDesc flat_shader_desc    = {};
+        flat_shader_desc.vertex_string       = flat_shader_string;
+        flat_shader_desc.fragment_string     = flat_shader_string;
+        flat_shader_desc.vertex_layout       = standard_vertex_layout;
+        flat_shader_desc.vertex_layout_count = ARRAY_LENGTH(standard_vertex_layout);
+        g_material_builtin_shaders.flat_shader_id
+          = chugl_createShader(&flat_shader_desc);
+    }
+
+    {
+
+        CHUGL_ShaderDesc gtext_shader_desc    = {};
+        gtext_shader_desc.vertex_string       = gtext_shader_string;
+        gtext_shader_desc.fragment_string     = gtext_shader_string;
+        gtext_shader_desc.vertex_layout       = gtext_vertex_layout;
+        gtext_shader_desc.vertex_layout_count = ARRAY_LENGTH(gtext_vertex_layout);
+        g_material_builtin_shaders.gtext_shader_id
+          = chugl_createShader(&gtext_shader_desc);
+    }
+
+    {
+        CHUGL_ShaderDesc output_pass_shader_desc = {};
+        output_pass_shader_desc.vertex_string    = output_pass_shader_string;
+        output_pass_shader_desc.fragment_string  = output_pass_shader_string;
+        g_material_builtin_shaders.output_pass_shader_id
+          = chugl_createShader(&output_pass_shader_desc);
+    }
 
     g_material_builtin_shaders.bloom_downsample_shader_id
       = chugl_createComputeShader(bloom_downsample_shader_string, NULL);
@@ -2149,40 +2249,91 @@ void chugl_initDefaultMaterials()
     g_material_builtin_shaders.bloom_upsample_shader_id
       = chugl_createComputeShader(bloom_upsample_shader_string, NULL);
 
-    g_material_builtin_shaders.bloom_downsample_screen_shader_id
-      = chugl_createShader(g_chuglAPI, bloom_downsample_screen_shader,
-                           bloom_downsample_screen_shader, NULL, NULL, NULL, 0);
+    {
+        CHUGL_ShaderDesc bloom_downsample_screen_shader_desc = {};
+        bloom_downsample_screen_shader_desc.vertex_string
+          = bloom_downsample_screen_shader;
+        bloom_downsample_screen_shader_desc.fragment_string
+          = bloom_downsample_screen_shader;
 
-    g_material_builtin_shaders.bloom_upsample_screen_shader_id
-      = chugl_createShader(g_chuglAPI, bloom_upsample_screen_shader,
-                           bloom_upsample_screen_shader, NULL, NULL, NULL, 0);
+        g_material_builtin_shaders.bloom_downsample_screen_shader_id
+          = chugl_createShader(&bloom_downsample_screen_shader_desc);
+    }
 
-    // pbr material
-    g_material_builtin_shaders.pbr_shader_id = chugl_createShader(
-      g_chuglAPI, pbr_shader_string, pbr_shader_string, NULL, NULL,
-      standard_vertex_layout, ARRAY_LENGTH(standard_vertex_layout), NULL, NULL, true);
+    {
+        CHUGL_ShaderDesc bloom_upsample_screen_shader_desc = {};
+        bloom_upsample_screen_shader_desc.vertex_string = bloom_upsample_screen_shader;
+        bloom_upsample_screen_shader_desc.fragment_string
+          = bloom_upsample_screen_shader;
 
-    // uv material
-    g_material_builtin_shaders.uv_shader_id = chugl_createShader(
-      g_chuglAPI, uv_shader_string, uv_shader_string, NULL, NULL,
-      standard_vertex_layout, ARRAY_LENGTH(standard_vertex_layout), NULL, NULL, false);
+        g_material_builtin_shaders.bloom_upsample_screen_shader_id
+          = chugl_createShader(&bloom_upsample_screen_shader_desc);
+    }
 
-    // normal material
-    g_material_builtin_shaders.normal_shader_id = chugl_createShader(
-      g_chuglAPI, normal_shader_string, normal_shader_string, NULL, NULL,
-      standard_vertex_layout, ARRAY_LENGTH(standard_vertex_layout), NULL, NULL, false);
+    { // pbr material
+        CHUGL_ShaderDesc pbr_shader_desc         = {};
+        pbr_shader_desc.vertex_string            = pbr_shader_string;
+        pbr_shader_desc.fragment_string          = pbr_shader_string;
+        pbr_shader_desc.vertex_layout            = standard_vertex_layout;
+        pbr_shader_desc.vertex_layout_count      = ARRAY_LENGTH(standard_vertex_layout);
+        pbr_shader_desc.lit                      = true;
+        g_material_builtin_shaders.pbr_shader_id = chugl_createShader(&pbr_shader_desc);
+    }
 
-    // tangent material
-    g_material_builtin_shaders.tangent_shader_id = chugl_createShader(
-      g_chuglAPI, tangent_shader_string, tangent_shader_string, NULL, NULL,
-      standard_vertex_layout, ARRAY_LENGTH(standard_vertex_layout), NULL, NULL, false);
+    { // uv material
+        CHUGL_ShaderDesc uv_shader_desc         = {};
+        uv_shader_desc.vertex_string            = uv_shader_string;
+        uv_shader_desc.fragment_string          = uv_shader_string;
+        uv_shader_desc.vertex_layout            = standard_vertex_layout;
+        uv_shader_desc.vertex_layout_count      = ARRAY_LENGTH(standard_vertex_layout);
+        g_material_builtin_shaders.uv_shader_id = chugl_createShader(&uv_shader_desc);
+    }
 
-    // phong
-    g_material_builtin_shaders.phong_shader_id = chugl_createShader(
-      g_chuglAPI, phong_shader_string, phong_shader_string, NULL, NULL,
-      standard_vertex_layout, ARRAY_LENGTH(standard_vertex_layout), NULL, NULL, true);
+    { // normal material
+        CHUGL_ShaderDesc normal_shader_desc    = {};
+        normal_shader_desc.vertex_string       = normal_shader_string;
+        normal_shader_desc.fragment_string     = normal_shader_string;
+        normal_shader_desc.vertex_layout       = standard_vertex_layout;
+        normal_shader_desc.vertex_layout_count = ARRAY_LENGTH(standard_vertex_layout);
+        g_material_builtin_shaders.normal_shader_id
+          = chugl_createShader(&normal_shader_desc);
+    }
 
-    // points
-    g_material_builtin_shaders.points_shader_id = chugl_createShader(
-      g_chuglAPI, points_shader_string, points_shader_string, NULL, NULL, NULL, 0);
+    { // tangent material
+        CHUGL_ShaderDesc tangent_shader_desc    = {};
+        tangent_shader_desc.vertex_string       = tangent_shader_string;
+        tangent_shader_desc.fragment_string     = tangent_shader_string;
+        tangent_shader_desc.vertex_layout       = standard_vertex_layout;
+        tangent_shader_desc.vertex_layout_count = ARRAY_LENGTH(standard_vertex_layout);
+        g_material_builtin_shaders.tangent_shader_id
+          = chugl_createShader(&tangent_shader_desc);
+    }
+
+    { // phong material
+        CHUGL_ShaderDesc phong_shader_desc    = {};
+        phong_shader_desc.vertex_string       = phong_shader_string;
+        phong_shader_desc.fragment_string     = phong_shader_string;
+        phong_shader_desc.vertex_layout       = standard_vertex_layout;
+        phong_shader_desc.vertex_layout_count = ARRAY_LENGTH(standard_vertex_layout);
+        phong_shader_desc.lit                 = true;
+        g_material_builtin_shaders.phong_shader_id
+          = chugl_createShader(&phong_shader_desc);
+    }
+
+    { // points material
+        CHUGL_ShaderDesc points_shader_desc = {};
+        points_shader_desc.vertex_string    = points_shader_string;
+        points_shader_desc.fragment_string  = points_shader_string;
+        g_material_builtin_shaders.points_shader_id
+          = chugl_createShader(&points_shader_desc);
+    }
+
+    { // skybox material
+        CHUGL_ShaderDesc skybox_shader_desc = {};
+        skybox_shader_desc.vertex_string    = skybox_shader_string;
+        skybox_shader_desc.fragment_string  = skybox_shader_string;
+        skybox_shader_desc.uses_envmap      = true;
+        g_material_builtin_shaders.skybox_shader_id
+          = chugl_createShader(&skybox_shader_desc);
+    }
 }

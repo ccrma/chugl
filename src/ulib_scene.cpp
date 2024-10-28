@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -46,6 +46,12 @@ CK_DLL_MFUN(gscene_get_ambient_light);
 
 CK_DLL_MFUN(gscene_get_default_light);
 CK_DLL_MFUN(gscene_get_lights);
+
+CK_DLL_MFUN(gscene_set_environment_map);
+CK_DLL_MFUN(gscene_get_environment_map);
+
+CK_DLL_MFUN(gscene_set_skybox_material);
+CK_DLL_MFUN(gscene_get_skybox_material);
 
 SG_Scene* ulib_scene_create(Chuck_Object* ckobj)
 {
@@ -105,6 +111,27 @@ static void ulib_gscene_query(Chuck_DL_Query* QUERY)
 
     MFUN(gscene_get_lights, "GLight[]", "lights");
     DOC_FUNC("Get array of all lights in the scene");
+
+    MFUN(gscene_set_environment_map, "void", "envMap");
+    ARG(SG_CKNames[SG_COMPONENT_TEXTURE], "envMap");
+    DOC_FUNC(
+      "Set the environment map of the scene. By default this used as a skybox and for "
+      "environment lighting calculations on lit materials (PhongMaterial supported, "
+      "PBRMaterial not yet supported). The environment color will be multiplied by the "
+      "background color.");
+
+    MFUN(gscene_get_environment_map, SG_CKNames[SG_COMPONENT_TEXTURE], "envMap");
+    DOC_FUNC("Get the environment map of the scene");
+
+    MFUN(gscene_set_skybox_material, "void", "skybox");
+    ARG(SG_CKNames[SG_COMPONENT_MATERIAL], "skybox");
+    DOC_FUNC(
+      "Set the skybox material of the scene. Will be used in the skybox pass and drawn "
+      "with NO bound vertex attribute buffers and a vertexCount of 6*6=36. The "
+      "default scene already includes an instance of SkyboxMaterial here");
+
+    MFUN(gscene_get_skybox_material, SG_CKNames[SG_COMPONENT_MATERIAL], "skybox");
+    DOC_FUNC("Get the skybox material of the scene");
 
     // end class -----------------------------------------------------
     QUERY->end_class(QUERY);
@@ -211,4 +238,42 @@ CK_DLL_MFUN(gscene_get_lights)
     }
 
     RETURN->v_object = (Chuck_Object*)light_ck_array;
+}
+
+CK_DLL_MFUN(gscene_set_environment_map)
+{
+    SG_Scene* scene      = SG_GetScene(OBJ_MEMBER_UINT(SELF, component_offset_id));
+    Chuck_Object* ck_tex = GET_NEXT_OBJECT(
+      ARGS); // SG_GetTexture(OBJ_MEMBER_UINT(ck_tex, component_offset_id));
+
+    SG_Texture* tex = ck_tex ?
+                        SG_GetTexture(OBJ_MEMBER_UINT(ck_tex, component_offset_id)) :
+                        SG_GetTexture(g_builtin_textures.default_cubemap_id);
+
+    SG_Scene::setEnvMap(scene, tex);
+    CQ_PushCommand_SceneUpdate(scene);
+}
+
+CK_DLL_MFUN(gscene_get_environment_map)
+{
+    SG_Scene* scene  = SG_GetScene(OBJ_MEMBER_UINT(SELF, component_offset_id));
+    SG_Texture* tex  = SG_GetTexture(scene->desc.env_map_id);
+    RETURN->v_object = tex ? tex->ckobj : NULL;
+}
+
+CK_DLL_MFUN(gscene_set_skybox_material)
+{
+    SG_Scene* scene      = SG_GetScene(OBJ_MEMBER_UINT(SELF, component_offset_id));
+    Chuck_Object* ck_mat = GET_NEXT_OBJECT(ARGS);
+    SG_Material* mat
+      = ck_mat ? SG_GetMaterial(OBJ_MEMBER_UINT(ck_mat, component_offset_id)) : NULL;
+    SG_Scene::setSkyboxMaterial(scene, mat);
+    CQ_PushCommand_SceneUpdate(scene);
+}
+
+CK_DLL_MFUN(gscene_get_skybox_material)
+{
+    SG_Scene* scene  = SG_GetScene(OBJ_MEMBER_UINT(SELF, component_offset_id));
+    SG_Material* mat = SG_GetMaterial(scene->desc.skybox_material_id);
+    RETURN->v_object = mat ? mat->ckobj : NULL;
 }

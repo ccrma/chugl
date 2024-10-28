@@ -6,6 +6,7 @@ T.assert(shader_desc.vertexPath == "", "shader desc vertexPath");
 T.assert(shader_desc.fragmentPath == "", "shader desc fragmentPath");
 T.assert(T.arrayEquals(shader_desc.vertexLayout, [VertexFormat.Float3, VertexFormat.Float3, VertexFormat.Float2, VertexFormat.Float4]), "shader desc default vertexLayout");
 T.assert(!shader_desc.lit, "shader desc lit");
+T.assert(!shader_desc.usesEnvMap, "shader desc usesEnvmap");
 
 "vertex_string" => shader_desc.vertexCode;
 "fragment_string" => shader_desc.fragmentCode;
@@ -13,6 +14,7 @@ T.assert(!shader_desc.lit, "shader desc lit");
 "fragment_filepath" => shader_desc.fragmentPath;
 [1,2,3,4,5,6,7,8] @=> shader_desc.vertexLayout;
 true => shader_desc.lit;
+true => shader_desc.usesEnvMap;
 
 // Shader shader; // default constructor not allowed
 Shader shader(shader_desc);
@@ -22,6 +24,7 @@ T.assert(shader.fragmentPath() == shader_desc.fragmentPath, "shader fragmentPath
 T.assert(shader.vertexPath() == shader_desc.vertexPath, "shader vertexPath");
 T.assert(T.arrayEquals(shader.vertexLayout(), shader_desc.vertexLayout), "shader vertexLayout");
 T.assert(shader.lit(), "shader lit");
+T.assert(shader.usesEnvMap(), "shader usesEnvMap");
 
 ShaderDesc shader_desc2;
 null @=> shader_desc2.vertexLayout;
@@ -32,6 +35,7 @@ T.assert(shader2.fragmentPath() == shader_desc2.fragmentPath, "shader2 fragmentP
 T.assert(shader2.vertexPath() == shader_desc2.vertexPath, "shader2 vertexPath");
 T.assert(T.arrayEquals(shader2.vertexLayout(), [0,0,0,0,0,0,0,0]), "shader2 vertexLayout");
 T.assert(!shader2.lit(), "shader2 lit");
+T.assert(!shader2.usesEnvMap(), "shader2 usesEnvMap");
 
 Material material;
 

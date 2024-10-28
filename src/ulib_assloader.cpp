@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -46,13 +46,14 @@ CK_DLL_SFUN(assloader_load_obj_flip_y);
 static void logRapidobjError(const rapidobj::Error& error, const char* filepath)
 {
     log_warn("Could not load OBJ model \"%s\": %s", filepath,
-              error.code.message().c_str());
+             error.code.message().c_str());
     if (!error.line.empty()) {
         log_warn("On line %d: \"%s\"", error.line_num, error.line.c_str());
     }
 }
 
 // used to track geometries per material id during OBJ loading
+// currently unused
 static hashmap* ulib_assloader_mat2geo_map = NULL;
 struct AssloaderMat2GeoItem {
     SG_ID mat_id; // key
@@ -292,7 +293,7 @@ static SG_Transform* ulib_assloader_load_obj(const char* filepath,
 
             // copy normals
             if (index.normal_index < 0) {
-                missing_normals = false;
+                missing_normals = true;
             } else {
                 float* norm = &result.attributes.normals[index.normal_index * 3];
                 normals->x  = norm[0];

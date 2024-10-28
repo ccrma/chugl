@@ -393,7 +393,8 @@ struct SG_Command_ShaderCreate : public SG_Command {
     ptrdiff_t compute_string_offset;
     ptrdiff_t compute_filepath_offset;
     WGPUVertexFormat vertex_layout[SG_GEOMETRY_MAX_VERTEX_ATTRIBUTES];
-    bool lit;
+
+    SG_ShaderIncludes includes;
 };
 
 struct SG_Command_MaterialCreate : public SG_Command {
