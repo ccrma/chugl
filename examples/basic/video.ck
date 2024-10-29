@@ -3,7 +3,7 @@
 // desc: Video playback example. Currently only supports the MPEG1 video and 
 // MP2 audio.
 // To run, download and place this music video in the same directory: 
-// https://ccrma.stanford.edu/~azaday/music/bjork-all-is-love.mpg
+// https://ccrma.stanford.edu/~azaday/music/bjork-all-is-full-of-love.mpg
 //
 // authors: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
 //
