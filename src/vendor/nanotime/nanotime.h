@@ -400,8 +400,8 @@ uint64_t nanotime_now() {
 #include <errno.h>
 void nanotime_sleep(uint64_t nsec_count) {
 	const struct timespec req = {
-		.tv_sec = (time_t)(nsec_count / NANOTIME_NSEC_PER_SEC),
-		.tv_nsec = (long)(nsec_count % NANOTIME_NSEC_PER_SEC)
+		(time_t)(nsec_count / NANOTIME_NSEC_PER_SEC),
+		(long)(nsec_count % NANOTIME_NSEC_PER_SEC)
 	};
 	#ifndef NDEBUG
 	const int status =
