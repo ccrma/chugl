@@ -103,7 +103,9 @@ void ulib_video_query(Chuck_DL_Query* QUERY)
           "which "
           "will be updated synchronously with audio. For sample-accurate audio "
           "manipulation, we recommend controlling the audio data separately with "
-          "SndBuf.");
+          "SndBuf. You can convert videos to the MPEG format with the following "
+          "command-line ffmpeg command: `ffmpeg -i input.mp4 -c:v mpeg1video -q:v 0 "
+          "-c:a mp2 -format mpeg output.mpg`");
         ADD_EX("basic/video.ck");
 
         QUERY->add_ugen_funcf(QUERY, video_tick_multichannel, NULL,
