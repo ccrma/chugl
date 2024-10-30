@@ -577,8 +577,21 @@ CK_DLL_MFUN(video_seek)
 // webcam
 // =================================================================================================
 
+// currently unsupported on linux.
+// logs warning if Webcam constructor is called on linux
+static void ulib_webcam_validate()
+{
+#if defined(_WIN32)
+#elif defined(__APPLE__)
+#elif defined(__EMSCRIPTEN__)
+#else /* anything else, this will need more care for non-Linux platforms */
+    log_warn("Webcam is not supported on this platform");
+#endif
+}
+
 CK_DLL_CTOR(webcam_ctor)
 {
+    ulib_webcam_validate();
     // SG_CreateWebcam(SELF, SHRED, 0, 640, 480, 60);
     // default to really high resolution (should fallback to largest supported)
     SG_CreateWebcam(SELF, SHRED, 0, 4096, 4096, 60);
@@ -586,12 +599,14 @@ CK_DLL_CTOR(webcam_ctor)
 
 CK_DLL_CTOR(webcam_ctor_with_device_id)
 {
+    ulib_webcam_validate();
     int device_id = GET_NEXT_INT(ARGS);
     SG_CreateWebcam(SELF, SHRED, device_id, 640, 480, 60);
 }
 
 CK_DLL_CTOR(webcam_ctor_with_device_id_and_format)
 {
+    ulib_webcam_validate();
     int device_id = GET_NEXT_INT(ARGS);
     int width     = GET_NEXT_INT(ARGS);
     int height    = GET_NEXT_INT(ARGS);
