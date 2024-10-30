@@ -58,7 +58,7 @@
 // clang-format on
 
 // ChuGL version string
-#define CHUGL_VERSION_STRING "0.2.2 (alpha)"
+#define CHUGL_VERSION_STRING "0.2.3 (alpha)"
 
 // metadata required for scene rendering
 struct GG_Config {
