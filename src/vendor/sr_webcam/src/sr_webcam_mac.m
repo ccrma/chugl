@@ -28,7 +28,8 @@
 	int _framerate;
 }
 
-- (BOOL)setupWithID:(int)deviceID rate:(int)framerate width:(int)w height:(int)h;
+- (BOOL)setupWithID:(int)deviceID rate:(int)framerate width:(int)w height:(int)h device_name:(char*)device_name device_name_length:(int)device_name_length;
+
 - (void)start;
 - (void)stop;
 
@@ -52,7 +53,7 @@
 	return self;
 }
 
-- (BOOL)setupWithID:(int)deviceID rate:(int)framerate width:(int)w height:(int)h {
+- (BOOL)setupWithID:(int)deviceID rate:(int)framerate width:(int)w height:(int)h device_name:(char*)device_name device_name_length:(int)device_name_length {
 	// List available devices
 	NSArray* devices;
 	NSArray* deviceTypes;
@@ -82,6 +83,10 @@
 	devices = [devices sortedArrayUsingDescriptors:@[[NSSortDescriptor sortDescriptorWithKey:@"uniqueID" ascending:YES]]];
 	_id			   = MIN(deviceID, (int)([devices count]) - 1);
 	_captureDevice = [devices objectAtIndex:_id];
+
+	// store the localized name as device name
+	const char* multibyte_name = [_captureDevice.localizedName UTF8String];
+	strncpy(device_name, multibyte_name, device_name_length);
 
 	// for each device in the devices array
 	// for(AVCaptureDevice* device in devices) {
@@ -303,7 +308,7 @@ int sr_webcam_open(sr_webcam_device* device) {
 	}
 	SRWebcamVideoStream* stream = [[SRWebcamVideoStream alloc] init];
 	stream->_parent				= device;
-	BOOL res					= [stream setupWithID:device->deviceId rate:device->framerate width:device->width height:device->height];
+	BOOL res					= [stream setupWithID:device->deviceId rate:device->framerate width:device->width height:device->height device_name:device->user_friendly_name device_name_length:sizeof(device->user_friendly_name)];
 	if(res == NO) {
 		device->stream = NULL;
 		return -1;

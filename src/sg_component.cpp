@@ -1424,7 +1424,8 @@ void SG_GC()
     // release all objects in read queue
     size_t count = ARENA_LENGTH(_gc_queue_read, SG_ID);
     for (size_t i = 0; i < count; i++) {
-        SG_Component* comp = ARENA_GET_TYPE(_gc_queue_read, SG_Component, i);
+        SG_ID comp_id      = *ARENA_GET_TYPE(_gc_queue_read, SG_ID, i);
+        SG_Component* comp = SG_GetComponent(comp_id);
         if (!comp) continue; // already deleted
         _ck_api->object->release(comp->ckobj);
     }
