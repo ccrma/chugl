@@ -77,6 +77,7 @@ GG_Config gg_config = {};
 
 static f64 ckdt_sec      = 0;
 static f64 system_dt_sec = 0;
+static App chugl_app     = {};
 
 t_CKBOOL chugl_main_loop_hook(void* bindle)
 {
@@ -84,17 +85,15 @@ t_CKBOOL chugl_main_loop_hook(void* bindle)
 
     ASSERT(g_chuglAPI && g_chuglVM);
 
-    App app = {};
-
-    App::init(&app, g_chuglVM, g_chuglAPI);
-    App::start(&app); // blocking
+    App::init(&chugl_app, g_chuglVM, g_chuglAPI);
+    App::start(&chugl_app); // blocking
 
     { // cleanup (after exiting main loop)
         // remove all shreds (should trigger shutdown, unless running in --loop
         // mode)
         if (g_chuglVM && g_chuglAPI) g_chuglAPI->vm->remove_all_shreds(g_chuglVM);
 
-        App::end(&app);
+        App::end(&chugl_app);
     }
 
     return true;

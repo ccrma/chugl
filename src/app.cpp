@@ -316,6 +316,7 @@ struct App {
         srand((unsigned int)time(0));
 
         { // Initialize window
+            glfwSetErrorCallback(_R_glfwErrorCallback);
             if (!glfwInit()) {
                 log_fatal("Failed to initialize GLFW\n");
                 return;
@@ -389,7 +390,6 @@ struct App {
         }
 
         { // set window callbacks
-            glfwSetErrorCallback(_R_glfwErrorCallback);
             glfwSetWindowUserPointer(app->window, app);
             glfwSetMouseButtonCallback(app->window, _mouseButtonCallback);
             glfwSetScrollCallback(app->window, _scrollCallback);
@@ -1701,7 +1701,7 @@ static void _R_HandleCommand(App* app, SG_Command* command)
             } else {
                 log_trace("setting custom cursor");
                 // create cursor
-                GLFWimage image;
+                GLFWimage image = {};
                 image.width  = cmd->width;
                 image.height = cmd->height;
                 image.pixels = (unsigned char*)CQ_ReadCommandGetOffset(
