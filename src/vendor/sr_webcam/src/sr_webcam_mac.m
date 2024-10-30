@@ -77,8 +77,23 @@
 	if([devices count] == 0 || deviceID < 0) {
 		return NO;
 	}
+
+	// sort devices by uniqueID
+	devices = [devices sortedArrayUsingDescriptors:@[[NSSortDescriptor sortDescriptorWithKey:@"uniqueID" ascending:YES]]];
 	_id			   = MIN(deviceID, (int)([devices count]) - 1);
 	_captureDevice = [devices objectAtIndex:_id];
+
+	// for each device in the devices array
+	// for(AVCaptureDevice* device in devices) {
+	// 	// log the device uniqueID
+	// 	NSLog(@"Device uniqueID: %@", [device uniqueID]);
+	// 	// log the device modelID
+	// 	NSLog(@"Device modelID: %@", [device modelID]);
+	// 	// log the device localizedName
+	// 	NSLog(@"Device localizedName: %@", [device localizedName]);
+	// 	// log the device manufacturer
+	// 	NSLog(@"Device manufacturer: %@", [device manufacturer]);
+	// }
 
 	// Setup the device.
 	NSError* err = nil;
