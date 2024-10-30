@@ -879,6 +879,7 @@ struct SG_Webcam : public SG_Component {
     int fps;
     bool freeze;
     bool capture = true;
+    char device_name[64];
 };
 
 // ============================================================================

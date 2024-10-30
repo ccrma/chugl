@@ -126,6 +126,7 @@
     "unordered_map": "cpp",
     "variant": "cpp",
     "vector": "cpp",
-    "algorithm": "cpp"
+    "algorithm": "cpp",
+    "sr_webcam_internal.h": "c"
   }
 }

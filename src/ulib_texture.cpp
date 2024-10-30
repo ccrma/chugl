@@ -307,6 +307,7 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
         ADD_EX("deep/game_of_life.ck");
         ADD_EX("deep/audio_donut.ck");
         ADD_EX("deep/snowstorm.ck");
+        ADD_EX("basic/skybox.ck");
 
         // svars ---------------
         static t_CKINT texture_usage_copy_src        = WGPUTextureUsage_CopySrc;

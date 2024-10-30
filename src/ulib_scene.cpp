@@ -75,6 +75,7 @@ static void ulib_gscene_query(Chuck_DL_Query* QUERY)
     DOC_CLASS(
       "Scene class. Static--all instances point to the same underlying ChuGL main "
       "scene. GGens must be added to a scene to be rendered.");
+    ADD_EX("basic/skybox.ck");
 
     QUERY->add_ctor(QUERY, gscene_ctor);
 

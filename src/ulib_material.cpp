@@ -768,6 +768,7 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
         BEGIN_CLASS(SG_MaterialTypeNames[SG_MATERIAL_PHONG],
                     SG_CKNames[SG_COMPONENT_MATERIAL]);
         DOC_CLASS("Phong specular shading model");
+        ADD_EX("basic/skybox.ck");
 
         CTOR(phong_material_ctor);
 

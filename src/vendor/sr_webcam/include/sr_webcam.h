@@ -12,7 +12,8 @@ typedef void (*sr_webcam_callback)(sr_webcam_device* device, void* data);
 
 int sr_webcam_create(sr_webcam_device** device, int deviceId);
 
-void sr_webcam_set_format(sr_webcam_device* device, int width, int height, int framerate);
+void sr_webcam_set_format(sr_webcam_device* device, int width, int height,
+                          int framerate);
 
 void sr_webcam_set_callback(sr_webcam_device* device, sr_webcam_callback callback);
 
@@ -25,6 +26,8 @@ void* sr_webcam_get_user(sr_webcam_device* device);
 void sr_webcam_get_dimensions(sr_webcam_device* device, int* width, int* height);
 
 void sr_webcam_get_framerate(sr_webcam_device* device, int* fps);
+
+const char* sr_webcam_get_user_friendly_name(sr_webcam_device* device);
 
 int sr_webcam_open(sr_webcam_device* device);
 

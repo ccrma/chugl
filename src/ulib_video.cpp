@@ -85,6 +85,7 @@ CK_DLL_MFUN(webcam_get_aspect);
 CK_DLL_MFUN(webcam_get_fps);
 CK_DLL_MFUN(webcam_get_texture);
 CK_DLL_MFUN(webcam_get_device_id);
+CK_DLL_MFUN(webcam_get_device_name);
 
 void ulib_video_query(Chuck_DL_Query* QUERY)
 {
@@ -249,6 +250,9 @@ void ulib_video_query(Chuck_DL_Query* QUERY)
 
         MFUN(webcam_get_device_id, "int", "deviceID");
         DOC_FUNC("Get the device id of this webcam.");
+
+        MFUN(webcam_get_device_name, "string", "deviceName");
+        DOC_FUNC("Get the user-friendly name of this webcam.");
 
         MFUN(webcam_set_capture, "void", "capture");
         ARG("int", "capture");
@@ -648,6 +652,11 @@ CK_DLL_MFUN(webcam_get_texture)
 CK_DLL_MFUN(webcam_get_device_id)
 {
     RETURN->v_int = GET_WEBCAM(SELF)->device_id;
+}
+
+CK_DLL_MFUN(webcam_get_device_name)
+{
+    RETURN->v_string = chugin_createCkString(GET_WEBCAM(SELF)->device_name);
 }
 
 CK_DLL_MFUN(webcam_set_capture)

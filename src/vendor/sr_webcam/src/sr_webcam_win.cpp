@@ -2,13 +2,13 @@
 
 #ifdef __cplusplus
 
-#include <windows.h>
 #include <mfapi.h>
+#include <windows.h>
 
+#include <cmath>
+#include <mferror.h>
 #include <mfplay.h>
 #include <mfreadwrite.h>
-#include <mferror.h>
-#include <cmath>
 #include <shlwapi.h>
 
 struct IMFMediaType;
@@ -103,6 +103,7 @@ class SRWebcamVideoStreamMF : public IMFSourceReaderCallback
 
     virtual ~SRWebcamVideoStreamMF()
     {
+        //
     }
 
     STDMETHODIMP
@@ -262,7 +263,8 @@ class SRWebcamVideoStreamMF : public IMFSourceReaderCallback
         return S_OK;
     }
 
-    bool setupWith(int id, int framerate, int w, int h)
+    bool setupWith(int id, int framerate, int w, int h, char* device_name,
+                   int device_name_len)
     {
         // Prepate video devices query.
         IMFAttributes* msAttr = NULL;
@@ -434,8 +436,21 @@ class SRWebcamVideoStreamMF : public IMFSourceReaderCallback
             return false;
         }
         // Store infos for callback.
-        selectedStream = (DWORD)bestStream;
-        captureFormat  = SRWebcamFormat(typeOut);
+        selectedStream                = (DWORD)bestStream;
+        captureFormat                 = SRWebcamFormat(typeOut);
+        WCHAR* deviceFriendlyName     = NULL;
+        UINT32 deviceFriendlyNameSize = 0;
+        ppDevices[_id]->GetAllocatedString(MF_DEVSOURCE_ATTRIBUTE_FRIENDLY_NAME,
+                                           &deviceFriendlyName,
+                                           &deviceFriendlyNameSize);
+        // copy device name
+        if (device_name && deviceFriendlyName && deviceFriendlyNameSize > 0) {
+            wcstombs(device_name, deviceFriendlyName, device_name_len);
+        }
+        // Clean up.
+        if (deviceFriendlyName) {
+            CoTaskMemFree(deviceFriendlyName);
+        }
         ppDevices[_id]->Release();
         CoTaskMemFree(ppDevices);
         return true;
@@ -478,7 +493,8 @@ int sr_webcam_open(sr_webcam_device* device)
     SRWebcamVideoStreamMF* stream = new SRWebcamVideoStreamMF();
     stream->_parent               = device;
     bool res = stream->setupWith(device->deviceId, device->framerate, device->width,
-                                 device->height);
+                                 device->height, device->user_friendly_name,
+                                 sizeof(device->user_friendly_name) - 1);
     if (!res) {
         device->stream = NULL;
         return -1;
@@ -488,7 +504,7 @@ int sr_webcam_open(sr_webcam_device* device)
     device->height    = stream->captureFormat.height;
     device->framerate = (int)(stream->captureFormat.framerate);
     device->deviceId  = stream->_id;
-    return 0;
+	return 0;
 }
 
 void sr_webcam_start(sr_webcam_device* device)

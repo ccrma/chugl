@@ -56,9 +56,9 @@ GOrbitCamera camera --> GG.scene();
 camera.clip(.01, 1000);
 GG.scene().camera(camera);
 
-video_mesh.scaX(5 * video_aspect);
-video_mesh.scaY(5);
-video_mesh.scaZ(5);
+video_mesh.scaX(3 * video_aspect);
+video_mesh.scaY(3);
+video_mesh.scaZ(3);
 
 video_mat.colorMap(video_texture);
 

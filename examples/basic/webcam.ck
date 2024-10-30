@@ -11,6 +11,7 @@ Webcam webcam;
 <<< "webcam width: ", webcam.width() >>>;
 <<< "webcam height: ", webcam.height() >>>;
 <<< "webcam fps: ", webcam.fps() >>>;
+<<< "webcam name: ", webcam.deviceName() >>>;
 
 FlatMaterial plane_mat;
 plane_mat.colorMap(webcam.texture());

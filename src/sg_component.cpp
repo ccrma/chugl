@@ -1269,6 +1269,8 @@ SG_Webcam* SG_CreateWebcam(Chuck_Object* ckobj, Chuck_VM_Shred* shred, int devic
 
             webcam_texture     = SG_CreateTexture(&desc, NULL, shred, true);
             webcam->texture_id = webcam_texture->id;
+            strncpy(webcam->device_name, sr_webcam_get_user_friendly_name(device),
+                    sizeof(webcam->device_name));
 
             // if successful, create graphics component
             CQ_PushCommand_WebcamCreate(webcam, device);

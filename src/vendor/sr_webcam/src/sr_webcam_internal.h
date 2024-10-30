@@ -17,6 +17,8 @@ struct _sr_webcam_device {
     void* stream;
     sr_webcam_callback callback;
     void* user;
+
+    char user_friendly_name[64];
 };
 
 #ifdef __cplusplus

@@ -13,12 +13,12 @@
 
 // load the cubemap
 Texture.load(
-    me.dir() + "../../assets/bridge/posx.jpg", // right
-    me.dir() + "../../assets/bridge/negx.jpg", // left
-    me.dir() + "../../assets/bridge/posy.jpg", // top
-    me.dir() + "../../assets/bridge/negy.jpg", // bottom
-    me.dir() + "../../assets/bridge/posz.jpg", // back
-    me.dir() + "../../assets/bridge/negz.jpg"  // front
+    me.dir() + "./bridge/posx.jpg", // right
+    me.dir() + "./bridge/negx.jpg", // left
+    me.dir() + "./bridge/posy.jpg", // top
+    me.dir() + "./bridge/negy.jpg", // bottom
+    me.dir() + "./bridge/posz.jpg", // back
+    me.dir() + "./bridge/negz.jpg"  // front
 ) @=> Texture cubemap;
 
 // apply the cubemap to the scene
