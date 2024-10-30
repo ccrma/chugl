@@ -55,11 +55,21 @@
 - (BOOL)setupWithID:(int)deviceID rate:(int)framerate width:(int)w height:(int)h {
 	// List available devices
 	NSArray* devices;
+	NSArray* deviceTypes;
 	// if 10.15 or later
 	// if(@available(macOS 10.15, *)) {
-		NSArray* deviceTypes						   = @[AVCaptureDeviceTypeBuiltInWideAngleCamera];
-		AVCaptureDeviceDiscoverySession* discovSession = [AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:deviceTypes mediaType:AVMediaTypeVideo position:AVCaptureDevicePositionUnspecified];
-		devices										   = [discovSession devices];
+		// NSArray* deviceTypes						   = @[AVCaptureDeviceTypeBuiltInWideAngleCamera, AVCaptureDeviceTypeExternal];
+
+		// array of AVCaptureDeviceType builtin AND AVCaptureDeviceTypeExternal
+	
+	// if less than version 14.0, use AVCaptureDeviceTypeExternalUnknown
+	// if (@available(macOS 14.0, *)) {
+	// 	deviceTypes = @[AVCaptureDeviceTypeBuiltInWideAngleCamera, AVCaptureDeviceTypeExternal];
+	// } else {
+		deviceTypes = @[AVCaptureDeviceTypeBuiltInWideAngleCamera, AVCaptureDeviceTypeExternalUnknown];
+	// }
+	AVCaptureDeviceDiscoverySession* discovSession = [AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:deviceTypes mediaType:AVMediaTypeVideo position:AVCaptureDevicePositionUnspecified];
+	devices										   = [discovSession devices];
 	// } else {
 	// 	devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
 	// }
