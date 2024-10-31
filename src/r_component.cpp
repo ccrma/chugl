@@ -1104,6 +1104,7 @@ void R_Scene::removeSubgraphFromRenderState(R_Scene* scene, R_Transform* root)
         if (xform->type == SG_COMPONENT_LIGHT) {
             // remove from light set
             const void* prev_item = hashmap_delete(scene->light_id_set, &xform->id);
+            UNUSED_VAR(prev_item);
             ASSERT(prev_item);
         } else if (xform->type == SG_COMPONENT_MESH) {
             // get xforms from geometry
@@ -1157,6 +1158,7 @@ void R_Scene::addSubgraphToRenderState(R_Scene* scene, R_Transform* root)
             // add light to scene
             const void* replaced = hashmap_set(scene->light_id_set, &xform->id);
             // light should not already be in scene
+            UNUSED_VAR(replaced);
             ASSERT(!replaced);
         } else if (xform->_geoID != 0 && xform->_matID != 0) { // for all renderables
             ASSERT(xform->type == SG_COMPONENT_MESH
@@ -1762,6 +1764,7 @@ static void _Component_FreeComponent(SG_ID id, int component_size)
 
     // delete old item from locator
     const void* delete_result = hashmap_delete(r_locator, &id);
+    UNUSED_VAR(delete_result);
     ASSERT(delete_result);
 }
 
@@ -1795,6 +1798,7 @@ R_Transform* Component_CreateTransform()
     R_Location loc = { xform->id, Arena::offsetOf(&xformArena, xform), &xformArena };
     const void* result = hashmap_set(r_locator, &loc);
     ASSERT(result == NULL); // ensure id is unique
+    UNUSED_VAR(result); // ensure id is unique
 
     return xform;
 }
@@ -1811,6 +1815,7 @@ R_Transform* Component_CreateTransform(SG_Command_CreateXform* cmd)
     R_Location loc = { xform->id, Arena::offsetOf(&xformArena, xform), &xformArena };
     const void* result = hashmap_set(r_locator, &loc);
     ASSERT(result == NULL); // ensure id is unique
+    UNUSED_VAR(result);
 
     return xform;
 }
@@ -1829,6 +1834,7 @@ R_Transform* Component_CreateMesh(SG_ID mesh_id, SG_ID geo_id, SG_ID mat_id)
     R_Location loc = { xform->id, Arena::offsetOf(&xformArena, xform), &xformArena };
     const void* result = hashmap_set(r_locator, &loc);
     ASSERT(result == NULL); // ensure id is unique
+    UNUSED_VAR(result); // ensure id is unique
 
     return xform;
 }
@@ -1855,7 +1861,8 @@ R_Camera* Component_CreateCamera(GraphicsContext* gctx, SG_Command_CameraCreate*
     R_Location loc     = { cam->id, Arena::offsetOf(&cameraArena, cam), &cameraArena };
     const void* result = hashmap_set(r_locator, &loc);
     ASSERT(result == NULL); // ensure id is unique
-
+    UNUSED_VAR(result);
+    
     return cam;
 }
 
@@ -1908,6 +1915,7 @@ R_Text* Component_CreateText(GraphicsContext* gctx, FT_Library ft,
         R_Location loc     = { geo->id, Arena::offsetOf(&geoArena, geo), &geoArena };
         const void* result = hashmap_set(r_locator, &loc);
         ASSERT(result == NULL); // ensure id is unique
+        UNUSED_VAR(result);
     }
 
     // init text
@@ -1925,6 +1933,7 @@ R_Text* Component_CreateText(GraphicsContext* gctx, FT_Library ft,
         R_Location loc = { text->id, Arena::offsetOf(&textArena, text), &textArena };
         const void* result = hashmap_set(r_locator, &loc);
         ASSERT(result == NULL); // ensure id is unique
+        UNUSED_VAR(result);
 
         // make sure these are internal
         ASSERT(text->_geoID < 0);
@@ -1949,6 +1958,7 @@ R_Scene* Component_CreateScene(GraphicsContext* gctx, SG_ID scene_id,
     R_Location loc     = { r_scene->id, Arena::offsetOf(arena, r_scene), arena };
     const void* result = hashmap_set(r_locator, &loc);
     ASSERT(result == NULL); // ensure id is unique
+    UNUSED_VAR(result);
 
     return r_scene;
 }
@@ -1965,6 +1975,7 @@ R_Geometry* Component_CreateGeometry()
     R_Location loc     = { geo->id, Arena::offsetOf(&geoArena, geo), &geoArena };
     const void* result = hashmap_set(r_locator, &loc);
     ASSERT(result == NULL); // ensure id is unique
+    UNUSED_VAR(result);
 
     return geo;
 }
@@ -1984,6 +1995,7 @@ R_Geometry* Component_CreateGeometry(GraphicsContext* gctx, SG_ID geo_id)
     R_Location loc     = { geo->id, Arena::offsetOf(&geoArena, geo), &geoArena };
     const void* result = hashmap_set(r_locator, &loc);
     ASSERT(result == NULL); // ensure id is unique
+    UNUSED_VAR(result);
 
     return geo;
 }
@@ -2020,6 +2032,7 @@ R_Shader* Component_CreateShader(GraphicsContext* gctx, SG_Command_ShaderCreate*
       = { shader->id, Arena::offsetOf(&shaderArena, shader), &shaderArena };
     const void* result = hashmap_set(r_locator, &loc);
     ASSERT(result == NULL); // ensure id is unique
+    UNUSED_VAR(result);
 
     return shader;
 }
@@ -2049,6 +2062,7 @@ R_Material* Component_CreateMaterial(GraphicsContext* gctx,
     R_Location loc = { mat->id, Arena::offsetOf(&materialArena, mat), &materialArena };
     const void* result = hashmap_set(r_locator, &loc);
     ASSERT(result == NULL); // ensure id is unique
+    UNUSED_VAR(result);
 
     return mat;
 }
@@ -2106,6 +2120,7 @@ R_Texture* Component_CreateTexture(GraphicsContext* gctx, SG_Command_TextureCrea
     R_Location loc = { tex->id, Arena::offsetOf(&textureArena, tex), &textureArena };
     const void* result = hashmap_set(r_locator, &loc);
     ASSERT(result == NULL); // ensure id is unique
+    UNUSED_VAR(result);
 
     return tex;
 }
@@ -2124,6 +2139,7 @@ R_Pass* Component_CreatePass(SG_ID pass_id)
     R_Location loc     = { pass->id, Arena::offsetOf(arena, pass), arena };
     const void* result = hashmap_set(r_locator, &loc);
     ASSERT(result == NULL); // ensure id is unique
+    UNUSED_VAR(result);
 
     return pass;
 }
@@ -2142,6 +2158,7 @@ R_Buffer* Component_CreateBuffer(SG_ID id)
     R_Location loc     = { buffer->id, Arena::offsetOf(arena, buffer), arena };
     const void* result = hashmap_set(r_locator, &loc);
     ASSERT(result == NULL); // ensure id is unique
+    UNUSED_VAR(result);
 
     return buffer;
 }
@@ -2159,6 +2176,7 @@ R_Light* Component_CreateLight(SG_ID id, SG_LightDesc* desc)
     R_Location loc = { light->id, Arena::offsetOf(&lightArena, light), &lightArena };
     const void* result = hashmap_set(r_locator, &loc);
     ASSERT(result == NULL); // ensure id is unique
+    UNUSED_VAR(result);
 
     return light;
 }
@@ -2222,6 +2240,7 @@ R_Video* Component_CreateVideo(GraphicsContext* gctx, SG_ID id, const char* file
     R_Location loc     = { video->id, Arena::offsetOf(arena, video), arena };
     const void* result = hashmap_set(r_locator, &loc);
     ASSERT(result == NULL); // ensure id is unique
+    UNUSED_VAR(result);
 
     { // video init (TODO move to video Desc struct)
         video->gctx                  = gctx;
@@ -2372,6 +2391,7 @@ R_Webcam* Component_CreateWebcam(SG_Command_WebcamCreate* cmd)
     R_Location loc     = { webcam->id, Arena::offsetOf(arena, webcam), arena };
     const void* result = hashmap_set(r_locator, &loc);
     ASSERT(result == NULL); // ensure id is unique
+    UNUSED_VAR(result);
 
     { // webcam init
         webcam->device_id         = cmd->device_id;

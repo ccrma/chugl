@@ -312,6 +312,7 @@ bool GraphicsContext::init(GraphicsContext* context, GLFWwindow* window)
 #ifdef WEBGPU_BACKEND_WGPU
     WGPUSupportedLimits supportedLimits = {};
     bool success = wgpuAdapterGetLimits(adapter, &supportedLimits);
+    UNUSED_VAR(success);
     ASSERT(success);
     // copy supported limits into context
     context->limits = supportedLimits.limits;

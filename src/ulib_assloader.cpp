@@ -90,6 +90,7 @@ struct AssloaderMat2GeoItem {
 
         const void* exists = hashmap_set(ulib_assloader_mat2geo_map, &item);
         ASSERT(!exists);
+        UNUSED_VAR(exists);
 
         return geo;
     }

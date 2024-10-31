@@ -1,5 +1,6 @@
-// ------- graphics stuff -----------
-// shader code string (does the GoL simulation)
+// TODO: improve test by actually tracking memory allocation in audio and graphics component managers
+// for now, this test just checks the SG_ID of the first shader and makes sure it is unchanged
+
 "
 #include FRAME_UNIFORMS
 #include DRAW_UNIFORMS
@@ -26,12 +27,7 @@ fun void createShader() {
     <<< "first_shader id", first_shader.id(), "| custom_shader id", custom_shader.id() >>>;
 }
 
-while (true) {
+repeat (5) {
     GG.nextFrame() => now;
-
-    // if (GWindow.keyDown(GWindow.Key_Space)) {
-    //     <<< "creating shader" >>>;
-    //     createShader();
-    // }
     createShader();
 }

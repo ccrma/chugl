@@ -1473,6 +1473,7 @@ static void _SG_ComponentManagerFree(SG_ID id, int component_size)
     // delete old item from locator
     const void* delete_result = hashmap_delete(locator, &id);
     ASSERT(delete_result);
+    UNUSED_VAR(delete_result);
 }
 
 void SG_ComponentFree(SG_Component* comp)

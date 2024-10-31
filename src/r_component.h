@@ -227,6 +227,7 @@ struct R_Texture : public R_Component {
     {
         // free previous
         WGPU_RELEASE_RESOURCE(Texture, texture->gpu_texture);
+        WGPU_RELEASE_RESOURCE(TextureView, texture->gpu_texture_view);
 
         // bump generation
         texture->generation++;
@@ -597,6 +598,7 @@ struct GeometryToXforms {
         SG_ID xform_id      = *ARENA_GET_TYPE(&g2x->xform_ids, SG_ID, xform_id_index);
         const void* removed = hashmap_delete(g2x->xform_id_set, &xform_id);
         ASSERT(removed);
+        UNUSED_VAR(removed);
 
         // swap with last element
         *ARENA_GET_TYPE(&g2x->xform_ids, SG_ID, xform_id_index)

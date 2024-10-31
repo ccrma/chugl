@@ -1337,6 +1337,7 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
       &frameUniforms, sizeof(frameUniforms));
     camera->frame_uniform_buffer_fc = app->fc;
     ASSERT(!frame_uniforms_recreated);
+    UNUSED_VAR(frame_uniforms_recreated);
 
     // ==optimize== to prevent sparseness, delete render state entries / arena ids
     // if we find SG_ID arenas are empty
@@ -1348,14 +1349,6 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
     R_RenderPipeline* render_pipeline = NULL;
     size_t rpIndex                    = 0;
     while (Component_RenderPipelineIter(&rpIndex, &render_pipeline)) {
-
-        static char debug_group_label[64] = {};
-        snprintf(debug_group_label, sizeof(debug_group_label),
-                 "RenderPipeline[%d] Shader[%d] ", render_pipeline->rid,
-                 render_pipeline->pso.sg_shader_id);
-        wgpuRenderPassEncoderPushDebugGroup(render_pass, debug_group_label);
-        defer(wgpuRenderPassEncoderPopDebugGroup(render_pass));
-
         ASSERT(render_pipeline->rid != 0);
 
         if (R_RenderPipeline::numMaterials(render_pipeline) == 0) continue;
@@ -1386,15 +1379,6 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
             if (!m2g) continue;
             int geo_count = ARENA_LENGTH(&m2g->geo_ids, SG_ID);
             if (geo_count == 0) continue;
-
-            // debug group
-            //            snprintf(debug_group_label, sizeof(debug_group_label),
-            //                     "Material[%d] Shader[%d] %s ", r_material->id,
-            //                     r_material->pso.sg_shader_id,
-            //                     r_material->name.c_str());
-            //            wgpuRenderPassEncoderPushDebugGroup(render_pass,
-            //            debug_group_label);
-            //            defer(wgpuRenderPassEncoderPopDebugGroup(render_pass));
 
             // set per_material bind group
             // R_Shader* shader = Component_GetShader(r_material->pso.sg_shader_id);

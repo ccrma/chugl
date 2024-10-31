@@ -492,6 +492,7 @@ void Geometry_computeTangents(GeometryArenaBuilder* builder)
     // allocate tangent memory if not already
     if (ARENA_LENGTH(builder->tangent_arena, gvec4f) == 0) {
         int vertex_count = GAB_vertexCount(builder);
+        UNUSED_VAR(vertex_count);
         ARENA_PUSH_COUNT(builder->tangent_arena, gvec4f, GAB_vertexCount(builder));
         ASSERT(ARENA_LENGTH(builder->tangent_arena, gvec4f) == vertex_count)
     }
@@ -553,6 +554,7 @@ void Geometry_computeTangents(GeometryArenaBuilder* builder)
         gvec4f* tangents = (gvec4f*)(builder->tangent_arena->base);
         // make sure index within arena bounds
         int tangent_alloc_length = ARENA_LENGTH(builder->tangent_arena, gvec4f);
+        UNUSED_VAR(tangent_alloc_length);
         ASSERT(index < tangent_alloc_length);
         tangents[index] = { fvTangent[0], fvTangent[1], fvTangent[2], fSign };
     };
