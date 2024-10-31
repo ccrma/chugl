@@ -161,7 +161,7 @@ class SRWebcamVideoStreamMF : public IMFSourceReaderCallback
             LONG pitch             = 0;
             DWORD maxSize = 0, curSize = 0;
             int exactRowSize = captureFormat.width * 3;
-            IMF2DBuffer* buffer2d;
+            IMF2DBuffer* buffer2d = NULL;
 
             // Generate data buffer from sample.
             if (!SUCCEEDED(pSample->ConvertToContiguousBuffer(&buffer))) {

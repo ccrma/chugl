@@ -787,7 +787,7 @@ void R_Material::rebuildBindGroup(R_Material* mat, GraphicsContext* gctx,
         if (!needs_rebuild) return;
     }
 
-    // log_info("rebuilding bind group\n");
+    // log_trace("rebuilding bindgroup for material pipeline id %d", mat->pipelineID);
 
     // create bindgroups for all bindings
     WGPUBindGroupEntry new_bind_group_entries[SG_MATERIAL_MAX_UNIFORMS] = {};
@@ -850,7 +850,12 @@ void R_Material::rebuildBindGroup(R_Material* mat, GraphicsContext* gctx,
     WGPU_RELEASE_RESOURCE(BindGroup, mat->bind_group);
 
     // create new bindgroup
+    char bind_group_label[128] = {};
+    snprintf(bind_group_label, sizeof(bind_group_label),
+             "Material[%d] Pipeline[%d] Shader[%d] Bindgroup", mat->id, mat->pipelineID,
+             mat->pso.sg_shader_id);
     WGPUBindGroupDescriptor bg_desc = {};
+    bg_desc.label                   = bind_group_label;
     bg_desc.layout                  = layout;
     bg_desc.entryCount              = bind_group_index;
     bg_desc.entries                 = new_bind_group_entries;
@@ -1000,8 +1005,15 @@ void R_Material::setBinding(GraphicsContext* gctx, R_Material* mat, u32 location
 
 void GeometryToXforms::rebuildBindGroup(GraphicsContext* gctx, R_Scene* scene,
                                         GeometryToXforms* g2x,
-                                        WGPUBindGroupLayout layout, Arena* frame_arena)
+                                        WGPUBindGroupLayout layout, Arena* frame_arena,
+                                        R_RenderPipeline* pipeline)
 {
+    // if new pipeline, need to rebuild bindgroup with new layout
+    if (pipeline->rid != g2x->pipeline_id) {
+        g2x->stale       = true;
+        g2x->pipeline_id = pipeline->rid;
+    }
+
     if (g2x->bind_group_layout != layout) {
         g2x->bind_group_layout = layout;
         g2x->stale             = true;
@@ -1357,6 +1369,8 @@ WGPUBindGroupLayout R_RenderPipeline::getBindGroupLayout(R_RenderPipeline* pipel
     if (pipeline->_bind_group_layouts[index] == NULL) {
         pipeline->_bind_group_layouts[index]
           = wgpuRenderPipelineGetBindGroupLayout(pipeline->gpu_pipeline, index);
+        // wgpuBindGroupLayoutSetLabel(pipeline->_bind_group_layouts[index],
+        // pipeline->name);
     }
     return pipeline->_bind_group_layouts[index];
 }
@@ -1428,8 +1442,10 @@ void R_RenderPipeline::init(GraphicsContext* gctx, R_RenderPipeline* pipeline,
 
     char pipeline_label[128] = {};
     snprintf(pipeline_label, sizeof(pipeline_label),
-             "RenderPipeline %d %s cm: %d top: %d", shader->id, shader->name,
-             primitiveState.cullMode, primitiveState.topology);
+             "RenderPipeline[%d] Shader[%d] %s cullmode: %d topology: %d",
+             pipeline->rid, shader->id, shader->name, primitiveState.cullMode,
+             primitiveState.topology);
+    strncpy(pipeline->name, pipeline_label, sizeof(pipeline->name));
     WGPURenderPipelineDescriptor pipeline_desc = {};
     pipeline_desc.label                        = pipeline_label;
     pipeline_desc.layout                       = NULL; // Using layout: auto
@@ -1444,6 +1460,8 @@ void R_RenderPipeline::init(GraphicsContext* gctx, R_RenderPipeline* pipeline,
     ASSERT(pipeline->gpu_pipeline);
 
     Arena::init(&pipeline->materialIDs, sizeof(SG_ID) * 8);
+
+    log_trace("init render pipeline %d", pipeline->rid);
 }
 
 /*
@@ -1490,6 +1508,25 @@ void R_RenderPipeline::addMaterial(R_RenderPipeline* pipeline, R_Material* mater
     ASSERT(!ARENA_CONTAINS(&pipeline->materialIDs, material->id));
     *ARENA_PUSH_TYPE(&pipeline->materialIDs, SG_ID) = material->id;
     material->pipelineID                            = pipeline->rid;
+    // set bind group to stale because now we need a new pipeline layout
+    material->bind_group_stale = true;
+    // note: we also need to set all the geometryToXforms that use this material
+    // to stale, so that they can be rebuilt with the new pipeline layout
+    // but we don't have the scene(s) here so instead deferring that update
+    // to the scene's render loop
+}
+
+void R_RenderPipeline::free(R_RenderPipeline* pipeline)
+{
+    WGPU_RELEASE_RESOURCE(RenderPipeline, pipeline->gpu_pipeline);
+
+    for (int i = 0; i < ARRAY_LENGTH(pipeline->_bind_group_layouts); i++) {
+        WGPU_RELEASE_RESOURCE(BindGroupLayout, pipeline->_bind_group_layouts[i]);
+    }
+
+    Arena::free(&pipeline->materialIDs);
+
+    log_trace("freeing render pipeline %s", pipeline->name);
 }
 
 size_t R_RenderPipeline::numMaterials(R_RenderPipeline* pipeline)
@@ -1798,7 +1835,7 @@ R_Transform* Component_CreateTransform()
     R_Location loc = { xform->id, Arena::offsetOf(&xformArena, xform), &xformArena };
     const void* result = hashmap_set(r_locator, &loc);
     ASSERT(result == NULL); // ensure id is unique
-    UNUSED_VAR(result); // ensure id is unique
+    UNUSED_VAR(result);     // ensure id is unique
 
     return xform;
 }
@@ -1834,7 +1871,7 @@ R_Transform* Component_CreateMesh(SG_ID mesh_id, SG_ID geo_id, SG_ID mat_id)
     R_Location loc = { xform->id, Arena::offsetOf(&xformArena, xform), &xformArena };
     const void* result = hashmap_set(r_locator, &loc);
     ASSERT(result == NULL); // ensure id is unique
-    UNUSED_VAR(result); // ensure id is unique
+    UNUSED_VAR(result);     // ensure id is unique
 
     return xform;
 }
@@ -1862,7 +1899,7 @@ R_Camera* Component_CreateCamera(GraphicsContext* gctx, SG_Command_CameraCreate*
     const void* result = hashmap_set(r_locator, &loc);
     ASSERT(result == NULL); // ensure id is unique
     UNUSED_VAR(result);
-    
+
     return cam;
 }
 
@@ -2576,16 +2613,73 @@ bool Component_MaterialIter(size_t* i, R_Material** material)
 
 bool Component_RenderPipelineIter(size_t* i, R_RenderPipeline** renderPipeline)
 {
-    if (*i >= ARENA_LENGTH(&_RenderPipelineArena, R_RenderPipeline)) {
-        *renderPipeline = NULL;
-        return false;
-    }
-
     // Possible optimization: pack nonempty pipelines at start, swap empty
     // pipelines to end
-    *renderPipeline = ARENA_GET_TYPE(&_RenderPipelineArena, R_RenderPipeline, *i);
-    ++(*i);
-    return true;
+    while (*i < ARENA_LENGTH(&_RenderPipelineArena, R_RenderPipeline)) {
+        // lazy deletion: free if shader is gone
+        R_RenderPipeline* pipeline
+          = ARENA_GET_TYPE(&_RenderPipelineArena, R_RenderPipeline, *i);
+        ASSERT(!pipeline->pso.exclude_from_render_pass)
+        R_Shader* shader = Component_GetShader(pipeline->pso.sg_shader_id);
+        if (!shader) {
+            // shader gone, free this pipeline as well
+
+            // delete the old pipeline hashmap entries
+            RenderPipelineIDTableItem* rid_deletion_result
+              = (RenderPipelineIDTableItem*)hashmap_delete(_RenderPipelineMap,
+                                                           &pipeline->rid);
+            ASSERT(rid_deletion_result);
+            RenderPipelinePSOTableItem* pso_deletion_result
+              = (RenderPipelinePSOTableItem*)hashmap_delete(render_pipeline_pso_table,
+                                                            &pipeline->pso);
+            ASSERT(pso_deletion_result);
+            ASSERT(rid_deletion_result->pipeline_offset
+                   == pso_deletion_result->pipeline_offset);
+
+            // free pipeline struct
+            R_RenderPipeline::free(pipeline);
+
+            // remove from pipeline arena
+            ARENA_SWAP_DELETE(&_RenderPipelineArena, R_RenderPipeline, *i);
+            pipeline = NULL;
+
+            // update the newly swapped pipeline, if there is one
+            if (*i < ARENA_LENGTH(&_RenderPipelineArena, R_RenderPipeline)) {
+                R_RenderPipeline* swapped_pipeline
+                  = ARENA_GET_TYPE(&_RenderPipelineArena, R_RenderPipeline, *i);
+
+                int offset = *i * sizeof(R_RenderPipeline);
+                ASSERT(offset
+                       == Arena::offsetOf(&_RenderPipelineArena, swapped_pipeline));
+
+                // update offsets
+                RenderPipelinePSOTableItem* pso_item
+                  = (RenderPipelinePSOTableItem*)hashmap_get(render_pipeline_pso_table,
+                                                             &swapped_pipeline->pso);
+                ASSERT(pso_item);
+                ASSERT(pso_item->pipeline_offset != offset);
+                pso_item->pipeline_offset = offset;
+
+                RenderPipelineIDTableItem* rid_item
+                  = (RenderPipelineIDTableItem*)hashmap_get(_RenderPipelineMap,
+                                                            &swapped_pipeline->rid);
+                ASSERT(rid_item);
+                ASSERT(rid_item->pipeline_offset != offset);
+                rid_item->pipeline_offset = offset;
+            }
+        } else {
+            // pipeline is valid, return
+            // *renderPipeline = ARENA_GET_TYPE(&_RenderPipelineArena, R_RenderPipeline,
+            // *i);
+            *renderPipeline = pipeline;
+            ++(*i);
+            return true;
+        }
+    }
+
+    // no more pipelines
+    *renderPipeline = NULL;
+    return false;
 }
 
 int Component_RenderPipelineCount()
@@ -2631,8 +2725,6 @@ R_RenderPipeline* Component_GetPipeline(GraphicsContext* gctx,
       = ARENA_PUSH_ZERO_TYPE(&_RenderPipelineArena, R_RenderPipeline);
     u64 pipelineOffset = Arena::offsetOf(&_RenderPipelineArena, rPipeline);
     R_RenderPipeline::init(gctx, rPipeline, pso);
-
-    log_trace("creating new pipeline %d", rPipeline->rid);
 
     ASSERT(!hashmap_get(_RenderPipelineMap, &rPipeline->rid))
     RenderPipelineIDTableItem new_ri_item = { rPipeline->rid, pipelineOffset };

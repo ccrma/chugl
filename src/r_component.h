@@ -55,6 +55,7 @@ struct R_Material;
 struct R_Scene;
 struct R_Font;
 struct hashmap;
+struct R_RenderPipeline;
 
 typedef SG_ID R_ID; // negative for R_Components NOT mapped to SG_Components
 
@@ -569,6 +570,7 @@ struct GeometryToXforms {
     hashmap* xform_id_set; // kept in sync with xform_ids, use for quick lookup
     WGPUBindGroup xform_bind_group;
     GPU_Buffer xform_storage_buffer;
+    R_ID pipeline_id; // the pipeline this bindgroup belongs to
     bool stale;
 
     // after updating to webgpu v22.1.0.5, bind_group_layout is now part of bind_group,
@@ -630,7 +632,7 @@ struct GeometryToXforms {
 
     static void rebuildBindGroup(GraphicsContext* gctx, R_Scene* scene,
                                  GeometryToXforms* g2x, WGPUBindGroupLayout layout,
-                                 Arena* frame_arena);
+                                 Arena* frame_arena, R_RenderPipeline* pipeline);
 };
 
 struct R_Scene : R_Transform {
@@ -676,6 +678,8 @@ struct R_RenderPipeline /* NOT backed by SG_Component */ {
 
     Arena materialIDs; // array of SG_IDs
 
+    char name[64];
+
     // cache the bind group layouts because apparently
     // wgpuRenderPipelineGetBindGroupLayout freaking leaks...
     WGPUBindGroupLayout _bind_group_layouts[4];
@@ -695,6 +699,8 @@ struct R_RenderPipeline /* NOT backed by SG_Component */ {
                      const SG_MaterialPipelineState* config, int msaa_sample_count = 4);
 
     static void addMaterial(R_RenderPipeline* pipeline, R_Material* material);
+
+    static void free(R_RenderPipeline* pipeline);
 
     /// @brief Iterator for materials tied to render pipeline
     static size_t numMaterials(R_RenderPipeline* pipeline);

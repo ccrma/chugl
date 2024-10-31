@@ -1381,7 +1381,6 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
             if (geo_count == 0) continue;
 
             // set per_material bind group
-            // R_Shader* shader = Component_GetShader(r_material->pso.sg_shader_id);
             R_Material::rebuildBindGroup(r_material, &app->gctx,
                                          R_RenderPipeline::getBindGroupLayout(
                                            render_pipeline, PER_MATERIAL_GROUP));
@@ -1401,7 +1400,7 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
                 GeometryToXforms::rebuildBindGroup(
                   &app->gctx, scene, g2x,
                   R_RenderPipeline::getBindGroupLayout(render_pipeline, PER_DRAW_GROUP),
-                  &app->frameArena);
+                  &app->frameArena, render_pipeline);
 
                 // check *after* rebuildBindGroup because some xform ids may be
                 // removed

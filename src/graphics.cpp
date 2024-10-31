@@ -427,7 +427,7 @@ static WGPUTextureView GraphicsContext_GetNextSurfaceTextureView(GraphicsContext
     }
 
     // Create a view for this surface texture
-    WGPUTextureViewDescriptor viewDescriptor;
+    WGPUTextureViewDescriptor viewDescriptor = {};
     viewDescriptor.label          = "Surface texture view";
     viewDescriptor.format         = wgpuTextureGetFormat(gctx->surface_texture.texture);
     viewDescriptor.dimension      = WGPUTextureViewDimension_2D;
@@ -1195,7 +1195,7 @@ void MipMapGenerator_generate(GraphicsContext* ctx, WGPUTexture texture,
               = wgpuCommandEncoderBeginRenderPass(cmd_encoder, &render_pass_desc);
 
             // initialize bind group entries
-            WGPUBindGroupEntry bg_entries[2];
+            WGPUBindGroupEntry bg_entries[2] = {};
 
             // sampler bind group
             bg_entries[0]         = {};

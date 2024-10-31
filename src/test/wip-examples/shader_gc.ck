@@ -191,4 +191,5 @@ while (true) {
         <<< "reloading shader" >>>;
         initMaterial();
     }
+        initMaterial();
 }
