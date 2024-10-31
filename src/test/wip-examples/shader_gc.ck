@@ -140,8 +140,13 @@ conway_tex_b.write(texture_data); // initialize empty texture
 conway_tex_a.write(texture_data);
 
 fun void initMaterial() {
+    material.shader() @=> Shader old_shader;
     Shader new_shader(shader_desc); // create shader from shader_desc
+    <<< "new shader pre-add", Machine.refcount(new_shader) >>>;
+    <<< "old shader pre-add", Machine.refcount(old_shader) >>>;
     new_shader => material.shader; // connect shader to material
+    <<< "new shader post-add", Machine.refcount(new_shader) >>>;
+    <<< "old shader post-add", Machine.refcount(old_shader) >>>;
 }
 
 fun void simulate() 

@@ -1728,6 +1728,61 @@ void Component_Free()
     }
 }
 
+// analgous to audio thread's `_SG_ComponentManagerFree`
+// frees resources within the locator hashmap and R_Component arenas
+// sectioned off as a separate function to prevent any memory errors
+// `component_size` is size in bytes
+static void _Component_FreeComponent(SG_ID id, int component_size)
+{
+    // remove from shader arena (via swap-delete with last element)
+    R_Location* result = (R_Location*)hashmap_get(r_locator, &id);
+    ASSERT(result);
+    ASSERT(result->offset % component_size
+           == 0); // offset should be a multiple of struct size
+    ASSERT(result->arena->curr % component_size
+           == 0); // arena size should be multiple of component size
+    ASSERT(result->arena->curr >= component_size); // nonempty
+    ASSERT(result->id == id);
+
+    // int component_idx = result->offset / component_size;
+    memcpy(Arena::get(result->arena, result->offset),
+           Arena::get(result->arena, result->arena->curr - component_size),
+           component_size);
+    Arena::pop(result->arena, component_size);
+
+    // IMPORTANT: change offset of the newly swapped arena item
+    SG_ID swapped_component_id
+      = ((R_Component*)Arena::get(result->arena, result->offset))->id;
+    R_Location* swapped_component_location
+      = (R_Location*)hashmap_get(r_locator, &swapped_component_id);
+    ASSERT(swapped_component_location);
+    ASSERT(swapped_component_location->id == swapped_component_id);
+    ASSERT(swapped_component_location->arena == result->arena);
+    swapped_component_location->offset = result->offset;
+
+    // delete old item from locator
+    const void* delete_result = hashmap_delete(r_locator, &id);
+    ASSERT(delete_result);
+}
+
+// component garbage collection
+void Component_FreeComponent(SG_ID id)
+{
+    R_Component* comp = Component_GetComponent(id);
+    if (!comp) return; // already freed
+
+    switch (comp->type) {
+        case SG_COMPONENT_SHADER: {
+            log_trace("graphics thread freeing shader %d", comp->id);
+            R_Shader::free((R_Shader*)comp);
+            _Component_FreeComponent(id, sizeof(R_Shader));
+        } break;
+        default: {
+            // other types not yet supported
+        }
+    }
+}
+
 R_Transform* Component_CreateTransform()
 {
     R_Transform* xform = ARENA_PUSH_ZERO_TYPE(&xformArena, R_Transform);
@@ -2371,7 +2426,13 @@ R_Component* Component_GetComponent(SG_ID id)
 {
     R_Location loc     = { id, 0, NULL };
     R_Location* result = (R_Location*)hashmap_get(r_locator, &loc);
-    return result ? (R_Component*)Arena::get(result->arena, result->offset) : NULL;
+    R_Component* comp
+      = result ? (R_Component*)Arena::get(result->arena, result->offset) : NULL;
+    if (comp) {
+        ASSERT(comp->id == id);
+        ASSERT(result->id == id);
+    }
+    return comp;
 }
 
 WGPUSampler Component_GetSampler(GraphicsContext* gctx, SG_Sampler sampler)
@@ -2654,6 +2715,7 @@ void R_Shader::free(R_Shader* shader)
 {
     WGPU_RELEASE_RESOURCE(ShaderModule, shader->vertex_shader_module);
     WGPU_RELEASE_RESOURCE(ShaderModule, shader->fragment_shader_module);
+    WGPU_RELEASE_RESOURCE(ShaderModule, shader->compute_shader_module);
 }
 
 // =============================================================================

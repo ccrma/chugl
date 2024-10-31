@@ -63,6 +63,7 @@ CK_DLL_CTOR(component_ctor)
 
 CK_DLL_DTOR(component_dtor)
 {
+    SG_ComponentFree(SG_GetComponent(OBJ_MEMBER_UINT(SELF, component_offset_id)));
 }
 
 CK_DLL_MFUN(component_get_id)
@@ -110,6 +111,8 @@ static void ulib_component_query(Chuck_DL_Query* QUERY)
       "(useful for debugging) and the unique id which chugl assigns");
     // member vars
     component_offset_id = QUERY->add_mvar(QUERY, "int", "@component_ptr", false);
+
+    DTOR(component_dtor);
 
     // member functions
     QUERY->add_mfun(QUERY, component_get_id, "int", "id");

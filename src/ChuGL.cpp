@@ -257,7 +257,8 @@ static void chugl_GraphicsShredPerformNextFrameUpdate(Chuck_VM_Shred* SHRED)
         }
 
         // Garbage collect (TODO add API function to control this via GG
-        // config) SG_GC();
+        // config)
+        SG_GC();
 
         // signal the graphics-side that audio-side is done processing for
         // this frame

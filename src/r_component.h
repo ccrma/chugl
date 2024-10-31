@@ -1114,6 +1114,9 @@ bool Component_WebcamIter(size_t* i, R_Webcam** webcam);
 void Component_Init(GraphicsContext* gctx);
 void Component_Free();
 
+// component garbage collection
+void Component_FreeComponent(SG_ID id);
+
 // TODO: add destroy functions. Remember to change offsets after swapping!
 // should these live in the components?
 // TODO: on xform destroy, set material/geo primitive to stale

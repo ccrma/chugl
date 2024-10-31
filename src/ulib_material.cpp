@@ -51,6 +51,7 @@ static t_CKUINT shader_desc_uses_envmap              = 0;
 
 CK_DLL_CTOR(shader_ctor_default);
 CK_DLL_CTOR(shader_ctor);
+
 CK_DLL_MFUN(shader_get_vertex_string);
 CK_DLL_MFUN(shader_get_fragment_string);
 CK_DLL_MFUN(shader_get_vertex_filepath);

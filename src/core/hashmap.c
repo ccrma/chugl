@@ -625,7 +625,8 @@ static uint64_t MM86128(const void *key, const int len, uint32_t seed) {
     h2 += h1; h3 += h1; h4 += h1;
     FMIX32(h1); FMIX32(h2); FMIX32(h3); FMIX32(h4);
     h1 += h2; h1 += h3; h1 += h4;
-    h2 += h1; h3 += h1; h4 += h1;
+    h2 += h1;
+    // h3 += h1; h4 += h1;
     return (((uint64_t)h2)<<32)|h1;
 }
 

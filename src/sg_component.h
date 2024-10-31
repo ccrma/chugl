@@ -394,6 +394,16 @@ struct SG_Shader : SG_Component {
 
     // material properties
     SG_ShaderIncludes includes;
+
+    static void free(SG_Shader* shader)
+    {
+        FREE(shader->vertex_string_owned);
+        FREE(shader->fragment_string_owned);
+        FREE(shader->vertex_filepath_owned);
+        FREE(shader->fragment_filepath_owned);
+        FREE(shader->compute_string_owned);
+        FREE(shader->compute_filepath_owned);
+    }
 };
 
 // ============================================================================
@@ -936,3 +946,4 @@ SG_Webcam* SG_GetWebcam(SG_ID id);
 void SG_DecrementRef(SG_ID id);
 void SG_AddRef(SG_Component* comp);
 void SG_GC();
+void SG_ComponentFree(SG_Component* comp);

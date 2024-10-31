@@ -25,7 +25,7 @@ void* reallocate(void* pointer, i64 oldSize, i64 newSize);
 
 #define FREE(ptr)                                                                      \
     do {                                                                               \
-        reallocate(ptr, 0, 0);                                                         \
+        reallocate((void*)ptr, 0, 0);                                                  \
         ptr = NULL;                                                                    \
     } while (0)
 

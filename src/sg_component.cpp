@@ -1287,6 +1287,10 @@ SG_Component* SG_GetComponent(SG_ID id)
     SG_Location* result = (SG_Location*)hashmap_get(locator, &key);
     SG_Component* component
       = result ? (SG_Component*)Arena::get(result->arena, result->offset) : NULL;
+    if (component) {
+        ASSERT(result->id == id);
+        ASSERT(component->id == id);
+    }
     return component;
 }
 
@@ -1432,6 +1436,60 @@ void SG_GC()
 
     // clear read queue
     Arena::clear(_gc_queue_read);
+}
+
+// frees resources within the locator hashmap and SG_Component arenas
+// sectioned off as a separate function to prevent any memory errors
+// `component_size` is size in bytes
+static void _SG_ComponentManagerFree(SG_ID id, int component_size)
+{
+    // remove from shader arena (via swap-delete with last element)
+    SG_Location* result = (SG_Location*)hashmap_get(locator, &id);
+    ASSERT(result);
+    ASSERT(result->offset % component_size
+           == 0); // offset should be a multiple of struct size
+    ASSERT(result->arena->curr % component_size
+           == 0); // arena size should be multiple of component size
+    ASSERT(result->arena->curr >= component_size); // nonempty
+    ASSERT(result->id == id);
+
+    // int component_idx = result->offset / component_size;
+
+    memcpy(Arena::get(result->arena, result->offset),
+           Arena::get(result->arena, result->arena->curr - component_size),
+           component_size);
+    Arena::pop(result->arena, component_size);
+
+    // IMPORTANT: change offset of the newly swapped arena item
+    SG_ID swapped_component_id
+      = ((SG_Component*)Arena::get(result->arena, result->offset))->id;
+    SG_Location* swapped_component_location
+      = (SG_Location*)hashmap_get(locator, &swapped_component_id);
+    ASSERT(swapped_component_location);
+    ASSERT(swapped_component_location->id == swapped_component_id);
+    ASSERT(swapped_component_location->arena == result->arena);
+    swapped_component_location->offset = result->offset;
+
+    // delete old item from locator
+    const void* delete_result = hashmap_delete(locator, &id);
+    ASSERT(delete_result);
+}
+
+void SG_ComponentFree(SG_Component* comp)
+{
+    // chugl v0.2.3 10/30/24 azaday: only implementing gc for shader class
+    switch (comp->type) {
+        case SG_COMPONENT_SHADER: {
+            // push free command
+            CQ_PushCommand_ComponentFree(comp);
+
+            log_trace("freeing shader %d", comp->id);
+            // free shader strings
+            SG_Shader::free((SG_Shader*)comp);
+            _SG_ComponentManagerFree(comp->id, sizeof(SG_Shader));
+        } break;
+        default: break; // TODO impl other types
+    }
 }
 
 // ============================================================================

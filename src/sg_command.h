@@ -100,6 +100,7 @@ enum SG_CommandType : u32 {
 
     // components
     SG_COMMAND_COMPONENT_UPDATE_NAME,
+    SG_COMMAND_COMPONENT_FREE,
     SG_COMMAND_GG_SCENE,
     SG_COMMAND_CREATE_XFORM,
     SG_COMMAND_ADD_CHILD,
@@ -268,6 +269,10 @@ struct SG_Command_UI_Disabled : public SG_Command {
 struct SG_Command_ComponentUpdateName : public SG_Command {
     SG_ID sg_id;
     ptrdiff_t name_offset;
+};
+
+struct SG_Command_ComponentFree : public SG_Command {
+    SG_ID id;
 };
 
 struct SG_Command_GG_Scene : public SG_Command {
@@ -590,6 +595,7 @@ void CQ_PushCommand_UI_Disabled(bool disabled);
 
 // components
 void CQ_PushCommand_ComponentUpdateName(SG_Component* component);
+void CQ_PushCommand_ComponentFree(SG_Component* component);
 
 void CQ_PushCommand_GG_Scene(SG_Scene* scene);
 void CQ_PushCommand_CreateTransform(SG_Transform* xform);

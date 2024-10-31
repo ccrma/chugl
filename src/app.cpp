@@ -1702,9 +1702,9 @@ static void _R_HandleCommand(App* app, SG_Command* command)
                 log_trace("setting custom cursor");
                 // create cursor
                 GLFWimage image = {};
-                image.width  = cmd->width;
-                image.height = cmd->height;
-                image.pixels = (unsigned char*)CQ_ReadCommandGetOffset(
+                image.width     = cmd->width;
+                image.height    = cmd->height;
+                image.pixels    = (unsigned char*)CQ_ReadCommandGetOffset(
                   cmd->mouse_cursor_image_offset);
 
                 // print image
@@ -1790,6 +1790,9 @@ static void _R_HandleCommand(App* app, SG_Command* command)
                     ASSERT(FALSE);
                 } break;
             }
+        } break;
+        case SG_COMMAND_COMPONENT_FREE: {
+            Component_FreeComponent(((SG_Command_ComponentFree*)command)->id);
         } break;
         case SG_COMMAND_GG_SCENE: {
             app->mainScene = ((SG_Command_GG_Scene*)command)->sg_id;
@@ -2073,7 +2076,7 @@ static void _R_HandleCommand(App* app, SG_Command* command)
             R_Video* video              = Component_GetVideo(cmd->video_id);
             // TODO handle updating video file path here
             if (!video)
-                video = Component_CreateVideo(
+                Component_CreateVideo(
                   &app->gctx, cmd->video_id,
                   (const char*)CQ_ReadCommandGetOffset(cmd->path_offset),
                   cmd->rgba_video_texture_id);

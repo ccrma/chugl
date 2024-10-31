@@ -309,6 +309,13 @@ void CQ_PushCommand_ComponentUpdateName(SG_Component* component)
     END_COMMAND();
 }
 
+void CQ_PushCommand_ComponentFree(SG_Component* component)
+{
+    BEGIN_COMMAND(SG_Command_ComponentFree, SG_COMMAND_COMPONENT_FREE);
+    command->id = component->id;
+    END_COMMAND();
+}
+
 void CQ_PushCommand_GG_Scene(SG_Scene* scene)
 {
     BEGIN_COMMAND(SG_Command_GG_Scene, SG_COMMAND_GG_SCENE);

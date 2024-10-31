@@ -142,17 +142,11 @@
 	// Now try to adjust the framerate.
 	if(framerate > 0) {
 		NSArray* validRates			= _captureDevice.activeFormat.videoSupportedFrameRateRanges;
-		AVFrameRateRange* bestRange = [AVFrameRateRange alloc];
-		BOOL found					= NO;
 		for(AVFrameRateRange* range in validRates) {
 			if(framerate >= floor([range minFrameRate]) && framerate <= ceil([range maxFrameRate])) {
-				bestRange = range;
-				found	  = YES;
+                _captureDevice.activeVideoMinFrameDuration = range.minFrameDuration;
+                _captureDevice.activeVideoMaxFrameDuration = range.maxFrameDuration;
 			}
-		}
-		if(found) {
-			_captureDevice.activeVideoMinFrameDuration = bestRange.minFrameDuration;
-			_captureDevice.activeVideoMaxFrameDuration = bestRange.maxFrameDuration;
 		}
 	}
 
@@ -311,6 +305,7 @@ int sr_webcam_open(sr_webcam_device* device) {
 	BOOL res					= [stream setupWithID:device->deviceId rate:device->framerate width:device->width height:device->height device_name:device->user_friendly_name device_name_length:sizeof(device->user_friendly_name)];
 	if(res == NO) {
 		device->stream = NULL;
+        [stream release];
 		return -1;
 	}
 	device->stream	  = stream;
