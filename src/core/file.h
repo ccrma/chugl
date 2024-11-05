@@ -61,7 +61,12 @@ FileReadResult File_read(const char* filename, int is_text_file)
     fseek(file, 0, SEEK_SET);
 
     result.data_owned = (u8*)malloc(result.size + (is_text_file == 0 ? 0 : 1));
-    fread(result.data_owned, 1, result.size, file);
+    if(fread(result.data_owned, 1, result.size, file) != result.size)
+    {
+    	log_error("Unable to read file '%s'\n", filename);
+	fclose(file);
+	exit(1);
+    }
     fclose(file);
     if (is_text_file != 0) {
         result.data_owned[result.size] = 0;
