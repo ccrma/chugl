@@ -50,21 +50,37 @@ FileReadResult File_read(const char* filename, int is_text_file)
 {
     ASSERT(filename);
     FileReadResult result = {};
+    // zero out contents
+    result.size = 0;
+    result.data_owned = NULL;
 
     FILE* file = fopen(filename, "rb");
     if (file == NULL) {
         log_error("Unable to open file '%s'\n", filename);
-        exit(1);
+        goto error;
     }
     fseek(file, 0, SEEK_END);
     result.size = ftell(file);
     fseek(file, 0, SEEK_SET);
 
     result.data_owned = (u8*)malloc(result.size + (is_text_file == 0 ? 0 : 1));
-    fread(result.data_owned, 1, result.size, file);
+    if (fread(result.data_owned, 1, result.size, file) != result.size) {
+    	log_error("Unable to read file '%s'\n", filename);
+        goto error;
+    }
     fclose(file);
     if (is_text_file != 0) {
         result.data_owned[result.size] = 0;
     }
+    return result;
+
+error:
+    // close file if needed
+    if (file) { fclose(file); }
+    // zero out return struct
+    result.size = 0;
+    // clean up memory
+    if (result.data_owned) { free(result.data_owned); result.data_owned = NULL; }
+
     return result;
 }
