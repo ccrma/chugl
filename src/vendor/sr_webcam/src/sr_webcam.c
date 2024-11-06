@@ -37,7 +37,9 @@ void sr_webcam_set_user(sr_webcam_device* device, void* user)
 long sr_webcam_get_format_size(sr_webcam_device* device)
 {
     // Return the size in bytes, assume RGB for now.
-    return (long)(device->width) * (long)(device->height) * 3;
+    // return (long)(device->width) * (long)(device->height) * 3;
+    // RGBA
+    return (long)(device->width) * (long)(device->height) * 4;
 }
 
 void sr_webcam_get_dimensions(sr_webcam_device* device, int* width, int* height)

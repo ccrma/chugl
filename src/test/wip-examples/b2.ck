@@ -78,6 +78,9 @@ keep in your application."
 
 */
 
+GOrbitCamera camera --> GG.scene();
+GG.scene().camera(camera);
+
 GWindow.maximize();
 
 b2_WorldDef world_def;

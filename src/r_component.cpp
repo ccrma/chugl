@@ -2329,10 +2329,6 @@ void R_Webcam::updateTexture(GraphicsContext* gctx, R_Webcam* webcam)
     // validate texture dimensions
     int webcam_width{}, webcam_height{};
     sr_webcam_get_dimensions(webcam_data->webcam, &webcam_width, &webcam_height);
-    // log_trace("Webcam %d dimensions: %d x %d", webcam->device_id, webcam_width,
-    //           webcam_height);
-    // log_trace("texture dimensions: %d x %d", texture->desc.width,
-    // texture->desc.height);
     ASSERT(texture->desc.width == webcam_width);
     ASSERT(texture->desc.height == webcam_height);
 
@@ -2340,13 +2336,8 @@ void R_Webcam::updateTexture(GraphicsContext* gctx, R_Webcam* webcam)
 
     // check if has_frame
     if (webcam_data->frame_count == webcam->last_frame_count) {
-        // log_trace("No frame for webcam device %d and texture %d", webcam->device_id,
-        //           webcam->webcam_texture_id);
         return;
     }
-
-    // log_trace("Writing webcam device %d to texture %d", webcam->device_id,
-    //           webcam->webcam_texture_id);
 
     // write to texture
     SG_TextureWriteDesc write_desc = {};
@@ -2391,21 +2382,9 @@ static void R_Webcam_Callback(sr_webcam_device* device, void* data)
     if (!webcam_data->capture) return;
 
     // copy data, scaling up size from rgb to rgba
-    int data_size = sr_webcam_get_format_size(device);
-    ASSERT(data_size % 3 == 0);
-    data_size = data_size / 3 * 4;
-    if (webcam_data->size < data_size) {
-        webcam_data->data = (u8*)realloc(webcam_data->data, data_size);
-    }
+    int data_size     = sr_webcam_get_format_size(device);
     webcam_data->size = data_size;
-    u8* rgb_data      = (u8*)data;
-    // copy data, setting alpha to 255
-    for (int i = 0; i < data_size; i += 4) {
-        webcam_data->data[i]     = rgb_data[i / 4 * 3];
-        webcam_data->data[i + 1] = rgb_data[i / 4 * 3 + 1];
-        webcam_data->data[i + 2] = rgb_data[i / 4 * 3 + 2];
-        webcam_data->data[i + 3] = 255;
-    }
+    webcam_data->data = (u8*)data;
 
     // bump frame count
     webcam_data->frame_count++;

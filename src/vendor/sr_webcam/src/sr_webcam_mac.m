@@ -229,37 +229,52 @@
 - (void)captureOutput:(AVCaptureOutput*)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection*)connection {
 #	pragma unused(captureOutput)
 #	pragma unused(connection)
-	if(!_parent) {
-		return;
-	}
+
+	if(!_parent) return;
+
+	// double buffer for concurrent reader/writer
+	static int dst_buffer_a_size = 0;
+	static int dst_buffer_b_size = 0;
+	static unsigned char* dst_buffer_a = NULL;
+	static unsigned char* dst_buffer_b = NULL;
+	static unsigned char** write_buffer = &dst_buffer_a;
+	static int* write_buffer_size = &dst_buffer_a_size;
+
+	// flip buffers
+	write_buffer = (write_buffer == &dst_buffer_a) ? &dst_buffer_b : &dst_buffer_a;
+	write_buffer_size = (write_buffer_size == &dst_buffer_a_size) ? &dst_buffer_b_size : &dst_buffer_a_size;
+
 	@autoreleasepool {
 		CVImageBufferRef imgBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
 		CVPixelBufferLockBaseAddress(imgBuffer, 0);
 
 		const int wBuffer = (int)CVPixelBufferGetWidth(imgBuffer);
 		const int hBuffer = (int)CVPixelBufferGetHeight(imgBuffer);
+
 		if(wBuffer == _parent->width && hBuffer == _parent->height) {
 			unsigned char* baseBuffer = (unsigned char*)CVPixelBufferGetBaseAddress(imgBuffer);
-			// Convert to RGB.
-			vImage_Buffer srcImg;
-			srcImg.width	= wBuffer;
-			srcImg.height	= hBuffer;
-			srcImg.data		= baseBuffer;
-			srcImg.rowBytes = CVPixelBufferGetBytesPerRow(imgBuffer);
 
-			unsigned char* dstBuffer = (unsigned char*)malloc(wBuffer * hBuffer * 3);
-			vImage_Buffer dstImg;
-			dstImg.width	= wBuffer;
-			dstImg.height	= hBuffer;
-			dstImg.rowBytes = wBuffer * 3;
-			dstImg.data		= dstBuffer;
+			int bytes_per_row = 4 * wBuffer;
+			int buffer_size = bytes_per_row * hBuffer;
 
-			vImage_Error err = vImageConvert_BGRA8888toRGB888(&srcImg, &dstImg, kvImageNoFlags);
-			if(err == kvImageNoError) {
-				// Pass the data.
-				_parent->callback(_parent, dstBuffer);
+			// resize
+			if (*write_buffer_size != buffer_size) {
+				*write_buffer_size = buffer_size;
+				*write_buffer = realloc(*write_buffer, buffer_size);
 			}
-			free(dstBuffer);
+
+			// convert bgra8 of baseBuffer to rgba8 of dst_buffer, also flipping along x and y
+			for (unsigned int y = 0; y < hBuffer; ++y) {
+				for (unsigned int x = 0; x < wBuffer; ++x) {
+					(*write_buffer)[(hBuffer - 1 - y) * bytes_per_row + (wBuffer - 1 - x) * 4 + 0] = baseBuffer[y * bytes_per_row + 4 * x + 2];
+					(*write_buffer)[(hBuffer - 1 - y) * bytes_per_row + (wBuffer - 1 - x) * 4 + 1] = baseBuffer[y * bytes_per_row + 4 * x + 1];
+					(*write_buffer)[(hBuffer - 1 - y) * bytes_per_row + (wBuffer - 1 - x) * 4 + 2] = baseBuffer[y * bytes_per_row + 4 * x + 0];
+					(*write_buffer)[(hBuffer - 1 - y) * bytes_per_row + (wBuffer - 1 - x) * 4 + 3] = 255;
+				}
+			}
+
+			// write buffer becomes the read buffer, send to graphics thread
+			_parent->callback(_parent, *write_buffer);
 		}
 		CVPixelBufferUnlockBaseAddress(imgBuffer, kCVPixelBufferLock_ReadOnly);
 	}

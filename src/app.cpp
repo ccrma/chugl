@@ -2027,6 +2027,39 @@ static void _R_HandleCommand(App* app, SG_Command* command)
                                    bottom_path, back_path, front_path,
                                    cmd->flip_vertically);
         } break;
+        case SG_COMMAND_COPY_TEXTURE_TO_TEXTURE: {
+            SG_Command_CopyTextureToTexture* cmd
+              = (SG_Command_CopyTextureToTexture*)command;
+
+            // TODO: do we need to recreate the texture view??
+
+            R_Texture* src_texture   = Component_GetTexture(cmd->src_texture_id);
+            R_Texture* dst_texture   = Component_GetTexture(cmd->dst_texture_id);
+            WGPUImageCopyTexture src = SG_TextureLocation::wgpuImageCopyTexture(
+              cmd->src_location, src_texture->gpu_texture);
+            WGPUImageCopyTexture dst = SG_TextureLocation::wgpuImageCopyTexture(
+              cmd->dst_location, dst_texture->gpu_texture);
+            WGPUExtent3D copy_size
+              = { (u32)cmd->width, (u32)cmd->height, (u32)cmd->depth };
+
+            dst_texture->generation++;
+
+            // TODO: have command encoder be created at START of frame, while processing
+            // all the render commands then can reuse in main render pass, don't need to
+            // duplicate
+            WGPUCommandEncoder cmd_encoder
+              = wgpuDeviceCreateCommandEncoder(app->gctx.device, NULL);
+            wgpuCommandEncoderCopyTextureToTexture(cmd_encoder, &src, &dst, &copy_size);
+            WGPUCommandBuffer command_buffer
+              = wgpuCommandEncoderFinish(cmd_encoder, NULL);
+            ASSERT(command_buffer != NULL);
+            WGPU_RELEASE_RESOURCE(CommandEncoder, cmd_encoder)
+
+            // Sumbit commmand buffer
+            wgpuQueueSubmit(app->gctx.queue, 1, &command_buffer);
+
+            WGPU_RELEASE_RESOURCE(CommandBuffer, command_buffer)
+        } break;
         // buffers ----------------------
         case SG_COMMAND_BUFFER_UPDATE: {
             SG_Command_BufferUpdate* cmd = (SG_Command_BufferUpdate*)command;

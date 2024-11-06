@@ -640,6 +640,23 @@ void CQ_PushCommand_CubemapTextureFromFile(
     END_COMMAND();
 }
 
+void CQ_PushCommand_CopyTextureToTexture(SG_Texture* dst_texture,
+                                         SG_Texture* src_texture,
+                                         SG_TextureLocation* dst_location,
+                                         SG_TextureLocation* src_location, int width,
+                                         int height, int depth)
+{
+    BEGIN_COMMAND(SG_Command_CopyTextureToTexture, SG_COMMAND_COPY_TEXTURE_TO_TEXTURE);
+    command->dst_texture_id = dst_texture->id;
+    command->src_texture_id = src_texture->id;
+    command->dst_location   = *dst_location;
+    command->src_location   = *src_location;
+    command->width          = width;
+    command->height         = height;
+    command->depth          = depth;
+    END_COMMAND();
+}
+
 // Shader ======================================================================
 
 void CQ_PushCommand_ShaderCreate(SG_Shader* shader)

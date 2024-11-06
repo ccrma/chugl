@@ -51,3 +51,10 @@ TextureLoadDesc load_desc;
 T.assert(!load_desc.flip_y, "load desc flip y");
 T.assert(load_desc.gen_mips, "load desc gen mips");
 
+
+// Texturelocation defaults ============================
+TextureLocation location;
+T.assert(location.mip == 0, "location mip");
+T.assert(location.x == 0, "location x ");
+T.assert(location.y == 0, "location y");
+T.assert(location.z == 0, "location z");

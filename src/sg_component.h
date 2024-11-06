@@ -184,6 +184,23 @@ struct SG_TextureLoadDesc {
     bool gen_mips = true;
 };
 
+struct SG_TextureLocation {
+    int mip;
+    int origin_x;
+    int origin_y;
+    int origin_z;
+
+    static WGPUImageCopyTexture wgpuImageCopyTexture(SG_TextureLocation loc,
+                                                     WGPUTexture texture)
+    {
+        WGPUImageCopyTexture img = {};
+        img.texture              = texture;
+        img.mipLevel             = loc.mip;
+        img.origin = { (u32)loc.origin_x, (u32)loc.origin_y, (u32)loc.origin_z };
+        return img;
+    }
+};
+
 int SG_Texture_numComponentsPerTexel(WGPUTextureFormat format);
 int SG_Texture_byteSizePerTexel(
   WGPUTextureFormat format); // size of a single texel in bytes

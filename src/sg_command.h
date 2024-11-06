@@ -153,6 +153,7 @@ enum SG_CommandType : u32 {
     SG_COMMAND_TEXTURE_WRITE,
     SG_COMMAND_TEXTURE_FROM_FILE,
     SG_COMMAND_CUBEMAP_TEXTURE_FROM_FILE,
+    SG_COMMAND_COPY_TEXTURE_TO_TEXTURE,
 
     // buffer
     SG_COMMAND_BUFFER_UPDATE,
@@ -387,6 +388,18 @@ struct SG_Command_CubemapTextureFromFile : public SG_Command {
     ptrdiff_t front_face_offset;
     bool flip_vertically;
 };
+
+struct SG_Command_CopyTextureToTexture : public SG_Command {
+    SG_ID dst_texture_id;
+    SG_ID src_texture_id;
+    SG_TextureLocation dst_location;
+    SG_TextureLocation src_location;
+    int width;
+    int height;
+    int depth;
+};
+
+// shader commands -----------------------------------------------------
 
 struct SG_Command_ShaderCreate : public SG_Command {
     SG_ID sg_id;
@@ -631,6 +644,11 @@ void CQ_PushCommand_CubemapTextureFromFile(
   SG_Texture* texture, SG_TextureLoadDesc* desc, const char* right_face,
   const char* left_face, const char* top_face, const char* bottom_face,
   const char* back_face, const char* front_face);
+void CQ_PushCommand_CopyTextureToTexture(SG_Texture* dst_texture,
+                                         SG_Texture* src_texture,
+                                         SG_TextureLocation* dst_location,
+                                         SG_TextureLocation* src_location, int width,
+                                         int height, int depth);
 
 // shader
 void CQ_PushCommand_ShaderCreate(SG_Shader* shader);

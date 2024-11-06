@@ -160,7 +160,7 @@ class SRWebcamVideoStreamMF : public IMFSourceReaderCallback
             BYTE* ptr              = NULL;
             LONG pitch             = 0;
             DWORD maxSize = 0, curSize = 0;
-            int exactRowSize = captureFormat.width * 3;
+            int exactRowSize      = captureFormat.width * 3;
             IMF2DBuffer* buffer2d = NULL;
 
             // Generate data buffer from sample.
@@ -220,19 +220,20 @@ class SRWebcamVideoStreamMF : public IMFSourceReaderCallback
                 }
                 return S_OK;
             }
-            // Convert from BGR (with stride) to compact RGB.
+            // Convert from BGR (with stride) to compact RGBA
             unsigned char* dstBuffer = (unsigned char*)malloc(
-              (int)captureFormat.width * (int)captureFormat.height * 3);
+              (int)captureFormat.width * (int)captureFormat.height * 4);
             if (dstBuffer != nullptr) {
                 // Copy each pixel and switch components, taking the pitch into account.
-                for (unsigned int y = 0; y < captureFormat.height; ++y) {
+                for (unsigned int y = captureFormat.height - 1; y >= 0; --y) {
                     for (unsigned int x = 0; x < captureFormat.width; ++x) {
-                        dstBuffer[y * exactRowSize + 3 * x + 0]
+                        dstBuffer[y * exactRowSize + 4 * x + 0]
                           = ptr[y * pitch + 3 * x + 2];
-                        dstBuffer[y * exactRowSize + 3 * x + 1]
+                        dstBuffer[y * exactRowSize + 4 * x + 1]
                           = ptr[y * pitch + 3 * x + 1];
-                        dstBuffer[y * exactRowSize + 3 * x + 2]
+                        dstBuffer[y * exactRowSize + 4 * x + 2]
                           = ptr[y * pitch + 3 * x + 0];
+                        dstBuffer[y * exactRowSize + 4 * x + 3] = 255;
                     }
                 }
             }
@@ -504,7 +505,7 @@ int sr_webcam_open(sr_webcam_device* device)
     device->height    = stream->captureFormat.height;
     device->framerate = (int)(stream->captureFormat.framerate);
     device->deviceId  = stream->_id;
-	return 0;
+    return 0;
 }
 
 void sr_webcam_start(sr_webcam_device* device)

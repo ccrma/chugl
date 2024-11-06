@@ -137,6 +137,18 @@ static t_CKUINT texture_write_desc_width_offset  = 0;
 static t_CKUINT texture_write_desc_height_offset = 0;
 static t_CKUINT texture_write_desc_depth_offset  = 0;
 
+// TextureLocation -----------------------------------------------------------------
+// wrapper around WGPUImageCopyTexture, describes a region of a texture to copy to/from
+// NOT storying the actual texture in here so we don't need to worry about refcounting
+
+CK_DLL_CTOR(texture_location_ctor);
+
+static t_CKUINT texture_location_mip_offset      = 0;
+static t_CKUINT texture_location_origin_x_offset = 0;
+static t_CKUINT texture_location_origin_y_offset = 0;
+static t_CKUINT texture_location_origin_z_offset = 0;
+// static t_CKUINT texture_location_aspect_offset   = 0;
+
 // TextureWriteDesc -----------------------------------------------------------------
 CK_DLL_CTOR(texture_load_desc_ctor);
 
@@ -162,6 +174,10 @@ CK_DLL_MFUN(texture_write_with_desc);
 CK_DLL_SFUN(texture_load_2d_file);
 CK_DLL_SFUN(texture_load_2d_file_with_params);
 CK_DLL_SFUN(texture_load_cubemap);
+
+// copy texture
+CK_DLL_SFUN(texture_copy_texture_to_texture);
+CK_DLL_SFUN(texture_copy_texture_to_texture_with_desc);
 
 static void ulib_texture_query(Chuck_DL_Query* QUERY)
 {
@@ -281,6 +297,29 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
         END_CLASS();
     };
 
+    { // TextureLocation
+        BEGIN_CLASS("TextureLocation", "Object");
+        DOC_CLASS(
+          "Describes a specific location/offset into a texture. Used for copying "
+          "to/from textures");
+
+        CTOR(texture_location_ctor);
+
+        texture_location_mip_offset = MVAR("int", "mip", false);
+        DOC_VAR("Mip level of the texture location");
+
+        texture_location_origin_x_offset = MVAR("int", "x", false);
+        DOC_VAR("X offset of the location");
+
+        texture_location_origin_y_offset = MVAR("int", "y", false);
+        DOC_VAR("Y offset of the location");
+
+        texture_location_origin_z_offset = MVAR("int", "z", false);
+        DOC_VAR("Z offset of the location");
+
+        END_CLASS();
+    }
+
     { // TextureLoadDesc
         BEGIN_CLASS("TextureLoadDesc", "Object");
         DOC_CLASS("Options for loading a texture from a file");
@@ -308,6 +347,7 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
         ADD_EX("deep/audio_donut.ck");
         ADD_EX("deep/snowstorm.ck");
         ADD_EX("basic/skybox.ck");
+        ADD_EX("deep/webcam_echo.ck");
 
         // svars ---------------
         static t_CKINT texture_usage_copy_src        = WGPUTextureUsage_CopySrc;
@@ -378,6 +418,22 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
         ARG("string", "back");
         ARG("string", "front");
         DOC_FUNC("Load a cubemap texture from 6 filepaths, one for each face");
+
+        SFUN(texture_copy_texture_to_texture, "void", "copy");
+        ARG(SG_CKNames[SG_COMPONENT_TEXTURE], "dst_texture");
+        ARG(SG_CKNames[SG_COMPONENT_TEXTURE], "src_texture");
+        DOC_FUNC("Copy the entire src texture to the dst texture at mip level 0");
+
+        SFUN(texture_copy_texture_to_texture_with_desc, "void", "copy");
+        ARG(SG_CKNames[SG_COMPONENT_TEXTURE], "dst_texture");
+        ARG("TextureLocation", "dst_location");
+        ARG(SG_CKNames[SG_COMPONENT_TEXTURE], "src_texture");
+        ARG("TextureLocation", "src_location");
+        ARG("vec3", "size");
+        DOC_FUNC(
+          "Copy a region of the src texture to a location in the dst texture. The size "
+          "parameter is floored to integers and specifies the 3D dimensions of the "
+          "region to copy");
 
         // mfun ------------------------------------------------------------------
 
@@ -534,6 +590,31 @@ static SG_TextureWriteDesc ulib_texture_textureWriteDescFromCkobj(Chuck_Object* 
     // validation happens at final write
 
     return desc;
+}
+
+// TextureRegion -----------------------------------------------------------------
+
+CK_DLL_CTOR(texture_location_ctor)
+{
+    OBJ_MEMBER_INT(SELF, texture_location_mip_offset)      = 0;
+    OBJ_MEMBER_INT(SELF, texture_location_origin_x_offset) = 0;
+    OBJ_MEMBER_INT(SELF, texture_location_origin_y_offset) = 0;
+    OBJ_MEMBER_INT(SELF, texture_location_origin_z_offset) = 0;
+}
+
+static SG_TextureLocation ulib_texture_textureLocationFromCkobj(Chuck_Object* ckobj)
+{
+    if (!ckobj) return {};
+
+    CK_DL_API API = g_chuglAPI;
+
+    SG_TextureLocation location = {};
+    location.mip                = OBJ_MEMBER_INT(ckobj, texture_location_mip_offset);
+    location.origin_x = OBJ_MEMBER_INT(ckobj, texture_location_origin_x_offset);
+    location.origin_y = OBJ_MEMBER_INT(ckobj, texture_location_origin_y_offset);
+    location.origin_z = OBJ_MEMBER_INT(ckobj, texture_location_origin_z_offset);
+
+    return location;
 }
 
 // TextureLoadDesc -----------------------------------------------------------------
@@ -862,4 +943,153 @@ CK_DLL_SFUN(texture_load_cubemap)
       = ulib_texture_load_cubemap(right_face, left_face, top_face, bottom_face,
                                   back_face, front_face, &load_desc, SHRED)
           ->ckobj;
+}
+
+static const char* ulib_texture_wgpuTextureFormatToString(WGPUTextureFormat format)
+{
+    switch (format) {
+        case WGPUTextureFormat_RGBA8Unorm: return "RGBA8Unorm";
+        case WGPUTextureFormat_RGBA16Float: return "RGBA16Float";
+        case WGPUTextureFormat_RGBA32Float: return "RGBA32Float";
+        case WGPUTextureFormat_R32Float: return "R32Float";
+        case WGPUTextureFormat_Depth24PlusStencil8: return "Depth24PlusStencil8";
+        default: {
+            ASSERT(false); // unknown
+            return "";
+        }
+    }
+}
+
+static void ulib_texture_copyTextureToTexture(SG_Texture* dst, SG_Texture* src,
+                                              SG_TextureLocation dst_loc,
+                                              SG_TextureLocation src_loc, int width,
+                                              int height, int depth)
+{
+    { // validation
+        // make sure location is within bounds of texture
+        if (dst_loc.origin_x > dst->desc.width || dst_loc.origin_y > dst->desc.height
+            || dst_loc.origin_z > dst->desc.depth || dst_loc.mip >= dst->desc.mips) {
+            log_warn("Could not copy texture[%d] %s to texture[%d] %s", src->id,
+                     src->name, dst->id, dst->name);
+            log_warn(
+              " |- Reason: destination location [%d, %d, %d] mip %d is out of "
+              "bounds of texture with dimensions [%d, %d, %d] and %d mips",
+              dst_loc.origin_x, dst_loc.origin_y, dst_loc.origin_z, dst_loc.mip,
+              dst->desc.width, dst->desc.height, dst->desc.depth, dst->desc.mips);
+            return;
+        }
+        if (src_loc.origin_x > src->desc.width || src_loc.origin_y > src->desc.height
+            || src_loc.origin_z > src->desc.depth || src_loc.mip >= src->desc.mips) {
+            log_warn("Could not copy texture[%d] %s to texture[%d] %s", src->id,
+                     src->name, dst->id, dst->name);
+            log_warn(
+              " |- Reason: source location [%d, %d, %d] mip %d is out of bounds "
+              "of texture with dimensions [%d, %d, %d] and %d mips",
+              src_loc.origin_x, src_loc.origin_y, src_loc.origin_z, src_loc.mip,
+              src->desc.width, src->desc.height, src->desc.depth, src->desc.mips);
+            return;
+        }
+
+        // The two textures must be must either be the same format, or they must only
+        // differ by the suffix '-srgb'.
+        // TODO: after adding srgb support, change this to check for srgb suffix
+        if (dst->desc.format != src->desc.format) {
+            const char* dst_format_str
+              = ulib_texture_wgpuTextureFormatToString(dst->desc.format);
+            const char* src_format_str
+              = ulib_texture_wgpuTextureFormatToString(src->desc.format);
+
+            log_warn("Could not copy texture[%d] %s to texture[%d] %s", src->id,
+                     src->name, dst->id, dst->name);
+            log_warn(" |- Reason: mismatched texture formats %s != %s", dst_format_str,
+                     src_format_str);
+            return;
+        }
+
+        // src.texture must have a usage of GPUTextureUsage.COPY_SRC
+        if ((src->desc.usage | WGPUTextureUsage_CopySrc) == 0) {
+            log_warn("Could not copy texture[%d] %s to texture[%d] %s", src->id,
+                     src->name, dst->id, dst->name);
+            log_warn(
+              " |- Reason: source texture[%d] does not have the Texture.Usage_CopySrc "
+              "permission",
+              src->id);
+            return;
+        }
+
+        // dst.texture must have a usage of GPUTextureUsage.COPY_DST
+        if ((dst->desc.usage & WGPUTextureUsage_CopyDst) == 0) {
+            log_warn("Could not copy texture[%d] %s to texture[%d] %s", src->id,
+                     src->name, dst->id, dst->name);
+            log_warn(
+              " |- Reason: destination texture[%d] does not have the "
+              "Texture.Usage_CopyDst "
+              "permission",
+              dst->id);
+            return;
+        }
+
+        // check if dst is too small
+        if (dst->desc.width < width || dst->desc.height < height
+            || dst->desc.depth < depth) {
+            log_warn("Could not copy texture[%d] %s to texture[%d] %s", src->id,
+                     src->name, dst->id, dst->name);
+            log_warn(
+              " |- Reason: destination texture is too small"
+              " copy size [%d, %d, %d] > destination size [%d, %d, %d]",
+              width, height, depth, dst->desc.width, dst->desc.height, dst->desc.depth);
+            return;
+        }
+
+        // TODO after supporting compressed textures, check size is multiple of block
+        // size
+    }
+
+    CQ_PushCommand_CopyTextureToTexture(dst, src, &dst_loc, &src_loc, width, height,
+                                        depth);
+}
+
+CK_DLL_SFUN(texture_copy_texture_to_texture)
+{
+    Chuck_Object* dst_ckobj = (GET_NEXT_OBJECT(ARGS));
+    Chuck_Object* src_ckobj = (GET_NEXT_OBJECT(ARGS));
+    if (!dst_ckobj || !src_ckobj) {
+        log_warn("Could not copy texture to texture");
+        log_warn(" |- Reason: null texture objects");
+        return;
+    }
+    SG_Texture* dst_texture = GET_TEXTURE(dst_ckobj);
+    SG_Texture* src_texture = GET_TEXTURE(src_ckobj);
+
+    SG_TextureLocation dst_location = {};
+    SG_TextureLocation src_location = {};
+    ulib_texture_copyTextureToTexture(
+      dst_texture, src_texture, dst_location, src_location, src_texture->desc.width,
+      src_texture->desc.height, src_texture->desc.depth);
+}
+
+CK_DLL_SFUN(texture_copy_texture_to_texture_with_desc)
+{
+    Chuck_Object* dst_ckobj = GET_NEXT_OBJECT(ARGS);
+    SG_TextureLocation dst_loc
+      = ulib_texture_textureLocationFromCkobj(GET_NEXT_OBJECT(ARGS));
+
+    Chuck_Object* src_ckobj = GET_NEXT_OBJECT(ARGS);
+    SG_TextureLocation src_loc
+      = ulib_texture_textureLocationFromCkobj(GET_NEXT_OBJECT(ARGS));
+
+    t_CKVEC3 copy_size = GET_NEXT_VEC3(ARGS);
+
+    if (!dst_ckobj || !src_ckobj) {
+        log_warn("Could not copy texture to texture");
+        log_warn(" |- Reason: null texture objects");
+        return;
+    }
+
+    SG_Texture* dst_texture = GET_TEXTURE(dst_ckobj);
+    SG_Texture* src_texture = GET_TEXTURE(src_ckobj);
+
+    ulib_texture_copyTextureToTexture(dst_texture, src_texture, dst_loc, src_loc,
+                                      (int)copy_size.x, (int)copy_size.y,
+                                      (int)copy_size.z);
 }
