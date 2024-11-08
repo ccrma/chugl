@@ -48,13 +48,26 @@ struct CQ {
 
     Arena cq_a = {};
     Arena cq_b = {};
+
+    static void init(CQ* cq)
+    {
+        ASSERT(cq->cq_a.base == NULL);
+        ASSERT(cq->cq_b.base == NULL);
+
+        Arena::init(&cq->cq_a, MEGABYTE);
+        Arena::init(&cq->cq_b, MEGABYTE);
+
+        cq->read_q  = &cq->cq_a;
+        cq->write_q = &cq->cq_b;
+    }
 };
 
 // enforce it fits within a cache line
 // static_assert(sizeof(CQ) <= 64);
 // TODO: look into aligned_alloc for cache line alignment
 
-static CQ cq = {};
+static CQ audio_to_graphics_cq = {};
+static CQ graphics_to_audio_cq = {};
 
 // static Arena* _CQ_GetReadQ()
 // {
@@ -68,24 +81,12 @@ static CQ cq = {};
 
 void CQ_Init()
 {
-    ASSERT(cq.cq_a.base == NULL);
-    ASSERT(cq.cq_b.base == NULL);
-
-    Arena::init(&cq.cq_a, MEGABYTE);
-    Arena::init(&cq.cq_b, MEGABYTE);
-
-    cq.read_q  = &cq.cq_a;
-    cq.write_q = &cq.cq_b;
-}
-
-void CQ_Free()
-{
-    Arena::free(&cq.cq_a);
-    Arena::free(&cq.cq_b);
+    CQ::init(&audio_to_graphics_cq);
+    CQ::init(&graphics_to_audio_cq);
 }
 
 // swap the command queue double buffer
-void CQ_SwapQueues()
+static void _CQ_SwapQueuesImpl(CQ& cq)
 {
     // assert read queue has been flushed before swapping
     ASSERT(cq.read_q->curr == 0);
@@ -98,7 +99,16 @@ void CQ_SwapQueues()
     spinlock::unlock(&cq.write_q_lock);
 }
 
-bool CQ_ReadCommandQueueIter(SG_Command** command)
+void CQ_SwapQueues(bool which = false)
+{
+    if (which) {
+        _CQ_SwapQueuesImpl(graphics_to_audio_cq);
+    } else {
+        _CQ_SwapQueuesImpl(audio_to_graphics_cq);
+    }
+}
+
+static bool _CQ_ReadCommandQueueIterImpl(CQ& cq, SG_Command** command)
 {
     // command queue empty
     if (cq.read_q->curr == 0) {
@@ -127,19 +137,46 @@ bool CQ_ReadCommandQueueIter(SG_Command** command)
     return true;
 }
 
-void CQ_ReadCommandQueueClear()
+bool CQ_ReadCommandQueueIter(SG_Command** command, bool which = false)
+{
+    if (which)
+        return _CQ_ReadCommandQueueIterImpl(graphics_to_audio_cq, command);
+    else
+        return _CQ_ReadCommandQueueIterImpl(audio_to_graphics_cq, command);
+}
+
+static void _CQ_ReadCommandQueueClearImpl(CQ& cq)
 {
     Arena::clear(cq.read_q);
 }
 
-void* CQ_ReadCommandGetOffset(u64 byte_offset)
+void CQ_ReadCommandQueueClear(bool which = false)
+{
+    if (which)
+        _CQ_ReadCommandQueueClearImpl(graphics_to_audio_cq);
+    else
+        _CQ_ReadCommandQueueClearImpl(audio_to_graphics_cq);
+}
+
+static void* _CQ_ReadCommandGetOffsetImpl(CQ& cq, u64 byte_offset)
 {
     return Arena::get(cq.read_q, byte_offset);
+}
+
+void* CQ_ReadCommandGetOffset(u64 byte_offset, bool which = false)
+{
+    if (which)
+        return _CQ_ReadCommandGetOffsetImpl(graphics_to_audio_cq, byte_offset);
+    else
+        return _CQ_ReadCommandGetOffsetImpl(audio_to_graphics_cq, byte_offset);
 }
 
 // ============================================================================
 // Command API
 // ============================================================================
+
+// hack to avoid having to pass the command queue around
+#define cq audio_to_graphics_cq
 
 #define BEGIN_COMMAND(cmd_type, cmd_enum)                                              \
     spinlock::lock(&cq.write_q_lock);                                                  \
@@ -657,6 +694,14 @@ void CQ_PushCommand_CopyTextureToTexture(SG_Texture* dst_texture,
     END_COMMAND();
 }
 
+void CQ_PushCommand_CopyTextureToCPU(SG_Texture* texture)
+{
+    // TODO malloc memory for data
+    BEGIN_COMMAND(SG_Command_CopyTextureToCPU, SG_COMMAND_COPY_TEXTURE_TO_CPU);
+    command->id = texture->id;
+    END_COMMAND();
+}
+
 // Shader ======================================================================
 
 void CQ_PushCommand_ShaderCreate(SG_Shader* shader)
@@ -957,3 +1002,24 @@ void CQ_PushCommand_WebcamUpdate(SG_Webcam* webcam)
     command->capture   = webcam->capture;
     END_COMMAND();
 }
+
+#undef cq
+
+// ============================================================================
+// Graphics to Audio Commands
+// ============================================================================
+
+#define cq graphics_to_audio_cq
+
+void CQ_PushCommand_G2A_TextureRead(SG_ID id, void* data, int size_bytes,
+                                    WGPUBufferMapAsyncStatus status)
+{
+    BEGIN_COMMAND(SG_Command_G2A_TextureRead, SG_COMMAND_G2A_TEXTURE_READ);
+    command->texture_id = id;
+    command->data_OWNED = data;
+    command->size_bytes = size_bytes;
+    command->status     = status;
+    END_COMMAND();
+}
+
+#undef cq

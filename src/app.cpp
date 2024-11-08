@@ -1494,6 +1494,39 @@ post_skybox_pass:
     return;
 }
 
+// pool of pending mapped buffers
+// currently only used for reading texture data back to CPU
+// simple, assuming there won't be many outstanding requests
+struct BufferMapAsyncData {
+    WGPUBuffer buffer; // if null, this slot is not in use
+    SG_ID texture_id;
+    int size_bytes;
+};
+
+static Arena buffer_map_async_data_arena{};
+static BufferMapAsyncData* BufferMapAsyncData_Add(int* index)
+{
+    // linear search for first available slot
+    for (int i = 0; i < ARENA_LENGTH(&buffer_map_async_data_arena, BufferMapAsyncData);
+         i++) {
+        BufferMapAsyncData* data
+          = ARENA_GET_TYPE(&buffer_map_async_data_arena, BufferMapAsyncData, i);
+        if (!data->buffer) {
+            *index = i;
+            return data;
+        }
+    }
+    // else at this point we need to add a new one
+    *index = ARENA_LENGTH(&buffer_map_async_data_arena, BufferMapAsyncData);
+    return ARENA_PUSH_ZERO_TYPE(&buffer_map_async_data_arena, BufferMapAsyncData);
+}
+
+static BufferMapAsyncData* BufferMapAsyncData_Get(int index)
+{
+    ASSERT(index < ARENA_LENGTH(&buffer_map_async_data_arena, BufferMapAsyncData));
+    return ARENA_GET_TYPE(&buffer_map_async_data_arena, BufferMapAsyncData, index);
+}
+
 // TODO make sure switch statement is in correct order?
 static void _R_HandleCommand(App* app, SG_Command* command)
 {
@@ -2031,8 +2064,6 @@ static void _R_HandleCommand(App* app, SG_Command* command)
             SG_Command_CopyTextureToTexture* cmd
               = (SG_Command_CopyTextureToTexture*)command;
 
-            // TODO: do we need to recreate the texture view??
-
             R_Texture* src_texture   = Component_GetTexture(cmd->src_texture_id);
             R_Texture* dst_texture   = Component_GetTexture(cmd->dst_texture_id);
             WGPUImageCopyTexture src = SG_TextureLocation::wgpuImageCopyTexture(
@@ -2059,6 +2090,106 @@ static void _R_HandleCommand(App* app, SG_Command* command)
             wgpuQueueSubmit(app->gctx.queue, 1, &command_buffer);
 
             WGPU_RELEASE_RESOURCE(CommandBuffer, command_buffer)
+        } break;
+        case SG_COMMAND_COPY_TEXTURE_TO_CPU: {
+            SG_Command_CopyTextureToCPU* cmd = (SG_Command_CopyTextureToCPU*)command;
+            R_Texture* tex                   = Component_GetTexture(cmd->id);
+            // Experimentation for the "Playing with buffer" chapter
+
+            // TODO string arena in graphics.h for building 1-time labels (use
+            // asprintf?)
+            char label[256] = {};
+            snprintf(label, sizeof(label) - 1, "Mapped Buffer for Texture[%d] %s",
+                     tex->id, tex->name);
+            WGPUBufferDescriptor bufferDesc = {};
+            bufferDesc.label                = label;
+            bufferDesc.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_MapRead;
+            bufferDesc.size  = NEXT_MULT(R_Texture::sizeBytes(tex), 4);
+            WGPUBuffer mapped_buffer
+              = wgpuDeviceCreateBuffer(app->gctx.device, &bufferDesc);
+
+            { // gpu command
+                WGPUCommandEncoder cmd_encoder
+                  = wgpuDeviceCreateCommandEncoder(app->gctx.device, NULL);
+
+                // currently only support copying entire texture at mip 0
+                WGPUImageCopyTexture copy_location = {};
+                copy_location.texture              = tex->gpu_texture;
+
+                // TODO share command encoder across entire CQ flush
+
+                // TODO allow specifying a certain region
+                // for now just copying the entire texture
+                WGPUImageCopyBuffer copy_buffer = {};
+                copy_buffer.buffer              = mapped_buffer;
+                copy_buffer.layout.bytesPerRow
+                  = tex->desc.width * G_bytesPerTexel(tex->desc.format);
+                copy_buffer.layout.rowsPerImage = tex->desc.height;
+                WGPUExtent3D copy_size // size in texels
+                  = { (u32)tex->desc.width, (u32)tex->desc.height, 1 };
+                // copy to mapped buffer
+                wgpuCommandEncoderCopyTextureToBuffer(cmd_encoder, &copy_location,
+                                                      &copy_buffer, &copy_size);
+
+                WGPUCommandBuffer command_buffer
+                  = wgpuCommandEncoderFinish(cmd_encoder, NULL);
+                ASSERT(command_buffer != NULL);
+                WGPU_RELEASE_RESOURCE(CommandEncoder, cmd_encoder)
+
+                // Sumbit commmand buffer
+                wgpuQueueSubmit(app->gctx.queue, 1, &command_buffer);
+
+                WGPU_RELEASE_RESOURCE(CommandBuffer, command_buffer)
+            }
+
+            { // map buffer
+                auto onBufferMapped = [](WGPUBufferMapAsyncStatus status, void* udata) {
+                    BufferMapAsyncData* data = BufferMapAsyncData_Get((intptr_t)udata);
+                    R_Texture* tex           = Component_GetTexture(data->texture_id);
+
+                    if (status != WGPUBufferMapAsyncStatus_Success) {
+                        CQ_PushCommand_G2A_TextureRead(tex->id, NULL, 0, status);
+                    }
+
+                    // Get a pointer to wherever the driver mapped the GPU memory to
+                    // the RAM
+                    u8* bufferData = (u8*)wgpuBufferGetConstMappedRange(
+                      data->buffer, 0, data->size_bytes);
+
+                    void* copied_buffer_data = malloc(data->size_bytes);
+                    memcpy(copied_buffer_data, bufferData, data->size_bytes);
+
+                    // std::cout << "bufferData = [";
+                    // for (int i = 0; i < 16; ++i) {
+                    //     if (i > 0) std::cout << ", ";
+                    //     std::cout << (int)bufferData[i];
+                    // }
+                    // std::cout << "]" << std::endl;
+
+                    // Then do not forget to unmap the memory
+                    wgpuBufferUnmap(data->buffer);
+
+                    // this also removes from buffer map async data arena
+                    // by setting buffer to null
+                    WGPU_RELEASE_RESOURCE(Buffer, data->buffer);
+
+                    // send data back to CQ
+                    CQ_PushCommand_G2A_TextureRead(tex->id, copied_buffer_data,
+                                                   data->size_bytes, status);
+                };
+
+                // == optimize == use mapped buffer pool
+
+                int index                = 0;
+                BufferMapAsyncData* data = BufferMapAsyncData_Add(&index);
+                data->buffer             = mapped_buffer;
+                data->texture_id         = tex->id;
+                data->size_bytes         = R_Texture::sizeBytes(tex);
+
+                wgpuBufferMapAsync(mapped_buffer, WGPUMapMode_Read, 0, bufferDesc.size,
+                                   onBufferMapped, (void*)(intptr_t)index);
+            }
+
         } break;
         // buffers ----------------------
         case SG_COMMAND_BUFFER_UPDATE: {

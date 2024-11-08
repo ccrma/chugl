@@ -170,6 +170,10 @@ CK_DLL_MFUN(texture_get_mips);
 CK_DLL_MFUN(texture_write);
 CK_DLL_MFUN(texture_write_with_desc);
 
+// read texture to CPU
+CK_DLL_MFUN(texture_read_to_cpu);
+CK_DLL_MFUN(texture_get_data);
+
 // loading images
 CK_DLL_SFUN(texture_load_2d_file);
 CK_DLL_SFUN(texture_load_2d_file_with_params);
@@ -348,6 +352,7 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
         ADD_EX("deep/snowstorm.ck");
         ADD_EX("basic/skybox.ck");
         ADD_EX("deep/webcam_echo.ck");
+        ADD_EX("basic/texture_read.ck");
 
         // svars ---------------
         static t_CKINT texture_usage_copy_src        = WGPUTextureUsage_CopySrc;
@@ -429,7 +434,9 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
         ARG("TextureLocation", "dst_location");
         ARG(SG_CKNames[SG_COMPONENT_TEXTURE], "src_texture");
         ARG("TextureLocation", "src_location");
-        ARG("vec3", "size");
+        ARG("int", "size_x");
+        ARG("int", "size_y");
+        ARG("int", "size_z");
         DOC_FUNC(
           "Copy a region of the src texture to a location in the dst texture. The size "
           "parameter is floored to integers and specifies the 3D dimensions of the "
@@ -489,8 +496,17 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
           "Get the number of mip levels (immutable). Returns the number of mip levels "
           "in the texture.");
 
-        // TODO: specify in WGPUImageCopyTexture where in texture to write to ?
-        // e.g. texture.subData()
+        MFUN(texture_read_to_cpu, "Event", "read");
+        DOC_FUNC(
+          "Initializes an async readback of texture data at mip level 0 from GPU to "
+          "CPU. This function returns an Event object which can be waited on until the "
+          "data is ready. Access the newly acquired data via `Texture.data()`. "
+          "Note that it can take several frames for the data to read back to chuck.");
+
+        MFUN(texture_get_data, "float[]", "data");
+        DOC_FUNC(
+          "Get the most recently read texture data. This function should be called "
+          "after waiting on the Event object returned by `Texture.read()`");
 
         END_CLASS();
     }
@@ -855,6 +871,29 @@ SG_Texture* ulib_texture_load(const char* filepath, SG_TextureLoadDesc* load_des
     return tex;
 }
 
+CK_DLL_MFUN(texture_read_to_cpu)
+{
+    // the graphics thread won't be triggered until nextFrame() is called
+    // so we don't need to do this in a "waitingOn" ck event callback
+
+    SG_Texture* tex = GET_TEXTURE(SELF);
+    CQ_PushCommand_CopyTextureToCPU(tex);
+    RETURN->v_object = (Chuck_Object*)tex->texture_read_event;
+}
+
+CK_DLL_MFUN(texture_get_data)
+{
+    SG_Texture* tex = GET_TEXTURE(SELF);
+
+    if (API->object->array_float_size(tex->texture_data) == 0) {
+        log_warn("Texture[id=%d, name=%s] data empty", tex->id, tex->name);
+        log_warn(" |- Did you mean to read the texture data from GPU first?");
+        log_warn(" |- e.g. `tex.read() => now;`");
+    }
+
+    RETURN->v_object = (Chuck_Object*)tex->texture_data;
+}
+
 CK_DLL_SFUN(texture_load_2d_file)
 {
     SG_TextureLoadDesc load_desc = {};
@@ -978,6 +1017,7 @@ static void ulib_texture_copyTextureToTexture(SG_Texture* dst, SG_Texture* src,
               dst->desc.width, dst->desc.height, dst->desc.depth, dst->desc.mips);
             return;
         }
+
         if (src_loc.origin_x > src->desc.width || src_loc.origin_y > src->desc.height
             || src_loc.origin_z > src->desc.depth || src_loc.mip >= src->desc.mips) {
             log_warn("Could not copy texture[%d] %s to texture[%d] %s", src->id,
@@ -1007,7 +1047,7 @@ static void ulib_texture_copyTextureToTexture(SG_Texture* dst, SG_Texture* src,
         }
 
         // src.texture must have a usage of GPUTextureUsage.COPY_SRC
-        if ((src->desc.usage | WGPUTextureUsage_CopySrc) == 0) {
+        if ((src->desc.usage & WGPUTextureUsage_CopySrc) == 0) {
             log_warn("Could not copy texture[%d] %s to texture[%d] %s", src->id,
                      src->name, dst->id, dst->name);
             log_warn(
@@ -1064,8 +1104,10 @@ CK_DLL_SFUN(texture_copy_texture_to_texture)
     SG_TextureLocation dst_location = {};
     SG_TextureLocation src_location = {};
     ulib_texture_copyTextureToTexture(
-      dst_texture, src_texture, dst_location, src_location, src_texture->desc.width,
-      src_texture->desc.height, src_texture->desc.depth);
+      dst_texture, src_texture, dst_location, src_location,
+      MIN(src_texture->desc.width, dst_texture->desc.width),
+      MIN(src_texture->desc.height, dst_texture->desc.height),
+      MIN(src_texture->desc.depth, dst_texture->desc.depth));
 }
 
 CK_DLL_SFUN(texture_copy_texture_to_texture_with_desc)
@@ -1078,7 +1120,9 @@ CK_DLL_SFUN(texture_copy_texture_to_texture_with_desc)
     SG_TextureLocation src_loc
       = ulib_texture_textureLocationFromCkobj(GET_NEXT_OBJECT(ARGS));
 
-    t_CKVEC3 copy_size = GET_NEXT_VEC3(ARGS);
+    t_CKINT copy_size_x = GET_NEXT_INT(ARGS);
+    t_CKINT copy_size_y = GET_NEXT_INT(ARGS);
+    t_CKINT copy_size_z = GET_NEXT_INT(ARGS);
 
     if (!dst_ckobj || !src_ckobj) {
         log_warn("Could not copy texture to texture");
@@ -1090,6 +1134,5 @@ CK_DLL_SFUN(texture_copy_texture_to_texture_with_desc)
     SG_Texture* src_texture = GET_TEXTURE(src_ckobj);
 
     ulib_texture_copyTextureToTexture(dst_texture, src_texture, dst_loc, src_loc,
-                                      (int)copy_size.x, (int)copy_size.y,
-                                      (int)copy_size.z);
+                                      copy_size_x, copy_size_y, copy_size_z);
 }

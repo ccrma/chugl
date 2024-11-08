@@ -224,6 +224,8 @@ struct R_Texture : public R_Component {
     u32 generation = 0;  // incremented every time texture is modified
     SG_TextureDesc desc; // TODO redundant with R_Texture.gpu_texture
 
+    static int sizeBytes(R_Texture* texture);
+
     static void init(GraphicsContext* gctx, R_Texture* texture, SG_TextureDesc* desc)
     {
         // free previous

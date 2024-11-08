@@ -18,8 +18,8 @@ plane_mat.colorMap(webcam.texture());
 PlaneGeometry plane_geo;
 GMesh plane(plane_geo, plane_mat) --> GG.scene();
 
-plane.scaX(-3 * webcam.aspect());
-plane.scaY(-3); // flipping to match webcam orientation
+plane.scaX(3 * webcam.aspect());
+plane.scaY(3);
 
 UI_Bool capture(webcam.capture());
 

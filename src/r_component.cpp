@@ -679,6 +679,12 @@ static LoadImageResult R_Texture_LoadImage(const char* filepath,
     return result;
 }
 
+int R_Texture::sizeBytes(R_Texture* texture)
+{
+    return texture->desc.width * texture->desc.height * texture->desc.depth
+           * G_bytesPerTexel(texture->desc.format);
+}
+
 void R_Texture::load(GraphicsContext* gctx, R_Texture* texture, const char* filepath,
                      bool flip_vertically, bool gen_mips)
 {

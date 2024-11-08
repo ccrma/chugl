@@ -154,6 +154,7 @@ enum SG_CommandType : u32 {
     SG_COMMAND_TEXTURE_FROM_FILE,
     SG_COMMAND_CUBEMAP_TEXTURE_FROM_FILE,
     SG_COMMAND_COPY_TEXTURE_TO_TEXTURE,
+    SG_COMMAND_COPY_TEXTURE_TO_CPU,
 
     // buffer
     SG_COMMAND_BUFFER_UPDATE,
@@ -170,6 +171,13 @@ enum SG_CommandType : u32 {
     // webcam
     SG_COMMAND_WEBCAM_CREATE,
     SG_COMMAND_WEBCAM_UPDATE,
+
+    // ================================
+    // graphics2audio commands
+    // ================================
+
+    // reading back gpu data
+    SG_COMMAND_G2A_TEXTURE_READ,
 
     SG_COMMAND_COUNT
 };
@@ -399,6 +407,10 @@ struct SG_Command_CopyTextureToTexture : public SG_Command {
     int depth;
 };
 
+struct SG_Command_CopyTextureToCPU : public SG_Command {
+    SG_ID id;
+};
+
 // shader commands -----------------------------------------------------
 
 struct SG_Command_ShaderCreate : public SG_Command {
@@ -556,25 +568,37 @@ struct SG_Command_WebcamUpdate : public SG_Command {
 };
 
 // ============================================================================
+// Graphics to Audio Commands
+// ============================================================================
+
+// reading back gpu data
+
+struct SG_Command_G2A_TextureRead : public SG_Command {
+    SG_ID texture_id;
+    void* data_OWNED; // malloc on graphics thread, free on audio thread
+    int size_bytes;   // size of data
+    WGPUBufferMapAsyncStatus status;
+};
+
+// ============================================================================
 // Command Queue API
 // ============================================================================
 
 void CQ_Init();
-void CQ_Free();
 
 // swap the command queue double buffer
-void CQ_SwapQueues();
+void CQ_SwapQueues(bool which);
 
-bool CQ_ReadCommandQueueIter(SG_Command** command);
+bool CQ_ReadCommandQueueIter(SG_Command** command, bool which);
 
-void CQ_ReadCommandQueueClear();
+void CQ_ReadCommandQueueClear(bool which);
 
 // some command structs have variable data (e.g. strings), which are stored in
 // the same command queue arena as cmd->xxx_offset. This function returns the
 // pointer to the data at the offset.
 // (necessary to avoid segfaults from direct pointers to the arena memory
 // caused by Arena resizing)
-void* CQ_ReadCommandGetOffset(u64 byte_offset);
+void* CQ_ReadCommandGetOffset(u64 byte_offset, bool which);
 
 // ============================================================================
 // Commands
@@ -649,6 +673,7 @@ void CQ_PushCommand_CopyTextureToTexture(SG_Texture* dst_texture,
                                          SG_TextureLocation* dst_location,
                                          SG_TextureLocation* src_location, int width,
                                          int height, int depth);
+void CQ_PushCommand_CopyTextureToCPU(SG_Texture* texture);
 
 // shader
 void CQ_PushCommand_ShaderCreate(SG_Shader* shader);
@@ -697,3 +722,10 @@ void CQ_PushCommand_VideoRate(SG_ID video_id, double rate, bool loop);
 // webcam
 void CQ_PushCommand_WebcamCreate(SG_Webcam* webcam, sr_webcam_device* device);
 void CQ_PushCommand_WebcamUpdate(SG_Webcam* webcam);
+
+// ============================================================================
+// Commands from Graphics Thread --> Audio Thread
+// ============================================================================
+
+void CQ_PushCommand_G2A_TextureRead(SG_ID id, void* data, int size_bytes,
+                                    WGPUBufferMapAsyncStatus status);

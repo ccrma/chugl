@@ -37,6 +37,8 @@
 
 #include <glfw/include/GLFW/glfw3.h>
 
+#include "ulib_helper.h"
+
 static std::unordered_map<Chuck_VM_Shred*, bool> registeredShreds;
 
 static spinlock waitingShredsLock;
@@ -486,6 +488,7 @@ static const char* CHUGL_EventTypeNames[CHUGL_EVENT_TYPE_COUNT] = {
 };
 
 void Event_Broadcast(CHUGL_EventType type, CK_DL_API api, Chuck_VM* vm);
+void Event_Broadcast(Chuck_Event* ck_event);
 Chuck_Event* Event_Get(CHUGL_EventType type, CK_DL_API api, Chuck_VM* vm);
 const char* Event_GetName(CHUGL_EventType type);
 
@@ -533,6 +536,11 @@ void Event_Broadcast(CHUGL_EventType type, CK_DL_API api, Chuck_VM* vm)
         }
         default: api->vm->queue_event(vm, events[type], 1, chuckEventQueue);
     }
+}
+
+void Event_Broadcast(Chuck_Event* ck_event)
+{
+    g_chuglAPI->vm->queue_event(g_chuglVM, ck_event, 1, chuckEventQueue);
 }
 
 Chuck_Event* Event_Get(CHUGL_EventType type, CK_DL_API api, Chuck_VM* vm)

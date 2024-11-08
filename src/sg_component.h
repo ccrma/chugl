@@ -207,7 +207,12 @@ int SG_Texture_byteSizePerTexel(
 
 struct SG_Texture : SG_Component {
     SG_TextureDesc desc;
-    // intentionally do not store pixel data here; only stored on GPU
+
+    // set by SG_COMMAND_G2A_TEXTURE_READ handler
+    Chuck_ArrayFloat* texture_data;
+    Chuck_Event* texture_read_event;
+
+    static void updateTextureData(SG_Texture* texture, void* data, int data_size_bytes);
 };
 
 // ============================================================================

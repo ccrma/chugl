@@ -916,12 +916,22 @@ SG_Texture* SG_CreateTexture(SG_TextureDesc* desc, Chuck_Object* ckobj,
       = ckobj ? ckobj :
                 chugin_createCkObj(SG_CKNames[SG_COMPONENT_TEXTURE], add_ref, shred);
 
+    // create chuck event
+    Chuck_Event* texture_read_event
+      = (Chuck_Event*)chugin_createCkObj("Event", true, shred);
+
+    // create default empty texture data
+    Chuck_ArrayFloat* texture_read_data = chugin_createCkFloatArray(NULL, 0, true);
+
     // create chugl obj
     Arena* arena    = &SG_TextureArena;
     size_t offset   = arena->curr;
     SG_Texture* tex = ARENA_PUSH_TYPE(arena, SG_Texture);
     *tex            = {};
     tex->desc       = *desc;
+
+    tex->texture_read_event = texture_read_event;
+    tex->texture_data       = texture_read_data;
 
     { // validate texture desc
 #define ULIB_TEXTURE_NUM_MIP_LEVELS(width, height)                                     \
@@ -934,6 +944,11 @@ SG_Texture* SG_CreateTexture(SG_TextureDesc* desc, Chuck_Object* ckobj,
 
         // enforce usage_flags are a subset of ALL
         tex->desc.usage &= WGPUTextureUsage_All;
+
+        // if usage_flags is 0, default to ALL
+        if (tex->desc.usage == 0) {
+            tex->desc.usage = WGPUTextureUsage_All;
+        }
 
         // if mips <= 0, auto determine the max count
         int max_mips = ULIB_TEXTURE_NUM_MIP_LEVELS(tex->desc.width, tex->desc.height);
@@ -1741,4 +1756,45 @@ void SG_Scene::setSkyboxMaterial(SG_Scene* scene, SG_Material* skybox_material)
 
     // update scene
     scene->desc.skybox_material_id = skybox_material ? skybox_material->id : 0;
+}
+
+void SG_Texture::updateTextureData(SG_Texture* texture, void* data, int data_size_bytes)
+{
+    // byte size must be multiple of texel size
+    ASSERT(data_size_bytes % SG_Texture_byteSizePerTexel(texture->desc.format) == 0);
+
+    int num_components = SG_Texture_numComponentsPerTexel(texture->desc.format);
+    int num_texels
+      = data_size_bytes / SG_Texture_byteSizePerTexel(texture->desc.format);
+
+    Chuck_ArrayFloat* ck_arr = (Chuck_ArrayFloat*)chugin_createCkObj("float[]", true);
+
+    switch (texture->desc.format) {
+        case WGPUTextureFormat_RGBA8Unorm: {
+            u8* arr = (u8*)data;
+            for (int i = 0; i < num_texels * num_components; i++) {
+                g_chuglAPI->object->array_float_push_back(ck_arr, arr[i] / 255.0f);
+            }
+        } break;
+        case WGPUTextureFormat_RGBA32Float:
+        case WGPUTextureFormat_R32Float: {
+            f32* arr = (f32*)data;
+            for (int i = 0; i < num_texels * num_components; i++) {
+                g_chuglAPI->object->array_float_push_back(ck_arr, arr[i]);
+            }
+        } break;
+        default: {
+            // texture format not supported
+            ASSERT(false);
+        }
+    }
+
+    // release old texture data
+    g_chuglAPI->object->release((Chuck_Object*)texture->texture_data);
+
+    // assign new texture data
+    texture->texture_data = ck_arr;
+
+    // broadcast TextureReadEvent
+    Event_Broadcast(texture->texture_read_event);
 }

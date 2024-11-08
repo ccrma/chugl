@@ -103,7 +103,6 @@ t_CKBOOL chugl_main_loop_quit(void* bindle)
 {
     UNUSED_VAR(bindle);
     SG_Free();
-    CQ_Free();
     return true;
 }
 
@@ -173,6 +172,78 @@ static void autoUpdateScenegraph(Arena* arena, SG_Scene* scene, Chuck_VM* VM,
         SG_ID* children_ptr = ARENA_PUSH_COUNT(arena, SG_ID, numChildren);
         memcpy(children_ptr, xform->childrenIDs.base, sizeof(SG_ID) * numChildren);
     }
+}
+
+static const char* BufferMapAsyncStatusToString(WGPUBufferMapAsyncStatus status)
+{
+    switch (status) {
+        case WGPUBufferMapAsyncStatus_Success: {
+            return "Success";
+        } break;
+        case WGPUBufferMapAsyncStatus_ValidationError: {
+            return "Validation Error";
+        } break;
+        case WGPUBufferMapAsyncStatus_Unknown: {
+            return "Unknown";
+        } break;
+        case WGPUBufferMapAsyncStatus_DeviceLost: {
+            return "Device Lost";
+        } break;
+        case WGPUBufferMapAsyncStatus_DestroyedBeforeCallback: {
+            return "Destroyed Before Callback";
+        } break;
+        case WGPUBufferMapAsyncStatus_UnmappedBeforeCallback: {
+            return "Unmapped Before Callback";
+        } break;
+        case WGPUBufferMapAsyncStatus_MappingAlreadyPending: {
+            return "Mapping Already Pending";
+        } break;
+        case WGPUBufferMapAsyncStatus_OffsetOutOfRange: {
+            return "Offset Out Of Range";
+        } break;
+        case WGPUBufferMapAsyncStatus_SizeOutOfRange: {
+            return "Size Out Of Range";
+        } break;
+        default: break;
+    }
+    ASSERT(false);
+    return "Invalid Status";
+}
+
+static void FlushGraphicsToAudioCQ()
+{
+    // swap read/write queues
+    CQ_SwapQueues(true);
+
+    // flush command queue
+    SG_Command* command = NULL;
+    while (CQ_ReadCommandQueueIter(&command, true)) {
+        switch (command->type) {
+            case SG_COMMAND_G2A_TEXTURE_READ: {
+                SG_Command_G2A_TextureRead* cmd = (SG_Command_G2A_TextureRead*)command;
+                SG_Texture* texture             = SG_GetTexture(cmd->texture_id);
+                defer(free(cmd->data_OWNED));
+
+                // if texture was already GC'd, skip
+                if (!texture) break;
+
+                // check status
+                if (cmd->status != WGPUBufferMapAsyncStatus_Success) {
+                    log_warn("Texture[id=%d, name=%s] read failed with status: %s",
+                             texture->id, texture->name,
+                             BufferMapAsyncStatusToString(cmd->status));
+                    break;
+                }
+
+                // else copy data to texture and broadcast event
+                SG_Texture::updateTextureData(texture, cmd->data_OWNED,
+                                              cmd->size_bytes);
+            } break;
+            default: ASSERT(false)
+        }
+    }
+
+    CQ_ReadCommandQueueClear(true);
 }
 
 // MUST BE CALLED WITH waitingShredsLock LOCKED
@@ -256,13 +327,16 @@ static void chugl_GraphicsShredPerformNextFrameUpdate(Chuck_VM_Shred* SHRED)
             }
         }
 
+        // signal the graphics-side that audio-side is done processing for
+        // this frame
+        Sync_SignalUpdateDone();
+
         // Garbage collect (TODO add API function to control this via GG
         // config)
         SG_GC();
 
-        // signal the graphics-side that audio-side is done processing for
-        // this frame
-        Sync_SignalUpdateDone();
+        // Handle commands from graphics thread
+        FlushGraphicsToAudioCQ();
 
         // clear audio frame arena
         Arena::clear(&audio_frame_arena);

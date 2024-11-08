@@ -8,14 +8,6 @@
 // date: Fall 2024
 //-----------------------------------------------------------------------------
 
-/*
-- how to handle copying textures with mips?
-- shorthand for initializing a texture with the same TextureDesc as another?
-- make integration test for error handling msgs
-- add texture readback
-- command encoder group all under 1 command buffer? rather than individual command buffer for each texture copy
-*/
-
 Webcam webcam;
 
 GG.camera().orthographic();
