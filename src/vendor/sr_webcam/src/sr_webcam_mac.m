@@ -355,7 +355,9 @@ void sr_webcam_delete(sr_webcam_device* device) {
 		SRWebcamVideoStream* stream = (SRWebcamVideoStream*)(device->stream);
 		[stream release];
 	}
-	free(device);
+
+	// freeing here causes segfault in webcam callback thread (it accesses device ptr)
+	// free(device); 
 }
 
 #endif

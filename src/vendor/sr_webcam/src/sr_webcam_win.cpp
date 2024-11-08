@@ -556,7 +556,9 @@ void sr_webcam_delete(sr_webcam_device* device)
     if (device->running == 1) {
         sr_webcam_stop(device);
     }
-    free(device);
+
+    // freeing here causes segfault in webcam callback thread (it accesses device ptr)
+    // free(device);
 }
 
 #endif

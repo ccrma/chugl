@@ -29,7 +29,6 @@ behaviour:
 - if R_WebcamData refcount reaches 0, call sr_webcam_stop()
 - if R_WebcamData refcount goes from 0 to 1, call sr_webcam_start()
 - Webcam destructor decrements R_WebcamData refcount
-- sr_webcam_delete() is neve
 */
 
 #include "ulib_helper.h"

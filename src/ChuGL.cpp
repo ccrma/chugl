@@ -102,7 +102,11 @@ t_CKBOOL chugl_main_loop_hook(void* bindle)
 t_CKBOOL chugl_main_loop_quit(void* bindle)
 {
     UNUSED_VAR(bindle);
-    SG_Free();
+
+    // NOT freeing SG components here because causes race with audio/graphics thread
+    // we let the OS free for us
+    // SG_Free();
+
     return true;
 }
 
