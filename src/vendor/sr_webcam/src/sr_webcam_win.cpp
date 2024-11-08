@@ -153,6 +153,15 @@ class SRWebcamVideoStreamMF : public IMFSourceReaderCallback
         if (!_parent || !SUCCEEDED(hrStatus)) {
             return S_OK;
         }
+
+        // double buffer for concurrent reader/writer
+        static int dst_buffer_a_size        = 0;
+        static int dst_buffer_b_size        = 0;
+        static unsigned char* dst_buffer_a  = NULL;
+        static unsigned char* dst_buffer_b  = NULL;
+        static unsigned char** write_buffer = &dst_buffer_a;
+        static int* write_buffer_size       = &dst_buffer_a_size;
+
         // Extract data and pass it.
         if (pSample != NULL) {
             IMFMediaBuffer* buffer = NULL;
@@ -220,26 +229,43 @@ class SRWebcamVideoStreamMF : public IMFSourceReaderCallback
                 }
                 return S_OK;
             }
+
+            // flip buffers
+            write_buffer
+              = (write_buffer == &dst_buffer_a) ? &dst_buffer_b : &dst_buffer_a;
+            write_buffer_size = (write_buffer_size == &dst_buffer_a_size) ?
+                                  &dst_buffer_b_size :
+                                  &dst_buffer_a_size;
+
+            // resize
+            int buffer_size = captureFormat.width * captureFormat.height * 4;
+            if (*write_buffer_size != buffer_size) {
+                *write_buffer_size = buffer_size;
+                *write_buffer = (unsigned char*)realloc(*write_buffer, buffer_size);
+            }
+
             // Convert from BGR (with stride) to compact RGBA
-            unsigned char* dstBuffer = (unsigned char*)malloc(
-              (int)captureFormat.width * (int)captureFormat.height * 4);
-            if (dstBuffer != nullptr) {
-                // Copy each pixel and switch components, taking the pitch into account.
-                for (unsigned int y = captureFormat.height - 1; y >= 0; --y) {
-                    for (unsigned int x = 0; x < captureFormat.width; ++x) {
-                        dstBuffer[y * exactRowSize + 4 * x + 0]
-                          = ptr[y * pitch + 3 * x + 2];
-                        dstBuffer[y * exactRowSize + 4 * x + 1]
-                          = ptr[y * pitch + 3 * x + 1];
-                        dstBuffer[y * exactRowSize + 4 * x + 2]
-                          = ptr[y * pitch + 3 * x + 0];
-                        dstBuffer[y * exactRowSize + 4 * x + 3] = 255;
-                    }
+            // Copy each pixel and switch components, taking the pitch into account.
+            int bytes_per_row = 4 * captureFormat.width;
+            for (unsigned int y = 0; y < captureFormat.height; ++y) {
+                for (unsigned int x = 0; x < captureFormat.width; ++x) {
+                    (*write_buffer)[(captureFormat.height - 1 - y) * bytes_per_row
+                                    + (captureFormat.width - 1 - x) * 4 + 0]
+                      = ptr[y * pitch + 3 * x + 2];
+                    (*write_buffer)[(captureFormat.height - 1 - y) * bytes_per_row
+                                    + (captureFormat.width - 1 - x) * 4 + 1]
+                      = ptr[y * pitch + 3 * x + 1];
+                    (*write_buffer)[(captureFormat.height - 1 - y) * bytes_per_row
+                                    + (captureFormat.width - 1 - x) * 4 + 2]
+                      = ptr[y * pitch + 3 * x + 0];
+                    (*write_buffer)[(captureFormat.height - 1 - y) * bytes_per_row
+                                    + (captureFormat.width - 1 - x) * 4 + 3]
+                      = 255;
                 }
             }
 
             // Transmit data to user.
-            _parent->callback(_parent, dstBuffer);
+            _parent->callback(_parent, *write_buffer);
             // Release and clean.
             if (is2DLocked) {
                 buffer2d->Unlock2D();
@@ -252,7 +278,6 @@ class SRWebcamVideoStreamMF : public IMFSourceReaderCallback
             if (buffer2d) {
                 buffer2d->Release();
             }
-            free(dstBuffer);
         }
 
         // Schedule next sample.
