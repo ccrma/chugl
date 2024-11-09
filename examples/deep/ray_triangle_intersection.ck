@@ -73,6 +73,9 @@ fun int isect(
 while (true) {
     GG.nextFrame() => now;
 
+    // rotate the plane
+    GG.dt() => plane.rotateY;
+
     // compute the ray origin and direction given mouse position 
     GG.scene().camera().screenCoordToWorldPos(GWindow.mousePos(), 1.0) => vec3 mouse_world_pos;
     mouse_world_pos - GG.scene().camera().posWorld() => vec3 ray_dir;

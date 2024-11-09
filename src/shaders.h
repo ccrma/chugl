@@ -253,6 +253,45 @@ static std::unordered_map<std::string, std::string> shader_table = {
             return output;
         }
         )glsl"
+    }, 
+
+    {
+        "NORMAL_MAPPING_FUNCTIONS",
+        R"glsl(
+        // http://www.thetenthplanet.de/archives/1180
+        fn cotangentFrame( N : vec3f, p : vec3f, uv : vec2f ) -> mat3x3f { 
+            // get edge vectors of the pixel triangle 
+            let dp1 = dpdx( p ); 
+            let dp2 = dpdy( p ); 
+            let duv1 = dpdx( uv ); 
+            let duv2 = dpdy( uv );   
+            // solve the linear system 
+            let dp2perp = cross( dp2, N ); 
+            let dp1perp = cross( N, dp1 ); 
+            let T = dp2perp * duv1.x + dp1perp * duv2.x;
+            let B = dp2perp * duv1.y + dp1perp * duv2.y;
+            // construct a scale-invariant frame 
+            let invmax = inverseSqrt( max( dot(T,T), dot(B,B) ) ); 
+            return mat3x3f( T * invmax, B * invmax, N ); 
+        }
+
+        fn perturbNormal( v_normal : vec3f, V : vec3f, texcoord : vec2f, scale : f32, is_front : bool) -> vec3f { 
+            let N = normalize(v_normal);
+
+            // assume N, the interpolated vertex normal and 
+            // V, the view vector (vertex to eye) 
+            var map = textureSample(u_normal_map, texture_sampler, texcoord).xyz * 2.0 - 1.0;
+            map.x *= scale;
+            map.y *= -scale; // flip y too to be consistent with previuos normal map version
+
+            let TBN = cotangentFrame( N, -V, texcoord ); 
+            var normal = normalize( TBN * map ); 
+            if (!is_front) {
+                normal = -normal;
+            }
+            return normal;
+        }
+        )glsl"
     }
 
     // TODO lighting
@@ -491,33 +530,39 @@ static const char* phong_shader_string = R"glsl(
         return srgbToLinear(textureSample(u_envmap, texture_sampler, normal * vec3f(1, 1, -1)).rgb);
     }
 
-    fn calculateNormal(inNormal: vec3f, inUV : vec2f, inTangent: vec4f, scale: f32, is_front : bool) -> vec3f {
-        var tangentNormal : vec3f = textureSample(u_normal_map, texture_sampler, inUV).rgb * 2.0 - 1.0;
-        tangentNormal.x *= scale;
-        tangentNormal.y *= scale;
+    // deprecated
+    // fn calculateNormal(inNormal: vec3f, inUV : vec2f, inTangent: vec4f, scale: f32, is_front : bool) -> vec3f {
+    //     var tangentNormal : vec3f = textureSample(u_normal_map, texture_sampler, inUV).rgb * 2.0 - 1.0;
+    //     tangentNormal.x *= scale;
+    //     tangentNormal.y *= scale;
 
-        let N : vec3f = normalize(inNormal);
-        let T : vec3f = normalize(inTangent.xyz);
-        let B : vec3f = inTangent.w * normalize(cross(N, T));  // mikkt method
-        let TBN : mat3x3f = mat3x3(T, B, N);
+    //     let N : vec3f = normalize(inNormal);
+    //     let T : vec3f = normalize(inTangent.xyz);
+    //     let B : vec3f = inTangent.w * normalize(cross(N, T));  // mikkt method
+    //     let TBN : mat3x3f = mat3x3(T, B, N);
 
-        var normal = normalize(TBN * tangentNormal);
-        if (!is_front) {
-            normal = -normal;
-        }
-        return normal;
-    }
+    //     var normal = normalize(TBN * tangentNormal);
+    //     if (!is_front) {
+    //         normal = -normal;
+    //     }
+    //     return normal;
+    // }
+    
+    #include NORMAL_MAPPING_FUNCTIONS
 
-    // main =====================================================================================
+// main =====================================================================================
     @fragment 
     fn fs_main(
         in : VertexOutput,
         @builtin(front_facing) is_front: bool,
     ) -> @location(0) vec4f
     {
-        var normal = calculateNormal(in.v_normal, in.v_uv, in.v_tangent, u_normal_factor, is_front);
+        let viewVector = u_frame.camera_pos - in.v_worldpos;
+        let viewDir = normalize(viewVector);  // direction from camera to this frag
 
-        let viewDir = normalize(u_frame.camera_pos - in.v_worldpos);  // direction from camera to this frag
+        // var normal = calculateNormal(in.v_normal, in.v_uv, in.v_tangent, u_normal_factor, is_front);
+        var normal = perturbNormal(in.v_normal, viewVector, in.v_uv, u_normal_factor, is_front);
+
 
         // material color properties (ignore alpha channel for now)
         let diffuseTex = textureSample(u_diffuse_map, texture_sampler, in.v_uv);
@@ -848,7 +893,7 @@ static const char* pbr_shader_string = R"glsl(
     // textures
     @group(1) @binding(0) var texture_sampler: sampler;
     @group(1) @binding(1) var albedoMap: texture_2d<f32>;
-    @group(1) @binding(2) var normalMap: texture_2d<f32>;
+    @group(1) @binding(2) var u_normal_map: texture_2d<f32>;
     @group(1) @binding(3) var aoMap: texture_2d<f32>;
     @group(1) @binding(4) var mrMap: texture_2d<f32>;
     @group(1) @binding(5) var emissiveMap: texture_2d<f32>;
@@ -858,40 +903,42 @@ static const char* pbr_shader_string = R"glsl(
     @group(1) @binding(7) var<uniform> u_emissiveFactor: vec3f;
     @group(1) @binding(8) var<uniform> u_metallic: f32;
     @group(1) @binding(9) var<uniform> u_roughness: f32;
-    @group(1) @binding(10) var<uniform> u_normalFactor: f32;
+    @group(1) @binding(10) var<uniform> u_normal_factor: f32;
     @group(1) @binding(11) var<uniform> u_aoFactor: f32;
 
     fn srgbToLinear(srgb_in : vec3f) -> vec3f {
         return pow(srgb_in.rgb,vec3f(2.2));
     }
 
-    fn calculateNormal(inNormal: vec3f, inUV : vec2f, inTangent: vec4f, scale: f32, is_front : bool) -> vec3f {
-        var tangentNormal : vec3f = textureSample(normalMap, texture_sampler, inUV).rgb * 2.0 - 1.0;
-        // scale normal
-        // ref: https://github.com/mrdoob/three.js/blob/dev/src/renderers/shaders/ShaderChunk/normal_fragment_maps.glsl.js
-        tangentNormal.x *= scale;
-        tangentNormal.y *= scale;
+    // fn calculateNormal(inNormal: vec3f, inUV : vec2f, inTangent: vec4f, scale: f32, is_front : bool) -> vec3f {
+    //     var tangentNormal : vec3f = textureSample(u_normal_map, texture_sampler, inUV).rgb * 2.0 - 1.0;
+    //     // scale normal
+    //     // ref: https://github.com/mrdoob/three.js/blob/dev/src/renderers/shaders/ShaderChunk/normal_fragment_maps.glsl.js
+    //     tangentNormal.x *= scale;
+    //     tangentNormal.y *= scale;
 
-        // TODO: do we need to adjust tangent normal based on face direction (backface or frontface)?
-        // e.g. tangentNormal *= (sign(dot(normal, faceNormal)))
-        // don't think so since normal map is in tangent space
+    //     // TODO: do we need to adjust tangent normal based on face direction (backface or frontface)?
+    //     // e.g. tangentNormal *= (sign(dot(normal, faceNormal)))
+    //     // don't think so since normal map is in tangent space
 
-        // from mikkt:
-        // For normal maps it is sufficient to use the following simplified version
-        // of the bitangent which is generated at pixel/vertex level. 
-        // bitangent = fSign * cross(vN, tangent);
-        let N : vec3f = normalize(inNormal);
-        let T : vec3f = normalize(inTangent.xyz);
-        let B : vec3f = inTangent.w * normalize(cross(N, T));  // mikkt method
-        let TBN : mat3x3f = mat3x3(T, B, N);
+    //     // from mikkt:
+    //     // For normal maps it is sufficient to use the following simplified version
+    //     // of the bitangent which is generated at pixel/vertex level. 
+    //     // bitangent = fSign * cross(vN, tangent);
+    //     let N : vec3f = normalize(inNormal);
+    //     let T : vec3f = normalize(inTangent.xyz);
+    //     let B : vec3f = inTangent.w * normalize(cross(N, T));  // mikkt method
+    //     let TBN : mat3x3f = mat3x3(T, B, N);
 
-        // return inTangent.xyz;
-        var normal = normalize(TBN * tangentNormal);
-        if (!is_front) {
-            normal = -normal;
-        }
-        return normal;
-    }
+    //     // return inTangent.xyz;
+    //     var normal = normalize(TBN * tangentNormal);
+    //     if (!is_front) {
+    //         normal = -normal;
+    //     }
+    //     return normal;
+    // }
+
+    #include NORMAL_MAPPING_FUNCTIONS
 
     const PI = 3.1415926535897932384626433832795;
     const reflectivity = 0.04;  // heuristic, assume F0 of 0.04 for all dielectrics
@@ -926,9 +973,12 @@ static const char* pbr_shader_string = R"glsl(
         in : VertexOutput,
         @builtin(front_facing) is_front: bool
     ) -> @location(0) vec4f
-    {
-        let N : vec3f = calculateNormal(in.v_normal, in.v_uv, in.v_tangent, u_normalFactor, is_front);
-        let V : vec3f = normalize(u_frame.camera_pos - in.v_worldpos);
+    {   
+        let viewVector = u_frame.camera_pos - in.v_worldpos;
+        let V : vec3f = normalize(viewVector);  // direction from camera to this frag
+
+        // let N : vec3f = calculateNormal(in.v_normal, in.v_uv, in.v_tangent, u_normalFactor, is_front);
+        let N = perturbNormal(in.v_normal, viewVector, in.v_uv, u_normal_factor, is_front);
 
         // linear-space albedo (normally authored in sRGB space so we have to convert to linear space)
         // transparency not supported

@@ -155,9 +155,11 @@ CK_DLL_MFUN(ggen_set_pos_z);
 
 CK_DLL_MFUN(ggen_set_pos);
 CK_DLL_MFUN(ggen_get_pos);
+CK_DLL_MFUN(ggen_set_pos_vec2);
 
 CK_DLL_MFUN(ggen_get_pos_world);
 CK_DLL_MFUN(ggen_set_pos_world);
+CK_DLL_MFUN(ggen_set_pos_world_vec2);
 
 CK_DLL_MFUN(ggen_translate);
 CK_DLL_MFUN(ggen_translate_x);
@@ -295,6 +297,11 @@ static void ulib_ggen_query(Chuck_DL_Query* QUERY)
         QUERY->add_arg(QUERY, "vec3", "pos");
         QUERY->doc_func(QUERY, "Set object position in local space");
 
+        QUERY->add_mfun(QUERY, ggen_set_pos_vec2, SG_CKNames[SG_COMPONENT_TRANSFORM],
+                        "pos");
+        QUERY->add_arg(QUERY, "vec2", "pos");
+        QUERY->doc_func(QUERY, "Set object XY position in local space. Z is preserved");
+
         // vec3 posWorld()
         QUERY->add_mfun(QUERY, ggen_get_pos_world, "vec3", "posWorld");
         QUERY->doc_func(QUERY, "Get object position in world space");
@@ -304,6 +311,11 @@ static void ulib_ggen_query(Chuck_DL_Query* QUERY)
                         "posWorld");
         QUERY->add_arg(QUERY, "vec3", "pos");
         QUERY->doc_func(QUERY, "Set object position in world space");
+
+        QUERY->add_mfun(QUERY, ggen_set_pos_world_vec2,
+                        SG_CKNames[SG_COMPONENT_TRANSFORM], "posWorld");
+        QUERY->add_arg(QUERY, "vec2", "pos");
+        QUERY->doc_func(QUERY, "Set object XY position in world space. Z is preserved");
 
         // GGen translate( vec3 )
         QUERY->add_mfun(QUERY, ggen_translate, "GGen", "translate");
@@ -658,6 +670,17 @@ CK_DLL_MFUN(ggen_set_pos)
     CQ_PushCommand_SetPosition(xform);
 }
 
+CK_DLL_MFUN(ggen_set_pos_vec2)
+{
+    SG_Transform* xform = SG_GetTransform(OBJ_MEMBER_UINT(SELF, component_offset_id));
+    t_CKVEC2 vec        = GET_NEXT_VEC2(ARGS);
+    xform->pos.x        = vec.x;
+    xform->pos.y        = vec.y;
+    RETURN->v_object    = SELF;
+
+    CQ_PushCommand_SetPosition(xform);
+}
+
 CK_DLL_MFUN(ggen_get_pos_world)
 {
     SG_Transform* xform = SG_GetTransform(OBJ_MEMBER_UINT(SELF, component_offset_id));
@@ -670,6 +693,18 @@ CK_DLL_MFUN(ggen_set_pos_world)
     SG_Transform* xform = SG_GetTransform(OBJ_MEMBER_UINT(SELF, component_offset_id));
     t_CKVEC3 vec        = GET_NEXT_VEC3(ARGS);
     SG_Transform::worldPosition(xform, glm::vec3(vec.x, vec.y, vec.z));
+
+    CQ_PushCommand_SetPosition(xform);
+
+    RETURN->v_object = SELF;
+}
+
+CK_DLL_MFUN(ggen_set_pos_world_vec2)
+{
+    SG_Transform* xform = SG_GetTransform(OBJ_MEMBER_UINT(SELF, component_offset_id));
+    t_CKVEC2 vec        = GET_NEXT_VEC2(ARGS);
+    glm::vec3 world_pos = SG_Transform::worldPosition(xform);
+    SG_Transform::worldPosition(xform, glm::vec3(vec.x, vec.y, world_pos.z));
 
     CQ_PushCommand_SetPosition(xform);
 
