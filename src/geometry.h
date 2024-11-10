@@ -91,6 +91,16 @@ struct KnotParams {
     int q               = 3;
 };
 
+struct PolygonParams {
+    f32* main_polygon;       // array of vec2 coordinates
+    int main_polygon_length; // len(main_polygon) / 2
+
+    f32* holes;            // array of vec2 hold coordinates
+    int* hole_run_lengths; // hole run lengths
+    int holes_length;      // len(holes) / 2
+    int num_holes;         // len(hole_run_lengths)
+};
+
 // Arena builders
 struct Arena;
 
@@ -109,3 +119,4 @@ void Geometry_buildCircle(GeometryArenaBuilder* gab, CircleParams* params);
 void Geometry_buildTorus(GeometryArenaBuilder* gab, TorusParams* params);
 void Geometry_buildCylinder(GeometryArenaBuilder* gab, CylinderParams* params);
 void Geometry_buildKnot(GeometryArenaBuilder* gab, KnotParams* params);
+void Geometry_buildPolygon(GeometryArenaBuilder* gab, PolygonParams* params);

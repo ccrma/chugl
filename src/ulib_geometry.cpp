@@ -145,6 +145,10 @@ CK_DLL_MFUN(knot_geo_get_radialSegments);
 CK_DLL_MFUN(knot_geo_get_p);
 CK_DLL_MFUN(knot_geo_get_q);
 
+CK_DLL_CTOR(polygon_geo_ctor);
+CK_DLL_MFUN(polygon_geo_build);
+CK_DLL_MFUN(polygon_geo_build_with_holes);
+
 static void ulib_geometry_query(Chuck_DL_Query* QUERY)
 {
     // Geometry -----------------------------------------------------
@@ -631,6 +635,38 @@ static void ulib_geometry_query(Chuck_DL_Query* QUERY)
 
         END_CLASS();
     }
+
+    { // Polygon -----------------------------------------------------
+        BEGIN_CLASS(SG_GeometryTypeNames[SG_GEOMETRY_POLYGON],
+                    SG_CKNames[SG_COMPONENT_GEOMETRY]);
+        DOC_CLASS(
+          "ChuGL port of the earcut triangulation library: "
+          "https://github.com/mapbox/earcut.hpp "
+          "Supports arbitrary polygons with holes.");
+
+        CTOR(polygon_geo_ctor);
+
+        MFUN(polygon_geo_build, "void", "build");
+        ARG("vec2[]", "points");
+        DOC_FUNC(
+          "Construct a polygon from the given points. The points are automatically "
+          "closed.");
+
+        MFUN(polygon_geo_build_with_holes, "void", "build");
+        ARG("vec2[]", "points");
+        ARG("vec2[]", "holes");
+        ARG("int[]", "hole_counts");
+        DOC_FUNC(
+          "Construct a polygon (with holes) from the given points and holes. `points` "
+          "forms the closed shape. Any winding order is supported. The points and "
+          "holes are automatically closed. `hole_counts` specifies the number of "
+          "points in each hole. "
+          "E.g. build([@(0,0), @(1,0), @(1,1), @(0,1)], [@(0.25,0.25), @(0.5, 0.75), "
+          "@(0.75, 0.25)], [3]) "
+          "will create a square with a triangular hole in the center.");
+
+        END_CLASS();
+    }
 }
 
 // Geometry -----------------------------------------------------
@@ -689,6 +725,10 @@ static void ulib_geometry_build(SG_Geometry* geo, SG_GeometryType geo_type,
               geo, (Chuck_Object*)g_builtin_ckobjs.init_2d_pos);
             ulib_geo_lines2d_set_line_colors(
               geo, (Chuck_Object*)g_builtin_ckobjs.init_white_color);
+        } break;
+        case SG_GEOMETRY_POLYGON: {
+            ASSERT(params);
+            SG_Geometry::buildPolygon(geo, (PolygonParams*)params);
         } break;
         default: ASSERT(false);
     }
@@ -1650,4 +1690,94 @@ CK_DLL_MFUN(knot_geo_get_p)
 CK_DLL_MFUN(knot_geo_get_q)
 {
     RETURN->v_int = GET_GEOMETRY(SELF)->params.knot.q;
+}
+
+// Polygon Geometry -----------------------------------------------------
+
+CK_DLL_CTOR(polygon_geo_ctor)
+{
+    SG_Geometry* geo = SG_GetGeometry(OBJ_MEMBER_UINT(SELF, component_offset_id));
+
+    f32 default_polygon[] = {
+        -0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f,
+    };
+
+    f32 default_polygon_hole[] = {
+        -0.25f, -0.25f, 0.25f, -0.25f, 0.25f, 0.25f, -0.25f, 0.25f,
+    };
+
+    int hole_lengths = 4;
+
+    PolygonParams params       = {};
+    params.main_polygon        = default_polygon;
+    params.main_polygon_length = 4;
+    params.holes               = default_polygon_hole;
+    params.hole_run_lengths    = &hole_lengths;
+    params.holes_length        = 4;
+    params.num_holes           = 1;
+
+    ulib_geometry_build(geo, SG_GEOMETRY_POLYGON, &params);
+}
+
+CK_DLL_MFUN(polygon_geo_build)
+{
+    SG_Geometry* geo = SG_GetGeometry(OBJ_MEMBER_UINT(SELF, component_offset_id));
+    Chuck_ArrayVec2* main_polygon = GET_NEXT_VEC2_ARRAY(ARGS);
+
+    if (!main_polygon) return;
+
+    int main_polygon_len = API->object->array_vec2_size(main_polygon);
+
+    f32* main_polygon_data
+      = (f32*)ARENA_PUSH_COUNT(&audio_frame_arena, f32, main_polygon_len * 2);
+
+    chugin_copyCkVec2Array(main_polygon, main_polygon_data);
+
+    PolygonParams params       = {};
+    params.main_polygon        = main_polygon_data;
+    params.main_polygon_length = main_polygon_len;
+    params.holes               = NULL;
+    params.hole_run_lengths    = NULL;
+    params.holes_length        = 0;
+    params.num_holes           = 0;
+
+    ulib_geometry_build(geo, SG_GEOMETRY_POLYGON, &params);
+}
+
+CK_DLL_MFUN(polygon_geo_build_with_holes)
+{
+    SG_Geometry* geo = SG_GetGeometry(OBJ_MEMBER_UINT(SELF, component_offset_id));
+    Chuck_ArrayVec2* main_polygon = GET_NEXT_VEC2_ARRAY(ARGS);
+    Chuck_ArrayVec2* holes        = GET_NEXT_VEC2_ARRAY(ARGS);
+    Chuck_ArrayInt* hole_lengths  = GET_NEXT_INT_ARRAY(ARGS);
+
+    if (!main_polygon || !holes || !hole_lengths) {
+        log_warn("Passing null array to PolygonGeometry.build(...)");
+        return;
+    }
+
+    int main_polygon_len = API->object->array_vec2_size(main_polygon);
+
+    f32* main_polygon_data
+      = (f32*)ARENA_PUSH_COUNT(&audio_frame_arena, f32, main_polygon_len * 2);
+
+    chugin_copyCkVec2Array(main_polygon, main_polygon_data);
+
+    int holes_len   = API->object->array_vec2_size(holes);
+    f32* holes_data = (f32*)ARENA_PUSH_COUNT(&audio_frame_arena, f32, holes_len * 2);
+    chugin_copyCkVec2Array(holes, holes_data);
+
+    int num_holes          = API->object->array_int_size(hole_lengths);
+    int* hole_lengths_data = (int*)ARENA_PUSH_COUNT(&audio_frame_arena, int, num_holes);
+    chugin_copyCkIntArray(hole_lengths, hole_lengths_data, num_holes);
+
+    PolygonParams params       = {};
+    params.main_polygon        = main_polygon_data;
+    params.main_polygon_length = main_polygon_len;
+    params.holes               = holes_data;
+    params.holes_length        = holes_len;
+    params.hole_run_lengths    = hole_lengths_data;
+    params.num_holes           = num_holes;
+
+    ulib_geometry_build(geo, SG_GEOMETRY_POLYGON, &params);
 }

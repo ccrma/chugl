@@ -20,6 +20,7 @@ GMesh mesh --> GG.scene();
     new TorusGeometry,
     new CylinderGeometry,
     new KnotGeometry,
+    new PolygonGeometry,
 ] @=> Geometry geometries[];
 
 UI_Int geometry_index;

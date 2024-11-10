@@ -28,9 +28,15 @@
 #include "geometry.h"
 #include "core/memory.h"
 #include "suzanne_geo.cpp"
+#include <array> // ew
 #include <glm/gtc/epsilon.hpp>
 #include <mikktspace/mikktspace.h>
 #include <vector> // ew
+
+// #include <earcut/earcut.hpp>
+#include <rapidobj/rapidobj.hpp>
+
+#include <cfloat> // FLT_MAX
 
 // ============================================================================
 // Vertex
@@ -700,4 +706,101 @@ void Geometry_buildKnot(GeometryArenaBuilder* gab, KnotParams* params)
         }
     }
     ASSERT(index == num_indices);
+}
+
+void Geometry_buildPolygon(GeometryArenaBuilder* gab, PolygonParams* params)
+{
+    if (params->main_polygon_length == 0) return;
+
+    // The number type to use for tessellation
+    using Coord = f32;
+
+    // The index type. Defaults to uint32_t, but you can also pass uint16_t if you know
+    // that your data won't have more than 65536 vertices.
+    using N = u32;
+
+    // Create array
+    using Point = std::array<Coord, 2>;
+    std::vector<std::vector<Point>> polygon;
+    static_assert(sizeof(std::array<f32, 2>) == sizeof(f32) * 2, "Point size mismatch");
+
+    // create std::vector from f32* array
+    std::vector<Point> main_polygon((Point*)params->main_polygon,
+                                    (Point*)params->main_polygon
+                                      + params->main_polygon_length);
+    // TODO add safety bounds clamping
+    polygon.push_back(main_polygon);
+
+    int hole_run_length_accum = 0;
+    for (int i = 0; i < params->num_holes; i++) {
+        int end = hole_run_length_accum + params->hole_run_lengths[i];
+
+        if (end > params->holes_length) {
+            // past end of array, break out
+            break;
+        }
+
+        std::vector<Point> hole((Point*)params->holes + hole_run_length_accum,
+                                (Point*)params->holes + end);
+        polygon.push_back(hole);
+
+        hole_run_length_accum = end;
+    }
+
+    // Run tessellation
+    // Returns array of indices that refer to the vertices of the input polygon.
+    // e.g: the index 6 would refer to {25, 75} in this example.
+    // Three subsequent indices form a triangle. Output triangles are clockwise.
+    std::vector<N> earcut_indices = mapbox::earcut<N>(polygon);
+
+    // setup vertex buffers
+    int num_vertices      = params->main_polygon_length + params->holes_length;
+    const int num_indices = earcut_indices.size();
+
+    // arenas should be reset
+    ASSERT(gab->pos_arena->curr == 0);
+    ASSERT(gab->norm_arena->curr == 0);
+    ASSERT(gab->uv_arena->curr == 0);
+    ASSERT(gab->indices_arena->curr == 0);
+
+    glm::vec3* positions = ARENA_PUSH_COUNT(gab->pos_arena, glm::vec3, num_vertices);
+    glm::vec3* normals   = ARENA_PUSH_COUNT(gab->norm_arena, glm::vec3, num_vertices);
+    gvec2f* uvs          = ARENA_PUSH_COUNT(gab->uv_arena, gvec2f, num_vertices);
+    u32* indices         = ARENA_PUSH_COUNT(gab->indices_arena, u32, num_indices);
+
+    // set positions and get min/max vertices for setting uvs
+    glm::vec2 min             = { FLT_MAX, FLT_MAX };
+    glm::vec2 max             = { FLT_MIN, FLT_MIN };
+    glm::vec2* polygon_coords = (glm::vec2*)params->main_polygon;
+    for (int i = 0; i < params->main_polygon_length; i++) {
+        // set position
+        positions[i] = { polygon_coords[i].x, polygon_coords[i].y, 0 };
+        // update min/max
+        min = glm::min(min, polygon_coords[i]);
+        max = glm::max(max, polygon_coords[i]);
+        // set normal
+        normals[i] = { 0, 0, 1 };
+    }
+
+    glm::vec2* hole_coords = (glm::vec2*)params->holes;
+    for (int i = 0; i < params->holes_length; i++) {
+        // set position
+        positions[params->main_polygon_length + i]
+          = { hole_coords[i].x, hole_coords[i].y, 0 };
+        // update min/max
+        min = glm::min(min, hole_coords[i]);
+        // set normal
+        normals[params->main_polygon_length + i] = { 0, 0, 1 };
+    }
+
+    // now that we have min/max, we can set uvs
+    float width  = max.x - min.x;
+    float height = max.y - min.y;
+    for (int i = 0; i < num_vertices; i++) {
+        uvs[i].x = (positions[i].x - min.x) / width;
+        uvs[i].y = (positions[i].y - min.y) / height;
+    }
+
+    // copy indices
+    memcpy(indices, earcut_indices.data(), earcut_indices.size() * sizeof(*indices));
 }

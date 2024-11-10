@@ -319,7 +319,8 @@ struct SG_Scene : public SG_Transform {
     X(SG_GEOMETRY_TORUS, "TorusGeometry")                                              \
     X(SG_GEOMETRY_SUZANNE, "SuzanneGeometry")                                          \
     X(SG_GEOMETRY_KNOT, "KnotGeometry")                                                \
-    X(SG_GEOMETRY_LINES2D, "LinesGeometry")
+    X(SG_GEOMETRY_LINES2D, "LinesGeometry")                                            \
+    X(SG_GEOMETRY_POLYGON, "PolygonGeometry")
 
 enum SG_GeometryType {
 #define X(name, str) name,
@@ -342,6 +343,7 @@ union SG_GeometryParams {
     TorusParams torus;
     CylinderParams cylinder;
     KnotParams knot;
+    PolygonParams polygon;
 };
 
 #define SG_GEOMETRY_MAX_VERTEX_ATTRIBUTES 8
@@ -388,6 +390,7 @@ struct SG_Geometry : SG_Component {
     static void buildTorus(SG_Geometry* g, TorusParams* p);
     static void buildCylinder(SG_Geometry* g, CylinderParams* p);
     static void buildKnot(SG_Geometry* g, KnotParams* p);
+    static void buildPolygon(SG_Geometry* g, PolygonParams* p);
 };
 
 // ============================================================================
