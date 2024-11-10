@@ -46,11 +46,11 @@ CK_DLL_MFUN(geo_set_vertex_attribute_int);
 CK_DLL_MFUN(geo_set_positions);
 CK_DLL_MFUN(geo_set_normals);
 CK_DLL_MFUN(geo_set_uvs);
-CK_DLL_MFUN(geo_set_tangents);
+// CK_DLL_MFUN(geo_set_tangents);
 CK_DLL_MFUN(geo_get_positions);
 CK_DLL_MFUN(geo_get_normals);
 CK_DLL_MFUN(geo_get_uvs);
-CK_DLL_MFUN(geo_get_tangents);
+// CK_DLL_MFUN(geo_get_tangents);
 
 CK_DLL_MFUN(geo_get_vertex_attribute_num_components);
 
@@ -70,7 +70,7 @@ CK_DLL_MFUN(geo_set_pulled_vertex_attribute_int);
 CK_DLL_MFUN(geo_get_pulled_vertex_attribute);
 CK_DLL_MFUN(geo_get_pulled_vertex_attribute_int);
 
-CK_DLL_MFUN(geo_generate_tangents);
+// CK_DLL_MFUN(geo_generate_tangents);
 
 // end Geometry -----------------------------------------------------
 
@@ -164,7 +164,7 @@ static void ulib_geometry_query(Chuck_DL_Query* QUERY)
     static t_CKINT pos_attr_loc{ SG_GEOMETRY_POSITION_ATTRIBUTE_LOCATION };
     static t_CKINT norm_attr_loc{ SG_GEOMETRY_NORMAL_ATTRIBUTE_LOCATION };
     static t_CKINT uv_attr_loc{ SG_GEOMETRY_UV_ATTRIBUTE_LOCATION };
-    static t_CKINT tangent_attr_loc{ SG_GEOMETRY_TANGENT_ATTRIBUTE_LOCATION };
+    // static t_CKINT tangent_attr_loc{ SG_GEOMETRY_TANGENT_ATTRIBUTE_LOCATION };
 
     SVAR("int", "AttributeLocation_Count", &sg_geometry_max_attributes);
     DOC_VAR("Maximum number of vertex attributes.");
@@ -178,8 +178,8 @@ static void ulib_geometry_query(Chuck_DL_Query* QUERY)
     SVAR("int", "AttributeLocation_UV", &uv_attr_loc);
     DOC_VAR("UV attribute location used by builtin renderer");
 
-    SVAR("int", "AttributeLocation_Tangent", &tangent_attr_loc);
-    DOC_VAR("Tangent attribute location used by builtin renderer");
+    // SVAR("int", "AttributeLocation_Tangent", &tangent_attr_loc);
+    // DOC_VAR("Tangent attribute location used by builtin renderer");
 
     // ctor
     CTOR(geo_ctor);
@@ -217,11 +217,11 @@ static void ulib_geometry_query(Chuck_DL_Query* QUERY)
     ARG("vec2[]", "uvs");
     DOC_FUNC("Set the UVs for a geometry. Equivalent to vertexAttribute(2, 2, uvs)");
 
-    MFUN(geo_set_tangents, "void", "tangents");
-    ARG("vec4[]", "tangents");
-    DOC_FUNC(
-      "Set the tangents for a geometry. Equivalent to vertexAttribute(3, 4, "
-      "tangents)");
+    // MFUN(geo_set_tangents, "void", "tangents");
+    // ARG("vec4[]", "tangents");
+    // DOC_FUNC(
+    //   "Set the tangents for a geometry. Equivalent to vertexAttribute(3, 4, "
+    //   "tangents)");
 
     MFUN(geo_get_positions, "vec3[]", "positions");
     DOC_FUNC(
@@ -233,9 +233,9 @@ static void ulib_geometry_query(Chuck_DL_Query* QUERY)
     MFUN(geo_get_uvs, "vec2[]", "uvs");
     DOC_FUNC("Get the UVs for a geometry. Equivalent to getVertexAttributeData(2)");
 
-    MFUN(geo_get_tangents, "vec4[]", "tangents");
-    DOC_FUNC(
-      "Get the tangents for a geometry. Equivalent to getVertexAttributeData(3)");
+    // MFUN(geo_get_tangents, "vec4[]", "tangents");
+    // DOC_FUNC(
+    //   "Get the tangents for a geometry. Equivalent to getVertexAttributeData(3)");
 
     MFUN(geo_get_vertex_attribute_num_components, "int[]",
          "vertexAttributeNumComponents");
@@ -316,12 +316,12 @@ static void ulib_geometry_query(Chuck_DL_Query* QUERY)
       "Default is -1, which means all vertices are drawn. Values will be clamped to "
       "the actual number of vertices in the geometry.");
 
-    MFUN(geo_generate_tangents, "void", "generateTangents");
-    DOC_FUNC(
-      "Generate tangents assuming default vertex attribute locations: "
-      "position=0, normal=1, uv=2, tangent=3. Tangents are written to location = 3."
-      "Indices are supported but optional."
-      " Call *after* all other attribute data and indices have been supplied.");
+    // MFUN(geo_generate_tangents, "void", "generateTangents");
+    // DOC_FUNC(
+    //   "Generate tangents assuming default vertex attribute locations: "
+    //   "position=0, normal=1, uv=2, tangent=3. Tangents are written to location = 3."
+    //   "Indices are supported but optional."
+    //   " Call *after* all other attribute data and indices have been supplied.");
 
     END_CLASS();
 
@@ -833,6 +833,7 @@ CK_DLL_MFUN(geo_set_uvs)
                                               attrib_arena->base, attrib_arena->curr);
 }
 
+#ifdef CHUGL_TANGENTS
 CK_DLL_MFUN(geo_set_tangents)
 {
     Chuck_ArrayVec4* ck_arr = GET_NEXT_VEC4_ARRAY(ARGS);
@@ -846,6 +847,7 @@ CK_DLL_MFUN(geo_set_tangents)
                                               SG_GEOMETRY_TANGENT_ATTRIBUTE_LOCATION, 4,
                                               attrib_arena->base, attrib_arena->curr);
 }
+#endif
 
 CK_DLL_MFUN(geo_get_positions)
 {
@@ -885,6 +887,7 @@ CK_DLL_MFUN(geo_get_uvs)
     RETURN->v_object = (Chuck_Object*)chugin_createCkFloat2Array(data, data_count);
 }
 
+#ifdef CHUGL_TANGENTS
 CK_DLL_MFUN(geo_get_tangents)
 {
     SG_Geometry* geo = SG_GetGeometry(OBJ_MEMBER_UINT(SELF, component_offset_id));
@@ -897,6 +900,7 @@ CK_DLL_MFUN(geo_get_tangents)
 
     RETURN->v_object = (Chuck_Object*)chugin_createCkFloat4Array(data, data_count);
 }
+#endif
 
 CK_DLL_MFUN(geo_get_vertex_attribute_num_components)
 {
@@ -1119,6 +1123,7 @@ CK_DLL_MFUN(geo_set_vertex_count)
     CQ_PushCommand_GeometrySetVertexCount(geo, count);
 }
 
+#ifdef CHUGL_TANGENTS
 CK_DLL_MFUN(geo_generate_tangents)
 {
     SG_Geometry* g = SG_GetGeometry(OBJ_MEMBER_UINT(SELF, component_offset_id));
@@ -1159,6 +1164,7 @@ CK_DLL_MFUN(geo_generate_tangents)
                                               4, b.tangent_arena->base,
                                               b.tangent_arena->curr);
 }
+#endif
 
 // Plane Geometry -----------------------------------------------------
 
@@ -1181,11 +1187,11 @@ void CQ_UpdateAllVertexAttributes(SG_Geometry* geo)
     CQ_PushCommand_GeometrySetVertexAttribute(geo, SG_GEOMETRY_UV_ATTRIBUTE_LOCATION, 2,
                                               uvs_arena->base, uvs_arena->curr);
 
-    Arena* tangents_arena
-      = &geo->vertex_attribute_data[SG_GEOMETRY_TANGENT_ATTRIBUTE_LOCATION];
-    CQ_PushCommand_GeometrySetVertexAttribute(
-      geo, SG_GEOMETRY_TANGENT_ATTRIBUTE_LOCATION, 4, tangents_arena->base,
-      tangents_arena->curr);
+    // Arena* tangents_arena
+    //   = &geo->vertex_attribute_data[SG_GEOMETRY_TANGENT_ATTRIBUTE_LOCATION];
+    // CQ_PushCommand_GeometrySetVertexAttribute(
+    //   geo, SG_GEOMETRY_TANGENT_ATTRIBUTE_LOCATION, 4, tangents_arena->base,
+    //   tangents_arena->curr);
 
     Arena* indices_arena = &geo->indices;
     if (indices_arena->curr > 0) {

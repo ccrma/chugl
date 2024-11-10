@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -109,11 +109,10 @@ struct GeometryArenaBuilder {
     Arena* pos_arena;
     Arena* norm_arena;
     Arena* uv_arena;
-    Arena* tangent_arena;
     Arena* indices_arena;
 };
 
-void Geometry_computeTangents(GeometryArenaBuilder* builder);
+// void Geometry_computeTangents(GeometryArenaBuilder* builder);
 void Geometry_buildPlane(GeometryArenaBuilder* builder, PlaneParams* params);
 void Geometry_buildSphere(GeometryArenaBuilder* builder, SphereParams* params);
 void Geometry_buildSuzanne(GeometryArenaBuilder* builder);
@@ -123,8 +122,9 @@ void Geometry_buildTorus(GeometryArenaBuilder* gab, TorusParams* params);
 void Geometry_buildCylinder(GeometryArenaBuilder* gab, CylinderParams* params);
 void Geometry_buildKnot(GeometryArenaBuilder* gab, KnotParams* params);
 
+#if 0
 // add hasColor / hasTangent / has... flags
-#define CHUGL_FLOATS_PER_VERTEX (3 + 3 + 2 + 4)
+#define CHUGL_FLOATS_PER_VERTEX (3 + 3 + 2)
 struct Vertices {
     u32 vertexCount;
     u32 indicesCount;
@@ -161,5 +161,4 @@ struct Vertices {
     static void createPlane(Vertices* vertices, PlaneParams* params);
     static void createSphere(Vertices* vertices, SphereParams* params);
 };
-
-// Vertices createPlane(const PlaneParams* params);
+#endif

@@ -936,7 +936,11 @@ CK_DLL_CTOR(shader_desc_ctor)
 
     WGPUVertexFormat default_format[]
       = { WGPUVertexFormat_Float32x3, WGPUVertexFormat_Float32x3,
-          WGPUVertexFormat_Float32x2, WGPUVertexFormat_Float32x4 };
+          WGPUVertexFormat_Float32x2,
+#ifdef CHUGL_TANGENTS
+          WGPUVertexFormat_Float32x4
+#endif
+        };
 
     OBJ_MEMBER_INT_ARRAY(SELF, shader_desc_vertex_layout_offset)
       = chugin_createCkIntArray((int*)default_format, ARRAY_LENGTH(default_format),
@@ -2286,7 +2290,9 @@ void chugl_initDefaultMaterials()
         WGPUVertexFormat_Float32x3, // position
         WGPUVertexFormat_Float32x3, // normal
         WGPUVertexFormat_Float32x2, // uv
+#ifdef CHUGL_TANGENTS
         WGPUVertexFormat_Float32x4, // tangent
+#endif
     };
 
     static WGPUVertexFormat gtext_vertex_layout[] = {

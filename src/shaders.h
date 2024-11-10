@@ -158,14 +158,14 @@ static std::unordered_map<std::string, std::string> shader_table = {
     },
 
     {
-        "STANDARD_VERTEX_INPUT", // vertex input for standard 3D objects (pos, normal, uv, tangent)
+        "STANDARD_VERTEX_INPUT", // vertex input for standard 3D objects (pos, normal, uv)
         R"glsl(
 
         struct VertexInput {
             @location(0) position : vec3f,
             @location(1) normal : vec3f,
             @location(2) uv : vec2f,
-            @location(3) tangent : vec4f,
+            // @location(3) tangent : vec4f,
             @builtin(instance_index) instance : u32,
         };
 
@@ -173,7 +173,7 @@ static std::unordered_map<std::string, std::string> shader_table = {
     },
 
     {
-        "STANDARD_VERTEX_OUTPUT", // vertex output for standard 3D objects (pos, normal, uv, tangent)
+        "STANDARD_VERTEX_OUTPUT", // vertex output for standard 3D objects (pos, normal, uv)
         R"glsl(
 
         struct VertexOutput {
@@ -181,7 +181,7 @@ static std::unordered_map<std::string, std::string> shader_table = {
             @location(0) v_worldpos : vec3f,
             @location(1) v_normal : vec3f,
             @location(2) v_uv : vec2f,
-            @location(3) v_tangent : vec4f,
+            // @location(3) v_tangent : vec4f,
         };
 
         )glsl"
@@ -211,7 +211,7 @@ static std::unordered_map<std::string, std::string> shader_table = {
             out.v_normal = (u_Draw.model * vec4f(in.normal, 0.0)).xyz;
 
             // tangent vectors aren't impacted by non-uniform scaling or translation
-            out.v_tangent = vec4f(modelMat3 * in.tangent.xyz, in.tangent.w);
+            // out.v_tangent = vec4f(modelMat3 * in.tangent.xyz, in.tangent.w);
             out.v_uv     = in.uv;
 
             return out;
@@ -404,8 +404,8 @@ fn vs_main(in : VertexInput) -> VertexOutput
     out.position = (u_frame.projection * u_frame.view) * u_Draw.model * vec4f(in.position, 1.0f);
 
     // tangent vectors aren't impacted by non-uniform scaling or translation
-    out.v_world_tangent = vec4f(modelMat3 * in.tangent.xyz, in.tangent.w);
-    out.v_local_tangent = in.tangent;
+    // out.v_world_tangent = vec4f(modelMat3 * in.tangent.xyz, in.tangent.w);
+    // out.v_local_tangent = in.tangent;
 
     return out;
 }
@@ -529,24 +529,6 @@ static const char* phong_shader_string = R"glsl(
         }
         return srgbToLinear(textureSample(u_envmap, texture_sampler, normal * vec3f(1, 1, -1)).rgb);
     }
-
-    // deprecated
-    // fn calculateNormal(inNormal: vec3f, inUV : vec2f, inTangent: vec4f, scale: f32, is_front : bool) -> vec3f {
-    //     var tangentNormal : vec3f = textureSample(u_normal_map, texture_sampler, inUV).rgb * 2.0 - 1.0;
-    //     tangentNormal.x *= scale;
-    //     tangentNormal.y *= scale;
-
-    //     let N : vec3f = normalize(inNormal);
-    //     let T : vec3f = normalize(inTangent.xyz);
-    //     let B : vec3f = inTangent.w * normalize(cross(N, T));  // mikkt method
-    //     let TBN : mat3x3f = mat3x3(T, B, N);
-
-    //     var normal = normalize(TBN * tangentNormal);
-    //     if (!is_front) {
-    //         normal = -normal;
-    //     }
-    //     return normal;
-    // }
     
     #include NORMAL_MAPPING_FUNCTIONS
 
@@ -560,7 +542,6 @@ static const char* phong_shader_string = R"glsl(
         let viewVector = u_frame.camera_pos - in.v_worldpos;
         let viewDir = normalize(viewVector);  // direction from camera to this frag
 
-        // var normal = calculateNormal(in.v_normal, in.v_uv, in.v_tangent, u_normal_factor, is_front);
         var normal = perturbNormal(in.v_normal, viewVector, in.v_uv, u_normal_factor, is_front);
 
 
@@ -910,34 +891,6 @@ static const char* pbr_shader_string = R"glsl(
         return pow(srgb_in.rgb,vec3f(2.2));
     }
 
-    // fn calculateNormal(inNormal: vec3f, inUV : vec2f, inTangent: vec4f, scale: f32, is_front : bool) -> vec3f {
-    //     var tangentNormal : vec3f = textureSample(u_normal_map, texture_sampler, inUV).rgb * 2.0 - 1.0;
-    //     // scale normal
-    //     // ref: https://github.com/mrdoob/three.js/blob/dev/src/renderers/shaders/ShaderChunk/normal_fragment_maps.glsl.js
-    //     tangentNormal.x *= scale;
-    //     tangentNormal.y *= scale;
-
-    //     // TODO: do we need to adjust tangent normal based on face direction (backface or frontface)?
-    //     // e.g. tangentNormal *= (sign(dot(normal, faceNormal)))
-    //     // don't think so since normal map is in tangent space
-
-    //     // from mikkt:
-    //     // For normal maps it is sufficient to use the following simplified version
-    //     // of the bitangent which is generated at pixel/vertex level. 
-    //     // bitangent = fSign * cross(vN, tangent);
-    //     let N : vec3f = normalize(inNormal);
-    //     let T : vec3f = normalize(inTangent.xyz);
-    //     let B : vec3f = inTangent.w * normalize(cross(N, T));  // mikkt method
-    //     let TBN : mat3x3f = mat3x3(T, B, N);
-
-    //     // return inTangent.xyz;
-    //     var normal = normalize(TBN * tangentNormal);
-    //     if (!is_front) {
-    //         normal = -normal;
-    //     }
-    //     return normal;
-    // }
-
     #include NORMAL_MAPPING_FUNCTIONS
 
     const PI = 3.1415926535897932384626433832795;
@@ -977,7 +930,6 @@ static const char* pbr_shader_string = R"glsl(
         let viewVector = u_frame.camera_pos - in.v_worldpos;
         let V : vec3f = normalize(viewVector);  // direction from camera to this frag
 
-        // let N : vec3f = calculateNormal(in.v_normal, in.v_uv, in.v_tangent, u_normalFactor, is_front);
         let N = perturbNormal(in.v_normal, viewVector, in.v_uv, u_normal_factor, is_front);
 
         // linear-space albedo (normally authored in sRGB space so we have to convert to linear space)

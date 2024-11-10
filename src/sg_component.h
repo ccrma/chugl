@@ -275,8 +275,6 @@ struct SG_Transform : public SG_Component {
 // SG_Scene
 // ============================================================================
 
-// TODO add ambient to FrameUniforms
-
 struct SG_SceneDesc {
     glm::vec4 bg_color      = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
     SG_ID main_camera_id    = 0;
@@ -351,7 +349,7 @@ union SG_GeometryParams {
 #define SG_GEOMETRY_POSITION_ATTRIBUTE_LOCATION 0
 #define SG_GEOMETRY_NORMAL_ATTRIBUTE_LOCATION 1
 #define SG_GEOMETRY_UV_ATTRIBUTE_LOCATION 2
-#define SG_GEOMETRY_TANGENT_ATTRIBUTE_LOCATION 3
+// #define SG_GEOMETRY_TANGENT_ATTRIBUTE_LOCATION 3
 
 #define SG_GEOMETRY_MAX_VERTEX_PULL_BUFFERS 4
 
@@ -381,7 +379,7 @@ struct SG_Geometry : SG_Component {
     static f32* getAttributeData(SG_Geometry* geo, int location);
 
     // builder functions
-    static void computeTangents(SG_Geometry* geo);
+    // static void computeTangents(SG_Geometry* geo);
     static void initGABandNumComponents(GeometryArenaBuilder* b, SG_Geometry* g,
                                         bool clear);
     static void buildPlane(SG_Geometry* g, PlaneParams* p);

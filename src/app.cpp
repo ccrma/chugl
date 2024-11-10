@@ -51,7 +51,7 @@ static_assert(sizeof(u32) == sizeof(b2WorldId), "b2WorldId != u32");
 #include <emscripten/html5.h>
 #endif
 
-#include "camera.cpp"
+// #include "camera.cpp"
 #include "graphics.h"
 #include "r_component.h"
 #include "sg_command.h"

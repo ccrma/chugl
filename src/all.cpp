@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -25,14 +25,14 @@
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  SOFTWARE.
 -----------------------------------------------------------------------------*/
-#include <cstdlib>
 #include <chuck/chugin.h>
+#include <cstdlib>
 
 // clang-format off
 
 #include "graphics.cpp"
 #include "geometry.cpp"
-#include "entity.cpp"
+// #include "entity.cpp"
 #include "sync.cpp"
 #include "sg_component.cpp" // chugl scenegraph API
 #include "sg_command.cpp"

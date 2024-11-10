@@ -60,6 +60,7 @@ void Vertex::norm(Vertex* v, char c, f32 val)
 // Vertices
 // ============================================================================
 
+#if 0
 void Vertices::init(Vertices* v, u32 vertexCount, u32 indicesCount)
 {
 
@@ -118,11 +119,6 @@ f32* Vertices::normals(Vertices* v)
 f32* Vertices::texcoords(Vertices* v)
 {
     return v->vertexData + v->vertexCount * 6;
-}
-
-f32* Vertices::tangents(Vertices* v)
-{
-    return v->vertexData + v->vertexCount * 8;
 }
 
 void Vertices::buildTangents(Vertices* v)
@@ -208,18 +204,11 @@ size_t Vertices::texcoordOffset(Vertices* v)
     return v->vertexCount * 6 * sizeof(f32);
 }
 
-size_t Vertices::tangentOffset(Vertices* v)
-{
-    return v->vertexCount * 8 * sizeof(f32);
-}
-
 void Vertices::setVertex(Vertices* vertices, Vertex v, u32 index)
 {
     f32* positions = Vertices::positions(vertices);
     f32* normals   = Vertices::normals(vertices);
     f32* texcoords = Vertices::texcoords(vertices);
-
-    // TODO: add tangents here?
 
     positions[index * 3 + 0] = v.x;
     positions[index * 3 + 1] = v.y;
@@ -276,10 +265,12 @@ void Vertices::copy(Vertices* v, Vertex* vertices, u32 vertexCount, u32* indices
 
     memcpy(v->indices, indices, indicesCount * sizeof(u32));
 }
+#endif
 
 // ============================================================================
 // Plane
 // ============================================================================
+#ifdef CHUGL_TANGENTS
 void Vertices::createPlane(Vertices* vertices, PlaneParams* params)
 {
     ASSERT(vertices->vertexCount == 0);
@@ -427,6 +418,7 @@ void Vertices::createSphere(Vertices* vertices, SphereParams* params)
     Vertices::copy(vertices, verts.data(), (u32)verts.size(), indices.data(),
                    (u32)indices.size());
 }
+#endif
 
 // ============================================================================
 // Arena builders
@@ -458,15 +450,17 @@ struct gvec4f {
     f32 x, y, z, w;
 };
 
-static int GAB_indicesCount(GeometryArenaBuilder* builder)
-{
-    return ARENA_LENGTH(builder->indices_arena, u32);
-}
-
 static int GAB_vertexCount(GeometryArenaBuilder* builder)
 {
     return ARENA_LENGTH(builder->pos_arena, gvec3f);
 }
+
+// static int GAB_indicesCount(GeometryArenaBuilder* builder)
+// {
+//     return ARENA_LENGTH(builder->indices_arena, u32);
+// }
+
+#ifdef CHUGL_TANGENTS
 
 static int GAB_faceCount(GeometryArenaBuilder* builder)
 {
@@ -561,6 +555,7 @@ void Geometry_computeTangents(GeometryArenaBuilder* builder)
 
     genTangSpaceDefault(&mikktspaceContext);
 }
+#endif
 
 void Geometry_buildPlane(GeometryArenaBuilder* builder, PlaneParams* params)
 {
@@ -583,8 +578,8 @@ void Geometry_buildPlane(GeometryArenaBuilder* builder, PlaneParams* params)
     gvec3f* pos_array  = ARENA_PUSH_COUNT(builder->pos_arena, gvec3f, vertex_count);
     gvec3f* norm_array = ARENA_PUSH_COUNT(builder->norm_arena, gvec3f, vertex_count);
     gvec2f* uv_array   = ARENA_PUSH_COUNT(builder->uv_arena, gvec2f, vertex_count);
-    gvec4f* tangent_array
-      = ARENA_PUSH_COUNT(builder->tangent_arena, gvec4f, vertex_count);
+    // gvec4f* tangent_array
+    //   = ARENA_PUSH_COUNT(builder->tangent_arena, gvec4f, vertex_count);
     gvec3i* indices_array
       = ARENA_PUSH_COUNT(builder->indices_arena, gvec3i, index_tri_count);
 
@@ -592,11 +587,11 @@ void Geometry_buildPlane(GeometryArenaBuilder* builder, PlaneParams* params)
     for (u32 iy = 0; iy < gridY1; iy++) {
         const f32 y = iy * segment_height - height_half;
         for (u32 ix = 0; ix < gridX1; ix++) {
-            const f32 x          = ix * segment_width - width_half;
-            pos_array[index]     = { x, -y, 0 };
-            norm_array[index]    = { 0, 0, 1 };
-            uv_array[index]      = { (f32)ix / gridX, 1.0f - ((f32)iy / gridY) };
-            tangent_array[index] = { 1, 0, 0, 1 };
+            const f32 x       = ix * segment_width - width_half;
+            pos_array[index]  = { x, -y, 0 };
+            norm_array[index] = { 0, 0, 1 };
+            uv_array[index]   = { (f32)ix / gridX, 1.0f - ((f32)iy / gridY) };
+            // tangent_array[index] = { 1, 0, 0, 1 };
 
             ++index;
         }
@@ -616,7 +611,8 @@ void Geometry_buildPlane(GeometryArenaBuilder* builder, PlaneParams* params)
         }
     }
     ASSERT(index == index_tri_count);
-    ASSERT(ARENA_LENGTH(builder->tangent_arena, gvec4f) == vertex_count);
+
+    // ASSERT(ARENA_LENGTH(builder->tangent_arena, gvec4f) == vertex_count);
 }
 
 void Geometry_buildSphere(GeometryArenaBuilder* builder, SphereParams* params)
@@ -633,7 +629,8 @@ void Geometry_buildSphere(GeometryArenaBuilder* builder, SphereParams* params)
       = ARENA_PUSH_COUNT(builder->pos_arena, glm::vec3, num_vertices);
     glm::vec3* normals = ARENA_PUSH_COUNT(builder->norm_arena, glm::vec3, num_vertices);
     gvec2f* uvs        = ARENA_PUSH_COUNT(builder->uv_arena, gvec2f, num_vertices);
-    gvec4f* tangents   = ARENA_PUSH_COUNT(builder->tangent_arena, gvec4f, num_vertices);
+    // gvec4f* tangents   = ARENA_PUSH_COUNT(builder->tangent_arena, gvec4f,
+    // num_vertices);
 
     u32 index = 0;
     std::vector<u32> grid;
@@ -677,8 +674,10 @@ void Geometry_buildSphere(GeometryArenaBuilder* builder, SphereParams* params)
             // tangent
             // the direction of the uv is tangent to the torus at this point
             // glm::vec3 uv_dir = glm::vec3(-center.y, center.x, 0);
-            tangents[index] = { glm::sin(params->phiStart + u * params->phiLength), 0,
-                                glm::cos(params->phiStart + u * params->phiLength), 1 };
+            // tangents[index] = { glm::sin(params->phiStart + u * params->phiLength),
+            // 0,
+            //                     glm::cos(params->phiStart + u * params->phiLength), 1
+            //                     };
 
             grid.push_back(index++);
         }
@@ -710,7 +709,7 @@ void Geometry_buildSphere(GeometryArenaBuilder* builder, SphereParams* params)
     ASSERT(index_count % 3 == 0); // must be a multiple of 3 triangles only
 
     u32* indices_array = ARENA_PUSH_COUNT(builder->indices_arena, u32, index_count);
-    UNUSED_VAR(tangents);
+    // UNUSED_VAR(tangents);
 
     // copy indices
     memcpy(indices_array, indices.data(), indices.size() * sizeof(*indices_array));
@@ -730,13 +729,14 @@ void Geometry_buildSuzanne(GeometryArenaBuilder* builder)
       = ARENA_PUSH_COUNT(builder->norm_arena, f32, ARRAY_LENGTH(suzanne_normals));
     f32* texcoords
       = ARENA_PUSH_COUNT(builder->uv_arena, f32, ARRAY_LENGTH(suzanne_uvs));
-    f32* tangents
-      = ARENA_PUSH_COUNT(builder->tangent_arena, f32, ARRAY_LENGTH(suzanne_tangents));
+    // f32* tangents
+    //   = ARENA_PUSH_COUNT(builder->tangent_arena, f32,
+    //   ARRAY_LENGTH(suzanne_tangents));
 
     memcpy(positions, suzanne_positions, sizeof(suzanne_positions));
     memcpy(normals, suzanne_normals, sizeof(suzanne_normals));
     memcpy(texcoords, suzanne_uvs, sizeof(suzanne_uvs));
-    memcpy(tangents, suzanne_tangents, sizeof(suzanne_tangents));
+    // memcpy(tangents, suzanne_tangents, sizeof(suzanne_tangents));
 }
 
 // Box ============================================================================
@@ -827,7 +827,7 @@ void Geometry_buildBox(GeometryArenaBuilder* gab, BoxParams* params)
                             -params->depth, params->widthSeg, params->heightSeg); // nz
 
     // build tangents
-    Geometry_computeTangents(gab);
+    // Geometry_computeTangents(gab);
 }
 
 void Geometry_buildCircle(GeometryArenaBuilder* gab, CircleParams* params)
@@ -835,10 +835,11 @@ void Geometry_buildCircle(GeometryArenaBuilder* gab, CircleParams* params)
     const int num_vertices = params->segments + 2;
     const int num_indices  = params->segments;
 
-    gvec3f* positions     = ARENA_PUSH_COUNT(gab->pos_arena, gvec3f, num_vertices);
-    gvec3f* normals       = ARENA_PUSH_COUNT(gab->norm_arena, gvec3f, num_vertices);
-    gvec2f* uvs           = ARENA_PUSH_COUNT(gab->uv_arena, gvec2f, num_vertices);
-    gvec4f* tangents      = ARENA_PUSH_COUNT(gab->tangent_arena, gvec4f, num_vertices);
+    gvec3f* positions = ARENA_PUSH_COUNT(gab->pos_arena, gvec3f, num_vertices);
+    gvec3f* normals   = ARENA_PUSH_COUNT(gab->norm_arena, gvec3f, num_vertices);
+    gvec2f* uvs       = ARENA_PUSH_COUNT(gab->uv_arena, gvec2f, num_vertices);
+    // gvec4f* tangents      = ARENA_PUSH_COUNT(gab->tangent_arena, gvec4f,
+    // num_vertices);
     gvec3i* indices_array = ARENA_PUSH_COUNT(gab->indices_arena, gvec3i, num_indices);
 
     // center vertex
@@ -864,7 +865,7 @@ void Geometry_buildCircle(GeometryArenaBuilder* gab, CircleParams* params)
                        (positions[index].y / params->radius + 1.0f) / 2.0f };
 
         // tangents
-        tangents[index] = { 1, 0, 0, 1 };
+        // tangents[index] = { 1, 0, 0, 1 };
 
         index++;
     }
@@ -886,8 +887,9 @@ void Geometry_buildTorus(GeometryArenaBuilder* gab, TorusParams* params)
     glm::vec3* positions = ARENA_PUSH_COUNT(gab->pos_arena, glm::vec3, num_vertices);
     glm::vec3* normals   = ARENA_PUSH_COUNT(gab->norm_arena, glm::vec3, num_vertices);
     gvec2f* uvs          = ARENA_PUSH_COUNT(gab->uv_arena, gvec2f, num_vertices);
-    gvec4f* tangents     = ARENA_PUSH_COUNT(gab->tangent_arena, gvec4f, num_vertices);
-    gvec3i* indices      = ARENA_PUSH_COUNT(gab->indices_arena, gvec3i, num_indices);
+    // gvec4f* tangents     = ARENA_PUSH_COUNT(gab->tangent_arena, gvec4f,
+    // num_vertices);
+    gvec3i* indices = ARENA_PUSH_COUNT(gab->indices_arena, gvec3i, num_indices);
 
     int index = 0;
     for (int j = 0; j <= params->radialSegments; j++) {
@@ -915,7 +917,7 @@ void Geometry_buildTorus(GeometryArenaBuilder* gab, TorusParams* params)
             // the direction of the uv is tangent to the torus at this point
             // we can use this to calculate the tangent
             // glm::vec3 uv_dir = glm::vec3(-center.y, center.x, 0);
-            tangents[index] = { -center.y, center.x, 0, 1 };
+            // tangents[index] = { -center.y, center.x, 0, 1 };
 
             index++;
         }
@@ -1095,7 +1097,7 @@ void Geometry_buildCylinder(GeometryArenaBuilder* gab, CylinderParams* params)
     }
 
     // build tangents
-    Geometry_computeTangents(gab);
+    // Geometry_computeTangents(gab);
 }
 
 // Knot ============================================================================
@@ -1207,5 +1209,5 @@ void Geometry_buildKnot(GeometryArenaBuilder* gab, KnotParams* params)
     ASSERT(index == num_indices);
 
     // build tangents
-    Geometry_computeTangents(gab);
+    // Geometry_computeTangents(gab);
 }

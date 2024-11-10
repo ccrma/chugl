@@ -63,20 +63,6 @@ customGeometry.indices(
     ]
 );
 
-// set tangents manually 
-// customGeometry.vertexAttribute(
-//     Geometry.AttributeLocation_Tangent,
-//     4,
-//     [
-//         1.0, 0, 0, 1, 
-//         1, 0, 0, 1, 
-//         1, 0, 0, 1, 
-//         1, 0, 0, 1, 
-//     ]
-// );
-// OR use helper function to calculate tangents (must happen AFTER setting pos/norm/uv/indices)
-customGeometry.generateTangents();
-
 // Scene setup ================================================================
 PBRMaterial mat;
 GMesh mesh(customGeometry, mat) --> GG.scene();
