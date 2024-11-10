@@ -435,6 +435,7 @@ struct SG_Shader : SG_Component {
     X(SG_MATERIAL_FLAT, "FlatMaterial")                                                \
     X(SG_MATERIAL_UV, "UVMaterial")                                                    \
     X(SG_MATERIAL_NORMAL, "NormalMaterial")                                            \
+    X(SG_MATERIAL_WIREFRAME, "WireframeMaterial")                                      \
     X(SG_MATERIAL_DIFFUSE, "DiffuseMaterial")                                          \
     X(SG_MATERIAL_PHONG, "PhongMaterial")                                              \
     X(SG_MATERIAL_PBR, "PBRMaterial")                                                  \

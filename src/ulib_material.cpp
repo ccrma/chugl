@@ -141,6 +141,14 @@ CK_DLL_CTOR(normal_material_ctor);
 CK_DLL_MFUN(normal_material_set_worldspace_normals);
 CK_DLL_MFUN(normal_material_get_worldspace_normals);
 
+CK_DLL_CTOR(wireframe_material_ctor);
+CK_DLL_MFUN(wireframe_material_set_thickness);
+CK_DLL_MFUN(wireframe_material_get_thickness);
+CK_DLL_MFUN(wireframe_material_set_alpha_cutoff);
+CK_DLL_MFUN(wireframe_material_get_alpha_cutoff);
+CK_DLL_MFUN(wireframe_material_set_color);
+CK_DLL_MFUN(wireframe_material_get_color);
+
 // phong ---------------------------------------------------------------------
 CK_DLL_CTOR(phong_material_ctor);
 
@@ -738,6 +746,49 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
       "object space.");
 
     END_CLASS();
+
+    // Wireframe Material -----------------------------------------------------
+    {
+
+        BEGIN_CLASS(SG_MaterialTypeNames[SG_MATERIAL_WIREFRAME],
+                    SG_CKNames[SG_COMPONENT_MATERIAL]);
+        DOC_CLASS(
+          "View a mesh as wireframe. Uses barycentric coordinates to draw lines. "
+          "WARNING: May not work with indexed geometry, rendering incorrectly as solid "
+          "triangles.");
+        // TODO problem is that indexed draws may assign every vertex of a triangle the
+        // same barycentric coordinates, so the wireframe will be drawn as a solid
+        // triangle. possible workaround: switch to vertex-pulling buffers, and compute
+        // the proper vertex index, as in
+        // https://webgpu.github.io/webgpu-samples/?sample=wireframe#main.ts
+
+        CTOR(wireframe_material_ctor);
+
+        MFUN(wireframe_material_set_thickness, "void", "thickness");
+        ARG("float", "thickness");
+        DOC_FUNC("Set the thickness of the wireframe lines.");
+
+        MFUN(wireframe_material_get_thickness, "float", "thickness");
+        DOC_FUNC("Get the thickness of the wireframe lines.");
+
+        MFUN(wireframe_material_set_alpha_cutoff, "void", "alphaCutoff");
+        ARG("float", "alphaCutoff");
+        DOC_FUNC(
+          "Set the alpha cutoff value for the wireframe material. Default 0.5. "
+          "Fragments with alpha values below this threshold will be discarded.");
+
+        MFUN(wireframe_material_get_alpha_cutoff, "float", "alphaCutoff");
+        DOC_FUNC("Get the alpha cutoff value for the wireframe material.");
+
+        MFUN(wireframe_material_set_color, "void", "color");
+        ARG("vec3", "color");
+        DOC_FUNC("Set the color of the wireframe lines.");
+
+        MFUN(wireframe_material_get_color, "vec3", "color");
+        DOC_FUNC("Get the color of the wireframe lines.");
+
+        END_CLASS();
+    }
 
     // Phong Material -----------------------------------------------------
     {
@@ -1479,6 +1530,23 @@ static void ulib_material_init_uniforms_and_pso(SG_Material* material)
             SG_Material::uniformInt(material, 0, 1); // use_worldspace_normals
             CQ_PushCommand_MaterialSetUniform(material, 0);
         } break;
+        case SG_MATERIAL_WIREFRAME: {
+            // init shader
+            SG_Shader* shader
+              = SG_GetShader(g_material_builtin_shaders.wireframe_shader_id);
+            ASSERT(shader);
+
+            chugl_materialSetShader(material, shader);
+
+            SG_Material::uniformFloat(material, 0, 2.0); // default thickness
+            CQ_PushCommand_MaterialSetUniform(material, 0);
+
+            SG_Material::uniformFloat(material, 1, .5); // default alpha cutoff
+            CQ_PushCommand_MaterialSetUniform(material, 1);
+
+            SG_Material::uniformVec3f(material, 2, glm::vec3(1.0)); // default color
+            CQ_PushCommand_MaterialSetUniform(material, 2);
+        } break;
         case SG_MATERIAL_PHONG: {
             SG_Shader* shader
               = SG_GetShader(g_material_builtin_shaders.phong_shader_id);
@@ -1771,6 +1839,59 @@ CK_DLL_MFUN(normal_material_set_worldspace_normals)
 CK_DLL_MFUN(normal_material_get_worldspace_normals)
 {
     RETURN->v_int = GET_MATERIAL(SELF)->uniforms[0].as.i;
+}
+
+// WireframeMaterial ===================================================================
+
+CK_DLL_CTOR(wireframe_material_ctor)
+{
+    SG_Material* material   = GET_MATERIAL(SELF);
+    material->material_type = SG_MATERIAL_WIREFRAME;
+
+    ulib_material_init_uniforms_and_pso(material);
+}
+
+CK_DLL_MFUN(wireframe_material_set_thickness)
+{
+    SG_Material* material = GET_MATERIAL(SELF);
+    t_CKFLOAT thickness   = GET_NEXT_FLOAT(ARGS);
+
+    SG_Material::uniformFloat(material, 0, (f32)thickness);
+    CQ_PushCommand_MaterialSetUniform(material, 0);
+}
+
+CK_DLL_MFUN(wireframe_material_get_thickness)
+{
+    RETURN->v_float = GET_MATERIAL(SELF)->uniforms[0].as.f;
+}
+
+CK_DLL_MFUN(wireframe_material_set_alpha_cutoff)
+{
+    SG_Material* material  = GET_MATERIAL(SELF);
+    t_CKFLOAT alpha_cutoff = GET_NEXT_FLOAT(ARGS);
+
+    SG_Material::uniformFloat(material, 1, (f32)alpha_cutoff);
+    CQ_PushCommand_MaterialSetUniform(material, 1);
+}
+
+CK_DLL_MFUN(wireframe_material_get_alpha_cutoff)
+{
+    RETURN->v_float = GET_MATERIAL(SELF)->uniforms[1].as.f;
+}
+
+CK_DLL_MFUN(wireframe_material_set_color)
+{
+    SG_Material* material = GET_MATERIAL(SELF);
+    t_CKVEC3 color        = GET_NEXT_VEC3(ARGS);
+
+    SG_Material::uniformVec3f(material, 2, glm::vec3(color.x, color.y, color.z));
+    CQ_PushCommand_MaterialSetUniform(material, 2);
+}
+
+CK_DLL_MFUN(wireframe_material_get_color)
+{
+    glm::vec3 color = GET_MATERIAL(SELF)->uniforms[2].as.vec3f;
+    RETURN->v_vec3  = { color.r, color.g, color.b };
 }
 
 // PhongMaterial ===================================================================
@@ -2325,6 +2446,17 @@ void chugl_initDefaultMaterials()
         normal_shader_desc.vertex_layout_count = ARRAY_LENGTH(standard_vertex_layout);
         g_material_builtin_shaders.normal_shader_id
           = chugl_createShader(&normal_shader_desc);
+    }
+
+    { // wireframe material
+        CHUGL_ShaderDesc wireframe_shader_desc = {};
+        wireframe_shader_desc.vertex_string    = wireframe_shader_string;
+        wireframe_shader_desc.fragment_string  = wireframe_shader_string;
+        wireframe_shader_desc.vertex_layout    = standard_vertex_layout;
+        wireframe_shader_desc.vertex_layout_count
+          = ARRAY_LENGTH(standard_vertex_layout);
+        g_material_builtin_shaders.wireframe_shader_id
+          = chugl_createShader(&wireframe_shader_desc);
     }
 
     { // phong material

@@ -130,6 +130,7 @@ struct chugl_MaterialBuiltinShaders {
     SG_ID normal_shader_id;
     SG_ID phong_shader_id;
     SG_ID points_shader_id;
+    SG_ID wireframe_shader_id;
 
     // screen shaders
     SG_ID output_pass_shader_id;

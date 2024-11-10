@@ -20,9 +20,9 @@ scene.camera(cam);
 for( auto x : [ sun, earth, moon ] )
     x.mat().topology( Material.Topology_LineList );
 
-(sun.mat() $ PhongMaterial).color( @(1,1,.25) );
-(earth.mat() $ PhongMaterial).color( @(.25,.25,1) );
-(moon.mat() $ PhongMaterial).color( @(.5,.5,.5) );
+(sun.mat() $ PhongMaterial).color( 10 * @(1,1,.25) );
+(earth.mat() $ PhongMaterial).color( 10 * @(.25,.25,1) );
+(moon.mat() $ PhongMaterial).color( 10 * @(.5,.5,.5) );
 
 earthSystem.pos(@(2.2, 0.0, 0.0));
 moonSystem.pos(@(.55, 0.0, 0.0));

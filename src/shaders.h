@@ -325,6 +325,55 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4f
 }
 )glsl";
 
+// https://web.archive.org/web/20130424093557/http://codeflow.org/entries/2012/aug/02/easy-wireframe-display-with-barycentric-coordinates/
+static const char* wireframe_shader_string = R"glsl(
+    #include FRAME_UNIFORMS
+    #include DRAW_UNIFORMS
+    #include STANDARD_VERTEX_INPUT
+
+    @group(1) @binding(0) var<uniform> u_thickness: f32;
+    @group(1) @binding(1) var<uniform> u_alpha_threshold: f32;
+    @group(1) @binding(2) var<uniform> u_color : vec3f;
+
+    struct VertexOutput {
+        @builtin(position) position: vec4f,
+        @location(0) barycentric: vec3f,
+    };
+
+    @vertex 
+    fn vs_main(
+        @builtin(vertex_index) vNdx: u32,
+        in: VertexInput
+    ) -> VertexOutput {
+        var out : VertexOutput;
+        var u_Draw : DrawUniforms = u_draw_instances[in.instance];
+
+        out.position = (u_frame.projection * u_frame.view) * u_Draw.model * vec4f(in.position, 1.0f);
+        // emit a barycentric coordinate
+        out.barycentric = vec3f(0);
+        out.barycentric[vNdx % 3] = 1.0;
+
+        return out;
+    }
+
+    fn edgeFactor(bary: vec3f) -> f32 {
+        let d = fwidth(bary);
+        let a3 = smoothstep(vec3f(0.0), d * u_thickness, bary);
+        return min(min(a3.x, a3.y), a3.z);
+    }
+
+    @fragment 
+    fn fs_main( v: VertexOutput) -> @location(0) vec4f {
+        let a = 1.0 - edgeFactor(v.barycentric);
+        if (a < u_alpha_threshold) {
+            discard;
+        }
+
+        // return vec4((u_color), a);
+        return vec4((u_color) * a, a);
+    }
+)glsl";
+
 static const char* normal_shader_string  = R"glsl(
 #include FRAME_UNIFORMS
 #include DRAW_UNIFORMS
