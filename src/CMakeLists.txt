@@ -279,12 +279,6 @@ target_include_directories(chugl_shared_properties
 
 # vendor dependencies ==========================================================
 
-if (NOT EMSCRIPTEN)
-    add_subdirectory(vendor/glfw)
-endif()
-add_subdirectory(vendor/glfw3webgpu)
-add_subdirectory(vendor/sr_webcam)
-
 # host our own distribution of WebGPU on CCRMA
 # switching to static library instead of dynami b/c
 # chuck cannot find build/Debug/webgpu_native.dll.
@@ -297,6 +291,12 @@ FetchContent_Declare(
   GIT_TAG        wgpu-static-22.1.0.5
 )
 FetchContent_MakeAvailable(webgpu)
+
+if (NOT EMSCRIPTEN)
+    add_subdirectory(vendor/glfw)
+endif()
+add_subdirectory(vendor/glfw3webgpu)
+add_subdirectory(vendor/sr_webcam)
 
 # FreeType font rendering
 # set default freetype options

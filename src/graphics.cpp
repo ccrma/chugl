@@ -279,7 +279,8 @@ bool GraphicsContext::init(GraphicsContext* context, GLFWwindow* window)
     if (!instance) return false;
     log_trace("WebGPU instance created");
 
-    context->surface = glfwGetWGPUSurface(instance, window);
+    // context->surface = glfwGetWGPUSurface(instance, window);
+    context->surface = glfwCreateWindowWGPUSurface(instance, window);
     if (!context->surface) return false;
     // context->window = window;
     log_trace("WebGPU surface created");
@@ -428,7 +429,7 @@ static WGPUTextureView GraphicsContext_GetNextSurfaceTextureView(GraphicsContext
 
     // Create a view for this surface texture
     WGPUTextureViewDescriptor viewDescriptor = {};
-    viewDescriptor.label          = "Surface texture view";
+    viewDescriptor.label                     = "Surface texture view";
     viewDescriptor.format         = wgpuTextureGetFormat(gctx->surface_texture.texture);
     viewDescriptor.dimension      = WGPUTextureViewDimension_2D;
     viewDescriptor.baseMipLevel   = 0;

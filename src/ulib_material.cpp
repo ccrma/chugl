@@ -754,8 +754,11 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
                     SG_CKNames[SG_COMPONENT_MATERIAL]);
         DOC_CLASS(
           "View a mesh as wireframe. Uses barycentric coordinates to draw lines. "
-          "WARNING: May not work with indexed geometry, rendering incorrectly as solid "
-          "triangles.");
+          "WARNING: May not work with indexed geometry, rendering some or all faces "
+          "incorrectly as solid. Known issues with SphereGeometry, CircleGeometry, "
+          "KnotGeometry, CylinderGeometry. In those cases, set Material.topology() to "
+          "Material.Topology_LineList or Material.Topology_LineStrip. You will no "
+          "longer be able to set thickness, but the wireframe will render correctly.");
         // TODO problem is that indexed draws may assign every vertex of a triangle the
         // same barycentric coordinates, so the wireframe will be drawn as a solid
         // triangle. possible workaround: switch to vertex-pulling buffers, and compute
