@@ -349,7 +349,6 @@ union SG_GeometryParams {
 #define SG_GEOMETRY_POSITION_ATTRIBUTE_LOCATION 0
 #define SG_GEOMETRY_NORMAL_ATTRIBUTE_LOCATION 1
 #define SG_GEOMETRY_UV_ATTRIBUTE_LOCATION 2
-// #define SG_GEOMETRY_TANGENT_ATTRIBUTE_LOCATION 3
 
 #define SG_GEOMETRY_MAX_VERTEX_PULL_BUFFERS 4
 
@@ -379,7 +378,6 @@ struct SG_Geometry : SG_Component {
     static f32* getAttributeData(SG_Geometry* geo, int location);
 
     // builder functions
-    // static void computeTangents(SG_Geometry* geo);
     static void initGABandNumComponents(GeometryArenaBuilder* b, SG_Geometry* g,
                                         bool clear);
     static void buildPlane(SG_Geometry* g, PlaneParams* p);
@@ -437,7 +435,6 @@ struct SG_Shader : SG_Component {
     X(SG_MATERIAL_FLAT, "FlatMaterial")                                                \
     X(SG_MATERIAL_UV, "UVMaterial")                                                    \
     X(SG_MATERIAL_NORMAL, "NormalMaterial")                                            \
-    X(SG_MATERIAL_TANGENT, "TangentMaterial")                                          \
     X(SG_MATERIAL_DIFFUSE, "DiffuseMaterial")                                          \
     X(SG_MATERIAL_PHONG, "PhongMaterial")                                              \
     X(SG_MATERIAL_PBR, "PBRMaterial")                                                  \

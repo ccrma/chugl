@@ -128,7 +128,6 @@ struct chugl_MaterialBuiltinShaders {
     SG_ID pbr_shader_id;
     SG_ID uv_shader_id;
     SG_ID normal_shader_id;
-    SG_ID tangent_shader_id;
     SG_ID phong_shader_id;
     SG_ID points_shader_id;
 

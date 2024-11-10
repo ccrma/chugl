@@ -458,8 +458,6 @@ void SG_Geometry::initGABandNumComponents(GeometryArenaBuilder* b, SG_Geometry* 
     b->pos_arena  = &g->vertex_attribute_data[SG_GEOMETRY_POSITION_ATTRIBUTE_LOCATION];
     b->norm_arena = &g->vertex_attribute_data[SG_GEOMETRY_NORMAL_ATTRIBUTE_LOCATION];
     b->uv_arena   = &g->vertex_attribute_data[SG_GEOMETRY_UV_ATTRIBUTE_LOCATION];
-    // b->tangent_arena
-    //   = &g->vertex_attribute_data[SG_GEOMETRY_TANGENT_ATTRIBUTE_LOCATION];
     b->indices_arena = &g->indices;
 
     // clear arenas
@@ -467,7 +465,6 @@ void SG_Geometry::initGABandNumComponents(GeometryArenaBuilder* b, SG_Geometry* 
         Arena::clear(b->pos_arena);
         Arena::clear(b->norm_arena);
         Arena::clear(b->uv_arena);
-        // Arena::clear(b->tangent_arena);
         Arena::clear(b->indices_arena);
     }
 
@@ -476,18 +473,7 @@ void SG_Geometry::initGABandNumComponents(GeometryArenaBuilder* b, SG_Geometry* 
     g->vertex_attribute_num_components[SG_GEOMETRY_POSITION_ATTRIBUTE_LOCATION] = 3;
     g->vertex_attribute_num_components[SG_GEOMETRY_NORMAL_ATTRIBUTE_LOCATION]   = 3;
     g->vertex_attribute_num_components[SG_GEOMETRY_UV_ATTRIBUTE_LOCATION]       = 2;
-    // g->vertex_attribute_num_components[SG_GEOMETRY_TANGENT_ATTRIBUTE_LOCATION]  = 4;
 }
-
-// computes tangents assuming pos/norm/uv already populated
-// void SG_Geometry::computeTangents(SG_Geometry* geo)
-// {
-//     ASSERT(geo);
-//     GeometryArenaBuilder gab;
-//     SG_Geometry::initGABandNumComponents(&gab, geo, false);
-
-//     Geometry_computeTangents(&gab);
-// }
 
 void SG_Geometry::buildPlane(SG_Geometry* g, PlaneParams* p)
 {

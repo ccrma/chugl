@@ -334,7 +334,6 @@ static SG_Transform* ulib_assloader_load_obj(const char* filepath,
         }
 
         SG_Geometry* geo = SG_GetGeometry(geo_ids[i]);
-        // SG_Geometry::computeTangents(geo);
 
         // update
         CQ_UpdateAllVertexAttributes(geo);

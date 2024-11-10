@@ -165,7 +165,6 @@ static std::unordered_map<std::string, std::string> shader_table = {
             @location(0) position : vec3f,
             @location(1) normal : vec3f,
             @location(2) uv : vec2f,
-            // @location(3) tangent : vec4f,
             @builtin(instance_index) instance : u32,
         };
 
@@ -181,7 +180,6 @@ static std::unordered_map<std::string, std::string> shader_table = {
             @location(0) v_worldpos : vec3f,
             @location(1) v_normal : vec3f,
             @location(2) v_uv : vec2f,
-            // @location(3) v_tangent : vec4f,
         };
 
         )glsl"
@@ -210,8 +208,6 @@ static std::unordered_map<std::string, std::string> shader_table = {
             // out.v_normal = (transpose(inverse(u_frame.viewMat * u_Draw.model)) * vec4f(in.normal, 0.0)).xyz;
             out.v_normal = (u_Draw.model * vec4f(in.normal, 0.0)).xyz;
 
-            // tangent vectors aren't impacted by non-uniform scaling or translation
-            // out.v_tangent = vec4f(modelMat3 * in.tangent.xyz, in.tangent.w);
             out.v_uv     = in.uv;
 
             return out;
@@ -359,7 +355,6 @@ fn vs_main(in : VertexInput) -> VertexOutput
 // our custom material uniforms
 @group(1) @binding(0) var<uniform> world_space_normals: i32;
 
-// don't actually need normals/tangents
 @fragment 
 fn fs_main(in : VertexOutput, @builtin(front_facing) is_front: bool) -> @location(0) vec4f
 {   
@@ -377,53 +372,6 @@ fn fs_main(in : VertexOutput, @builtin(front_facing) is_front: bool) -> @locatio
     }
 }
 )glsl";
-
-static const char* tangent_shader_string  = R"glsl(
-#include FRAME_UNIFORMS
-#include DRAW_UNIFORMS
-#include STANDARD_VERTEX_INPUT
-
-struct VertexOutput {
-    @builtin(position) position : vec4f,
-    @location(0) v_world_tangent : vec4f,
-    @location(1) v_local_tangent : vec4f,
-};
-
-@vertex 
-fn vs_main(in : VertexInput) -> VertexOutput
-{
-    var out : VertexOutput;
-    var u_Draw : DrawUniforms = u_draw_instances[in.instance];
-
-    let modelMat3 : mat3x3<f32> = mat3x3(
-        u_Draw.model[0].xyz,
-        u_Draw.model[1].xyz,
-        u_Draw.model[2].xyz
-    );
-
-    out.position = (u_frame.projection * u_frame.view) * u_Draw.model * vec4f(in.position, 1.0f);
-
-    // tangent vectors aren't impacted by non-uniform scaling or translation
-    // out.v_world_tangent = vec4f(modelMat3 * in.tangent.xyz, in.tangent.w);
-    // out.v_local_tangent = in.tangent;
-
-    return out;
-}
-
-// our custom material uniforms
-@group(1) @binding(0) var<uniform> world_space_tangents: i32;
-
-@fragment 
-fn fs_main(in : VertexOutput) -> @location(0) vec4f
-{
-    if (world_space_tangents == 1) {
-        return vec4f(max(in.v_world_tangent.xyz, vec3f(0.0)), 1.0);
-    } else {
-        return vec4f(max(in.v_local_tangent.xyz, vec3f(0.0)), 1.0);
-    }
-}
-)glsl";
-
 
 static const char* flat_shader_string  = R"glsl(
 #include FRAME_UNIFORMS
@@ -448,7 +396,6 @@ fn srgbToLinear(c : vec4f) -> vec4f {
     );
 }
 
-// don't actually need normals/tangents
 @fragment 
 fn fs_main(in : VertexOutput) -> @location(0) vec4f
 {

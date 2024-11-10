@@ -141,10 +141,6 @@ CK_DLL_CTOR(normal_material_ctor);
 CK_DLL_MFUN(normal_material_set_worldspace_normals);
 CK_DLL_MFUN(normal_material_get_worldspace_normals);
 
-CK_DLL_CTOR(tangent_material_ctor);
-CK_DLL_MFUN(tangent_material_set_worldspace_tangents);
-CK_DLL_MFUN(tangent_material_get_worldspace_tangents);
-
 // phong ---------------------------------------------------------------------
 CK_DLL_CTOR(phong_material_ctor);
 
@@ -309,8 +305,8 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
       "`vertexLayout` to [VertexFormat.Float3, VertexFormat.Float2]. "
       "By default this field is set to the standard vertex layout, "
       "[VertexFormat.Float3, "
-      "VertexFormat.Float3, VertexFormat.Float2, VertexFormat.Float4]. "
-      "This corresponds to position, normal, uv, tangent.");
+      "VertexFormat.Float3, VertexFormat.Float2]. "
+      "This corresponds to position, normal, uv.");
 
     shader_desc_compute_string_offset = MVAR("string", "computeCode", false);
     DOC_VAR("Compute shader string. Set if passing a raw shader code (not a filepath)");
@@ -743,27 +739,6 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
 
     END_CLASS();
 
-    // Tangent Material -----------------------------------------------------
-
-    BEGIN_CLASS(SG_MaterialTypeNames[SG_MATERIAL_TANGENT],
-                SG_CKNames[SG_COMPONENT_MATERIAL]);
-    DOC_CLASS("Visualize tangents of a mesh.");
-
-    CTOR(tangent_material_ctor);
-
-    MFUN(tangent_material_set_worldspace_tangents, "void", "worldspaceTangents");
-    ARG("int", "use_worldspace_tangents");
-    DOC_FUNC(
-      "Set whether to use worldspace tangents. If false, visualizes tangents in local "
-      "object space.");
-
-    MFUN(tangent_material_get_worldspace_tangents, "int", "worldspaceTangents");
-    DOC_FUNC(
-      "Get whether to use worldspace tangents. If false, visualizes tangents in local "
-      "object space.");
-
-    END_CLASS();
-
     // Phong Material -----------------------------------------------------
     {
         BEGIN_CLASS(SG_MaterialTypeNames[SG_MATERIAL_PHONG],
@@ -936,11 +911,7 @@ CK_DLL_CTOR(shader_desc_ctor)
 
     WGPUVertexFormat default_format[]
       = { WGPUVertexFormat_Float32x3, WGPUVertexFormat_Float32x3,
-          WGPUVertexFormat_Float32x2,
-#ifdef CHUGL_TANGENTS
-          WGPUVertexFormat_Float32x4
-#endif
-        };
+          WGPUVertexFormat_Float32x2 };
 
     OBJ_MEMBER_INT_ARRAY(SELF, shader_desc_vertex_layout_offset)
       = chugin_createCkIntArray((int*)default_format, ARRAY_LENGTH(default_format),
@@ -1508,17 +1479,6 @@ static void ulib_material_init_uniforms_and_pso(SG_Material* material)
             SG_Material::uniformInt(material, 0, 1); // use_worldspace_normals
             CQ_PushCommand_MaterialSetUniform(material, 0);
         } break;
-        case SG_MATERIAL_TANGENT: {
-            // init shader
-            SG_Shader* shader
-              = SG_GetShader(g_material_builtin_shaders.tangent_shader_id);
-            ASSERT(shader);
-
-            chugl_materialSetShader(material, shader);
-
-            SG_Material::uniformInt(material, 0, 1); // use_worldspace_tangents
-            CQ_PushCommand_MaterialSetUniform(material, 0);
-        } break;
         case SG_MATERIAL_PHONG: {
             SG_Shader* shader
               = SG_GetShader(g_material_builtin_shaders.phong_shader_id);
@@ -1809,30 +1769,6 @@ CK_DLL_MFUN(normal_material_set_worldspace_normals)
 }
 
 CK_DLL_MFUN(normal_material_get_worldspace_normals)
-{
-    RETURN->v_int = GET_MATERIAL(SELF)->uniforms[0].as.i;
-}
-
-// TangentMaterial ===================================================================
-
-CK_DLL_CTOR(tangent_material_ctor)
-{
-    SG_Material* material   = GET_MATERIAL(SELF);
-    material->material_type = SG_MATERIAL_TANGENT;
-
-    ulib_material_init_uniforms_and_pso(material);
-}
-
-CK_DLL_MFUN(tangent_material_set_worldspace_tangents)
-{
-    SG_Material* material           = GET_MATERIAL(SELF);
-    t_CKINT use_worldspace_tangents = GET_NEXT_INT(ARGS);
-
-    SG_Material::uniformInt(material, 0, use_worldspace_tangents ? 1 : 0);
-    CQ_PushCommand_MaterialSetUniform(material, 0);
-}
-
-CK_DLL_MFUN(tangent_material_get_worldspace_tangents)
 {
     RETURN->v_int = GET_MATERIAL(SELF)->uniforms[0].as.i;
 }
@@ -2290,9 +2226,6 @@ void chugl_initDefaultMaterials()
         WGPUVertexFormat_Float32x3, // position
         WGPUVertexFormat_Float32x3, // normal
         WGPUVertexFormat_Float32x2, // uv
-#ifdef CHUGL_TANGENTS
-        WGPUVertexFormat_Float32x4, // tangent
-#endif
     };
 
     static WGPUVertexFormat gtext_vertex_layout[] = {
@@ -2392,16 +2325,6 @@ void chugl_initDefaultMaterials()
         normal_shader_desc.vertex_layout_count = ARRAY_LENGTH(standard_vertex_layout);
         g_material_builtin_shaders.normal_shader_id
           = chugl_createShader(&normal_shader_desc);
-    }
-
-    { // tangent material
-        CHUGL_ShaderDesc tangent_shader_desc    = {};
-        tangent_shader_desc.vertex_string       = tangent_shader_string;
-        tangent_shader_desc.fragment_string     = tangent_shader_string;
-        tangent_shader_desc.vertex_layout       = standard_vertex_layout;
-        tangent_shader_desc.vertex_layout_count = ARRAY_LENGTH(standard_vertex_layout);
-        g_material_builtin_shaders.tangent_shader_id
-          = chugl_createShader(&tangent_shader_desc);
     }
 
     { // phong material

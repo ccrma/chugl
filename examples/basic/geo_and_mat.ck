@@ -23,21 +23,13 @@ GMesh mesh --> GG.scene();
 ] @=> Geometry geometries[];
 
 UI_Int geometry_index;
-[
-    "None",
-    "PlaneGeometry",
-    "SuzanneGeometry",
-    "SphereGeometry",
-    "CubeGeometry",
-    "CircleGeometry",
-    "TorusGeometry",
-    "CylinderGeometry",
-    "KnotGeometry",
-] @=> string builtin_geometries[];
+[ "None" ] @=> string builtin_geometries[];
+for (1 => int i; i < geometries.size(); i++) {
+    builtin_geometries << Type.of(geometries[i]).name();
+}
 
 UVMaterial uv_material;
 NormalMaterial normal_material;
-TangentMaterial tangent_material;
 FlatMaterial flat_material;
 PhongMaterial phong_material;
 PBRMaterial pbr_material;
@@ -46,7 +38,6 @@ PBRMaterial pbr_material;
     null,
     uv_material,
     normal_material,
-    tangent_material,
     flat_material,
     phong_material,
     pbr_material,
