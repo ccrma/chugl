@@ -344,22 +344,9 @@ Chuck_ArrayVec4* chugin_createCkFloat4Array(glm::vec4* arr, int count,
 
 bool chugin_typeEquals(Chuck_Object* ckobj, const char* type_name)
 {
-#if 0
     Chuck_DL_Api::Type ggenType = g_chuglAPI->type->lookup(g_chuglVM, type_name);
     Chuck_DL_Api::Type thisType = g_chuglAPI->object->get_type(ckobj);
-    return (
-      g_chuglAPI->type->is_equal(
-        thisType,
-        ggenType) // this type is an exact match (subclasses are handled on their own)
-      || g_chuglAPI->type->origin_hint(thisType)
-           == ckte_origin_USERDEFINED // this type is defined .ck file
-      || g_chuglAPI->type->origin_hint(thisType)
-           == ckte_origin_IMPORT // .ck file included in search path
-    );
-#endif
-
-    Chuck_DL_Api::Type ggenType = g_chuglAPI->type->lookup(g_chuglVM, type_name);
-    Chuck_DL_Api::Type thisType = g_chuglAPI->object->get_type(ckobj);
+    // check for exact match (subclasses are handled on their own)
     return g_chuglAPI->type->is_equal(thisType, ggenType);
 }
 
