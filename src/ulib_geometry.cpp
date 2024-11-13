@@ -1277,12 +1277,20 @@ void ulib_geo_lines2d_set_line_colors(SG_Geometry* geo, Chuck_Object* ck_arr)
     geoSetPulledVertexAttribute(geo, 1, ck_arr, 3, false);
 }
 
-void ulib_geo_lines2d_set_lines_points(SG_Geometry* geo, Chuck_Object* ck_arr)
+void ulib_geo_lines2d_set_lines_points(SG_Geometry* geo, Chuck_Object* ck_arr, int len)
 {
     // need to add sentinel points to beginning and end of array
     int ck_arr_len
       = ck_arr ? g_chuglAPI->object->array_vec2_size((Chuck_ArrayVec2*)ck_arr) : 0;
-    if (ck_arr_len < 2) {
+
+    // adjust user-specified length to be within bounds
+    if (len == -1) {
+        len = ck_arr_len;
+    } else {
+        len = MIN(len, ck_arr_len);
+    }
+
+    if (ck_arr_len < 2 || len < 2) {
         // nothing to draw for a line with < 2 points
         CQ_PushCommand_GeometrySetVertexCount(geo, 0);
         return;
@@ -1290,17 +1298,15 @@ void ulib_geo_lines2d_set_lines_points(SG_Geometry* geo, Chuck_Object* ck_arr)
 
     Arena* pull_buffer = &geo->vertex_pull_buffers[0];
     Arena::clear(pull_buffer);
-    f32* local_data = ARENA_PUSH_COUNT(pull_buffer, f32, (ck_arr_len + 2) * 2);
+    f32* local_data = ARENA_PUSH_COUNT(pull_buffer, f32, (len + 2) * 2);
 
     // copy ck array positions
     chugin_copyCkVec2Array((Chuck_ArrayVec2*)ck_arr, &local_data[2]);
 
     glm::vec2 start      = glm::vec2(local_data[2], local_data[3]);
     glm::vec2 start_next = glm::vec2(local_data[4], local_data[5]);
-    glm::vec2 end
-      = glm::vec2(local_data[ck_arr_len * 2], local_data[ck_arr_len * 2 + 1]);
-    glm::vec2 end_prev
-      = glm::vec2(local_data[ck_arr_len * 2 - 2], local_data[ck_arr_len * 2 - 1]);
+    glm::vec2 end        = glm::vec2(local_data[len * 2], local_data[len * 2 + 1]);
+    glm::vec2 end_prev   = glm::vec2(local_data[len * 2 - 2], local_data[len * 2 - 1]);
 
     // write the start sentinel point
     // TODO: if looping, set to the last point
@@ -1310,18 +1316,23 @@ void ulib_geo_lines2d_set_lines_points(SG_Geometry* geo, Chuck_Object* ck_arr)
     local_data[1]            = start_sentinel.y;
 
     // end sentinel point
-    glm::vec2 end_sentinel               = end + (end - end_prev);
-    local_data[(ck_arr_len + 1) * 2]     = end_sentinel.x;
-    local_data[(ck_arr_len + 1) * 2 + 1] = end_sentinel.y;
+    glm::vec2 end_sentinel        = end + (end - end_prev);
+    local_data[(len + 1) * 2]     = end_sentinel.x;
+    local_data[(len + 1) * 2 + 1] = end_sentinel.y;
 
     // push attribute change to command queue
     CQ_PushCommand_GeometrySetPulledVertexAttribute(geo, 0, local_data,
                                                     pull_buffer->curr);
-    ASSERT(ARENA_LENGTH(pull_buffer, glm::vec2) == (ck_arr_len + 2));
+    ASSERT(ARENA_LENGTH(pull_buffer, glm::vec2) == (len + 2));
 
-    // always draw ck_arr_len+1 points to handle line loop
+    // always draw len+1 points to handle line loop
     CQ_PushCommand_GeometrySetVertexCount(geo,
-                                          ck_arr_len * 4); // 3 vertices per segment
+                                          len * 4); // 3 vertices per segment
+}
+
+void ulib_geo_lines2d_set_lines_points(SG_Geometry* geo, Chuck_Object* ck_arr)
+{
+    ulib_geo_lines2d_set_lines_points(geo, ck_arr, -1);
 }
 
 CK_DLL_CTOR(lines2d_geo_ctor)

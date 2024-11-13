@@ -264,6 +264,17 @@ void chugin_copyCkVec2Array(Chuck_ArrayVec2* ck_arr, f32* arr)
     }
 }
 
+void chugin_copyCkVec2Array(Chuck_ArrayVec2* ck_arr, f32* arr, int count)
+{
+    if (!ck_arr) return;
+    int size = MIN(g_chuglAPI->object->array_vec2_size(ck_arr), count);
+    for (int i = 0; i < size; i++) {
+        t_CKVEC2 vec2  = g_chuglAPI->object->array_vec2_get_idx(ck_arr, i);
+        arr[i * 2]     = vec2.x;
+        arr[i * 2 + 1] = vec2.y;
+    }
+}
+
 void chugin_copyCkVec3Array(Chuck_ArrayVec3* ck_arr, f32* arr)
 {
     if (!ck_arr) return;
@@ -364,6 +375,7 @@ void ulib_material_cq_update_all_uniforms(SG_Material* material);
 // impl in ulib_geometry.cpp
 SG_Geometry* ulib_geometry_create(SG_GeometryType type, Chuck_VM_Shred* shred);
 void ulib_geo_lines2d_set_lines_points(SG_Geometry* geo, Chuck_Object* ck_arr);
+void ulib_geo_lines2d_set_lines_points(SG_Geometry* geo, Chuck_Object* ck_arr, int len);
 void ulib_geo_lines2d_set_line_colors(SG_Geometry* geo, Chuck_Object* ck_arr);
 void ulib_geo_lines2d_set_line_colors(SG_Geometry* geo, f32* data, int data_len);
 void CQ_UpdateAllVertexAttributes(SG_Geometry* geo);

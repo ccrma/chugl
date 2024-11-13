@@ -1142,6 +1142,7 @@ CK_DLL_MFUN(gmesh_set_mat_and_geo);
 
 CK_DLL_CTOR(glines2d_ctor);
 CK_DLL_MFUN(glines2d_set_line_positions);
+CK_DLL_MFUN(glines2d_set_line_positions_with_length);
 CK_DLL_MFUN(glines2d_set_line_colors);
 CK_DLL_MFUN(glines2d_set_width);
 CK_DLL_MFUN(glines2d_set_color);
@@ -1294,6 +1295,12 @@ static void ulib_mesh_query(Chuck_DL_Query* QUERY)
         DOC_FUNC(
           "Set the line positions. Z values are fixed to 0.0. Equivalent to "
           "LinesGeometry.linePoints()");
+
+        MFUN(glines2d_set_line_positions_with_length, "void", "positions");
+        ARG("vec2[]", "points");
+        ARG("int", "length");
+        DOC_FUNC(
+          "Set line positions from the first `length` values in the `points` array.");
 
         MFUN(glines2d_set_line_colors, "void", "colors");
         ARG("vec3[]", "colors");
@@ -1643,6 +1650,15 @@ CK_DLL_MFUN(glines2d_set_line_positions)
     Chuck_Object* ck_arr = GET_NEXT_OBJECT(ARGS);
     SG_Geometry* geo     = SG_GetGeometry(mesh->_geo_id);
     ulib_geo_lines2d_set_lines_points(geo, ck_arr);
+}
+
+CK_DLL_MFUN(glines2d_set_line_positions_with_length)
+{
+    SG_Mesh* mesh        = GET_MESH(SELF);
+    Chuck_Object* ck_arr = GET_NEXT_OBJECT(ARGS);
+    t_CKINT length       = GET_NEXT_INT(ARGS);
+    SG_Geometry* geo     = SG_GetGeometry(mesh->_geo_id);
+    ulib_geo_lines2d_set_lines_points(geo, ck_arr, length);
 }
 
 CK_DLL_MFUN(glines2d_set_line_colors)
