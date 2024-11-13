@@ -181,8 +181,11 @@ static SG_Transform* ulib_assloader_load_obj(const char* filepath,
         ulib_component_set_name(phong_material, obj_material.name.c_str());
 
         // set uniforms
+        // adding ambient + diffuse color (PhongMaterial doesn't differentiate between
+        // diffuse color and ambient color)
         PhongParams::diffuse(phong_material,
-                             RAPID_FLOAT3_TO_GLM_VEC3(obj_material.diffuse));
+                             RAPID_FLOAT3_TO_GLM_VEC3(obj_material.diffuse)
+                               + RAPID_FLOAT3_TO_GLM_VEC3(obj_material.ambient));
         PhongParams::specular(phong_material,
                               RAPID_FLOAT3_TO_GLM_VEC3(obj_material.specular));
         PhongParams::shininess(phong_material, obj_material.shininess);
