@@ -58,7 +58,7 @@ CK_DLL_MFUN(gtext_get_texture);
 
 void ulib_text_query(Chuck_DL_Query* QUERY)
 {
-    BEGIN_CLASS(SG_CKNames[SG_COMPONENT_TEXT], SG_CKNames[SG_COMPONENT_TRANSFORM]);
+    BEGIN_CLASS("GText", SG_CKNames[SG_COMPONENT_TRANSFORM]);
     DOC_CLASS(
       "Builtin fonts are \"chugl:cousine-regular\", \"chugl:karla-regular\", "
       "\"chugl:proggy-tiny\", \"chugl:proggy-clean\" which can be assigned to "
@@ -138,7 +138,6 @@ CK_DLL_CTOR(gtext_ctor)
     // not extend GMesh for now to not expose underlying geometry/material
 
     SG_Text* text = SG_CreateText(SELF);
-    ASSERT(text->type == SG_COMPONENT_TEXT);
 
     OBJ_MEMBER_UINT(SELF, component_offset_id) = text->id;
 

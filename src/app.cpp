@@ -1796,7 +1796,6 @@ static void _R_HandleCommand(App* app, SG_Command* command)
                 } break;
                 case SG_COMPONENT_MESH: break;
                 case SG_COMPONENT_CAMERA: break;
-                case SG_COMPONENT_TEXT: break;
                 case SG_COMPONENT_PASS: {
                     // TODO
                 } break;

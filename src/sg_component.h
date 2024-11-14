@@ -74,7 +74,6 @@ typedef i32 SG_ID;
     X(SG_COMPONENT_TEXTURE, "Texture")                                                 \
     X(SG_COMPONENT_MESH, "GMesh")                                                      \
     X(SG_COMPONENT_CAMERA, "GCamera")                                                  \
-    X(SG_COMPONENT_TEXT, "GText")                                                      \
     X(SG_COMPONENT_PASS, "GPass")                                                      \
     X(SG_COMPONENT_BUFFER, "GBuffer")                                                  \
     X(SG_COMPONENT_LIGHT, "GLight")                                                    \

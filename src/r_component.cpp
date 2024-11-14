@@ -378,7 +378,7 @@ static void _Transform_RebuildDescendants(R_Scene* scene, R_Transform* xform,
 {
     // mark primitive as stale since world matrix will change
     if (xform->_geoID && xform->_matID) {
-        ASSERT(xform->type == SG_COMPONENT_MESH || xform->type == SG_COMPONENT_TEXT);
+        ASSERT(xform->type == SG_COMPONENT_MESH);
         R_Scene::getPrimitive(scene, xform->_geoID, xform->_matID)->stale = true;
     }
 
@@ -1125,8 +1125,7 @@ void R_Scene::removeSubgraphFromRenderState(R_Scene* scene, R_Transform* root)
             UNUSED_VAR(prev_item);
             ASSERT(prev_item);
             // TODO: somehow consolidate GText into also being a mesh...
-        } else if (xform->type == SG_COMPONENT_MESH
-                   || xform->type == SG_COMPONENT_TEXT) {
+        } else if (xform->type == SG_COMPONENT_MESH) {
             // get xforms from geometry
             GeometryToXforms* g2x
               = R_Scene::getPrimitive(scene, xform->_geoID, xform->_matID);
@@ -1181,8 +1180,7 @@ void R_Scene::addSubgraphToRenderState(R_Scene* scene, R_Transform* root)
             UNUSED_VAR(replaced);
             ASSERT(!replaced);
         } else if (xform->_geoID != 0 && xform->_matID != 0) { // for all renderables
-            ASSERT(xform->type == SG_COMPONENT_MESH
-                   || xform->type == SG_COMPONENT_TEXT);
+            ASSERT(xform->type == SG_COMPONENT_MESH);
 
             // try adding to bottom level GeometryToXform
             // if its not present, build up entire chain:
@@ -1274,7 +1272,7 @@ void R_Scene::registerMesh(R_Scene* scene, R_Transform* mesh)
 
     if (mesh->_geoID == 0 || mesh->_matID == 0) return;
 
-    ASSERT(mesh->type == SG_COMPONENT_MESH || mesh->type == SG_COMPONENT_TEXT);
+    ASSERT(mesh->type == SG_COMPONENT_MESH);
     GeometryToXforms* g2x = R_Scene::getPrimitive(scene, mesh->_geoID, mesh->_matID);
     GeometryToXforms::addXform(g2x, mesh->id);
 
@@ -1965,7 +1963,7 @@ R_Text* Component_CreateText(GraphicsContext* gctx, FT_Library ft,
                                 R_Text); // can also add void* udata to R_Transform to
                                          // support these kinds of renderables
     {
-        R_Transform_init(text, cmd->text_id, SG_COMPONENT_TEXT); // text or mesh type?
+        R_Transform_init(text, cmd->text_id, SG_COMPONENT_MESH); // text or mesh type?
 
         // init mesh
         text->_geoID = geo->id;
@@ -2131,7 +2129,8 @@ void Material_batchUpdatePipelines(GraphicsContext* gctx, FT_Library ft_lib,
                 R_RenderPipeline::addMaterial(pipeline, mat);
                 ASSERT(mat->pipelineID == pipeline->rid);
             } break;
-            case SG_COMPONENT_TEXT: {
+            case SG_COMPONENT_MESH: {
+                // for now assuming text is the only mesh type that needs to update
                 R_Text* rtext = (R_Text*)comp;
                 R_Font* font
                   = Component_GetFont(gctx, ft_lib, rtext->font_path.c_str());
@@ -2487,7 +2486,7 @@ R_Transform* Component_GetXform(SG_ID id)
     if (comp) {
         ASSERT(comp->type == SG_COMPONENT_TRANSFORM || comp->type == SG_COMPONENT_SCENE
                || comp->type == SG_COMPONENT_MESH || comp->type == SG_COMPONENT_CAMERA
-               || comp->type == SG_COMPONENT_TEXT || comp->type == SG_COMPONENT_LIGHT);
+               || comp->type == SG_COMPONENT_LIGHT);
     }
     return (R_Transform*)comp;
 }
@@ -2544,7 +2543,7 @@ R_Camera* Component_GetCamera(SG_ID id)
 R_Text* Component_GetText(SG_ID id)
 {
     R_Component* comp = Component_GetComponent(id);
-    ASSERT(comp == NULL || comp->type == SG_COMPONENT_TEXT);
+    ASSERT(comp == NULL || comp->type == SG_COMPONENT_MESH);
     return (R_Text*)comp;
 }
 

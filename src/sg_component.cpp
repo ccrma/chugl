@@ -997,6 +997,7 @@ SG_Camera* SG_CreateCamera(Chuck_Object* ckobj, SG_CameraParams cam_params)
     return cam;
 }
 
+// nocheckin: just use createmesh instead?
 SG_Text* SG_CreateText(Chuck_Object* ckobj)
 {
     Arena* arena  = &SG_TextArena;
@@ -1007,7 +1008,7 @@ SG_Text* SG_CreateText(Chuck_Object* ckobj)
 
     // init SG_Component base class
     text->id    = SG_GetNewComponentID();
-    text->type  = SG_COMPONENT_TEXT;
+    text->type  = SG_COMPONENT_MESH;
     text->ckobj = ckobj;
 
     // store in map
@@ -1308,11 +1309,11 @@ SG_Component* SG_GetComponent(SG_ID id)
 SG_Transform* SG_GetTransform(SG_ID id)
 {
     SG_Component* component = SG_GetComponent(id);
-    ASSERT(
-      component == NULL || component->type == SG_COMPONENT_TRANSFORM
-      || component->type == SG_COMPONENT_SCENE || component->type == SG_COMPONENT_MESH
-      || component->type == SG_COMPONENT_CAMERA || component->type == SG_COMPONENT_TEXT
-      || component->type == SG_COMPONENT_LIGHT);
+    ASSERT(component == NULL || component->type == SG_COMPONENT_TRANSFORM
+           || component->type == SG_COMPONENT_SCENE
+           || component->type == SG_COMPONENT_MESH
+           || component->type == SG_COMPONENT_CAMERA
+           || component->type == SG_COMPONENT_LIGHT);
     return (SG_Transform*)component;
 }
 
@@ -1368,7 +1369,7 @@ SG_Camera* SG_GetCamera(SG_ID id)
 SG_Text* SG_GetText(SG_ID id)
 {
     SG_Component* component = SG_GetComponent(id);
-    ASSERT(component == NULL || component->type == SG_COMPONENT_TEXT);
+    ASSERT(component == NULL || component->type == SG_COMPONENT_MESH);
     return (SG_Text*)component;
 }
 
