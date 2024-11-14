@@ -1124,7 +1124,9 @@ void R_Scene::removeSubgraphFromRenderState(R_Scene* scene, R_Transform* root)
             const void* prev_item = hashmap_delete(scene->light_id_set, &xform->id);
             UNUSED_VAR(prev_item);
             ASSERT(prev_item);
-        } else if (xform->type == SG_COMPONENT_MESH) {
+            // TODO: somehow consolidate GText into also being a mesh...
+        } else if (xform->type == SG_COMPONENT_MESH
+                   || xform->type == SG_COMPONENT_TEXT) {
             // get xforms from geometry
             GeometryToXforms* g2x
               = R_Scene::getPrimitive(scene, xform->_geoID, xform->_matID);
@@ -1923,9 +1925,6 @@ static void R_Text_updateFromCommand(R_Text* text, SG_Command_TextRebuild* cmd)
     hashmap_set(materials_with_new_pso, &text->id);
 }
 
-// ==optimize== group materials by font
-// GText which share the same font_path can share the same material
-// actually we can't: consider two GTexts same fonts but different color.
 R_Text* Component_CreateText(GraphicsContext* gctx, FT_Library ft,
                              SG_Command_TextRebuild* cmd)
 {

@@ -4,7 +4,7 @@ T.assert(shader_desc.vertexCode == "", "shader desc vertexCode");
 T.assert(shader_desc.fragmentCode == "", "shader desc fragmentCode");
 T.assert(shader_desc.vertexPath == "", "shader desc vertexPath");
 T.assert(shader_desc.fragmentPath == "", "shader desc fragmentPath");
-T.assert(T.arrayEquals(shader_desc.vertexLayout, [VertexFormat.Float3, VertexFormat.Float3, VertexFormat.Float2, VertexFormat.Float4]), "shader desc default vertexLayout");
+T.assert(T.arrayEquals(shader_desc.vertexLayout, [VertexFormat.Float3, VertexFormat.Float3, VertexFormat.Float2]), "shader desc default vertexLayout");
 T.assert(!shader_desc.lit, "shader desc lit");
 T.assert(!shader_desc.usesEnvMap, "shader desc usesEnvmap");
 

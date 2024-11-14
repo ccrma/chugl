@@ -1427,8 +1427,10 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
                 for (int location = 0; location < R_Geometry::vertexAttributeCount(geo);
                      location++) {
                     GPU_Buffer* gpu_buffer = &geo->gpu_vertex_buffers[location];
-                    wgpuRenderPassEncoderSetVertexBuffer(
-                      render_pass, location, gpu_buffer->buf, 0, gpu_buffer->size);
+                    if (gpu_buffer->buf && gpu_buffer->size > 0) {
+                        wgpuRenderPassEncoderSetVertexBuffer(
+                          render_pass, location, gpu_buffer->buf, 0, gpu_buffer->size);
+                    }
                 }
 
                 // set pulled vertex buffers (programmable vertex pulling)

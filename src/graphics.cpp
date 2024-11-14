@@ -511,38 +511,6 @@ void GraphicsContext::release(GraphicsContext* ctx)
     *ctx = {};
 }
 
-void VertexBuffer::init(GraphicsContext* ctx, VertexBuffer* buf, u64 vertexCount,
-                        const f32* data, const char* label)
-{
-#define FLOATS_PER_VERTEX 8
-    ASSERT(buf->buf == NULL);
-    // update description
-    buf->desc.label = label;
-    buf->desc.usage |= WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex;
-    buf->desc.size             = sizeof(f32) * FLOATS_PER_VERTEX * vertexCount;
-    buf->desc.mappedAtCreation = false;
-
-    buf->buf = wgpuDeviceCreateBuffer(ctx->device, &buf->desc);
-
-    if (data) wgpuQueueWriteBuffer(ctx->queue, buf->buf, 0, data, buf->desc.size);
-#undef FLOATS_PER_VERTEX
-}
-
-void IndexBuffer::init(GraphicsContext* ctx, IndexBuffer* buf, u64 data_length,
-                       const u32* data, const char* label)
-{
-    ASSERT(buf->buf == NULL);
-    // update description
-    buf->desc.label = label;
-    buf->desc.usage |= WGPUBufferUsage_CopyDst | WGPUBufferUsage_Index;
-    buf->desc.size             = sizeof(u32) * data_length;
-    buf->desc.mappedAtCreation = false;
-
-    buf->buf = wgpuDeviceCreateBuffer(ctx->device, &buf->desc);
-
-    if (data) wgpuQueueWriteBuffer(ctx->queue, buf->buf, 0, data, buf->desc.size);
-}
-
 void VertexBufferLayout::init(VertexBufferLayout* layout, u8 attribute_count,
                               u32* attribute_strides)
 {

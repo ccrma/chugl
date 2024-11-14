@@ -101,26 +101,6 @@ struct GraphicsContext {
 // Buffers
 // =============================================================================
 
-struct VertexBuffer {
-    WGPUBuffer buf;
-    WGPUBufferDescriptor desc;
-
-    // hold copy of original data?
-
-    static void init(GraphicsContext* ctx, VertexBuffer* buf, u64 vertexCount,
-                     const f32* data, // force float data for now
-                     const char* label);
-};
-
-struct IndexBuffer {
-    WGPUBuffer buf;
-    WGPUBufferDescriptor desc;
-
-    static void init(GraphicsContext* ctx, IndexBuffer* buf, u64 data_length,
-                     const u32* data, // force float data for now
-                     const char* label);
-};
-
 // grows buffer to new size, copying old data
 struct GPU_Buffer {
     WGPUBuffer buf;
@@ -157,10 +137,16 @@ struct GPU_Buffer {
                       u64 size)
     {
         bool recreated = false;
-        if (size == 0) return recreated;
 
-        if (offset + size > gpu_buffer->capacity
-            || (usage_flags & gpu_buffer->usage) != usage_flags) {
+        // if (size == 0) return recreated;
+
+        bool needs_new_capacity    = size + offset > gpu_buffer->capacity;
+        bool needs_new_permissions = (usage_flags & gpu_buffer->usage) != usage_flags;
+        bool needs_initialization  = gpu_buffer->buf == NULL;
+        if (needs_new_capacity || needs_new_permissions || needs_initialization
+            // offset + size > gpu_buffer->capacity
+            // || (usage_flags & gpu_buffer->usage) != usage_flags
+        ) {
 
             recreated = true;
 

@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -135,7 +135,7 @@ CK_DLL_SFUN(gtext_set_default_font)
 
 CK_DLL_CTOR(gtext_ctor)
 {
-    // IDEA: extend GMesh?
+    // not extend GMesh for now to not expose underlying geometry/material
 
     SG_Text* text = SG_CreateText(SELF);
     ASSERT(text->type == SG_COMPONENT_TEXT);

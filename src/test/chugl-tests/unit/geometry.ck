@@ -5,7 +5,6 @@ T.assert(Geometry.AttributeLocation_Count == 8, "MAX_VERTEX_ATTRIBUTES");
 T.assert(Geometry.AttributeLocation_Position == 0, "POSITION_ATTRIBUTE_LOCATION");
 T.assert(Geometry.AttributeLocation_Normal == 1, "NORMAL_ATTRIBUTE_LOCATION");
 T.assert(Geometry.AttributeLocation_UV == 2, "UV_ATTRIBUTE_LOCATION");
-T.assert(Geometry.AttributeLocation_Tangent == 3, "TANGENT_ATTRIBUTE_LOCATION");
 
 Geometry custom_geo;
 
@@ -48,18 +47,15 @@ T.assert(T.arrayEquals(vertex_attrib_data_int, custom_geo.vertexAttributeDataInt
 [@(1,2,3)] @=> vec3 positions[];
 [@(4,5,6)] @=> vec3 normals[];
 [@(7,8)] @=> vec2 uvs[];
-[@(4,3,2,1)] @=> vec4 tangents[];
 
 custom_geo.positions(positions);
 custom_geo.normals(normals);
 custom_geo.uvs(uvs);
-custom_geo.tangents(tangents);
 
 T.assert(T.arrayEquals(positions, custom_geo.positions()), "positions");
 T.assert(T.arrayEquals(normals, custom_geo.normals()), "normals");
 T.assert(T.arrayEquals(uvs, custom_geo.uvs()), "uvs");
-T.assert(T.arrayEquals(tangents, custom_geo.tangents()), "tangents");
-T.assert(T.arrayEquals(custom_geo.vertexAttributeNumComponents(), [3, 3, 2, 4, 0, 0, 0, 0]), "vertexAttributeNumComponents ALL");
+T.assert(T.arrayEquals(custom_geo.vertexAttributeNumComponents(), [3, 3, 2, 0, 0, 0, 0, 0]), "vertexAttributeNumComponents ALL");
 
 // plane geo
 PlaneGeometry A;
@@ -68,7 +64,7 @@ A.indices() @=> int plane_indices[];
 for (0 => int i; i < truth_plane_indices.size(); ++i) {
     T.assert(truth_plane_indices[i] == plane_indices[i], "plane indices equality");
 }
-T.assert(T.arrayEquals(A.vertexAttributeNumComponents(), [3, 3, 2, 4, 0, 0, 0, 0]), "plane vertexAttributeNumComponents ALL");
+T.assert(T.arrayEquals(A.vertexAttributeNumComponents(), [3, 3, 2, 0, 0, 0, 0, 0]), "plane vertexAttributeNumComponents ALL");
 
 // programmable vertex pulling
 Geometry pulled_geo;
