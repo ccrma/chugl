@@ -555,6 +555,14 @@ CK_DLL_QUERY(ChuGL)
     g_chuglVM  = QUERY->ck_vm(QUERY);
     g_chuglAPI = QUERY->ck_api(QUERY);
 
+    { // cache common chuck types
+        g_chuck_types.int_array   = g_chuglAPI->type->lookup(g_chuglVM, "int[]");
+        g_chuck_types.float_array = g_chuglAPI->type->lookup(g_chuglVM, "float[]");
+        g_chuck_types.vec2_array  = g_chuglAPI->type->lookup(g_chuglVM, "vec2[]");
+        g_chuck_types.vec3_array  = g_chuglAPI->type->lookup(g_chuglVM, "vec3[]");
+        g_chuck_types.vec4_array  = g_chuglAPI->type->lookup(g_chuglVM, "vec4[]");
+    }
+
     // audio frame arena
     Arena::init(&audio_frame_arena, 64 * KILOBYTE);
 

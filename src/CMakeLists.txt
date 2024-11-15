@@ -176,7 +176,7 @@ else()
         -Wno-unused-parameter
         # in release mode only, allowed unused params (to get around ASSERT)
         $<$<CONFIG:Release>:-Wno-unused-variable>
-        $<$<CONFIG:Release>:-Wno-unused-function>
+        -Wno-unused-function
 
         -Wno-deprecated-declarations
         -Wno-compound-token-split-by-macro

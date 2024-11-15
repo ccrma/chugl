@@ -56,10 +56,10 @@ static_assert(sizeof(b2ShapeId) <= sizeof(t_CKINT), "b2Shape size mismatch");
 // custom accessor because size of the b2Id may be less than the corresponding ckobj
 // member field (e.g. 32 byte b2WorldId is stored in the slot of a 64byte t_CKINT)
 // TODO today: refactor GET_B2_ID out and replace
-#define GET_NEXT_B2_ID(type, args, val)                                                \
-    *val = (*(type*)args);                                                             \
-    ASSERT(sizeof(type <= sizeof(t_CKINT)));                                           \
-    GET_NEXT_INT(args) // advance the pointer by amount allocate
+#define GET_NEXT_B2_ID(type, val)                                                      \
+    type val = (*(type*)ARGS);                                                         \
+    static_assert(sizeof(type) <= sizeof(t_CKINT), "b2 id size mismatch");             \
+    GET_NEXT_INT(ARGS); // advance the pointer by amount allocate
 
 #define GET_B2_ID(type, ptr) (*(type*)ptr)
 #define RETURN_B2_ID(type, id) *((type*)&(RETURN->v_int)) = (id)
@@ -78,6 +78,19 @@ b2BodyType ckint_to_b2BodyType(t_CKINT type)
         case 2: return b2_dynamicBody;
         default: return b2_staticBody;
     }
+}
+
+b2AABB vec4_to_b2AABB(t_CKVEC4 vec)
+{
+    b2AABB aabb;
+    aabb.lowerBound = { (f32)vec.x, (f32)vec.y };
+    aabb.upperBound = { (f32)vec.z, (f32)vec.w };
+    return aabb;
+}
+
+b2Vec2 vec2_to_b2Vec2(t_CKVEC2 vec)
+{
+    return { (f32)vec.x, (f32)vec.y };
 }
 
 // ckobj data offsets --------------------------------------------
@@ -124,6 +137,24 @@ static void b2ContactHitEvent_to_ckobj(CK_DL_API API, Chuck_Object* ckobj,
 // static void ckobj_to_b2ContactHitEvent(CK_DL_API  API, b2ContactHitEvent*
 // obj, Chuck_Object* ckobj);
 
+// b2RayResult
+static t_CKUINT b2RayResult_shape_offset    = 0;
+static t_CKUINT b2RayResult_point_offset    = 0;
+static t_CKUINT b2RayResult_normal_offset   = 0;
+static t_CKUINT b2RayResult_fraction_offset = 0;
+
+static void b2RayResult_to_ckobj(Chuck_Object* ckobj, b2RayResult* obj);
+static void ckobj_to_b2RayResult(b2RayResult* obj, Chuck_Object* ckobj);
+
+// b2QueryFilter
+static t_CKUINT b2QueryFilter_categoryBits_offset = 0;
+static t_CKUINT b2QueryFilter_maskBits_offset     = 0;
+CK_DLL_CTOR(b2QueryFilter_ctor);
+
+static void b2QueryFilter_to_ckobj(CK_DL_API API, Chuck_Object* ckobj,
+                                   b2QueryFilter* obj);
+static b2QueryFilter ckobj_to_b2QueryFilter(Chuck_Object* ckobj);
+
 // b2Filter
 static t_CKUINT b2Filter_categoryBits_offset = 0;
 static t_CKUINT b2Filter_maskBits_offset     = 0;
@@ -158,6 +189,12 @@ static Chuck_Object* b2Polygon_create(Chuck_VM_Shred* shred, b2Polygon* polygon)
     Chuck_Object* polygon_obj = chugin_createCkObj("b2Polygon", false, shred);
     OBJ_MEMBER_UINT(polygon_obj, b2Polygon_data_offset) = (t_CKUINT)poly;
     return polygon_obj;
+}
+
+static b2Polygon* ckobj_to_b2Polygon(Chuck_Object* ckobj)
+{
+    CK_DL_API API = g_chuglAPI;
+    return (b2Polygon*)OBJ_MEMBER_UINT(ckobj, b2Polygon_data_offset);
 }
 
 // b2BodyDef
@@ -216,6 +253,7 @@ CK_DLL_SFUN(b2_World_OverlapAABB);
 CK_DLL_SFUN(b2_World_OverlapCircle);
 CK_DLL_SFUN(b2_World_OverlapCapsule);
 CK_DLL_SFUN(b2_World_OverlapPolygon);
+CK_DLL_SFUN(b2_World_CastRayClosest);
 
 // b2Polygon
 CK_DLL_DTOR(b2Polygon_dtor);
@@ -476,8 +514,7 @@ void ulib_box2d_query(Chuck_DL_Query* QUERY)
     { // b2CastOutput --------------------------------------
         BEGIN_CLASS("b2CastOutput", "Object");
         DOC_CLASS(
-          "https://box2d.org/documentation/"
-          "group__geometry.html#structb2_cast_output");
+          "https://box2d.org/documentation/group__geometry.html#structb2_cast_output");
 
         b2CastOutput_normal_offset = MVAR("vec2", "normal", false);
         DOC_VAR("The surface normal at the hit point");
@@ -607,6 +644,52 @@ void ulib_box2d_query(Chuck_DL_Query* QUERY)
 
         END_CLASS();
     } // b2Filter
+
+    // b2QueryFilter --------------------------------------
+    {
+        BEGIN_CLASS("b2QueryFilter", "Object");
+        DOC_CLASS(
+          " https://box2d.org/documentation/group__shape.html#structb2_query_filter "
+          "and https://box2d.org/documentation/md_simulation.html#autotoc_md112. The "
+          "query filter is used to filter collisions between queries and shapes. For "
+          "example, you may want a ray-cast representing a projectile to hit players "
+          "and the static environment but not debris.  ");
+
+        CTOR(b2QueryFilter_ctor);
+
+        b2QueryFilter_categoryBits_offset = MVAR("int", "categoryBits", false);
+        DOC_VAR(
+          "The collision category bits of this query. Normally you would just set one "
+          "bit.");
+
+        b2QueryFilter_maskBits_offset = MVAR("int", "maskBits", false);
+        DOC_VAR(
+          "The collision mask bits. This states the shape categories that this query "
+          "would accept for collision.");
+
+        END_CLASS();
+    } // b2QueryFilter
+
+    { // b2RayResult --------------------------------------
+        BEGIN_CLASS("b2RayResult", "Object");
+        // clang-format off
+        DOC_CLASS("Result from raycast queries");
+        // clang-format on
+
+        b2RayResult_shape_offset = MVAR("int", "shape", false);
+        DOC_VAR("the shape id hit by the ray");
+
+        b2RayResult_point_offset = MVAR("vec2", "point", false);
+        DOC_VAR("the point of initial intersection");
+
+        b2RayResult_normal_offset = MVAR("vec2", "normal", false);
+        DOC_VAR("the normal vector at the point of intersection");
+
+        b2RayResult_fraction_offset = MVAR("float", "fraction", false);
+        DOC_VAR("the fraction along the ray at the point of intersection");
+
+        END_CLASS();
+    } // b2RayResult
 
     { // b2ShapeDef --------------------------------------
         BEGIN_CLASS("b2ShapeDef", "Object");
@@ -1507,35 +1590,51 @@ void ulib_box2d_query(Chuck_DL_Query* QUERY)
           "the "
           "last frame.");
 
-        // SFUN(b2_World_OverlapAABB, "void", "overlapAABB");
-        // ARG("int", "world_id");
-        // ARG("vec4", "aabb");
-        // ARG("b2_QueryFilter", "filter");
+        SFUN(b2_World_OverlapAABB, "int[]", "overlapAABB");
+        ARG("int", "world_id");
+        ARG("vec4", "aabb");
+        ARG("b2QueryFilter", "filter");
+        DOC_FUNC(
+          "Returns the b2ShapeId for all shapes that overlap the provided AABB. The "
+          "AABB is in the form of @(lowerBound.x, lowerBound.y, upperBound.x, "
+          "upperBound.y)");
 
-        // /// Overlap test for all shapes that *potentially* overlap the provided AABB
-        // B2_API void b2World_OverlapAABB(b2WorldId worldId, b2AABB aabb,
-        //                                 b2QueryFilter filter, b2OverlapResultFcn *
-        //                                 fcn, void* context);
+        SFUN(b2_World_OverlapCircle, "int[]", "overlapCapsule");
+        ARG("int", "world_id");
+        ARG("b2Circle", "circle");
+        ARG("vec2", "circle_position");
+        ARG("float", "circle_rotation_radians");
+        ARG("b2QueryFilter", "filter");
+        DOC_FUNC(
+          "Returns the b2ShapeId for all shapes that overlap the provided circle");
 
-        // /// Overlap test for for all shapes that overlap the provided circle
-        // B2_API void b2World_OverlapCircle(b2WorldId worldId, const b2Circle* circle,
-        //                                   b2Transform transform, b2QueryFilter
-        //                                   filter, b2OverlapResultFcn* fcn, void*
-        //                                   context);
+        SFUN(b2_World_OverlapCapsule, "int[]", "overlapCapsule");
+        ARG("int", "world_id");
+        ARG("b2Capsule", "capsule");
+        ARG("vec2", "capsule_position");
+        ARG("float", "capsule_rotation_radians");
+        ARG("b2QueryFilter", "filter");
+        DOC_FUNC(
+          "Returns the b2ShapeId for all shapes that overlap the provided capsule");
 
-        // /// Overlap test for all shapes that overlap the provided capsule
-        // B2_API void b2World_OverlapCapsule(b2WorldId worldId, const b2Capsule*
-        // capsule,
-        //                                    b2Transform transform, b2QueryFilter
-        //                                    filter, b2OverlapResultFcn* fcn, void*
-        //                                    context);
+        SFUN(b2_World_OverlapPolygon, "int[]", "overlapPolygon");
+        ARG("int", "world_id");
+        ARG("b2Polygon", "polygon");
+        ARG("vec2", "polygon_position");
+        ARG("float", "polygon_rotation_radians");
+        ARG("b2QueryFilter", "filter");
+        DOC_FUNC(
+          "Returns the b2ShapeId for all shapes that overlap the provided polygon");
 
-        // /// Overlap test for all shapes that overlap the provided polygon
-        // B2_API void b2World_OverlapPolygon(b2WorldId worldId, const b2Polygon*
-        // polygon,
-        //                                    b2Transform transform, b2QueryFilter
-        //                                    filter, b2OverlapResultFcn* fcn, void*
-        //                                    context);
+        // TODO: does chuck leak with object arrays?
+        SFUN(b2_World_CastRayClosest, "b2RayResult", "castRayClosest");
+        ARG("int", "world_id");
+        ARG("vec2", "ray_origin");
+        ARG("vec2", "ray_direction");
+        ARG("b2QueryFilter", "filter");
+        DOC_FUNC(
+          "Cast a ray and return the closest hit. The ray is defined by a start "
+          "point and a direction vector.");
 
         END_CLASS();
     } // b2World
@@ -1729,17 +1828,109 @@ CK_DLL_SFUN(b2_World_GetContactEvents)
     }
 }
 
+static bool b2_OverlapResultFcn(b2ShapeId shapeId, void* context)
+{
+    Chuck_ArrayInt* overlapping_shapes = (Chuck_ArrayInt*)context;
+    g_chuglAPI->object->array_int_push_back(overlapping_shapes,
+                                            B2_ID_TO_CKINT(shapeId));
+    return true; // return false to terminate overlap query
+}
+
 CK_DLL_SFUN(b2_World_OverlapAABB)
 {
+    GET_NEXT_B2_ID(b2WorldId, world_id);
+    b2AABB aabb          = vec4_to_b2AABB(GET_NEXT_VEC4(ARGS));
+    b2QueryFilter filter = ckobj_to_b2QueryFilter(GET_NEXT_OBJECT(ARGS));
+
+    static_assert(sizeof(b2ShapeId) == sizeof(t_CKINT), "b2ShapeId size mismatch");
+
+    Chuck_Object* overlapping_shapes
+      = chugin_createCkObj(g_chuck_types.int_array, false, SHRED);
+
+    b2World_OverlapAABB(world_id, aabb, filter, b2_OverlapResultFcn,
+                        overlapping_shapes);
+
+    RETURN->v_object = overlapping_shapes;
 }
+
 CK_DLL_SFUN(b2_World_OverlapCircle)
 {
+    GET_NEXT_B2_ID(b2WorldId, world_id);
+
+    b2Circle circle = {};
+    ckobj_to_b2Circle(API, &circle, GET_NEXT_OBJECT(ARGS));
+
+    b2Transform transform = {};
+    transform.p           = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
+    transform.q           = b2MakeRot(GET_NEXT_FLOAT(ARGS));
+
+    b2QueryFilter filter = ckobj_to_b2QueryFilter(GET_NEXT_OBJECT(ARGS));
+
+    Chuck_Object* overlapping_shapes
+      = chugin_createCkObj(g_chuck_types.int_array, false, SHRED);
+
+    b2World_OverlapCircle(world_id, &circle, transform, filter, b2_OverlapResultFcn,
+                          overlapping_shapes);
+
+    RETURN->v_object = overlapping_shapes;
 }
+
 CK_DLL_SFUN(b2_World_OverlapCapsule)
 {
+    GET_NEXT_B2_ID(b2WorldId, world_id);
+
+    b2Capsule capsule = {};
+    ckobj_to_b2Capsule(API, &capsule, GET_NEXT_OBJECT(ARGS));
+
+    b2Transform transform = {};
+    transform.p           = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
+    transform.q           = b2MakeRot(GET_NEXT_FLOAT(ARGS));
+
+    b2QueryFilter filter = ckobj_to_b2QueryFilter(GET_NEXT_OBJECT(ARGS));
+
+    Chuck_Object* overlapping_shapes
+      = chugin_createCkObj(g_chuck_types.int_array, false, SHRED);
+
+    b2World_OverlapCapsule(world_id, &capsule, transform, filter, b2_OverlapResultFcn,
+                           overlapping_shapes);
+
+    RETURN->v_object = overlapping_shapes;
 }
+
 CK_DLL_SFUN(b2_World_OverlapPolygon)
 {
+    GET_NEXT_B2_ID(b2WorldId, world_id);
+
+    b2Polygon* polygon = ckobj_to_b2Polygon(GET_NEXT_OBJECT(ARGS));
+
+    b2Transform transform = {};
+    transform.p           = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
+    transform.q           = b2MakeRot(GET_NEXT_FLOAT(ARGS));
+
+    b2QueryFilter filter = ckobj_to_b2QueryFilter(GET_NEXT_OBJECT(ARGS));
+
+    Chuck_Object* overlapping_shapes
+      = chugin_createCkObj(g_chuck_types.int_array, false, SHRED);
+
+    b2World_OverlapPolygon(world_id, polygon, transform, filter, b2_OverlapResultFcn,
+                           overlapping_shapes);
+
+    RETURN->v_object = overlapping_shapes;
+}
+
+CK_DLL_SFUN(b2_World_CastRayClosest)
+{
+    GET_NEXT_B2_ID(b2WorldId, world_id);
+    b2Vec2 origin        = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
+    b2Vec2 translation   = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
+    b2QueryFilter filter = ckobj_to_b2QueryFilter(GET_NEXT_OBJECT(ARGS));
+
+    b2RayResult result = b2World_CastRayClosest(world_id, origin, translation, filter);
+
+    Chuck_Object* ckobj = chugin_createCkObj("b2RayResult", false, SHRED);
+    b2RayResult_to_ckobj(ckobj, &result);
+
+    RETURN->v_object = ckobj;
 }
 
 // ============================================================================
@@ -1820,6 +2011,57 @@ CK_DLL_CTOR(b2Filter_ctor)
 {
     b2Filter default_filter = b2DefaultFilter();
     b2Filter_to_ckobj(API, SELF, &default_filter);
+}
+
+// ============================================================================
+// b2QueryFilter
+// ============================================================================
+
+static void b2QueryFilter_to_ckobj(CK_DL_API API, Chuck_Object* ckobj,
+                                   b2QueryFilter* obj)
+{
+    OBJ_MEMBER_INT(ckobj, b2QueryFilter_categoryBits_offset) = obj->categoryBits;
+    OBJ_MEMBER_INT(ckobj, b2QueryFilter_maskBits_offset)     = obj->maskBits;
+}
+
+static b2QueryFilter ckobj_to_b2QueryFilter(Chuck_Object* ckobj)
+{
+    CK_DL_API API     = g_chuglAPI;
+    b2QueryFilter obj = {};
+    obj.categoryBits  = OBJ_MEMBER_UINT(ckobj, b2QueryFilter_categoryBits_offset);
+    obj.maskBits      = OBJ_MEMBER_UINT(ckobj, b2QueryFilter_maskBits_offset);
+    return obj;
+}
+
+CK_DLL_CTOR(b2QueryFilter_ctor)
+{
+    b2QueryFilter default_query_filter = b2DefaultQueryFilter();
+    b2QueryFilter_to_ckobj(API, SELF, &default_query_filter);
+}
+
+// ============================================================================
+// b2RayResult
+// ============================================================================
+
+static void b2RayResult_to_ckobj(Chuck_Object* ckobj, b2RayResult* obj)
+{
+    CK_DL_API API                                                = g_chuglAPI;
+    OBJ_MEMBER_B2_ID(b2ShapeId, ckobj, b2RayResult_shape_offset) = obj->shapeId;
+    OBJ_MEMBER_VEC2(ckobj, b2RayResult_point_offset) = { obj->point.x, obj->point.y };
+    OBJ_MEMBER_VEC2(ckobj, b2RayResult_normal_offset)
+      = { obj->normal.x, obj->normal.y };
+    OBJ_MEMBER_FLOAT(ckobj, b2RayResult_fraction_offset) = obj->fraction;
+}
+
+static void ckobj_to_b2RayResult(b2RayResult* obj, Chuck_Object* ckobj)
+{
+    CK_DL_API API        = g_chuglAPI;
+    obj->shapeId         = OBJ_MEMBER_B2_ID(b2ShapeId, ckobj, b2RayResult_shape_offset);
+    t_CKVEC2 point_vec2  = OBJ_MEMBER_VEC2(ckobj, b2RayResult_point_offset);
+    obj->point           = { (float)point_vec2.x, (float)point_vec2.y };
+    t_CKVEC2 normal_vec2 = OBJ_MEMBER_VEC2(ckobj, b2RayResult_normal_offset);
+    obj->normal          = { (float)normal_vec2.x, (float)normal_vec2.y };
+    obj->fraction        = (float)OBJ_MEMBER_FLOAT(ckobj, b2RayResult_fraction_offset);
 }
 
 // ============================================================================

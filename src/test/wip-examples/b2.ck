@@ -78,8 +78,6 @@ keep in your application."
 Is Box2D threadsafe?
 - No. Box2D will likely never be thread-safe. Box2D has a large API and trying to make such an API thread-safe would have a large performance and complexity impact. However, you can call read only functions from multiple threads. For example, all the spatial query functions are read only.
 - so like with imgui, add validation on write functions: error if calling shred is not a registered graphics shred
-- allow chuck shreds that are NOT graphics shreds to call Box2D read-only fns
-
 
 
 */

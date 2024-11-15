@@ -103,6 +103,15 @@ Arena audio_frame_arena = {};
 f64 g_last_dt           = 0.0;
 i64 g_frame_count       = 0;
 
+// cached chuck types
+static struct {
+    Chuck_DL_Api::Type int_array;
+    Chuck_DL_Api::Type float_array;
+    Chuck_DL_Api::Type vec2_array;
+    Chuck_DL_Api::Type vec3_array;
+    Chuck_DL_Api::Type vec4_array;
+} g_chuck_types;
+
 // offset which stores the component's SG_ID.
 static t_CKUINT component_offset_id = 0;
 
@@ -216,6 +225,16 @@ Chuck_Object* chugin_createCkObj(const char* type_name, bool add_ref,
                                  Chuck_VM_Shred* shred = NULL)
 {
     Chuck_DL_Api::Type cktype = g_chuglAPI->type->lookup(g_chuglVM, type_name);
+    if (shred) {
+        return g_chuglAPI->object->create(shred, cktype, add_ref);
+    } else {
+        return g_chuglAPI->object->create_without_shred(g_chuglVM, cktype, add_ref);
+    }
+}
+
+Chuck_Object* chugin_createCkObj(Chuck_DL_Api::Type cktype, bool add_ref,
+                                 Chuck_VM_Shred* shred = NULL)
+{
     if (shred) {
         return g_chuglAPI->object->create(shred, cktype, add_ref);
     } else {
