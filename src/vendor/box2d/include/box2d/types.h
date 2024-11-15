@@ -27,7 +27,7 @@
 ///	}
 ///	@endcode
 ///	@ingroup world
-typedef void b2TaskCallback(int32_t startIndex, int32_t endIndex, uint32_t workerIndex, void* taskContext);
+typedef void b2TaskCallback( int32_t startIndex, int32_t endIndex, uint32_t workerIndex, void* taskContext );
 
 /// These functions can be provided to Box2D to invoke a task system. These are designed to work well with enkiTS.
 /// Returns a pointer to the user's task object. May be nullptr. A nullptr indicates to Box2D that the work was executed
@@ -40,12 +40,12 @@ typedef void b2TaskCallback(int32_t startIndex, int32_t endIndex, uint32_t worke
 ///	endIndex - startIndex >= minRange
 ///	The exception of course is when itemCount < minRange.
 ///	@ingroup world
-typedef void* b2EnqueueTaskCallback(b2TaskCallback* task, int32_t itemCount, int32_t minRange, void* taskContext,
-									void* userContext);
+typedef void* b2EnqueueTaskCallback( b2TaskCallback* task, int32_t itemCount, int32_t minRange, void* taskContext,
+									 void* userContext );
 
 /// Finishes a user task object that wraps a Box2D task.
 ///	@ingroup world
-typedef void b2FinishTaskCallback(void* userTask, void* userContext);
+typedef void b2FinishTaskCallback( void* userTask, void* userContext );
 
 /// Result from b2World_RayCastClosest
 /// @ingroup world
@@ -88,6 +88,9 @@ typedef struct b2WorldDef
 	/// Joint bounciness. Non-dimensional.
 	float jointDampingRatio;
 
+	/// Maximum linear velocity. Usually meters per second.
+	float maximumLinearVelocity;
+
 	/// Can bodies go to sleep to improve performance
 	bool enableSleep;
 
@@ -114,7 +117,7 @@ typedef struct b2WorldDef
 
 /// Use this to initialize your world definition
 /// @ingroup world
-B2_API b2WorldDef b2DefaultWorldDef();
+B2_API b2WorldDef b2DefaultWorldDef( void );
 
 /// The body simulation type.
 /// Each body is one of these three types. The type determines how the body behaves in the simulation.
@@ -149,13 +152,13 @@ typedef struct b2BodyDef
 	///	if the body is moved after shapes have been added.
 	b2Vec2 position;
 
-	/// The initial world angle of the body in radians.
-	float angle;
+	/// The initial world rotation of the body. Use b2MakeRot() if you have an angle.
+	b2Rot rotation;
 
 	/// The initial linear velocity of the body's origin. Typically in meters per second.
 	b2Vec2 linearVelocity;
 
-	/// The initial angular velocity of the body. Typically in meters per second.
+	/// The initial angular velocity of the body. Radians per second.
 	float angularVelocity;
 
 	/// Linear damping is use to reduce the linear velocity. The damping parameter
@@ -202,13 +205,17 @@ typedef struct b2BodyDef
 	/// Triggers whenever a shape is add/removed/changed. Default is true.
 	bool automaticMass;
 
+	/// This allows this body to bypass rotational speed limits. Should only be used
+	///	for circular objects, like wheels.
+	bool allowFastRotation;
+
 	/// Used internally to detect a valid definition. DO NOT SET.
 	int32_t internalValue;
 } b2BodyDef;
 
 /// Use this to initialize your body definition
 /// @ingroup body
-B2_API b2BodyDef b2DefaultBodyDef();
+B2_API b2BodyDef b2DefaultBodyDef( void );
 
 /// This is used to filter collision on shapes. It affects shape-vs-shape collision
 ///	and shape-versus-query collision (such as b2World_CastRay).
@@ -249,7 +256,7 @@ typedef struct b2Filter
 
 /// Use this to initialize your filter
 /// @ingroup shape
-B2_API b2Filter b2DefaultFilter();
+B2_API b2Filter b2DefaultFilter( void );
 
 /// The query filter is used to filter collisions between queries and shapes. For example,
 ///	you may want a ray-cast representing a projectile to hit players and the static environment
@@ -267,7 +274,7 @@ typedef struct b2QueryFilter
 
 /// Use this to initialize your query filter
 /// @ingroup shape
-B2_API b2QueryFilter b2DefaultQueryFilter();
+B2_API b2QueryFilter b2DefaultQueryFilter( void );
 
 /// Shape type
 /// @ingroup shape
@@ -314,6 +321,9 @@ typedef struct b2ShapeDef
 	/// Collision filtering data.
 	b2Filter filter;
 
+	/// Custom debug draw color.
+	uint32_t customColor;
+
 	/// A sensor shape generates overlap events but never generates a collision response.
 	bool isSensor;
 
@@ -341,7 +351,7 @@ typedef struct b2ShapeDef
 
 /// Use this to initialize your shape definition
 /// @ingroup shape
-B2_API b2ShapeDef b2DefaultShapeDef();
+B2_API b2ShapeDef b2DefaultShapeDef( void );
 
 /// Used to create a chain of edges. This is designed to eliminate ghost collisions with some limitations.
 ///	- chains are one-sided
@@ -387,7 +397,7 @@ typedef struct b2ChainDef
 
 /// Use this to initialize your chain definition
 /// @ingroup shape
-B2_API b2ChainDef b2DefaultChainDef();
+B2_API b2ChainDef b2DefaultChainDef( void );
 
 //! @cond
 /// Profiling data. Times are in milliseconds.
@@ -515,7 +525,7 @@ typedef struct b2DistanceJointDef
 
 /// Use this to initialize your joint definition
 /// @ingroup distance_joint
-B2_API b2DistanceJointDef b2DefaultDistanceJointDef();
+B2_API b2DistanceJointDef b2DefaultDistanceJointDef( void );
 
 /// A motor joint is used to control the relative motion between two bodies
 ///
@@ -556,7 +566,7 @@ typedef struct b2MotorJointDef
 
 /// Use this to initialize your joint definition
 /// @ingroup motor_joint
-B2_API b2MotorJointDef b2DefaultMotorJointDef();
+B2_API b2MotorJointDef b2DefaultMotorJointDef( void );
 
 /// A mouse joint is used to make a point on a body track a specified world point.
 ///
@@ -595,7 +605,7 @@ typedef struct b2MouseJointDef
 
 /// Use this to initialize your joint definition
 /// @ingroup mouse_joint
-B2_API b2MouseJointDef b2DefaultMouseJointDef();
+B2_API b2MouseJointDef b2DefaultMouseJointDef( void );
 
 /// Prismatic joint definition
 ///
@@ -663,7 +673,7 @@ typedef struct b2PrismaticJointDef
 
 /// Use this to initialize your joint definition
 /// @ingroupd prismatic_joint
-B2_API b2PrismaticJointDef b2DefaultPrismaticJointDef();
+B2_API b2PrismaticJointDef b2DefaultPrismaticJointDef( void );
 
 /// Revolute joint definition
 ///
@@ -737,7 +747,7 @@ typedef struct b2RevoluteJointDef
 
 /// Use this to initialize your joint definition.
 /// @ingroup revolute_joint
-B2_API b2RevoluteJointDef b2DefaultRevoluteJointDef();
+B2_API b2RevoluteJointDef b2DefaultRevoluteJointDef( void );
 
 /// Weld joint definition
 ///
@@ -786,7 +796,7 @@ typedef struct b2WeldJointDef
 
 /// Use this to initialize your joint definition
 /// @ingroup weld_joint
-B2_API b2WeldJointDef b2DefaultWeldJointDef();
+B2_API b2WeldJointDef b2DefaultWeldJointDef( void );
 
 /// Wheel joint definition
 ///
@@ -851,7 +861,7 @@ typedef struct b2WheelJointDef
 
 /// Use this to initialize your joint definition
 /// @ingroup wheel_joint
-B2_API b2WheelJointDef b2DefaultWheelJointDef();
+B2_API b2WheelJointDef b2DefaultWheelJointDef( void );
 
 /**
  * @defgroup events Events
@@ -991,7 +1001,7 @@ typedef struct b2BodyMoveEvent
 
 /// Body events are buffered in the Box2D world and are available
 ///	as event arrays after the time step is complete.
-///	Note: this date becomes invalid if bodies are destroyed
+///	Note: this data becomes invalid if bodies are destroyed
 typedef struct b2BodyEvents
 {
 	/// Array of move events
@@ -1024,7 +1034,7 @@ typedef struct b2ContactData
 ///	Return false if you want to disable the collision
 ///	@warning Do not attempt to modify the world inside this callback
 ///	@ingroup world
-typedef bool b2CustomFilterFcn(b2ShapeId shapeIdA, b2ShapeId shapeIdB, void* context);
+typedef bool b2CustomFilterFcn( b2ShapeId shapeIdA, b2ShapeId shapeIdB, void* context );
 
 /// Prototype for a pre-solve callback.
 /// This is called after a contact is updated. This allows you to inspect a
@@ -1032,21 +1042,21 @@ typedef bool b2CustomFilterFcn(b2ShapeId shapeIdA, b2ShapeId shapeIdB, void* con
 /// contact manifold (e.g. modify the normal).
 /// Notes:
 ///	- this function must be thread-safe
-///	- this is only called if the shape has enabled presolve events
+///	- this is only called if the shape has enabled pre-solve events
 /// - this is called only for awake dynamic bodies
 /// - this is not called for sensors
 /// - the supplied manifold has impulse values from the previous step
 ///	Return false if you want to disable the contact this step
 ///	@warning Do not attempt to modify the world inside this callback
 ///	@ingroup world
-typedef bool b2PreSolveFcn(b2ShapeId shapeIdA, b2ShapeId shapeIdB, b2Manifold* manifold, void* context);
+typedef bool b2PreSolveFcn( b2ShapeId shapeIdA, b2ShapeId shapeIdB, b2Manifold* manifold, void* context );
 
 /// Prototype callback for overlap queries.
 /// Called for each shape found in the query.
 /// @see b2World_QueryAABB
 /// @return false to terminate the query.
 ///	@ingroup world
-typedef bool b2OverlapResultFcn(b2ShapeId shapeId, void* context);
+typedef bool b2OverlapResultFcn( b2ShapeId shapeId, void* context );
 
 /// Prototype callback for ray casts.
 /// Called for each shape found in the query. You control how the ray cast
@@ -1063,9 +1073,10 @@ typedef bool b2OverlapResultFcn(b2ShapeId shapeId, void* context);
 /// @return -1 to filter, 0 to terminate, fraction to clip the ray for closest hit, 1 to continue
 /// @see b2World_CastRay
 ///	@ingroup world
-typedef float b2CastResultFcn(b2ShapeId shapeId, b2Vec2 point, b2Vec2 normal, float fraction, void* context);
+typedef float b2CastResultFcn( b2ShapeId shapeId, b2Vec2 point, b2Vec2 normal, float fraction, void* context );
 
 /// These colors are used for debug draw.
+///	See https://www.rapidtables.com/web/color/index.html
 typedef enum b2HexColor
 {
 	b2_colorAliceBlue = 0xf0f8ff,
@@ -1222,6 +1233,10 @@ typedef enum b2HexColor
 	b2_colorWhiteSmoke = 0xf5f5f5,
 	b2_colorYellow = 0xffff00,
 	b2_colorYellowGreen = 0x9acd32,
+	b2_colorBox2DRed = 0xdc3132,
+	b2_colorBox2DBlue = 0x30aebf,
+	b2_colorBox2DGreen = 0x8cc924,
+	b2_colorBox2DYellow = 0xffee8c
 } b2HexColor;
 
 /// This struct holds callbacks you can implement to draw a Box2D world.
@@ -1229,35 +1244,35 @@ typedef enum b2HexColor
 typedef struct b2DebugDraw
 {
 	/// Draw a closed polygon provided in CCW order.
-	void (*DrawPolygon)(const b2Vec2* vertices, int vertexCount, b2HexColor color, void* context);
+	void ( *DrawPolygon )( const b2Vec2* vertices, int vertexCount, b2HexColor color, void* context );
 
 	/// Draw a solid closed polygon provided in CCW order.
-	void (*DrawSolidPolygon)(b2Transform transform, const b2Vec2* vertices, int vertexCount, float radius, b2HexColor color,
-							 void* context);
+	void ( *DrawSolidPolygon )( b2Transform transform, const b2Vec2* vertices, int vertexCount, float radius, b2HexColor color,
+								void* context );
 
 	/// Draw a circle.
-	void (*DrawCircle)(b2Vec2 center, float radius, b2HexColor color, void* context);
+	void ( *DrawCircle )( b2Vec2 center, float radius, b2HexColor color, void* context );
 
 	/// Draw a solid circle.
-	void (*DrawSolidCircle)(b2Transform transform, float radius, b2HexColor color, void* context);
+	void ( *DrawSolidCircle )( b2Transform transform, float radius, b2HexColor color, void* context );
 
 	/// Draw a capsule.
-	void (*DrawCapsule)(b2Vec2 p1, b2Vec2 p2, float radius, b2HexColor color, void* context);
+	void ( *DrawCapsule )( b2Vec2 p1, b2Vec2 p2, float radius, b2HexColor color, void* context );
 
 	/// Draw a solid capsule.
-	void (*DrawSolidCapsule)(b2Vec2 p1, b2Vec2 p2, float radius, b2HexColor color, void* context);
+	void ( *DrawSolidCapsule )( b2Vec2 p1, b2Vec2 p2, float radius, b2HexColor color, void* context );
 
 	/// Draw a line segment.
-	void (*DrawSegment)(b2Vec2 p1, b2Vec2 p2, b2HexColor color, void* context);
+	void ( *DrawSegment )( b2Vec2 p1, b2Vec2 p2, b2HexColor color, void* context );
 
 	/// Draw a transform. Choose your own length scale.
-	void (*DrawTransform)(b2Transform transform, void* context);
+	void ( *DrawTransform )( b2Transform transform, void* context );
 
 	/// Draw a point.
-	void (*DrawPoint)(b2Vec2 p, float size, b2HexColor color, void* context);
+	void ( *DrawPoint )( b2Vec2 p, float size, b2HexColor color, void* context );
 
 	/// Draw a string.
-	void (*DrawString)(b2Vec2 p, const char* s, void* context);
+	void ( *DrawString )( b2Vec2 p, const char* s, void* context );
 
 	/// Bounds to use if restricting drawing to a rectangular region
 	b2AABB drawingBounds;
