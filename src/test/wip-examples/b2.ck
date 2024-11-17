@@ -80,6 +80,99 @@ Is Box2D threadsafe?
 - so like with imgui, add validation on write functions: error if calling shred is not a registered graphics shred
 
 
+struct b2BodyDef
+{
+	/// The body type: static, kinematic, or dynamic.
+	b2BodyType type;
+
+	/// The initial world position of the body. Bodies should be created with the desired position.
+	/// @note Creating bodies at the origin and then moving them nearly doubles the cost of body creation, especially
+	///	if the body is moved after shapes have been added.
+	b2Vec2 position;
+
+	/// The initial world rotation of the body. Use b2MakeRot() if you have an angle.
+	b2Rot rotation;
+
+	/// The initial linear velocity of the body's origin. Typically in meters per second.
+	b2Vec2 linearVelocity;
+
+	/// The initial angular velocity of the body. Radians per second.
+	float angularVelocity;
+
+	/// Linear damping is use to reduce the linear velocity. The damping parameter
+	/// can be larger than 1 but the damping effect becomes sensitive to the
+	/// time step when the damping parameter is large.
+	///	Generally linear damping is undesirable because it makes objects move slowly
+	///	as if they are floating.
+	float linearDamping;
+
+	/// Angular damping is use to reduce the angular velocity. The damping parameter
+	/// can be larger than 1.0f but the damping effect becomes sensitive to the
+	/// time step when the damping parameter is large.
+	///	Angular damping can be use slow down rotating bodies.
+	float angularDamping;
+
+	/// Scale the gravity applied to this body. Non-dimensional.
+	float gravityScale;
+
+	/// Sleep velocity threshold, default is 0.05 meter per second
+	float sleepThreshold;
+
+	/// Use this to store application specific body data.
+	void* userData;
+
+	/// Set this flag to false if this body should never fall asleep.
+	bool enableSleep;
+
+	/// Is this body initially awake or sleeping?
+	bool isAwake;
+
+	/// Should this body be prevented from rotating? Useful for characters.
+	bool fixedRotation;
+
+	/// Treat this body as high speed object that performs continuous collision detection
+	/// against dynamic and kinematic bodies, but not other bullet bodies.
+	///	@warning Bullets should be used sparingly. They are not a solution for general dynamic-versus-dynamic
+	///	continuous collision. They may interfere with joint constraints.
+	bool isBullet;
+} b2BodyDef;
+
+typedef struct b2ShapeDef
+{
+	/// The Coulomb (dry) friction coefficient, usually in the range [0,1].
+	float friction;
+
+	/// The restitution (bounce) usually in the range [0,1].
+	float restitution;
+
+	/// The density, usually in kg/m^2.
+	float density;
+
+	/// Collision filtering data.
+	b2Filter filter;
+
+	/// Custom debug draw color.
+	uint32_t customColor;
+
+	/// A sensor shape generates overlap events but never generates a collision response.
+	bool isSensor;
+} b2ShapeDef;
+
+
+Body: transform
+
+ShapeDef:  collision parameters (friction, density, filter)
+Polygon/circle/capsule: geometry data
+
+ShapeDef is analgous to a physics "Material", only instead of data for
+rendering, it contains data for physics simulation.
+
+a (shapeDef, geometry) pair is bound to a body via CreatePolygonShape(),
+which actually creates a shape_id and shape object.
+
+b2World > b2Body > b2shape
+
+
 */
 
 GOrbitCamera camera --> GG.scene();
@@ -102,15 +195,16 @@ b2BodyDef ground_body_def;
 b2.createBody(world_id, ground_body_def) => int ground_id;
 b2ShapeDef ground_shape_def;
 true => ground_shape_def.enableHitEvents;
-b2Polygon.makeBox(50.0, 10.0) @=> b2Polygon ground_box;
-b2Shape.createPolygonShape(ground_id, ground_shape_def, ground_box);
+b2.makeBox(50.0, 10.0) @=> b2Polygon ground_box;
+// TODO move createXXXX shape to b2 class
+b2.createPolygonShape(ground_id, ground_shape_def, ground_box);
 
 PlaneGeometry plane_geo;
 FlatMaterial mat;
 GMesh ground_mesh(plane_geo, mat) --> GG.scene();
 ground_mesh.posY(-10.0);
-ground_mesh.scaX(100.0);
-ground_mesh.scaY(20.0);
+ground_mesh.scaX(50.0);
+ground_mesh.scaY(10.0);
 
 GMesh@ dynamic_box_meshes[0];
 int dynamic_body_ids[0];
@@ -127,15 +221,15 @@ fun void addBody()
     dynamic_body_ids << dynamic_body_id;
 
     // then shape
-    b2Polygon.makeBox(1.0f, 1.0f) @=> b2Polygon dynamic_box;
+    b2.makeBox(1.0f, 1.0f) @=> b2Polygon dynamic_box;
     b2ShapeDef dynamic_shape_def;
     true => dynamic_shape_def.enableHitEvents;
-    b2Shape.createPolygonShape(dynamic_body_id, dynamic_shape_def, dynamic_box);
+    b2.createPolygonShape(dynamic_body_id, dynamic_shape_def, dynamic_box);
 
     // matching GGen
     GMesh dynamic_box_mesh(plane_geo, mat) --> GG.scene();
-    dynamic_box_mesh.scaX(2.0);
-    dynamic_box_mesh.scaY(2.0);
+    dynamic_box_mesh.scaX(1.0);
+    dynamic_box_mesh.scaY(1.0);
     dynamic_box_meshes << dynamic_box_mesh;
 }
 

@@ -585,13 +585,13 @@ struct App {
             // critical_section_stats.update(stm_since(critical_start));
 
             // physics
-            // we intentionally are NOT having a fixed timestap for the sake of
+            // we intentionally are NOT having a fixed timestep for the sake of
             // simplicity.
             // instead, rely on vsync + stable framerate
             // https://gafferongames.com/post/fix_your_timestep/
             if (b2World_IsValid(app->b2_world_id)) {
                 b2World_Step(app->b2_world_id, app->dt, app->b2_substep_count);
-                log_trace("simulating %d %f", app->b2_world_id.index1, app->dt);
+                // log_trace("simulating %d %f", app->b2_world_id.index1, app->dt);
             }
         }
 

@@ -68,6 +68,8 @@
     (*(Chuck_ArrayInt**)OBJ_MEMBER_DATA(obj, offset))
 #define OBJ_MEMBER_FLOAT_ARRAY(obj, offset)                                            \
     (*(Chuck_ArrayFloat**)OBJ_MEMBER_DATA(obj, offset))
+#define OBJ_MEMBER_VEC2_ARRAY(obj, offset)                                             \
+    (*(Chuck_ArrayVec2**)OBJ_MEMBER_DATA(obj, offset))
 
 // log levels (copied from
 // https://github.com/ccrma/chuck/blob/90f966cb8649840bc05f5d77219867593eb7fe94/src/core/chuck_errmsg.h#L78)
@@ -283,15 +285,16 @@ void chugin_copyCkVec2Array(Chuck_ArrayVec2* ck_arr, f32* arr)
     }
 }
 
-void chugin_copyCkVec2Array(Chuck_ArrayVec2* ck_arr, f32* arr, int count)
+int chugin_copyCkVec2Array(Chuck_ArrayVec2* ck_arr, f32* arr, int count)
 {
-    if (!ck_arr) return;
+    if (!ck_arr) return 0;
     int size = MIN(g_chuglAPI->object->array_vec2_size(ck_arr), count);
     for (int i = 0; i < size; i++) {
         t_CKVEC2 vec2  = g_chuglAPI->object->array_vec2_get_idx(ck_arr, i);
         arr[i * 2]     = vec2.x;
         arr[i * 2 + 1] = vec2.y;
     }
+    return size;
 }
 
 void chugin_copyCkVec3Array(Chuck_ArrayVec3* ck_arr, f32* arr)
@@ -341,9 +344,11 @@ Chuck_ArrayFloat* chugin_createCkFloatArray(float* arr, int count, bool add_ref 
 }
 
 Chuck_ArrayVec2* chugin_createCkFloat2Array(glm::vec2* arr, int count,
-                                            bool add_ref = false)
+                                            bool add_ref          = false,
+                                            Chuck_VM_Shred* shred = NULL)
 {
-    Chuck_ArrayVec2* ck_arr = (Chuck_ArrayVec2*)chugin_createCkObj("vec2[]", add_ref);
+    Chuck_ArrayVec2* ck_arr
+      = (Chuck_ArrayVec2*)chugin_createCkObj(g_chuck_types.vec2_array, add_ref, shred);
     for (int i = 0; i < count; i++) {
         g_chuglAPI->object->array_vec2_push_back(ck_arr, { arr[i].x, arr[i].y });
     }

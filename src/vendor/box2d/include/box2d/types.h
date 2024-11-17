@@ -1256,7 +1256,8 @@ typedef struct b2DebugDraw
 	/// Draw a solid circle.
 	void ( *DrawSolidCircle )( b2Transform transform, float radius, b2HexColor color, void* context );
 
-	/// Draw a capsule.
+	/// Draw a capsule. 
+	/// NOTE (azaday) this is currently never called
 	void ( *DrawCapsule )( b2Vec2 p1, b2Vec2 p2, float radius, b2HexColor color, void* context );
 
 	/// Draw a solid capsule.

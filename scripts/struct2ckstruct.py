@@ -11,12 +11,10 @@
 
 out = ""
 prefix = "b2"
-original_type = "b2QueryFilter"
-# struct_name = "b2_QueryFilter"
+original_type = "b2SegmentDistanceResult"
 struct_name = original_type
 
-class_doc = 'https://box2d.org/documentation_v3/group__events.html#structb2_contact_hit_event'
-
+class_doc = "Result of computing the distance between two line segments. https://box2d.org/documentation/group__distance.html#structb2_segment_distance_result"
 # (type, name, comment)
 struct_info = [
     # ("vec2", "gravity", "Gravity vector. Box2D has no up-vector defined."),
@@ -31,11 +29,11 @@ struct_info = [
     # ("int", "enableContinous", "Enable continuous collision"),
     # ("int", "workerCount", "Number of workers to use with the provided task system. Box2D performs best when using only performance cores and accessing a single L2 cache. Efficiency cores and hyper-threading provide little benefit and may even harm performance."),
 
-    ("int", "shapeIdA", "Id of the first shape"),
-    ("int", "shapeIdB", "Id of the second shape"),
-    ("vec2", "point", "Point where the shapes hit"),
-    ("vec2", "normal", "Normal vector pointing from shape A to shape B"),
-    ("float", "approachSpeed", "The speed the shapes are approaching. Always positive. Typically in meters per second."),
+    ("vec2", "closest1", "The closest point on the first segment"),
+    ("vec2", "closest2", "The closest point on the second segment"),
+    ("float", "fraction1", "The barycentric coordinate on the first segment"),
+    ("float", "fraction2", "The barycentric coordinate on the second segment"),
+    ("float", "distanceSquared", "The squared distance between the closest points"),
 ]
 
 def l(s):
@@ -55,11 +53,11 @@ for (type, name, comment) in struct_info:
     l(f"static t_CKUINT {ck_offset_name(name)} = 0;")
 l(f"CK_DLL_CTOR({ck_ctor_name()});")
 l("")
-l(f"static void {original_type}_to_ckobj(CK_DL_API API, Chuck_Object* ckobj, {original_type}* obj);")
-l(f"static void ckobj_to_{original_type}(CK_DL_API API, {original_type}* obj, Chuck_Object* ckobj);")
+l(f"static void {original_type}_to_ckobj(Chuck_Object* ckobj, {original_type}* obj);")
+l(f"static void ckobj_to_{original_type}({original_type}* obj, Chuck_Object* ckobj);")
 
 # query
-l(f"// {struct_name} --------------------------------------")
+l(f"{{ // {struct_name} --------------------------------------")
 l(f"BEGIN_CLASS(\"{struct_name}\", \"Object\");")
 l(f"// clang-format off")
 l(f"DOC_CLASS(\"{class_doc}\");")
@@ -79,8 +77,8 @@ for (type, name, comment) in struct_info:
     l(f"DOC_VAR(\"{comment}\");")
     l("")
 
-l(f"END_CLASS(); // {struct_name}")
-l("")
+l(f"END_CLASS();")
+l(f"}} // {struct_name} ")
 
 
 # impl ---------------------------------------------
@@ -89,8 +87,9 @@ l(f"// =========================================================================
 l(f"// {struct_name}")
 l(f"// ============================================================================")
 l("")
-l(f"static void {original_type}_to_ckobj(CK_DL_API API, Chuck_Object* ckobj, {original_type}* obj)")
+l(f"static void {original_type}_to_ckobj(Chuck_Object* ckobj, {original_type}* obj)")
 l("{")
+l("    CK_DL_API API = g_chuglAPI;")
 for (type, name, comment) in struct_info:
     if (type == "int"):
         l(f"OBJ_MEMBER_INT(ckobj, {ck_offset_name(name)}) = obj->{name};")
@@ -102,8 +101,9 @@ for (type, name, comment) in struct_info:
         l(f"{type}_to_ckobj(API, OBJ_MEMBER_OBJECT(ckobj, {ck_offset_name(name)}), &obj->{name});")
 l("}")
 l("")
-l(f"static void ckobj_to_{original_type}(CK_DL_API API, {original_type}* obj, Chuck_Object* ckobj)")
+l(f"static void ckobj_to_{original_type}({original_type}* obj, Chuck_Object* ckobj)")
 l("{")
+l("    CK_DL_API API = g_chuglAPI;")
 for (type, name, comment) in struct_info:
     if (type == "int"):
         l(f"obj->{name} = OBJ_MEMBER_INT(ckobj, {ck_offset_name(name)});")

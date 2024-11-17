@@ -38,20 +38,20 @@ b2.createBody(world_id, body_def) => int body_id;
 T.assert(b2Body.isValid(body_id), "body created");
 T.assert(T.feq(1337, b2Body.position(body_id).x), "position.x set");
 
-b2Polygon.makeBox(.5, .5) @=> b2Polygon@ box_poly;
-b2Shape.createPolygonShape(body_id, shape_def, box_poly) => int shape_id;
+b2.makeBox(.5, .5) @=> b2Polygon@ box_poly;
+b2.createPolygonShape(body_id, shape_def, box_poly) => int shape_id;
 
 b2Shape.filter(shape_id) @=> b2Filter circle_shape_filter;
 T.assert(circle_shape_filter.categoryBits == 0x0001, "filter.categoryBits default value");
 
 b2Circle circle(@(1,2), 3);
-b2Shape.createCircleShape(body_id, shape_def, circle) => int circle_shape_id;
+b2.createCircleShape(body_id, shape_def, circle) => int circle_shape_id;
 
 b2Segment segment(@(1,2), @(3,4));
-b2Shape.createSegmentShape(body_id, shape_def, segment) => int segment_shape_id;
+b2.createSegmentShape(body_id, shape_def, segment) => int segment_shape_id;
 
 b2Capsule capsule(@(1,2), @(3,4), 5);
-b2Shape.createCapsuleShape(body_id, shape_def, capsule) => int capsule_shape_id;
+b2.createCapsuleShape(body_id, shape_def, capsule) => int capsule_shape_id;
 
 int shape_ids[0];
 b2Body.shapes(body_id, shape_ids);
@@ -62,4 +62,24 @@ for (auto shape_id : shape_ids)
 b2.destroyBody(body_id);
 T.assert(!b2Body.isValid(body_id), "destroy body");
 T.assert(!b2Shape.isValid(shape_ids[0]), "destroy shape");
+
+// polygon creation tests
+
+// b2.makeSquare(1.0) @=> b2Polygon square;
+// T.println("Square vertices:");
+// T.printArray(square.vertices());
+// T.println("Square normals:");
+// T.printArray(square.normals());
+// T.println("Square centroid:");
+// <<< square.centroid() >>>;
+// T.println("Square radius:");
+// <<< square.radius() >>>;
+
+
+// CK_DLL_SFUN(b2_MakePolygon);
+// CK_DLL_SFUN(b2_MakeOffsetPolygon);
+// CK_DLL_SFUN(b2_MakeSquare);
+// CK_DLL_SFUN(b2_MakeBox);
+// CK_DLL_SFUN(b2_MakeRoundedBox);
+// CK_DLL_SFUN(b2_MakeOffsetBox);
 
