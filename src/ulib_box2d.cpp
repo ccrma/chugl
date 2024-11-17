@@ -303,6 +303,7 @@ CK_DLL_SFUN(b2_CreatePolygonShape);
 // shape destruction
 CK_DLL_SFUN(b2_DestroyShape);
 
+// polygon creation
 CK_DLL_SFUN(b2_MakePolygon);
 CK_DLL_SFUN(b2_MakeOffsetPolygon);
 CK_DLL_SFUN(b2_MakeSquare);

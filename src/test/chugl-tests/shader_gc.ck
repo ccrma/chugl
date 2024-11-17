@@ -15,6 +15,7 @@ fn fs_main(in : VertexOutput, @builtin(front_facing) is_front: bool) -> @locatio
 }" => string shader_string;
 
 null => Shader@ first_shader;
+int first_shader_id;
 
 fun void createShader() {
     ShaderDesc shader_desc;
@@ -23,8 +24,9 @@ fun void createShader() {
     Shader custom_shader(shader_desc); // create shader from shader_desc
     if (first_shader == null) {
         custom_shader @=> first_shader;
+        first_shader.id() => first_shader_id;
     } 
-    <<< "first_shader id", first_shader.id(), "| custom_shader id", custom_shader.id() >>>;
+    <<< "first_shader id changed?", first_shader.id() - first_shader_id, "| custom_shader id increment", custom_shader.id() - first_shader_id >>>;
 }
 
 repeat (5) {

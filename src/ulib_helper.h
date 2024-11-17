@@ -154,6 +154,9 @@ struct chugl_MaterialBuiltinShaders {
 
     // skybox shaders
     SG_ID skybox_shader_id;
+
+    // box2d debug shaders
+    SG_ID b2_debug_solid_polygon_shader_id;
 };
 static chugl_MaterialBuiltinShaders g_material_builtin_shaders;
 

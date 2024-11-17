@@ -2490,4 +2490,14 @@ void chugl_initDefaultMaterials()
         g_material_builtin_shaders.skybox_shader_id
           = chugl_createShader(&skybox_shader_desc);
     }
+
+    { // TODO maybe just keep this on graphics side
+        CHUGL_ShaderDesc b2_debug_solid_polygon_shader_desc = {};
+        b2_debug_solid_polygon_shader_desc.vertex_string
+          = b2_solid_polygon_shader_string;
+        b2_debug_solid_polygon_shader_desc.fragment_string
+          = b2_solid_polygon_shader_string;
+        g_material_builtin_shaders.b2_debug_solid_polygon_shader_id
+          = chugl_createShader(&b2_debug_solid_polygon_shader_desc);
+    }
 }

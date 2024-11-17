@@ -239,6 +239,73 @@ static void _R_glfwErrorCallback(int error, const char* description)
     log_warn("GLFW Error[%i]: %s\n", error, description);
 }
 
+// ============================================================================
+// b2 debug draw
+// ============================================================================
+
+Arena b2_debug_solid_polygon_arena = {};
+
+static glm::vec4 b2HexColorToVec4(b2HexColor c, float alpha)
+{
+    // return {
+    //     u8((c >> 16) & 0xFF),
+    //     u8((c >> 8) & 0xFF),
+    //     u8(c & 0xFF),
+    //     u8(0xFF * alpha),
+    // };
+    return glm::vec4(((c >> 16) & 0xFF) / 255.0f, //
+                     ((c >> 8) & 0xFF) / 255.0f,  //
+                     (c & 0xFF) / 255.0f,         //
+                     alpha                        //
+    );
+}
+
+/// Draw a closed polygon provided in CCW order.
+static void b2_debug_DrawPolygon(const b2Vec2* vertices, int vertexCount,
+                                 b2HexColor color, void* context)
+{
+    log_trace("b2_debug_DrawPolygon");
+}
+
+/// Draw a solid closed polygon provided in CCW order.
+static void b2_debug_DrawSolidPolygon(b2Transform transform, const b2Vec2* vertices,
+                                      int vertexCount, float radius, b2HexColor color,
+                                      void* context)
+{
+    b2_DebugDraw_SolidPolygon* s
+      = ARENA_PUSH_ZERO_TYPE(&b2_debug_solid_polygon_arena, b2_DebugDraw_SolidPolygon);
+    s->transform
+      = glm::vec4(transform.p.x, transform.p.y, transform.q.c, transform.q.s);
+
+    memcpy(&s->points12, vertices, sizeof(b2Vec2) * vertexCount);
+    s->color  = b2HexColorToVec4(color, 1.0f);
+    s->count  = vertexCount;
+    s->radius = radius;
+
+    // compute aabb
+    // Compute polygon AABB
+    glm::vec2 lower = glm::vec2(vertices[0].x, vertices[0].y);
+    glm::vec2 upper = glm::vec2(vertices[0].x, vertices[0].y);
+    for (int i = 1; i < vertexCount; ++i) {
+        lower = glm::min(lower, glm::vec2(vertices[i].x, vertices[i].y));
+        upper = glm::max(upper, glm::vec2(vertices[i].x, vertices[i].y));
+    }
+
+    s->aabb = glm::vec4(lower, upper);
+
+    // glm::vec4 color; // at byte offset 80
+    // glm::vec4 aabb;  // at byte offset 96
+    // int32_t count;   // at byte offset 96
+    // float radius;    // at byte offset 100
+}
+
+// TODO gate behind toggle
+b2DebugDraw debug_draw = {};
+
+// ============================================================================
+// end b2 debug draw
+// ============================================================================
+
 static int frame_buffer_width  = 0;
 static int frame_buffer_height = 0;
 static bool resized_this_frame = false;
@@ -300,6 +367,11 @@ struct App {
         app->ckapi = api;
 
         Arena::init(&app->frameArena, MEGABYTE); // 1MB
+
+        // b2 debug draw
+        debug_draw.DrawPolygon      = b2_debug_DrawPolygon;
+        debug_draw.DrawSolidPolygon = b2_debug_DrawSolidPolygon;
+        debug_draw.drawShapes       = true;
     }
 
     // static void emscriptenMainLoop(void* arg)
@@ -592,6 +664,10 @@ struct App {
             if (b2World_IsValid(app->b2_world_id)) {
                 b2World_Step(app->b2_world_id, app->dt, app->b2_substep_count);
                 // log_trace("simulating %d %f", app->b2_world_id.index1, app->dt);
+
+                // debug draw
+                // log_trace("drawing debug");
+                // b2World_Draw(app->b2_world_id, &debug_draw);
             }
         }
 
