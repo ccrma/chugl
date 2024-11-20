@@ -254,8 +254,8 @@ if ( MSVC )
 
     set(CHUCK_EXECUTABLE_DEBUG "${CMAKE_SOURCE_DIR}/chuck-debug.exe")
     set(CHUCK_EXECUTABLE_RELEASE "${CMAKE_SOURCE_DIR}/chuck-release.exe")
-    set(CHUGIN_PATH_DEBUG "--chugin-path:${CMAKE_TARGET_DIR}./build/Debug")
-    set(CHUGIN_PATH_RELEASE "--chugin-path:${CMAKE_TARGET_DIR}./build/Release")
+    set(CHUGIN_PATH_DEBUG "--chugin:${CMAKE_TARGET_DIR}./build/Debug/ChuGL.chug")
+    set(CHUGIN_PATH_RELEASE "--chugin:${CMAKE_TARGET_DIR}./build/Release/ChuGL.chug")
     set_target_properties( ${PROJECT_NAME} PROPERTIES
         # VS_DEBUGGER_COMMAND $<$<CONFIG:Debug>:${CHUCK_EXECUTABLE_DEBUG}>$<$<CONFIG:Release>:${CHUCK_EXECUTABLE_RELEASE}>
         VS_DEBUGGER_COMMAND "C:/Program Files/ChucK/chuck.exe"

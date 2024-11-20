@@ -16,6 +16,7 @@ chugl_path = "--chugin:./build-release/ChuGL.chug"
 
 if "CYGWIN" in platform.system() or "Windows" in platform.system():
     chugl_path = "--chugin:./build/Release/ChuGL.chug"
+    # chugl_path = " "
 
 
 exe = 'chuck'
@@ -59,7 +60,11 @@ def run_test(path, filename):
     # for color terminal text) from showing up in chuck output;
     # FYI chuck implicitly checks for TTY; if not will disable printing
     # escape codes; but leaving this note here FYI
-    result = subprocess.check_output([exe, chugl_path, "./test/T.ck",  path], stderr=subprocess.STDOUT).decode("utf-8")
+    result = ""
+    if chugl_path:
+        result = subprocess.check_output([exe, "./test/T.ck", path], stderr=subprocess.STDOUT).decode("utf-8")
+    else:
+        result = subprocess.check_output([exe, chugl_path, "./test/T.ck",  path], stderr=subprocess.STDOUT).decode("utf-8")
 
     if os.path.isfile(path.replace(".ck", ".txt")):
         with open(path.replace(".ck", ".txt")) as answerFile:
