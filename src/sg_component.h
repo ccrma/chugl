@@ -939,7 +939,7 @@ SG_Shader* SG_CreateShader(Chuck_Object* ckobj, const char* vertex_string,
 SG_Material* SG_CreateMaterial(Chuck_Object* ckobj, SG_MaterialType material_type);
 SG_Mesh* SG_CreateMesh(Chuck_Object* ckobj, SG_Geometry* sg_geo, SG_Material* sg_mat);
 SG_Light* SG_CreateLight(Chuck_Object* ckobj);
-SG_Video* SG_CreateVideo(Chuck_Object* ckobj);
+SG_Video* SG_CreateVideo(Chuck_Object* ckobj, t_CKUINT id_offset);
 SG_Webcam* SG_CreateWebcam(Chuck_Object* ckobj, Chuck_VM_Shred* shred, int device_id,
                            int width, int height, int fps);
 

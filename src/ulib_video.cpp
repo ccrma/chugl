@@ -40,7 +40,12 @@ behaviour:
 
 #include <pl/pl_mpeg.h>
 
-#define GET_VIDEO(ckobj) SG_GetVideo(OBJ_MEMBER_UINT(ckobj, component_offset_id))
+// Note: azaday 11/19/24: fixing a video memory crash
+// video doesn't extend SG_Component so it doesn't have a component_offset_id
+// adding a sepecial case member variable `video_component_offset_id` to store the
+// Scenegraph ID of the video component
+static t_CKUINT video_component_offset_id = 0;
+#define GET_VIDEO(ckobj) SG_GetVideo(OBJ_MEMBER_UINT(ckobj, video_component_offset_id))
 #define GET_WEBCAM(ckobj) SG_GetWebcam(OBJ_MEMBER_UINT(ckobj, component_offset_id))
 
 CK_DLL_CTOR(video_ctor);
@@ -107,6 +112,8 @@ void ulib_video_query(Chuck_DL_Query* QUERY)
           "command-line ffmpeg command: `ffmpeg -i input.mp4 -c:v mpeg1video -q:v 0 "
           "-c:a mp2 -format mpeg output.mpg`");
         ADD_EX("basic/video.ck");
+
+        video_component_offset_id = MVAR("int", "@component_ptr", false);
 
         QUERY->add_ugen_funcf(QUERY, video_tick_multichannel, NULL,
                               0, // 0 channels in
@@ -367,7 +374,7 @@ CK_DLL_CTOR(video_ctor)
       "path)` constructor instead");
 
     SG_Texture* video_texture_rgba = SG_GetTexture(g_builtin_textures.magenta_pixel_id);
-    SG_Video* video                = SG_CreateVideo(SELF);
+    SG_Video* video                = SG_CreateVideo(SELF, video_component_offset_id);
 
     video->path_OWNED            = NULL;
     video->video_texture_rgba_id = video_texture_rgba->id;
@@ -384,8 +391,9 @@ CK_DLL_CTOR(video_ctor_with_path)
     // TODO destroy plm in destructor
 
     SG_Texture* video_texture_rgba = SG_GetTexture(g_builtin_textures.magenta_pixel_id);
-    SG_Video* video                = SG_CreateVideo(SELF);
-    video->video_texture_rgba_id   = video_texture_rgba->id;
+
+    SG_Video* video              = SG_CreateVideo(SELF, video_component_offset_id);
+    video->video_texture_rgba_id = video_texture_rgba->id;
 
     // Initialize plmpeg, load the video file, install decode callbacks
     {

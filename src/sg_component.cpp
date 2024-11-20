@@ -1187,7 +1187,7 @@ SG_Light* SG_CreateLight(Chuck_Object* ckobj)
     return light;
 }
 
-SG_Video* SG_CreateVideo(Chuck_Object* ckobj)
+SG_Video* SG_CreateVideo(Chuck_Object* ckobj, t_CKUINT id_offset)
 {
     CK_DL_API API = g_chuglAPI;
 
@@ -1201,8 +1201,9 @@ SG_Video* SG_CreateVideo(Chuck_Object* ckobj)
     video->id    = SG_GetNewComponentID();
     video->type  = SG_COMPONENT_VIDEO;
 
-    // set ckobj pointer
-    OBJ_MEMBER_UINT(ckobj, component_offset_id) = video->id;
+    // set ckobj pointer (using id_offset because Video extends UGen and therefore
+    // doesn't share same `component_offset_id` as other scenegraph objects)
+    OBJ_MEMBER_UINT(ckobj, id_offset) = video->id;
 
     // store in map
     SG_Location loc = { video->id, offset, arena };
