@@ -1287,6 +1287,7 @@ static void ulib_mesh_query(Chuck_DL_Query* QUERY)
         ADD_EX("deep/sndpeek.ck");
         ADD_EX("deep/sndpeek_minimal.ck");
         ADD_EX("deep/soundbulb.ck");
+        ADD_EX("deep/fish.ck");
 
         CTOR(glines2d_ctor);
 

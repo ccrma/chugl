@@ -644,6 +644,10 @@ static void ulib_geometry_query(Chuck_DL_Query* QUERY)
           "https://github.com/mapbox/earcut.hpp "
           "Supports arbitrary polygons with holes.");
 
+        ADD_EX("basic/geo_and_mat.ck");
+        ADD_EX("basic/triangulate.ck");
+        ADD_EX("deep/fish.ck");
+
         CTOR(polygon_geo_ctor);
 
         MFUN(polygon_geo_build, "void", "build");
