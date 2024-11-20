@@ -82,6 +82,7 @@ doc.addGroup(
         "KnotGeometry",
         "SuzanneGeometry",
         "LinesGeometry",
+        "PolygonGeometry",
     ],
     // group name
     "ChuGL Geometries",
