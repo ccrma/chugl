@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "core/log.h"
 #include "core/memory.h"
 #include "memory.h"
 
@@ -14,7 +15,12 @@ void* reallocate(void* pointer, i64 oldSize, i64 newSize)
     }
 
     void* result = realloc(pointer, newSize);
-    if (result == NULL) exit(1); // out of memory
+    if (result == NULL) {
+        log_error("Memory allocation failure. Unable to allocate %ld bytes", newSize);
+#ifdef CHUGL_DEBUG
+        exit(1); // out of memory
+#endif
+    }
 
     // zero out the new memory
     if (newSize > oldSize) {

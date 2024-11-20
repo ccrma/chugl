@@ -62,9 +62,9 @@ def run_test(path, filename):
     # escape codes; but leaving this note here FYI
     result = ""
     if chugl_path:
-        result = subprocess.check_output([exe, "./test/T.ck", path], stderr=subprocess.STDOUT).decode("utf-8")
-    else:
         result = subprocess.check_output([exe, chugl_path, "./test/T.ck",  path], stderr=subprocess.STDOUT).decode("utf-8")
+    else:
+        result = subprocess.check_output([exe, "./test/T.ck", path], stderr=subprocess.STDOUT).decode("utf-8")
 
     if os.path.isfile(path.replace(".ck", ".txt")):
         with open(path.replace(".ck", ".txt")) as answerFile:
