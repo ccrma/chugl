@@ -82,7 +82,7 @@ b2BodyType ckint_to_b2BodyType(t_CKINT type)
 
 b2AABB vec4_to_b2AABB(t_CKVEC4 vec)
 {
-    b2AABB aabb;
+    b2AABB aabb{};
     aabb.lowerBound = { (f32)vec.x, (f32)vec.y };
     aabb.upperBound = { (f32)vec.z, (f32)vec.w };
     return aabb;
@@ -150,7 +150,7 @@ static t_CKUINT b2RayResult_normal_offset   = 0;
 static t_CKUINT b2RayResult_fraction_offset = 0;
 
 static void b2RayResult_to_ckobj(Chuck_Object* ckobj, b2RayResult* obj);
-static void ckobj_to_b2RayResult(b2RayResult* obj, Chuck_Object* ckobj);
+// static void ckobj_to_b2RayResult(b2RayResult* obj, Chuck_Object* ckobj);
 
 // b2QueryFilter
 static t_CKUINT b2QueryFilter_categoryBits_offset = 0;
@@ -2270,7 +2270,7 @@ CK_DLL_SFUN(b2_ComputePolygonMass)
 CK_DLL_SFUN(b2_ComputeCircleAABB)
 {
     b2Circle circle = ckobj_to_b2Circle(GET_NEXT_OBJECT(ARGS));
-    b2Transform transform;
+    b2Transform transform = {};
     transform.p = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
     transform.q = b2MakeRot(GET_NEXT_FLOAT(ARGS));
 
@@ -2282,7 +2282,7 @@ CK_DLL_SFUN(b2_ComputeCapsuleAABB)
 {
     b2Capsule capsule = {};
     ckobj_to_b2Capsule(API, &capsule, GET_NEXT_OBJECT(ARGS));
-    b2Transform transform;
+    b2Transform transform = {};
     transform.p = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
     transform.q = b2MakeRot(GET_NEXT_FLOAT(ARGS));
 
@@ -2293,7 +2293,7 @@ CK_DLL_SFUN(b2_ComputeCapsuleAABB)
 CK_DLL_SFUN(b2_ComputePolygonAABB)
 {
     b2Polygon* polygon = ckobj_to_b2Polygon(GET_NEXT_OBJECT(ARGS));
-    b2Transform transform;
+    b2Transform transform = {};
     transform.p = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
     transform.q = b2MakeRot(GET_NEXT_FLOAT(ARGS));
 
@@ -2305,7 +2305,7 @@ CK_DLL_SFUN(b2_ComputeSegmentAABB)
 {
     b2Segment segment = {};
     ckobj_to_b2Segment(API, &segment, GET_NEXT_OBJECT(ARGS));
-    b2Transform transform;
+    b2Transform transform = {};
     transform.p = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
     transform.q = b2MakeRot(GET_NEXT_FLOAT(ARGS));
 
@@ -3029,16 +3029,16 @@ static void b2RayResult_to_ckobj(Chuck_Object* ckobj, b2RayResult* obj)
     OBJ_MEMBER_FLOAT(ckobj, b2RayResult_fraction_offset) = obj->fraction;
 }
 
-static void ckobj_to_b2RayResult(b2RayResult* obj, Chuck_Object* ckobj)
-{
-    CK_DL_API API        = g_chuglAPI;
-    obj->shapeId         = OBJ_MEMBER_B2_ID(b2ShapeId, ckobj, b2RayResult_shape_offset);
-    t_CKVEC2 point_vec2  = OBJ_MEMBER_VEC2(ckobj, b2RayResult_point_offset);
-    obj->point           = { (float)point_vec2.x, (float)point_vec2.y };
-    t_CKVEC2 normal_vec2 = OBJ_MEMBER_VEC2(ckobj, b2RayResult_normal_offset);
-    obj->normal          = { (float)normal_vec2.x, (float)normal_vec2.y };
-    obj->fraction        = (float)OBJ_MEMBER_FLOAT(ckobj, b2RayResult_fraction_offset);
-}
+//static void ckobj_to_b2RayResult(b2RayResult* obj, Chuck_Object* ckobj)
+//{
+//    CK_DL_API API        = g_chuglAPI;
+//    obj->shapeId         = OBJ_MEMBER_B2_ID(b2ShapeId, ckobj, b2RayResult_shape_offset);
+//    t_CKVEC2 point_vec2  = OBJ_MEMBER_VEC2(ckobj, b2RayResult_point_offset);
+//    obj->point           = { (float)point_vec2.x, (float)point_vec2.y };
+//    t_CKVEC2 normal_vec2 = OBJ_MEMBER_VEC2(ckobj, b2RayResult_normal_offset);
+//    obj->normal          = { (float)normal_vec2.x, (float)normal_vec2.y };
+//    obj->fraction        = (float)OBJ_MEMBER_FLOAT(ckobj, b2RayResult_fraction_offset);
+//}
 
 // ============================================================================
 // b2ShapeDef
