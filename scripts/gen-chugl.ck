@@ -117,7 +117,7 @@ doc.addGroup(
         // material stuff
         "Material", 
         "NormalMaterial", 
-        "TangentMaterial", 
+        "WireframeMaterial", 
         "FlatMaterial", 
         "PhongMaterial", 
         "LinesMaterial", 
