@@ -261,7 +261,7 @@ int chugin_copyCkIntArray(Chuck_ArrayInt* ck_arr, int* arr, int count)
 {
     int size = MIN(g_chuglAPI->object->array_int_size(ck_arr), count);
     for (int i = 0; i < size; i++) {
-        arr[i] = (int)g_chuglAPI->object->array_int_get_idx(ck_arr, i);
+        arr[i] = (i32)g_chuglAPI->object->array_int_get_idx(ck_arr, i);
     }
     return size;
 }

@@ -174,15 +174,54 @@ b2World > b2Body > b2shape
 
 
 */
-
 GOrbitCamera camera --> GG.scene();
 GG.scene().camera(camera);
+camera.posZ(50);
 
-GWindow.maximize();
+me.dir() + "./b2_solid_polygon_shader.wgsl" @=> string b2_solid_polygon_shader_path;
+// set drawing shader
+ShaderDesc b2_solid_polygon_shader_desc;
+b2_solid_polygon_shader_path => b2_solid_polygon_shader_desc.vertexPath;
+b2_solid_polygon_shader_path => b2_solid_polygon_shader_desc.fragmentPath;
+null => b2_solid_polygon_shader_desc.vertexLayout; // no vertex layout
+// material shader
+Shader b2_solid_polygon_shader(b2_solid_polygon_shader_desc);
+Material b2_solid_polygon_material;
+b2_solid_polygon_material.shader(b2_solid_polygon_shader);
+
+// initialize material uniforms
+// TODO: binding empty storage buffer crashes wgpu
+int empty_int_arr[1];
+float empty_float_arr[1];
+b2_solid_polygon_material.storageBuffer(0, empty_int_arr);
+b2_solid_polygon_material.storageBuffer(1, empty_float_arr);
+b2_solid_polygon_material.storageBuffer(2, empty_float_arr);
+b2_solid_polygon_material.storageBuffer(3, empty_float_arr);
+b2_solid_polygon_material.storageBuffer(4, empty_float_arr);
+b2_solid_polygon_material.storageBuffer(5, empty_float_arr);
+
+
+
+Geometry b2_solid_polygon_geo;
+
+GMesh b2_solid_polygon_mesh(b2_solid_polygon_geo, b2_solid_polygon_material) --> GG.scene();
+
 
 // custom debug draw
 class DebugDraw extends b2DebugDraw
 {
+
+	int u_polygon_vertex_counts[0];
+	float u_polygon_vertices[0];
+	float u_polygon_transforms[0];
+	float u_polygon_colors[0];
+	float u_polygon_aabb[0];
+	float u_polygon_radius[0];
+	int num_solid_polygons;
+
+	// set trillion to be the initial aabb (flt max is actualy more like 3.4e38)
+	@(1000000000, 1000000000, -1000000000, -1000000000) => vec4 init_aabb;
+
 	fun void drawSolidPolygon(
 		vec2 position,
 		float rotation_radians,
@@ -190,9 +229,75 @@ class DebugDraw extends b2DebugDraw
 		float radius,
 		vec3 color
 	) {
-		for (auto v : vertices)
+		num_solid_polygons++;
+
+		u_polygon_vertex_counts << u_polygon_vertices.size() / 2; // offset
+		u_polygon_vertex_counts << vertices.size(); // count
+
+		init_aabb => vec4 aabb;
+		for (auto v : vertices) {
+			u_polygon_vertices << v.x;
+			u_polygon_vertices << v.y;
 			<<< v >>>;
-		<<< GG.fc() >>>;
+
+			// update aabb
+			Math.min(aabb.x, v.x) => aabb.x;
+			Math.min(aabb.y, v.y) => aabb.y;
+			Math.max(aabb.z, v.x) => aabb.z;
+			Math.max(aabb.w, v.y) => aabb.w;
+		}
+
+		u_polygon_aabb << aabb.x;
+		u_polygon_aabb << aabb.y;
+		u_polygon_aabb << aabb.z;
+		u_polygon_aabb << aabb.w;
+
+		u_polygon_transforms << position.x;
+		u_polygon_transforms << position.y;
+		u_polygon_transforms << Math.cos(rotation_radians);
+		u_polygon_transforms << Math.sin(rotation_radians);
+
+		u_polygon_radius << radius;
+
+		u_polygon_colors << color.r;
+		u_polygon_colors << color.g;
+		u_polygon_colors << color.b;
+		u_polygon_colors << 1.0;
+		<<< "color", color >>>;
+	}
+
+	// upload all the collected debug draw data to the materials/geometry/GPU
+	fun void update() {
+		// upload
+		{ // b2 solid polygon
+			// @group(1) @binding(0) var<storage> u_polygon_vertex_counts : array<i32>;
+			// @group(1) @binding(1) var<storage> u_polygon_vertices : array<f32>; // x1, y1, x2, y2 ... vec2f
+			// @group(1) @binding(2) var<storage> u_polygon_transforms : array<f32>; // every 3 floats is a transform, x, y, cos rotation, sin rot radians vecf4f
+			// @group(1) @binding(3) var<storage> u_polygon_colors: array<f32>; // every 4 floats is a color vec4f
+			// @group(1) @binding(4) var<storage> u_polygon_aabb: array<f32>; // lower left, upper right vec4f
+			// @group(1) @binding(5) var<storage> u_polygon_radius: array<f32>; // f32
+			b2_solid_polygon_material.storageBuffer(0, u_polygon_vertex_counts);
+			b2_solid_polygon_material.storageBuffer(1, u_polygon_vertices);
+			b2_solid_polygon_material.storageBuffer(2, u_polygon_transforms);
+			b2_solid_polygon_material.storageBuffer(3, u_polygon_colors);
+			b2_solid_polygon_material.storageBuffer(4, u_polygon_aabb);
+			b2_solid_polygon_material.storageBuffer(5, u_polygon_radius);
+
+			// update geometry vertices (6 vertices per polygon plane)
+			b2_solid_polygon_geo.vertexCount(6 * num_solid_polygons);
+			<<< num_solid_polygons, "solid polygons" >>>;
+		}
+
+		// zero
+		{ // b2 solid polygon
+			u_polygon_vertex_counts.clear();
+			u_polygon_vertices.clear();
+			u_polygon_transforms.clear();
+			u_polygon_colors.clear();
+			u_polygon_aabb.clear();
+			u_polygon_radius.clear();
+			0 => num_solid_polygons;
+		}
 	}
 }
 
@@ -215,17 +320,11 @@ b2.createBody(world_id, ground_body_def) => int ground_id;
 b2ShapeDef ground_shape_def;
 true => ground_shape_def.enableHitEvents;
 b2.makeBox(50.0, 10.0) @=> b2Polygon ground_box;
-// TODO move createXXXX shape to b2 class
 b2.createPolygonShape(ground_id, ground_shape_def, ground_box);
 
-PlaneGeometry plane_geo;
-FlatMaterial mat;
-GMesh ground_mesh(plane_geo, mat) --> GG.scene();
-ground_mesh.posY(-10.0);
-ground_mesh.scaX(50.0);
-ground_mesh.scaY(10.0);
-
-GMesh@ dynamic_box_meshes[0];
+// PlaneGeometry plane_geo;
+// FlatMaterial mat;
+// GMesh@ dynamic_box_meshes[0];
 int dynamic_body_ids[0];
 
 fun void addBody()
@@ -246,10 +345,10 @@ fun void addBody()
     b2.createPolygonShape(dynamic_body_id, dynamic_shape_def, dynamic_box);
 
     // matching GGen
-    GMesh dynamic_box_mesh(plane_geo, mat) --> GG.scene();
-    dynamic_box_mesh.scaX(1.0);
-    dynamic_box_mesh.scaY(1.0);
-    dynamic_box_meshes << dynamic_box_mesh;
+    // GMesh dynamic_box_mesh(plane_geo, mat) --> GG.scene();
+    // dynamic_box_mesh.scaX(1.0);
+    // dynamic_box_mesh.scaY(1.0);
+    // dynamic_box_meshes << dynamic_box_mesh;
 }
 
 b2BodyMoveEvent move_events[0];
@@ -263,11 +362,12 @@ while (1) {
 
     if (UI.isKeyPressed(UI_Key.Space)) addBody();
 
-    for (int i; i < dynamic_body_ids.size(); i++) {
-        b2Body.position(dynamic_body_ids[i]) => vec2 p;
-        dynamic_box_meshes[i].pos(@(p.x, p.y, 0.0));
-        dynamic_box_meshes[i].rotZ(b2Body.angle(dynamic_body_ids[i]));
-    }
+	// update box mesh positions
+    // for (int i; i < dynamic_body_ids.size(); i++) {
+        // b2Body.position(dynamic_body_ids[i]) => vec2 p;
+        // dynamic_box_meshes[i].pos(@(p.x, p.y, 0.0));
+        // dynamic_box_meshes[i].rotZ(b2Body.angle(dynamic_body_ids[i]));
+    // }
 
     b2World.bodyEvents(world_id, move_events);
     // for (int i; i < move_events.size(); i++) {
@@ -291,4 +391,5 @@ while (1) {
     // }
 
 	b2World.draw(world_id, debug_draw);
+	debug_draw.update();
 }

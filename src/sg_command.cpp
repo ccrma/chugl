@@ -795,18 +795,37 @@ void CQ_PushCommand_MaterialSetUniform(SG_Material* material, int location)
 }
 
 void CQ_PushCommand_MaterialSetStorageBuffer(SG_Material* material, int location,
-                                             Chuck_ArrayFloat* ck_arr)
+                                             Chuck_Object* ck_arr,
+                                             SG_MaterialUniformType storage_buffer_type)
 {
-    int data_count = g_chuglAPI->object->array_float_size(ck_arr);
+    int data_count = 0;
+    switch (storage_buffer_type) {
+        case SG_MATERIAL_UNIFORM_FLOAT: {
+            data_count
+              = g_chuglAPI->object->array_float_size((Chuck_ArrayFloat*)ck_arr);
+        } break;
+        case SG_MATERIAL_UNIFORM_INT: {
+            data_count = g_chuglAPI->object->array_int_size((Chuck_ArrayInt*)ck_arr);
+        } break;
+        default: ASSERT(false); // unsupported type
+    }
     BEGIN_COMMAND_ADDITIONAL_MEMORY(SG_Command_MaterialSetStorageBuffer,
                                     SG_COMMAND_MATERIAL_SET_STORAGE_BUFFER,
                                     data_count * sizeof(f32));
     command->sg_id           = material->id;
     command->location        = location;
     command->data_size_bytes = data_count * sizeof(f32);
-    f32* data                = (f32*)memory;
-    chugin_copyCkFloatArray(ck_arr, data, data_count);
-    command->data_offset = Arena::offsetOf(cq.write_q, data);
+    switch (storage_buffer_type) {
+        case SG_MATERIAL_UNIFORM_FLOAT: {
+            chugin_copyCkFloatArray((Chuck_ArrayFloat*)ck_arr, (f32*)memory,
+                                    data_count);
+        } break;
+        case SG_MATERIAL_UNIFORM_INT: {
+            chugin_copyCkIntArray((Chuck_ArrayInt*)ck_arr, (i32*)memory, data_count);
+        } break;
+        default: ASSERT(false); // unsupported type
+    }
+    command->data_offset = Arena::offsetOf(cq.write_q, memory);
     END_COMMAND();
 }
 

@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -37,6 +37,7 @@
 CK_DLL_CTOR(storage_buffer_ctor);
 CK_DLL_MFUN(storage_buffer_set_size);
 CK_DLL_MFUN(storage_buffer_write);
+CK_DLL_MFUN(storage_buffer_write_integer);
 CK_DLL_MFUN(storage_buffer_write_with_offset);
 // CK_DLL_MFUN(storage_buffer_write_int); // TODO
 
@@ -62,6 +63,13 @@ void ulib_buffer_query(Chuck_DL_Query* QUERY)
       "Writes data to the start of buffer. Floats from the chuck data array are "
       "converted into 4-byte f32s. Will increase buffer size if needed. Will "
       "not decrease buffer size if data is smaller than buffer size.");
+
+    // MFUN(storage_buffer_write_integer, "void", "write");
+    // ARG("int[]", "data");
+    // DOC_FUNC(
+    //   "Writes data to the start of buffer. Ints from the chuck data array are "
+    //   "converted into 4-byte i32s. Will increase buffer size if needed. Will "
+    //   "not decrease buffer size if data is smaller than buffer size.");
 
     MFUN(storage_buffer_write_with_offset, "void", "write");
     ARG("float[]", "data");
@@ -105,6 +113,11 @@ CK_DLL_MFUN(storage_buffer_write)
     // note: *not* saving data on audio-thread cpu side
 
     CQ_PushCommand_BufferWrite(buff, data, 0);
+}
+
+CK_DLL_MFUN(storage_buffer_write_integer)
+{
+    ASSERT(false); // TODO impl
 }
 
 CK_DLL_MFUN(storage_buffer_write_with_offset)

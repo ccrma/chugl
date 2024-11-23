@@ -682,8 +682,9 @@ void CQ_PushCommand_ShaderCreate(SG_Shader* shader);
 void CQ_PushCommand_MaterialCreate(SG_Material* material);
 void CQ_PushCommand_MaterialUpdatePSO(SG_Material* material);
 void CQ_PushCommand_MaterialSetUniform(SG_Material* material, int location);
-void CQ_PushCommand_MaterialSetStorageBuffer(SG_Material* material, int location,
-                                             Chuck_ArrayFloat* ck_arr);
+void CQ_PushCommand_MaterialSetStorageBuffer(
+  SG_Material* material, int location, Chuck_Object* ck_arr,
+  SG_MaterialUniformType storage_buffer_type);
 
 // mesh
 void CQ_PushCommand_MeshUpdate(SG_Mesh* mesh);
