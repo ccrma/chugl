@@ -191,13 +191,12 @@ struct {
 // map from ckobj to shred
 std::unordered_map<Chuck_Object*, Chuck_VM_Shred*> ckobj_2_OriginShred;
 
-void chugin_setVTableOffset(t_CKINT* offset, const char* type_name,
-                            const char* method_name)
+t_CKINT chugin_setVTableOffset(const char* type_name, const char* method_name)
 {
     // update() vt offset
     Chuck_Type* cktype = g_chuglAPI->type->lookup(g_chuglVM, type_name);
     // find the offset for update
-    *offset = g_chuglAPI->type->get_vtable_offset(g_chuglVM, cktype, method_name);
+    return g_chuglAPI->type->get_vtable_offset(g_chuglVM, cktype, method_name);
 }
 
 // store ckobj --> ancestor shred mapping
@@ -277,6 +276,7 @@ void chugin_copyCkFloatArray(Chuck_ArrayFloat* ck_arr, float* arr, int count)
     }
 }
 
+// copies a chuck vec2 array into `arr`
 void chugin_copyCkVec2Array(Chuck_ArrayVec2* ck_arr, f32* arr)
 {
     if (!ck_arr) return;

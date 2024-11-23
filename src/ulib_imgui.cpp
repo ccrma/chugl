@@ -4596,14 +4596,14 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
     QUERY->end_class(QUERY);
 
     // update() vt offset
-    chugin_setVTableOffset(&ui_size_callback_vt_offset, "UI_SizeCallback", "handler");
+    ui_size_callback_vt_offset = chugin_setVTableOffset("UI_SizeCallback", "handler");
 
     BEGIN_CLASS("UI_ComboCallback", "UI_Callback");
     MFUN(ui_combo_callback, "void", "handler");
     ARG("int", "idx");
     END_CLASS();
 
-    chugin_setVTableOffset(&ui_combo_callback_vt_offset, "UI_ComboCallback", "handler");
+    ui_combo_callback_vt_offset = chugin_setVTableOffset("UI_ComboCallback", "handler");
 
     // complex, not yet implemented
     // BEGIN_CLASS("UI_InputTextCallback", "UI_Callback");

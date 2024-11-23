@@ -2611,10 +2611,12 @@ bool Component_RenderPipelineIter(size_t* i, R_RenderPipeline** renderPipeline)
             RenderPipelineIDTableItem* rid_deletion_result
               = (RenderPipelineIDTableItem*)hashmap_delete(_RenderPipelineMap,
                                                            &pipeline->rid);
+            UNUSED_VAR(rid_deletion_result);
             ASSERT(rid_deletion_result);
             RenderPipelinePSOTableItem* pso_deletion_result
               = (RenderPipelinePSOTableItem*)hashmap_delete(render_pipeline_pso_table,
                                                             &pipeline->pso);
+            UNUSED_VAR(pso_deletion_result);
             ASSERT(pso_deletion_result);
             ASSERT(rid_deletion_result->pipeline_offset
                    == pso_deletion_result->pipeline_offset);

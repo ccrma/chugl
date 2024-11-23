@@ -282,6 +282,43 @@ static Chuck_Object* b2CastOutput_create(b2CastOutput* obj, Chuck_VM_Shred* shre
 // static void ckobj_to_b2CastOutput(CK_DL_API API, b2CastOutput* obj,
 // Chuck_Object* ckobj);
 
+// b2DebugDraw
+static void ckobj_to_b2DebugDraw(b2DebugDraw* obj, Chuck_Object* ckobj);
+t_CKUINT b2_DebugDraw_drawingBounds_offset        = 0;
+t_CKUINT b2_DebugDraw_useDrawingBounds_offset     = 0;
+t_CKUINT b2_DebugDraw_drawShapes_offset           = 0;
+t_CKUINT b2_DebugDraw_drawJoints_offset           = 0;
+t_CKUINT b2_DebugDraw_drawJointExtras_offset      = 0;
+t_CKUINT b2_DebugDraw_drawAABBs_offset            = 0;
+t_CKUINT b2_DebugDraw_drawMass_offset             = 0;
+t_CKUINT b2_DebugDraw_drawContacts_offset         = 0;
+t_CKUINT b2_DebugDraw_drawGraphColors_offset      = 0;
+t_CKUINT b2_DebugDraw_drawContactNormals_offset   = 0;
+t_CKUINT b2_DebugDraw_drawContactImpulses_offset  = 0;
+t_CKUINT b2_DebugDraw_drawFrictionImpulses_offset = 0;
+CK_DLL_MFUN(b2_DebugDraw_DrawPolygon);
+CK_DLL_MFUN(b2_DebugDraw_DrawSolidPolygon);
+CK_DLL_MFUN(b2_DebugDraw_DrawCircle);
+CK_DLL_MFUN(b2_DebugDraw_DrawSolidCircle);
+CK_DLL_MFUN(b2_DebugDraw_DrawSolidCapsule);
+CK_DLL_MFUN(b2_DebugDraw_DrawSegment);
+CK_DLL_MFUN(b2_DebugDraw_DrawTransform);
+CK_DLL_MFUN(b2_DebugDraw_DrawPoint);
+CK_DLL_MFUN(b2_DebugDraw_DrawString);
+
+t_CKINT b2_DebugDraw_DrawPolygon_callback_offset      = 0;
+t_CKINT b2_DebugDraw_DrawSolidPolygon_callback_offset = 0;
+t_CKINT b2_DebugDraw_DrawCircle_callback_offset       = 0;
+t_CKINT b2_DebugDraw_DrawSolidCircle_callback_offset  = 0;
+t_CKINT b2_DebugDraw_DrawSolidCapsule_callback_offset = 0;
+t_CKINT b2_DebugDraw_DrawSegment_callback_offset      = 0;
+t_CKINT b2_DebugDraw_DrawTransform_callback_offset    = 0;
+t_CKINT b2_DebugDraw_DrawPoint_callback_offset        = 0;
+t_CKINT b2_DebugDraw_DrawString_callback_offset       = 0;
+
+CK_DLL_CTOR(b2_DebugDraw_ctor);
+CK_DLL_DTOR(b2_DebugDraw_dtor);
+
 // API ----------------------------------------------------------------
 
 // b2
@@ -335,6 +372,7 @@ CK_DLL_SFUN(b2_SegmentDistance);
 
 // b2World ----------------------------------------------------------
 CK_DLL_SFUN(b2_World_IsValid);
+CK_DLL_SFUN(b2_World_Draw);
 CK_DLL_SFUN(b2_World_GetBodyEvents);
 CK_DLL_SFUN(b2_World_GetSensorEvents);
 CK_DLL_SFUN(b2_World_GetContactEvents);
@@ -1909,6 +1947,130 @@ DOC_CLASS("Result of computing the distance between two line segments. https://b
         END_CLASS();
     } // b2Shape
 
+    { // b2DebugDraw
+
+        BEGIN_CLASS("b2DebugDraw", "Object");
+        DOC_CLASS(
+          "This class holds callbacks you can override to draw a Box2D world. "
+          "https://box2d.org/documentation/group__world.html#structb2_debug_draw");
+
+        CTOR(b2_DebugDraw_ctor);
+        DTOR(b2_DebugDraw_dtor);
+
+        // member vars --------------------------------------
+        b2_DebugDraw_drawingBounds_offset = MVAR("vec4", "drawingBounds", false);
+        DOC_VAR(
+          "Bounds to use if restricting drawing to a rectangular region. The AABB is "
+          "in "
+          "the form of @(lowerBound.x, lowerBound.y, upperBound.x, upperBound.y)");
+        b2_DebugDraw_useDrawingBounds_offset = MVAR("int", "useDrawingBounds", false);
+        DOC_VAR(
+          "Option to restrict drawing to a rectangular region. May suffer from "
+          "unstable depth sorting.");
+        b2_DebugDraw_drawShapes_offset = MVAR("int", "drawShapes", false);
+        DOC_VAR("Option to draw shapes");
+        b2_DebugDraw_drawJoints_offset = MVAR("int", "drawJoints", false);
+        DOC_VAR("Option to draw joints");
+        b2_DebugDraw_drawJointExtras_offset = MVAR("int", "drawJointExtras", false);
+        DOC_VAR("Option to draw additional information for joints");
+        b2_DebugDraw_drawAABBs_offset = MVAR("int", "drawAABBs", false);
+        DOC_VAR("Option to draw the bounding boxes for shapes");
+        b2_DebugDraw_drawMass_offset = MVAR("int", "drawMass", false);
+        DOC_VAR("Option to draw the mass and center of mass of dynamic bodies");
+        b2_DebugDraw_drawContacts_offset = MVAR("int", "drawContacts", false);
+        DOC_VAR("Option to draw contact points");
+        b2_DebugDraw_drawGraphColors_offset = MVAR("int", "drawGraphColors", false);
+        DOC_VAR("Option to visualize the graph coloring used for contacts and joints");
+        b2_DebugDraw_drawContactNormals_offset
+          = MVAR("int", "drawContactNormals", false);
+        DOC_VAR("Option to draw contact normals");
+        b2_DebugDraw_drawContactImpulses_offset
+          = MVAR("int", "drawContactImpulses", false);
+        DOC_VAR("Option to draw contact normal impulses");
+        b2_DebugDraw_drawFrictionImpulses_offset
+          = MVAR("int", "drawFrictionImpulses", false);
+        DOC_VAR("Option to draw contact friction impulses");
+
+        // callbacks --------------------------------------
+        MFUN(b2_DebugDraw_DrawPolygon, "void", "drawPolygon");
+        ARG("vec2[]", "vertices");
+        ARG("vec3", "color");
+        DOC_FUNC("Draw a closed polygon provided in CCW order.");
+
+        MFUN(b2_DebugDraw_DrawSolidPolygon, "void", "drawSolidPolygon");
+        ARG("vec2", "position");
+        ARG("float", "rotation_radians");
+        ARG("vec2[]", "vertices");
+        ARG("float", "radius");
+        ARG("vec3", "color");
+        DOC_FUNC("Draw a solid closed polygon provided in CCW order.");
+
+        MFUN(b2_DebugDraw_DrawCircle, "void", "drawCircle");
+        ARG("vec2", "center");
+        ARG("float", "radius");
+        ARG("vec3", "color");
+        DOC_FUNC("Draw a circle outline.");
+
+        MFUN(b2_DebugDraw_DrawSolidCircle, "void", "drawSolidCircle");
+        ARG("vec2", "center");
+        ARG("float", "rotation_radians");
+        ARG("float", "radius");
+        ARG("vec3", "color");
+        DOC_FUNC("Draw a solid circle.");
+
+        MFUN(b2_DebugDraw_DrawSolidCapsule, "void", "drawSolidCapsule");
+        ARG("vec2", "p1");
+        ARG("vec2", "p2");
+        ARG("float", "radius");
+        ARG("vec3", "color");
+        DOC_FUNC("Draw a solid capsule.");
+
+        MFUN(b2_DebugDraw_DrawSegment, "void", "drawSegment");
+        ARG("vec2", "p1");
+        ARG("vec2", "p2");
+        ARG("vec3", "color");
+        DOC_FUNC("Draw a line segment.");
+
+        MFUN(b2_DebugDraw_DrawTransform, "void", "drawTransform");
+        ARG("vec2", "position");
+        ARG("float", "rotation_radians");
+        DOC_FUNC("Draw a transform. Choose your own length scale.");
+
+        MFUN(b2_DebugDraw_DrawPoint, "void", "drawPoint");
+        ARG("vec2", "position");
+        ARG("float", "size");
+        ARG("vec3", "color");
+        DOC_FUNC("Draw a point.");
+
+        MFUN(b2_DebugDraw_DrawString, "void", "drawString");
+        ARG("vec2", "position");
+        ARG("string", "text");
+        DOC_FUNC("Draw a string.");
+
+        END_CLASS();
+
+        // store callback offsets
+        b2_DebugDraw_DrawPolygon_callback_offset
+          = chugin_setVTableOffset("b2DebugDraw", "drawPolygon");
+        b2_DebugDraw_DrawSolidPolygon_callback_offset
+          = chugin_setVTableOffset("b2DebugDraw", "drawSolidPolygon");
+        b2_DebugDraw_DrawCircle_callback_offset
+          = chugin_setVTableOffset("b2DebugDraw", "drawCircle");
+        b2_DebugDraw_DrawSolidCircle_callback_offset
+          = chugin_setVTableOffset("b2DebugDraw", "drawSolidCircle");
+        b2_DebugDraw_DrawSolidCapsule_callback_offset
+          = chugin_setVTableOffset("b2DebugDraw", "drawSolidCapsule");
+        b2_DebugDraw_DrawSegment_callback_offset
+          = chugin_setVTableOffset("b2DebugDraw", "drawSegment");
+        b2_DebugDraw_DrawTransform_callback_offset
+          = chugin_setVTableOffset("b2DebugDraw", "drawTransform");
+        b2_DebugDraw_DrawPoint_callback_offset
+          = chugin_setVTableOffset("b2DebugDraw", "drawPoint");
+        b2_DebugDraw_DrawString_callback_offset
+          = chugin_setVTableOffset("b2DebugDraw", "drawString");
+
+    } // b2DebugDraw
+
     { // b2World --------------------------------------
         BEGIN_CLASS("b2World", "Object");
 
@@ -1917,6 +2079,13 @@ DOC_CLASS("Result of computing the distance between two line segments. https://b
         DOC_FUNC("World id validation. Provides validation for up to 64K allocations.");
 
         // TODO debug draw
+        SFUN(b2_World_Draw, "void", "draw");
+        ARG("int", "world_id");
+        ARG("b2DebugDraw", "draw");
+        DOC_FUNC(
+          "Call this to have the given b2DebugDraw be called with shapes and other "
+          "debug draw data for the given world. Note: you will need to extend "
+          "b2DebugDraw and implement your own drawing functions");
 
         SFUN(b2_World_GetBodyEvents, "void", "bodyEvents");
         ARG("int", "world_id");
@@ -2269,10 +2438,10 @@ CK_DLL_SFUN(b2_ComputePolygonMass)
 
 CK_DLL_SFUN(b2_ComputeCircleAABB)
 {
-    b2Circle circle = ckobj_to_b2Circle(GET_NEXT_OBJECT(ARGS));
+    b2Circle circle       = ckobj_to_b2Circle(GET_NEXT_OBJECT(ARGS));
     b2Transform transform = {};
-    transform.p = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
-    transform.q = b2MakeRot(GET_NEXT_FLOAT(ARGS));
+    transform.p           = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
+    transform.q           = b2MakeRot(GET_NEXT_FLOAT(ARGS));
 
     b2AABB aabb    = b2ComputeCircleAABB(&circle, transform);
     RETURN->v_vec4 = b2AABB_to_vec4(aabb);
@@ -2283,8 +2452,8 @@ CK_DLL_SFUN(b2_ComputeCapsuleAABB)
     b2Capsule capsule = {};
     ckobj_to_b2Capsule(API, &capsule, GET_NEXT_OBJECT(ARGS));
     b2Transform transform = {};
-    transform.p = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
-    transform.q = b2MakeRot(GET_NEXT_FLOAT(ARGS));
+    transform.p           = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
+    transform.q           = b2MakeRot(GET_NEXT_FLOAT(ARGS));
 
     b2AABB aabb    = b2ComputeCapsuleAABB(&capsule, transform);
     RETURN->v_vec4 = b2AABB_to_vec4(aabb);
@@ -2292,10 +2461,10 @@ CK_DLL_SFUN(b2_ComputeCapsuleAABB)
 
 CK_DLL_SFUN(b2_ComputePolygonAABB)
 {
-    b2Polygon* polygon = ckobj_to_b2Polygon(GET_NEXT_OBJECT(ARGS));
+    b2Polygon* polygon    = ckobj_to_b2Polygon(GET_NEXT_OBJECT(ARGS));
     b2Transform transform = {};
-    transform.p = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
-    transform.q = b2MakeRot(GET_NEXT_FLOAT(ARGS));
+    transform.p           = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
+    transform.q           = b2MakeRot(GET_NEXT_FLOAT(ARGS));
 
     b2AABB aabb    = b2ComputePolygonAABB(polygon, transform);
     RETURN->v_vec4 = b2AABB_to_vec4(aabb);
@@ -2306,8 +2475,8 @@ CK_DLL_SFUN(b2_ComputeSegmentAABB)
     b2Segment segment = {};
     ckobj_to_b2Segment(API, &segment, GET_NEXT_OBJECT(ARGS));
     b2Transform transform = {};
-    transform.p = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
-    transform.q = b2MakeRot(GET_NEXT_FLOAT(ARGS));
+    transform.p           = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
+    transform.q           = b2MakeRot(GET_NEXT_FLOAT(ARGS));
 
     b2AABB aabb    = b2ComputeSegmentAABB(&segment, transform);
     RETURN->v_vec4 = b2AABB_to_vec4(aabb);
@@ -2422,6 +2591,15 @@ CK_DLL_SFUN(b2_SegmentDistance)
 CK_DLL_SFUN(b2_World_IsValid)
 {
     RETURN->v_int = b2World_IsValid(GET_B2_ID(b2WorldId, ARGS));
+}
+
+CK_DLL_SFUN(b2_World_Draw)
+{
+    GET_NEXT_B2_ID(b2WorldId, world_id);
+    b2DebugDraw draw = {};
+    ckobj_to_b2DebugDraw(&draw, GET_NEXT_OBJECT(ARGS));
+    /// Call this to draw shapes and other debug draw data
+    b2World_Draw(world_id, &draw);
 }
 
 CK_DLL_SFUN(b2_World_GetBodyEvents)
@@ -3029,16 +3207,17 @@ static void b2RayResult_to_ckobj(Chuck_Object* ckobj, b2RayResult* obj)
     OBJ_MEMBER_FLOAT(ckobj, b2RayResult_fraction_offset) = obj->fraction;
 }
 
-//static void ckobj_to_b2RayResult(b2RayResult* obj, Chuck_Object* ckobj)
+// static void ckobj_to_b2RayResult(b2RayResult* obj, Chuck_Object* ckobj)
 //{
-//    CK_DL_API API        = g_chuglAPI;
-//    obj->shapeId         = OBJ_MEMBER_B2_ID(b2ShapeId, ckobj, b2RayResult_shape_offset);
-//    t_CKVEC2 point_vec2  = OBJ_MEMBER_VEC2(ckobj, b2RayResult_point_offset);
-//    obj->point           = { (float)point_vec2.x, (float)point_vec2.y };
-//    t_CKVEC2 normal_vec2 = OBJ_MEMBER_VEC2(ckobj, b2RayResult_normal_offset);
-//    obj->normal          = { (float)normal_vec2.x, (float)normal_vec2.y };
-//    obj->fraction        = (float)OBJ_MEMBER_FLOAT(ckobj, b2RayResult_fraction_offset);
-//}
+//     CK_DL_API API        = g_chuglAPI;
+//     obj->shapeId         = OBJ_MEMBER_B2_ID(b2ShapeId, ckobj,
+//     b2RayResult_shape_offset); t_CKVEC2 point_vec2  = OBJ_MEMBER_VEC2(ckobj,
+//     b2RayResult_point_offset); obj->point           = { (float)point_vec2.x,
+//     (float)point_vec2.y }; t_CKVEC2 normal_vec2 = OBJ_MEMBER_VEC2(ckobj,
+//     b2RayResult_normal_offset); obj->normal          = { (float)normal_vec2.x,
+//     (float)normal_vec2.y }; obj->fraction        = (float)OBJ_MEMBER_FLOAT(ckobj,
+//     b2RayResult_fraction_offset);
+// }
 
 // ============================================================================
 // b2ShapeDef
@@ -4093,13 +4272,233 @@ static void b2CastOutput_to_ckobj(CK_DL_API API, Chuck_Object* ckobj, b2CastOutp
 // }
 
 // ============================================================================
+// b2DebugDraw
+// ============================================================================
+static t_CKVEC3 b2_HexColorToVec3(b2HexColor c)
+{
+    return {
+        ((c >> 16) & 0xFF) / 255.0f, //
+        ((c >> 8) & 0xFF) / 255.0f,  //
+        (c & 0xFF) / 255.0f,         //
+    };
+}
+
+static void b2_DebugDrawPolygonCallback(const b2Vec2* vertices, int vertexCount,
+                                        b2HexColor color, void* context)
+{
+    // Chuck_Object* ckobj          = (Chuck_Object*)context;
+    // Chuck_VM_Shred* origin_shred = chugin_getOriginShred(ckobj);
+
+    // Chuck_DL_Arg args[2];
+    // args[0].kind = kindof_INT;
+    // args[0].value.v_object
+
+    // ARG("vec2[]", "vertices");
+    // args[0].kind           = kindof_INT;
+    // args[0].value.v_object = size_callback_data;
+    // ARG("vec3", "color");
+
+    // g_chuglAPI->vm->invoke_mfun_immediate_mode(ckobj,
+    // b2_DebugDraw_DrawPolygon_callback_offset, g_chuglVM, origin_shred,
+    //                                            args, ARRAY_LENGTH(args));
+}
+
+static void b2_DebugDrawSolidPolygonCallback(b2Transform transform,
+                                             const b2Vec2* vertices, int vertexCount,
+                                             float radius, b2HexColor color,
+                                             void* context)
+{
+    Chuck_Object* ckobj          = (Chuck_Object*)context;
+    Chuck_VM_Shred* origin_shred = chugin_getOriginShred(ckobj);
+
+    Chuck_DL_Arg args[5];
+    // ARG("vec2", "position");
+    args[0].kind         = kindof_VEC2;
+    args[0].value.v_vec2 = { transform.p.x, transform.p.y };
+    // ARG("float", "rotation_radians");
+    args[1].kind          = kindof_FLOAT;
+    args[1].value.v_float = b2Rot_GetAngle(transform.q);
+    { // ARG("vec2[]", "vertices");
+        // TODO (chuck core bug): passing obj as arg leaks. using static array for now
+        // so we don't create a new one every frame (and leak)
+//        static Chuck_ArrayVec2* vertices_ck_arr{ NULL };
+//        if (!vertices_ck_arr) {
+//            vertices_ck_arr = (Chuck_ArrayVec2*)chugin_createCkObj(
+//              g_chuck_types.vec2_array, true, NULL);
+//        }
+//        Chuck_ArrayVec2* vertices_ck_arr = (Chuck_ArrayVec2*)chugin_createCkObj( g_chuck_types.vec2_array, false, NULL);
+//        // repopulate array
+//        if (g_chuglAPI->object->array_vec2_size(vertices_ck_arr))
+//            g_chuglAPI->object->array_vec2_clear(vertices_ck_arr);
+//        for (int i = 0; i < vertexCount; i++)
+//            g_chuglAPI->object->array_vec2_push_back(vertices_ck_arr,
+//                                                     { vertices[i].x, vertices[i].y });
+
+        // assign to chuck arg
+        args[2].kind           = kindof_INT;
+        args[2].value.v_object = (Chuck_Object*) chugin_createCkFloat2Array((glm::vec2*)vertices, vertexCount, true);
+    }
+
+    // ARG("float", "radius");
+    args[3].kind          = kindof_FLOAT;
+    args[3].value.v_float = radius;
+    // ARG("vec3", "color");
+    args[4].kind         = kindof_VEC3;
+    args[4].value.v_vec3 = b2_HexColorToVec3(color);
+
+    g_chuglAPI->vm->invoke_mfun_immediate_mode(
+      ckobj, b2_DebugDraw_DrawSolidPolygon_callback_offset, g_chuglVM, origin_shred,
+      args, ARRAY_LENGTH(args));
+}
+
+static void b2_DebugDrawCircleCallback(b2Vec2 center, float radius, b2HexColor color,
+                                       void* context)
+{
+    // Chuck_Object* ckobj          = (Chuck_Object*)context;
+    // Chuck_VM_Shred* origin_shred = chugin_getOriginShred(ckobj);
+
+    // Chuck_Object* ckobj = (Chuck_Object*)context;
+    // g_chuglAPI->vm->invoke_mfun_immediate_mode(ckobj, offset, g_chuglVM,
+    // origin_shred,
+    //                                            chuck_fn_args, 1);
+}
+
+static void b2_DebugDrawSolidCircleCallback(b2Transform transform, float radius,
+                                            b2HexColor color, void* context)
+{
+    // Chuck_Object* ckobj = (Chuck_Object*)context;
+    // g_chuglAPI->vm->invoke_mfun_immediate_mode(ckobj, offset, g_chuglVM,
+    // origin_shred,
+    //                                            chuck_fn_args, 1);
+}
+
+static void b2_DebugDrawSolidCapsuleCallback(b2Vec2 p1, b2Vec2 p2, float radius,
+                                             b2HexColor color, void* context)
+{
+    // Chuck_Object* ckobj = (Chuck_Object*)context;
+    // g_chuglAPI->vm->invoke_mfun_immediate_mode(ckobj, offset, g_chuglVM,
+    // origin_shred,
+    //                                            chuck_fn_args, 1);
+}
+
+static void b2_DebugDrawSegmentCallback(b2Vec2 p1, b2Vec2 p2, b2HexColor color,
+                                        void* context)
+{
+    // Chuck_Object* ckobj = (Chuck_Object*)context;
+    // g_chuglAPI->vm->invoke_mfun_immediate_mode(ckobj, offset, g_chuglVM,
+    // origin_shred,
+    //                                            chuck_fn_args, 1);
+}
+
+static void b2_DebugDrawTransformCallback(b2Transform transform, void* context)
+{
+    // Chuck_Object* ckobj = (Chuck_Object*)context;
+    // g_chuglAPI->vm->invoke_mfun_immediate_mode(ckobj, offset, g_chuglVM,
+    // origin_shred,
+    //                                            chuck_fn_args, 1);
+}
+
+static void b2_DebugDrawPointCallback(b2Vec2 p, float size, b2HexColor color,
+                                      void* context)
+{
+    // Chuck_Object* ckobj = (Chuck_Object*)context;
+    // g_chuglAPI->vm->invoke_mfun_immediate_mode(ckobj, offset, g_chuglVM,
+    // origin_shred,
+    //                                            chuck_fn_args, 1);
+}
+
+static void b2_DebugDrawStringCallback(b2Vec2 p, const char* s, void* context)
+{
+    // Chuck_Object* ckobj = (Chuck_Object*)context;
+    // g_chuglAPI->vm->invoke_mfun_immediate_mode(ckobj, offset, g_chuglVM,
+    // origin_shred,
+    //                                            chuck_fn_args, 1);
+}
+
+static void ckobj_to_b2DebugDraw(b2DebugDraw* obj, Chuck_Object* ckobj)
+{
+    CK_DL_API API = g_chuglAPI;
+    // set flags first
+    t_CKVEC4 drawing_bounds = OBJ_MEMBER_VEC4(ckobj, b2_DebugDraw_drawingBounds_offset);
+    obj->drawingBounds      = vec4_to_b2AABB(drawing_bounds);
+    obj->useDrawingBounds
+      = (bool)OBJ_MEMBER_INT(ckobj, b2_DebugDraw_useDrawingBounds_offset);
+    obj->drawShapes = (bool)OBJ_MEMBER_INT(ckobj, b2_DebugDraw_drawShapes_offset);
+    obj->drawJoints = (bool)OBJ_MEMBER_INT(ckobj, b2_DebugDraw_drawJoints_offset);
+    obj->drawJointExtras
+      = (bool)OBJ_MEMBER_INT(ckobj, b2_DebugDraw_drawJointExtras_offset);
+    obj->drawAABBs    = (bool)OBJ_MEMBER_INT(ckobj, b2_DebugDraw_drawAABBs_offset);
+    obj->drawMass     = (bool)OBJ_MEMBER_INT(ckobj, b2_DebugDraw_drawMass_offset);
+    obj->drawContacts = (bool)OBJ_MEMBER_INT(ckobj, b2_DebugDraw_drawContacts_offset);
+    obj->drawGraphColors
+      = (bool)OBJ_MEMBER_INT(ckobj, b2_DebugDraw_drawGraphColors_offset);
+    obj->drawContactNormals
+      = (bool)OBJ_MEMBER_INT(ckobj, b2_DebugDraw_drawContactNormals_offset);
+    obj->drawContactImpulses
+      = (bool)OBJ_MEMBER_INT(ckobj, b2_DebugDraw_drawContactImpulses_offset);
+    obj->drawFrictionImpulses
+      = (bool)OBJ_MEMBER_INT(ckobj, b2_DebugDraw_drawFrictionImpulses_offset);
+
+    obj->context = ckobj;
+
+    // set the callbacks
+    obj->DrawPolygon      = b2_DebugDrawPolygonCallback;
+    obj->DrawSolidPolygon = b2_DebugDrawSolidPolygonCallback;
+    obj->DrawCircle       = b2_DebugDrawCircleCallback;
+    obj->DrawSolidCircle  = b2_DebugDrawSolidCircleCallback;
+    obj->DrawSolidCapsule = b2_DebugDrawSolidCapsuleCallback;
+    obj->DrawSegment      = b2_DebugDrawSegmentCallback;
+    obj->DrawTransform    = b2_DebugDrawTransformCallback;
+    obj->DrawPoint        = b2_DebugDrawPointCallback;
+    obj->DrawString       = b2_DebugDrawStringCallback;
+}
+
+CK_DLL_CTOR(b2_DebugDraw_ctor)
+{
+    // origin shred needed for API->vm->invoke_mfun_immediate_mode
+    chugin_setOriginShred(SELF, SHRED);
+}
+
+CK_DLL_DTOR(b2_DebugDraw_dtor)
+{
+    chugin_removeFromOriginShredMap(SELF);
+}
+
+CK_DLL_MFUN(b2_DebugDraw_DrawPolygon)
+{
+}
+CK_DLL_MFUN(b2_DebugDraw_DrawSolidPolygon)
+{
+}
+CK_DLL_MFUN(b2_DebugDraw_DrawCircle)
+{
+}
+CK_DLL_MFUN(b2_DebugDraw_DrawSolidCircle)
+{
+}
+CK_DLL_MFUN(b2_DebugDraw_DrawSolidCapsule)
+{
+}
+CK_DLL_MFUN(b2_DebugDraw_DrawSegment)
+{
+}
+CK_DLL_MFUN(b2_DebugDraw_DrawTransform)
+{
+}
+CK_DLL_MFUN(b2_DebugDraw_DrawPoint)
+{
+}
+CK_DLL_MFUN(b2_DebugDraw_DrawString)
+{
+}
+
+// ============================================================================
 // b2ContactHitEvent
 // ============================================================================
 
 static void b2ContactHitEvent_to_ckobj(CK_DL_API API, Chuck_Object* ckobj,
                                        b2ContactHitEvent* obj)
 {
-
     OBJ_MEMBER_B2_ID(b2ShapeId, ckobj, b2ContactHitEvent_shapeIdA_offset)
       = obj->shapeIdA;
     OBJ_MEMBER_B2_ID(b2ShapeId, ckobj, b2ContactHitEvent_shapeIdB_offset)

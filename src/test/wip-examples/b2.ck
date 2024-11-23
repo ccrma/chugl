@@ -180,6 +180,25 @@ GG.scene().camera(camera);
 
 GWindow.maximize();
 
+// custom debug draw
+class DebugDraw extends b2DebugDraw
+{
+	fun void drawSolidPolygon(
+		vec2 position,
+		float rotation_radians,
+		vec2 vertices[], 
+		float radius,
+		vec3 color
+	) {
+		for (auto v : vertices)
+			<<< v >>>;
+		<<< GG.fc() >>>;
+	}
+}
+
+DebugDraw debug_draw;
+true => debug_draw.drawShapes;
+
 b2WorldDef world_def;
 // .05 => world_def.hitEventThreshold;
 
@@ -270,4 +289,6 @@ while (1) {
     // for (int i; i < end_touch_events.size(); 2 +=> i) {
     //     <<< "end touch:", end_touch_events[i], "stopped touching", end_touch_events[i+1] >>>;
     // }
+
+	b2World.draw(world_id, debug_draw);
 }
