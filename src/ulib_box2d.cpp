@@ -4286,21 +4286,21 @@ static t_CKVEC3 b2_HexColorToVec3(b2HexColor c)
 static void b2_DebugDrawPolygonCallback(const b2Vec2* vertices, int vertexCount,
                                         b2HexColor color, void* context)
 {
-    // Chuck_Object* ckobj          = (Chuck_Object*)context;
-    // Chuck_VM_Shred* origin_shred = chugin_getOriginShred(ckobj);
+    Chuck_Object* ckobj          = (Chuck_Object*)context;
+    Chuck_VM_Shred* origin_shred = chugin_getOriginShred(ckobj);
 
-    // Chuck_DL_Arg args[2];
-    // args[0].kind = kindof_INT;
-    // args[0].value.v_object
-
+    Chuck_DL_Arg args[2];
     // ARG("vec2[]", "vertices");
-    // args[0].kind           = kindof_INT;
-    // args[0].value.v_object = size_callback_data;
+    args[0].kind           = kindof_INT;
+    args[0].value.v_object = (Chuck_Object*)chugin_createCkFloat2Array(
+      (glm::vec2*)vertices, vertexCount, true);
     // ARG("vec3", "color");
+    args[1].kind         = kindof_VEC3;
+    args[1].value.v_vec3 = b2_HexColorToVec3(color);
 
-    // g_chuglAPI->vm->invoke_mfun_immediate_mode(ckobj,
-    // b2_DebugDraw_DrawPolygon_callback_offset, g_chuglVM, origin_shred,
-    //                                            args, ARRAY_LENGTH(args));
+    g_chuglAPI->vm->invoke_mfun_immediate_mode(
+      ckobj, b2_DebugDraw_DrawPolygon_callback_offset, g_chuglVM, origin_shred, args,
+      ARRAY_LENGTH(args));
 }
 
 static void b2_DebugDrawSolidPolygonCallback(b2Transform transform,
@@ -4318,27 +4318,10 @@ static void b2_DebugDrawSolidPolygonCallback(b2Transform transform,
     // ARG("float", "rotation_radians");
     args[1].kind          = kindof_FLOAT;
     args[1].value.v_float = b2Rot_GetAngle(transform.q);
-    { // ARG("vec2[]", "vertices");
-        // TODO (chuck core bug): passing obj as arg leaks. using static array for now
-        // so we don't create a new one every frame (and leak)
-//        static Chuck_ArrayVec2* vertices_ck_arr{ NULL };
-//        if (!vertices_ck_arr) {
-//            vertices_ck_arr = (Chuck_ArrayVec2*)chugin_createCkObj(
-//              g_chuck_types.vec2_array, true, NULL);
-//        }
-//        Chuck_ArrayVec2* vertices_ck_arr = (Chuck_ArrayVec2*)chugin_createCkObj( g_chuck_types.vec2_array, false, NULL);
-//        // repopulate array
-//        if (g_chuglAPI->object->array_vec2_size(vertices_ck_arr))
-//            g_chuglAPI->object->array_vec2_clear(vertices_ck_arr);
-//        for (int i = 0; i < vertexCount; i++)
-//            g_chuglAPI->object->array_vec2_push_back(vertices_ck_arr,
-//                                                     { vertices[i].x, vertices[i].y });
-
-        // assign to chuck arg
-        args[2].kind           = kindof_INT;
-        args[2].value.v_object = (Chuck_Object*) chugin_createCkFloat2Array((glm::vec2*)vertices, vertexCount, true);
-    }
-
+    // ARG("vec2[]", "vertices");
+    args[2].kind           = kindof_INT;
+    args[2].value.v_object = (Chuck_Object*)chugin_createCkFloat2Array(
+      (glm::vec2*)vertices, vertexCount, true);
     // ARG("float", "radius");
     args[3].kind          = kindof_FLOAT;
     args[3].value.v_float = radius;
@@ -4354,44 +4337,84 @@ static void b2_DebugDrawSolidPolygonCallback(b2Transform transform,
 static void b2_DebugDrawCircleCallback(b2Vec2 center, float radius, b2HexColor color,
                                        void* context)
 {
-    // Chuck_Object* ckobj          = (Chuck_Object*)context;
-    // Chuck_VM_Shred* origin_shred = chugin_getOriginShred(ckobj);
+    Chuck_Object* ckobj          = (Chuck_Object*)context;
+    Chuck_VM_Shred* origin_shred = chugin_getOriginShred(ckobj);
 
-    // Chuck_Object* ckobj = (Chuck_Object*)context;
-    // g_chuglAPI->vm->invoke_mfun_immediate_mode(ckobj, offset, g_chuglVM,
-    // origin_shred,
-    //                                            chuck_fn_args, 1);
+    Chuck_DL_Arg args[3];
+
+    // ARG("vec2", "center");
+    args[0].kind         = kindof_VEC2;
+    args[0].value.v_vec2 = { center.x, center.y };
+    // ARG("float", "radius");
+    args[1].kind          = kindof_FLOAT;
+    args[1].value.v_float = radius;
+    // ARG("vec3", "color");
+    args[2].kind         = kindof_VEC3;
+    args[2].value.v_vec3 = b2_HexColorToVec3(color);
+
+    g_chuglAPI->vm->invoke_mfun_immediate_mode(
+      ckobj, b2_DebugDraw_DrawCircle_callback_offset, g_chuglVM, origin_shred, args,
+      ARRAY_LENGTH(args));
 }
 
 static void b2_DebugDrawSolidCircleCallback(b2Transform transform, float radius,
                                             b2HexColor color, void* context)
 {
-    // Chuck_Object* ckobj = (Chuck_Object*)context;
-    // g_chuglAPI->vm->invoke_mfun_immediate_mode(ckobj, offset, g_chuglVM,
-    // origin_shred,
-    //                                            chuck_fn_args, 1);
+    Chuck_Object* ckobj          = (Chuck_Object*)context;
+    Chuck_VM_Shred* origin_shred = chugin_getOriginShred(ckobj);
+
+    Chuck_DL_Arg args[4];
+
+    // ARG("vec2", "center");
+    args[0].kind         = kindof_VEC2;
+    args[0].value.v_vec2 = { transform.p.x, transform.p.y };
+    // ARG("float", "rotation_radians");
+    args[1].kind          = kindof_FLOAT;
+    args[1].value.v_float = b2Rot_GetAngle(transform.q);
+    // ARG("float", "radius");
+    args[2].kind          = kindof_FLOAT;
+    args[2].value.v_float = radius;
+    // ARG("vec3", "color");
+    args[3].kind         = kindof_VEC3;
+    args[3].value.v_vec3 = b2_HexColorToVec3(color);
+
+    g_chuglAPI->vm->invoke_mfun_immediate_mode(
+      ckobj, b2_DebugDraw_DrawSolidCircle_callback_offset, g_chuglVM, origin_shred,
+      args, ARRAY_LENGTH(args));
 }
 
 static void b2_DebugDrawSolidCapsuleCallback(b2Vec2 p1, b2Vec2 p2, float radius,
                                              b2HexColor color, void* context)
 {
-    // Chuck_Object* ckobj = (Chuck_Object*)context;
-    // g_chuglAPI->vm->invoke_mfun_immediate_mode(ckobj, offset, g_chuglVM,
-    // origin_shred,
-    //                                            chuck_fn_args, 1);
+    ASSERT(false); // not impl
 }
 
 static void b2_DebugDrawSegmentCallback(b2Vec2 p1, b2Vec2 p2, b2HexColor color,
                                         void* context)
 {
-    // Chuck_Object* ckobj = (Chuck_Object*)context;
-    // g_chuglAPI->vm->invoke_mfun_immediate_mode(ckobj, offset, g_chuglVM,
-    // origin_shred,
-    //                                            chuck_fn_args, 1);
+    Chuck_Object* ckobj          = (Chuck_Object*)context;
+    Chuck_VM_Shred* origin_shred = chugin_getOriginShred(ckobj);
+
+    Chuck_DL_Arg args[3];
+
+    // ARG("vec2", "p1");
+    args[0].kind         = kindof_VEC2;
+    args[0].value.v_vec2 = { p1.x, p1.y };
+    // ARG("vec2", "p2");
+    args[1].kind         = kindof_VEC2;
+    args[1].value.v_vec2 = { p2.x, p2.y };
+    // ARG("vec3", "color");
+    args[2].kind         = kindof_VEC3;
+    args[2].value.v_vec3 = b2_HexColorToVec3(color);
+
+    g_chuglAPI->vm->invoke_mfun_immediate_mode(
+      ckobj, b2_DebugDraw_DrawSegment_callback_offset, g_chuglVM, origin_shred, args,
+      ARRAY_LENGTH(args));
 }
 
 static void b2_DebugDrawTransformCallback(b2Transform transform, void* context)
 {
+    ASSERT(false); // not impl
     // Chuck_Object* ckobj = (Chuck_Object*)context;
     // g_chuglAPI->vm->invoke_mfun_immediate_mode(ckobj, offset, g_chuglVM,
     // origin_shred,
@@ -4401,6 +4424,7 @@ static void b2_DebugDrawTransformCallback(b2Transform transform, void* context)
 static void b2_DebugDrawPointCallback(b2Vec2 p, float size, b2HexColor color,
                                       void* context)
 {
+    ASSERT(false); // not impl
     // Chuck_Object* ckobj = (Chuck_Object*)context;
     // g_chuglAPI->vm->invoke_mfun_immediate_mode(ckobj, offset, g_chuglVM,
     // origin_shred,
@@ -4409,6 +4433,7 @@ static void b2_DebugDrawPointCallback(b2Vec2 p, float size, b2HexColor color,
 
 static void b2_DebugDrawStringCallback(b2Vec2 p, const char* s, void* context)
 {
+    // ASSERT(false); // not impl
     // Chuck_Object* ckobj = (Chuck_Object*)context;
     // g_chuglAPI->vm->invoke_mfun_immediate_mode(ckobj, offset, g_chuglVM,
     // origin_shred,

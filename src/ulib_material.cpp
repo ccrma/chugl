@@ -994,6 +994,23 @@ CK_DLL_CTOR(shader_ctor)
       OBJ_MEMBER_INT_ARRAY(shader_desc, shader_desc_vertex_layout_offset),
       (int*)vertex_layout, ARRAY_LENGTH(vertex_layout));
 
+    // validate vertex layouts
+    for (int i = 0; i < vertex_layout_len; i++) {
+        WGPUVertexFormat format = vertex_layout[i];
+
+        bool format_is_valid_float = (format >= WGPUVertexFormat_Float32
+                                      && format <= WGPUVertexFormat_Float32x4);
+        bool format_is_valid_int
+          = (format >= WGPUVertexFormat_Sint32 && format <= WGPUVertexFormat_Sint32x4);
+        if (!(format_is_valid_float || format_is_valid_int)) {
+            log_warn("Invalid VertexFormat %d given to ShaderDesc.vertexLayout ",
+                     format);
+            log_warn(
+              "  | Valid formats include VertexFormat.Float, VertexFormat.Int, "
+              "VertexFormat.Int2 etc. ");
+        }
+    }
+
     SG_ShaderIncludes includes = {};
     includes.lit               = OBJ_MEMBER_INT(shader_desc, shader_desc_is_lit);
     includes.uses_env_map      = OBJ_MEMBER_INT(shader_desc, shader_desc_uses_envmap);

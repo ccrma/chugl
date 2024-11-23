@@ -174,43 +174,43 @@ b2World > b2Body > b2shape
 
 
 */
+
+
+/*
+TODO 11/23
+- test other shapes
+	- circle
+	- custom polygons
+	- cylinder
+- keyboard control: 1 to drop random polygon, 2 to drop circle, etc...
+	- after 30 shapes despawn the oldest
+- implement other debugDraw callbacks
+- add sokol timer to ChuGL API
+- profile debug draw on audio side
+
+- add immediate-mode b2_world.step(int substeps, int worker_threads, float dt) command and simpler variants
+
+*/
 GOrbitCamera camera --> GG.scene();
 GG.scene().camera(camera);
 camera.posZ(50);
 
-me.dir() + "./b2_solid_polygon_shader.wgsl" @=> string b2_solid_polygon_shader_path;
-// set drawing shader
-ShaderDesc b2_solid_polygon_shader_desc;
-b2_solid_polygon_shader_path => b2_solid_polygon_shader_desc.vertexPath;
-b2_solid_polygon_shader_path => b2_solid_polygon_shader_desc.fragmentPath;
-null => b2_solid_polygon_shader_desc.vertexLayout; // no vertex layout
-// material shader
-Shader b2_solid_polygon_shader(b2_solid_polygon_shader_desc);
-Material b2_solid_polygon_material;
-b2_solid_polygon_material.shader(b2_solid_polygon_shader);
-
-// initialize material uniforms
-// TODO: binding empty storage buffer crashes wgpu
-int empty_int_arr[1];
-float empty_float_arr[1];
-b2_solid_polygon_material.storageBuffer(0, empty_int_arr);
-b2_solid_polygon_material.storageBuffer(1, empty_float_arr);
-b2_solid_polygon_material.storageBuffer(2, empty_float_arr);
-b2_solid_polygon_material.storageBuffer(3, empty_float_arr);
-b2_solid_polygon_material.storageBuffer(4, empty_float_arr);
-b2_solid_polygon_material.storageBuffer(5, empty_float_arr);
-
-
-
-Geometry b2_solid_polygon_geo;
-
-GMesh b2_solid_polygon_mesh(b2_solid_polygon_geo, b2_solid_polygon_material) --> GG.scene();
-
-
-// custom debug draw
-class DebugDraw extends b2DebugDraw
+class b2DebugDraw_SolidPolygon extends GGen
 {
+	me.dir() + "./b2_solid_polygon_shader.wgsl" @=> string b2_solid_polygon_shader_path;
 
+	// set drawing shader
+	ShaderDesc b2_solid_polygon_shader_desc;
+	b2_solid_polygon_shader_path => b2_solid_polygon_shader_desc.vertexPath;
+	b2_solid_polygon_shader_path => b2_solid_polygon_shader_desc.fragmentPath;
+	null => b2_solid_polygon_shader_desc.vertexLayout; // no vertex layout
+
+	// material shader (draws all solid polygons in 1 draw call)
+	Shader b2_solid_polygon_shader(b2_solid_polygon_shader_desc);
+	Material b2_solid_polygon_material;
+	b2_solid_polygon_material.shader(b2_solid_polygon_shader);
+
+	// storage buffers
 	int u_polygon_vertex_counts[0];
 	float u_polygon_vertices[0];
 	float u_polygon_transforms[0];
@@ -219,8 +219,27 @@ class DebugDraw extends b2DebugDraw
 	float u_polygon_radius[0];
 	int num_solid_polygons;
 
+	// initialize material uniforms
+	// TODO: binding empty storage buffer crashes wgpu
+	int empty_int_arr[1];
+	float empty_float_arr[1];
+	initStorageBuffers();
+
+	Geometry b2_solid_polygon_geo; // just used to set vertex count
+	GMesh b2_solid_polygon_mesh(b2_solid_polygon_geo, b2_solid_polygon_material) --> this;
+
 	// set trillion to be the initial aabb (flt max is actualy more like 3.4e38)
 	@(1000000000, 1000000000, -1000000000, -1000000000) => vec4 init_aabb;
+
+	fun void initStorageBuffers() {
+		b2_solid_polygon_material.storageBuffer(0, empty_int_arr);
+		b2_solid_polygon_material.storageBuffer(1, empty_float_arr);
+		b2_solid_polygon_material.storageBuffer(2, empty_float_arr);
+		b2_solid_polygon_material.storageBuffer(3, empty_float_arr);
+		b2_solid_polygon_material.storageBuffer(4, empty_float_arr);
+		b2_solid_polygon_material.storageBuffer(5, empty_float_arr);
+	}
+
 
 	fun void drawSolidPolygon(
 		vec2 position,
@@ -238,7 +257,6 @@ class DebugDraw extends b2DebugDraw
 		for (auto v : vertices) {
 			u_polygon_vertices << v.x;
 			u_polygon_vertices << v.y;
-			<<< v >>>;
 
 			// update aabb
 			Math.min(aabb.x, v.x) => aabb.x;
@@ -247,35 +265,25 @@ class DebugDraw extends b2DebugDraw
 			Math.max(aabb.w, v.y) => aabb.w;
 		}
 
-		u_polygon_aabb << aabb.x;
-		u_polygon_aabb << aabb.y;
-		u_polygon_aabb << aabb.z;
-		u_polygon_aabb << aabb.w;
+		u_polygon_aabb << aabb.x << aabb.y << aabb.z << aabb.w;
 
-		u_polygon_transforms << position.x;
-		u_polygon_transforms << position.y;
-		u_polygon_transforms << Math.cos(rotation_radians);
-		u_polygon_transforms << Math.sin(rotation_radians);
+		u_polygon_transforms << position.x << position.y; // position
+		u_polygon_transforms << Math.cos(rotation_radians) << Math.sin(rotation_radians); // rotation
 
 		u_polygon_radius << radius;
 
-		u_polygon_colors << color.r;
-		u_polygon_colors << color.g;
-		u_polygon_colors << color.b;
+		u_polygon_colors << color.r << color.g << color.b;
 		u_polygon_colors << 1.0;
-		<<< "color", color >>>;
 	}
 
-	// upload all the collected debug draw data to the materials/geometry/GPU
 	fun void update() {
+		if (num_solid_polygons == 0) {
+			initStorageBuffers(); // needed because empty storage buffers cause WGPU to crash on bindgroup creation
+			return;
+		}
+
 		// upload
 		{ // b2 solid polygon
-			// @group(1) @binding(0) var<storage> u_polygon_vertex_counts : array<i32>;
-			// @group(1) @binding(1) var<storage> u_polygon_vertices : array<f32>; // x1, y1, x2, y2 ... vec2f
-			// @group(1) @binding(2) var<storage> u_polygon_transforms : array<f32>; // every 3 floats is a transform, x, y, cos rotation, sin rot radians vecf4f
-			// @group(1) @binding(3) var<storage> u_polygon_colors: array<f32>; // every 4 floats is a color vec4f
-			// @group(1) @binding(4) var<storage> u_polygon_aabb: array<f32>; // lower left, upper right vec4f
-			// @group(1) @binding(5) var<storage> u_polygon_radius: array<f32>; // f32
 			b2_solid_polygon_material.storageBuffer(0, u_polygon_vertex_counts);
 			b2_solid_polygon_material.storageBuffer(1, u_polygon_vertices);
 			b2_solid_polygon_material.storageBuffer(2, u_polygon_transforms);
@@ -285,7 +293,6 @@ class DebugDraw extends b2DebugDraw
 
 			// update geometry vertices (6 vertices per polygon plane)
 			b2_solid_polygon_geo.vertexCount(6 * num_solid_polygons);
-			<<< num_solid_polygons, "solid polygons" >>>;
 		}
 
 		// zero
@@ -301,8 +308,91 @@ class DebugDraw extends b2DebugDraw
 	}
 }
 
+// batch draws simple line segments (no width)
+class b2DebugDraw_Lines extends GGen
+{
+	me.dir() + "./b2_lines_shader.wgsl" @=> string shader_path;
+
+	// set drawing shader
+	ShaderDesc shader_desc;
+	shader_path => shader_desc.vertexPath;
+	shader_path => shader_desc.fragmentPath;
+	[VertexFormat.Float2] @=> shader_desc.vertexLayout; // no vertex layout
+
+	// material shader (draws all line segments in 1 draw call)
+	Shader shader(shader_desc);
+	<<< "lines shader id", shader.id() >>>;
+	Material material;
+	material.shader(shader);
+	material.topology(Material.Topology_LineList);
+
+	// vertex buffers
+	vec2 u_positions[0];
+
+	Geometry geo; // just used to set vertex count
+	geo.vertexCount(0);
+	GMesh mesh(geo, material) --> this;
+
+	fun void drawSegment( vec2 p1, vec2 p2) {
+		u_positions << p1 << p2;
+	}
+
+	fun void update()
+	{
+		// update GPU vertex buffers
+		geo.vertexAttribute(0, u_positions);
+		geo.vertexCount(u_positions.size());
+
+		// reset
+		u_positions.clear();
+	}
+}
+
+
+// custom debug draw
+class DebugDraw extends b2DebugDraw
+{
+	b2DebugDraw_SolidPolygon solid_polygons --> GG.scene();
+	b2DebugDraw_Lines lines --> GG.scene();
+
+	fun void drawSolidPolygon(
+		vec2 position,
+		float rotation_radians,
+		vec2 vertices[], 
+		float radius,
+		vec3 color
+	) {
+		solid_polygons.drawSolidPolygon(position, rotation_radians, vertices, radius, color);
+	}
+
+	fun void drawSegment(
+		vec2 p1, vec2 p2, vec3 color
+	) {
+		// color unused
+		lines.drawSegment(p1, p2);
+	}
+
+	// draws a polygon outline
+	fun void drawPolygon(vec2 vertices[], vec3 color) {
+		// just draw as individual line segments for now
+		for (int i; i < vertices.size() - 1; i++)
+			lines.drawSegment(vertices[i], vertices[i+1]);
+
+		// to close the loop
+		lines.drawSegment(vertices[-1], vertices[0]);
+	}
+
+	// upload all the collected debug draw data to the materials/geometry/GPU
+	fun void update() {
+		solid_polygons.update();
+		lines.update();
+	}
+}
+
 DebugDraw debug_draw;
 true => debug_draw.drawShapes;
+true => debug_draw.drawAABBs; // calls drawPolygon, not drawSegment
+
 
 b2WorldDef world_def;
 // .05 => world_def.hitEventThreshold;

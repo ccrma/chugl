@@ -41,6 +41,9 @@
 CK_DLL_CTOR(geo_ctor);
 
 CK_DLL_MFUN(geo_set_vertex_attribute);
+CK_DLL_MFUN(geo_set_vertex_attribute_vec2);
+CK_DLL_MFUN(geo_set_vertex_attribute_vec3);
+CK_DLL_MFUN(geo_set_vertex_attribute_vec4);
 CK_DLL_MFUN(geo_set_vertex_attribute_int);
 
 CK_DLL_MFUN(geo_set_positions);
@@ -188,6 +191,27 @@ static void ulib_geometry_query(Chuck_DL_Query* QUERY)
     DOC_FUNC(
       "Set the vertex attribute data for a geometry. location must be between "
       "0 and AttributeLocation_Max.");
+
+    MFUN(geo_set_vertex_attribute_vec2, "void", "vertexAttribute");
+    ARG("int", "location");
+    ARG("vec2[]", "attributeData");
+    DOC_FUNC(
+      "Set the vertex attribute data for a geometry. location must be between "
+      "0 and AttributeLocation_Max. Assumes attribute has 2 float components");
+
+    MFUN(geo_set_vertex_attribute_vec3, "void", "vertexAttribute");
+    ARG("int", "location");
+    ARG("vec3[]", "attributeData");
+    DOC_FUNC(
+      "Set the vertex attribute data for a geometry. location must be between "
+      "0 and AttributeLocation_Max. Assumes attribute has 3 float components");
+
+    MFUN(geo_set_vertex_attribute_vec4, "void", "vertexAttribute");
+    ARG("int", "location");
+    ARG("vec4[]", "attributeData");
+    DOC_FUNC(
+      "Set the vertex attribute data for a geometry. location must be between "
+      "0 and AttributeLocation_Max. Assumes attribute has 4 float components");
 
     MFUN(geo_set_vertex_attribute_int, "void", "vertexAttribute");
     ARG("int", "location");
@@ -787,6 +811,60 @@ CK_DLL_MFUN(geo_set_vertex_attribute)
     // set attribute locally
     Arena* vertex_attrib_data = SG_Geometry::setAttribute(
       geo, location, num_components, API, (Chuck_Object*)ck_arr, 1, false);
+
+    // push attribute change to command queue
+    CQ_PushCommand_GeometrySetVertexAttribute(geo, location, num_components,
+                                              vertex_attrib_data->base,
+                                              vertex_attrib_data->curr);
+}
+
+CK_DLL_MFUN(geo_set_vertex_attribute_vec2)
+{
+    t_CKINT location        = GET_NEXT_INT(ARGS);
+    t_CKINT num_components  = 2;
+    Chuck_ArrayVec2* ck_arr = GET_NEXT_VEC2_ARRAY(ARGS);
+
+    SG_Geometry* geo = SG_GetGeometry(OBJ_MEMBER_UINT(SELF, component_offset_id));
+
+    // set attribute locally
+    Arena* vertex_attrib_data = SG_Geometry::setAttribute(
+      geo, location, num_components, API, (Chuck_Object*)ck_arr, num_components, false);
+
+    // push attribute change to command queue
+    CQ_PushCommand_GeometrySetVertexAttribute(geo, location, num_components,
+                                              vertex_attrib_data->base,
+                                              vertex_attrib_data->curr);
+}
+
+CK_DLL_MFUN(geo_set_vertex_attribute_vec3)
+{
+    t_CKINT location        = GET_NEXT_INT(ARGS);
+    t_CKINT num_components  = 3;
+    Chuck_ArrayVec3* ck_arr = GET_NEXT_VEC3_ARRAY(ARGS);
+
+    SG_Geometry* geo = SG_GetGeometry(OBJ_MEMBER_UINT(SELF, component_offset_id));
+
+    // set attribute locally
+    Arena* vertex_attrib_data = SG_Geometry::setAttribute(
+      geo, location, num_components, API, (Chuck_Object*)ck_arr, num_components, false);
+
+    // push attribute change to command queue
+    CQ_PushCommand_GeometrySetVertexAttribute(geo, location, num_components,
+                                              vertex_attrib_data->base,
+                                              vertex_attrib_data->curr);
+}
+
+CK_DLL_MFUN(geo_set_vertex_attribute_vec4)
+{
+    t_CKINT location        = GET_NEXT_INT(ARGS);
+    t_CKINT num_components  = 4;
+    Chuck_ArrayVec4* ck_arr = GET_NEXT_VEC4_ARRAY(ARGS);
+
+    SG_Geometry* geo = SG_GetGeometry(OBJ_MEMBER_UINT(SELF, component_offset_id));
+
+    // set attribute locally
+    Arena* vertex_attrib_data = SG_Geometry::setAttribute(
+      geo, location, num_components, API, (Chuck_Object*)ck_arr, num_components, false);
 
     // push attribute change to command queue
     CQ_PushCommand_GeometrySetVertexAttribute(geo, location, num_components,
