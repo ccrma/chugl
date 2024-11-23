@@ -66,8 +66,6 @@ static_assert(sizeof(b2ShapeId) <= sizeof(t_CKINT), "b2Shape size mismatch");
 
 #define OBJ_MEMBER_B2_ID(type, ckobj, offset) (*(type*)OBJ_MEMBER_DATA(ckobj, offset))
 
-#define OBJ_MEMBER_B2_PTR(type, ckobj, offset) (*(type**)OBJ_MEMBER_DATA(ckobj, offset))
-
 #define B2_ID_TO_CKINT(id) (*(t_CKINT*)&(id))
 
 b2BodyType ckint_to_b2BodyType(t_CKINT type)
@@ -226,20 +224,95 @@ static void b2ShapeDef_to_ckobj(CK_DL_API API, Chuck_Object* ckobj, b2ShapeDef* 
 static void ckobj_to_b2ShapeDef(CK_DL_API API, b2ShapeDef* obj, Chuck_Object* ckobj);
 
 // b2Polygon
+
+struct b2PolygonPoolEntry {
+    b2Polygon polygon;
+    u32 next_empty; // index of next available slot in pool.
+};
+
+struct b2PolygonPool {
+    // contiguous array of b2PolygonPoolEntry
+    // first item at index 0 is reserved for bookkeeping
+    Arena polygon_arena;
+    u32 next_empty = 1; // index of next available entry
+
+    static void init(b2PolygonPool* pool)
+    {
+        Arena::init(&pool->polygon_arena,
+                    sizeof(b2PolygonPoolEntry)
+                      * 2); // nocheckin change to 32 after testing realloc
+        // init first sentinal entry
+        pool->next_empty = 1;
+        ARENA_PUSH_ZERO_TYPE(&pool->polygon_arena, b2PolygonPoolEntry);
+    }
+
+    static b2Polygon* get(b2PolygonPool* pool, u32 index)
+    {
+        ASSERT(index != 0);
+        ASSERT(index < b2PolygonPool::len(pool));
+        return &(
+          ARENA_GET_TYPE(&pool->polygon_arena, b2PolygonPoolEntry, index)->polygon);
+    }
+
+    static u32 len(b2PolygonPool* pool)
+    {
+        return ARENA_LENGTH(&pool->polygon_arena, b2PolygonPoolEntry);
+    }
+
+    static u32 add(b2PolygonPool* pool, b2Polygon* added_entry)
+    {
+        ASSERT(pool->next_empty != 0);
+        b2PolygonPoolEntry* entry;
+        // check if we need to realloc
+        if (pool->next_empty >= b2PolygonPool::len(pool)) {
+            ASSERT(pool->next_empty == b2PolygonPool::len(pool));
+            entry = ARENA_PUSH_ZERO_TYPE(&pool->polygon_arena, b2PolygonPoolEntry);
+        } else {
+            entry = ARENA_GET_TYPE(&pool->polygon_arena, b2PolygonPoolEntry,
+                                   pool->next_empty);
+        }
+
+        // copy entry
+        entry->polygon = *added_entry;
+
+        // update next empty
+        u32 index = pool->next_empty;
+        pool->next_empty
+          = (entry->next_empty == 0) ? pool->next_empty + 1 : entry->next_empty;
+
+        return index;
+    }
+
+    static void del(b2PolygonPool* pool, u32 index)
+    {
+        ASSERT(index != 0);
+        ASSERT(index < b2PolygonPool::len(pool));
+        ASSERT(pool->next_empty != 0);
+
+        b2PolygonPoolEntry* deleted_entry
+          = ARENA_GET_TYPE(&pool->polygon_arena, b2PolygonPoolEntry, index);
+        deleted_entry->next_empty = pool->next_empty;
+        pool->next_empty          = index;
+    }
+};
+
+static b2PolygonPool b2polygon_pool = {};
+
 static t_CKUINT b2Polygon_data_offset = 0;
 static Chuck_Object* b2Polygon_create(Chuck_VM_Shred* shred, b2Polygon* polygon)
 {
     CK_DL_API API             = g_chuglAPI;
-    b2Polygon* poly           = new b2Polygon(*polygon);
+    u32 index                 = b2PolygonPool::add(&b2polygon_pool, polygon);
     Chuck_Object* polygon_obj = chugin_createCkObj("b2Polygon", false, shred);
-    OBJ_MEMBER_UINT(polygon_obj, b2Polygon_data_offset) = (t_CKUINT)poly;
+    OBJ_MEMBER_UINT(polygon_obj, b2Polygon_data_offset) = (t_CKUINT)index;
     return polygon_obj;
 }
 
 static b2Polygon* ckobj_to_b2Polygon(Chuck_Object* ckobj)
 {
     CK_DL_API API = g_chuglAPI;
-    return (b2Polygon*)OBJ_MEMBER_UINT(ckobj, b2Polygon_data_offset);
+    return b2PolygonPool::get(&b2polygon_pool,
+                              OBJ_MEMBER_UINT(ckobj, b2Polygon_data_offset));
 }
 
 // b2BodyDef
@@ -414,6 +487,7 @@ CK_DLL_MFUN(b2Polygon_get_radius);
 static t_CKUINT b2Circle_position_offset = 0;
 static t_CKUINT b2Circle_radius_offset   = 0;
 CK_DLL_CTOR(b2Circle_ctor);
+CK_DLL_CTOR(b2Circle_ctor_centered);
 
 static void b2Circle_to_ckobj(CK_DL_API API, Chuck_Object* ckobj, b2Circle* obj);
 static b2Circle ckobj_to_b2Circle(Chuck_Object* ckobj);
@@ -537,6 +611,9 @@ CK_DLL_SFUN(b2_Body_compute_aabb);
 
 void ulib_box2d_query(Chuck_DL_Query* QUERY)
 {
+    // init resource managers
+    b2PolygonPool::init(&b2polygon_pool);
+
     { // b2BodyType --------------------------------------
         BEGIN_CLASS("b2BodyType", "Object");
         static t_CKINT b2_static_body    = 0;
@@ -729,6 +806,10 @@ void ulib_box2d_query(Chuck_DL_Query* QUERY)
         CTOR(b2Circle_ctor);
         ARG("vec2", "center");
         ARG("float", "radius");
+
+        CTOR(b2Circle_ctor_centered);
+        ARG("float", "radius");
+        DOC_FUNC("assumes circle is centered at @(0,0)");
 
         b2Circle_position_offset = MVAR("vec2", "center", false);
         DOC_VAR("The local center (relative to the body's origin)");
@@ -3283,12 +3364,12 @@ CK_DLL_CTOR(b2ShapeDef_ctor)
 
 CK_DLL_DTOR(b2Polygon_dtor)
 {
-    CHUGIN_SAFE_DELETE(b2Polygon, b2Polygon_data_offset);
+    b2PolygonPool::del(&b2polygon_pool, OBJ_MEMBER_UINT(SELF, b2Polygon_data_offset));
 }
 
 CK_DLL_MFUN(b2Polygon_get_vertices)
 {
-    b2Polygon* polygon = OBJ_MEMBER_B2_PTR(b2Polygon, SELF, b2Polygon_data_offset);
+    b2Polygon* polygon = ckobj_to_b2Polygon(SELF);
 
     RETURN->v_object = (Chuck_Object*)chugin_createCkFloat2Array(
       (glm::vec2*)&polygon->vertices, polygon->count, false, SHRED);
@@ -3296,7 +3377,7 @@ CK_DLL_MFUN(b2Polygon_get_vertices)
 
 CK_DLL_MFUN(b2Polygon_get_normals)
 {
-    b2Polygon* polygon = OBJ_MEMBER_B2_PTR(b2Polygon, SELF, b2Polygon_data_offset);
+    b2Polygon* polygon = ckobj_to_b2Polygon(SELF);
 
     RETURN->v_object = (Chuck_Object*)chugin_createCkFloat2Array(
       (glm::vec2*)&polygon->normals, polygon->count, false, SHRED);
@@ -3304,13 +3385,13 @@ CK_DLL_MFUN(b2Polygon_get_normals)
 
 CK_DLL_MFUN(b2Polygon_get_centroid)
 {
-    b2Polygon* polygon = OBJ_MEMBER_B2_PTR(b2Polygon, SELF, b2Polygon_data_offset);
+    b2Polygon* polygon = ckobj_to_b2Polygon(SELF);
     RETURN->v_vec2     = { polygon->centroid.x, polygon->centroid.y };
 }
 
 CK_DLL_MFUN(b2Polygon_get_radius)
 {
-    RETURN->v_float = OBJ_MEMBER_B2_PTR(b2Polygon, SELF, b2Polygon_data_offset)->radius;
+    RETURN->v_float = ckobj_to_b2Polygon(SELF)->radius;
 }
 
 // ============================================================================
@@ -3368,8 +3449,7 @@ CK_DLL_SFUN(b2_CreatePolygonShape)
     b2ShapeDef shape_def = b2DefaultShapeDef();
     ckobj_to_b2ShapeDef(API, &shape_def, GET_NEXT_OBJECT(ARGS));
 
-    b2Polygon* polygon
-      = OBJ_MEMBER_B2_PTR(b2Polygon, GET_NEXT_OBJECT(ARGS), b2Polygon_data_offset);
+    b2Polygon* polygon = ckobj_to_b2Polygon(GET_NEXT_OBJECT(ARGS));
     // b2Polygon polygon = b2MakeBox(.5f, .5f);
 
     RETURN_B2_ID(b2ShapeId, b2CreatePolygonShape(body_id, &shape_def, polygon));
@@ -3603,8 +3683,7 @@ CK_DLL_SFUN(b2_Shape_SetPolygon)
 {
     b2ShapeId shape_id = GET_B2_ID(b2ShapeId, ARGS);
     GET_NEXT_INT(ARGS); // advance
-    b2Polygon* polygon
-      = OBJ_MEMBER_B2_PTR(b2Polygon, GET_NEXT_OBJECT(ARGS), b2Polygon_data_offset);
+    b2Polygon* polygon = ckobj_to_b2Polygon(GET_NEXT_OBJECT(ARGS));
     b2Shape_SetPolygon(shape_id, polygon);
 }
 
@@ -4188,6 +4267,12 @@ static b2Circle ckobj_to_b2Circle(Chuck_Object* ckobj)
 CK_DLL_CTOR(b2Circle_ctor)
 {
     OBJ_MEMBER_VEC2(SELF, b2Circle_position_offset) = GET_NEXT_VEC2(ARGS);
+    OBJ_MEMBER_FLOAT(SELF, b2Circle_radius_offset)  = GET_NEXT_FLOAT(ARGS);
+}
+
+CK_DLL_CTOR(b2Circle_ctor_centered)
+{
+    OBJ_MEMBER_VEC2(SELF, b2Circle_position_offset) = { 0, 0 };
     OBJ_MEMBER_FLOAT(SELF, b2Circle_radius_offset)  = GET_NEXT_FLOAT(ARGS);
 }
 

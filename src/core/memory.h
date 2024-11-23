@@ -63,7 +63,7 @@ struct Arena {
 #define ARENA_LENGTH(a, type) ((a)->curr / sizeof(type))
 #define ARENA_CAP(a, type) ((a)->cap / sizeof(type))
 
-#define ARENA_GET_TYPE(a, type, index) (type*)Arena::get(a, (index) * sizeof(type))
+#define ARENA_GET_TYPE(a, type, index) ((type*)Arena::get(a, (index) * sizeof(type)))
 
 #define ARENA_GET_LAST_TYPE(a, type) ARENA_GET_TYPE(a, type, ARENA_LENGTH(a, type) - 1)
 

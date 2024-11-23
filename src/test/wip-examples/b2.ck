@@ -189,8 +189,8 @@ TODO 11/23
 - profile debug draw on audio side
 
 - add immediate-mode b2_world.step(int substeps, int worker_threads, float dt) command and simpler variants
-
 */
+
 GOrbitCamera camera --> GG.scene();
 GG.scene().camera(camera);
 camera.posZ(50);
@@ -417,7 +417,7 @@ b2.createPolygonShape(ground_id, ground_shape_def, ground_box);
 // GMesh@ dynamic_box_meshes[0];
 int dynamic_body_ids[0];
 
-fun void addBody()
+fun void addBody(int which)
 {
     // create dynamic box
     b2BodyDef dynamic_body_def;
@@ -429,11 +429,32 @@ fun void addBody()
     dynamic_body_ids << dynamic_body_id;
 
     // then shape
-    b2.makeBox(1.0f, 1.0f) @=> b2Polygon dynamic_box;
-    b2ShapeDef dynamic_shape_def;
-    true => dynamic_shape_def.enableHitEvents;
-    b2.createPolygonShape(dynamic_body_id, dynamic_shape_def, dynamic_box);
+	b2ShapeDef dynamic_shape_def;
+	true => dynamic_shape_def.enableHitEvents;
+	if (which == 0) {
+		b2.makeBox(1.0f, 1.0f) @=> b2Polygon dynamic_box;
+		b2.createPolygonShape(dynamic_body_id, dynamic_shape_def, dynamic_box);
+	} else if (which == 1) {
+		b2.makePolygon(
+			[ // hexagon
+				@(-1, 0),
+				@(-.5, Math.sqrt(3)/2),
+				@(.5, Math.sqrt(3)/2),
+				@(1, 0),
+				@(.5, -Math.sqrt(3)/2),
+				@(-.5, -Math.sqrt(3)/2),
+			],
+			0.0
+		) @=> b2Polygon dynamic_polygon;
+		b2.createPolygonShape(dynamic_body_id, dynamic_shape_def, dynamic_polygon);
+	} else if (which == 2) {
+		b2Circle circle(0.5);
+		b2.createCircleShape(dynamic_body_id, dynamic_shape_def, circle);
+	} else if (which == 3) {
 
+	} else if (which == 4) {
+
+	}
     // matching GGen
     // GMesh dynamic_box_mesh(plane_geo, mat) --> GG.scene();
     // dynamic_box_mesh.scaX(1.0);
@@ -450,7 +471,8 @@ b2ContactHitEvent hit_events[0];
 while (1) {
     GG.nextFrame() => now;
 
-    if (UI.isKeyPressed(UI_Key.Space)) addBody();
+    if (GWindow.keyDown(GWindow.Key_1)) addBody(0);
+    if (GWindow.keyDown(GWindow.Key_2)) addBody(1);
 
 	// update box mesh positions
     // for (int i; i < dynamic_body_ids.size(); i++) {
