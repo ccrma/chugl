@@ -348,12 +348,71 @@ class b2DebugDraw_Lines extends GGen
 	}
 }
 
+// batch draws solid and wireframe circles
+class b2DebugDraw_Circles extends GGen
+{
+	me.dir() + "./b2_circle_shader.wgsl" @=> string shader_path;
+
+	// set drawing shader
+	ShaderDesc shader_desc;
+	shader_path => shader_desc.vertexPath;
+	shader_path => shader_desc.fragmentPath;
+	null @=> shader_desc.vertexLayout; 
+
+	// material shader (draws all line segments in 1 draw call)
+	Shader shader(shader_desc);
+	Material material;
+	material.shader(shader);
+
+	// default bindings
+	float empty_float_arr[4];
+	initStorageBuffers();
+
+	// vertex buffers
+	vec4 u_center_radius_thickness[0];
+	vec4 u_colors[0];
+
+	Geometry geo;
+	geo.vertexCount(0);
+	GMesh mesh(geo, material) --> this;
+
+	fun void initStorageBuffers() {
+		material.storageBuffer(0, empty_float_arr);
+		material.storageBuffer(1, empty_float_arr);
+	}
+
+	fun void drawCircle( vec2 center, float radius, float thickness, vec3 color) {
+		u_center_radius_thickness << @(center.x, center.y, radius, thickness);
+		u_colors << @(color.r, color.g, color.b, 1.0);
+	}
+
+	fun void update()
+	{
+		if (u_center_radius_thickness.size() == 0) {
+			initStorageBuffers(); // needed because empty storage buffers cause WGPU to crash on bindgroup creation
+			return;
+		}
+
+		// update GPU vertex buffers
+		// geo.vertexAttribute(0, u_center_radius_thickness);
+		// geo.vertexAttribute(1, u_colors);
+		material.storageBuffer(0, u_center_radius_thickness);
+		material.storageBuffer(1, u_colors);
+		geo.vertexCount(6 * u_center_radius_thickness.size());
+
+		// reset
+		u_center_radius_thickness.clear();
+		u_colors.clear();
+	}
+}
+
 
 // custom debug draw
 class DebugDraw extends b2DebugDraw
 {
 	b2DebugDraw_SolidPolygon solid_polygons --> GG.scene();
 	b2DebugDraw_Lines lines --> GG.scene();
+	b2DebugDraw_Circles circles --> GG.scene();
 
 	fun void drawSolidPolygon(
 		vec2 position,
@@ -382,10 +441,19 @@ class DebugDraw extends b2DebugDraw
 		lines.drawSegment(vertices[-1], vertices[0]);
 	}
 
+	fun void drawCircle(vec2 center, float radius, vec3 color) {
+		circles.drawCircle(center, radius, .1, color);
+	}
+
+	fun void drawSolidCircle(vec2 center, float rotation_radians, float radius, vec3 color) {
+		circles.drawCircle(center, radius, 1.0, color);
+	}
+
 	// upload all the collected debug draw data to the materials/geometry/GPU
 	fun void update() {
 		solid_polygons.update();
 		lines.update();
+		circles.update();
 	}
 }
 
@@ -448,7 +516,7 @@ fun void addBody(int which)
 		) @=> b2Polygon dynamic_polygon;
 		b2.createPolygonShape(dynamic_body_id, dynamic_shape_def, dynamic_polygon);
 	} else if (which == 2) {
-		b2Circle circle(0.5);
+		b2Circle circle(Math.random2f(0.3, 0.7));
 		b2.createCircleShape(dynamic_body_id, dynamic_shape_def, circle);
 	} else if (which == 3) {
 
@@ -473,6 +541,7 @@ while (1) {
 
     if (GWindow.keyDown(GWindow.Key_1)) addBody(0);
     if (GWindow.keyDown(GWindow.Key_2)) addBody(1);
+	if (GWindow.keyDown(GWindow.Key_3)) addBody(2);
 
 	// update box mesh positions
     // for (int i; i < dynamic_body_ids.size(); i++) {

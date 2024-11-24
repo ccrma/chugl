@@ -807,6 +807,10 @@ void CQ_PushCommand_MaterialSetStorageBuffer(SG_Material* material, int location
         case SG_MATERIAL_UNIFORM_INT: {
             data_count = g_chuglAPI->object->array_int_size((Chuck_ArrayInt*)ck_arr);
         } break;
+        case SG_MATERIAL_UNIFORM_VEC4F: {
+            data_count
+              = 4 * g_chuglAPI->object->array_vec4_size((Chuck_ArrayVec4*)ck_arr);
+        } break;
         default: ASSERT(false); // unsupported type
     }
     BEGIN_COMMAND_ADDITIONAL_MEMORY(SG_Command_MaterialSetStorageBuffer,
@@ -822,6 +826,9 @@ void CQ_PushCommand_MaterialSetStorageBuffer(SG_Material* material, int location
         } break;
         case SG_MATERIAL_UNIFORM_INT: {
             chugin_copyCkIntArray((Chuck_ArrayInt*)ck_arr, (i32*)memory, data_count);
+        } break;
+        case SG_MATERIAL_UNIFORM_VEC4F: {
+            chugin_copyCkVec4Array((Chuck_ArrayVec4*)ck_arr, (f32*)memory);
         } break;
         default: ASSERT(false); // unsupported type
     }
