@@ -178,13 +178,7 @@ b2World > b2Body > b2shape
 
 /*
 TODO 11/23
-- test other shapes
-	- circle
-	- custom polygons
-	- cylinder
-- keyboard control: 1 to drop random polygon, 2 to drop circle, etc...
-	- after 30 shapes despawn the oldest
-- implement other debugDraw callbacks
+- after 30 shapes despawn the oldest
 - add sokol timer to ChuGL API
 - profile debug draw on audio side
 
@@ -239,7 +233,6 @@ class b2DebugDraw_SolidPolygon extends GGen
 		b2_solid_polygon_material.storageBuffer(4, empty_float_arr);
 		b2_solid_polygon_material.storageBuffer(5, empty_float_arr);
 	}
-
 
 	fun void drawSolidPolygon(
 		vec2 position,
@@ -406,6 +399,67 @@ class b2DebugDraw_Circles extends GGen
 	}
 }
 
+// batch draws solid capsules
+class b2DebugDraw_Capsule extends GGen
+{
+	me.dir() + "./b2_capsule_shader.wgsl" @=> string shader_path;
+
+	// set drawing shader
+	ShaderDesc shader_desc;
+	shader_path => shader_desc.vertexPath;
+	shader_path => shader_desc.fragmentPath;
+	null @=> shader_desc.vertexLayout; 
+
+	// material shader (draws all line segments in 1 draw call)
+	Shader shader(shader_desc);
+	Material material;
+	material.shader(shader);
+
+	// default bindings
+	float empty_float_arr[4];
+	initStorageBuffers();
+
+	// vertex buffers
+	vec4 u_p1p2[0];
+	float u_radius[0];
+	vec4 u_colors[0];
+
+	Geometry geo;
+	geo.vertexCount(0);
+	GMesh mesh(geo, material) --> this;
+
+	fun void initStorageBuffers() {
+		material.storageBuffer(0, empty_float_arr);
+		material.storageBuffer(1, empty_float_arr);
+		material.storageBuffer(2, empty_float_arr);
+	}
+
+	fun void drawCapsule( vec2 p1, vec2 p2, float radius, vec3 color) {
+		u_p1p2 << @(p1.x, p1.y, p2.x, p2.y);
+		u_radius << radius;
+		u_colors << @(color.r, color.g, color.b, 1.0);
+	}
+
+	fun void update()
+	{
+		if (u_radius.size() == 0) {
+			initStorageBuffers(); // needed because empty storage buffers cause WGPU to crash on bindgroup creation
+			return;
+		}
+
+		// update GPU vertex buffers
+		material.storageBuffer(0, u_p1p2);
+		material.storageBuffer(1, u_radius);
+		material.storageBuffer(2, u_colors);
+		geo.vertexCount(6 * u_radius.size());
+
+		// reset
+		u_p1p2.clear();
+		u_radius.clear();
+		u_colors.clear();
+	}
+}
+
 
 // custom debug draw
 class DebugDraw extends b2DebugDraw
@@ -413,6 +467,7 @@ class DebugDraw extends b2DebugDraw
 	b2DebugDraw_SolidPolygon solid_polygons --> GG.scene();
 	b2DebugDraw_Lines lines --> GG.scene();
 	b2DebugDraw_Circles circles --> GG.scene();
+	b2DebugDraw_Capsule capsules --> GG.scene();
 
 	fun void drawSolidPolygon(
 		vec2 position,
@@ -448,19 +503,24 @@ class DebugDraw extends b2DebugDraw
 	fun void drawSolidCircle(vec2 center, float rotation_radians, float radius, vec3 color) {
 		circles.drawCircle(center, radius, 1.0, color);
 	}
+	
+	fun void drawSolidCapsule(vec2 p1, vec2 p2, float radius, vec3 color) {
+		capsules.drawCapsule(p1, p2, radius, color);
+	}
+
 
 	// upload all the collected debug draw data to the materials/geometry/GPU
 	fun void update() {
 		solid_polygons.update();
 		lines.update();
 		circles.update();
+		capsules.update();
 	}
 }
 
 DebugDraw debug_draw;
 true => debug_draw.drawShapes;
 true => debug_draw.drawAABBs; // calls drawPolygon, not drawSegment
-
 
 b2WorldDef world_def;
 // .05 => world_def.hitEventThreshold;
@@ -519,7 +579,8 @@ fun void addBody(int which)
 		b2Circle circle(Math.random2f(0.3, 0.7));
 		b2.createCircleShape(dynamic_body_id, dynamic_shape_def, circle);
 	} else if (which == 3) {
-
+		b2Capsule capsule(@(0.0, 0.0), @(0.0, 1.0), Math.random2f(0.2, .7));
+		b2.createCapsuleShape(dynamic_body_id, dynamic_shape_def, capsule);
 	} else if (which == 4) {
 
 	}
@@ -542,6 +603,7 @@ while (1) {
     if (GWindow.keyDown(GWindow.Key_1)) addBody(0);
     if (GWindow.keyDown(GWindow.Key_2)) addBody(1);
 	if (GWindow.keyDown(GWindow.Key_3)) addBody(2);
+	if (GWindow.keyDown(GWindow.Key_4)) addBody(3);
 
 	// update box mesh positions
     // for (int i; i < dynamic_body_ids.size(); i++) {

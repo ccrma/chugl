@@ -2123,10 +2123,10 @@ DOC_CLASS("Result of computing the distance between two line segments. https://b
         ARG("vec3", "color");
         DOC_FUNC("Draw a point.");
 
-        MFUN(b2_DebugDraw_DrawString, "void", "drawString");
-        ARG("vec2", "position");
-        ARG("string", "text");
-        DOC_FUNC("Draw a string.");
+        // MFUN(b2_DebugDraw_DrawString, "void", "drawString");
+        // ARG("vec2", "position");
+        // ARG("string", "text");
+        // DOC_FUNC("Draw a string.");
 
         END_CLASS();
 
@@ -2147,8 +2147,8 @@ DOC_CLASS("Result of computing the distance between two line segments. https://b
           = chugin_setVTableOffset("b2DebugDraw", "drawTransform");
         b2_DebugDraw_DrawPoint_callback_offset
           = chugin_setVTableOffset("b2DebugDraw", "drawPoint");
-        b2_DebugDraw_DrawString_callback_offset
-          = chugin_setVTableOffset("b2DebugDraw", "drawString");
+        // b2_DebugDraw_DrawString_callback_offset
+        //   = chugin_setVTableOffset("b2DebugDraw", "drawString");
 
     } // b2DebugDraw
 
@@ -4471,7 +4471,27 @@ static void b2_DebugDrawSolidCircleCallback(b2Transform transform, float radius,
 static void b2_DebugDrawSolidCapsuleCallback(b2Vec2 p1, b2Vec2 p2, float radius,
                                              b2HexColor color, void* context)
 {
-    ASSERT(false); // not impl
+    Chuck_Object* ckobj          = (Chuck_Object*)context;
+    Chuck_VM_Shred* origin_shred = chugin_getOriginShred(ckobj);
+
+    Chuck_DL_Arg args[4];
+
+    // ARG("vec2", "p1");
+    args[0].kind         = kindof_VEC2;
+    args[0].value.v_vec2 = { p1.x, p1.y };
+    // ARG("vec2", "p2");
+    args[1].kind         = kindof_VEC2;
+    args[1].value.v_vec2 = { p2.x, p2.y };
+    // ARG("float", "radius");
+    args[2].kind          = kindof_FLOAT;
+    args[2].value.v_float = radius;
+    // ARG("vec3", "color");
+    args[3].kind         = kindof_VEC3;
+    args[3].value.v_vec3 = b2_HexColorToVec3(color);
+
+    g_chuglAPI->vm->invoke_mfun_immediate_mode(
+      ckobj, b2_DebugDraw_DrawSolidCapsule_callback_offset, g_chuglVM, origin_shred,
+      args, ARRAY_LENGTH(args));
 }
 
 static void b2_DebugDrawSegmentCallback(b2Vec2 p1, b2Vec2 p2, b2HexColor color,
@@ -4499,30 +4519,68 @@ static void b2_DebugDrawSegmentCallback(b2Vec2 p1, b2Vec2 p2, b2HexColor color,
 
 static void b2_DebugDrawTransformCallback(b2Transform transform, void* context)
 {
-    ASSERT(false); // not impl
-    // Chuck_Object* ckobj = (Chuck_Object*)context;
-    // g_chuglAPI->vm->invoke_mfun_immediate_mode(ckobj, offset, g_chuglVM,
-    // origin_shred,
-    //                                            chuck_fn_args, 1);
+    Chuck_Object* ckobj          = (Chuck_Object*)context;
+    Chuck_VM_Shred* origin_shred = chugin_getOriginShred(ckobj);
+
+    Chuck_DL_Arg args[2];
+
+    // ARG("vec2", "position");
+    args[0].kind         = kindof_VEC2;
+    args[0].value.v_vec2 = { transform.p.x, transform.p.y };
+    // ARG("float", "rotation_radians");
+    args[1].kind          = kindof_FLOAT;
+    args[1].value.v_float = b2Rot_GetAngle(transform.q);
+
+    g_chuglAPI->vm->invoke_mfun_immediate_mode(
+      ckobj, b2_DebugDraw_DrawTransform_callback_offset, g_chuglVM, origin_shred, args,
+      ARRAY_LENGTH(args));
 }
 
 static void b2_DebugDrawPointCallback(b2Vec2 p, float size, b2HexColor color,
                                       void* context)
 {
-    ASSERT(false); // not impl
-    // Chuck_Object* ckobj = (Chuck_Object*)context;
-    // g_chuglAPI->vm->invoke_mfun_immediate_mode(ckobj, offset, g_chuglVM,
-    // origin_shred,
-    //                                            chuck_fn_args, 1);
+    Chuck_Object* ckobj          = (Chuck_Object*)context;
+    Chuck_VM_Shred* origin_shred = chugin_getOriginShred(ckobj);
+
+    Chuck_DL_Arg args[3];
+
+    // ARG("vec2", "position");
+    args[0].kind         = kindof_VEC2;
+    args[0].value.v_vec2 = { p.x, p.y };
+    // ARG("float", "size");
+    args[1].kind          = kindof_FLOAT;
+    args[1].value.v_float = size;
+    // ARG("vec3", "color");
+    args[2].kind         = kindof_VEC3;
+    args[2].value.v_vec3 = b2_HexColorToVec3(color);
+
+    g_chuglAPI->vm->invoke_mfun_immediate_mode(
+      ckobj, b2_DebugDraw_DrawPoint_callback_offset, g_chuglVM, origin_shred, args,
+      ARRAY_LENGTH(args));
 }
 
 static void b2_DebugDrawStringCallback(b2Vec2 p, const char* s, void* context)
 {
-    // ASSERT(false); // not impl
-    // Chuck_Object* ckobj = (Chuck_Object*)context;
-    // g_chuglAPI->vm->invoke_mfun_immediate_mode(ckobj, offset, g_chuglVM,
-    // origin_shred,
-    //                                            chuck_fn_args, 1);
+    // unclear what this does... leaving out for now
+    if (true) return;
+
+    ASSERT(false);
+
+    Chuck_Object* ckobj          = (Chuck_Object*)context;
+    Chuck_VM_Shred* origin_shred = chugin_getOriginShred(ckobj);
+
+    Chuck_DL_Arg args[2];
+
+    // ARG("vec2", "position");
+    args[0].kind         = kindof_VEC2;
+    args[0].value.v_vec2 = { p.x, p.y };
+    // ARG("string", "text");
+    args[1].kind           = kindof_INT;
+    args[1].value.v_object = (Chuck_Object*)chugin_createCkString(s, false);
+
+    g_chuglAPI->vm->invoke_mfun_immediate_mode(
+      ckobj, b2_DebugDraw_DrawString_callback_offset, g_chuglVM, origin_shred, args,
+      ARRAY_LENGTH(args));
 }
 
 static void ckobj_to_b2DebugDraw(b2DebugDraw* obj, Chuck_Object* ckobj)
