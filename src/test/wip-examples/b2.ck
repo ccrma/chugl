@@ -189,7 +189,7 @@ GOrbitCamera camera --> GG.scene();
 GG.scene().camera(camera);
 camera.posZ(50);
 
-class b2DebugDraw_SolidPolygon extends GGen
+public class b2DebugDraw_SolidPolygon extends GGen
 {
 	me.dir() + "./b2_solid_polygon_shader.wgsl" @=> string b2_solid_polygon_shader_path;
 
@@ -302,7 +302,7 @@ class b2DebugDraw_SolidPolygon extends GGen
 }
 
 // batch draws simple line segments (no width)
-class b2DebugDraw_Lines extends GGen
+public class b2DebugDraw_Lines extends GGen
 {
 	me.dir() + "./b2_lines_shader.wgsl" @=> string shader_path;
 
@@ -342,7 +342,7 @@ class b2DebugDraw_Lines extends GGen
 }
 
 // batch draws solid and wireframe circles
-class b2DebugDraw_Circles extends GGen
+public class b2DebugDraw_Circles extends GGen
 {
 	me.dir() + "./b2_circle_shader.wgsl" @=> string shader_path;
 
@@ -400,7 +400,7 @@ class b2DebugDraw_Circles extends GGen
 }
 
 // batch draws solid capsules
-class b2DebugDraw_Capsule extends GGen
+public class b2DebugDraw_Capsule extends GGen
 {
 	me.dir() + "./b2_capsule_shader.wgsl" @=> string shader_path;
 

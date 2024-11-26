@@ -64,6 +64,11 @@ CK_DLL_MFUN(renderpass_get_resolve_target);
 CK_DLL_MFUN(renderpass_set_color_target_clear_on_load);
 CK_DLL_MFUN(renderpass_get_color_target_clear_on_load);
 
+CK_DLL_MFUN(renderpass_set_resolve_target_resolution);
+
+CK_DLL_MFUN(renderpass_set_msaa_sample_count);
+CK_DLL_MFUN(renderpass_get_msaa_sample_count);
+
 // TODO get_resolve_target
 // TODO set/get camera and scene
 // - enforce camera is part of scene
@@ -90,6 +95,8 @@ CK_DLL_MFUN(outputpass_set_gamma);
 CK_DLL_MFUN(outputpass_get_gamma);
 CK_DLL_MFUN(outputpass_set_exposure);
 CK_DLL_MFUN(outputpass_get_exposure);
+CK_DLL_MFUN(outputpass_get_sampler);
+CK_DLL_MFUN(outputpass_set_sampler);
 
 // ComputePass
 CK_DLL_CTOR(computepass_ctor); // don't send creation CQ Command until shader is set
@@ -198,6 +205,20 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
         MFUN(renderpass_get_color_target_clear_on_load, "int", "autoClearColor");
         DOC_FUNC("Get whether the framebuffer's color target is cleared each frame");
 
+        MFUN(renderpass_set_resolve_target_resolution, "void", "resolution");
+        ARG("int", "width");
+        ARG("int", "height");
+        DOC_FUNC(
+          "Set the resolution of the output framebuffer. Default 0x0. If either "
+          "dimension is set to 0, will auto-resize to the window size.");
+
+        MFUN(renderpass_set_msaa_sample_count, "void", "samples");
+        ARG("int", "sample_count");
+        DOC_FUNC("Set the MSAA sample count for the render pass (default 4)");
+
+        MFUN(renderpass_get_msaa_sample_count, "int", "samples");
+        DOC_FUNC("Get the MSAA sample count for the render pass");
+
         END_CLASS();
     }
 
@@ -276,6 +297,13 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
 
         MFUN(outputpass_get_exposure, "float", "exposure");
         DOC_FUNC("Get the exposure value for the tonemapping algorithm");
+
+        MFUN(outputpass_get_sampler, "TextureSampler", "sampler");
+        DOC_FUNC("Get the sampler used for the input texture");
+
+        MFUN(outputpass_set_sampler, "void", "sampler");
+        ARG("TextureSampler", "sampler");
+        DOC_FUNC("Set the sampler used for the input texture");
 
         END_CLASS();
     }
@@ -518,12 +546,35 @@ CK_DLL_MFUN(renderpass_get_resolve_target)
 
 CK_DLL_MFUN(renderpass_set_color_target_clear_on_load)
 {
-    GET_PASS(SELF)->color_target_clear_on_load = GET_NEXT_INT(ARGS);
+    SG_Pass* pass                    = GET_PASS(SELF);
+    pass->color_target_clear_on_load = GET_NEXT_INT(ARGS);
+    CQ_PushCommand_PassUpdate(pass);
 }
 
 CK_DLL_MFUN(renderpass_get_color_target_clear_on_load)
 {
     RETURN->v_int = GET_PASS(SELF)->color_target_clear_on_load;
+}
+
+CK_DLL_MFUN(renderpass_set_resolve_target_resolution)
+{
+    SG_Pass* pass                           = GET_PASS(SELF);
+    pass->render_pass_resolve_target_width  = GET_NEXT_INT(ARGS);
+    pass->render_pass_resolve_target_height = GET_NEXT_INT(ARGS);
+
+    CQ_PushCommand_PassUpdate(pass);
+}
+
+CK_DLL_MFUN(renderpass_set_msaa_sample_count)
+{
+    SG_Pass* pass                       = GET_PASS(SELF);
+    pass->render_pass_msaa_sample_count = GET_NEXT_INT(ARGS);
+    CQ_PushCommand_PassUpdate(pass);
+}
+
+CK_DLL_MFUN(renderpass_get_msaa_sample_count)
+{
+    RETURN->v_int = GET_PASS(SELF)->render_pass_msaa_sample_count;
 }
 
 // ============================================================================
@@ -711,6 +762,25 @@ CK_DLL_MFUN(outputpass_get_exposure)
     SG_Pass* pass         = GET_PASS(SELF);
     SG_Material* material = SG_GetMaterial(pass->screen_material_id);
     RETURN->v_float       = material->uniforms[3].as.f;
+}
+
+CK_DLL_MFUN(outputpass_get_sampler)
+{
+    SG_Pass* pass         = GET_PASS(SELF);
+    SG_Material* material = SG_GetMaterial(pass->screen_material_id);
+
+    RETURN->v_object
+      = ulib_texture_ckobj_from_sampler(material->uniforms[1].as.sampler, false, SHRED);
+}
+
+CK_DLL_MFUN(outputpass_set_sampler)
+{
+    SG_Pass* pass         = GET_PASS(SELF);
+    SG_Material* material = SG_GetMaterial(pass->screen_material_id);
+
+    // set uniform
+    SG_Material::setSampler(material, 1, SG_Sampler::fromCkObj(GET_NEXT_OBJECT(ARGS)));
+    CQ_PushCommand_MaterialSetUniform(material, 1);
 }
 
 // ============================================================================

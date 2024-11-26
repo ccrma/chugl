@@ -7,49 +7,55 @@ struct WGPURenderPassColorAttachment {
     WGPULoadOp loadOp;                           // undefined, clear, load
     WGPUStoreOp storeOp;                         // undefined, store, discard
     WGPUColor clearValue;
-}
+};
 
 struct WGPURenderPassDescriptor {
     size_t colorAttachmentCount;
     WGPURenderPassColorAttachment const* colorAttachments;
     WGPU_NULLABLE WGPURenderPassDepthStencilAttachment const* depthStencilAttachment;
-}
+};
 
-WGPU_EXPORT WGPURenderPassEncoder
+WGPURenderPassEncoder*
 wgpuCommandEncoderBeginRenderPass(WGPUCommandEncoder commandEncoder,
-                                  WGPURenderPassDescriptor const* descriptor)
-  WGPU_FUNCTION_ATTRIBUTE;
+                                  WGPURenderPassDescriptor const* descriptor);
 
 wgpuRenderPassEncoderSetPipeline(WGPURenderPassEncoder renderPassEncoder,
-                                 WGPURenderPipeline pipeline)
-  - list render pipeline state
+                                 WGPURenderPipeline pipeline);
 
-  wgpuRenderPassEncoderSetBindGroup(WGPURenderPassEncoder, uint32_t groupIndex,
-                                    WGPU_NULLABLE WGPUBindGroup, )
+// set per-material and per-frame bind group
+wgpuRenderPassEncoderSetBindGroup(WGPURenderPassEncoder, uint32_t groupIndex,
+                                  WGPU_NULLABLE WGPUBindGroup);
 
-    wgpuRenderPassEncoderSetVertexBuffer(WGPURenderPassEncoder, uint32_t slot,
-                                         WGPU_NULLABLE WGPUBuffer buffer,
-                                         uint64_t offset, uint64_t size)
-      wgpuRenderPassEncoderSetIndexBuffer(WGPURenderPassEncoder WGPUBuffer,
-                                          WGPUIndexFormat uint64_t offset,
-                                          uint64_t size)
+// set vertex/index buffers (per geometry)
+wgpuRenderPassEncoderSetVertexBuffer(WGPURenderPassEncoder, uint32_t slot,
+                                     WGPU_NULLABLE WGPUBuffer buffer, uint64_t offset,
+                                     uint64_t size);
+wgpuRenderPassEncoderSetIndexBuffer(WGPURenderPassEncoder WGPUBuffer,
+                                    WGPUIndexFormat uint64_t offset, uint64_t size);
 
-        wgpuRenderPassEncoderDraw(WGPURenderPassEncoder renderPassEncoder,
-                                  uint32_t vertexCount, uint32_t instanceCount,
-                                  // uint32_t firstVertex,
-                                  // uint32_t firstInstance
-                                  )
+// set per-draw bind group (xform data)
+wgpuRenderPassEncoderSetBindGroup(WGPURenderPassEncoder, uint32_t groupIndex,
+                                  WGPU_NULLABLE WGPUBindGroup);
 
-          wgpuRenderPassEncoderDrawIndexed(WGPURenderPassEncoder renderPassEncoder,
-                                           uint32_t indexCount, uint32_t instanceCount,
-                                           // uint32_t firstIndex,
-                                           // int32_t baseVertex,
-                                           // uint32_t firstInstance
-                                           )
+// draw (non-indexed or indexed)
+{
+    wgpuRenderPassEncoderDraw(WGPURenderPassEncoder renderPassEncoder,
+                              uint32_t vertexCount, uint32_t instanceCount,
+                              // uint32_t firstVertex,
+                              // uint32_t firstInstance
+    );
 
-  // =====================================================================================
+    wgpuRenderPassEncoderDrawIndexed(WGPURenderPassEncoder renderPassEncoder,
+                                     uint32_t indexCount, uint32_t instanceCount,
+                                     // uint32_t firstIndex,
+                                     // int32_t baseVertex,
+                                     // uint32_t firstInstance
+    );
+}
 
-  struct DrawCall {
+// =====================================================================================
+
+struct DrawCall {
     // render pass state ---------------------------------------------
     struct WGPURenderPassDescriptor {
         WGPURenderPassColorAttachment colorAttachments[] WGPU_NULLABLE WGPUTextureView
@@ -59,6 +65,7 @@ wgpuRenderPassEncoderSetPipeline(WGPURenderPassEncoder renderPassEncoder,
         WGPULoadOp loadOp;                           // undefined, clear, load
         WGPUStoreOp storeOp;                         // undefined, store, discard
         WGPUColor clearValue;                        // clear color
+
         WGPU_NULLABLE WGPURenderPassDepthStencilAttachment const*
           depthStencilAttachment;
         WGPUTextureView view;
@@ -67,7 +74,7 @@ wgpuRenderPassEncoderSetPipeline(WGPURenderPassEncoder renderPassEncoder,
         float depthClearValue; // 1.0f for "far"
         WGPUBool depthReadOnly;
         // ignoring stencil
-    }
+    };
 
     // pipeline state ---------------------------------------------
     WGPURenderPipeline struct WGPURenderPipelineDescriptor {
@@ -98,17 +105,19 @@ wgpuRenderPassEncoderSetPipeline(WGPURenderPassEncoder renderPassEncoder,
         WGPUBlendComponent color;          // operation, srcFactor, dstFactor
         WGPUBlendComponent alpha;          // operation, srcFactor, dstFactor
         WGPUColorWriteMaskFlags writeMask; // None Red Green Blue Alpha All
-    }
+    };
 
     // bind groups (currently spread across 0: frame uniforms, 1: material, 2: per_draw
     // (instancing)  3: vertexPullGroups)
     // ---------------------------------------------
-    uint32_t groupIndex[] WGPU_NULLABLE WGPUBindGroup[]
+    uint32_t groupIndex[];
+    WGPU_NULLABLE WGPUBindGroup[];
 
-      // Vertex/Index buffers ---------------------------------------------
-      WGPUBuffer vertex_buffers[] uint64_t vertex_buffer_sizes_bytes[]
-      // uint64_t vertex_buffer_offsets[]
-      WGPUBuffer index_buffers;
+    // Vertex/Index buffers ---------------------------------------------
+    WGPUBuffer vertex_buffers[];
+    uint64_t vertex_buffer_sizes_bytes[];
+    // uint64_t vertex_buffer_offsets[]
+    WGPUBuffer index_buffers;
     uint64_t index_buffer_size_bytes;
     // uint64_t index_buffer_offset
 

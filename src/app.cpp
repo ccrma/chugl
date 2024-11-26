@@ -352,7 +352,6 @@ struct App {
     SG_ID root_pass_id;
     hashmap*
       frame_uniforms_map; // map from <pipeline_id, camera_id, scene_id> to bindgroup
-    int msaa_sample_count = 4;
 
     // ============================================================================
     // App API
@@ -797,10 +796,18 @@ struct App {
                     // no render texture bound, skip this pass
                     if (!r_tex) break;
 
-                    // TODO check auto-resize property on RenderPass
-                    // auto-resize framebuffer color target
-                    R_Texture::resize(&app->gctx, r_tex, app->window_fb_width,
-                                      app->window_fb_height);
+                    // auto-resize framebuffer color target if resolution not set
+                    if (pass->sg_pass.render_pass_resolve_target_width == 0
+                        || pass->sg_pass.render_pass_resolve_target_height == 0) {
+                        R_Texture::resize(&app->gctx, r_tex, app->window_fb_width,
+                                          app->window_fb_height);
+                    } else {
+                        // resize to specified resolution
+                        R_Texture::resize(
+                          &app->gctx, r_tex,
+                          pass->sg_pass.render_pass_resolve_target_width,
+                          pass->sg_pass.render_pass_resolve_target_height);
+                    }
 
                     // descriptor for view at mip 0
                     WGPUTextureView resolve_target_view = G_createTextureViewAtMipLevel(
@@ -812,9 +819,13 @@ struct App {
                     ASSERT(scene && resolve_target_view && camera);
                     {
                         R_Pass::updateRenderPassDesc(
-                          &app->gctx, pass, app->window_fb_width, app->window_fb_height,
-                          app->msaa_sample_count, resolve_target_view,
-                          color_attachment_format, scene->sg_scene_desc.bg_color);
+                          &app->gctx, pass, r_tex->desc.width, r_tex->desc.height,
+                          pass->sg_pass.render_pass_msaa_sample_count,
+                          resolve_target_view, color_attachment_format,
+                          scene->sg_scene_desc.bg_color);
+
+                        log_info("render pass width %d, height %d", r_tex->desc.width,
+                                 r_tex->desc.height);
 
                         WGPURenderPassEncoder render_pass
                           = wgpuCommandEncoderBeginRenderPass(app->gctx.commandEncoder,

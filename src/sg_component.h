@@ -791,7 +791,10 @@ struct SG_Pass : public SG_Component {
     SG_ID scene_id;
     SG_ID camera_id;
     SG_ID resolve_target_id;
-    bool color_target_clear_on_load = true;
+    int render_pass_resolve_target_width  = 0;
+    int render_pass_resolve_target_height = 0;
+    int render_pass_msaa_sample_count     = 4;
+    bool color_target_clear_on_load       = true;
 
     // ScreenPass params
     SG_ID screen_texture_id;  // color attachment output

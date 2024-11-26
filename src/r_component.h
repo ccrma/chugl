@@ -840,7 +840,7 @@ struct R_Pass : public R_Component {
     // for the given pass. R_Pass.sg_pass is assumed to be updated (memcopied in the
     // updatePass Command), but not the gpu-specific parameters of R_Pass
     static void updateRenderPassDesc(GraphicsContext* gctx, R_Pass* pass,
-                                     u32 window_width, u32 window_height,
+                                     u32 color_target_width, u32 color_target_height,
                                      int sample_count, WGPUTextureView resolve_view,
                                      WGPUTextureFormat view_format,
                                      glm::vec4 clear_color)
@@ -848,8 +848,8 @@ struct R_Pass : public R_Component {
         ASSERT(pass->sg_pass.pass_type == SG_PassType_Render);
 
         // handle resize
-        Framebuffer::rebuild(gctx, &pass->framebuffer, window_width, window_height,
-                             sample_count, view_format);
+        Framebuffer::rebuild(gctx, &pass->framebuffer, color_target_width,
+                             color_target_height, sample_count, view_format);
 
         // for now, we always set renderpass depth/stencil and color descriptors
         // (even if they haven't changed) to simplify state management
@@ -876,10 +876,16 @@ struct R_Pass : public R_Component {
             *ca                               = {};
 
             // view and resolve set in GraphicsContext::prepareFrame()
-            ca->view
-              = pass->framebuffer.color_view; // multisampled view, for now lock down
-            ca->resolveTarget = resolve_view;
-            ca->depthSlice    = WGPU_DEPTH_SLICE_UNDEFINED;
+            if (sample_count > 1) {
+                // if MSAA, need to set target and resolve separately
+                ca->view          = pass->framebuffer.color_view;
+                ca->resolveTarget = resolve_view;
+            } else {
+                // no MSAA, set color attachment to resolve target directly
+                ca->view          = resolve_view;
+                ca->resolveTarget = NULL;
+            }
+            ca->depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
             ca->loadOp  = pass->sg_pass.color_target_clear_on_load ? WGPULoadOp_Clear :
                                                                      WGPULoadOp_Load;
             ca->storeOp = WGPUStoreOp_Store;
