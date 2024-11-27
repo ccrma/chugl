@@ -12,7 +12,16 @@ T.assert(!shader_desc.usesEnvMap, "shader desc usesEnvmap");
 "fragment_string" => shader_desc.fragmentCode;
 "vertex_filepath" => shader_desc.vertexPath;
 "fragment_filepath" => shader_desc.fragmentPath;
-[1,2,3,4,5,6,7,8] @=> shader_desc.vertexLayout;
+[
+    VertexFormat.Float, 
+    VertexFormat.Float2, 
+    VertexFormat.Float3,
+    VertexFormat.Float4,
+    VertexFormat.Int,
+    VertexFormat.Int2,
+    VertexFormat.Int3,
+    VertexFormat.Int4,
+] @=> shader_desc.vertexLayout;
 true => shader_desc.lit;
 true => shader_desc.usesEnvMap;
 

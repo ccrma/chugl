@@ -1423,9 +1423,10 @@ void R_RenderPipeline::init(GraphicsContext* gctx, R_RenderPipeline* pipeline,
       = wgpuDeviceCreateRenderPipeline(gctx->device, &pipeline_desc);
     ASSERT(pipeline->gpu_pipeline);
 
-    // Arena::init(&pipeline->materialIDs, sizeof(SG_ID) * 8);
-
     log_trace("init render pipeline %d", pipeline->rid);
+
+    // add pipeline to shader for future Garbage Collection
+    R_Shader::addPipeline(shader, pipeline->rid);
 }
 
 /*
@@ -2625,6 +2626,9 @@ void R_Shader::init(GraphicsContext* gctx, R_Shader* shader, const char* vertex_
 {
     shader->includes = *includes;
 
+    // zero out pipeline ids
+    memset(shader->pipeline_ids, 0, sizeof(shader->pipeline_ids));
+
     char vertex_shader_label[32] = {};
     snprintf(vertex_shader_label, sizeof(vertex_shader_label), "vertex shader %d",
              (int)shader->id);
@@ -2687,17 +2691,85 @@ void R_Shader::init(GraphicsContext* gctx, R_Shader* shader, const char* vertex_
     }
 }
 
+void R_Shader::addPipeline(R_Shader* shader, R_ID pipeline_id)
+{
+    // assume 0 means the slot is free
+    for (int i = 0; i < ARRAY_LENGTH(shader->pipeline_ids); ++i) {
+        if (shader->pipeline_ids[i] == 0) {
+            shader->pipeline_ids[i] = pipeline_id;
+            return;
+        }
+    }
+
+    // should never reach here
+    log_error("R_Shader[%d] no free slots for pipeline id %d", shader->id, pipeline_id);
+    ASSERT(false);
+}
+
 void R_Shader::free(R_Shader* shader)
 {
     WGPU_RELEASE_RESOURCE(ShaderModule, shader->vertex_shader_module);
     WGPU_RELEASE_RESOURCE(ShaderModule, shader->fragment_shader_module);
     WGPU_RELEASE_RESOURCE(ShaderModule, shader->compute_shader_module);
 
-    // nocheckin remove all associated pipelines as well
-    // use pipeline->pso to remove from:
-    // - RID --> pipeline hashmap
-    // PSO --> pipeline hashmap
-    // pipeline arena
+    // free all pipelines created from this shader
+    for (int i = 0; i < ARRAY_LENGTH(shader->pipeline_ids); ++i) {
+        R_ID pipeline_id = shader->pipeline_ids[i];
+        if (pipeline_id == 0) continue;
+
+        R_RenderPipeline* pipeline = Component_GetPipeline(pipeline_id);
+        ASSERT(pipeline);
+
+        // delete the old pipeline hashmap entries
+        RenderPipelineIDTableItem* rid_deletion_result
+          = (RenderPipelineIDTableItem*)hashmap_delete(_RenderPipelineMap,
+                                                       &pipeline->rid);
+        UNUSED_VAR(rid_deletion_result);
+        ASSERT(rid_deletion_result);
+        RenderPipelinePSOTableItem* pso_deletion_result
+          = (RenderPipelinePSOTableItem*)hashmap_delete(render_pipeline_pso_table,
+                                                        &pipeline->pso);
+        UNUSED_VAR(pso_deletion_result);
+        ASSERT(pso_deletion_result);
+        ASSERT(pso_deletion_result->pso.sg_state.sg_shader_id == shader->id);
+        ASSERT(rid_deletion_result->pipeline_offset
+               == pso_deletion_result->pipeline_offset);
+
+        // free pipeline struct
+        R_RenderPipeline::free(pipeline);
+
+        // remove from pipeline arena
+        int offset = rid_deletion_result->pipeline_offset;
+        ASSERT(offset % sizeof(R_RenderPipeline) == 0);
+        int pipeline_arena_index = offset / sizeof(R_RenderPipeline);
+        ARENA_SWAP_DELETE(&_RenderPipelineArena, R_RenderPipeline,
+                          pipeline_arena_index);
+        // pipeline = NULL;
+
+        // update the newly swapped pipeline, if there is one
+        if (pipeline_arena_index
+            < ARENA_LENGTH(&_RenderPipelineArena, R_RenderPipeline)) {
+            R_RenderPipeline* swapped_pipeline = ARENA_GET_TYPE(
+              &_RenderPipelineArena, R_RenderPipeline, pipeline_arena_index);
+
+            ASSERT(offset == Arena::offsetOf(&_RenderPipelineArena, swapped_pipeline));
+
+            // update offsets
+            RenderPipelinePSOTableItem* pso_item
+              = (RenderPipelinePSOTableItem*)hashmap_get(render_pipeline_pso_table,
+                                                         &swapped_pipeline->pso);
+            ASSERT(pso_item);
+            ASSERT(pso_item->pipeline_offset != offset);
+            pso_item->pipeline_offset = offset;
+
+            RenderPipelineIDTableItem* rid_item
+              = (RenderPipelineIDTableItem*)hashmap_get(_RenderPipelineMap,
+                                                        &swapped_pipeline->rid);
+            ASSERT(rid_item);
+            ASSERT(rid_item->pipeline_offset != offset);
+            rid_item->pipeline_offset = offset;
+        }
+    }
 }
 
 // =============================================================================

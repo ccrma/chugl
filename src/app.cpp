@@ -1446,6 +1446,9 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
         draw_call->shader_id     = material->pso.sg_shader_id;
         draw_call->material_id   = material->id;
         draw_call->geo_id        = primitive->key.geo_id;
+
+        // ==optimize== upload xform arena buffers here
+        // currently being done by R_Scene::createPrimitiveBindGroup()
     }
 
     // now sort draw calls

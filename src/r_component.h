@@ -367,11 +367,16 @@ struct R_Shader : public R_Component {
     WGPUShaderModule compute_shader_module;
     SG_ShaderIncludes includes;
 
+    // track all pipeline built from this shader for garbage collection
+    R_ID pipeline_ids[4];
+
     static void init(GraphicsContext* gctx, R_Shader* shader, const char* vertex_string,
                      const char* vertex_filepath, const char* fragment_string,
                      const char* fragment_filepath, WGPUVertexFormat* vertex_layout,
                      int vertex_layout_count, const char* compute_string,
                      const char* compute_filepath, SG_ShaderIncludes* includes);
+
+    static void addPipeline(R_Shader* shader, R_ID pipeline_id);
 
     static void free(R_Shader* shader);
 };
@@ -567,12 +572,8 @@ struct R_PSO {
 
 struct R_RenderPipeline /* NOT backed by SG_Component */ {
     R_ID rid;
-    // RenderPipeline pipeline;
     WGPURenderPipeline gpu_pipeline;
     R_PSO pso;
-    // ptrdiff_t offset; // acts as an ID, offset in bytes into pipeline Arena
-
-    // Arena materialIDs; // array of SG_IDs
 
     char name[64];
 
@@ -595,11 +596,6 @@ struct R_RenderPipeline /* NOT backed by SG_Component */ {
                      const R_PSO* config);
 
     static void free(R_RenderPipeline* pipeline);
-
-    /// @brief Iterator for materials tied to render pipeline
-    static size_t numMaterials(R_RenderPipeline* pipeline);
-    static bool materialIter(R_RenderPipeline* pipeline, size_t* indexPtr,
-                             R_Material** material);
 };
 
 // =============================================================================
