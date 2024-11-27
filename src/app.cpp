@@ -1324,23 +1324,8 @@ static void _R_ScenePassCreateAndBindFrameBindgroup(GraphicsContext* gctx,
     // camera frame uniform buffer needs to already be updated
     ASSERT(camera->frame_uniform_buffer_fc == fc);
 
-    // TODO: try releasing the bindgroup immediately after setting
-    // if wgpu correctly refcounts, we don't need an Arena
-    static Arena frame_bind_group_arena{};
-    { // clear arena bind groups from previous call to _R_RenderScene
-        int num_bindgroups = ARENA_LENGTH(&frame_bind_group_arena, WGPUBindGroup);
-        for (int i = 0; i < num_bindgroups; i++) {
-            WGPUBindGroup bg
-              = *ARENA_GET_TYPE(&frame_bind_group_arena, WGPUBindGroup, i);
-            WGPU_RELEASE_RESOURCE(BindGroup, bg);
-        }
-        Arena::clear(&frame_bind_group_arena);
-    }
-
     R_Shader* shader = Component_GetShader(render_pipeline->pso.sg_shader_id);
 
-    WGPUBindGroup* frame_bind_group
-      = ARENA_PUSH_ZERO_TYPE(&frame_bind_group_arena, WGPUBindGroup);
     { // set frame uniforms
         WGPUBindGroupEntry frame_group_entries[3] = {};
         int entry_count = 1; // min 1 because we always have frame_uniforms for now
@@ -1374,10 +1359,11 @@ static void _R_ScenePassCreateAndBindFrameBindgroup(GraphicsContext* gctx,
         frameGroupDesc.entryCount = entry_count;
 
         // layout:auto requires a bind group per pipeline
-        *frame_bind_group = wgpuDeviceCreateBindGroup(gctx->device, &frameGroupDesc);
-        ASSERT(*frame_bind_group);
+        WGPUBindGroup frame_bind_group
+          = wgpuDeviceCreateBindGroup(gctx->device, &frameGroupDesc);
         wgpuRenderPassEncoderSetBindGroup(render_pass, PER_FRAME_GROUP,
-                                          *frame_bind_group, 0, NULL);
+                                          frame_bind_group, 0, NULL);
+        WGPU_RELEASE_RESOURCE(BindGroup, frame_bind_group);
     }
 }
 
