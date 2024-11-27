@@ -171,7 +171,7 @@ struct R_Geometry : public R_Component {
 
     // storage buffers for vertex pulling
     GPU_Buffer pull_buffers[SG_GEOMETRY_MAX_VERTEX_PULL_BUFFERS];
-    WGPUBindGroup pull_bind_group;
+    // WGPUBindGroup pull_bind_group;
     int vertex_count  = -1; // if set, overrides vertex count from vertices
     int indices_count = -1; // if set, overrides index count from indices
     bool pull_bind_group_dirty;
@@ -195,8 +195,8 @@ struct R_Geometry : public R_Component {
     // TODO move vertexPulling reflection check into state of ck ShaderDesc
     static bool usesVertexPulling(R_Geometry* geo);
 
-    static void rebuildPullBindGroup(GraphicsContext* gctx, R_Geometry* geo,
-                                     WGPUBindGroupLayout layout);
+    static WGPUBindGroup createPullBindGroup(GraphicsContext* gctx, R_Geometry* geo,
+                                             WGPUBindGroupLayout layout);
 
     static void setPulledVertexAttribute(GraphicsContext* gctx, R_Geometry* geo,
                                          u32 location, void* data, size_t size_bytes);
@@ -399,6 +399,8 @@ struct R_Binding {
     u64 generation; // currently only used for textures, track generation so we know
                     // when to rebuild BindGroup
                     // eventually can use to track GPU_Buffer generation
+                    // TODO: with new dynamic render refactor, can remove generation
+                    // tracking (we now rebuild bindgroups every frame)
     union {
         SG_ID textureID;
         WGPUTextureView textureView;
@@ -424,27 +426,26 @@ struct MaterialTextureView {
 struct R_Material : public R_Component {
     SG_MaterialPipelineState pso;
 
-    b32 bind_group_stale; // set if modified by chuck user, need to rebuild bind groups
+    // b32 bind_group_layout_stale; // set if modified by chuck user, need to rebuild
+    // bind
+    //                              // group layout
 
-    R_ID pipelineID; // renderpipeline this material belongs to
+    // R_ID pipelineID; // renderpipeline this material belongs to
 
     // bindgroup state (uniforms, storage buffers, textures, samplers)
     R_Binding bindings[SG_MATERIAL_MAX_UNIFORMS];
     GPU_Buffer uniform_buffer; // maps 1:1 with uniform location, initializesd in
                                // Component_MaterialCreate
-    WGPUBindGroup bind_group;
+    // WGPUBindGroup bind_group;
 
     // after updating to webgpu v22.1.0.5, bind_group_layout is now part of bind_group,
     // so we cache here in order to check if we need to rebuild the bindgroup (e.g. when
     // changing a material PSO property such as Topology. Same for Geometry bindgroups)
-    WGPUBindGroupLayout bind_group_layout; // render pipeline layout at @group(1)
-
-    static void updatePSO(GraphicsContext* gctx, R_Material* mat,
-                          SG_MaterialPipelineState* pso);
+    // WGPUBindGroupLayout bind_group_layout; // render pipeline layout at @group(1)
 
     // bind group fns --------------------------------------------
-    static void rebuildBindGroup(R_Material* mat, GraphicsContext* gctx,
-                                 WGPUBindGroupLayout layout);
+    static WGPUBindGroup createBindGroup(R_Material* mat, GraphicsContext* gctx,
+                                         WGPUBindGroupLayout layout);
     static void setBinding(GraphicsContext* gctx, R_Material* mat, u32 location,
                            R_BindType type, void* data, size_t bytes);
     static void setUniformBinding(GraphicsContext* gctx, R_Material* mat, u32 location,
@@ -526,124 +527,9 @@ struct R_Light : public R_Transform {
 // R_Scene
 // =============================================================================
 
-struct MaterialToGeometry {
-    SG_ID material_id;   // key
-    Arena geo_ids;       // value, array of SG_IDs
-    hashmap* geo_id_set; // kept in sync with geo_ids, use for quick lookup
-
-    static void addGeometry(MaterialToGeometry* m2g, SG_ID geo_id)
-    {
-        // first check if already exists
-        if (hashmap_get(m2g->geo_id_set, &geo_id) == NULL) {
-            *ARENA_PUSH_TYPE(&m2g->geo_ids, SG_ID) = geo_id;
-            hashmap_set(m2g->geo_id_set, &geo_id);
-        }
-    }
-
-    static int compare(const void* a, const void* b, void* udata)
-    {
-        return ((MaterialToGeometry*)a)->material_id
-               - ((MaterialToGeometry*)b)->material_id;
-    }
-
-    static u64 hash(const void* item, uint64_t seed0, uint64_t seed1)
-    {
-        MaterialToGeometry* key = (MaterialToGeometry*)item;
-        return hashmap_xxhash3(&key->material_id, sizeof(key->material_id), seed0,
-                               seed1);
-    }
-
-    static void free(void* item)
-    {
-        MaterialToGeometry* key = (MaterialToGeometry*)item;
-        Arena::free(&key->geo_ids);
-        hashmap_free(key->geo_id_set);
-    }
-};
-
-struct GeometryToXformKey {
-    SG_ID geo_id;
-    SG_ID mat_id;
-};
-
-struct GeometryToXforms {
-    GeometryToXformKey key;
-    Arena xform_ids;       // value, array of SG_IDs
-    hashmap* xform_id_set; // kept in sync with xform_ids, use for quick lookup
-    WGPUBindGroup xform_bind_group;
-    GPU_Buffer xform_storage_buffer;
-    R_ID pipeline_id; // the pipeline this bindgroup belongs to
-    bool stale;
-
-    // after updating to webgpu v22.1.0.5, bind_group_layout is now part of bind_group,
-    // so we cache here in order to check if we need to rebuild the bindgroup
-    WGPUBindGroupLayout bind_group_layout; // @group(2) DRAW_UNIFORMS
-
-    static bool hasXform(GeometryToXforms* g2x, SG_ID xform_id)
-    {
-        return hashmap_get(g2x->xform_id_set, &xform_id) != NULL;
-    }
-
-    static void addXform(GeometryToXforms* g2x, SG_ID xform_id)
-    {
-        // first check if already exists
-        if (hashmap_get(g2x->xform_id_set, &xform_id) == NULL) {
-            *ARENA_PUSH_TYPE(&g2x->xform_ids, SG_ID) = xform_id;
-            hashmap_set(g2x->xform_id_set, &xform_id);
-            g2x->stale = true;
-        }
-    }
-
-    static void removeXform(GeometryToXforms* g2x, size_t xform_id_index)
-    {
-        // note: we don't set stale here because removal happens during lazy-deletion,
-        // when we are rebuilding a fresh bindgroup
-
-        SG_ID xform_id      = *ARENA_GET_TYPE(&g2x->xform_ids, SG_ID, xform_id_index);
-        const void* removed = hashmap_delete(g2x->xform_id_set, &xform_id);
-        ASSERT(removed);
-        UNUSED_VAR(removed);
-
-        // swap with last element
-        *ARENA_GET_TYPE(&g2x->xform_ids, SG_ID, xform_id_index)
-          = *ARENA_GET_LAST_TYPE(&g2x->xform_ids, SG_ID);
-        ARENA_POP_TYPE(&g2x->xform_ids, SG_ID);
-    }
-
-    static int compare(const void* a, const void* b, void* udata)
-    {
-        GeometryToXforms* ga = (GeometryToXforms*)a;
-        GeometryToXforms* gb = (GeometryToXforms*)b;
-        return memcmp(&ga->key, &gb->key, sizeof(ga->key));
-    }
-
-    static u64 hash(const void* item, uint64_t seed0, uint64_t seed1)
-    {
-        GeometryToXforms* g2x = (GeometryToXforms*)item;
-        return hashmap_xxhash3(&g2x->key, sizeof(g2x->key), seed0, seed1);
-    }
-
-    static void free(void* item)
-    {
-        GeometryToXforms* g2x = (GeometryToXforms*)item;
-        Arena::free(&g2x->xform_ids);
-        WGPU_RELEASE_RESOURCE(BindGroup, g2x->xform_bind_group);
-        GPU_Buffer::destroy(&g2x->xform_storage_buffer);
-        hashmap_free(g2x->xform_id_set);
-    }
-
-    static void rebuildBindGroup(GraphicsContext* gctx, R_Scene* scene,
-                                 GeometryToXforms* g2x, WGPUBindGroupLayout layout,
-                                 Arena* frame_arena, R_RenderPipeline* pipeline);
-};
-
 struct R_Scene : R_Transform {
     SG_SceneDesc sg_scene_desc;
-
-    hashmap* pipeline_to_material; // R_ID -> Arena of R_Material ids
-    hashmap* material_to_geo;      // SG_ID -> Arena of geo ids
-    hashmap* geo_to_xform;         // SG_ID -> Arena of xform ids (for each material)
-
+    hashmap* geo_to_xform;        // map from (Material, Geometry) to list of xforms
     hashmap* light_id_set;        // set of SG_IDs
     GPU_Buffer light_info_buffer; // lighting storage buffer
 
@@ -661,24 +547,32 @@ struct R_Scene : R_Transform {
     }
 
     static void registerMesh(R_Scene* scene, R_Transform* mesh);
-    static GeometryToXforms* getPrimitive(R_Scene* scene, SG_ID geo_id, SG_ID mat_id);
-    static MaterialToGeometry* getMaterialToGeometry(R_Scene* scene, SG_ID mat_id);
-
-    // static void free(R_Scene* scene);
+    static void unregisterMesh(R_Scene* scene, R_Transform* mesh);
+    static void markPrimitiveStale(R_Scene* scene, R_Transform* mesh);
+    static WGPUBindGroup createPrimitiveBindGroup(GraphicsContext* gctx, R_Scene* scene,
+                                                  SG_ID material_id, SG_ID geo_id,
+                                                  WGPUBindGroupLayout layout,
+                                                  Arena* frame_arena);
+    static int numPrimitives(R_Scene* scene, SG_ID material_id, SG_ID geo_id);
 };
 
 // =============================================================================
 // R_RenderPipeline
 // =============================================================================
 
+struct R_PSO {
+    SG_MaterialPipelineState sg_state; // state from chugl scenegraph
+    int msaa_sample_count;
+};
+
 struct R_RenderPipeline /* NOT backed by SG_Component */ {
     R_ID rid;
     // RenderPipeline pipeline;
     WGPURenderPipeline gpu_pipeline;
-    SG_MaterialPipelineState pso;
+    R_PSO pso;
     // ptrdiff_t offset; // acts as an ID, offset in bytes into pipeline Arena
 
-    Arena materialIDs; // array of SG_IDs
+    // Arena materialIDs; // array of SG_IDs
 
     char name[64];
 
@@ -698,9 +592,7 @@ struct R_RenderPipeline /* NOT backed by SG_Component */ {
     // static void init(GraphicsContext* gctx, R_RenderPipeline* pipeline,
     //                  const SG_MaterialPipelineState* config, ptrdiff_t offset);
     static void init(GraphicsContext* gctx, R_RenderPipeline* pipeline,
-                     const SG_MaterialPipelineState* config, int msaa_sample_count = 4);
-
-    static void addMaterial(R_RenderPipeline* pipeline, R_Material* material);
+                     const R_PSO* config);
 
     static void free(R_RenderPipeline* pipeline);
 
@@ -1107,8 +999,7 @@ R_Video* Component_GetVideo(SG_ID id);
 R_Webcam* Component_GetWebcam(SG_ID id);
 
 // lazily created on-demand because of many possible shader variations
-R_RenderPipeline* Component_GetPipeline(GraphicsContext* gctx,
-                                        SG_MaterialPipelineState* pso);
+R_RenderPipeline* Component_GetOrCreatePipeline(GraphicsContext* gctx, R_PSO* pso);
 
 // this version doesn't actually create the pipeline, just returns the existing one
 R_RenderPipeline* Component_GetPipeline(R_ID rid);
@@ -1120,7 +1011,7 @@ R_RenderPipeline* Component_GetPipeline(R_ID rid);
 // be careful to not delete components while iterating
 // returns false upon reachign end of material arena
 bool Component_MaterialIter(size_t* i, R_Material** material);
-bool Component_RenderPipelineIter(size_t* i, R_RenderPipeline** renderPipeline);
+// bool Component_RenderPipelineIter(size_t* i, R_RenderPipeline** renderPipeline);
 int Component_RenderPipelineCount();
 
 bool Component_VideoIter(size_t* i, R_Video** video);

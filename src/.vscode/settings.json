@@ -127,6 +127,8 @@
     "variant": "cpp",
     "vector": "cpp",
     "algorithm": "cpp",
-    "sr_webcam_internal.h": "c"
+    "sr_webcam_internal.h": "c",
+    "*.tcc": "cpp",
+    "numeric": "cpp"
   }
 }

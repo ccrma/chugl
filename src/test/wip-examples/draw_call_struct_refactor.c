@@ -129,3 +129,103 @@ struct DrawCall {
     // int baseVertex,  // only for indexed draw
     // int firstInstance
 };
+
+// ============================================================================
+// New IMPL
+// ============================================================================
+
+/*
+High level:
+- dynamically create bindgroups right before the draw call, and release
+immediately after
+  - reason: BindGroups are specific to a BindGroupLayout, and thus a single
+  RenderPipeline (when using implicit layout: auto). Adding dynamic MSAA means
+  that a single material can be associated with multiple RenderPipelines
+  (e.g. no MSAA, 2xMSAA, 4xMSAA) and therefore it doesn't make sense to cache
+  the bindgroup any more. Same goes for all the XForm matrices in a GScene
+
+*/
+
+typedef int SG_ID;
+
+struct DrawCall {
+    SG_ID shader_id;
+    SG_ID material_id;
+    SG_ID geo_id;
+};
+
+struct R_Scene {
+
+    // add
+    DrawCall drawcalls[];
+    bool stale; // optional. optimization
+    // in case we render the same GScene in multiple render passes, flag so we don't
+    // need to rebuild all the drawcall list state every time?
+
+    // keep
+    Hashmap<(material, geo), xform_ids : int[]>
+    // - keep the lazy deletion, and marking an entry as "stale" when xforms change
+    // this preserves our instanced-draw-by-default and keeps buffer uploads of
+    // transform data to a minimum
+
+    // Remove
+    // all the other complicated hashmap/tree state
+};
+
+void onAddSubgraph(...)
+{
+    // Convert mesh to drawcall struct and add to scene->drawcalls
+}
+
+void onRemoveSubgraph(...)
+{
+    // don't need to remove drawcall from scene->drawcalls, the lazy deletion
+    // will happen in prepareScene
+}
+
+// convert the mesh_id list into a list of sorted draw call structs
+void prepareScene(R_Scene* scene)
+{
+    Arena draw_call_arena;
+
+    foreach (DrawCall drawcall : scene->mesh_ids) {
+        ASSERT(every id is valid);
+
+        // rebuild material GPU buffer if stale
+        // NOTE: this no longer creates a bindgroup
+
+        // lookup in scene G2X map if (material, geo) is empty
+        // if so, remove from both G2X and scene->drawcalls
+
+        // push for sorting
+        // this would be the place to add transparency
+        ARENA_PUSH(draw_call_arena, drawcall);
+    }
+
+    qsort();
+
+    // render all the drawcalls in (now sorted) draw_call_arena in order
+    // except now we dynamically create and release bindgroups within the nested loops
+    R_RenderPipeline pipeline = GetOrCreateRenderPipeline(R_PSO);
+}
+
+// new lookup key for all standard material render pipelines
+struct R_PSO {
+    SG_ID shader_id;
+    Material PSO stuff;
+    MSAA Count;
+    // whatever else, add as needed
+};
+
+// new Shader GC
+
+struct R_Shader {
+    // add
+    WGPUPipeline pipelines[];
+};
+
+RenderPipeline::init()
+{
+    // add pipeline to R_Shader pipelines[]
+    // needed for GC
+}

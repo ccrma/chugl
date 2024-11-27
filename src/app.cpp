@@ -232,7 +232,7 @@ struct App;
 static void _R_HandleCommand(App* app, SG_Command* command);
 
 static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
-                           WGPURenderPassEncoder render_pass);
+                           WGPURenderPassEncoder render_pass, int msaa_sample_count);
 
 static void _R_glfwErrorCallback(int error, const char* description)
 {
@@ -824,14 +824,16 @@ struct App {
                           resolve_target_view, color_attachment_format,
                           scene->sg_scene_desc.bg_color);
 
-                        log_info("render pass width %d, height %d", r_tex->desc.width,
-                                 r_tex->desc.height);
+                        // log_info("render pass width %d, height %d",
+                        // r_tex->desc.width,
+                        //          r_tex->desc.height);
 
                         WGPURenderPassEncoder render_pass
                           = wgpuCommandEncoderBeginRenderPass(app->gctx.commandEncoder,
                                                               &pass->render_pass_desc);
 
-                        _R_RenderScene(app, scene, camera, render_pass);
+                        _R_RenderScene(app, scene, camera, render_pass,
+                                       pass->sg_pass.render_pass_msaa_sample_count);
 
                         wgpuRenderPassEncoderEnd(render_pass);
                         wgpuRenderPassEncoderRelease(render_pass);
@@ -886,13 +888,15 @@ struct App {
                         // set bind groups
                         const int screen_pass_binding_location = 0;
 
-                        R_Material::rebuildBindGroup(
+                        WGPUBindGroup bind_group = R_Material::createBindGroup(
                           material, &app->gctx,
                           screen_pass_pipeline.frame_group_layout);
 
-                        wgpuRenderPassEncoderSetBindGroup(
-                          render_pass, screen_pass_binding_location,
-                          material->bind_group, 0, NULL);
+                        wgpuRenderPassEncoderSetBindGroup(render_pass,
+                                                          screen_pass_binding_location,
+                                                          bind_group, 0, NULL);
+
+                        WGPU_RELEASE_RESOURCE(BindGroup, bind_group);
                     }
 
                     wgpuRenderPassEncoderDraw(render_pass, 3, 1, 0, 0);
@@ -929,12 +933,14 @@ struct App {
                     { // update bind groups
                         const int compute_pass_binding_location = 0;
 
-                        R_Material::rebuildBindGroup(compute_material, &app->gctx,
-                                                     pipeline.bind_group_layout);
+                        WGPUBindGroup bind_group = R_Material::createBindGroup(
+                          compute_material, &app->gctx, pipeline.bind_group_layout);
 
                         wgpuComputePassEncoderSetBindGroup(
-                          compute_pass, compute_pass_binding_location,
-                          compute_material->bind_group, 0, NULL);
+                          compute_pass, compute_pass_binding_location, bind_group, 0,
+                          NULL);
+
+                        WGPU_RELEASE_RESOURCE(BindGroup, bind_group);
                     }
 
                     // dispatch
@@ -1030,12 +1036,6 @@ struct App {
                               &app->gctx, bloom_downscale_material, 0,
                               downsample_texture_views[i]);
 
-                            { // update bind group
-                                R_Material::rebuildBindGroup(
-                                  bloom_downscale_material, &app->gctx,
-                                  downscale_pipeline.frame_group_layout);
-                            }
-
                             // set color target to mip level i + 1
                             WGPURenderPassColorAttachment ca = {};
                             ca.view       = downsample_texture_views[i + 1];
@@ -1059,9 +1059,13 @@ struct App {
                             wgpuRenderPassEncoderSetPipeline(
                               render_pass, downscale_pipeline.gpu_pipeline);
 
+                            WGPUBindGroup bloom_downscale_bindgroup
+                              = R_Material::createBindGroup(
+                                bloom_downscale_material, &app->gctx,
+                                downscale_pipeline.frame_group_layout);
                             wgpuRenderPassEncoderSetBindGroup(
-                              render_pass, 0, bloom_downscale_material->bind_group, 0,
-                              NULL);
+                              render_pass, 0, bloom_downscale_bindgroup, 0, NULL);
+                            WGPU_RELEASE_RESOURCE(BindGroup, bloom_downscale_bindgroup);
 
                             wgpuRenderPassEncoderDraw(render_pass, 3, 1, 0, 0);
 
@@ -1103,12 +1107,6 @@ struct App {
                               &app->gctx, bloom_upscale_material, 2,
                               downsample_texture_views[i]);
 
-                            { // update bind group
-                                R_Material::rebuildBindGroup(
-                                  bloom_upscale_material, &app->gctx,
-                                  upscale_pipeline.frame_group_layout);
-                            }
-
                             // set color target to mip level i + 1
                             WGPURenderPassColorAttachment ca = {};
                             ca.view       = upsample_texture_views[i];
@@ -1132,9 +1130,13 @@ struct App {
                             wgpuRenderPassEncoderSetPipeline(
                               render_pass, upscale_pipeline.gpu_pipeline);
 
+                            WGPUBindGroup bloom_upscale_bindgroup
+                              = R_Material::createBindGroup(
+                                bloom_upscale_material, &app->gctx,
+                                upscale_pipeline.frame_group_layout);
                             wgpuRenderPassEncoderSetBindGroup(
-                              render_pass, 0, bloom_upscale_material->bind_group, 0,
-                              NULL);
+                              render_pass, 0, bloom_upscale_bindgroup, 0, NULL);
+                            WGPU_RELEASE_RESOURCE(BindGroup, bloom_upscale_bindgroup);
 
                             wgpuRenderPassEncoderDraw(render_pass, 3, 1, 0, 0);
 
@@ -1324,7 +1326,7 @@ static void _R_ScenePassCreateAndBindFrameBindgroup(GraphicsContext* gctx,
     // camera frame uniform buffer needs to already be updated
     ASSERT(camera->frame_uniform_buffer_fc == fc);
 
-    R_Shader* shader = Component_GetShader(render_pipeline->pso.sg_shader_id);
+    R_Shader* shader = Component_GetShader(render_pipeline->pso.sg_state.sg_shader_id);
 
     { // set frame uniforms
         WGPUBindGroupEntry frame_group_entries[3] = {};
@@ -1367,12 +1369,15 @@ static void _R_ScenePassCreateAndBindFrameBindgroup(GraphicsContext* gctx,
     }
 }
 
-static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
-                           WGPURenderPassEncoder render_pass)
-{
-    // early out if no pipelines
-    if (Component_RenderPipelineCount() == 0) return;
+struct SceneDrawCall {
+    SG_ID shader_id;
+    SG_ID material_id;
+    SG_ID geo_id;
+};
 
+static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
+                           WGPURenderPassEncoder render_pass, int msaa_sample_count)
+{
     // Update all transforms
     R_Transform::rebuildMatrices(scene, &app->frameArena);
     // R_Transform::print(main_scene, 0);
@@ -1416,137 +1421,156 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
     // if we find SG_ID arenas are empty
     // - impl only after render loop architecture has stabilized
 
-    // ==optimize== currently iterating over *every* pipeline for each renderpass
-    // store a renderpipeline list per R_Scene / renderpass so we don't iterate
-    // over pipelines that aren't used in this particular scene
-    R_RenderPipeline* render_pipeline = NULL;
-    size_t rpIndex                    = 0;
-    while (Component_RenderPipelineIter(&rpIndex, &render_pipeline)) {
-        ASSERT(render_pipeline->rid != 0);
+    // form draw call list and sort
+    static Arena draw_call_list{};
+    defer(Arena::clear(&draw_call_list));
 
-        if (R_RenderPipeline::numMaterials(render_pipeline) == 0) continue;
+    size_t hashmap_idx_DONT_USE = 0;
+    GeometryToXforms* primitive = NULL;
+    int num_draw_calls          = 0;
+    while (
+      hashmap_iter(scene->geo_to_xform, &hashmap_idx_DONT_USE, (void**)&primitive)) {
+        // TODO remove the primitive from scene->geo_to_xform if it's empty
+        // do this in Scene::register/unreigster mesh
+        // at this point, ASSERT(count(primitive) > 0)
+        ASSERT(GeometryToXforms::count(primitive) > 0);
+
+        ++num_draw_calls;
+
+        // Get shader id from material
+        R_Material* material = Component_GetMaterial(primitive->key.mat_id);
+        ASSERT(material);
+
+        // add to draw call list
+        SceneDrawCall* draw_call = ARENA_PUSH_TYPE(&draw_call_list, SceneDrawCall);
+        draw_call->shader_id     = material->pso.sg_shader_id;
+        draw_call->material_id   = material->id;
+        draw_call->geo_id        = primitive->key.geo_id;
+    }
+
+    // now sort draw calls
+    if (num_draw_calls > 0)
+        qsort(draw_call_list.base, num_draw_calls, sizeof(SceneDrawCall),
+              [](const void* a, const void* b) -> int {
+                  SceneDrawCall* draw_call_a = (SceneDrawCall*)a;
+                  SceneDrawCall* draw_call_b = (SceneDrawCall*)b;
+                  // To test: set breakpoint here, run wip-examples/drawcall_sort.ck
+                  return memcmp(draw_call_a, draw_call_b, sizeof(SceneDrawCall));
+              });
+
+    // main render pass
+    R_ID last_pipeline_id  = 0;
+    SG_ID last_material_id = 0;
+    for (int draw_call_idx = 0; draw_call_idx < num_draw_calls; ++draw_call_idx) {
+        SceneDrawCall* draw_call
+          = ARENA_GET_TYPE(&draw_call_list, SceneDrawCall, draw_call_idx);
+
+        R_Material* material = Component_GetMaterial(draw_call->material_id);
+        R_Geometry* geo      = Component_GetGeometry(draw_call->geo_id);
+        ASSERT(material);
+        ASSERT(geo);
+        ASSERT(material->pso.sg_shader_id == draw_call->shader_id);
+
+        // get the pipeline for this draw call
+        R_PSO pso = { material->pso, msaa_sample_count };
+        R_RenderPipeline* render_pipeline
+          = Component_GetOrCreatePipeline(&app->gctx, &pso);
+        ASSERT(render_pipeline);
+
+        defer({
+            last_pipeline_id = render_pipeline->rid;
+            last_material_id = draw_call->material_id;
+        });
 
         WGPURenderPipeline gpu_pipeline = render_pipeline->gpu_pipeline;
+        // new pipeline, set it and rebind frame bindgroup
+        bool new_pipeline = last_pipeline_id != render_pipeline->rid;
+        if (new_pipeline) {
+            wgpuRenderPassEncoderSetPipeline(render_pass, gpu_pipeline);
+            // bind per-frame bind group @group(0) (uniforms that are constant for the
+            // entire frame)
+            _R_ScenePassCreateAndBindFrameBindgroup(
+              &app->gctx, scene, camera, render_pipeline, render_pass, app->fc);
+        }
 
-        // set shader
-        // ==optimize== only set shader if we actually have anything to render
-        wgpuRenderPassEncoderSetPipeline(render_pass, gpu_pipeline);
+        bool new_material = last_material_id != draw_call->material_id;
+        // assume it's impossible to have a new pipeline but the same material
+        if (new_pipeline) ASSERT(new_material);
 
-        // bind per-frame bind group @group(0) (uniforms that are constant for the
-        // entire frame)
-        _R_ScenePassCreateAndBindFrameBindgroup(&app->gctx, scene, camera,
-                                                render_pipeline, render_pass, app->fc);
-
-        // per-material render loop
-        size_t material_idx    = 0;
-        R_Material* r_material = NULL;
-        while (
-          R_RenderPipeline::materialIter(render_pipeline, &material_idx, &r_material)) {
-
-            ASSERT(r_material->pipelineID == render_pipeline->rid);
-
-            MaterialToGeometry* m2g = (MaterialToGeometry*)hashmap_get(
-              scene->material_to_geo, &r_material->id);
-
-            // early out scene doesn't use this material
-            if (!m2g) continue;
-            int geo_count = ARENA_LENGTH(&m2g->geo_ids, SG_ID);
-            if (geo_count == 0) continue;
-
-            // set per_material bind group
-            R_Material::rebuildBindGroup(r_material, &app->gctx,
-                                         R_RenderPipeline::getBindGroupLayout(
-                                           render_pipeline, PER_MATERIAL_GROUP));
-            ASSERT(r_material->bind_group);
-
+        // if we have a new material, need to rebuild bindgroup for new layout
+        if (new_material) {
+            WGPUBindGroup material_bindgroup
+              = R_Material::createBindGroup(material, &app->gctx,
+                                            R_RenderPipeline::getBindGroupLayout(
+                                              render_pipeline, PER_MATERIAL_GROUP));
             wgpuRenderPassEncoderSetBindGroup(render_pass, PER_MATERIAL_GROUP,
-                                              r_material->bind_group, 0, NULL);
+                                              material_bindgroup, 0, NULL);
+            WGPU_RELEASE_RESOURCE(BindGroup, material_bindgroup);
+        }
 
-            // iterate over geometries attached to this material
-            for (int geo_idx = 0; geo_idx < geo_count; geo_idx++) {
-                R_Geometry* geo = Component_GetGeometry(
-                  *ARENA_GET_TYPE(&m2g->geo_ids, SG_ID, geo_idx));
-                GeometryToXforms* g2x
-                  = R_Scene::getPrimitive(scene, geo->id, r_material->id);
-                ASSERT(g2x->key.geo_id == geo->id && g2x->key.mat_id == r_material->id);
+        WGPUBindGroup per_draw_bind_group = R_Scene::createPrimitiveBindGroup(
+          &app->gctx, scene, material->id, geo->id,
+          R_RenderPipeline::getBindGroupLayout(render_pipeline, PER_DRAW_GROUP),
+          &app->frameArena);
 
-                GeometryToXforms::rebuildBindGroup(
-                  &app->gctx, scene, g2x,
-                  R_RenderPipeline::getBindGroupLayout(render_pipeline, PER_DRAW_GROUP),
-                  &app->frameArena, render_pipeline);
+        // set model bind group
+        wgpuRenderPassEncoderSetBindGroup(render_pass, PER_DRAW_GROUP,
+                                          per_draw_bind_group, 0, NULL);
+        WGPU_RELEASE_RESOURCE(BindGroup, per_draw_bind_group);
 
-                // check *after* rebuildBindGroup because some xform ids may be
-                // removed
-                int num_instances = ARENA_LENGTH(&g2x->xform_ids, SG_ID);
-                if (num_instances == 0) {
-                    continue;
-                }
-                ASSERT(g2x->xform_bind_group); // shouldn't be null if we have non-zero
-                                               // instances
+        // set vertex attributes
+        for (int location = 0; location < R_Geometry::vertexAttributeCount(geo);
+             location++) {
+            GPU_Buffer* gpu_buffer = &geo->gpu_vertex_buffers[location];
+            if (gpu_buffer->buf && gpu_buffer->size > 0) {
+                wgpuRenderPassEncoderSetVertexBuffer(
+                  render_pass, location, gpu_buffer->buf, 0, gpu_buffer->size);
+            }
+        }
 
-                // debug group
-                //                snprintf(debug_group_label, sizeof(debug_group_label),
-                //                         "Geometry[%d] %s ", geo->id,
-                //                         geo->name.c_str());
-                //                wgpuRenderPassEncoderPushDebugGroup(render_pass,
-                //                debug_group_label);
-                //                defer(wgpuRenderPassEncoderPopDebugGroup(render_pass));
+        // set pulled vertex buffers (programmable vertex pulling)
+        if (R_Geometry::usesVertexPulling(geo)) {
+            WGPUBindGroup pull_bind_group = R_Geometry::createPullBindGroup(
+              &app->gctx, geo,
+              R_RenderPipeline::getBindGroupLayout(render_pipeline, VERTEX_PULL_GROUP));
+            wgpuRenderPassEncoderSetBindGroup(render_pass, VERTEX_PULL_GROUP,
+                                              pull_bind_group, 0, NULL);
+            WGPU_RELEASE_RESOURCE(BindGroup, pull_bind_group);
+        }
 
-                // set model bind group
-                wgpuRenderPassEncoderSetBindGroup(render_pass, PER_DRAW_GROUP,
-                                                  g2x->xform_bind_group, 0, NULL);
+        // get instance count
+        int num_instances = R_Scene::numPrimitives(scene, material->id, geo->id);
 
-                // set vertex attributes
-                for (int location = 0; location < R_Geometry::vertexAttributeCount(geo);
-                     location++) {
-                    GPU_Buffer* gpu_buffer = &geo->gpu_vertex_buffers[location];
-                    if (gpu_buffer->buf && gpu_buffer->size > 0) {
-                        wgpuRenderPassEncoderSetVertexBuffer(
-                          render_pass, location, gpu_buffer->buf, 0, gpu_buffer->size);
-                    }
-                }
+        // populate index buffer
+        int num_indices = (int)R_Geometry::indexCount(geo);
+        if (num_indices > 0) {
+            wgpuRenderPassEncoderSetIndexBuffer(render_pass, geo->gpu_index_buffer.buf,
+                                                WGPUIndexFormat_Uint32, 0,
+                                                geo->gpu_index_buffer.size);
 
-                // set pulled vertex buffers (programmable vertex pulling)
-                if (R_Geometry::usesVertexPulling(geo)) {
-                    R_Geometry::rebuildPullBindGroup(
-                      &app->gctx, geo,
-                      R_RenderPipeline::getBindGroupLayout(render_pipeline,
-                                                           VERTEX_PULL_GROUP));
-                    wgpuRenderPassEncoderSetBindGroup(render_pass, VERTEX_PULL_GROUP,
-                                                      geo->pull_bind_group, 0, NULL);
-                }
-
-                // populate index buffer
-                int num_indices = (int)R_Geometry::indexCount(geo);
-                if (num_indices > 0) {
-                    wgpuRenderPassEncoderSetIndexBuffer(
-                      render_pass, geo->gpu_index_buffer.buf, WGPUIndexFormat_Uint32, 0,
-                      geo->gpu_index_buffer.size);
-
-                    wgpuRenderPassEncoderDrawIndexed(render_pass, num_indices,
-                                                     num_instances, 0, 0, 0);
-                } else {
-                    // non-index draw
-                    int num_vertices = (int)R_Geometry::vertexCount(geo);
-                    int vertex_draw_count
-                      = geo->vertex_count >= 0 ? geo->vertex_count : num_vertices;
-                    if (vertex_draw_count > 0) {
-                        wgpuRenderPassEncoderDraw(render_pass, vertex_draw_count,
-                                                  num_instances, 0, 0);
-                    }
-                }
-            } // foreach geometry
-        } // foreach material
-    } // foreach pipeline
+            wgpuRenderPassEncoderDrawIndexed(render_pass, num_indices, num_instances, 0,
+                                             0, 0);
+        } else {
+            // non-index draw
+            int num_vertices = (int)R_Geometry::vertexCount(geo);
+            int vertex_draw_count
+              = geo->vertex_count >= 0 ? geo->vertex_count : num_vertices;
+            if (vertex_draw_count > 0) {
+                wgpuRenderPassEncoderDraw(render_pass, vertex_draw_count, num_instances,
+                                          0, 0);
+            }
+        }
+    }
 
     { // skybox pass
         R_Material* skybox_material
           = Component_GetMaterial(scene->sg_scene_desc.skybox_material_id);
         if (!skybox_material) goto post_skybox_pass;
+
+        R_PSO skybox_pso = { skybox_material->pso, msaa_sample_count };
         R_RenderPipeline* skybox_pipeline
-          = Component_GetPipeline(skybox_material->pipelineID);
+          = Component_GetOrCreatePipeline(&app->gctx, &skybox_pso);
         if (!skybox_pipeline) goto post_skybox_pass;
-        ASSERT(skybox_material->pipelineID == skybox_pipeline->rid);
 
         wgpuRenderPassEncoderSetPipeline(render_pass, skybox_pipeline->gpu_pipeline);
 
@@ -1554,16 +1578,14 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
         _R_ScenePassCreateAndBindFrameBindgroup(&app->gctx, scene, camera,
                                                 skybox_pipeline, render_pass, app->fc);
 
-        R_Material::rebuildBindGroup(
+        WGPUBindGroup bind_group = R_Material::createBindGroup(
           skybox_material, &app->gctx,
           R_RenderPipeline::getBindGroupLayout(skybox_pipeline, PER_MATERIAL_GROUP));
-        ASSERT(skybox_material->bind_group);
-
-        wgpuRenderPassEncoderSetBindGroup(render_pass, PER_MATERIAL_GROUP,
-                                          skybox_material->bind_group, 0, NULL);
+        wgpuRenderPassEncoderSetBindGroup(render_pass, PER_MATERIAL_GROUP, bind_group,
+                                          0, NULL);
+        WGPU_RELEASE_RESOURCE(BindGroup, bind_group);
 
         wgpuRenderPassEncoderDraw(render_pass, 3, 1, 0, 0);
-        // wgpuRenderPassEncoderDraw(render_pass, 6 * 6, 1, 0, 0);
     }
 post_skybox_pass:
     return;
@@ -1943,7 +1965,7 @@ static void _R_HandleCommand(App* app, SG_Command* command)
         case SG_COMMAND_MATERIAL_UPDATE_PSO: {
             SG_Command_MaterialUpdatePSO* cmd = (SG_Command_MaterialUpdatePSO*)command;
             R_Material* material              = Component_GetMaterial(cmd->sg_id);
-            R_Material::updatePSO(&app->gctx, material, &cmd->pso);
+            material->pso                     = cmd->pso;
         } break;
         case SG_COMMAND_MATERIAL_SET_UNIFORM: {
             SG_Command_MaterialSetUniform* cmd

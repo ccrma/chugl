@@ -379,7 +379,7 @@ static void _Transform_RebuildDescendants(R_Scene* scene, R_Transform* xform,
     // mark primitive as stale since world matrix will change
     if (xform->_geoID && xform->_matID) {
         ASSERT(xform->type == SG_COMPONENT_MESH);
-        R_Scene::getPrimitive(scene, xform->_geoID, xform->_matID)->stale = true;
+        R_Scene::markPrimitiveStale(scene, xform);
     }
 
     // TODO ==optimize==: this is where we would mark lights as stale
@@ -477,8 +477,8 @@ void R_Transform::updateMesh(R_Transform* xform, SG_ID geo_id, SG_ID mat_id)
 {
     R_Scene* scene = Component_GetScene(xform->scene_id);
     if (scene) {
-        // mark previous primitives as stale
-        R_Scene::getPrimitive(scene, xform->_geoID, xform->_matID)->stale = true;
+        // remove from previous primitive
+        R_Scene::unregisterMesh(scene, xform);
     }
 
     xform->_geoID = geo_id;
@@ -573,15 +573,10 @@ bool R_Geometry::usesVertexPulling(R_Geometry* geo)
     }
     return false;
 }
-void R_Geometry::rebuildPullBindGroup(GraphicsContext* gctx, R_Geometry* geo,
-                                      WGPUBindGroupLayout layout)
+
+WGPUBindGroup R_Geometry::createPullBindGroup(GraphicsContext* gctx, R_Geometry* geo,
+                                              WGPUBindGroupLayout layout)
 {
-    if (!geo->pull_bind_group_dirty) {
-        return;
-    }
-
-    geo->pull_bind_group_dirty = false;
-
     WGPUBindGroupEntry entries[SG_GEOMETRY_MAX_VERTEX_PULL_BUFFERS] = {};
     int num_entries                                                 = 0;
     for (u32 i = 0; i < SG_GEOMETRY_MAX_VERTEX_PULL_BUFFERS; i++) {
@@ -601,10 +596,7 @@ void R_Geometry::rebuildPullBindGroup(GraphicsContext* gctx, R_Geometry* geo,
     desc.entryCount              = num_entries;
     desc.entries                 = entries;
 
-    WGPU_RELEASE_RESOURCE(BindGroup, geo->pull_bind_group);
-
-    geo->pull_bind_group = wgpuDeviceCreateBindGroup(gctx->device, &desc);
-    ASSERT(geo->pull_bind_group);
+    return wgpuDeviceCreateBindGroup(gctx->device, &desc);
 }
 
 void R_Geometry::setPulledVertexAttribute(GraphicsContext* gctx, R_Geometry* geo,
@@ -751,49 +743,10 @@ void MaterialTextureView::init(MaterialTextureView* view)
     view->scale[1] = 1.0f;
 }
 
-void R_Material::updatePSO(GraphicsContext* gctx, R_Material* mat,
-                           SG_MaterialPipelineState* pso)
+WGPUBindGroup R_Material::createBindGroup(R_Material* mat, GraphicsContext* gctx,
+                                          WGPUBindGroupLayout layout)
 {
-    mat->pso = *pso;
-    hashmap_set(materials_with_new_pso, &mat->id);
-}
-
-void R_Material::rebuildBindGroup(R_Material* mat, GraphicsContext* gctx,
-                                  WGPUBindGroupLayout layout)
-{
-    defer(mat->bind_group_stale = false);
-    // check if layout changed (e.g. changing material topology)
-    if (layout != mat->bind_group_layout) {
-        mat->bind_group_layout = layout;
-        mat->bind_group_stale  = true;
-    }
-
-    // TODO: can we improve this? maybe assume bindings are consecutive.
-    // at first R_BIND_EMPTY can early-out
-    // check in chugl example if we can skip @binding() numbers
-    // unfortunately wgsl still compiles if there are skips/holes in bindgroup numbering
-    if (!mat->bind_group_stale) {
-        // check all texture bindings and see if generation# changed
-        // ==optimize== have textures track an arena of bound mat IDs, and mark as stale
-        // upon change or have a "bindgroup" manager class do the same
-        // this lazy check is the quickest to implement, and requires the least
-        // additional state
-        bool needs_rebuild = false;
-        for (u32 i = 0; i < ARRAY_LENGTH(mat->bindings); ++i) {
-            R_Binding* binding = &mat->bindings[i];
-            if (binding->type == R_BIND_TEXTURE_ID) {
-                R_Texture* tex = Component_GetTexture(binding->as.textureID);
-                if (tex->generation != binding->generation) {
-                    ASSERT(tex->generation > binding->generation);
-                    needs_rebuild = true;
-                    break;
-                }
-            }
-        }
-        if (!needs_rebuild) return;
-    }
-
-    // log_trace("rebuilding bindgroup for material pipeline id %d", mat->pipelineID);
+    // ==optimize== cache bind group layout
 
     // create bindgroups for all bindings
     WGPUBindGroupEntry new_bind_group_entries[SG_MATERIAL_MAX_UNIFORMS] = {};
@@ -852,21 +805,16 @@ void R_Material::rebuildBindGroup(R_Material* mat, GraphicsContext* gctx,
         }
     }
 
-    // release previous bindgroup
-    WGPU_RELEASE_RESOURCE(BindGroup, mat->bind_group);
-
     // create new bindgroup
     char bind_group_label[128] = {};
     snprintf(bind_group_label, sizeof(bind_group_label),
-             "Material[%d] Pipeline[%d] Shader[%d] Bindgroup", mat->id, mat->pipelineID,
-             mat->pso.sg_shader_id);
+             "Material[%d] Shader[%d] Bindgroup", mat->id, mat->pso.sg_shader_id);
     WGPUBindGroupDescriptor bg_desc = {};
     bg_desc.label                   = bind_group_label;
     bg_desc.layout                  = layout;
     bg_desc.entryCount              = bind_group_index;
     bg_desc.entries                 = new_bind_group_entries;
-    mat->bind_group                 = wgpuDeviceCreateBindGroup(gctx->device, &bg_desc);
-    ASSERT(mat->bind_group);
+    return wgpuDeviceCreateBindGroup(gctx->device, &bg_desc);
 }
 
 static SamplerConfig samplerConfigFromSGSampler(SG_Sampler sg_sampler)
@@ -924,29 +872,6 @@ void R_Material::setBinding(GraphicsContext* gctx, R_Material* mat, u32 location
                             R_BindType type, void* data, size_t bytes)
 {
     R_Binding* binding = &mat->bindings[location];
-
-    { // logic for setting bind group stale (only check if it's not already set to
-      // stale)
-        if (!mat->bind_group_stale) {
-            bool same_bind_type = (binding->type == type);
-            // clang-format off
-            if (same_bind_type && 
-            (
-                (type == R_BIND_UNIFORM) // uniform buffer is never recreated
-                ||
-                (type == R_BIND_STORAGE && binding->size == bytes) // local storage binding same size
-                ||
-                (type == R_BIND_SAMPLER && memcmp(&binding->as.samplerConfig, data, bytes) == 0) // sampler config the same
-            )) {
-                // in this case do nothing
-                // DO NOT set bind_group_stale = false because that overwrites previous 
-                // times this frame when bind_group_stale was set to true correctly
-            } else {
-                mat->bind_group_stale = true;
-            }
-        }
-    }
-    // clang-format on
 
     R_BindType prev_bind_type = binding->type;
     binding->type             = type;
@@ -1006,91 +931,160 @@ void R_Material::setBinding(GraphicsContext* gctx, R_Material* mat, u32 location
 }
 
 // ============================================================================
-// R_Scene
+// GeometryToXforms (scene helper)
 // ============================================================================
 
-void GeometryToXforms::rebuildBindGroup(GraphicsContext* gctx, R_Scene* scene,
-                                        GeometryToXforms* g2x,
-                                        WGPUBindGroupLayout layout, Arena* frame_arena,
-                                        R_RenderPipeline* pipeline)
-{
-    // if new pipeline, need to rebuild bindgroup with new layout
-    if (pipeline->rid != g2x->pipeline_id) {
-        g2x->stale       = true;
-        g2x->pipeline_id = pipeline->rid;
+struct GeometryToXformKey {
+    SG_ID geo_id;
+    SG_ID mat_id;
+};
+
+struct GeometryToXforms {
+    GeometryToXformKey key;
+    // Arena xform_ids;       // value, array of SG_IDs
+    hashmap* xform_id_set; // kept in sync with xform_ids, use for quick lookup
+    // WGPUBindGroup xform_bind_group;
+    GPU_Buffer xform_storage_buffer;
+    // R_ID pipeline_id; // the pipeline this bindgroup belongs to
+    bool buffer_stale; // if true, need to update storage buffer
+
+    static int count(GeometryToXforms* g2x)
+    {
+        return hashmap_count(g2x->xform_id_set);
     }
 
-    if (g2x->bind_group_layout != layout) {
-        g2x->bind_group_layout = layout;
-        g2x->stale             = true;
+    static bool hasXform(GeometryToXforms* g2x, SG_ID xform_id)
+    {
+        return hashmap_get(g2x->xform_id_set, &xform_id) != NULL;
     }
 
-    if (!g2x->stale) return;
-    defer(g2x->stale = false);
+    static void addXform(GeometryToXforms* g2x, SG_ID xform_id)
+    {
+        hashmap_set(g2x->xform_id_set, &xform_id);
+        g2x->buffer_stale = true;
+    }
 
-    // build new array of matrices on CPU
-    u64 model_matrices_offset = frame_arena->curr;
+    static void removeXform(GeometryToXforms* g2x, SG_ID xform_id)
+    {
+        const void* removed = hashmap_delete(g2x->xform_id_set, &xform_id);
+        g2x->buffer_stale   = true;
+        ASSERT(removed);
+        UNUSED_VAR(removed);
+    }
 
-    int numInstances = ARENA_LENGTH(&g2x->xform_ids, SG_ID);
-    SG_ID* xformIDs  = (SG_ID*)g2x->xform_ids.base;
-    // delete and swap any destroyed xforms
-    for (size_t i = 0; i < numInstances; ++i) {
-        R_Transform* xform = Component_GetXform(xformIDs[i]);
-        // remove NULL xforms and xforms that have been reassigned new mesh params
+    static int compare(const void* a, const void* b, void* udata)
+    {
+        GeometryToXforms* ga = (GeometryToXforms*)a;
+        GeometryToXforms* gb = (GeometryToXforms*)b;
+        return memcmp(&ga->key, &gb->key, sizeof(ga->key));
+    }
 
-        bool xform_destroyed = (xform == NULL);
-        bool xform_changed_mesh
-          = (xform->_geoID != g2x->key.geo_id || xform->_matID != g2x->key.mat_id);
-        bool xform_detached_from_scene = (xform->scene_id != scene->id);
-        if (xform_destroyed || xform_changed_mesh || xform_detached_from_scene) {
-            GeometryToXforms::removeXform(g2x, i);
-            // decrement to reprocess this index
-            --i;
-            --numInstances;
-            continue;
+    static u64 hash(const void* item, uint64_t seed0, uint64_t seed1)
+    {
+        GeometryToXforms* g2x = (GeometryToXforms*)item;
+        return hashmap_xxhash3(&g2x->key, sizeof(g2x->key), seed0, seed1);
+    }
+
+    static void free(void* item)
+    {
+        GeometryToXforms* g2x = (GeometryToXforms*)item;
+        GPU_Buffer::destroy(&g2x->xform_storage_buffer);
+        hashmap_free(g2x->xform_id_set);
+    }
+
+    static WGPUBindGroup createBindGroup(GraphicsContext* gctx, R_Scene* scene,
+                                         GeometryToXforms* g2x,
+                                         WGPUBindGroupLayout layout, Arena* frame_arena)
+    {
+
+        // should be nonempty (if empty, should have already been deleted)
+        ASSERT(hashmap_count(g2x->xform_id_set) > 0);
+
+        // rebuild storage buffer
+        if (g2x->buffer_stale) {
+            defer(g2x->buffer_stale = false);
+
+            // build new array of matrices on CPU
+            u64 model_matrices_offset = frame_arena->curr;
+
+            size_t hashmap_idx_DONT_USE = 0;
+            SG_ID* xform_id             = NULL;
+            while (hashmap_iter(g2x->xform_id_set, &hashmap_idx_DONT_USE,
+                                (void**)&xform_id)) {
+                R_Transform* xform = Component_GetXform(*xform_id);
+
+                // all xforms should be valid here (can't delete xforms while
+                // iterating)
+                bool xform_same_mesh  = (xform->_geoID == g2x->key.geo_id
+                                        && xform->_matID == g2x->key.mat_id);
+                bool xform_same_scene = (xform->scene_id == scene->id);
+                ASSERT(xform && xform_same_mesh && xform_same_scene);
+                UNUSED_VAR(xform_same_mesh);
+                UNUSED_VAR(xform_same_scene);
+
+                // world matrix should already have been computed by now
+                ASSERT(xform->_stale == R_Transform_STALE_NONE);
+
+                // add xform matrix to arena
+                DrawUniforms* draw_uniforms
+                  = ARENA_PUSH_TYPE(frame_arena, DrawUniforms);
+                draw_uniforms->model = xform->world;
+                draw_uniforms->id    = xform->id;
+            }
+
+            u64 write_size = frame_arena->curr - model_matrices_offset;
+            GPU_Buffer::write(gctx, &g2x->xform_storage_buffer, WGPUBufferUsage_Storage,
+                              Arena::get(frame_arena, model_matrices_offset),
+                              write_size);
+
+            // pop arena after copying data to GPU
+            Arena::pop(frame_arena, write_size);
+            ASSERT(model_matrices_offset == frame_arena->curr);
         }
-        // assert his xform belongs to this material and geometry
-        ASSERT(xform->_geoID == g2x->key.geo_id);
-        ASSERT(xform->_matID == g2x->key.mat_id);
-        // else add xform matrix to arena
-        // world matrix should already have been computed by now
-        ASSERT(xform->_stale == R_Transform_STALE_NONE);
 
-        DrawUniforms* draw_uniforms = ARENA_PUSH_TYPE(frame_arena, DrawUniforms);
-        draw_uniforms->model        = xform->world;
-        draw_uniforms->id           = xform->id;
+        // recreate bindgroup
+        WGPUBindGroupEntry entry = {};
+        entry.binding            = 0;
+        entry.buffer             = g2x->xform_storage_buffer.buf;
+        entry.offset             = 0;
+        entry.size               = g2x->xform_storage_buffer.size;
+
+        WGPUBindGroupDescriptor desc = {};
+        desc.layout                  = layout;
+        desc.entryCount              = 1;
+        desc.entries                 = &entry;
+
+        // recreate bind group
+        return wgpuDeviceCreateBindGroup(gctx->device, &desc);
     }
-    // sanity check that we have the correct number of matrices
-    ASSERT(numInstances == ARENA_LENGTH(&g2x->xform_ids, SG_ID));
+};
 
-    u64 write_size = frame_arena->curr - model_matrices_offset;
-    GPU_Buffer::write(gctx, &g2x->xform_storage_buffer, WGPUBufferUsage_Storage,
-                      Arena::get(frame_arena, model_matrices_offset), write_size);
+static GeometryToXforms* R_Scene_getPrimitive(R_Scene* scene, SG_ID mat_id,
+                                              SG_ID geo_id)
+{
+    GeometryToXformKey key = {};
+    key.geo_id             = geo_id;
+    key.mat_id             = mat_id;
+    GeometryToXforms* g2x  = (GeometryToXforms*)hashmap_get(scene->geo_to_xform, &key);
 
-    // pop arena after copying data to GPU
-    Arena::pop(frame_arena, write_size);
-    ASSERT(model_matrices_offset == frame_arena->curr);
-
-    // recreate bindgroup
-    WGPUBindGroupEntry entry = {};
-    entry.binding            = 0;
-    entry.buffer             = g2x->xform_storage_buffer.buf;
-    entry.offset             = 0;
-    entry.size               = g2x->xform_storage_buffer.size;
-
-    WGPUBindGroupDescriptor desc = {};
-    desc.layout                  = layout;
-    desc.entryCount              = 1;
-    desc.entries                 = &entry;
-
-    WGPU_RELEASE_RESOURCE(BindGroup, g2x->xform_bind_group);
-
-    // only recreate bind group if we have nonzero instances
-    if (numInstances > 0) {
-        g2x->xform_bind_group = wgpuDeviceCreateBindGroup(gctx->device, &desc);
-        ASSERT(g2x->xform_bind_group);
+    if (!g2x) {
+        // create new one
+        GeometryToXforms new_g2x = {};
+        new_g2x.key.geo_id       = geo_id;
+        new_g2x.key.mat_id       = mat_id;
+        u64 seed                 = time(NULL);
+        new_g2x.xform_id_set     = hashmap_new(sizeof(SG_ID), 0, seed, seed, hashSGID,
+                                               compareSGIDs, NULL, NULL);
+        hashmap_set(scene->geo_to_xform, &new_g2x);
+        g2x = (GeometryToXforms*)hashmap_get(scene->geo_to_xform, &key);
     }
+    ASSERT(g2x);
+    return g2x;
 }
+
+// ============================================================================
+// R_Scene
+// ============================================================================
 
 void R_Scene::removeSubgraphFromRenderState(R_Scene* scene, R_Transform* root)
 {
@@ -1126,23 +1120,7 @@ void R_Scene::removeSubgraphFromRenderState(R_Scene* scene, R_Transform* root)
             ASSERT(prev_item);
             // TODO: somehow consolidate GText into also being a mesh...
         } else if (xform->type == SG_COMPONENT_MESH) {
-            // get xforms from geometry
-            GeometryToXforms* g2x
-              = R_Scene::getPrimitive(scene, xform->_geoID, xform->_matID);
-
-            // don't need to remove xform from geometry
-            // just mark the g2x entry as stale; will be lazily deleted in
-            // GeometryToXforms::rebuildBindGroup();
-            g2x->stale = true;
-            ASSERT(GeometryToXforms::hasXform(g2x, xform->id));
-
-            // TODO: deletions must cascade upwards to geo-->material-->pipeline
-            // we can only remove an SG_ID from a higher level IF that SG_ID
-            // at the lower level has an empty arena
-            // can implement this later. for now deletions will leave a bunch of empty
-            // arenas in the 3 hashmaps.
-            // better yet: batch all deletions and prune the render state in one go
-            // in a separate function like GG.gc()
+            R_Scene::unregisterMesh(scene, xform);
         }
     }
 }
@@ -1181,24 +1159,6 @@ void R_Scene::addSubgraphToRenderState(R_Scene* scene, R_Transform* root)
             ASSERT(!replaced);
         } else if (xform->_geoID != 0 && xform->_matID != 0) { // for all renderables
             ASSERT(xform->type == SG_COMPONENT_MESH);
-
-            // try adding to bottom level GeometryToXform
-            // if its not present, build up entire chain:
-            // g2x (geo, mat) --> xforms
-            // m2g mat --> geo
-            // p2g pso --> mat
-            // maintain invariant that if a (geo, mat) is present in g2x,
-            // then all higher order entries are also present.
-            // if g2x entry is not found, create it and all corresponding.
-            // invariant holds assuming the deletion in removeSubgraphFromRenderState()
-            // does not delete entire hashmap entries, ONLY pops individual SG_IDs from
-            // the entry arena
-            // that is, if a <geo_id, mat_id> entry is present in g2m hashmap,
-            // even if it has 0 xform ids, all upwards mat_id --> geo_ids and
-            // pipeline_id --> mat_ids entries also exist
-            // this avoids us having to do O(n) search on each xform added/removed
-            // from scenegraph render state
-
             R_Scene::registerMesh(scene, xform);
         }
     }
@@ -1269,58 +1229,57 @@ void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene, u64 
 void R_Scene::registerMesh(R_Scene* scene, R_Transform* mesh)
 {
     if (!scene || !mesh) return;
-
     if (mesh->_geoID == 0 || mesh->_matID == 0) return;
 
     ASSERT(mesh->type == SG_COMPONENT_MESH);
-    GeometryToXforms* g2x = R_Scene::getPrimitive(scene, mesh->_geoID, mesh->_matID);
-    GeometryToXforms::addXform(g2x, mesh->id);
+    GeometryToXforms::addXform(R_Scene_getPrimitive(scene, mesh->_matID, mesh->_geoID),
+                               mesh->id);
 
-    MaterialToGeometry* m2g = R_Scene::getMaterialToGeometry(scene, mesh->_matID);
-    MaterialToGeometry::addGeometry(m2g, mesh->_geoID);
+    // MaterialToGeometry* m2g = R_Scene::getMaterialToGeometry(scene, mesh->_matID);
+    // MaterialToGeometry::addGeometry(m2g, mesh->_geoID);
 }
 
-GeometryToXforms* R_Scene::getPrimitive(R_Scene* scene, SG_ID geo_id, SG_ID mat_id)
+void R_Scene::unregisterMesh(R_Scene* scene, R_Transform* mesh)
 {
-    GeometryToXformKey key = {};
-    key.geo_id             = geo_id;
-    key.mat_id             = mat_id;
-    GeometryToXforms* g2x  = (GeometryToXforms*)hashmap_get(scene->geo_to_xform, &key);
+    if (!scene || !mesh) return;
+    if (mesh->_geoID == 0 || mesh->_matID == 0) return;
 
-    if (!g2x) {
-        // create new one
-        GeometryToXforms new_g2x = {};
-        new_g2x.key.geo_id       = geo_id;
-        new_g2x.key.mat_id       = mat_id;
-        Arena::init(&new_g2x.xform_ids, sizeof(SG_ID) * 8);
-        u64 seed             = time(NULL);
-        new_g2x.xform_id_set = hashmap_new(sizeof(SG_ID), 0, seed, seed, hashSGID,
-                                           compareSGIDs, NULL, NULL);
-        hashmap_set(scene->geo_to_xform, &new_g2x);
-        g2x = (GeometryToXforms*)hashmap_get(scene->geo_to_xform, &key);
+    // get xforms from geometry
+    GeometryToXforms* g2x = R_Scene_getPrimitive(scene, mesh->_matID, mesh->_geoID);
+
+    ASSERT(GeometryToXforms::hasXform(g2x, mesh->id));
+
+    // remove xform from primitive set
+    GeometryToXforms::removeXform(g2x, mesh->id);
+
+    // delete primitive if empty
+    if (GeometryToXforms::count(g2x) == 0) {
+        const void* removed = hashmap_delete(scene->geo_to_xform, &g2x->key);
+        ASSERT(removed);
+        // TODO: hashmap bug, doesn't call elfree on removed item. do it ourselves
+        GeometryToXforms::free((void*)removed);
     }
-    ASSERT(g2x);
-    return g2x;
 }
 
-MaterialToGeometry* R_Scene::getMaterialToGeometry(R_Scene* scene, SG_ID mat_id)
+void R_Scene::markPrimitiveStale(R_Scene* scene, R_Transform* mesh)
 {
-    MaterialToGeometry* m2g
-      = (MaterialToGeometry*)hashmap_get(scene->material_to_geo, &mat_id);
+    GeometryToXforms* g2x = R_Scene_getPrimitive(scene, mesh->_matID, mesh->_geoID);
+    g2x->buffer_stale     = true;
+}
 
-    if (!m2g) {
-        MaterialToGeometry new_m2g = {};
-        new_m2g.material_id        = mat_id;
-        Arena::init(&new_m2g.geo_ids, sizeof(SG_ID) * 8);
-        u64 seed           = time(NULL);
-        new_m2g.geo_id_set = hashmap_new(sizeof(SG_ID), 0, seed, seed, hashSGID,
-                                         compareSGIDs, NULL, NULL);
-        hashmap_set(scene->material_to_geo, &new_m2g);
+WGPUBindGroup R_Scene::createPrimitiveBindGroup(GraphicsContext* gctx, R_Scene* scene,
+                                                SG_ID material_id, SG_ID geo_id,
+                                                WGPUBindGroupLayout layout,
+                                                Arena* frame_arena)
+{
+    GeometryToXforms* g2x = R_Scene_getPrimitive(scene, material_id, geo_id);
+    return GeometryToXforms::createBindGroup(gctx, scene, g2x, layout, frame_arena);
+}
 
-        m2g = (MaterialToGeometry*)hashmap_get(scene->material_to_geo, &mat_id);
-    }
-    ASSERT(m2g);
-    return m2g;
+int R_Scene::numPrimitives(R_Scene* scene, SG_ID material_id, SG_ID geo_id)
+{
+    GeometryToXforms* g2x = R_Scene_getPrimitive(scene, material_id, geo_id);
+    return GeometryToXforms::count(g2x);
 }
 
 void R_Scene::initFromSG(GraphicsContext* gctx, R_Scene* r_scene, SG_ID scene_id,
@@ -1347,12 +1306,11 @@ void R_Scene::initFromSG(GraphicsContext* gctx, R_Scene* r_scene, SG_ID scene_id
 
     // initialize arenas
     int seed = time(NULL);
-    r_scene->material_to_geo
-      = hashmap_new(sizeof(MaterialToGeometry), 0, seed, seed, MaterialToGeometry::hash,
-                    MaterialToGeometry::compare, MaterialToGeometry::free, NULL);
+
     r_scene->geo_to_xform
       = hashmap_new(sizeof(GeometryToXforms), 0, seed, seed, GeometryToXforms::hash,
                     GeometryToXforms::compare, GeometryToXforms::free, NULL);
+
     r_scene->light_id_set
       = hashmap_new(sizeof(SG_ID), 0, seed, seed, hashSGID, compareSGIDs, NULL, NULL);
 
@@ -1382,8 +1340,7 @@ WGPUBindGroupLayout R_RenderPipeline::getBindGroupLayout(R_RenderPipeline* pipel
 }
 
 void R_RenderPipeline::init(GraphicsContext* gctx, R_RenderPipeline* pipeline,
-                            const SG_MaterialPipelineState* config,
-                            int msaa_sample_count)
+                            const R_PSO* config)
 {
     ASSERT(pipeline->gpu_pipeline == NULL);
     ASSERT(pipeline->rid == 0);
@@ -1394,14 +1351,14 @@ void R_RenderPipeline::init(GraphicsContext* gctx, R_RenderPipeline* pipeline,
     pipeline->pso = *config;
 
     WGPUPrimitiveState primitiveState = {};
-    primitiveState.topology           = config->primitive_topology;
+    primitiveState.topology           = config->sg_state.primitive_topology;
     primitiveState.stripIndexFormat
       = (primitiveState.topology == WGPUPrimitiveTopology_TriangleStrip
          || primitiveState.topology == WGPUPrimitiveTopology_LineStrip) ?
           WGPUIndexFormat_Uint32 :
           WGPUIndexFormat_Undefined;
     primitiveState.frontFace = WGPUFrontFace_CCW;
-    primitiveState.cullMode  = config->cull_mode;
+    primitiveState.cullMode  = config->sg_state.cull_mode;
 
     // TODO transparency (dissallow partial transparency, see if fragment
     // discard writes to the depth buffer)
@@ -1417,11 +1374,11 @@ void R_RenderPipeline::init(GraphicsContext* gctx, R_RenderPipeline* pipeline,
       = G_createDepthStencilState(WGPUTextureFormat_Depth24PlusStencil8, true);
 
     // Setup shader module
-    R_Shader* shader = Component_GetShader(config->sg_shader_id);
+    R_Shader* shader = Component_GetShader(config->sg_state.sg_shader_id);
     if (!shader) {
         log_error(
           "Error: failed creating render pipeline from material with shader id = %llu",
-          config->sg_shader_id);
+          config->sg_state.sg_shader_id);
     }
     ASSERT(shader);
 
@@ -1444,7 +1401,8 @@ void R_RenderPipeline::init(GraphicsContext* gctx, R_RenderPipeline* pipeline,
     fragmentState.targets           = &colorTargetState;
 
     // multisample state
-    WGPUMultisampleState multisampleState = G_createMultisampleState(msaa_sample_count);
+    WGPUMultisampleState multisampleState
+      = G_createMultisampleState(config->msaa_sample_count);
 
     char pipeline_label[128] = {};
     snprintf(pipeline_label, sizeof(pipeline_label),
@@ -1465,7 +1423,7 @@ void R_RenderPipeline::init(GraphicsContext* gctx, R_RenderPipeline* pipeline,
       = wgpuDeviceCreateRenderPipeline(gctx->device, &pipeline_desc);
     ASSERT(pipeline->gpu_pipeline);
 
-    Arena::init(&pipeline->materialIDs, sizeof(SG_ID) * 8);
+    // Arena::init(&pipeline->materialIDs, sizeof(SG_ID) * 8);
 
     log_trace("init render pipeline %d", pipeline->rid);
 }
@@ -1495,33 +1453,6 @@ Going with option 2 for now
 
 */
 
-void R_RenderPipeline::addMaterial(R_RenderPipeline* pipeline, R_Material* material)
-{
-    if (material->pipelineID == pipeline->rid) {
-        ASSERT(ARENA_CONTAINS(&pipeline->materialIDs, material->id));
-        return;
-    }
-
-    // remove material from existing pipeline
-    // Lazy deletion. during render loop, pipeline checks if the material
-    // ID matches this current pipeline. If not, we know we've switched.
-    // the render pipeline then removes the material from its list of
-    // material IDs. This avoids the cost of doing a linear search over all
-    // materials for deletion. We postpone the deletion until we're already
-    // iterating over the materials anyways
-
-    // add material to new pipeline
-    ASSERT(!ARENA_CONTAINS(&pipeline->materialIDs, material->id));
-    *ARENA_PUSH_TYPE(&pipeline->materialIDs, SG_ID) = material->id;
-    material->pipelineID                            = pipeline->rid;
-    // set bind group to stale because now we need a new pipeline layout
-    material->bind_group_stale = true;
-    // note: we also need to set all the geometryToXforms that use this material
-    // to stale, so that they can be rebuilt with the new pipeline layout
-    // but we don't have the scene(s) here so instead deferring that update
-    // to the scene's render loop
-}
-
 void R_RenderPipeline::free(R_RenderPipeline* pipeline)
 {
     WGPU_RELEASE_RESOURCE(RenderPipeline, pipeline->gpu_pipeline);
@@ -1530,51 +1461,7 @@ void R_RenderPipeline::free(R_RenderPipeline* pipeline)
         WGPU_RELEASE_RESOURCE(BindGroupLayout, pipeline->_bind_group_layouts[i]);
     }
 
-    Arena::free(&pipeline->materialIDs);
-
     log_trace("freeing render pipeline %s", pipeline->name);
-}
-
-size_t R_RenderPipeline::numMaterials(R_RenderPipeline* pipeline)
-{
-    return ARENA_LENGTH(&pipeline->materialIDs, SG_ID);
-}
-
-// While iterating, will lazy delete NULL material IDs and materials
-// whose config doesn't match the pipeline (e.g. material has been assigned
-// elsewhere) swap NULL with last element and pop
-// Can do away with this lazy deletion if we augment the SG_ID arena with a
-// hashmap for O(1) material ID lookup and deletion
-bool R_RenderPipeline::materialIter(R_RenderPipeline* pipeline, size_t* indexPtr,
-                                    R_Material** material)
-{
-    size_t numMaterials = R_RenderPipeline::numMaterials(pipeline);
-
-    if (*indexPtr >= numMaterials) {
-        *material = NULL;
-        return false;
-    }
-
-    SG_ID* materialID = ARENA_GET_TYPE(&pipeline->materialIDs, SG_ID, *indexPtr);
-    *material         = Component_GetMaterial(*materialID);
-
-    // if null or reassigned to different pipeline, swap with last element
-    // and try again
-    if (*material == NULL || (*material)->pipelineID != pipeline->rid) {
-        SG_ID* lastMatID
-          = ARENA_GET_TYPE(&pipeline->materialIDs, SG_ID, numMaterials - 1);
-
-        // swap
-        *materialID = *lastMatID;
-        // pop last element
-        Arena::pop(&pipeline->materialIDs, sizeof(SG_ID));
-        // try again with same index
-        return materialIter(pipeline, indexPtr, material);
-    }
-
-    // else return normally
-    ++(*indexPtr);
-    return true;
 }
 
 // ============================================================================
@@ -1643,8 +1530,8 @@ struct R_Location {
 };
 
 struct RenderPipelinePSOTableItem {
-    SG_MaterialPipelineState pso; // key
-    u64 pipeline_offset;          // item
+    R_PSO pso;           // key
+    u64 pipeline_offset; // item
 
     static int compare(const void* a, const void* b, void* udata)
     {
@@ -2084,10 +1971,9 @@ R_Material* Component_CreateMaterial(GraphicsContext* gctx,
 
     // initialize
     {
-        *mat                  = {};
-        mat->id               = cmd->sg_id;
-        mat->type             = SG_COMPONENT_MATERIAL;
-        mat->bind_group_stale = true;
+        *mat      = {};
+        mat->id   = cmd->sg_id;
+        mat->type = SG_COMPONENT_MATERIAL;
 
         // init uniform buffer
         GPU_Buffer::init(gctx, &mat->uniform_buffer, WGPUBufferUsage_Uniform,
@@ -2095,7 +1981,7 @@ R_Material* Component_CreateMaterial(GraphicsContext* gctx,
                              gctx->limits.minUniformBufferOffsetAlignment)
                            * ARRAY_LENGTH(mat->bindings));
 
-        R_Material::updatePSO(gctx, mat, &cmd->pso);
+        mat->pso = cmd->pso;
     }
 
     // store offset
@@ -2117,18 +2003,8 @@ void Material_batchUpdatePipelines(GraphicsContext* gctx, FT_Library ft_lib,
       hashmap_iter(materials_with_new_pso, &hashmap_index_DONT_USE, (void**)&sg_id)) {
         R_Component* comp = Component_GetComponent(*sg_id);
         switch (comp->type) {
-            case SG_COMPONENT_MATERIAL: {
-                R_Material* mat = (R_Material*)comp;
-
-                // don't process ScreenPass materials in the RenderPass
-                if (mat->pso.exclude_from_render_pass) continue;
-
-                R_RenderPipeline* pipeline = Component_GetPipeline(gctx, &mat->pso);
-
-                // add material to pipeline
-                R_RenderPipeline::addMaterial(pipeline, mat);
-                ASSERT(mat->pipelineID == pipeline->rid);
-            } break;
+            // TODO: remove material batch update pipeline from PSO
+            // we do pipeline creation JIT during render scene now
             case SG_COMPONENT_MESH: {
                 // for now assuming text is the only mesh type that needs to update
                 R_Text* rtext = (R_Text*)comp;
@@ -2594,6 +2470,8 @@ bool Component_MaterialIter(size_t* i, R_Material** material)
     return true;
 }
 
+#if 0 // TODO delete after using this as a reference for shader destructor / render
+      // pipeline cleanup
 bool Component_RenderPipelineIter(size_t* i, R_RenderPipeline** renderPipeline)
 {
     // Possible optimization: pack nonempty pipelines at start, swap empty
@@ -2666,6 +2544,7 @@ bool Component_RenderPipelineIter(size_t* i, R_RenderPipeline** renderPipeline)
     *renderPipeline = NULL;
     return false;
 }
+#endif
 
 int Component_RenderPipelineCount()
 {
@@ -2696,8 +2575,7 @@ bool Component_WebcamIter(size_t* i, R_Webcam** webcam)
     return true;
 }
 
-R_RenderPipeline* Component_GetPipeline(GraphicsContext* gctx,
-                                        SG_MaterialPipelineState* pso)
+R_RenderPipeline* Component_GetOrCreatePipeline(GraphicsContext* gctx, R_PSO* pso)
 {
     RenderPipelinePSOTableItem* rp_item
       = (RenderPipelinePSOTableItem*)hashmap_get(render_pipeline_pso_table, pso);
@@ -2709,6 +2587,7 @@ R_RenderPipeline* Component_GetPipeline(GraphicsContext* gctx,
     R_RenderPipeline* rPipeline
       = ARENA_PUSH_ZERO_TYPE(&_RenderPipelineArena, R_RenderPipeline);
     u64 pipelineOffset = Arena::offsetOf(&_RenderPipelineArena, rPipeline);
+    log_info("creating new pipeline with shader %d", pso->sg_state.sg_shader_id);
     R_RenderPipeline::init(gctx, rPipeline, pso);
 
     ASSERT(!hashmap_get(_RenderPipelineMap, &rPipeline->rid))
@@ -2813,6 +2692,12 @@ void R_Shader::free(R_Shader* shader)
     WGPU_RELEASE_RESOURCE(ShaderModule, shader->vertex_shader_module);
     WGPU_RELEASE_RESOURCE(ShaderModule, shader->fragment_shader_module);
     WGPU_RELEASE_RESOURCE(ShaderModule, shader->compute_shader_module);
+
+    // nocheckin remove all associated pipelines as well
+    // use pipeline->pso to remove from:
+    // - RID --> pipeline hashmap
+    // PSO --> pipeline hashmap
+    // pipeline arena
 }
 
 // =============================================================================

@@ -238,9 +238,7 @@ struct b2PolygonPool {
 
     static void init(b2PolygonPool* pool)
     {
-        Arena::init(&pool->polygon_arena,
-                    sizeof(b2PolygonPoolEntry)
-                      * 2); // nocheckin change to 32 after testing realloc
+        Arena::init(&pool->polygon_arena, sizeof(b2PolygonPoolEntry) * 32);
         // init first sentinal entry
         pool->next_empty = 1;
         ARENA_PUSH_ZERO_TYPE(&pool->polygon_arena, b2PolygonPoolEntry);
