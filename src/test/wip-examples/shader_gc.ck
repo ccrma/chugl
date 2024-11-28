@@ -147,6 +147,9 @@ fun void initMaterial() {
     new_shader => material.shader; // connect shader to material
     <<< "new shader post-add", Machine.refcount(new_shader) >>>;
     <<< "old shader post-add", Machine.refcount(old_shader) >>>;
+
+    // see if ShaderDesc leaks (doesn't)
+    ShaderDesc shader_desk_leak_check;
 }
 
 fun void simulate() 
