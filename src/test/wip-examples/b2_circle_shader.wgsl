@@ -29,6 +29,7 @@ struct VertexOutput {
 
 @group(1) @binding(0) var<storage> u_center_radius_thickness : array<vec4f>; // .xy is center, .z is radius, .w is thickness
 @group(1) @binding(1) var<storage> u_color : array<vec4f>;  // vec3f color
+@group(1) @binding(2) var<uniform> u_antialias : i32;
 
 @vertex
 fn vs_main(
@@ -65,11 +66,16 @@ fn vs_main(
 fn fs_main(in : VertexOutput) -> @location(0) vec4f {
     let inner_radius = 1.0 - in.v_thickness;
     let d = length(in.v_local_pos);
-    let sdf = max(d - 1.0, inner_radius - d);
-    let aaf = fwidth(sdf); // anti alias field
+    let sdf = max(d - 1.0, inner_radius - d); // distance from circle outline
 
-    let alpha = smoothstep(inner_radius - aaf, inner_radius, d) - 
-                smoothstep(1.0 - aaf, 1.0, d);
+    var alpha = 1.0;
+    if (bool(u_antialias)) {
+        let aaf = fwidth(sdf); // anti alias field
+        alpha = smoothstep(inner_radius - aaf, inner_radius, d) - 
+                    smoothstep(1.0 - aaf, 1.0, d);
+    } else {
+        alpha = step(sdf, 0.0);
+    }
     
     if (alpha < .01) { discard; }
 

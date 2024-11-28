@@ -372,6 +372,12 @@ public class b2DebugDraw_Circles extends GGen
 	fun void initStorageBuffers() {
 		material.storageBuffer(0, empty_float_arr);
 		material.storageBuffer(1, empty_float_arr);
+		material.uniformInt(2, 1); // default antialiasing to true
+	}
+
+	// set whether to antialias circles
+	fun void antialias(int value) {
+		material.uniformInt(2, value);
 	}
 
 	fun void drawCircle( vec2 center, float radius, float thickness, vec3 color) {

@@ -1,6 +1,9 @@
 // import materials for 2D drawing
 @import "b2.ck"
 
+GOrbitCamera camera --> GG.scene();
+GG.scene().camera(camera);
+
 // most steam games (over half) default to 1920x1080
 // 1920x1080 / 4 = 480x270
 
@@ -19,9 +22,15 @@ GG.outputPass().sampler(output_sampler);
 
 
 b2DebugDraw_Circles circles --> GG.scene();
+circles.antialias(false);
+
+// GCircle circle --> GG.scene();
+
+GSuzanne suzanne --> GG.scene();
+
 
 while (true) {
     GG.nextFrame() => now;
-    circles.drawCircle(@(0,0), 1.0, .01, Color.WHITE);
+    circles.drawCircle(@(0,0), 1.0, .015, Color.WHITE);
     circles.update();
 }
