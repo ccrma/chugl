@@ -206,7 +206,8 @@ CK_DLL_MFUN(gtext_set_text)
 CK_DLL_MFUN(gtext_get_text)
 {
     SG_Text* text    = GET_TEXT(SELF);
-    RETURN->v_string = chugin_createCkString(text->text.c_str());
+    // return new string (no ref count needed; chuck VM function call mechanism will take it from here)
+    RETURN->v_string = chugin_createCkString(text->text.c_str(),false);
 }
 
 CK_DLL_MFUN(gtext_set_font)
@@ -220,7 +221,8 @@ CK_DLL_MFUN(gtext_set_font)
 CK_DLL_MFUN(gtext_get_font)
 {
     SG_Text* text    = GET_TEXT(SELF);
-    RETURN->v_string = chugin_createCkString(text->font_path.c_str());
+    // return new string (no ref count needed; chuck VM function call mechanism will take it from here)
+    RETURN->v_string = chugin_createCkString(text->font_path.c_str(),false);
 }
 
 CK_DLL_MFUN(gtext_set_vertical_spacing)

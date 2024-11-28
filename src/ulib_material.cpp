@@ -963,19 +963,20 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
 CK_DLL_CTOR(shader_desc_ctor)
 {
     // chuck doesn't initialize class member vars in constructor. create manually
+    // NOTE: these should be reference counted (add_ref=true)
     // create string members (empty string)
     OBJ_MEMBER_STRING(SELF, shader_desc_vertex_string_offset)
-      = chugin_createCkString("");
+      = chugin_createCkString("",true);
     OBJ_MEMBER_STRING(SELF, shader_desc_fragment_string_offset)
-      = chugin_createCkString("");
+      = chugin_createCkString("",true);
     OBJ_MEMBER_STRING(SELF, shader_desc_vertex_filepath_offset)
-      = chugin_createCkString("");
+      = chugin_createCkString("",true);
     OBJ_MEMBER_STRING(SELF, shader_desc_fragment_filepath_offset)
-      = chugin_createCkString("");
+      = chugin_createCkString("",true);
     OBJ_MEMBER_STRING(SELF, shader_desc_compute_string_offset)
-      = chugin_createCkString("");
+      = chugin_createCkString("",true);
     OBJ_MEMBER_STRING(SELF, shader_desc_compute_filepath_offset)
-      = chugin_createCkString("");
+      = chugin_createCkString("",true);
 
     WGPUVertexFormat default_format[]
       = { WGPUVertexFormat_Float32x3, WGPUVertexFormat_Float32x3,
@@ -1066,25 +1067,29 @@ CK_DLL_CTOR(shader_ctor)
 CK_DLL_MFUN(shader_get_vertex_string)
 {
     SG_Shader* shader = GET_SHADER(SELF);
-    RETURN->v_string  = chugin_createCkString(shader->vertex_string_owned);
+    // return new string (no ref count needed; chuck VM function call mechanism will take it from here)
+    RETURN->v_string  = chugin_createCkString(shader->vertex_string_owned,false);
 }
 
 CK_DLL_MFUN(shader_get_fragment_string)
 {
     SG_Shader* shader = GET_SHADER(SELF);
-    RETURN->v_string  = chugin_createCkString(shader->fragment_string_owned);
+    // return new string (no ref count needed; chuck VM function call mechanism will take it from here)
+    RETURN->v_string  = chugin_createCkString(shader->fragment_string_owned,false);
 }
 
 CK_DLL_MFUN(shader_get_vertex_filepath)
 {
     SG_Shader* shader = GET_SHADER(SELF);
-    RETURN->v_string  = chugin_createCkString(shader->vertex_filepath_owned);
+    // return new string (no ref count needed; chuck VM function call mechanism will take it from here)
+    RETURN->v_string  = chugin_createCkString(shader->vertex_filepath_owned,false);
 }
 
 CK_DLL_MFUN(shader_get_fragment_filepath)
 {
     SG_Shader* shader = GET_SHADER(SELF);
-    RETURN->v_string  = chugin_createCkString(shader->fragment_filepath_owned);
+    // return new string (no ref count needed; chuck VM function call mechanism will take it from here)
+    RETURN->v_string  = chugin_createCkString(shader->fragment_filepath_owned,false);
 }
 
 CK_DLL_MFUN(shader_get_vertex_layout)

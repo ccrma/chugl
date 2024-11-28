@@ -251,7 +251,7 @@ const char* chugin_copyCkString(Chuck_String* ck_str)
     return strdup(g_chuglAPI->object->str(ck_str));
 }
 
-Chuck_String* chugin_createCkString(const char* str, bool add_ref = false)
+Chuck_String* chugin_createCkString(const char* str, bool add_ref)
 {
     return g_chuglAPI->object->create_string(g_chuglVM, str, add_ref);
 }

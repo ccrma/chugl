@@ -664,7 +664,8 @@ CK_DLL_MFUN(webcam_get_device_id)
 
 CK_DLL_MFUN(webcam_get_device_name)
 {
-    RETURN->v_string = chugin_createCkString(GET_WEBCAM(SELF)->device_name);
+    // return new string (no ref count needed; chuck VM function call mechanism will take it from here)
+    RETURN->v_string = chugin_createCkString(GET_WEBCAM(SELF)->device_name,false);
 }
 
 CK_DLL_MFUN(webcam_set_capture)
