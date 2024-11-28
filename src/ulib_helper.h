@@ -259,7 +259,8 @@ Chuck_String* chugin_createCkString(const char* str, bool add_ref = false)
 // copies up to count elements from ck_arr to arr
 int chugin_copyCkIntArray(Chuck_ArrayInt* ck_arr, int* arr, int count)
 {
-    int size = MIN(g_chuglAPI->object->array_int_size(ck_arr), count);
+    ASSERT(arr);
+    int size = ck_arr ? MIN(g_chuglAPI->object->array_int_size(ck_arr), count) : 0;
     for (int i = 0; i < size; i++) {
         arr[i] = (i32)g_chuglAPI->object->array_int_get_idx(ck_arr, i);
     }

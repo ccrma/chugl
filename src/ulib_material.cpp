@@ -263,15 +263,17 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
     BEGIN_CLASS("VertexFormat", "Object");
     DOC_CLASS("Vertex format enum. Used to describe vertex data layout in ShaderDesc.");
 
-    static t_CKINT format_float  = WGPUVertexFormat_Float32;
-    static t_CKINT format_float2 = WGPUVertexFormat_Float32x2;
-    static t_CKINT format_float3 = WGPUVertexFormat_Float32x3;
-    static t_CKINT format_float4 = WGPUVertexFormat_Float32x4;
-    static t_CKINT format_int    = WGPUVertexFormat_Sint32;
-    static t_CKINT format_int2   = WGPUVertexFormat_Sint32x2;
-    static t_CKINT format_int3   = WGPUVertexFormat_Sint32x3;
-    static t_CKINT format_int4   = WGPUVertexFormat_Sint32x4;
+    static t_CKINT format_undefined = WGPUVertexFormat_Undefined;
+    static t_CKINT format_float     = WGPUVertexFormat_Float32;
+    static t_CKINT format_float2    = WGPUVertexFormat_Float32x2;
+    static t_CKINT format_float3    = WGPUVertexFormat_Float32x3;
+    static t_CKINT format_float4    = WGPUVertexFormat_Float32x4;
+    static t_CKINT format_int       = WGPUVertexFormat_Sint32;
+    static t_CKINT format_int2      = WGPUVertexFormat_Sint32x2;
+    static t_CKINT format_int3      = WGPUVertexFormat_Sint32x3;
+    static t_CKINT format_int4      = WGPUVertexFormat_Sint32x4;
 
+    SVAR("int", "Undefined", &format_undefined);
     SVAR("int", "Float", &format_float);
     SVAR("int", "Float2", &format_float2);
     SVAR("int", "Float3", &format_float3);
@@ -1001,14 +1003,29 @@ CK_DLL_CTOR(shader_ctor)
       (int*)vertex_layout, ARRAY_LENGTH(vertex_layout));
 
     // validate vertex layouts
+    bool passed_undefined_format = false;
     for (int i = 0; i < vertex_layout_len; i++) {
         WGPUVertexFormat format = vertex_layout[i];
 
+        bool format_is_undefined   = (format == WGPUVertexFormat_Undefined);
         bool format_is_valid_float = (format >= WGPUVertexFormat_Float32
                                       && format <= WGPUVertexFormat_Float32x4);
         bool format_is_valid_int
           = (format >= WGPUVertexFormat_Sint32 && format <= WGPUVertexFormat_Sint32x4);
-        if (!(format_is_valid_float || format_is_valid_int)) {
+
+        if (format_is_undefined) passed_undefined_format = true;
+
+        // vertex formats must be contiguous
+        // e.g. [Float2, Undefined, Float3] is NOT allowed
+        if (passed_undefined_format && !format_is_undefined) {
+            log_warn(
+              "VertexFormats given to ShaderDesc.vertexLayout must be contiguous ");
+            log_warn(
+              "  | E.g. [VertexFormat.Float, VertexFormat.Undefined, "
+              "VertexFormat.Float] is not allowed ");
+        }
+
+        if (!(format_is_valid_float || format_is_valid_int || format_is_undefined)) {
             log_warn("Invalid VertexFormat %d given to ShaderDesc.vertexLayout ",
                      format);
             log_warn(
