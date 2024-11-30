@@ -659,7 +659,8 @@ void ulib_box2d_query(Chuck_DL_Query* QUERY)
         CTOR(b2BodyDef_ctor);
 
         b2BodyDef_type_offset = MVAR("int", "type", false);
-        DOC_VAR("The body type: static, kinematic, or dynamic. Pass a b2BodyType enum");
+        DOC_VAR("The body type: static, kinematic, or dynamic. Pass a b2BodyType enum, e.g. "
+                "b2BodyType.dynamicBody");
 
         b2BodyDef_position_offset = MVAR("vec2", "position", false);
         DOC_VAR(

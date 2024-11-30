@@ -101,7 +101,6 @@ public class T {
         chout <= "]" <= IO.nl();
     }
 
-
     fun static void printArray(vec2 arr[]) {
         chout <= "[ ";
         for (0 => int i; i < arr.size(); ++i) {
@@ -109,6 +108,7 @@ public class T {
         }
         chout <= "]" <= IO.nl();
     }
+    fun static void print(vec2 arr[]) { printArray(arr); }
 
     fun static void printArray(vec3 arr[]) {
         chout <= "[ ";

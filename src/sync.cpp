@@ -464,6 +464,24 @@ CHUGL_KbKeyState CHUGL_Kb_key(int key)
     return k;
 }
 
+// copy all the keys pressed and released
+// size_bytes is the size in bytes of the given `keys` array
+void CHUGL_Kb_copyAllKeysPressedReleased(CHUGL_KbKey* keys, u64 size_bytes)
+{
+    ASSERT(size_bytes == sizeof(CHUGL_Kb.keys));
+    spinlock::lock(&CHUGL_Kb.lock);
+    memcpy(keys, CHUGL_Kb.keys, sizeof(CHUGL_Kb.keys));
+    spinlock::unlock(&CHUGL_Kb.lock);
+}
+
+void CHUGL_Kb_copyAllKeysHeldDown(bool* keys, u64 size_bytes)
+{
+    ASSERT(size_bytes == sizeof(CHUGL_Kb.keys_down));
+    spinlock::lock(&CHUGL_Kb.lock);
+    memcpy(keys, CHUGL_Kb.keys_down, sizeof(CHUGL_Kb.keys_down));
+    spinlock::unlock(&CHUGL_Kb.lock);
+}
+
 // ============================================================================
 // ChuGL Event API
 // ============================================================================

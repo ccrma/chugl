@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -25,9 +25,9 @@
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  SOFTWARE.
 -----------------------------------------------------------------------------*/
-#include <chuck/chugin.h>
 #include "ulib_helper.h"
 #include <GLFW/glfw3.h>
+#include <chuck/chugin.h>
 
 // monitor (not implemented)
 CK_DLL_SFUN(gwindow_monitor_info);
@@ -104,9 +104,15 @@ CK_DLL_SFUN(gwindow_set_mouse_cursor);
 CK_DLL_SFUN(gwindow_revert_mouse_cursor);
 
 // keyboard
-CK_DLL_SFUN(gwindow_get_kb_down);
+CK_DLL_SFUN(gwindow_get_kb);
 CK_DLL_SFUN(gwindow_get_kb_pressed);
 CK_DLL_SFUN(gwindow_get_kb_released);
+CK_DLL_SFUN(gwindow_get_kb_all);
+CK_DLL_SFUN(gwindow_get_kb_pressed_all);
+CK_DLL_SFUN(gwindow_get_kb_released_all);
+CK_DLL_SFUN(gwindow_get_kb_all_with_arr);
+CK_DLL_SFUN(gwindow_get_kb_pressed_all_with_arr);
+CK_DLL_SFUN(gwindow_get_kb_released_all_with_arr);
 
 void ulib_window_query(Chuck_DL_Query* QUERY)
 {
@@ -635,7 +641,7 @@ void ulib_window_query(Chuck_DL_Query* QUERY)
 
     // keyboard -------------------------------------------------------
 
-    SFUN(gwindow_get_kb_down, "int", "key");
+    SFUN(gwindow_get_kb, "int", "key");
     ARG("int", "key");
     DOC_FUNC(
       "Get the whether the specified key is being held down. Use the GWindow key "
@@ -652,6 +658,39 @@ void ulib_window_query(Chuck_DL_Query* QUERY)
     DOC_FUNC(
       "Get the whether the specified key was released this frame. Use the GWindow key "
       "constants for param `key`, e.g. GWindow.keyUp(GWindow.Key_Space)");
+
+    SFUN(gwindow_get_kb_all, "int[]", "keys");
+    DOC_FUNC(
+      "Returns an array with all keys held down on this frame. "
+      "Each value will be a key enum, e.g. GWindow.Key_Space");
+
+    SFUN(gwindow_get_kb_pressed_all, "int[]", "keysDown");
+    DOC_FUNC(
+      "Returns an array with all keys pressed on this frame. "
+      "Each value will be a key enum, e.g. GWindow.Key_Space");
+
+    SFUN(gwindow_get_kb_released_all, "int[]", "keysUp");
+    DOC_FUNC(
+      "Returns an array with all keys released on this frame. "
+      "Each value will be a key enum, e.g. GWindow.Key_Space");
+
+    SFUN(gwindow_get_kb_all_with_arr, "void", "keys");
+    ARG("int[]", "keys");
+    DOC_FUNC(
+      "Populates the array with all keys held down on this frame. "
+      "Each value will be a key enum, e.g. GWindow.Key_Space");
+
+    SFUN(gwindow_get_kb_pressed_all_with_arr, "void", "keysDown");
+    ARG("int[]", "keys");
+    DOC_FUNC(
+      "Populates the array with all keys pressed on this frame. "
+      "Each value will be a key enum, e.g. GWindow.Key_Space");
+
+    SFUN(gwindow_get_kb_released_all_with_arr, "void", "keysUp");
+    ARG("int[]", "keys");
+    DOC_FUNC(
+      "Populates the array with all keys released on this frame. "
+      "Each value will be a key enum, e.g. GWindow.Key_Space");
 
     END_CLASS(); // GWindow
 }
@@ -941,7 +980,7 @@ CK_DLL_SFUN(gwindow_revert_mouse_cursor)
 
 // Keyboard -------------------------------------------------------------------
 
-CK_DLL_SFUN(gwindow_get_kb_down)
+CK_DLL_SFUN(gwindow_get_kb)
 {
     int key = GET_NEXT_INT(ARGS);
     if (key < 0 || key > GLFW_KEY_LAST) {
@@ -969,4 +1008,97 @@ CK_DLL_SFUN(gwindow_get_kb_released)
         return;
     }
     RETURN->v_int = CHUGL_Kb_key(key).released ? 1 : 0;
+}
+
+static void ulib_window_get_kb_all(Chuck_ArrayInt* ck_arr)
+{
+    ASSERT(g_chuglAPI->object->array_int_size(ck_arr) == 0);
+    int keys_count = ARRAY_LENGTH(CHUGL_Kb.keys);
+    u64 arena_curr = audio_frame_arena.curr;
+    bool* keys     = ARENA_PUSH_COUNT(&audio_frame_arena, bool, keys_count);
+    u64 size_bytes = audio_frame_arena.curr - arena_curr;
+
+    CHUGL_Kb_copyAllKeysHeldDown(keys, size_bytes);
+
+    for (int i = 0; i < keys_count; i++) {
+        if (keys[i]) g_chuglAPI->object->array_int_push_back(ck_arr, i);
+    }
+}
+
+CK_DLL_SFUN(gwindow_get_kb_all)
+{
+    Chuck_ArrayInt* ck_arr = (Chuck_ArrayInt*)chugin_createCkObj("int[]", false, SHRED);
+    ulib_window_get_kb_all(ck_arr);
+    RETURN->v_object = (Chuck_Object*)ck_arr;
+}
+
+CK_DLL_SFUN(gwindow_get_kb_all_with_arr)
+{
+    Chuck_ArrayInt* ck_arr = GET_NEXT_INT_ARRAY(ARGS);
+    g_chuglAPI->object->array_int_clear(ck_arr);
+    ulib_window_get_kb_all(ck_arr);
+    RETURN->v_object = (Chuck_Object*)ck_arr;
+}
+
+static void ulib_window_get_kb_pressed_all(Chuck_ArrayInt* ck_arr)
+{
+    ASSERT(g_chuglAPI->object->array_int_size(ck_arr) == 0);
+    int keys_count = ARRAY_LENGTH(CHUGL_Kb.keys);
+
+    u64 arena_curr    = audio_frame_arena.curr;
+    CHUGL_KbKey* keys = ARENA_PUSH_COUNT(&audio_frame_arena, CHUGL_KbKey, keys_count);
+    u64 size_bytes    = audio_frame_arena.curr - arena_curr;
+
+    CHUGL_Kb_copyAllKeysPressedReleased(keys, size_bytes);
+
+    for (int i = 0; i < keys_count; i++) {
+        if (keys[i].pressed) g_chuglAPI->object->array_int_push_back(ck_arr, i);
+    }
+}
+
+CK_DLL_SFUN(gwindow_get_kb_pressed_all)
+{
+    Chuck_ArrayInt* ck_arr = (Chuck_ArrayInt*)chugin_createCkObj("int[]", false, SHRED);
+    ulib_window_get_kb_pressed_all(ck_arr);
+    RETURN->v_object = (Chuck_Object*)ck_arr;
+}
+
+CK_DLL_SFUN(gwindow_get_kb_pressed_all_with_arr)
+{
+    Chuck_ArrayInt* ck_arr = GET_NEXT_INT_ARRAY(ARGS);
+    g_chuglAPI->object->array_int_clear(ck_arr);
+    ulib_window_get_kb_pressed_all(ck_arr);
+    RETURN->v_object = (Chuck_Object*)ck_arr;
+}
+
+static void ulib_window_get_kb_released_all(Chuck_ArrayInt* ck_arr)
+{
+    ASSERT(g_chuglAPI->object->array_int_size(ck_arr) == 0);
+
+    int keys_count = ARRAY_LENGTH(CHUGL_Kb.keys);
+
+    u64 arena_curr    = audio_frame_arena.curr;
+    CHUGL_KbKey* keys = ARENA_PUSH_COUNT(&audio_frame_arena, CHUGL_KbKey, keys_count);
+    u64 size_bytes    = audio_frame_arena.curr - arena_curr;
+
+    CHUGL_Kb_copyAllKeysPressedReleased(keys, size_bytes);
+
+    for (int i = 0; i < keys_count; i++) {
+        if (keys[i].released) g_chuglAPI->object->array_int_push_back(ck_arr, i);
+    }
+}
+
+CK_DLL_SFUN(gwindow_get_kb_released_all)
+{
+    Chuck_ArrayInt* ck_arr = (Chuck_ArrayInt*)chugin_createCkObj("int[]", false, SHRED);
+    ulib_window_get_kb_released_all(ck_arr);
+    RETURN->v_object = (Chuck_Object*)ck_arr;
+}
+
+CK_DLL_SFUN(gwindow_get_kb_released_all_with_arr)
+{
+    Chuck_ArrayInt* ck_arr = GET_NEXT_INT_ARRAY(ARGS);
+    g_chuglAPI->object->array_int_clear(ck_arr);
+    ulib_window_get_kb_released_all(ck_arr);
+    RETURN->v_object = (Chuck_Object*)ck_arr;
 }
