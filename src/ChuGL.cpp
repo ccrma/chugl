@@ -384,6 +384,8 @@ CK_DLL_SFUN(chugl_next_frame)
     // preconstructors
     // https://trello.com/c/JwhVQEpv/48-cglnextframe-now-not-calling-preconstructor-of-cglupdate
 
+    g_chugl_window_initialized = true;
+
     if (!Sync_HasShredWaited(SHRED))
         API->vm->throw_exception(
           "NextFrameNotWaitedOnViolation",
@@ -391,8 +393,6 @@ CK_DLL_SFUN(chugl_next_frame)
           "Please replace this line with .nextFrame() => now;",
           SHRED);
 
-    // RETURN->v_object = (Chuck_Object *)CGL::GetShredUpdateEvent(SHRED, API,
-    // VM)->GetEvent();
     RETURN->v_object = (Chuck_Object*)Event_Get(CHUGL_EventType::NEXT_FRAME, API, VM);
 
     // register shred and set has-waited flag to false

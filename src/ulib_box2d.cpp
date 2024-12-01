@@ -46,6 +46,21 @@ body_def)
     - this will be resolved if chuck adds typedef
 */
 
+// box2d is not threadsafe, only registered graphics shreds can call the b2 API
+// OR box2d can be safely called before the first GG.nextFrame()
+#define ulib_box2d_accessAllowed                                                       \
+    {                                                                                  \
+        static bool printed      = false;                                              \
+        bool is_shred_registered = Sync_IsShredRegistered(SHRED);                      \
+        bool access_denied       = g_chugl_window_initialized && !is_shred_registered; \
+        if (access_denied && !printed) {                                               \
+            printed = true;                                                            \
+            log_warn("%s(...) called without initialization", __FUNCTION__);           \
+            log_warn(" |- (hint: is the shred missing a GG.nextFrame() => now?)");     \
+        }                                                                              \
+        if (access_denied) return;                                                     \
+    }
+
 // make sure we can fit b2 ids within a t_CKINT
 static_assert(sizeof(void*) == sizeof(t_CKUINT), "pointer size mismatch");
 static_assert(sizeof(b2WorldId) <= sizeof(t_CKINT), "b2Worldsize mismatch");
@@ -558,6 +573,8 @@ CK_DLL_SFUN(b2_Body_get_type);
 CK_DLL_SFUN(b2_Body_get_rotation);
 CK_DLL_SFUN(b2_Body_get_angle);
 CK_DLL_SFUN(b2_Body_set_transform);
+CK_DLL_SFUN(b2_Body_set_position);
+CK_DLL_SFUN(b2_Body_set_angle);
 CK_DLL_SFUN(b2_Body_get_local_point);
 CK_DLL_SFUN(b2_Body_get_world_point);
 CK_DLL_SFUN(b2_Body_get_local_vector);
@@ -659,8 +676,9 @@ void ulib_box2d_query(Chuck_DL_Query* QUERY)
         CTOR(b2BodyDef_ctor);
 
         b2BodyDef_type_offset = MVAR("int", "type", false);
-        DOC_VAR("The body type: static, kinematic, or dynamic. Pass a b2BodyType enum, e.g. "
-                "b2BodyType.dynamicBody");
+        DOC_VAR(
+          "The body type: static, kinematic, or dynamic. Pass a b2BodyType enum, e.g. "
+          "b2BodyType.dynamicBody");
 
         b2BodyDef_position_offset = MVAR("vec2", "position", false);
         DOC_VAR(
@@ -1484,12 +1502,28 @@ DOC_CLASS("Result of computing the distance between two line segments. https://b
         ARG("float", "angle_radians");
         DOC_FUNC(
           "Set the world transform of a body. This acts as a teleport and is "
-          "fairly expensive."
-          "@note Generally you should create a body with then intended "
-          "transform."
+          "fairly expensive. "
+          "@note Generally you should create a body with the intended transform. "
           "@see b2BodyDef.position. Angle is a rotation in radians and will be "
-          "converted "
-          "to a b2Rot rotation");
+          "converted to a b2Rot rotation");
+
+        SFUN(b2_Body_set_position, "void", "position");
+        ARG("int", "b2Body_id");
+        ARG("vec2", "position");
+        DOC_FUNC(
+          "Set the world position of a body. This acts as a teleport and is "
+          "fairly expensive. @note Generally you should create a body with the "
+          "intended "
+          "transform. @see b2BodyDef.position. ");
+
+        SFUN(b2_Body_set_angle, "void", "angle");
+        ARG("int", "b2Body_id");
+        ARG("float", "angle_radians");
+        DOC_FUNC(
+          "Set the world position of a body. This acts as a teleport and is "
+          "fairly expensive.@note Generally you should create a body with the "
+          "intended "
+          "transform. @see b2BodyDef.position. ");
 
         SFUN(b2_Body_get_local_point, "vec2", "localPoint");
         ARG("int", "b2Body_id");
@@ -2378,17 +2412,21 @@ static void b2BodyMoveEvent_to_ckobj(CK_DL_API API, Chuck_Object* ckobj,
 
 CK_DLL_SFUN(chugl_set_b2World)
 {
+    ulib_box2d_accessAllowed;
+
     b2WorldId world_id = GET_B2_ID(b2WorldId, ARGS);
     CQ_PushCommand_b2World_Set(*(u32*)&world_id);
 }
 
 CK_DLL_SFUN(b2_set_substep_count)
 {
+    ulib_box2d_accessAllowed;
     CQ_PushCommand_b2SubstepCount(GET_NEXT_INT(ARGS));
 }
 
 CK_DLL_SFUN(b2_CreateWorld)
 {
+    ulib_box2d_accessAllowed;
     b2WorldDef def = b2DefaultWorldDef();
     // TODO impl enqueueTask and finishTask callbacks
     ckobj_to_b2WorldDef(API, &def, GET_NEXT_OBJECT(ARGS));
@@ -2397,11 +2435,13 @@ CK_DLL_SFUN(b2_CreateWorld)
 
 CK_DLL_SFUN(b2_DestroyWorld)
 {
+    ulib_box2d_accessAllowed;
     b2DestroyWorld(GET_B2_ID(b2WorldId, ARGS));
 }
 
 CK_DLL_SFUN(b2_CreateBody)
 {
+    ulib_box2d_accessAllowed;
     b2WorldId world_id = GET_B2_ID(b2WorldId, ARGS);
     GET_NEXT_INT(ARGS); // advance to next arg
     b2BodyDef body_def = b2DefaultBodyDef();
@@ -2411,6 +2451,7 @@ CK_DLL_SFUN(b2_CreateBody)
 
 CK_DLL_SFUN(b2_DestroyBody)
 {
+    ulib_box2d_accessAllowed;
     b2DestroyBody(GET_B2_ID(b2BodyId, ARGS));
 }
 
@@ -2675,6 +2716,7 @@ CK_DLL_SFUN(b2_World_IsValid)
 
 CK_DLL_SFUN(b2_World_Draw)
 {
+    ulib_box2d_accessAllowed;
     GET_NEXT_B2_ID(b2WorldId, world_id);
     b2DebugDraw draw = {};
     ckobj_to_b2DebugDraw(&draw, GET_NEXT_OBJECT(ARGS));
@@ -2684,6 +2726,7 @@ CK_DLL_SFUN(b2_World_Draw)
 
 CK_DLL_SFUN(b2_World_GetBodyEvents)
 {
+    ulib_box2d_accessAllowed;
     b2WorldId world_id = GET_B2_ID(b2WorldId, ARGS);
     GET_NEXT_INT(ARGS); // advance to next arg
     Chuck_ArrayInt* body_event_array = GET_NEXT_OBJECT_ARRAY(ARGS);
@@ -2717,6 +2760,7 @@ CK_DLL_SFUN(b2_World_GetBodyEvents)
 
 CK_DLL_SFUN(b2_World_GetSensorEvents)
 {
+    ulib_box2d_accessAllowed;
     b2WorldId world_id = GET_B2_ID(b2WorldId, ARGS);
     GET_NEXT_INT(ARGS); // advance to next arg
     Chuck_ArrayInt* begin_sensor_events = GET_NEXT_OBJECT_ARRAY(ARGS);
@@ -2756,6 +2800,7 @@ CK_DLL_SFUN(b2_World_GetSensorEvents)
 
 CK_DLL_SFUN(b2_World_GetContactEvents)
 {
+    ulib_box2d_accessAllowed;
     b2WorldId world_id = GET_B2_ID(b2WorldId, ARGS);
     GET_NEXT_INT(ARGS); // advance to next arg
     Chuck_ArrayInt* begin_contact_events = GET_NEXT_OBJECT_ARRAY(ARGS);
@@ -2813,6 +2858,7 @@ static bool b2_OverlapResultFcn(b2ShapeId shapeId, void* context)
 
 CK_DLL_SFUN(b2_World_OverlapAABB)
 {
+    ulib_box2d_accessAllowed;
     GET_NEXT_B2_ID(b2WorldId, world_id);
     b2AABB aabb          = vec4_to_b2AABB(GET_NEXT_VEC4(ARGS));
     b2QueryFilter filter = ckobj_to_b2QueryFilter(GET_NEXT_OBJECT(ARGS));
@@ -2830,6 +2876,7 @@ CK_DLL_SFUN(b2_World_OverlapAABB)
 
 CK_DLL_SFUN(b2_World_OverlapCircle)
 {
+    ulib_box2d_accessAllowed;
     GET_NEXT_B2_ID(b2WorldId, world_id);
 
     b2Circle circle = ckobj_to_b2Circle(GET_NEXT_OBJECT(ARGS));
@@ -2851,6 +2898,7 @@ CK_DLL_SFUN(b2_World_OverlapCircle)
 
 CK_DLL_SFUN(b2_World_OverlapCapsule)
 {
+    ulib_box2d_accessAllowed;
     GET_NEXT_B2_ID(b2WorldId, world_id);
 
     b2Capsule capsule = {};
@@ -2873,6 +2921,7 @@ CK_DLL_SFUN(b2_World_OverlapCapsule)
 
 CK_DLL_SFUN(b2_World_OverlapPolygon)
 {
+    ulib_box2d_accessAllowed;
     GET_NEXT_B2_ID(b2WorldId, world_id);
 
     b2Polygon* polygon = ckobj_to_b2Polygon(GET_NEXT_OBJECT(ARGS));
@@ -2894,6 +2943,7 @@ CK_DLL_SFUN(b2_World_OverlapPolygon)
 
 CK_DLL_SFUN(b2_World_CastRayClosest)
 {
+    ulib_box2d_accessAllowed;
     GET_NEXT_B2_ID(b2WorldId, world_id);
     b2Vec2 origin        = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
     b2Vec2 translation   = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
@@ -2922,6 +2972,7 @@ static float b2_RayCastClosestFcn(b2ShapeId shapeId, b2Vec2 point, b2Vec2 normal
 
 CK_DLL_SFUN(b2_World_CastCircleClosest)
 {
+    ulib_box2d_accessAllowed;
     GET_NEXT_B2_ID(b2WorldId, world_id);
     b2Circle circle      = ckobj_to_b2Circle(GET_NEXT_OBJECT(ARGS));
     b2Vec2 origin        = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
@@ -2943,6 +2994,7 @@ CK_DLL_SFUN(b2_World_CastCircleClosest)
 
 CK_DLL_SFUN(b2_World_CastCapsuleClosest)
 {
+    ulib_box2d_accessAllowed;
     GET_NEXT_B2_ID(b2WorldId, world_id);
     b2Capsule capsule = {};
     ckobj_to_b2Capsule(API, &capsule, GET_NEXT_OBJECT(ARGS));
@@ -2964,6 +3016,7 @@ CK_DLL_SFUN(b2_World_CastCapsuleClosest)
 
 CK_DLL_SFUN(b2_World_CastPolygonClosest)
 {
+    ulib_box2d_accessAllowed;
     GET_NEXT_B2_ID(b2WorldId, world_id);
     b2Polygon* polygon           = ckobj_to_b2Polygon(GET_NEXT_OBJECT(ARGS));
     b2Transform origin_transform = {};
@@ -2984,36 +3037,42 @@ CK_DLL_SFUN(b2_World_CastPolygonClosest)
 
 CK_DLL_SFUN(b2_World_EnableSleeping)
 {
+    ulib_box2d_accessAllowed;
     GET_NEXT_B2_ID(b2WorldId, world_id);
     b2World_EnableSleeping(world_id, GET_NEXT_INT(ARGS));
 }
 
 CK_DLL_SFUN(b2_World_EnableContinuous)
 {
+    ulib_box2d_accessAllowed;
     GET_NEXT_B2_ID(b2WorldId, world_id);
     b2World_EnableContinuous(world_id, GET_NEXT_INT(ARGS));
 }
 
 CK_DLL_SFUN(b2_World_SetRestitutionThreshold)
 {
+    ulib_box2d_accessAllowed;
     GET_NEXT_B2_ID(b2WorldId, world_id);
     b2World_SetRestitutionThreshold(world_id, GET_NEXT_FLOAT(ARGS));
 }
 
 CK_DLL_SFUN(b2_World_SetHitEventThreshold)
 {
+    ulib_box2d_accessAllowed;
     GET_NEXT_B2_ID(b2WorldId, world_id);
     b2World_SetHitEventThreshold(world_id, GET_NEXT_FLOAT(ARGS));
 }
 
 CK_DLL_SFUN(b2_World_SetGravity)
 {
+    ulib_box2d_accessAllowed;
     GET_NEXT_B2_ID(b2WorldId, world_id);
     b2World_SetGravity(world_id, vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS)));
 }
 
 CK_DLL_SFUN(b2_World_GetGravity)
 {
+    ulib_box2d_accessAllowed;
     GET_NEXT_B2_ID(b2WorldId, world_id);
     b2Vec2 gravity = b2World_GetGravity(world_id);
     RETURN->v_vec2 = { gravity.x, gravity.y };
@@ -3021,6 +3080,7 @@ CK_DLL_SFUN(b2_World_GetGravity)
 
 CK_DLL_SFUN(b2_World_Explode)
 {
+    ulib_box2d_accessAllowed;
     GET_NEXT_B2_ID(b2WorldId, world_id);
     b2Vec2 position = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
     float radius    = GET_NEXT_FLOAT(ARGS);
@@ -3030,6 +3090,7 @@ CK_DLL_SFUN(b2_World_Explode)
 
 CK_DLL_SFUN(b2_World_SetContactTuning)
 {
+    ulib_box2d_accessAllowed;
     GET_NEXT_B2_ID(b2WorldId, world_id);
     float hertz        = GET_NEXT_FLOAT(ARGS);
     float dampingRatio = GET_NEXT_FLOAT(ARGS);
@@ -3399,6 +3460,7 @@ CK_DLL_MFUN(b2Polygon_get_radius)
 
 CK_DLL_SFUN(b2_CreateCircleShape)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance to next arg
 
@@ -3412,6 +3474,7 @@ CK_DLL_SFUN(b2_CreateCircleShape)
 
 CK_DLL_SFUN(b2_CreateSegmentShape)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance to next arg
 
@@ -3427,6 +3490,7 @@ CK_DLL_SFUN(b2_CreateSegmentShape)
 
 CK_DLL_SFUN(b2_CreateCapsuleShape)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance to next arg
 
@@ -3442,6 +3506,7 @@ CK_DLL_SFUN(b2_CreateCapsuleShape)
 
 CK_DLL_SFUN(b2_CreatePolygonShape)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance to next arg
 
@@ -3458,6 +3523,7 @@ CK_DLL_SFUN(b2_CreatePolygonShape)
 
 CK_DLL_SFUN(b2_DestroyShape)
 {
+    ulib_box2d_accessAllowed;
     b2DestroyShape(GET_B2_ID(b2ShapeId, ARGS));
 }
 
@@ -3484,6 +3550,7 @@ CK_DLL_SFUN(b2_Shape_IsSensor)
 
 CK_DLL_SFUN(b2_Shape_SetDensity)
 {
+    ulib_box2d_accessAllowed;
     b2ShapeId shape_id = GET_B2_ID(b2ShapeId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     float density = GET_NEXT_FLOAT(ARGS);
@@ -3497,6 +3564,7 @@ CK_DLL_SFUN(b2_Shape_GetDensity)
 
 CK_DLL_SFUN(b2_Shape_SetFriction)
 {
+    ulib_box2d_accessAllowed;
     b2ShapeId shape_id = GET_B2_ID(b2ShapeId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     float friction = GET_NEXT_FLOAT(ARGS);
@@ -3510,6 +3578,7 @@ CK_DLL_SFUN(b2_Shape_GetFriction)
 
 CK_DLL_SFUN(b2_Shape_SetRestitution)
 {
+    ulib_box2d_accessAllowed;
     b2ShapeId shape_id = GET_B2_ID(b2ShapeId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     float f = GET_NEXT_FLOAT(ARGS);
@@ -3531,6 +3600,7 @@ CK_DLL_SFUN(b2_Shape_GetFilter)
 
 CK_DLL_SFUN(b2_Shape_SetFilter)
 {
+    ulib_box2d_accessAllowed;
     b2ShapeId shape_id = GET_B2_ID(b2ShapeId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     b2Filter filter = b2DefaultFilter();
@@ -3540,6 +3610,7 @@ CK_DLL_SFUN(b2_Shape_SetFilter)
 
 CK_DLL_SFUN(b2_Shape_EnableSensorEvents)
 {
+    ulib_box2d_accessAllowed;
     b2ShapeId shape_id = GET_B2_ID(b2ShapeId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     int flag = GET_NEXT_INT(ARGS);
@@ -3553,6 +3624,7 @@ CK_DLL_SFUN(b2_Shape_AreSensorEventsEnabled)
 
 CK_DLL_SFUN(b2_Shape_EnableContactEvents)
 {
+    ulib_box2d_accessAllowed;
     b2ShapeId shape_id = GET_B2_ID(b2ShapeId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     int flag = GET_NEXT_INT(ARGS);
@@ -3566,6 +3638,7 @@ CK_DLL_SFUN(b2_Shape_AreContactEventsEnabled)
 
 CK_DLL_SFUN(b2_Shape_EnablePreSolveEvents)
 {
+    ulib_box2d_accessAllowed;
     b2ShapeId shape_id = GET_B2_ID(b2ShapeId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     int flag = GET_NEXT_INT(ARGS);
@@ -3579,6 +3652,7 @@ CK_DLL_SFUN(b2_Shape_ArePreSolveEventsEnabled)
 
 CK_DLL_SFUN(b2_Shape_EnableHitEvents)
 {
+    ulib_box2d_accessAllowed;
     b2ShapeId shape_id = GET_B2_ID(b2ShapeId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     int flag = GET_NEXT_INT(ARGS);
@@ -3592,6 +3666,7 @@ CK_DLL_SFUN(b2_Shape_AreHitEventsEnabled)
 
 CK_DLL_SFUN(b2_Shape_TestPoint)
 {
+    ulib_box2d_accessAllowed;
     b2ShapeId shape_id = GET_B2_ID(b2ShapeId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     t_CKVEC2 point = GET_NEXT_VEC2(ARGS);
@@ -3600,6 +3675,7 @@ CK_DLL_SFUN(b2_Shape_TestPoint)
 
 CK_DLL_SFUN(b2_Shape_RayCast)
 {
+    ulib_box2d_accessAllowed;
     b2ShapeId shape_id = GET_B2_ID(b2ShapeId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     t_CKVEC2 origin          = GET_NEXT_VEC2(ARGS);
@@ -3654,6 +3730,7 @@ CK_DLL_SFUN(b2_Shape_GetPolygon)
 
 CK_DLL_SFUN(b2_Shape_SetCircle)
 {
+    ulib_box2d_accessAllowed;
     b2ShapeId shape_id = GET_B2_ID(b2ShapeId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     b2Circle circle = ckobj_to_b2Circle(GET_NEXT_OBJECT(ARGS));
@@ -3662,6 +3739,7 @@ CK_DLL_SFUN(b2_Shape_SetCircle)
 
 CK_DLL_SFUN(b2_Shape_SetCapsule)
 {
+    ulib_box2d_accessAllowed;
     b2ShapeId shape_id = GET_B2_ID(b2ShapeId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     b2Capsule capsule = {};
@@ -3671,6 +3749,7 @@ CK_DLL_SFUN(b2_Shape_SetCapsule)
 
 CK_DLL_SFUN(b2_Shape_SetSegment)
 {
+    ulib_box2d_accessAllowed;
     b2ShapeId shape_id = GET_B2_ID(b2ShapeId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     b2Segment segment = {};
@@ -3680,6 +3759,7 @@ CK_DLL_SFUN(b2_Shape_SetSegment)
 
 CK_DLL_SFUN(b2_Shape_SetPolygon)
 {
+    ulib_box2d_accessAllowed;
     b2ShapeId shape_id = GET_B2_ID(b2ShapeId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     b2Polygon* polygon = ckobj_to_b2Polygon(GET_NEXT_OBJECT(ARGS));
@@ -3716,6 +3796,7 @@ CK_DLL_SFUN(b2_Shape_SetPolygon)
 
 CK_DLL_SFUN(b2_Shape_GetAABB)
 {
+    ulib_box2d_accessAllowed;
     b2ShapeId shape_id = GET_B2_ID(b2ShapeId, ARGS);
     b2AABB aabb        = b2Shape_GetAABB(shape_id);
     RETURN->v_vec4
@@ -3724,6 +3805,7 @@ CK_DLL_SFUN(b2_Shape_GetAABB)
 
 CK_DLL_SFUN(b2_Shape_GetClosestPoint)
 {
+    ulib_box2d_accessAllowed;
     b2ShapeId shape_id = GET_B2_ID(b2ShapeId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     t_CKVEC2 target = GET_NEXT_VEC2(ARGS);
@@ -3811,6 +3893,7 @@ CK_DLL_SFUN(b2_Body_get_type)
 
 CK_DLL_SFUN(b2_Body_set_type)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     b2Body_SetType(body_id, ckint_to_b2BodyType(GET_NEXT_INT(ARGS)));
@@ -3818,6 +3901,7 @@ CK_DLL_SFUN(b2_Body_set_type)
 
 CK_DLL_SFUN(b2_Body_get_position)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     b2Vec2 pos     = b2Body_GetPosition(body_id);
@@ -3826,6 +3910,7 @@ CK_DLL_SFUN(b2_Body_get_position)
 
 CK_DLL_SFUN(b2_Body_get_rotation)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     b2Rot rot         = b2Body_GetRotation(body_id);
@@ -3834,6 +3919,7 @@ CK_DLL_SFUN(b2_Body_get_rotation)
 
 CK_DLL_SFUN(b2_Body_get_angle)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     RETURN->v_float = b2Rot_GetAngle(b2Body_GetRotation(body_id));
@@ -3841,6 +3927,7 @@ CK_DLL_SFUN(b2_Body_get_angle)
 
 CK_DLL_SFUN(b2_Body_set_transform)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     t_CKVEC2 pos = GET_NEXT_VEC2(ARGS);
@@ -3848,8 +3935,26 @@ CK_DLL_SFUN(b2_Body_set_transform)
     b2Body_SetTransform(body_id, { (float)pos.x, (float)pos.y }, b2MakeRot(angle));
 }
 
+CK_DLL_SFUN(b2_Body_set_position)
+{
+    ulib_box2d_accessAllowed;
+    GET_NEXT_B2_ID(b2BodyId, body_id);
+    t_CKVEC2 pos = GET_NEXT_VEC2(ARGS);
+    b2Body_SetTransform(body_id, { (float)pos.x, (float)pos.y },
+                        b2Body_GetTransform(body_id).q);
+}
+
+CK_DLL_SFUN(b2_Body_set_angle)
+{
+    ulib_box2d_accessAllowed;
+    GET_NEXT_B2_ID(b2BodyId, body_id);
+    b2Body_SetTransform(body_id, b2Body_GetTransform(body_id).p,
+                        b2MakeRot(GET_NEXT_FLOAT(ARGS)));
+}
+
 CK_DLL_SFUN(b2_Body_get_local_point)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     t_CKVEC2 world_point = GET_NEXT_VEC2(ARGS);
@@ -3860,6 +3965,7 @@ CK_DLL_SFUN(b2_Body_get_local_point)
 
 CK_DLL_SFUN(b2_Body_get_world_point)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     t_CKVEC2 local_point = GET_NEXT_VEC2(ARGS);
@@ -3870,6 +3976,7 @@ CK_DLL_SFUN(b2_Body_get_world_point)
 
 CK_DLL_SFUN(b2_Body_get_local_vector)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     t_CKVEC2 world_vector = GET_NEXT_VEC2(ARGS);
@@ -3880,6 +3987,7 @@ CK_DLL_SFUN(b2_Body_get_local_vector)
 
 CK_DLL_SFUN(b2_Body_get_world_vector)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     t_CKVEC2 local_vector = GET_NEXT_VEC2(ARGS);
@@ -3890,6 +3998,7 @@ CK_DLL_SFUN(b2_Body_get_world_vector)
 
 CK_DLL_SFUN(b2_Body_get_linear_velocity)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     b2Vec2 vel     = b2Body_GetLinearVelocity(body_id);
@@ -3898,6 +4007,7 @@ CK_DLL_SFUN(b2_Body_get_linear_velocity)
 
 CK_DLL_SFUN(b2_Body_set_linear_velocity)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     t_CKVEC2 vel = GET_NEXT_VEC2(ARGS);
@@ -3906,6 +4016,7 @@ CK_DLL_SFUN(b2_Body_set_linear_velocity)
 
 CK_DLL_SFUN(b2_Body_get_angular_velocity)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     RETURN->v_float = b2Body_GetAngularVelocity(body_id);
@@ -3913,6 +4024,7 @@ CK_DLL_SFUN(b2_Body_get_angular_velocity)
 
 CK_DLL_SFUN(b2_Body_set_angular_velocity)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     b2Body_SetAngularVelocity(body_id, GET_NEXT_FLOAT(ARGS));
@@ -3920,6 +4032,7 @@ CK_DLL_SFUN(b2_Body_set_angular_velocity)
 
 CK_DLL_SFUN(b2_Body_apply_force)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     t_CKVEC2 force = GET_NEXT_VEC2(ARGS);
@@ -3931,6 +4044,7 @@ CK_DLL_SFUN(b2_Body_apply_force)
 
 CK_DLL_SFUN(b2_Body_apply_force_to_center)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     t_CKVEC2 force = GET_NEXT_VEC2(ARGS);
@@ -3940,6 +4054,7 @@ CK_DLL_SFUN(b2_Body_apply_force_to_center)
 
 CK_DLL_SFUN(b2_Body_apply_torque)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     t_CKFLOAT torque = GET_NEXT_FLOAT(ARGS);
@@ -3949,6 +4064,7 @@ CK_DLL_SFUN(b2_Body_apply_torque)
 
 CK_DLL_SFUN(b2_Body_apply_linear_impulse)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     t_CKVEC2 impulse = GET_NEXT_VEC2(ARGS);
@@ -3960,6 +4076,7 @@ CK_DLL_SFUN(b2_Body_apply_linear_impulse)
 
 CK_DLL_SFUN(b2_Body_apply_linear_impulse_to_center)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     t_CKVEC2 impulse = GET_NEXT_VEC2(ARGS);
@@ -3970,6 +4087,7 @@ CK_DLL_SFUN(b2_Body_apply_linear_impulse_to_center)
 
 CK_DLL_SFUN(b2_Body_apply_angular_impulse)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     t_CKFLOAT impulse = GET_NEXT_FLOAT(ARGS);
@@ -3979,6 +4097,7 @@ CK_DLL_SFUN(b2_Body_apply_angular_impulse)
 
 CK_DLL_SFUN(b2_Body_get_mass)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     RETURN->v_float = b2Body_GetMass(body_id);
@@ -3986,6 +4105,7 @@ CK_DLL_SFUN(b2_Body_get_mass)
 
 CK_DLL_SFUN(b2_Body_get_inertia)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     RETURN->v_float = b2Body_GetInertiaTensor(body_id);
@@ -3993,6 +4113,7 @@ CK_DLL_SFUN(b2_Body_get_inertia)
 
 CK_DLL_SFUN(b2_Body_get_local_center_of_mass)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     b2Vec2 center  = b2Body_GetLocalCenterOfMass(body_id);
@@ -4001,6 +4122,7 @@ CK_DLL_SFUN(b2_Body_get_local_center_of_mass)
 
 CK_DLL_SFUN(b2_Body_get_world_center_of_mass)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     b2Vec2 center  = b2Body_GetWorldCenterOfMass(body_id);
@@ -4009,6 +4131,7 @@ CK_DLL_SFUN(b2_Body_get_world_center_of_mass)
 
 CK_DLL_SFUN(b2_Body_get_mass_data)
 {
+    ulib_box2d_accessAllowed;
     GET_NEXT_B2_ID(b2BodyId, body_id);
     b2MassData data         = b2Body_GetMassData(body_id);
     Chuck_Object* mass_data = chugin_createCkObj("b2MassData", false, SHRED);
@@ -4018,6 +4141,7 @@ CK_DLL_SFUN(b2_Body_get_mass_data)
 
 CK_DLL_SFUN(b2_Body_set_mass_data)
 {
+    ulib_box2d_accessAllowed;
     GET_NEXT_B2_ID(b2BodyId, body_id);
     b2MassData mass_data = {};
     ckobj_to_b2MassData(&mass_data, GET_NEXT_OBJECT(ARGS));
@@ -4026,6 +4150,7 @@ CK_DLL_SFUN(b2_Body_set_mass_data)
 
 CK_DLL_SFUN(b2_Body_apply_mass_from_shapes)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     b2Body_ApplyMassFromShapes(body_id);
@@ -4033,6 +4158,7 @@ CK_DLL_SFUN(b2_Body_apply_mass_from_shapes)
 
 CK_DLL_SFUN(b2_Body_set_automatic_mass)
 {
+    ulib_box2d_accessAllowed;
     GET_NEXT_B2_ID(b2BodyId, body_id);
     b2Body_SetAutomaticMass(body_id, GET_NEXT_INT(ARGS));
 }
@@ -4044,6 +4170,7 @@ CK_DLL_SFUN(b2_Body_get_automatic_mass)
 
 CK_DLL_SFUN(b2_Body_set_linear_damping)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     b2Body_SetLinearDamping(body_id, GET_NEXT_FLOAT(ARGS));
@@ -4058,6 +4185,7 @@ CK_DLL_SFUN(b2_Body_get_linear_damping)
 
 CK_DLL_SFUN(b2_Body_set_angular_damping)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     b2Body_SetAngularDamping(body_id, GET_NEXT_FLOAT(ARGS));
@@ -4072,6 +4200,7 @@ CK_DLL_SFUN(b2_Body_get_angular_damping)
 
 CK_DLL_SFUN(b2_Body_set_gravity_scale)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     b2Body_SetGravityScale(body_id, GET_NEXT_FLOAT(ARGS));
@@ -4086,6 +4215,7 @@ CK_DLL_SFUN(b2_Body_get_gravity_scale)
 
 CK_DLL_SFUN(b2_Body_is_awake)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     RETURN->v_int = b2Body_IsAwake(body_id);
@@ -4093,6 +4223,7 @@ CK_DLL_SFUN(b2_Body_is_awake)
 
 CK_DLL_SFUN(b2_Body_set_awake)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     b2Body_SetAwake(body_id, GET_NEXT_INT(ARGS));
@@ -4100,6 +4231,7 @@ CK_DLL_SFUN(b2_Body_set_awake)
 
 CK_DLL_SFUN(b2_Body_enable_sleep)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     b2Body_EnableSleep(body_id, GET_NEXT_INT(ARGS));
@@ -4114,6 +4246,7 @@ CK_DLL_SFUN(b2_Body_is_sleep_enabled)
 
 CK_DLL_SFUN(b2_Body_set_sleep_threshold)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     b2Body_SetSleepThreshold(body_id, GET_NEXT_FLOAT(ARGS));
@@ -4135,6 +4268,7 @@ CK_DLL_SFUN(b2_Body_is_enabled)
 
 CK_DLL_SFUN(b2_Body_disable)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     b2Body_Disable(body_id);
@@ -4142,6 +4276,7 @@ CK_DLL_SFUN(b2_Body_disable)
 
 CK_DLL_SFUN(b2_Body_enable)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     b2Body_Enable(body_id);
@@ -4149,6 +4284,7 @@ CK_DLL_SFUN(b2_Body_enable)
 
 CK_DLL_SFUN(b2_Body_set_fixed_rotation)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     b2Body_SetFixedRotation(body_id, GET_NEXT_INT(ARGS));
@@ -4163,6 +4299,7 @@ CK_DLL_SFUN(b2_Body_is_fixed_rotation)
 
 CK_DLL_SFUN(b2_Body_set_bullet)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     b2Body_SetBullet(body_id, GET_NEXT_INT(ARGS));
@@ -4177,6 +4314,7 @@ CK_DLL_SFUN(b2_Body_is_bullet)
 
 CK_DLL_SFUN(b2_Body_enable_hit_events)
 {
+    ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
     b2Body_EnableHitEvents(body_id, GET_NEXT_INT(ARGS));

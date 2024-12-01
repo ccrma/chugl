@@ -99,11 +99,12 @@ Chuck_DL_MainThreadHook* hook = NULL;
 bool hookActivated            = false;
 
 // references to VM and API
-Chuck_VM* g_chuglVM     = NULL;
-CK_DL_API g_chuglAPI    = NULL;
-Arena audio_frame_arena = {};
-f64 g_last_dt           = 0.0;
-i64 g_frame_count       = 0;
+Chuck_VM* g_chuglVM             = NULL;
+CK_DL_API g_chuglAPI            = NULL;
+Arena audio_frame_arena         = {};
+f64 g_last_dt                   = 0.0;
+i64 g_frame_count               = 0;
+bool g_chugl_window_initialized = false; // set to true the on first GG.nextFrame()
 
 // cached chuck types
 static struct {
