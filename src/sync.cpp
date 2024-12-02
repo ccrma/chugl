@@ -535,8 +535,7 @@ static void Event_Init(CK_DL_API api, Chuck_VM* vm)
 
     for (u32 i = 0; i < CHUGL_EVENT_TYPE_COUNT; i++) {
         if (events[i] != NULL) continue;
-        Chuck_DL_Api::Type type = api->type->lookup(vm, CHUGL_EventTypeNames[i]);
-        events[i] = (Chuck_Event*)api->object->create_without_shred(vm, type, true);
+        events[i] = (Chuck_Event*)chugin_createCkObj(CHUGL_EventTypeNames[i], true);
     }
 }
 

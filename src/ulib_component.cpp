@@ -77,7 +77,7 @@ CK_DLL_MFUN(component_get_name)
 {
     SG_Component* component
       = SG_GetComponent(OBJ_MEMBER_UINT(SELF, component_offset_id));
-    RETURN->v_string = API->object->create_string(VM, component->name, false);
+    RETURN->v_string = chugin_createCkString(component->name, false);
 }
 
 void ulib_component_set_name(SG_Component* component, const char* name)

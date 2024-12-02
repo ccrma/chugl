@@ -6608,8 +6608,9 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
     SFUN(ui_GetKeyName, "string", "keyName");
     ARG("int", "key");
     DOC_FUNC(
-      "returns English name of the key. Those names a provided for debugging "
-      "purpose and are not meant to be saved persistently not compared.");
+      "`key` is a UI_Key enum, e.g. UI_Key.Backspace. Returns English name of the key. "
+      "Those names are provided for debugging and are not meant to be saved "
+      "persistently or compared.");
 
     SFUN(ui_SetNextFrameWantCaptureKeyboard, "void", "setNextFrameWantCaptureKeyboard");
     ARG("int", "want_capture_keyboard");
@@ -6736,9 +6737,11 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
     // Clipboard Utilities ---------------------------------------------------
 
     SFUN(ui_GetClipboardText, "string", "clipboardText");
+    DOC_FUNC("get current text from the clipboard (e.g. result of Ctrl+C)");
 
     SFUN(ui_SetClipboardText, "void", "clipboardText");
     ARG("string", "text");
+    DOC_FUNC("set the clipboard text");
 
     // styles ----------------------------------------------------------------
     QUERY->add_sfun(QUERY, ui_styleColorsDark, "void", "styleColorsDark");
@@ -6845,8 +6848,7 @@ CK_DLL_SFUN(ui_ShowUserGuide)
 CK_DLL_SFUN(ui_GetVersion)
 {
     if (!verifyInitialization(SHRED)) return;
-    RETURN->v_string
-      = API->object->create_string(VM, cimgui::ImGui_GetVersion(), false);
+    RETURN->v_string = chugin_createCkString(cimgui::ImGui_GetVersion(), false);
 }
 
 // ============================================================================
@@ -6912,7 +6914,7 @@ CK_DLL_DTOR(ui_string_dtor)
 CK_DLL_MFUN(ui_string_get_value)
 {
     char* s          = (char*)OBJ_MEMBER_UINT(SELF, ui_string_ptr_offset);
-    RETURN->v_string = API->object->create_string(VM, s, false);
+    RETURN->v_string = chugin_createCkString(s, false);
 }
 
 CK_DLL_MFUN(ui_string_set_value)
@@ -8922,8 +8924,7 @@ static void uiSizeCallbackHandler(cimgui::ImGuiSizeCallbackData* data)
     // must use shred associated with UI_SizeCallback instance
     Chuck_VM_Shred* origin_shred = chugin_getOriginShred(ui_size_callback_ckobj);
 
-    Chuck_Object* size_callback_data = API->object->create_without_shred(
-      VM, API->type->lookup(VM, "UI_SizeCallbackData"), false);
+    Chuck_Object* size_callback_data = chugin_createCkObj("UI_SizeCallbackData", false);
     OBJ_MEMBER_INT(size_callback_data, ui_size_callback_data_ptr_offset)
       = (t_CKINT)data;
 
@@ -11351,8 +11352,8 @@ CK_DLL_SFUN(ui_TableGetRowIndex)
 CK_DLL_SFUN(ui_TableGetColumnName)
 {
     if (!verifyInitialization(SHRED)) return;
-    RETURN->v_string = API->object->create_string(
-      VM, cimgui::ImGui_TableGetColumnName(GET_NEXT_INT(ARGS)), false);
+    RETURN->v_string = chugin_createCkString(
+      cimgui::ImGui_TableGetColumnName(GET_NEXT_INT(ARGS)), false);
 }
 
 CK_DLL_SFUN(ui_TableGetColumnFlags)
@@ -11738,8 +11739,8 @@ CK_DLL_SFUN(ui_GetKeyPressedAmount)
 CK_DLL_SFUN(ui_GetKeyName)
 {
     if (!verifyInitialization(SHRED)) return;
-    RETURN->v_string = API->object->create_string(
-      VM, cimgui::ImGui_GetKeyName(GET_NEXT_INT(ARGS)), false);
+    RETURN->v_string
+      = chugin_createCkString(cimgui::ImGui_GetKeyName(GET_NEXT_INT(ARGS)), false);
 }
 
 CK_DLL_SFUN(ui_SetNextFrameWantCaptureKeyboard)
@@ -11885,7 +11886,7 @@ CK_DLL_SFUN(ui_SetNextFrameWantCaptureMouse)
 CK_DLL_SFUN(ui_GetClipboardText)
 {
     RETURN->v_string
-      = API->object->create_string(VM, cimgui::ImGui_GetClipboardText(), false);
+      = chugin_createCkString(cimgui::ImGui_GetClipboardText(), false);
 }
 
 CK_DLL_SFUN(ui_SetClipboardText)

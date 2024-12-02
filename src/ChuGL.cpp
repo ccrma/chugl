@@ -854,7 +854,7 @@ CK_DLL_QUERY(ChuGL)
 
         // default camera
         SG_Camera* default_camera = ulib_camera_create(
-          chugin_createCkObj(SG_CKNames[SG_COMPONENT_CAMERA], false));
+          chugin_createCkObj(SG_CKNames[SG_COMPONENT_CAMERA], true));
         CQ_PushCommand_AddChild(scene, default_camera);
         SG_Scene::setMainCamera(scene, default_camera);
         CQ_PushCommand_SceneUpdate(scene);
