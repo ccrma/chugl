@@ -254,8 +254,8 @@ doc.addGroup(
     "GPU Buffer wrappers for ChuGL"
 );
 
-// don't sort
-doc.sort(false);
+// sort for now until order is preserved by CKDoc
+doc.sort(true);
 
 // generate
 doc.outputToDir( ".", "ChuGL [alpha] API Reference (v0.2.0)" );
