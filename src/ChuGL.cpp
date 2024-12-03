@@ -58,7 +58,7 @@
 // clang-format on
 
 // ChuGL version string
-#define CHUGL_VERSION_STRING "0.2.4 (alpha)"
+#define CHUGL_VERSION_STRING "0.2.5 (alpha)"
 
 static f64 ckdt_sec      = 0;
 static f64 system_dt_sec = 0;
