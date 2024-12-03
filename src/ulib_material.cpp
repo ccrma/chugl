@@ -1003,6 +1003,8 @@ CK_DLL_CTOR(shader_ctor)
       OBJ_MEMBER_INT_ARRAY(shader_desc, shader_desc_vertex_layout_offset),
       (int*)vertex_layout, ARRAY_LENGTH(vertex_layout));
 
+    // log_error("vertex layout len %d", vertex_layout_len);
+
     // validate vertex layouts
     bool passed_undefined_format = false;
     for (int i = 0; i < vertex_layout_len; i++) {
@@ -1019,11 +1021,16 @@ CK_DLL_CTOR(shader_ctor)
         // vertex formats must be contiguous
         // e.g. [Float2, Undefined, Float3] is NOT allowed
         if (passed_undefined_format && !format_is_undefined) {
-            log_warn(
-              "VertexFormats given to ShaderDesc.vertexLayout must be contiguous ");
-            log_warn(
-              "  | E.g. [VertexFormat.Float, VertexFormat.Undefined, "
-              "VertexFormat.Float] is not allowed ");
+            // TODO this is incorrectly triggered in RELEASE mode on mac
+            // log_error("error on index %d.", i);
+            // for (int tmp = 0; tmp < vertex_layout_len; tmp++) {
+            //     log_error("vertexFormat %d: %d", tmp, vertex_layout[tmp]);
+            // }
+            // log_warn(
+            //   "VertexFormats given to ShaderDesc.vertexLayout must be contiguous ");
+            // log_warn(
+            //   "  | E.g. [VertexFormat.Float, VertexFormat.Undefined, "
+            //   "VertexFormat.Float] is not allowed ");
         }
 
         if (!(format_is_valid_float || format_is_valid_int || format_is_undefined)) {
