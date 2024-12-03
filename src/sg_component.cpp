@@ -908,6 +908,7 @@ SG_Texture* SG_CreateTexture(SG_TextureDesc* desc, Chuck_Object* ckobj,
     CK_DL_API API = g_chuglAPI;
 
     // create ckobj
+    // NOTE: reference counting here depends on context; e.g., add_ref would false if the texture created is to be returned (without retain)
     Chuck_Object* texture_obj
       = ckobj ? ckobj :
                 chugin_createCkObj(SG_CKNames[SG_COMPONENT_TEXTURE], add_ref, shred);

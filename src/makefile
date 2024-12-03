@@ -27,6 +27,10 @@ mac osx linux linux-oss linux-jack linux-alsa linux-all: build-release
 	cmake --build build-release
 	cp build-release/ChuGL.chug .
 
+# generate XCode project in build-xcode
+xcode:
+	cmake -G Xcode -B build-xcode
+
 .PHONY: win win32 win64
 win win32 win64: build-release
 	@echo '------------'
@@ -62,4 +66,4 @@ ifneq ("$(wildcard build-debug)","")
 endif
 
 clean-all: 
-	rm -rf $(CHUG) build-release build-debug
+	rm -rf $(CHUG) build-release build-debug build-xcode

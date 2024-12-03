@@ -373,6 +373,7 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
         // mfun ------------------------------------------------------------------
 
         CTOR(texture_ctor);
+        // TODO: add destructor; also within dtor remember to release texture_read_event
 
         CTOR(texture_ctor_with_desc);
         ARG("TextureDesc", "texture_desc");

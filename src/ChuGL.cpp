@@ -88,6 +88,10 @@ t_CKBOOL chugl_main_loop_quit(void* bindle)
 {
     UNUSED_VAR(bindle);
 
+    // TODO: release per-chugl instances
+    // * ck-strings created inside g_builtin_ckobjs
+    // * main camera
+
     // NOT freeing SG components here because causes race with audio/graphics thread
     // we let the OS free for us
     // SG_Free();
