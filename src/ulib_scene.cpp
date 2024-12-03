@@ -53,7 +53,7 @@ CK_DLL_MFUN(gscene_get_environment_map);
 CK_DLL_MFUN(gscene_set_skybox_material);
 CK_DLL_MFUN(gscene_get_skybox_material);
 
-SG_Scene* ulib_scene_create(Chuck_Object* ckobj)
+SG_Scene* ulib_scene_create(Chuck_Object* ckobj, bool skybox, bool orthographic)
 {
     CK_DL_API API = g_chuglAPI;
 
@@ -62,7 +62,42 @@ SG_Scene* ulib_scene_create(Chuck_Object* ckobj)
     // save SG_ID
     OBJ_MEMBER_UINT(ckobj, component_offset_id) = scene->id;
 
+    // tell graphics thread to create the scene
     CQ_PushCommand_SceneUpdate(scene);
+
+    // default skybox and envmap
+    if (skybox) {
+        SG_Material* skybox_material = ulib_material_create(SG_MATERIAL_SKYBOX, NULL);
+        SG_Scene::setSkyboxMaterial(scene, skybox_material);
+    }
+    // SG_Scene::setEnvMapSampler(scene, SG_SAMPLER_DEFAULT);
+    SG_Scene::setEnvMap(scene, SG_GetTexture(g_builtin_textures.default_cubemap_id));
+
+    // default directional light
+    Chuck_Object* dir_light_ckobj
+      = chugin_createCkObj(SG_CKNames[SG_COMPONENT_LIGHT], true);
+    SG_Light* dir_light = ulib_light_create(dir_light_ckobj, SG_LightType_Directional);
+    CQ_PushCommand_AddChild(scene, dir_light);
+    // angle light down slightly
+    SG_Transform::lookAt(dir_light, glm::vec3(0.0f, -1.0f, -1.0f));
+    CQ_PushCommand_SetRotation(dir_light);
+
+    // default camera
+    SG_Camera* default_camera
+      = ulib_camera_create(chugin_createCkObj(SG_CKNames[SG_COMPONENT_CAMERA], true));
+    CQ_PushCommand_AddChild(scene, default_camera);
+    SG_Scene::setMainCamera(scene, default_camera);
+    gg_config.mainCamera = default_camera->id;
+    default_camera->pos  = glm::vec3(0.0f, 0.0f, 5.0f);
+    CQ_PushCommand_SetPosition(default_camera);
+    if (orthographic) {
+        default_camera->params.camera_type = SG_CameraType_ORTHOGRAPHIC;
+        CQ_PushCommand_CameraSetParams(default_camera);
+    }
+
+    // push rest of scene updates
+    CQ_PushCommand_SceneUpdate(scene);
+
     return scene;
 }
 
@@ -141,7 +176,7 @@ static void ulib_gscene_query(Chuck_DL_Query* QUERY)
 
 CK_DLL_CTOR(gscene_ctor)
 {
-    ulib_scene_create(SELF);
+    ulib_scene_create(SELF, true, false);
 }
 
 CK_DLL_DTOR(gscene_dtor)

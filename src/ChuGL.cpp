@@ -60,21 +60,6 @@
 // ChuGL version string
 #define CHUGL_VERSION_STRING "0.2.4 (alpha)"
 
-// metadata required for scene rendering
-struct GG_Config {
-    SG_ID mainScene;
-    SG_ID mainCamera;
-    SG_ID root_pass_id;
-    SG_ID default_render_pass_id;
-    SG_ID default_output_pass_id;
-
-    // options
-    bool auto_update_scenegraph = true;
-    int fixed_timestep_fps      = 60;
-};
-
-GG_Config gg_config = {};
-
 static f64 ckdt_sec      = 0;
 static f64 system_dt_sec = 0;
 static App chugl_app     = {};
@@ -425,11 +410,17 @@ CK_DLL_SFUN(chugl_gc)
     SG_GC();
 }
 
+CK_DLL_SFUN(chugl_get_hud_scene)
+{
+    RETURN->v_object = SG_GetScene(gg_config.hud_scene_id)->ckobj;
+}
+
 CK_DLL_SFUN(chugl_get_scene)
 {
     RETURN->v_object = SG_GetScene(gg_config.mainScene)->ckobj;
 }
 
+// TODO: should this update the main renderpass too?
 CK_DLL_SFUN(chugl_set_scene)
 {
     SG_ID prev_scene_id = gg_config.mainScene;
@@ -443,7 +434,6 @@ CK_DLL_SFUN(chugl_set_scene)
 
     // assign new scene
     gg_config.mainScene = sg_scene ? sg_scene->id : 0;
-    CQ_PushCommand_GG_Scene(sg_scene);
 
     // decrement refcount on old scene
     SG_DecrementRef(prev_scene_id);
@@ -479,6 +469,11 @@ CK_DLL_SFUN(chugl_get_root_pass)
 CK_DLL_SFUN(chugl_get_default_render_pass)
 {
     RETURN->v_object = SG_GetPass(gg_config.default_render_pass_id)->ckobj;
+}
+
+CK_DLL_SFUN(chugl_get_default_hud_pass)
+{
+    RETURN->v_object = SG_GetPass(gg_config.hud_render_pass_id)->ckobj;
 }
 
 CK_DLL_SFUN(chugl_get_default_output_pass)
@@ -712,6 +707,9 @@ CK_DLL_QUERY(ChuGL)
                         "scene");
         QUERY->add_arg(QUERY, SG_CKNames[SG_COMPONENT_SCENE], "scene");
 
+        SFUN(chugl_get_hud_scene, SG_CKNames[SG_COMPONENT_SCENE], "hud");
+        DOC_FUNC("Get the HUD scene");
+
         // QUERY->add_sfun(QUERY, chugl_gc, "void", "gc");
         // QUERY->doc_func(QUERY, "Trigger garbage collection");
 
@@ -745,6 +743,9 @@ CK_DLL_QUERY(ChuGL)
 
         SFUN(chugl_get_default_render_pass, "RenderPass", "renderPass");
         DOC_FUNC("Get the default render pass (renders the main scene");
+
+        SFUN(chugl_get_default_hud_pass, "RenderPass", "hudPass");
+        DOC_FUNC("Get the default HUD pass (renders UI on top of main scene");
 
         SFUN(chugl_get_default_output_pass, "OutputPass", "outputPass");
         DOC_FUNC(
@@ -831,36 +832,18 @@ CK_DLL_QUERY(ChuGL)
         // currently if the user instantiates a GScene it will have nothing
         Chuck_Object* scene_ckobj
           = chugin_createCkObj(SG_CKNames[SG_COMPONENT_SCENE], true);
-        SG_Scene* scene     = ulib_scene_create(scene_ckobj);
-        gg_config.mainScene = scene->id;
-        CQ_PushCommand_GG_Scene(scene);
+        SG_Scene* scene = ulib_scene_create(scene_ckobj, true, false);
 
-        // default skybox and envmap
-        SG_Material* skybox_material = ulib_material_create(SG_MATERIAL_SKYBOX, NULL);
-        SG_Scene::setSkyboxMaterial(scene, skybox_material);
-        // SG_Scene::setEnvMapSampler(scene, SG_SAMPLER_DEFAULT);
-        SG_Scene::setEnvMap(scene,
-                            SG_GetTexture(g_builtin_textures.default_cubemap_id));
+        // create HUD pass
+        Chuck_Object* hud_scene_ckobj
+          = chugin_createCkObj(SG_CKNames[SG_COMPONENT_SCENE], true);
+        SG_Scene* hud_scene
+          = ulib_scene_create(hud_scene_ckobj, false, true); // no skybox for HUD
 
-        // default directional light
-        Chuck_Object* dir_light_ckobj
-          = chugin_createCkObj(SG_CKNames[SG_COMPONENT_LIGHT], true);
-        SG_Light* dir_light
-          = ulib_light_create(dir_light_ckobj, SG_LightType_Directional);
-        CQ_PushCommand_AddChild(scene, dir_light);
-        // angle light down slightly
-        SG_Transform::lookAt(dir_light, glm::vec3(0.0f, -1.0f, -1.0f));
-        CQ_PushCommand_SetRotation(dir_light);
-
-        // default camera
-        SG_Camera* default_camera = ulib_camera_create(
-          chugin_createCkObj(SG_CKNames[SG_COMPONENT_CAMERA], true));
-        CQ_PushCommand_AddChild(scene, default_camera);
-        SG_Scene::setMainCamera(scene, default_camera);
-        CQ_PushCommand_SceneUpdate(scene);
-        gg_config.mainCamera = default_camera->id;
-        default_camera->pos  = glm::vec3(0.0f, 0.0f, 5.0f);
-        CQ_PushCommand_SetPosition(default_camera);
+        // update gg_config
+        gg_config.mainScene    = scene->id;
+        gg_config.mainCamera   = scene->desc.main_camera_id;
+        gg_config.hud_scene_id = hud_scene->id;
 
         // passRoot()
         gg_config.root_pass_id = ulib_pass_createPass(SG_PassType_Root);
@@ -872,6 +855,18 @@ CK_DLL_QUERY(ChuGL)
         render_pass->scene_id            = gg_config.mainScene;
         CQ_PushCommand_PassUpdate(render_pass);
 
+        // renderPass for HUD
+        gg_config.hud_render_pass_id = ulib_pass_createPass(SG_PassType_Render);
+        SG_Pass* hud_render_pass     = SG_GetPass(gg_config.hud_render_pass_id);
+        hud_render_pass->scene_id    = gg_config.hud_scene_id;
+        hud_render_pass->color_target_clear_on_load = false;
+        hud_render_pass->camera_id                  = 0;
+        // TODO: can't have MSAA for HUD, because the resolve clears the prev color
+        // target fixing to 1 for now, eventually need to come up with a way to delay
+        // the MSAA resolve
+        hud_render_pass->render_pass_msaa_sample_count = 1;
+        CQ_PushCommand_PassUpdate(hud_render_pass);
+
         // connect root to renderPass
         SG_Pass::connect(root_pass, render_pass);
 
@@ -879,6 +874,7 @@ CK_DLL_QUERY(ChuGL)
         SG_Texture* render_texture
           = SG_GetTexture(g_builtin_textures.default_render_texture_id);
         SG_Pass::resolveTarget(render_pass, render_texture);
+        SG_Pass::resolveTarget(hud_render_pass, render_texture);
 
         // output pass
         Chuck_Object* output_pass_ckobj = chugin_createCkObj("OutputPass", true);
@@ -886,7 +882,8 @@ CK_DLL_QUERY(ChuGL)
         gg_config.default_output_pass_id = output_pass->id;
 
         // connect renderPass to outputPass
-        SG_Pass::connect(render_pass, output_pass);
+        SG_Pass::connect(render_pass, hud_render_pass);
+        SG_Pass::connect(hud_render_pass, output_pass);
 
         // set render texture as input to output pass
         SG_Material* material = SG_GetMaterial(output_pass->screen_material_id);
@@ -896,6 +893,7 @@ CK_DLL_QUERY(ChuGL)
         // update all passes over cq
         CQ_PushCommand_PassUpdate(root_pass);
         CQ_PushCommand_PassUpdate(render_pass);
+        CQ_PushCommand_PassUpdate(hud_render_pass);
         CQ_PushCommand_PassUpdate(output_pass);
     }
 

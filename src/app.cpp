@@ -58,6 +58,7 @@ static_assert(sizeof(u32) == sizeof(b2WorldId), "b2WorldId != u32");
 #include "sg_component.h"
 
 #include "core/hashmap.h"
+#include "core/log.h"
 
 // Usage:
 //  static ImDrawDataSnapshot snapshot; // Important: make persistent accross
@@ -328,9 +329,6 @@ struct App {
     // timer for fixed timestep
     nanotime_step_data stepper;
     int stepper_fps = 60; // default to 60fps
-
-    // scenegraph state
-    SG_ID mainScene;
 
     // imgui
     bool imgui_disabled = false;
@@ -777,15 +775,20 @@ struct App {
         while (pass) {
             switch (pass->sg_pass.pass_type) {
                 case SG_PassType_Render: {
-
-                    // defaults to main_scene
+                    // get the target scene
                     R_Scene* scene = Component_GetScene(pass->sg_pass.scene_id);
-                    ASSERT(scene);
+                    if (!scene) {
+                        log_warn("No scene set for RenderPass[%d] %s", pass->id,
+                                 pass->name);
+                        break;
+                    }
+
                     // defaults to scene main camera
                     R_Camera* camera
                       = pass->sg_pass.camera_id != 0 ?
                           Component_GetCamera(pass->sg_pass.camera_id) :
                           Component_GetCamera(scene->sg_scene_desc.main_camera_id);
+                    ASSERT(camera->scene_id == scene->id);
                     // defaults to swapchain current view
                     // TODO: maybe don't need WindowTexture, let null texture
                     // default to window tex? but that would only work in renderpass
@@ -1909,13 +1912,6 @@ static void _R_HandleCommand(App* app, SG_Command* command)
         case SG_COMMAND_COMPONENT_FREE: {
             Component_FreeComponent(((SG_Command_ComponentFree*)command)->id);
         } break;
-        case SG_COMMAND_GG_SCENE: {
-            app->mainScene = ((SG_Command_GG_Scene*)command)->sg_id;
-            // update scene's render state
-            // TODO check multiple renderpasses, see if this is necessary
-            // R_Scene* scene = Component_GetScene(app->mainScene);
-            break;
-        }
         case SG_COMMAND_CREATE_XFORM:
             Component_CreateTransform((SG_Command_CreateXform*)command);
             break;

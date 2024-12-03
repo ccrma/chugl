@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -31,8 +31,6 @@
 #include "sg_component.h"
 
 #include "ulib_helper.h"
-
-#define GET_CAMERA(ckobj) SG_GetCamera(OBJ_MEMBER_UINT(ckobj, component_offset_id))
 
 CK_DLL_CTOR(gcamera_ctor);
 

@@ -60,6 +60,7 @@
 #define GET_NEXT_VEC4_ARRAY(ptr) (*((Chuck_ArrayVec4**&)ptr)++)
 #define GET_NEXT_OBJECT_ARRAY(ptr) (*((Chuck_ArrayInt**&)ptr)++)
 
+#define GET_CAMERA(ckobj) SG_GetCamera(OBJ_MEMBER_UINT(ckobj, component_offset_id))
 #define GET_TEXTURE(ckobj) SG_GetTexture(OBJ_MEMBER_UINT(ckobj, component_offset_id))
 
 #define ADVANCE_BY_INT(ptr) (((t_CKINT*&)ptr)++)
@@ -114,6 +115,22 @@ static struct {
     Chuck_DL_Api::Type vec3_array;
     Chuck_DL_Api::Type vec4_array;
 } g_chuck_types;
+
+// metadata required for scene rendering
+struct GG_Config {
+    SG_ID mainScene;
+    SG_ID mainCamera;
+    SG_ID hud_scene_id;
+    SG_ID root_pass_id;
+    SG_ID default_render_pass_id;
+    SG_ID hud_render_pass_id;
+    SG_ID default_output_pass_id;
+
+    // options
+    bool auto_update_scenegraph = true;
+    int fixed_timestep_fps      = 60;
+};
+GG_Config gg_config = {};
 
 // offset which stores the component's SG_ID.
 static t_CKUINT component_offset_id = 0;
@@ -389,6 +406,9 @@ bool chugin_typeEquals(Chuck_Object* ckobj, const char* type_name)
     // check for exact match (subclasses are handled on their own)
     return g_chuglAPI->type->is_equal(thisType, ggenType);
 }
+
+// impl in ulib_light.cpp
+SG_Light* ulib_light_create(Chuck_Object* ckobj, SG_LightType type);
 
 // impl in ulib_texture.cpp
 SG_Texture* ulib_texture_load(const char* filepath, SG_TextureLoadDesc* load_desc,

@@ -534,9 +534,10 @@ struct R_Light : public R_Transform {
 
 struct R_Scene : R_Transform {
     SG_SceneDesc sg_scene_desc;
-    hashmap* geo_to_xform;        // map from (Material, Geometry) to list of xforms
-    hashmap* light_id_set;        // set of SG_IDs
-    GPU_Buffer light_info_buffer; // lighting storage buffer
+    hashmap* geo_to_xform;          // map from (Material, Geometry) to list of xforms
+    hashmap* light_id_set;          // set of SG_IDs
+    GPU_Buffer light_info_buffer;   // lighting storage buffer
+    u64 light_info_last_fc_updated; // frame count of last light update
 
     static void initFromSG(GraphicsContext* gctx, R_Scene* r_scene, SG_ID scene_id,
                            SG_SceneDesc* sg_scene_desc);

@@ -353,13 +353,6 @@ void CQ_PushCommand_ComponentFree(SG_Component* component)
     END_COMMAND();
 }
 
-void CQ_PushCommand_GG_Scene(SG_Scene* scene)
-{
-    BEGIN_COMMAND(SG_Command_GG_Scene, SG_COMMAND_GG_SCENE);
-    command->sg_id = scene ? scene->id : 0;
-    END_COMMAND();
-}
-
 void CQ_PushCommand_CreateTransform(SG_Transform* xform)
 {
     BEGIN_COMMAND(SG_Command_CreateXform, SG_COMMAND_CREATE_XFORM);

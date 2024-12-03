@@ -69,6 +69,12 @@ CK_DLL_MFUN(renderpass_set_resolve_target_resolution);
 CK_DLL_MFUN(renderpass_set_msaa_sample_count);
 CK_DLL_MFUN(renderpass_get_msaa_sample_count);
 
+CK_DLL_MFUN(renderpass_set_camera);
+CK_DLL_MFUN(renderpass_get_camera);
+
+CK_DLL_MFUN(renderpass_set_scene);
+CK_DLL_MFUN(renderpass_get_scene);
+
 // TODO get_resolve_target
 // TODO set/get camera and scene
 // - enforce camera is part of scene
@@ -185,6 +191,7 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
           " If RenderPass.camera() is not set, will default to the scene's main "
           "camera: "
           "GG.scene().camera()");
+        ADD_EX("basic/hud.ck");
 
         CTOR(renderpass_ctor);
 
@@ -212,12 +219,33 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
           "Set the resolution of the output framebuffer. Default 0x0. If either "
           "dimension is set to 0, will auto-resize to the window size.");
 
-        MFUN(renderpass_set_msaa_sample_count, "void", "samples");
+        MFUN(renderpass_set_msaa_sample_count, "void", "msaa");
         ARG("int", "sample_count");
         DOC_FUNC("Set the MSAA sample count for the render pass (default 4)");
 
-        MFUN(renderpass_get_msaa_sample_count, "int", "samples");
+        MFUN(renderpass_get_msaa_sample_count, "int", "msaa");
         DOC_FUNC("Get the MSAA sample count for the render pass");
+
+        MFUN(renderpass_set_camera, "void", "camera");
+        ARG(SG_CKNames[SG_COMPONENT_CAMERA], "camera");
+        DOC_FUNC(
+          "Set the camera to use for rendering the scene. Defaults to the main camera "
+          "of the target scene. You can call .camera(null) to use the "
+          "scene's main camera.");
+
+        MFUN(renderpass_get_camera, SG_CKNames[SG_COMPONENT_CAMERA], "camera");
+        DOC_FUNC(
+          "Get the camera used for rendering the scene. If not set, will default to "
+          "the scene's main camera");
+
+        MFUN(renderpass_set_scene, "void", "scene");
+        ARG(SG_CKNames[SG_COMPONENT_SCENE], "scene");
+        DOC_FUNC(
+          "Set the scene to render. If not set, will default to the main scene, "
+          "GG.scene()");
+
+        MFUN(renderpass_get_scene, SG_CKNames[SG_COMPONENT_SCENE], "scene");
+        DOC_FUNC("Get the scene this pass is rendering");
 
         END_CLASS();
     }
@@ -575,6 +603,57 @@ CK_DLL_MFUN(renderpass_set_msaa_sample_count)
 CK_DLL_MFUN(renderpass_get_msaa_sample_count)
 {
     RETURN->v_int = GET_PASS(SELF)->render_pass_msaa_sample_count;
+}
+
+CK_DLL_MFUN(renderpass_set_camera)
+{
+    SG_Pass* pass = GET_PASS(SELF);
+    ASSERT(pass->pass_type == SG_PassType_Render);
+    Chuck_Object* camera = GET_NEXT_OBJECT(ARGS);
+
+    SG_Scene* scene = SG_GetScene(pass->scene_id);
+    // default to scene's main camera if `null` is passed
+    SG_Camera* sg_camera
+      = camera ? GET_CAMERA(camera) : SG_GetCamera(scene->desc.main_camera_id);
+
+    SG_Pass::camera(pass, sg_camera);
+
+    CQ_PushCommand_PassUpdate(pass);
+}
+
+CK_DLL_MFUN(renderpass_get_camera)
+{
+    SG_Pass* pass = GET_PASS(SELF);
+    ASSERT(pass->pass_type == SG_PassType_Render);
+
+    SG_Scene* scene = SG_GetScene(pass->scene_id);
+    // default to scene's main camera if `null` is passed
+    SG_Camera* sg_camera = pass->camera_id ? SG_GetCamera(pass->camera_id) :
+                                             SG_GetCamera(scene->desc.main_camera_id);
+
+    RETURN->v_object = sg_camera ? sg_camera->ckobj : NULL;
+}
+
+CK_DLL_MFUN(renderpass_set_scene)
+{
+    SG_Pass* pass = GET_PASS(SELF);
+    ASSERT(pass->pass_type == SG_PassType_Render);
+    Chuck_Object* scene = GET_NEXT_OBJECT(ARGS);
+
+    SG_Scene* sg_scene
+      = scene ? SG_GetScene(OBJ_MEMBER_UINT(scene, component_offset_id)) : NULL;
+    SG_Pass::scene(pass, sg_scene);
+
+    CQ_PushCommand_PassUpdate(pass);
+}
+
+CK_DLL_MFUN(renderpass_get_scene)
+{
+    SG_Pass* pass = GET_PASS(SELF);
+    ASSERT(pass->pass_type == SG_PassType_Render);
+
+    SG_Scene* sg_scene = SG_GetScene(pass->scene_id);
+    RETURN->v_object   = sg_scene ? sg_scene->ckobj : NULL;
 }
 
 // ============================================================================

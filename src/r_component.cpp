@@ -1166,9 +1166,8 @@ void R_Scene::addSubgraphToRenderState(R_Scene* scene, R_Transform* root)
 
 void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene, u64 fc)
 {
-    static u64 last_fc_updated{ 0 };
-    if (last_fc_updated == fc) return;
-    last_fc_updated = fc;
+    if (scene->light_info_last_fc_updated == fc) return;
+    scene->light_info_last_fc_updated = fc;
 
     static Arena light_info_arena{};
     ASSERT(light_info_arena.curr == 0);
@@ -1314,7 +1313,7 @@ void R_Scene::initFromSG(GraphicsContext* gctx, R_Scene* r_scene, SG_ID scene_id
     r_scene->light_id_set
       = hashmap_new(sizeof(SG_ID), 0, seed, seed, hashSGID, compareSGIDs, NULL, NULL);
 
-    GPU_Buffer::init(gctx, &r_scene->light_info_buffer, WGPUBufferUsage_Uniform,
+    GPU_Buffer::init(gctx, &r_scene->light_info_buffer, WGPUBufferUsage_Storage,
                      sizeof(LightUniforms) * 16);
 
     // initialize children array for 8 children
