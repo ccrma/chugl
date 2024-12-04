@@ -269,6 +269,33 @@ public class b2DebugDraw_SolidPolygon extends GGen
 		u_polygon_colors << 1.0;
 	}
 
+	fun void drawBox(
+		vec2 position,
+		float rotation_radians,
+		float width,
+		float height,
+		vec3 color
+	) {
+		.5 * width => float hw;
+		.5 * height => float hh;
+		this.drawSolidPolygon(
+			position,
+			rotation_radians,
+			[@(-hw, hh), @(-hw, -hh), @(hw, -hh), @(hw, hh)], 
+			0,
+			color	
+		);
+	}
+
+	fun void drawSquare(
+		vec2 position,
+		float rotation_radians,
+		float l,
+		vec3 color
+	) {
+		this.drawBox(position, rotation_radians, l, l, color);
+	}
+
 	fun void update() {
 		if (num_solid_polygons == 0) {
 			initStorageBuffers(); // needed because empty storage buffers cause WGPU to crash on bindgroup creation

@@ -10,9 +10,10 @@ GG.camera() @=> GCamera camera;
 // most steam games (over half) default to 1920x1080
 // 1920x1080 / 4 = 480x270
 GG.renderPass().resolution(480, 270);
+GG.hudPass().resolution(480, 270);
 
 // set MSAA
-GG.renderPass().samples(1);
+GG.renderPass().msaa(1);
 
 // pixelate the output
 TextureSampler output_sampler;
@@ -21,16 +22,64 @@ TextureSampler.Filter_Nearest => output_sampler.filterMag;
 TextureSampler.Filter_Nearest => output_sampler.filterMip;  
 GG.outputPass().sampler(output_sampler);
 
-
 b2DebugDraw_Circles circles --> GG.scene();
 b2DebugDraw_Lines lines --> GG.scene();
+b2DebugDraw_SolidPolygon polygons --> GG.scene();
 circles.antialias(false);
 
+/*
+Slow Effect Brainstorm
+b2: just have a "slow" factor api call e.g. b2.timeStretch()
+- can't do a per-frame simulate call because this needs to happen BEFORE we flush the command queue
+Effects: scale with GG.dt(), introduce a GG.timeScale() which scales all delta times
+
+*/
+
+// Globals ============================================
+class G
+{
+    static dur dt;
+    static float dtf;
+    1.0 => static float dt_rate; // modifier for time stretch
+}
+
+// Math ============================================
+
+class M
+{
+    fun static vec2 rot2vec(float radians) {
+        return @( Math.cos(radians), Math.sin(radians) );
+    }
+
+    fun static vec2 randomDir() {
+        return rot2vec(Math.random2f(0, Math.two_pi));
+    }
+
+    fun static float easeInOutCubic(float x) {
+        if (x < 0.5) 
+            return 4 * x * x * x;
+        else 
+            return 1 - Math.pow(-2 * x + 2, 3) / 2;
+    }
+
+    fun static float lerp(float t, float a, float b) {
+        return a + t * (b - a);
+    }
+
+    // returns ratio of x in range [a, b]
+    fun static float invLerp(float x, float a, float b) {
+        return (x - a) / (b - a);
+    }
+
+}
+
+
+
+// Camera shake ============================================
 int camera_shake_generation;
 fun void cameraShake(float amplitude, dur shake_dur, float hz) {
     ++camera_shake_generation => int gen;
-    now => time shake_start;
-    now + shake_dur => time shake_end;
+    dur elapsed_time;
 
     // generate shake params
     shake_dur / 1::second => float shake_dur_secs;
@@ -48,14 +97,22 @@ fun void cameraShake(float amplitude, dur shake_dur, float hz) {
     int camera_deltas_idx;
     while (true) {
         GG.nextFrame() => now;
-        // shake done OR another shake triggred, stop this one
-        if (now > shake_end || gen != camera_shake_generation) break;
+        // another shake triggred, stop this one
+        if (elapsed_time > shake_dur || gen != camera_shake_generation) break;
+        // update elapsed time
+        G.dt +=> elapsed_time;
 
         // compute fraction shake progress
-        (now - shake_start) / shake_dur => float progress;
-        (now - shake_start) / camera_delta_period => float elapsed_periods;
+        elapsed_time / shake_dur => float progress;
+        elapsed_time / camera_delta_period => float elapsed_periods;
         elapsed_periods $ int => int floor;
         elapsed_periods - floor => float fract;
+
+        // clamp to end of camera_deltas
+        if (floor + 1 >= camera_deltas.size()) {
+            camera_deltas.size() - 2 => floor;
+            1.0 => fract;
+        }
 
         // interpolate the progress
         camera_deltas[floor] * (1.0 - fract) + camera_deltas[floor + 1] * fract => vec2 delta;
@@ -79,8 +136,9 @@ b2BodyType.kinematicBody => dynamic_body_def.type;
 
 // player ============================================
 
-class Player extends GGen
+class Player
 {
+    // TODO cache and store player rotation / position once per frame rather than recalculating constantly
     int body_id;
     int shape_id;
     float rotation;
@@ -98,27 +156,134 @@ class Player extends GGen
         b2Circle circle(this.radius);
         b2.createCircleShape(this.body_id, shape_def, circle) => this.shape_id;
     }
+
+    fun vec2 pos() {
+        return b2Body.position(this.body_id);
+    }
 }
 
-FlatMaterial flat_material;
-PlaneGeometry plane_geo;
-Player player --> GG.scene();
-GMesh shoot_effect(plane_geo, flat_material) --> player;
-0 => shoot_effect.sca;
-shoot_effect.pos(@(player.radius, 0)); // position at blaster
+Player player;
 
 // TODO hashmap to track tween generations to prevent multiple concurrent of same type
 fun void shootEffect(dur tween_dur) {
-    now => time tween_start;
-    now + tween_dur => time tween_end;
+    dur elapsed_time;
 
-    // .1 => shoot_effect.sca;
-    while (now < tween_end) {
+    while (elapsed_time < tween_dur) {
         GG.nextFrame() => now;
-        (now - tween_start) / tween_dur => float t;
-        .1 * (1 - t * t) => shoot_effect.sca;
+        G.dt +=> elapsed_time;
+
+        elapsed_time / tween_dur => float t;
+        .1 * (1 - t * t) => float shoot_effect_scale;
+        polygons.drawSquare(
+            player.pos() + player.radius * M.rot2vec(player.rotation),
+            player.rotation, // rotation
+            shoot_effect_scale,
+            Color.WHITE
+        );
     }
-    // 0 => shoot_effect.sca;
+}
+
+// ==optimize== batch these together so all effects are managed
+// by a single shred looping over a progress array, rather than per shred
+fun void boomEffect(vec2 pos) {
+    // how can we improve chugl syntax for these types of per-frame multi-stage timing effects?
+    // 1. somehow add a retained mode to the vector graphics?
+    // for (1::second) { do xyz }
+    dur elapsed_time;
+    while (elapsed_time < .25::second) {
+        GG.nextFrame() => now;
+        G.dt +=> elapsed_time;
+
+        if (elapsed_time < .1::second) 
+            polygons.drawSquare(
+                pos,
+                0, // rotation
+                .1,
+                Color.WHITE
+            );
+        else 
+            polygons.drawSquare(
+                pos,
+                0, // rotation
+                .1,
+                Color.RED
+            );
+    }
+}
+
+// slows time to rate, and over d ramps back to normal speed
+fun void slowEffect(float rate, dur d) {
+    dur elapsed_time;
+
+    while (elapsed_time < d) {
+        GG.nextFrame() => now;
+        // must use GG.dt() so it's not affected by it's own time warp!
+        GG.dt()::second +=> elapsed_time; 
+        elapsed_time / d => float t;
+        M.lerp(M.easeInOutCubic(t), rate, 1.0) => G.dt_rate;
+        T.assert(G.dt_rate <= 1.0, "dt_rate exceeds bounds");
+        <<< "rate",  G.dt_rate, "t", t, "d", d, "rate", rate >>>;
+    }
+
+    // restore to normal rate
+    1.0 => G.dt_rate;
+}
+
+// spawns an explosion of lines going in random directinos that gradually shorten
+fun void explodeEffect(vec2 pos) {
+    // params
+    Math.random2(8, 16) => int num; // number of lines
+    .5::second => dur max_dur;
+
+    // shake it up
+    spork ~ cameraShake(.08, max_dur, 30);
+
+    // time warp!
+    spork ~ slowEffect(.1, 10::second) @=> Shred slow_effect_shred;
+
+    vec2 positions[num];
+    vec2 dir[num];
+    float lengths[num];
+    dur durations[num];
+    float velocities[num];
+
+    // init
+    for (int i; i < num; i++) {
+        pos => positions[i];
+        M.randomDir() => dir[i];
+        Math.random2f(.1, .2) => lengths[i];
+        Math.random2f(.3, .5)::second => durations[i];
+        Math.random2f(.01, .02) => velocities[i];
+    }
+
+    dur elapsed_time;
+    while (elapsed_time < max_dur) {
+        GG.nextFrame() => now;
+        G.dt +=> elapsed_time;
+
+        for (int i; i < num; i++) {
+            // update line 
+            (elapsed_time) / durations[i] => float t;
+            // if animation still in progress for this line
+            if (t < 1) {
+                // update position
+                velocities[i] * dir[i] +=> positions[i];
+                // shrink lengths linearly down to 0
+                lengths[i] * (1 - t) => float len;
+                // draw
+                lines.drawSegment(positions[i], positions[i] + len * dir[i]);
+            }
+        }
+    }
+
+    // TODO: create Effects manager that 
+    // 1: can let effects spork other effects without prematurely terminating the sporked effects
+    // if the shreds exits
+    // 2: de-dups by string. E.g. if multiple 'slow' effects are spawned will replace the previous
+    // do this via generation tracking
+    while (!slow_effect_shred.done()) {
+        GG.nextFrame() => now;
+    }
 }
 
 class ProjectilePool
@@ -139,6 +304,7 @@ class ProjectilePool
         return body_id;
     }
 
+    // fires a single projectile from given position along the direction
     fun void fire(vec2 position, float dir_radians) {
         // add new body
         if (num_active >= body_ids.size()) {
@@ -167,7 +333,8 @@ class ProjectilePool
                 body_id => body_ids[num_active - 1];
                 // decrement counter to re-check the newly swapped id
                 num_active--;
-                <<< "deactivating bullet" >>>;
+                // projectile boom!
+                spork ~ boomEffect(pos);
             } else {
                 // else draw the active!
                 circles.drawCircle(pos, radius, .15, Color.WHITE);
@@ -181,19 +348,40 @@ class ProjectilePool
 
 ProjectilePool projectile_pool;
 
+int g_fire_mode;
+// fire mode flags
+0 => int FireMode_Normal;
+1 => int FireMode_Triple;
+2 => int FireMode_Spread;
+3 => int FireMode_Count;
 
 fun void shoot() {
     .1::second => dur attack_rate;
     now => time last_fire;
     while (true) {
-        GG.nextFrame() => now;
+        GG.nextFrame() => now; // need to make this a graphics shred to use b2
         if (now - last_fire > attack_rate) {
             attack_rate +=> last_fire;
             spork ~ shootEffect(.5 * attack_rate);
-            projectile_pool.fire(player.pos() $ vec2, player.rotation);
+
+            player.pos() => vec2 player_pos;
+            // fire mode
+            if (g_fire_mode == FireMode_Normal) {
+                projectile_pool.fire(player_pos, player.rotation);
+            } else if (g_fire_mode == FireMode_Triple) {
+                .1 * M.rot2vec(player.rotation - (Math.pi / 2.0)) => vec2 perp;
+                projectile_pool.fire(player_pos + perp, player.rotation);
+                projectile_pool.fire(player_pos       , player.rotation);
+                projectile_pool.fire(player_pos - perp, player.rotation);
+            } else if (g_fire_mode == FireMode_Spread) {
+                projectile_pool.fire(player_pos, player.rotation + .2);
+                projectile_pool.fire(player_pos, player.rotation     );
+                projectile_pool.fire(player_pos, player.rotation - .2);
+            }
         }
     }
-} spork ~ shoot();
+} 
+spork ~ shoot();
 
 
 
@@ -202,6 +390,10 @@ fun void shoot() {
 int keys[0];
 while (true) {
     GG.nextFrame() => now;
+    
+    // update globals ======================================================
+    GG.dt() * G.dt_rate => G.dtf;
+    G.dtf::second => G.dt;
 
     // input ======================================================
     if (GWindow.keyDown(GWindow.Key_Space)) {
@@ -209,12 +401,30 @@ while (true) {
         spork ~ cameraShake(.1, 1::second, 30);
     }
 
-    if (GWindow.key(GWindow.Key_Left)) {
+    if (
+        GWindow.key(GWindow.Key_Left)
+        ||
+        UI.isKeyDown(UI_Key.GamepadLStickLeft)
+    ) {
         .1 +=> player.rotation;
     } 
-    if (GWindow.key(GWindow.Key_Right)) {
+    if (
+        GWindow.key(GWindow.Key_Right)
+        ||
+        UI.isKeyDown(UI_Key.GamepadLStickRight)
+    ) {
         -.1 +=> player.rotation;
     } 
+
+    // switch weapons
+    if (UI.isKeyPressed(UI_Key.GamepadFaceDown)) {
+        (1 + g_fire_mode) % FireMode_Count => g_fire_mode;
+    }
+
+    // explode test
+    if (UI.isKeyPressed(UI_Key.GamepadFaceRight)) {
+        spork ~ explodeEffect(@(0,0));
+    }
 
     { // player logic
         // update ======================================================
@@ -237,10 +447,6 @@ while (true) {
         camera.NDCToWorldPos(player_pos_ndc) $ vec2 => player_pos;
         b2Body.position(player.body_id, player_pos);
 
-        // update ggen
-        player_pos => player.pos;
-        player.rotation => player.rotZ;
-
         // draw circle at player position
         circles.drawCircle(player_pos, player.radius, .15, Color.WHITE);
         lines.drawSegment(player_pos, player_pos + player.radius * player_dir);
@@ -251,59 +457,5 @@ while (true) {
     // flush 
     circles.update();
     lines.update();
-
-
-
-    // { // kb test
-    //     GWindow.keysDown() @=> int keysDown[];
-    //     if (keysDown.size()) {
-    //         <<< "Keys pressed this frame: ", keysDown.size() >>>;
-    //         for (auto k : keysDown) {
-    //             <<< "Key: ", k >>>;
-    //         }
-    //     }
-
-    //     GWindow.keysUp() @=> int keysUp[];
-    //     if (keysUp.size()) {
-    //         <<< "Keys released this frame: ", keysUp.size() >>>;
-    //         for (auto k : keysUp) {
-    //             <<< "Key: ", k >>>;
-    //         }
-    //     }
-
-    //     GWindow.keys() @=> int keys[];
-    //     if (keys.size()) {
-    //         <<< "Keys held this frame: ", keys.size() >>>;
-    //         for (auto k : keys) {
-    //             <<< "Key: ", k >>>;
-    //         }
-    //     }
-    // }
-
-    if (false)
-    { // kb test
-        GWindow.keysDown(keys);
-        if (keys.size()) {
-            <<< "Keys pressed this frame: ", keys.size() >>>;
-            for (auto k : keys) {
-                <<< "Key: ", k >>>;
-            }
-        }
-
-        GWindow.keysUp(keys);
-        if (keys.size()) {
-            <<< "Keys released this frame: ", keys.size() >>>;
-            for (auto k : keys) {
-                <<< "Key: ", k >>>;
-            }
-        }
-
-        GWindow.keys(keys);
-        if (keys.size()) {
-            <<< "Keys held this frame: ", keys.size() >>>;
-            for (auto k : keys) {
-                <<< "Key: ", k >>>;
-            }
-        }
-    }
+    polygons.update();
 }
