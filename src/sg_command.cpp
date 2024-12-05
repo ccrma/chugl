@@ -918,7 +918,7 @@ void CQ_PushCommand_PassDisconnect(SG_Pass* pass, SG_Pass* next_pass)
     END_COMMAND();
 }
 
-void CQ_PushCommand_b2World_Set(u32 world_id)
+void CQ_PushCommand_b2World_Set(b2_SimulateDesc desc)
 {
     spinlock::lock(&cq.write_q_lock);
     {
@@ -929,16 +929,9 @@ void CQ_PushCommand_b2World_Set(u32 world_id)
         // initialize memory
         command->type              = SG_COMMAND_b2_WORLD_SET;
         command->nextCommandOffset = cq.write_q->curr;
-        command->b2_world_id       = world_id;
+        command->desc              = desc;
     }
     spinlock::unlock(&cq.write_q_lock);
-}
-
-void CQ_PushCommand_b2SubstepCount(u32 substep_count)
-{
-    BEGIN_COMMAND(SG_Command_b2_SubstepCount, SG_COMMAND_b2_SUBSTEP_COUNT);
-    command->substep_count = substep_count;
-    END_COMMAND();
 }
 
 void CQ_PushCommand_BufferUpdate(SG_Buffer* buffer)

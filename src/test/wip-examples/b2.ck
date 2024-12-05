@@ -357,6 +357,43 @@ public class b2DebugDraw_Lines extends GGen
 		u_positions << p1 << p2;
 	}
 
+	// draws a polygon outline at given position and rotation
+	fun void drawPolygon(vec2 pos, float rot_radians, vec2 vertices[]) {
+        Math.cos(rot_radians) => float cos_a;
+        Math.sin(rot_radians) => float sin_a;
+
+		// just draw as individual line segments for now
+		for (int i; i < vertices.size() - 1; i++) {
+			vertices[i] => vec2 v1;
+			vertices[i+1] => vec2 v2;
+			drawSegment(
+				pos + @(
+					cos_a * v1.x - sin_a * v1.y,
+					sin_a * v1.x + cos_a * v1.y
+				),
+				pos + @(
+					cos_a * v2.x - sin_a * v2.y,
+					sin_a * v2.x + cos_a * v2.y
+				)
+			);
+		}
+
+		// to close the loop
+		vertices[-1] => vec2 v1;
+		vertices[0] => vec2 v2;
+		drawSegment(
+			pos + @(
+				cos_a * v1.x - sin_a * v1.y,
+				sin_a * v1.x + cos_a * v1.y
+			),
+			pos + @(
+				cos_a * v2.x - sin_a * v2.y,
+				sin_a * v2.x + cos_a * v2.y
+			)
+		);
+	}
+
+
 	fun void update()
 	{
 		// update GPU vertex buffers

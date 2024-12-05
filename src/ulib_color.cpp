@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -35,6 +35,7 @@ CK_DLL_SFUN(chugl_color_hsv_to_rgb);
 CK_DLL_SFUN(chugl_color_rgb_to_hsv);
 CK_DLL_SFUN(chugl_color_grayscale_accurate);
 CK_DLL_SFUN(chugl_color_random_rgb);
+CK_DLL_SFUN(chugl_color_from_hex);
 
 static glm::vec3 ulib_color_hsv2rgb(const glm::vec3& hsv);
 static glm::vec3 ulib_color_rgb2hsv(const glm::vec3& rgb);
@@ -170,6 +171,10 @@ static void ulib_color_query(Chuck_DL_Query* QUERY)
     QUERY->add_sfun(QUERY, chugl_color_random_rgb, "vec3", "random");
     QUERY->doc_func(QUERY, "generate a random rgb color");
 
+    SFUN(chugl_color_from_hex, "vec3", "hex");
+    ARG("int", "hex");
+    DOC_FUNC("convert a hex color e.g. 0xff4500 to a vec3 rgb");
+
     QUERY->end_class(QUERY);
 }
 
@@ -199,6 +204,15 @@ CK_DLL_SFUN(chugl_color_random_rgb)
     float r        = (float)rand() / RAND_MAX;
     float g        = (float)rand() / RAND_MAX;
     float b        = (float)rand() / RAND_MAX;
+    RETURN->v_vec3 = { r, g, b };
+}
+
+CK_DLL_SFUN(chugl_color_from_hex)
+{
+    int hex        = GET_NEXT_INT(ARGS);
+    float r        = ((hex >> 16) & 0xFF) / 255.0f;
+    float g        = ((hex >> 8) & 0xFF) / 255.0f;
+    float b        = (hex & 0xFF) / 255.0f;
     RETURN->v_vec3 = { r, g, b };
 }
 

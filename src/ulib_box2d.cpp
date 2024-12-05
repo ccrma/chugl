@@ -408,8 +408,10 @@ CK_DLL_DTOR(b2_DebugDraw_dtor);
 // API ----------------------------------------------------------------
 
 // b2
+struct b2_SimulateDesc b2_sim_desc = {};
 CK_DLL_SFUN(chugl_set_b2World);
 CK_DLL_SFUN(b2_set_substep_count);
+CK_DLL_SFUN(b2_set_simulation_rate);
 
 CK_DLL_SFUN(b2_CreateWorld);
 CK_DLL_SFUN(b2_DestroyWorld);
@@ -1224,6 +1226,12 @@ DOC_CLASS("Result of computing the distance between two line segments. https://b
         DOC_FUNC(
           "Set the number of substeps for the physics simulation. Increasing the "
           "substep count can increase accuracy. Default 4.");
+
+        SFUN(b2_set_simulation_rate, "void", "rate");
+        ARG("float", "rate");
+        DOC_FUNC(
+          "Set the rate modifier at which the physics simulation runs. Default 1.0. "
+          "E.g. A rate of 2.0 will run the simulation at twice the speed.");
 
         SFUN(b2_CreateWorld, "int", "createWorld");
         ARG("b2WorldDef", "def");
@@ -2414,14 +2422,23 @@ CK_DLL_SFUN(chugl_set_b2World)
 {
     ulib_box2d_accessAllowed;
 
-    b2WorldId world_id = GET_B2_ID(b2WorldId, ARGS);
-    CQ_PushCommand_b2World_Set(*(u32*)&world_id);
+    b2WorldId world_id   = GET_B2_ID(b2WorldId, ARGS);
+    b2_sim_desc.world_id = *(u32*)&world_id;
+    CQ_PushCommand_b2World_Set(b2_sim_desc);
 }
 
 CK_DLL_SFUN(b2_set_substep_count)
 {
     ulib_box2d_accessAllowed;
-    CQ_PushCommand_b2SubstepCount(GET_NEXT_INT(ARGS));
+    b2_sim_desc.substeps = GET_NEXT_INT(ARGS);
+    CQ_PushCommand_b2World_Set(b2_sim_desc);
+}
+
+CK_DLL_SFUN(b2_set_simulation_rate)
+{
+    ulib_box2d_accessAllowed;
+    b2_sim_desc.rate = GET_NEXT_FLOAT(ARGS);
+    CQ_PushCommand_b2World_Set(b2_sim_desc);
 }
 
 CK_DLL_SFUN(b2_CreateWorld)

@@ -96,7 +96,6 @@ enum SG_CommandType : u32 {
 
     // b2 physics
     SG_COMMAND_b2_WORLD_SET,
-    SG_COMMAND_b2_SUBSTEP_COUNT, // # of substeps per physics step
 
     // components
     SG_COMMAND_COMPONENT_UPDATE_NAME,
@@ -498,12 +497,14 @@ struct SG_Command_PassConnect : public SG_Command {
 
 // b2 physics commands -----------------------------------------------------
 
-struct SG_Command_b2World_Set : public SG_Command {
-    u32 b2_world_id;
+struct b2_SimulateDesc {
+    u32 world_id;
+    int substeps = 4;
+    float rate   = 1.0f;
 };
 
-struct SG_Command_b2_SubstepCount : public SG_Command {
-    u32 substep_count;
+struct SG_Command_b2World_Set : public SG_Command {
+    b2_SimulateDesc desc;
 };
 
 // buffer commands -----------------------------------------------------
@@ -698,8 +699,7 @@ void CQ_PushCommand_PassConnect(SG_Pass* pass, SG_Pass* next_pass);
 void CQ_PushCommand_PassDisconnect(SG_Pass* pass, SG_Pass* next_pass);
 
 // b2
-void CQ_PushCommand_b2World_Set(u32 world_id);
-void CQ_PushCommand_b2SubstepCount(u32 substep_count);
+void CQ_PushCommand_b2World_Set(b2_SimulateDesc desc);
 
 // buffer
 void CQ_PushCommand_BufferUpdate(SG_Buffer* buffer);

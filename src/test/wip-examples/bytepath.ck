@@ -74,6 +74,16 @@ class M
         return (x - a) / (b - a);
     }
 
+    // rotate dir v by `a` radians
+    fun vec2 rot(vec2 v, float a) {
+        Math.cos(a) => float cos_a;
+        Math.sin(a) => float sin_a;
+        return @(
+            cos_a * v.x - sin_a * v.y,
+            sin_a * v.x + cos_a * v.y
+        );
+    }
+
 }
 
 // physics state setup ============================================
@@ -83,7 +93,7 @@ b2.createWorld(world_def) => int world_id;
 
 { // simulation config (eventually group these into single function/command/struct)
     b2.world(world_id);
-    // b2.substeps(1);
+    b2.substeps(4);
 }
 
 b2BodyDef dynamic_body_def;
@@ -100,6 +110,7 @@ class Player
     .1 => float radius;
 
     1.0 => float velocity_scale;
+    Color.WHITE => vec3 boost_trail_color;
 
     fun @construct() {
         // create body def
@@ -263,15 +274,22 @@ fun void slowEffect(float rate, dur d) {
         GG.nextFrame() => now;
         // must use GG.dt() so it's not affected by it's own time warp!
         GG.dt()::second +=> elapsed_time; 
-        elapsed_time / d => float t;
-        M.lerp(M.easeInOutCubic(t), rate, 1.0) => G.dt_rate;
+        M.lerp(M.easeInOutCubic(elapsed_time / d), rate, 1.0) => float t;
+
+        // adjust animation rate
+        t => G.dt_rate;
+        // adjust physics rate
+        t => b2.rate;
+
         T.assert(G.dt_rate <= 1.0, "dt_rate exceeds bounds");
         // <<< "rate",  G.dt_rate, "t", t, "d", d, "rate", rate >>>;
     }
 
     // restore to normal rate
-    if (gen == slow_effect_generation)
+    if (gen == slow_effect_generation) {
         1.0 => G.dt_rate;
+        1.0 => b2.rate;
+    }
 }
 
 // spawns an explosion of lines going in random directinos that gradually shorten
@@ -349,27 +367,49 @@ fun void screenFlashEffect(float hz, dur duration) {
 int refresh_effect_generation;
 fun void refreshEffect() {
     ++refresh_effect_generation => int gen;
-    .2::second => dur effect_dur;
+    .1::second => dur effect_dur;
 
     dur elapsed_time;
+
+    player.radius * 4 => float width;
+
     while (elapsed_time < effect_dur && gen == refresh_effect_generation) {
         GG.nextFrame() => now;
         G.dt +=> elapsed_time;
 
         (elapsed_time / effect_dur) => float t;
 
-        (player.radius * 2 * (1 - t)) => float height;
-        (player.radius) - height / 2 => float y_offset;
+        (width * (1 - t)) => float height;
+        (width * 0.5) - height / 2 => float y_offset;
 
         polygons.drawBox(
-            player.pos() + @(0, -y_offset),
+            player.pos() + @(0, y_offset),
             0, // rotation
-            player.radius * 2, // width 
+            width,
             height,
             Color.WHITE 
         );
     }
 
+}
+
+// flame trail from ship
+// multiple allowed
+// ==optimize== group all trails into circular buffer and pool, 1 shred
+fun void boostTrailEffect(vec2 pos, vec3 color, float radius_scale) {
+    radius_scale * Math.random2f(.04, .046) => float init_radius;
+    init_radius * 8 * 1::second => dur effect_dur; // time to dissolve
+
+    Math.random2f(0.8, 1.0) * color => vec3 init_color;
+
+    dur elapsed_time;
+    while (elapsed_time < effect_dur) {
+        GG.nextFrame() => now;
+        G.dt +=> elapsed_time;
+        1.0 - elapsed_time / effect_dur => float t;
+
+        circles.drawCircle(pos, init_radius * t, 1.0, t * t * init_color);
+    }
 }
 
 class ProjectilePool
@@ -488,12 +528,15 @@ while (true) {
     }
 
     // boost
-    if ( GWindow.key(GWindow.Key_Up) ) {
+    if ( GWindow.key(GWindow.Key_Up) || UI.isKeyDown(UI_Key.GamepadR2) ) {
         1.5 => player.velocity_scale;
-    } else if ( GWindow.key(GWindow.Key_Down) ) {
-        (1.0 / 1.5) => player.velocity_scale;
+        Color.hex(0x00ffff) => player.boost_trail_color;
+    } else if ( GWindow.key(GWindow.Key_Down) || UI.isKeyDown(UI_Key.GamepadL2) ) {
+        (0.5) => player.velocity_scale;
+        Color.hex(0xff0000) => player.boost_trail_color;
     } else {
         1.0 => player.velocity_scale;
+        Color.hex(0xffa500) => player.boost_trail_color;
     }
 
     if (
@@ -562,8 +605,35 @@ while (true) {
         b2Body.position(player.body_id, player_pos);
 
         // draw circle at player position
-        circles.drawCircle(player_pos, player.radius, .15, Color.WHITE);
-        lines.drawSegment(player_pos, player_pos + player.radius * player_dir);
+        // circles.drawCircle(player_pos, player.radius, .15, Color.WHITE);
+
+        lines.drawPolygon(
+            player_pos,
+            -Math.pi / 2 + player.rotation,
+            [
+                1* @(0, .1),
+                // 1* @(-.15, 0),
+                1* @(-.15, -.1),
+                1* @(.15, -.1),
+                // 1* @(.15, 0)
+            ]
+        );
+
+        // ship exhaust
+        M.rot2vec(player.rotation - (Math.pi / 2.0)) => vec2 player_rot_perp;
+        player_pos - .9 * player.radius * player_dir => vec2 exhaust_pos;
+
+        spork ~ boostTrailEffect(
+            exhaust_pos + .07 * player_rot_perp,
+            player.boost_trail_color,
+            player.velocity_scale // scale trail size by speed
+        );
+
+        spork ~ boostTrailEffect(
+            exhaust_pos - .07 * player_rot_perp,
+            player.boost_trail_color,
+            player.velocity_scale // scale trail size by speed
+        );
     }
 
     projectile_pool.update();
