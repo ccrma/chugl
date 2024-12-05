@@ -237,8 +237,8 @@ fn sdConvexPolygon(p : vec2f, v : ptr<function, array<vec2f, 8>>, count : i32) -
 @fragment
 fn fs_main(in : VertexOutput) -> @location(0) vec4f {
     let borderColor = in.f_color;
-    let fillColor = 0.6f * borderColor;
-    // let fillColor = in.f_color;
+    // let fillColor = 0.6f * borderColor;
+    let fillColor = in.f_color;
 
     var f_points = array(
         in.f_points12.xy, in.f_points12.zw,

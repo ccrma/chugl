@@ -22,6 +22,9 @@ TextureSampler.Filter_Nearest => output_sampler.filterMag;
 TextureSampler.Filter_Nearest => output_sampler.filterMip;  
 GG.outputPass().sampler(output_sampler);
 
+// TODO: fix the screenpass stuff
+
+
 b2DebugDraw_Circles circles --> GG.scene();
 b2DebugDraw_Lines lines --> GG.scene();
 b2DebugDraw_SolidPolygon polygons --> GG.scene();
@@ -73,11 +76,93 @@ class M
 
 }
 
+// physics state setup ============================================
 
+b2WorldDef world_def;
+b2.createWorld(world_def) => int world_id;
 
-// Camera shake ============================================
+{ // simulation config (eventually group these into single function/command/struct)
+    b2.world(world_id);
+    // b2.substeps(1);
+}
+
+b2BodyDef dynamic_body_def;
+b2BodyType.kinematicBody => dynamic_body_def.type;
+
+// player ============================================
+
+class Player
+{
+    // TODO cache and store player rotation / position once per frame rather than recalculating constantly
+    int body_id;
+    int shape_id;
+    float rotation;
+    .1 => float radius;
+
+    1.0 => float velocity_scale;
+
+    fun @construct() {
+        // create body def
+        // @(Math.random2f(-4.0, 4.0), Math.random2f(6.0, 12.0)) => dynamic_body_def.position;
+        // Math.random2f(0.0,Math.two_pi) => float angle;
+        // @(Math.cos(angle), Math.sin(angle)) => dynamic_body_def.rotation;
+        b2.createBody(world_id, dynamic_body_def) => this.body_id;
+
+        // then shape
+        b2ShapeDef shape_def;
+        b2Circle circle(this.radius);
+        b2.createCircleShape(this.body_id, shape_def, circle) => this.shape_id;
+    }
+
+    fun vec2 pos() {
+        return b2Body.position(this.body_id);
+    }
+}
+
+Player player;
+
+// Effects ==============================================================
+
+/* Effects Architecture
+To avoid the rabbit hole / performance sink of an EffectsManager +
+Effect base class + overriding/constructors/etc we instead
+have all effects be functions that can be sporked and combined
+to create larger meta effects.
+
+An effect is: a temporary shred that interpolates value(s) over time
+Currently it both
+- updates the interpolated value
+- applies those values to update state / make draw commands
+
+All the interpolated state in contained within the function body 
+of the effect itself, although this may change (add pooling?) 
+for performance reasons
+
+So far have observed these different "types" of effects
+- only single global instance allowed (e.g. cameraShake
+and timeWarp)
+    - for these, a single generation counter is sufficient
+- any number if instances allowed, no external state for de-duping required
+(e.g. bullet boom effect)
+- multiple allowed, but each of these is named and must be deduped
+within that name. Use a a hashmap<string name, int generation> for this
+
+Rules:
+- an effect ought to be sporked from a permanent graphics shred
+- an effect *cannot* spork other effects, instead just spork the two
+effects separately from the permanent graphics shred (this avoids bug
+where the parent effect shred exits before child is finished)
+
+Meta: follow philosophy of change/discipline/constrain your coding
+style to fit within the constraints of simplicity and performance,
+rather than complexifying the system (e.g. going the OOP/Effects 
+command queue route) to accomodate a more flexible but less performant
+programming style (e.g. one where effects can spawn other effects)
+- to be seen if this is the right move
+*/
+
 int camera_shake_generation;
-fun void cameraShake(float amplitude, dur shake_dur, float hz) {
+fun void cameraShakeEffect(float amplitude, dur shake_dur, float hz) {
     ++camera_shake_generation => int gen;
     dur elapsed_time;
 
@@ -120,49 +205,6 @@ fun void cameraShake(float amplitude, dur shake_dur, float hz) {
         (1.0 - progress) * delta => camera.pos;
     }
 }
-
-// physics state setup ============================================
-
-b2WorldDef world_def;
-b2.createWorld(world_def) => int world_id;
-
-{ // simulation config (eventually group these into single function/command/struct)
-    b2.world(world_id);
-    // b2.substeps(1);
-}
-
-b2BodyDef dynamic_body_def;
-b2BodyType.kinematicBody => dynamic_body_def.type;
-
-// player ============================================
-
-class Player
-{
-    // TODO cache and store player rotation / position once per frame rather than recalculating constantly
-    int body_id;
-    int shape_id;
-    float rotation;
-    .1 => float radius;
-
-    fun @construct() {
-        // create body def
-        // @(Math.random2f(-4.0, 4.0), Math.random2f(6.0, 12.0)) => dynamic_body_def.position;
-        // Math.random2f(0.0,Math.two_pi) => float angle;
-        // @(Math.cos(angle), Math.sin(angle)) => dynamic_body_def.rotation;
-        b2.createBody(world_id, dynamic_body_def) => this.body_id;
-
-        // then shape
-        b2ShapeDef shape_def;
-        b2Circle circle(this.radius);
-        b2.createCircleShape(this.body_id, shape_def, circle) => this.shape_id;
-    }
-
-    fun vec2 pos() {
-        return b2Body.position(this.body_id);
-    }
-}
-
-Player player;
 
 // TODO hashmap to track tween generations to prevent multiple concurrent of same type
 fun void shootEffect(dur tween_dur) {
@@ -212,34 +254,30 @@ fun void boomEffect(vec2 pos) {
 }
 
 // slows time to rate, and over d ramps back to normal speed
+int slow_effect_generation;
 fun void slowEffect(float rate, dur d) {
+    ++slow_effect_generation => int gen;
     dur elapsed_time;
 
-    while (elapsed_time < d) {
+    while (elapsed_time < d && gen == slow_effect_generation) {
         GG.nextFrame() => now;
         // must use GG.dt() so it's not affected by it's own time warp!
         GG.dt()::second +=> elapsed_time; 
         elapsed_time / d => float t;
         M.lerp(M.easeInOutCubic(t), rate, 1.0) => G.dt_rate;
         T.assert(G.dt_rate <= 1.0, "dt_rate exceeds bounds");
-        <<< "rate",  G.dt_rate, "t", t, "d", d, "rate", rate >>>;
+        // <<< "rate",  G.dt_rate, "t", t, "d", d, "rate", rate >>>;
     }
 
     // restore to normal rate
-    1.0 => G.dt_rate;
+    if (gen == slow_effect_generation)
+        1.0 => G.dt_rate;
 }
 
 // spawns an explosion of lines going in random directinos that gradually shorten
-fun void explodeEffect(vec2 pos) {
+fun void explodeEffect(vec2 pos, dur max_dur) {
     // params
     Math.random2(8, 16) => int num; // number of lines
-    .5::second => dur max_dur;
-
-    // shake it up
-    spork ~ cameraShake(.08, max_dur, 30);
-
-    // time warp!
-    spork ~ slowEffect(.1, 10::second) @=> Shred slow_effect_shred;
 
     vec2 positions[num];
     vec2 dir[num];
@@ -275,15 +313,63 @@ fun void explodeEffect(vec2 pos) {
             }
         }
     }
+}
 
-    // TODO: create Effects manager that 
-    // 1: can let effects spork other effects without prematurely terminating the sporked effects
-    // if the shreds exits
-    // 2: de-dups by string. E.g. if multiple 'slow' effects are spawned will replace the previous
-    // do this via generation tracking
-    while (!slow_effect_shred.done()) {
-        GG.nextFrame() => now;
+// NOTE: not affected by time warp
+int screen_flash_effect_generation;
+fun void screenFlashEffect(float hz, dur duration) {
+    <<< "screen flash EFfect" >>>;
+    ++screen_flash_effect_generation => int gen;
+
+    (1.0/hz)::second => dur period;
+
+    dur elapsed_time;
+    int toggle;
+    while (elapsed_time < duration && gen == screen_flash_effect_generation) {
+        period => now;
+        period +=> elapsed_time;
+        <<< "screen flash", toggle >>>;
+        if (toggle) {
+            GG.outputPass().exposure(1.0);
+            <<< "1 exposure" >>>;
+        } else {
+            GG.outputPass().exposure(0.0);
+            <<< "0 exposure" >>>;
+        }
+        1 - toggle => toggle;
     }
+
+    // restore
+    if (gen == screen_flash_effect_generation) {
+        GG.outputPass().exposure(1.0);
+    }
+}
+
+
+int refresh_effect_generation;
+fun void refreshEffect() {
+    ++refresh_effect_generation => int gen;
+    .2::second => dur effect_dur;
+
+    dur elapsed_time;
+    while (elapsed_time < effect_dur && gen == refresh_effect_generation) {
+        GG.nextFrame() => now;
+        G.dt +=> elapsed_time;
+
+        (elapsed_time / effect_dur) => float t;
+
+        (player.radius * 2 * (1 - t)) => float height;
+        (player.radius) - height / 2 => float y_offset;
+
+        polygons.drawBox(
+            player.pos() + @(0, -y_offset),
+            0, // rotation
+            player.radius * 2, // width 
+            height,
+            Color.WHITE 
+        );
+    }
+
 }
 
 class ProjectilePool
@@ -398,7 +484,16 @@ while (true) {
     // input ======================================================
     if (GWindow.keyDown(GWindow.Key_Space)) {
         <<< "shaking" >>>;
-        spork ~ cameraShake(.1, 1::second, 30);
+        spork ~ cameraShakeEffect(.1, 1::second, 30);
+    }
+
+    // boost
+    if ( GWindow.key(GWindow.Key_Up) ) {
+        1.5 => player.velocity_scale;
+    } else if ( GWindow.key(GWindow.Key_Down) ) {
+        (1.0 / 1.5) => player.velocity_scale;
+    } else {
+        1.0 => player.velocity_scale;
     }
 
     if (
@@ -417,13 +512,32 @@ while (true) {
     } 
 
     // switch weapons
-    if (UI.isKeyPressed(UI_Key.GamepadFaceDown)) {
+    if (
+        UI.isKeyPressed(UI_Key.GamepadFaceDown)
+        ||
+        GWindow.keyDown(GWindow.Key_Tab)
+    ) {
         (1 + g_fire_mode) % FireMode_Count => g_fire_mode;
     }
 
     // explode test
-    if (UI.isKeyPressed(UI_Key.GamepadFaceRight)) {
-        spork ~ explodeEffect(@(0,0));
+    if (
+        UI.isKeyPressed(UI_Key.GamepadFaceRight)
+        ||
+        GWindow.keyDown(GWindow.Key_Enter)
+    ) {
+        .5::second => dur explode_dur;
+        // shake it up
+        spork ~ cameraShakeEffect(.08, explode_dur, 30);
+        // time warp!
+        spork ~ slowEffect(.15, 2::second);
+        spork ~ explodeEffect(@(0,0), explode_dur);
+        spork ~ screenFlashEffect(20, .1::second); // TODO add back after fixing screen pass to flash white
+    }
+
+    // effects test
+    if (GWindow.keyDown(GWindow.Key_1)) {
+        spork ~ refreshEffect();
     }
 
     { // player logic
@@ -431,7 +545,7 @@ while (true) {
         @(Math.cos(player.rotation), Math.sin(player.rotation)) => vec2 player_dir;
         b2Body.linearVelocity(
             player.body_id, 
-            player_dir
+            player.velocity_scale * player_dir
         );
 
 
