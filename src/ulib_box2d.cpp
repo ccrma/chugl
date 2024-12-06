@@ -2832,17 +2832,8 @@ CK_DLL_SFUN(b2_World_GetContactEvents)
     // TODO switch to use array_int_set after updating chuck version
 
     if (begin_contact_events) {
-        if (contact_events.beginCount > 0)
-            log_trace("begin_contact_events: %d", contact_events.beginCount);
-
         API->object->array_int_clear(begin_contact_events);
         for (int i = 0; i < contact_events.beginCount; i++) {
-
-            b2Filter filterA
-              = b2Shape_GetFilter(contact_events.beginEvents[i].shapeIdA);
-            b2Filter filterB
-              = b2Shape_GetFilter(contact_events.beginEvents[i].shapeIdB);
-
             API->object->array_int_push_back(
               begin_contact_events,
               B2_ID_TO_CKINT(contact_events.beginEvents[i].shapeIdA));
