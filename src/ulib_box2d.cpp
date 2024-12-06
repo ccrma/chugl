@@ -700,9 +700,7 @@ void ulib_box2d_query(Chuck_DL_Query* QUERY)
           "per second.");
 
         b2BodyDef_angularVelocity_offset = MVAR("float", "angularVelocity", false);
-        DOC_VAR(
-          "The initial angular velocity of the body. Typically in meters per "
-          "second.");
+        DOC_VAR("The initial angular velocity of the body. Radians per second");
 
         b2BodyDef_linearDamping_offset = MVAR("float", "linearDamping", false);
         DOC_VAR(
@@ -787,7 +785,7 @@ void ulib_box2d_query(Chuck_DL_Query* QUERY)
         // TODO eventually expose internals
         BEGIN_CLASS("b2Polygon", "Object");
         DOC_CLASS(
-          "Don't instantiate directly. Use helpers b2Polygon.make* instead. "
+          "Don't instantiate directly. Use helpers b2.make* instead. "
           "https://box2d.org/documentation/group__geometry.html#structb2Polygon"
           "A solid convex polygon. It is assumed that the interior of the polygon"
           "is to the left of each edge."
@@ -1351,8 +1349,7 @@ DOC_CLASS("Result of computing the distance between two line segments. https://b
         DOC_FUNC(
           "Transform a polygon. Does not modify the given polygon, instead creating a "
           "new one at the new transform. This is useful for transferring a shape from "
-          "one "
-          "body to another.");
+          "one body to another.");
 
         SFUN(b2_ComputeCircleMass, "b2MassData", "computeCircleMass");
         ARG("b2Circle", "shape");
@@ -1528,7 +1525,7 @@ DOC_CLASS("Result of computing the distance between two line segments. https://b
         ARG("int", "b2Body_id");
         ARG("float", "angle_radians");
         DOC_FUNC(
-          "Set the world position of a body. This acts as a teleport and is "
+          "Set the world rotation of a body. This acts as a teleport and is "
           "fairly expensive.@note Generally you should create a body with the "
           "intended "
           "transform. @see b2BodyDef.position. ");
@@ -2787,81 +2784,106 @@ CK_DLL_SFUN(b2_World_GetSensorEvents)
 
     b2SensorEvents sensor_events = b2World_GetSensorEvents(world_id);
 
-    // clear arrays
-    API->object->array_int_clear(begin_sensor_events);
-    API->object->array_int_clear(end_sensor_events);
+    if (begin_sensor_events) {
+        API->object->array_int_clear(begin_sensor_events);
 
-    // add new sensor events to arrays
-    for (int i = 0; i < sensor_events.beginCount; i++) {
-        API->object->array_int_push_back(
-          begin_sensor_events,
-          B2_ID_TO_CKINT(sensor_events.beginEvents[i].sensorShapeId));
-        API->object->array_int_push_back(
-          begin_sensor_events,
-          B2_ID_TO_CKINT(sensor_events.beginEvents[i].visitorShapeId));
+        // add new sensor events to arrays
+        for (int i = 0; i < sensor_events.beginCount; i++) {
+            API->object->array_int_push_back(
+              begin_sensor_events,
+              B2_ID_TO_CKINT(sensor_events.beginEvents[i].sensorShapeId));
+            API->object->array_int_push_back(
+              begin_sensor_events,
+              B2_ID_TO_CKINT(sensor_events.beginEvents[i].visitorShapeId));
+        }
+
+        ASSERT(API->object->array_int_size(begin_sensor_events)
+               == sensor_events.beginCount * 2);
     }
 
-    ASSERT(API->object->array_int_size(begin_sensor_events)
-           == sensor_events.beginCount * 2);
+    if (end_sensor_events) {
+        API->object->array_int_clear(end_sensor_events);
 
-    for (int i = 0; i < sensor_events.endCount; i++) {
-        API->object->array_int_push_back(
-          end_sensor_events, B2_ID_TO_CKINT(sensor_events.endEvents[i].sensorShapeId));
-        API->object->array_int_push_back(
-          end_sensor_events, B2_ID_TO_CKINT(sensor_events.endEvents[i].visitorShapeId));
+        for (int i = 0; i < sensor_events.endCount; i++) {
+            API->object->array_int_push_back(
+              end_sensor_events,
+              B2_ID_TO_CKINT(sensor_events.endEvents[i].sensorShapeId));
+            API->object->array_int_push_back(
+              end_sensor_events,
+              B2_ID_TO_CKINT(sensor_events.endEvents[i].visitorShapeId));
+        }
+
+        ASSERT(API->object->array_int_size(end_sensor_events)
+               == sensor_events.endCount * 2);
     }
-
-    ASSERT(API->object->array_int_size(end_sensor_events)
-           == sensor_events.endCount * 2);
 }
 
 CK_DLL_SFUN(b2_World_GetContactEvents)
 {
     ulib_box2d_accessAllowed;
-    b2WorldId world_id = GET_B2_ID(b2WorldId, ARGS);
-    GET_NEXT_INT(ARGS); // advance to next arg
+
+    GET_NEXT_B2_ID(b2WorldId, world_id);
     Chuck_ArrayInt* begin_contact_events = GET_NEXT_OBJECT_ARRAY(ARGS);
     Chuck_ArrayInt* end_contact_events   = GET_NEXT_OBJECT_ARRAY(ARGS);
     Chuck_ArrayInt* hit_events           = GET_NEXT_OBJECT_ARRAY(ARGS);
 
-    // TODO switch to use array_int_set after updating chuck version
-    API->object->array_int_clear(begin_contact_events);
-    API->object->array_int_clear(end_contact_events);
-    API->object->array_int_clear(hit_events);
-
     b2ContactEvents contact_events = b2World_GetContactEvents(world_id);
 
-    // populate begin_contact_events and end_contact_events
-    for (int i = 0; i < contact_events.beginCount; i++) {
-        API->object->array_int_push_back(
-          begin_contact_events, B2_ID_TO_CKINT(contact_events.beginEvents[i].shapeIdA));
-        API->object->array_int_push_back(
-          begin_contact_events, B2_ID_TO_CKINT(contact_events.beginEvents[i].shapeIdB));
-    }
-    for (int i = 0; i < contact_events.endCount; i++) {
-        API->object->array_int_push_back(
-          end_contact_events, B2_ID_TO_CKINT(contact_events.endEvents[i].shapeIdA));
-        API->object->array_int_push_back(
-          end_contact_events, B2_ID_TO_CKINT(contact_events.endEvents[i].shapeIdB));
+    // TODO switch to use array_int_set after updating chuck version
+
+    if (begin_contact_events) {
+        if (contact_events.beginCount > 0)
+            log_trace("begin_contact_events: %d", contact_events.beginCount);
+
+        API->object->array_int_clear(begin_contact_events);
+        for (int i = 0; i < contact_events.beginCount; i++) {
+
+            b2Filter filterA
+              = b2Shape_GetFilter(contact_events.beginEvents[i].shapeIdA);
+            b2Filter filterB
+              = b2Shape_GetFilter(contact_events.beginEvents[i].shapeIdB);
+
+            API->object->array_int_push_back(
+              begin_contact_events,
+              B2_ID_TO_CKINT(contact_events.beginEvents[i].shapeIdA));
+            API->object->array_int_push_back(
+              begin_contact_events,
+              B2_ID_TO_CKINT(contact_events.beginEvents[i].shapeIdB));
+        }
     }
 
-    // populate hit_events
-    // first create new body events in pool
-    int pool_len = ARENA_LENGTH(&b2_contact_hit_event_pool, Chuck_Object*);
-    int diff     = contact_events.hitCount - pool_len;
-    if (diff > 0) {
-        Chuck_Object** p
-          = ARENA_PUSH_COUNT(&b2_contact_hit_event_pool, Chuck_Object*, diff);
-        for (int i = 0; i < diff; i++)
-            p[i] = chugin_createCkObj("b2ContactHitEvent", true, SHRED);
+    if (end_contact_events) {
+        API->object->array_int_clear(end_contact_events);
+
+        // populate begin_contact_events and end_contact_events
+        for (int i = 0; i < contact_events.endCount; i++) {
+            API->object->array_int_push_back(
+              end_contact_events, B2_ID_TO_CKINT(contact_events.endEvents[i].shapeIdA));
+            API->object->array_int_push_back(
+              end_contact_events, B2_ID_TO_CKINT(contact_events.endEvents[i].shapeIdB));
+        }
     }
 
-    // add new body events to array
-    for (int i = 0; i < contact_events.hitCount; i++) {
-        Chuck_Object* ckobj
-          = *ARENA_GET_TYPE(&b2_contact_hit_event_pool, Chuck_Object*, i);
-        b2ContactHitEvent_to_ckobj(API, ckobj, &contact_events.hitEvents[i]);
-        API->object->array_int_push_back(hit_events, (t_CKUINT)ckobj);
+    if (hit_events) {
+        API->object->array_int_clear(hit_events);
+        // populate hit_events
+        // first create new body events in pool
+        int pool_len = ARENA_LENGTH(&b2_contact_hit_event_pool, Chuck_Object*);
+        int diff     = contact_events.hitCount - pool_len;
+        if (diff > 0) {
+            Chuck_Object** p
+              = ARENA_PUSH_COUNT(&b2_contact_hit_event_pool, Chuck_Object*, diff);
+            for (int i = 0; i < diff; i++)
+                p[i] = chugin_createCkObj("b2ContactHitEvent", true, SHRED);
+        }
+
+        // add new body events to array
+        for (int i = 0; i < contact_events.hitCount; i++) {
+            Chuck_Object* ckobj
+              = *ARENA_GET_TYPE(&b2_contact_hit_event_pool, Chuck_Object*, i);
+            b2ContactHitEvent_to_ckobj(API, ckobj, &contact_events.hitEvents[i]);
+            API->object->array_int_push_back(hit_events, (t_CKUINT)ckobj);
+        }
     }
 }
 

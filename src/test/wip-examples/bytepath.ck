@@ -4,6 +4,8 @@
 // GOrbitCamera camera --> GG.scene();
 // GG.scene().camera(camera);
 GG.camera() @=> GCamera camera;
+camera.orthographic();
+camera.viewSize(5);
 // camera.posZ(10);
 
 // set target resolution
@@ -46,6 +48,11 @@ class G
     1.0 => static float dt_rate; // modifier for time stretch
 }
 
+// collision category flags
+(1 << 1) => int Category_Player;      // 2
+(1 << 2) => int Category_Projectile;  // 4
+(1 << 3) => int Category_Pickup;      // 8
+
 // Math ============================================
 
 class M
@@ -56,6 +63,10 @@ class M
 
     fun static vec2 randomDir() {
         return rot2vec(Math.random2f(0, Math.two_pi));
+    }
+
+    fun static float easeOutQuad(float x) {
+        return 1 - (1 - x) * (1 - x);
     }
 
     fun static float easeInOutCubic(float x) {
@@ -75,7 +86,7 @@ class M
     }
 
     // rotate dir v by `a` radians
-    fun vec2 rot(vec2 v, float a) {
+    fun static vec2 rot(vec2 v, float a) {
         Math.cos(a) => float cos_a;
         Math.sin(a) => float sin_a;
         return @(
@@ -84,20 +95,34 @@ class M
         );
     }
 
+    fun static vec2 normalize(vec2 n)
+    {
+        return n / Math.hypot(n.x, n.y); // hypot is the magnitude
+    }
+
 }
 
 // physics state setup ============================================
 
 b2WorldDef world_def;
 b2.createWorld(world_def) => int world_id;
+int begin_touch_events[0]; // for holding collision data
+int begin_sensor_events[0]; // for holding sensor data
 
 { // simulation config (eventually group these into single function/command/struct)
     b2.world(world_id);
     b2.substeps(4);
 }
 
-b2BodyDef dynamic_body_def;
-b2BodyType.kinematicBody => dynamic_body_def.type;
+b2Filter projectile_filter;
+Category_Projectile => projectile_filter.categoryBits;
+0 => projectile_filter.maskBits; // collide with nothing
+
+b2ShapeDef projectile_shape_def;
+projectile_filter @=> projectile_shape_def.filter;
+
+b2BodyDef projectile_body_def;
+b2BodyType.kinematicBody => projectile_body_def.type;
 
 // player ============================================
 
@@ -114,13 +139,23 @@ class Player
 
     fun @construct() {
         // create body def
-        // @(Math.random2f(-4.0, 4.0), Math.random2f(6.0, 12.0)) => dynamic_body_def.position;
+        // @(Math.random2f(-4.0, 4.0), Math.random2f(6.0, 12.0)) => kinematic_body_def.position;
         // Math.random2f(0.0,Math.two_pi) => float angle;
-        // @(Math.cos(angle), Math.sin(angle)) => dynamic_body_def.rotation;
-        b2.createBody(world_id, dynamic_body_def) => this.body_id;
+        // @(Math.cos(angle), Math.sin(angle)) => kinematic_body_def.rotation;
+        b2BodyDef player_body_def;
+        b2BodyType.dynamicBody => player_body_def.type; // must be dynamic to trigger sensor
+
+        b2.createBody(world_id, player_body_def) => this.body_id;
 
         // then shape
+        // TODO make player collider match the visual
+        b2Filter player_filter;
+        Category_Player => player_filter.categoryBits;
+        Category_Pickup => player_filter.maskBits; // nothing
+
         b2ShapeDef shape_def;
+        player_filter @=> shape_def.filter;
+
         b2Circle circle(this.radius);
         b2.createCircleShape(this.body_id, shape_def, circle) => this.shape_id;
     }
@@ -412,6 +447,93 @@ fun void boostTrailEffect(vec2 pos, vec3 color, float radius_scale) {
     }
 }
 
+
+fun void rippleEffect(vec2 pos) {
+    .5 => float end_radius;
+    .5::second => dur effect_dur;
+
+    dur elapsed_time;
+    while (elapsed_time < effect_dur) {
+        GG.nextFrame() => now;
+        G.dt +=> elapsed_time;
+        M.easeOutQuad(elapsed_time / effect_dur) => float t;
+
+        circles.drawCircle(pos, end_radius * t, .1 * (1 - t), Color.WHITE * (1 - t));
+    }
+}
+
+// ==optimize== group all under projectile pool if there are ever enough to matter
+fun void spawnPickup(vec2 pos) {
+    GG.nextFrame() => now; // to register as graphics shred
+
+    // params
+    .1 => float w;
+    .1 => float h;
+    .12 => float speed;
+    .08 => float steering_rate;
+    1 => float angular_velocity;
+
+    b2BodyDef pickup_body_def;
+    b2BodyType.kinematicBody => pickup_body_def.type;
+    angular_velocity => pickup_body_def.angularVelocity;
+    pos => pickup_body_def.position;
+    false => pickup_body_def.enableSleep; // disable otherwise slowly rotating objects will be put to sleep
+
+    b2Filter pickup_filter;
+    Category_Pickup => pickup_filter.categoryBits;
+    Category_Player => pickup_filter.maskBits;
+
+    b2ShapeDef pickup_shape_def;
+    true => pickup_shape_def.enableSensorEvents;
+    true => pickup_shape_def.isSensor; // note: sensors only create events with dynamic bodies?
+    pickup_filter @=> pickup_shape_def.filter;
+
+    b2.createBody(world_id, pickup_body_def) => int body_id;
+    T.assert(b2Body.isValid(body_id), "spawnPickup body invalid");
+    b2.makeBox(w, h) @=> b2Polygon polygon;
+    b2.createPolygonShape(body_id, pickup_shape_def, polygon);
+
+    polygon.vertices() @=> vec2 vertices[];
+
+    // draw until destroyed
+    while (true) {
+        GG.nextFrame() => now;
+
+        // if destroyed, break out
+        if (!b2Body.isValid(body_id)) return;
+
+        // calculate transform
+        b2Body.position(body_id) => vec2 pos;
+        b2Body.angle(body_id) => float rot_radians;
+
+        // steering towards player (if player is alive)
+        // https://code.tutsplus.com/understanding-steering-behaviors-seek--gamedev-849t
+        if (b2Body.isValid(player.body_id)) {
+            b2Body.linearVelocity(body_id) => vec2 current_heading;
+            // lines.drawSegment(pos, pos + current_heading); // debug draw
+            M.normalize(player.pos() - pos) => vec2 desired_heading;
+            desired_heading - current_heading => vec2 steering;
+            b2Body.linearVelocity(
+                body_id, 
+                speed * M.normalize(current_heading + steering_rate * steering)
+                // desired_heading // uncomment for no steering, instant course correction
+            );
+        }
+
+
+        // <<< rot_radians , "velocity: ", b2Body.angularVelocity(body_id), b2Body.isAwake(body_id) >>>;
+        // <<< "sleep enabled", b2Body.isSleepEnabled(body_id), "sleep threshold", b2Body.sleepThreshold(body_id) >>>;
+
+        // TODO add outline width option to polygon drawer
+        lines.drawPolygon(
+            pos,
+            rot_radians,
+            vertices
+        );
+    }
+} 
+spork ~ spawnPickup(@(1,0));
+
 class ProjectilePool
 {
     int body_ids[0];
@@ -424,9 +546,10 @@ class ProjectilePool
 
     fun int _addCollider() {
         // TODO: how do I stop simulating? just b2.destroyBody() ?
-        b2.createBody(world_id, dynamic_body_def) => int body_id;
+        // use b2Body.isEnabled().... (rather than awake)
+        b2.createBody(world_id, projectile_body_def) => int body_id;
         b2Circle circle(radius);
-        b2.createCircleShape(body_id, new b2ShapeDef, circle);
+        b2.createCircleShape(body_id, projectile_shape_def, circle);
         return body_id;
     }
 
@@ -467,8 +590,8 @@ class ProjectilePool
             }
         }
 
-        if (num_active != prev_active)
-            <<< "num bullets active ", prev_active, " to ", num_active >>>;
+        // if (num_active != prev_active)
+            // <<< "num bullets active ", prev_active, " to ", num_active >>>;
     }
 }
 
@@ -512,6 +635,8 @@ spork ~ shoot();
 
 
 // gameloop ============================================
+DebugDraw debug_draw;
+true => debug_draw.drawShapes;
 
 int keys[0];
 while (true) {
@@ -586,10 +711,13 @@ while (true) {
     { // player logic
         // update ======================================================
         @(Math.cos(player.rotation), Math.sin(player.rotation)) => vec2 player_dir;
+        // apply velocity
         b2Body.linearVelocity(
             player.body_id, 
             player.velocity_scale * player_dir
         );
+        // apply rotation
+        b2Body.angle(player.body_id, player.rotation);
 
 
         // render ======================================================
@@ -638,8 +766,48 @@ while (true) {
 
     projectile_pool.update();
 
+
+    // collisions (TODO does it matter what order in game loop this happens?)
+    {
+        // b2World.contactEvents(world_id, begin_touch_events, null, null);
+        // for (int i; i < begin_touch_events.size(); i++) {
+        //     <<< "begin_touch:", begin_touch_events[i] >>>;
+        // }
+
+        b2World.sensorEvents(world_id, begin_sensor_events, null);
+        for (int i; i < begin_sensor_events.size(); 2 +=> i) {
+            // assume for now that only pickups trigger sensor events
+            // and that the order is deterministic (sensor, player, sensor, player....) 
+            begin_sensor_events[i] => int pickup_id;
+            begin_sensor_events[i + 1] => int player_id;
+            T.assert(player_id == player.body_id, "non-player triggered sensor event");
+
+            // pickup effect
+            spork ~ rippleEffect(b2Body.position(pickup_id));
+
+            // remove sensor from b2
+            b2.destroyBody(pickup_id);
+
+            // spawn another!
+            camera.NDCToWorldPos(
+                @(
+                    Math.random2f(-1, 1),
+                    Math.random2f(-1, 1),
+                    .0
+                )
+            ) $ vec2 => vec2 new_pickup_pos;
+            spork ~ spawnPickup(new_pickup_pos);
+        }
+    }
+
     // flush 
-    circles.update();
-    lines.update();
-    polygons.update();
+    if (true) {
+        circles.update();
+        lines.update();
+        polygons.update();
+    } else {
+        // physics debug draw
+        b2World.draw(world_id, debug_draw);
+        debug_draw.update();
+    }
 }

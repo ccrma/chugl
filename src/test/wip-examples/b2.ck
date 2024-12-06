@@ -532,7 +532,7 @@ public class b2DebugDraw_Capsule extends GGen
 
 
 // custom debug draw
-class DebugDraw extends b2DebugDraw
+public class DebugDraw extends b2DebugDraw
 {
 	b2DebugDraw_SolidPolygon solid_polygons --> GG.scene();
 	b2DebugDraw_Lines lines --> GG.scene();
