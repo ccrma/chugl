@@ -45,6 +45,7 @@ UI_Float4 text_color;
 UI_Float line_spacing(1.0);
 UI_Float text_scale(text.sca().x);
 UI_Bool text_rotate;
+UI_Float antialias(text.antialias());
 
 // main loop
 while (true)
@@ -78,6 +79,10 @@ while (true)
 
         if (UI.slider("Text Scale", text_scale, 0.01, 1.0)) {
             text.sca(text_scale.val());
+        }
+
+        if (UI.slider("Antialias", antialias, 0, 50)) {
+            text.antialias(antialias.val());
         }
 
         UI.checkbox("Rotate Text", text_rotate);

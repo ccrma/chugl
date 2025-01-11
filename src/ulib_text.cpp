@@ -56,6 +56,9 @@ CK_DLL_MFUN(gtext_get_control_points);
 CK_DLL_MFUN(gtext_set_texture);
 CK_DLL_MFUN(gtext_get_texture);
 
+CK_DLL_MFUN(gtext_set_antialias);
+CK_DLL_MFUN(gtext_get_antialias);
+
 void ulib_text_query(Chuck_DL_Query* QUERY)
 {
     BEGIN_CLASS("GText", SG_CKNames[SG_COMPONENT_TRANSFORM]);
@@ -124,6 +127,19 @@ void ulib_text_query(Chuck_DL_Query* QUERY)
 
     MFUN(gtext_get_texture, SG_CKNames[SG_COMPONENT_TEXTURE], "texture");
     DOC_FUNC("Get the current texture applied to the text block");
+
+    MFUN(gtext_set_antialias, "void", "antialias");
+    ARG("float", "window_size");
+    DOC_FUNC(
+      "Set the size of the window (in pixels) used for text anti-aliasing.  0 - no "
+      "anti-aliasing.  1 - normal anti-aliasing. >=2 - exaggerated effect. Defaults to "
+      "1");
+
+    MFUN(gtext_get_antialias, "float", "antialias");
+    DOC_FUNC(
+      "Get the size of the window (in pixels) used for text anti-aliasing.  0 - no "
+      "anti-aliasing.  1 - normal anti-aliasing. >=2 - exaggerated effect. Defaults to "
+      "1");
 
     END_CLASS();
 }
@@ -205,9 +221,10 @@ CK_DLL_MFUN(gtext_set_text)
 
 CK_DLL_MFUN(gtext_get_text)
 {
-    SG_Text* text    = GET_TEXT(SELF);
-    // return new string (no ref count needed; chuck VM function call mechanism will take it from here)
-    RETURN->v_string = chugin_createCkString(text->text.c_str(),false);
+    SG_Text* text = GET_TEXT(SELF);
+    // return new string (no ref count needed; chuck VM function call mechanism will
+    // take it from here)
+    RETURN->v_string = chugin_createCkString(text->text.c_str(), false);
 }
 
 CK_DLL_MFUN(gtext_set_font)
@@ -220,9 +237,10 @@ CK_DLL_MFUN(gtext_set_font)
 
 CK_DLL_MFUN(gtext_get_font)
 {
-    SG_Text* text    = GET_TEXT(SELF);
-    // return new string (no ref count needed; chuck VM function call mechanism will take it from here)
-    RETURN->v_string = chugin_createCkString(text->font_path.c_str(),false);
+    SG_Text* text = GET_TEXT(SELF);
+    // return new string (no ref count needed; chuck VM function call mechanism will
+    // take it from here)
+    RETURN->v_string = chugin_createCkString(text->font_path.c_str(), false);
 }
 
 CK_DLL_MFUN(gtext_set_vertical_spacing)
@@ -271,4 +289,24 @@ CK_DLL_MFUN(gtext_get_texture)
     SG_Material* material = SG_GetMaterial(text->_mat_id);
     SG_Texture* texture   = SG_GetTexture(material->uniforms[6].as.texture_id);
     RETURN->v_object      = texture->ckobj;
+}
+
+CK_DLL_MFUN(gtext_set_antialias)
+{
+    SG_Text* text         = GET_TEXT(SELF);
+    SG_Material* material = SG_GetMaterial(text->_mat_id);
+    SG_Material::uniformFloat(material, 3, GET_NEXT_FLOAT(ARGS) * 1.0f);
+
+    CQ_PushCommand_MaterialSetUniform(material, 3);
+}
+
+CK_DLL_MFUN(gtext_get_antialias)
+{
+    SG_Text* text         = GET_TEXT(SELF);
+    SG_Material* material = SG_GetMaterial(text->_mat_id);
+
+    // TODO: implement uniforms getters on SG_Material with proper type checking /
+    // warning logging to chuck
+    ASSERT(material->uniforms[3].type == SG_MATERIAL_UNIFORM_FLOAT);
+    RETURN->v_float = material->uniforms[3].as.f;
 }
