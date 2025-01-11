@@ -879,10 +879,11 @@ void CQ_PushCommand_TextRebuild(SG_Text* text)
 
 void CQ_PushCommand_TextDefaultFont(const char* font_path)
 {
-    size_t additional_bytes = font_path ? strlen(font_path) : 1;
-    BEGIN_COMMAND_ADDITIONAL_MEMORY_ZERO(
-      SG_Command_TextDefaultFont, SG_COMMAND_TEXT_DEFAULT_FONT, additional_bytes);
-    if (font_path) strncpy((char*)memory, font_path, additional_bytes - 1);
+    size_t len = font_path ? strlen(font_path) : 0;
+    BEGIN_COMMAND_ADDITIONAL_MEMORY_ZERO(SG_Command_TextDefaultFont,
+                                         SG_COMMAND_TEXT_DEFAULT_FONT, len + 1);
+    // if (font_path) strncpy((char*)memory, font_path, additional_bytes - 1);
+    if (font_path) strncpy((char*)memory, font_path, len);
     command->font_path_str_offset = Arena::offsetOf(cq.write_q, memory);
     END_COMMAND();
 }

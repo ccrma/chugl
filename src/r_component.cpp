@@ -2007,6 +2007,7 @@ void Material_batchUpdatePipelines(GraphicsContext* gctx, FT_Library ft_lib,
             // we do pipeline creation JIT during render scene now
             case SG_COMPONENT_MESH: {
                 // for now assuming text is the only mesh type that needs to update
+                // why is this font creation even deferred??
                 R_Text* rtext = (R_Text*)comp;
                 R_Font* font
                   = Component_GetFont(gctx, ft_lib, rtext->font_path.c_str());
@@ -3262,6 +3263,7 @@ bool R_Font::init(GraphicsContext* gctx, FT_Library library, R_Font* font,
         }
     } else {
         font->face = R_Font_loadFace(library, font_path);
+        if (!font->face) return false;
     }
 
     FT_Face face = font->face;
