@@ -236,32 +236,27 @@ fn sdConvexPolygon(p : vec2f, v : ptr<function, array<vec2f, 8>>, count : i32) -
 
 @fragment
 fn fs_main(in : VertexOutput) -> @location(0) vec4f {
-    let borderColor = in.f_color;
-    // let fillColor = 0.6f * borderColor;
-    let fillColor = in.f_color;
-
     var f_points = array(
         in.f_points12.xy, in.f_points12.zw,
         in.f_points34.xy, in.f_points34.zw,
         in.f_points56.xy, in.f_points56.zw,
         in.f_points78.xy, in.f_points78.zw
     );
+    let sdf = sdConvexPolygon(in.f_position, &f_points, in.f_count);
 
-    let dw = sdConvexPolygon(in.f_position, &f_points, in.f_count);
-    let d = abs(dw - in.f_radius);
+    // TODO: anti-aliasing broken, fix later
+    // reference: http://www.numb3r23.net/2015/08/17/using-fwidth-for-distance-based-anti-aliasing/
+    var alpha = 1.0;
+    // if (bool(u_antialias)) {
+    //     let aaf = fwidth(sdf); // anti alias field
+    //     alpha = smoothstep(inner_radius - aaf, inner_radius, d) - 
+    //                 smoothstep(1.0 - aaf, 1.0, d);
+    // } else {
+        alpha = step(sdf, 0.0);
+    // }
 
-    // roll the fill alpha down at the border
-    let back = vec4f(fillColor.rgb, fillColor.a * smoothstep(in.f_radius + in.f_thickness, in.f_radius, dw));
-    // let back = vec4f(fillColor.rgb, fillColor.a * smoothstep(in.f_radius + .01, in.f_radius, dw));
 
-    // roll the border alpha down from 1 to 0 across the border thickness
-    let front = vec4(borderColor.rgb, smoothstep(in.f_thickness, 0.0f, d));
+    if (alpha < .01) { discard; }
 
-    let fragColor = blend_colors(front, back);
-
-    // TODO instead of discard, make transparent and disable depth writes
-    if (fragColor.a < .01) { discard; }
-
-    return fragColor;
-    // return back;
+    return vec4(in.f_color.rgb, alpha);
 }

@@ -32,7 +32,7 @@
 
 #include "shaders.h"
 
-#define GET_TEXT(ckobj) SG_GetText(OBJ_MEMBER_UINT(ckobj, component_offset_id));
+#define GET_TEXT(ckobj) (SG_GetText(OBJ_MEMBER_UINT(ckobj, component_offset_id)))
 
 CK_DLL_SFUN(gtext_set_default_font);
 
@@ -40,6 +40,8 @@ CK_DLL_CTOR(gtext_ctor);
 
 CK_DLL_MFUN(gtext_set_color);
 CK_DLL_MFUN(gtext_get_color);
+
+CK_DLL_MFUN(gtext_set_color_rgb);
 
 CK_DLL_MFUN(gtext_set_text);
 CK_DLL_MFUN(gtext_get_text);
@@ -58,6 +60,9 @@ CK_DLL_MFUN(gtext_get_texture);
 
 CK_DLL_MFUN(gtext_set_antialias);
 CK_DLL_MFUN(gtext_get_antialias);
+
+CK_DLL_MFUN(gtext_set_alpha);
+CK_DLL_MFUN(gtext_get_alpha);
 
 void ulib_text_query(Chuck_DL_Query* QUERY)
 {
@@ -80,6 +85,10 @@ void ulib_text_query(Chuck_DL_Query* QUERY)
 
     MFUN(gtext_get_color, "vec4", "color");
     DOC_FUNC("Get text color");
+
+    MFUN(gtext_set_color_rgb, "void", "color");
+    ARG("vec3", "color");
+    DOC_FUNC("Set text color, leaving alpha untouched");
 
     MFUN(gtext_set_text, "void", "text");
     ARG("string", "text");
@@ -140,6 +149,13 @@ void ulib_text_query(Chuck_DL_Query* QUERY)
       "Get the size of the window (in pixels) used for text anti-aliasing.  0 - no "
       "anti-aliasing.  1 - normal anti-aliasing. >=2 - exaggerated effect. Defaults to "
       "1");
+
+    MFUN(gtext_set_alpha, "void", "alpha");
+    ARG("float", "alpha");
+    DOC_FUNC("Set the alpha channel of the text color");
+
+    MFUN(gtext_get_alpha, "float", "alpha");
+    DOC_FUNC("Get the alpha channel of the text color");
 
     END_CLASS();
 }
@@ -209,6 +225,17 @@ CK_DLL_MFUN(gtext_get_color)
     SG_Material* material = SG_GetMaterial(text->_mat_id);
     glm::vec4 color       = material->uniforms[2].as.vec4f;
     RETURN->v_vec4        = { color.r, color.g, color.b, color.a };
+}
+
+CK_DLL_MFUN(gtext_set_color_rgb)
+{
+    SG_Text* text         = GET_TEXT(SELF);
+    SG_Material* material = SG_GetMaterial(text->_mat_id);
+    t_CKVEC3 color        = GET_NEXT_VEC3(ARGS);
+    float alpha           = material->uniforms[2].as.vec4f.a;
+
+    SG_Material::uniformVec4f(material, 2, { color.x, color.y, color.z, alpha });
+    CQ_PushCommand_MaterialSetUniform(material, 2);
 }
 
 CK_DLL_MFUN(gtext_set_text)
@@ -309,4 +336,24 @@ CK_DLL_MFUN(gtext_get_antialias)
     // warning logging to chuck
     ASSERT(material->uniforms[3].type == SG_MATERIAL_UNIFORM_FLOAT);
     RETURN->v_float = material->uniforms[3].as.f;
+}
+
+CK_DLL_MFUN(gtext_set_alpha)
+{
+    SG_Text* text         = GET_TEXT(SELF);
+    SG_Material* material = SG_GetMaterial(text->_mat_id);
+    t_CKFLOAT alpha       = GET_NEXT_FLOAT(ARGS);
+
+    glm::vec4 color = material->uniforms[2].as.vec4f;
+    color.a         = CLAMP(alpha, 0.0f, 1.0f);
+
+    SG_Material::uniformVec4f(material, 2, color);
+    CQ_PushCommand_MaterialSetUniform(material, 2);
+}
+
+CK_DLL_MFUN(gtext_get_alpha)
+{
+    SG_Material* material = SG_GetMaterial(GET_TEXT(SELF)->_mat_id);
+    glm::vec4 color       = material->uniforms[2].as.vec4f;
+    RETURN->v_float       = color.a;
 }

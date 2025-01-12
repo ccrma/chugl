@@ -1,12 +1,18 @@
+/*
+TODO
+- remove radius from b2_polygon shader (simplify overall)
+
+- pickup effects for health and SP
+
+*/
+
 // import materials for 2D drawing
 @import "b2.ck"
 
-// GOrbitCamera camera --> GG.scene();
-// GG.scene().camera(camera);
-GG.camera() @=> GCamera camera;
-camera.orthographic();
-camera.viewSize(5);
-// camera.posZ(10);
+GG.logLevel(GG.LogLevel_Debug);
+
+GG.camera().orthographic();
+GG.camera().viewSize(5);
 
 // set target resolution
 // most steam games (over half) default to 1920x1080
@@ -25,36 +31,57 @@ TextureSampler.Filter_Nearest => output_sampler.filterMip;
 GG.outputPass().sampler(output_sampler);
 
 // TODO: fix the screenpass stuff
-
-
+// 2D Vector Graphics
 b2DebugDraw_Circles circles --> GG.scene();
 b2DebugDraw_Lines lines --> GG.scene();
 b2DebugDraw_SolidPolygon polygons --> GG.scene();
 circles.antialias(false);
 
-/*
-Slow Effect Brainstorm
-b2: just have a "slow" factor api call e.g. b2.timeStretch()
-- can't do a per-frame simulate call because this needs to happen BEFORE we flush the command queue
-Effects: scale with GG.dt(), introduce a GG.timeScale() which scales all delta times
-
-*/
+// font
+GText.defaultFont(me.dir() + "./m5x7.ttf");
 
 // Globals ============================================
 class G
 {
     static dur dt;
-    static float dtf;
+    static float dtf; // equivalent to G.dt, but cast as float
     1.0 => static float dt_rate; // modifier for time stretch
+    static dur dt_cum;      // cumulative dt (equiv to time-stretched "now")
+    static float dtf_cum;   // cumulative dtf
+
+    static GCamera@ camera;
+
+    static HashMap@ pickup_map; // hashmap from pickup b2bodyid --> pickup type
 }
 
-// collision category flags
-(1 << 1) => int Category_Player;      // 2
-(1 << 2) => int Category_Projectile;  // 4
-(1 << 3) => int Category_Pickup;      // 8
+GG.camera() @=> G.camera;
+new HashMap @=> G.pickup_map;
+
+// Pickup Type Enums
+0 => int PickupType_Basic;
+1 => int PickupType_Boost;
+2 => int PickupType_Health;
+3 => int PickupType_SP;
+
+// pickup type colors
+[
+    Color.hex(0xFFFFFF),
+    Color.hex(0x00ffff),
+    Color.hex(0xFF0000),
+    Color.hex(0xFFD700),
+] @=> vec3 pickup_colors[];
+
+[
+    "DEFAULT PICKUP",
+    "+BOOST",
+    "+HP",
+    "+SP",
+] @=> string pickup_text[];
+
+.25 => float pickup_scale;
+
 
 // Math ============================================
-
 class M
 {
     fun static vec2 rot2vec(float radians) {
@@ -100,9 +127,31 @@ class M
         return n / Math.hypot(n.x, n.y); // hypot is the magnitude
     }
 
+    // ---------------
+    // random
+    // ---------------
+    fun static vec2 randomPointInCircle(vec2 center, float min_r, float max_r) {
+        Math.random2f(0, Math.two_pi) => float theta;
+        Math.random2f(min_r, max_r) => float radius;
+        return center + radius * @(Math.cos(theta), Math.sin(theta));
+    }
+
+
+    fun static vec2 randomPointInArea(vec2 center, float w, float h) {
+        return center + @(-w * 0.5, -h * 0.5) + @(
+            Math.random2f(0, w),
+            Math.random2f(0, h)
+        );
+
+    }
 }
 
 // physics state setup ============================================
+
+// collision category flags (for b2 physics)
+(1 << 1) => int Category_Player;      // 2
+(1 << 2) => int Category_Projectile;  // 4
+(1 << 3) => int Category_Pickup;      // 8
 
 b2WorldDef world_def;
 b2.createWorld(world_def) => int world_id;
@@ -114,6 +163,7 @@ int begin_sensor_events[0]; // for holding sensor data
     b2.substeps(4);
 }
 
+// projectile b2 definitions
 b2Filter projectile_filter;
 Category_Projectile => projectile_filter.categoryBits;
 0 => projectile_filter.maskBits; // collide with nothing
@@ -225,7 +275,6 @@ fun void cameraShakeEffect(float amplitude, dur shake_dur, float hz) {
 
     (1.0 / hz)::second => dur camera_delta_period; // time for 1 cycle of shake
 
-    int camera_deltas_idx;
     while (true) {
         GG.nextFrame() => now;
         // another shake triggred, stop this one
@@ -248,11 +297,11 @@ fun void cameraShakeEffect(float amplitude, dur shake_dur, float hz) {
         // interpolate the progress
         camera_deltas[floor] * (1.0 - fract) + camera_deltas[floor + 1] * fract => vec2 delta;
         // update camera pos with linear decay based on progress
-        (1.0 - progress) * delta => camera.pos;
+        (1.0 - progress) * delta => G.camera.pos;
     }
 }
 
-// TODO hashmap to track tween generations to prevent multiple concurrent of same type
+// shrinking white square on blaster end
 fun void shootEffect(dur tween_dur) {
     dur elapsed_time;
 
@@ -271,12 +320,7 @@ fun void shootEffect(dur tween_dur) {
     }
 }
 
-// ==optimize== batch these together so all effects are managed
-// by a single shred looping over a progress array, rather than per shred
 fun void boomEffect(vec2 pos) {
-    // how can we improve chugl syntax for these types of per-frame multi-stage timing effects?
-    // 1. somehow add a retained mode to the vector graphics?
-    // for (1::second) { do xyz }
     dur elapsed_time;
     while (elapsed_time < .25::second) {
         GG.nextFrame() => now;
@@ -305,10 +349,13 @@ fun void slowEffect(float rate, dur d) {
     ++slow_effect_generation => int gen;
     dur elapsed_time;
 
-    while (elapsed_time < d && gen == slow_effect_generation) {
+    while (gen == slow_effect_generation) {
         GG.nextFrame() => now;
         // must use GG.dt() so it's not affected by it's own time warp!
         GG.dt()::second +=> elapsed_time; 
+
+        if (elapsed_time > d) break;
+
         M.lerp(M.easeInOutCubic(elapsed_time / d), rate, 1.0) => float t;
 
         // adjust animation rate
@@ -317,7 +364,9 @@ fun void slowEffect(float rate, dur d) {
         t => b2.rate;
 
         T.assert(G.dt_rate <= 1.0, "dt_rate exceeds bounds");
-        // <<< "rate",  G.dt_rate, "t", t, "d", d, "rate", rate >>>;
+        if (G.dt_rate > 1.0) {
+            <<< "rate",  G.dt_rate, "t", t, "d", d, "rate", rate >>>;
+        }
     }
 
     // restore to normal rate
@@ -343,7 +392,7 @@ fun void explodeEffect(vec2 pos, dur max_dur) {
         pos => positions[i];
         M.randomDir() => dir[i];
         Math.random2f(.1, .2) => lengths[i];
-        Math.random2f(.3, .5)::second => durations[i];
+        Math.random2f(.3, max_dur / second)::second => durations[i];
         Math.random2f(.01, .02) => velocities[i];
     }
 
@@ -379,8 +428,6 @@ fun void screenFlashEffect(float hz, dur duration) {
     dur elapsed_time;
     int toggle;
     while (elapsed_time < duration && gen == screen_flash_effect_generation) {
-        period => now;
-        period +=> elapsed_time;
         <<< "screen flash", toggle >>>;
         if (toggle) {
             GG.outputPass().exposure(1.0);
@@ -390,6 +437,10 @@ fun void screenFlashEffect(float hz, dur duration) {
             <<< "0 exposure" >>>;
         }
         1 - toggle => toggle;
+
+        // pass time
+        period => now;
+        period +=> elapsed_time;
     }
 
     // restore
@@ -400,6 +451,7 @@ fun void screenFlashEffect(float hz, dur duration) {
 
 
 int refresh_effect_generation;
+// white box that slides up across player (for power up)
 fun void refreshEffect() {
     ++refresh_effect_generation => int gen;
     .1::second => dur effect_dur;
@@ -430,6 +482,7 @@ fun void refreshEffect() {
 
 // flame trail from ship
 // multiple allowed
+// gradually shrinking/fading circle
 // ==optimize== group all trails into circular buffer and pool, 1 shred
 fun void boostTrailEffect(vec2 pos, vec3 color, float radius_scale) {
     radius_scale * Math.random2f(.04, .046) => float init_radius;
@@ -447,7 +500,7 @@ fun void boostTrailEffect(vec2 pos, vec3 color, float radius_scale) {
     }
 }
 
-
+// slowly expanding ring
 fun void rippleEffect(vec2 pos) {
     .5 => float end_radius;
     .5::second => dur effect_dur;
@@ -462,8 +515,130 @@ fun void rippleEffect(vec2 pos) {
     }
 }
 
+// toggles a UI_Bool at hz freq n times after initial wait
+fun void blinkEffect(UI_Bool b, float hz, dur d, dur wait) {
+    wait => now;
+    (1 / hz)::second => dur T;
+    dur elapsed_time;
+    while (elapsed_time < d) {
+        G.dt_rate * T => now;
+        T +=> elapsed_time;
+        (1 - b.val()) => b.val;
+    }
+}
+
+// multiple parts
+// 1. color changes from white --> blue after .2 sec
+// 2. after x secs, starts flashing (toggling draw) every .05 seconds 6 times
+// 3. outer ring scale from 1 --> 2 over .35 sec
+fun void pickupEffect(vec2 pos, int type) {
+    // params
+    UI_Bool draw(true);
+    Color.WHITE => vec3 color;
+    1 => float ring_scale;
+
+    (.2 + .6)::second => dur effect_dur;
+    dur elapsed_time;
+    spork ~ blinkEffect(draw, 20, 1::second, .2::second);
+
+    while (true) {
+        GG.nextFrame() => now;
+        G.dt +=> elapsed_time;
+        if (elapsed_time > effect_dur) break;
+
+        // after .2 secs
+        if (elapsed_time > .2::second) {
+            // change color
+            if (elapsed_time > .2::second)
+                pickup_colors[type] => color;
+
+            // scale outer ring over .35 seconds
+            ((elapsed_time - .2::second) / .6::second) => float t;
+            1 + t * t => ring_scale;
+        }
+
+        if (draw.val()) { // draw
+            if (type == PickupType_Boost || type == PickupType_SP) {
+                polygons.drawSquare(pos, Math.pi * .25, pickup_scale * .4, color);
+                lines.square(pos, Math.pi * .25, ring_scale * pickup_scale, color);
+            } else if (type == PickupType_Health) {
+                pickup_scale * .6 => float w; // center size
+                polygons.drawBox(pos, 0, w, w * .33, color);
+                polygons.drawBox(pos, .5 * Math.pi, w, w * .33, color);
+                lines.circle(pos, ring_scale * w, Color.hex(0xFFFFFF));
+            }
+        }
+    }
+}
+
+// TODO: add text garbage collection to ChuGL....
+// using pool for now to prevenet leak
+class TextPool 
+{
+    GText text_pool[64]; // shouldn't need more than this?
+    HashMap text_to_index_map; // map from GText to text_pool index
+
+    // populate hashmap, init GText
+    for (int i; i < text_pool.size(); i++) {
+        text_to_index_map.set(text_pool[i], i);
+        text_pool[i].text("");
+        text_pool[i] --> GG.scene();
+        text_pool[i].antialias(false);
+    }
+
+    fun GText get() {
+        // ==optimize== move from linear search to linked-list of available texts
+        for (int i; i < text_pool.size(); i++) {
+            if (text_pool[i] != null) {
+                text_pool[i] @=> GText text;
+                null @=> text_pool[i]; // set to null to mark borrowed
+                return text;
+            }
+        }
+        T.assert(false, "insufficient GText in TextPool");
+        return null;
+    }
+
+    fun void ret(GText text) {
+        text_to_index_map.has(text) => int belongs;
+        T.assert(belongs, "trying to return text that does not belong to TextPool");
+
+        if (belongs) {
+            text_to_index_map.getInt(text) => int i;
+            T.assert(text_pool[i] == null, "text borrowed but still in pool?");
+            text @=> text_pool[i];
+            text.text("");
+        }
+    }
+}
+TextPool text_pool;
+
+fun void textEffect(string text_str, vec2 pos, vec3 color) {
+    text_pool.get() @=> GText text;
+
+    text.color(color);
+    text.pos(pos);
+    text.sca(.42);
+    text.text(text_str);
+
+    UI_Bool draw(true);
+    spork ~ blinkEffect(draw, 20, .8::second, .2::second);
+
+    dur elapsed_time;
+    while (true) {
+        GG.nextFrame() => now;
+        G.dt +=> elapsed_time;
+        if (elapsed_time > .8::second) break;
+
+        text.alpha(draw.val());
+    }
+
+    text_pool.ret(text);
+}
+
+
 // ==optimize== group all under projectile pool if there are ever enough to matter
-fun void spawnPickup(vec2 pos) {
+fun void spawnPickupTest(vec2 pos) {
     GG.nextFrame() => now; // to register as graphics shred
 
     // params
@@ -484,7 +659,7 @@ fun void spawnPickup(vec2 pos) {
     Category_Player => pickup_filter.maskBits;
 
     b2ShapeDef pickup_shape_def;
-    true => pickup_shape_def.enableSensorEvents;
+	/// A sensor shape generates overlap events but never generates a collision response.
     true => pickup_shape_def.isSensor; // note: sensors only create events with dynamic bodies?
     pickup_filter @=> pickup_shape_def.filter;
 
@@ -493,6 +668,9 @@ fun void spawnPickup(vec2 pos) {
     b2.makeBox(w, h) @=> b2Polygon polygon;
     b2.createPolygonShape(body_id, pickup_shape_def, polygon);
 
+    // register body id in LUT
+    G.pickup_map.set(body_id, PickupType_Basic);
+
     polygon.vertices() @=> vec2 vertices[];
 
     // draw until destroyed
@@ -500,7 +678,7 @@ fun void spawnPickup(vec2 pos) {
         GG.nextFrame() => now;
 
         // if destroyed, break out
-        if (!b2Body.isValid(body_id)) return;
+        if (!b2Body.isValid(body_id)) break;
 
         // calculate transform
         b2Body.position(body_id) => vec2 pos;
@@ -520,7 +698,6 @@ fun void spawnPickup(vec2 pos) {
             );
         }
 
-
         // <<< rot_radians , "velocity: ", b2Body.angularVelocity(body_id), b2Body.isAwake(body_id) >>>;
         // <<< "sleep enabled", b2Body.isSleepEnabled(body_id), "sleep threshold", b2Body.sleepThreshold(body_id) >>>;
 
@@ -531,8 +708,132 @@ fun void spawnPickup(vec2 pos) {
             vertices
         );
     }
+
+    { // cleanup
+        // remove from pick up map
+        G.pickup_map.del(body_id);
+        <<< "pickup map size: ", G.pickup_map.size() >>>;
+    }
 } 
-spork ~ spawnPickup(@(1,0));
+spork ~ spawnPickupTest(@(1,0));
+
+
+// boost pickup
+// -1 == spawn side right, go left
+// 1 == spawn side left, go right
+-1 => int Side_Right;
+1  => int Side_Left;
+fun void spawnPickup(int which_side, int pickup_type) 
+{
+    T.assert(which_side == Side_Right || which_side == Side_Left, "spawnPickup invalid side, " + which_side);
+    if (which_side != Side_Right && which_side != Side_Left) return;
+
+    GG.nextFrame() => now; // to register as graphics shred
+
+    // params
+    .2 => float speed;
+    Math.random2f(2.5, 3.5) => float pulse_freq; // for pulsing the health orb
+    pickup_colors[pickup_type] => vec3 color;
+
+    int body_id;
+
+    { // create b2 body
+        b2BodyDef pickup_body_def;
+        b2BodyType.kinematicBody => pickup_body_def.type;
+
+        // pickups that rotate while moving across screen
+        if (pickup_type == PickupType_Boost || pickup_type == PickupType_SP) {
+            Math.random2f(1, 2) => float angular_velocity;
+            angular_velocity => pickup_body_def.angularVelocity;
+        }
+
+        G.camera.NDCToWorldPos(@(-1 * which_side, Math.random2f(-0.66, 0.66), 0.5)) $ vec2 => pickup_body_def.position;
+        false => pickup_body_def.enableSleep; // disable otherwise slowly rotating objects will be put to sleep
+
+        b2Filter pickup_filter;
+        Category_Pickup => pickup_filter.categoryBits;
+        Category_Player => pickup_filter.maskBits;
+
+        b2ShapeDef pickup_shape_def;
+        true => pickup_shape_def.isSensor;
+        pickup_filter @=> pickup_shape_def.filter;
+
+        b2.createBody(world_id, pickup_body_def) => body_id;
+        T.assert(b2Body.isValid(body_id), "boost pickup b2body invalid");
+
+        // physics shape
+        if (pickup_type == PickupType_Boost || pickup_type == PickupType_SP) {
+            b2.makeBox(pickup_scale, pickup_scale) @=> b2Polygon polygon;
+            b2.createPolygonShape(body_id, pickup_shape_def, polygon);
+        } else if (pickup_type == PickupType_Health) {
+            b2.createCircleShape(body_id, pickup_shape_def, new b2Circle(pickup_scale * .5));
+        } 
+    }
+
+    // register body id in LUT
+    G.pickup_map.set(body_id, pickup_type);
+
+    // movement (side to side on screen)
+    b2Body.linearVelocity(body_id, speed * @(which_side, 0));
+
+    // draw until destroyed
+    while (true) {
+        GG.nextFrame() => now;
+
+        // if destroyed, break out
+        if (!b2Body.isValid(body_id)) break;
+
+        // calculate transform
+        b2Body.position(body_id) => vec2 pos;
+        b2Body.angle(body_id) => float rot_radians;
+
+        // if its off the screen, destroy and break
+        G.camera.worldPosToNDC(@(pos.x, pos.y, 0)) => vec3 pos_ndc;
+        if (Math.fabs(pos_ndc.x) > 1 || Math.fabs(pos_ndc.y) > 1) {
+            b2.destroyBody(body_id);
+            break;
+        }
+
+        { // draw
+            if (pickup_type == PickupType_Boost || pickup_type == PickupType_SP) {
+                polygons.drawSquare(pos, rot_radians, pickup_scale * .4, color);
+                lines.square(pos, rot_radians, pickup_scale, color);
+            } else if (pickup_type == PickupType_Health) {
+                pickup_scale * .6 => float w; // center size
+                1 + .12 * Math.sin(G.dtf_cum * pulse_freq) *=> w; // oscillate!
+
+                polygons.drawBox(pos, 0, w, w * .33, color);
+                polygons.drawBox(pos, .5 * Math.pi, w, w * .33, color);
+                lines.circle(pos, w, Color.hex(0xFFFFFF));
+            } 
+        }
+    }
+
+    { // cleanup
+        // remove from pick up map
+        G.pickup_map.del(body_id);
+        <<< "pickup map size: ", G.pickup_map.size() >>>;
+    }
+}
+
+
+// temp
+fun void boostSpawner() {
+
+        spork ~ spawnPickup(Side_Left, Math.random2(PickupType_Boost, PickupType_Health));
+        spork ~ spawnPickup(Side_Right, Math.random2(PickupType_Boost, PickupType_Health));
+    while (2::second => now) {
+        spork ~ spawnPickup(Side_Left, Math.random2(PickupType_Boost, PickupType_SP));
+        spork ~ spawnPickup(Side_Right, Math.random2(PickupType_Boost, PickupType_SP));
+    }
+} 
+spork ~ boostSpawner();
+/*
+TODO:
+- in collision event, detect if its boost or other pickup
+- spawn a gradually expanding boost fade effect
+*/
+
 
 class ProjectilePool
 {
@@ -573,7 +874,7 @@ class ProjectilePool
         for (int i; i < num_active; i++) {
             body_ids[i] => int body_id;
             b2Body.position(body_ids[i]) => vec2 pos;
-            camera.worldPosToNDC(@(pos.x, pos.y, 0)) => vec3 pos_ndc;
+            G.camera.worldPosToNDC(@(pos.x, pos.y, 0)) => vec3 pos_ndc;
 
             // if its off the screen, set inactive
             if (Math.fabs(pos_ndc.x) > 1 || Math.fabs(pos_ndc.y) > 1) {
@@ -606,11 +907,12 @@ int g_fire_mode;
 
 fun void shoot() {
     .1::second => dur attack_rate;
-    now => time last_fire;
+    0::second => dur cooldown;
     while (true) {
         GG.nextFrame() => now; // need to make this a graphics shred to use b2
-        if (now - last_fire > attack_rate) {
-            attack_rate +=> last_fire;
+        G.dt +=> cooldown;
+        if (cooldown > attack_rate) {
+            attack_rate -=> cooldown;
             spork ~ shootEffect(.5 * attack_rate);
 
             player.pos() => vec2 player_pos;
@@ -632,19 +934,21 @@ fun void shoot() {
 } 
 spork ~ shoot();
 
-
-
 // gameloop ============================================
 DebugDraw debug_draw;
 true => debug_draw.drawShapes;
 
 int keys[0];
+// keys.help();
+
 while (true) {
     GG.nextFrame() => now;
     
     // update globals ======================================================
     GG.dt() * G.dt_rate => G.dtf;
     G.dtf::second => G.dt;
+    G.dt +=> G.dt_cum;
+    G.dtf +=> G.dtf_cum;
 
     // input ======================================================
     if (GWindow.keyDown(GWindow.Key_Space)) {
@@ -724,12 +1028,12 @@ while (true) {
         b2Body.position(player.body_id) => vec2 player_pos;
 
         // wrap player around screen
-        camera.worldPosToNDC(player_pos $ vec3) => vec3 player_pos_ndc;
+        G.camera.worldPosToNDC(player_pos $ vec3) => vec3 player_pos_ndc;
         if (player_pos_ndc.x > 1) -1 => player_pos_ndc.x;
         if (player_pos_ndc.x < -1) 1 => player_pos_ndc.x;
         if (player_pos_ndc.y > 1) -1 => player_pos_ndc.y;
         if (player_pos_ndc.y < -1) 1 => player_pos_ndc.y;
-        camera.NDCToWorldPos(player_pos_ndc) $ vec2 => player_pos;
+        G.camera.NDCToWorldPos(player_pos_ndc) $ vec2 => player_pos;
         b2Body.position(player.body_id, player_pos);
 
         // draw circle at player position
@@ -751,12 +1055,14 @@ while (true) {
         M.rot2vec(player.rotation - (Math.pi / 2.0)) => vec2 player_rot_perp;
         player_pos - .9 * player.radius * player_dir => vec2 exhaust_pos;
 
+        // ~20 shreds
         spork ~ boostTrailEffect(
             exhaust_pos + .07 * player_rot_perp,
             player.boost_trail_color,
             player.velocity_scale // scale trail size by speed
         );
 
+        // ~20 shreds
         spork ~ boostTrailEffect(
             exhaust_pos - .07 * player_rot_perp,
             player.boost_trail_color,
@@ -780,25 +1086,41 @@ while (true) {
             // and that the order is deterministic (sensor, player, sensor, player....) 
             begin_sensor_events[i] => int pickup_id;
             begin_sensor_events[i + 1] => int player_id;
+
             T.assert(player_id == player.body_id, "non-player triggered sensor event");
 
-            // pickup effect
-            spork ~ rippleEffect(b2Body.position(pickup_id));
+            // switch on pickup type
+            G.pickup_map.getInt(pickup_id) => int pickup_type;
+            if (pickup_type == PickupType_Basic) {
+                // pickup effect
+                spork ~ rippleEffect(b2Body.position(pickup_id));
 
-            // remove sensor from b2
-            b2.destroyBody(pickup_id);
+                // spawn another!
+                G.camera.NDCToWorldPos(
+                    @(
+                        Math.random2f(-1, 1),
+                        Math.random2f(-1, 1),
+                        .0
+                    )
+                ) $ vec2 => vec2 new_pickup_pos;
+                spork ~ spawnPickupTest(new_pickup_pos);
+            } else { // all other pickup types
+                b2Body.position(pickup_id) => vec2 pickup_pos;
+                spork ~ pickupEffect(pickup_pos, pickup_type);
+                spork ~ textEffect(
+                    pickup_text[pickup_type],
+                    M.randomPointInCircle(pickup_pos, .25, .35),
+                    pickup_colors[pickup_type]
+                );
+            }
 
-            // spawn another!
-            camera.NDCToWorldPos(
-                @(
-                    Math.random2f(-1, 1),
-                    Math.random2f(-1, 1),
-                    .0
-                )
-            ) $ vec2 => vec2 new_pickup_pos;
-            spork ~ spawnPickup(new_pickup_pos);
+            { // cleanup
+                // remove sensor from b2
+                b2.destroyBody(pickup_id);
+            }
         }
     }
+
 
     // flush 
     if (true) {

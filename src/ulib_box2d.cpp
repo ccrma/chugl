@@ -888,13 +888,27 @@ void ulib_box2d_query(Chuck_DL_Query* QUERY)
         CTOR(b2Filter_ctor);
 
         b2Filter_categoryBits_offset = MVAR("int", "categoryBits", false);
-        DOC_VAR("");
+        DOC_VAR(
+          "The collision category bits. Normally you would just set one bit. The "
+          "category bits should represent your application object types. E.g. player "
+          "is category 0x001, enemy is category 0x002, projectile is category 0x004");
 
         b2Filter_maskBits_offset = MVAR("int", "maskBits", false);
-        DOC_VAR("");
+        DOC_VAR(
+          "The collision mask bits. This states the categories that this shape would "
+          "accept for collision.  For example, you may want your player to only "
+          "collide with static objects and other players. Then `maskbits = static | "
+          "player`");
 
         b2Filter_groupIndex_offset = MVAR("int", "groupIndex", false);
-        DOC_VAR("");
+        DOC_VAR(
+          "	Collision groups allow a certain group of objects to never collide "
+          "(negative) or always collide (positive). A group index of zero has no "
+          "effect. Non-zero group filtering always wins against the mask bits.  For "
+          "example, you may want ragdolls to collide with other ragdolls but you don't "
+          "want ragdoll self-collision. In this case you would give each ragdoll a "
+          "unique negative group index and apply that group index to all shapes on the "
+          "ragdoll.");
 
         END_CLASS();
     } // b2Filter

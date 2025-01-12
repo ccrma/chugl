@@ -159,7 +159,7 @@ typedef struct b2ShapeDef
 } b2ShapeDef;
 
 
-Body: transform
+Body: transform, body type (static, kinematic, dynamic)
 
 ShapeDef:  collision parameters (friction, density, filter)
 Polygon/circle/capsule: geometry data
@@ -337,28 +337,43 @@ public class b2DebugDraw_Lines extends GGen
 	ShaderDesc shader_desc;
 	shader_path => shader_desc.vertexPath;
 	shader_path => shader_desc.fragmentPath;
-	[VertexFormat.Float2] @=> shader_desc.vertexLayout; // no vertex layout
+	[VertexFormat.Float2, VertexFormat.Float3] @=> shader_desc.vertexLayout; // no vertex layout
 
 	// material shader (draws all line segments in 1 draw call)
 	Shader shader(shader_desc);
 	<<< "lines shader id", shader.id() >>>;
 	Material material;
 	material.shader(shader);
-	material.topology(Material.Topology_LineList);
+
+	// ==optimize== use lineStrip topology + index reset? but then requires using additional index buffer
+	material.topology(Material.Topology_LineList); // list not strip!
+
+	// color stack
+	[Color.WHITE] @=> vec3 color_stack[];
 
 	// vertex buffers
 	vec2 u_positions[0];
+	vec3 u_colors[0];
 
 	Geometry geo; // just used to set vertex count
 	geo.vertexCount(0);
 	GMesh mesh(geo, material) --> this;
 
+	fun void pushColor(vec3 color) {
+		color_stack << color;
+	}
+
+	fun void popColor() {
+		color_stack.popBack();
+	}
+
 	fun void drawSegment( vec2 p1, vec2 p2) {
 		u_positions << p1 << p2;
+		u_colors << color_stack[-1] << color_stack[-1];
 	}
 
 	// draws a polygon outline at given position and rotation
-	fun void drawPolygon(vec2 pos, float rot_radians, vec2 vertices[]) {
+	fun void drawPolygon(vec2 pos, float rot_radians, vec2 vertices[], vec2 scale) {
         Math.cos(rot_radians) => float cos_a;
         Math.sin(rot_radians) => float sin_a;
 
@@ -366,6 +381,11 @@ public class b2DebugDraw_Lines extends GGen
 		for (int i; i < vertices.size() - 1; i++) {
 			vertices[i] => vec2 v1;
 			vertices[i+1] => vec2 v2;
+
+			// scale
+			scale.x *=> v1.x; scale.y *=> v1.y;
+			scale.x *=> v2.x; scale.y *=> v2.y;
+
 			drawSegment(
 				pos + @(
 					cos_a * v1.x - sin_a * v1.y,
@@ -381,6 +401,11 @@ public class b2DebugDraw_Lines extends GGen
 		// to close the loop
 		vertices[-1] => vec2 v1;
 		vertices[0] => vec2 v2;
+
+		// scale
+		scale.x *=> v1.x; scale.y *=> v1.y;
+		scale.x *=> v2.x; scale.y *=> v2.y;
+
 		drawSegment(
 			pos + @(
 				cos_a * v1.x - sin_a * v1.y,
@@ -393,15 +418,45 @@ public class b2DebugDraw_Lines extends GGen
 		);
 	}
 
+	fun void drawPolygon(vec2 pos, float rot_radians, vec2 vertices[]) {
+		drawPolygon(pos, rot_radians, vertices, @(1,1));
+	}
+
+	fun void square(vec2 pos, float rot_radians, float size, vec3 color) {
+		pushColor(color);
+		drawPolygon(pos, rot_radians, [@(0.5, 0.5), @(-0.5, 0.5), @(-0.5, -0.5), @(0.5, -0.5)], @(size, size));
+		popColor();
+	}
+
+	16 => int circle_segments;
+	vec2 circle_vertices[circle_segments];
+	for (int i; i < circle_segments; i++) {
+		Math.two_pi * i / circle_segments => float theta;
+		@( Math.cos(theta), Math.sin(theta)) => circle_vertices[i];
+	}
+	fun void circle(vec2 pos, float radians, vec3 color) {
+		pushColor(color);
+		for (int i; i < circle_vertices.size() - 1; i++) {
+			drawSegment(pos + radians * circle_vertices[i], pos + radians * circle_vertices[i+1]);
+		}
+		drawSegment(pos + radians * circle_vertices[-1], pos + radians * circle_vertices[0]);
+		popColor();
+	}
 
 	fun void update()
 	{
+		// sanity check
+		T.assert(u_positions.size() == u_colors.size(), "Debug_DrawLines: u_positions.size != u_colors.size");
+
 		// update GPU vertex buffers
 		geo.vertexAttribute(0, u_positions);
 		geo.vertexCount(u_positions.size());
+		geo.vertexAttribute(1, u_colors);
+
 
 		// reset
 		u_positions.clear();
+		u_colors.clear();
 	}
 }
 
@@ -420,6 +475,7 @@ public class b2DebugDraw_Circles extends GGen
 	Shader shader(shader_desc);
 	Material material;
 	material.shader(shader);
+	antialias(true); // default antialiasing to true
 
 	// default bindings
 	float empty_float_arr[4];
@@ -436,7 +492,6 @@ public class b2DebugDraw_Circles extends GGen
 	fun void initStorageBuffers() {
 		material.storageBuffer(0, empty_float_arr);
 		material.storageBuffer(1, empty_float_arr);
-		material.uniformInt(2, 1); // default antialiasing to true
 	}
 
 	// set whether to antialias circles
