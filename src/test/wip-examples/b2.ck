@@ -367,9 +367,14 @@ public class b2DebugDraw_Lines extends GGen
 		color_stack.popBack();
 	}
 
-	fun void drawSegment( vec2 p1, vec2 p2) {
+	fun void drawSegment(vec2 p1, vec2 p2) {
 		u_positions << p1 << p2;
 		u_colors << color_stack[-1] << color_stack[-1];
+	}
+
+	fun void segment(vec2 p1, vec2 p2, vec3 color) {
+		u_positions << p1 << p2;
+		u_colors << color << color;
 	}
 
 	// draws a polygon outline at given position and rotation
@@ -420,6 +425,12 @@ public class b2DebugDraw_Lines extends GGen
 
 	fun void drawPolygon(vec2 pos, float rot_radians, vec2 vertices[]) {
 		drawPolygon(pos, rot_radians, vertices, @(1,1));
+	}
+
+	fun void drawPolygon(vec2 pos, float rot_radians, vec2 vertices[], vec3 color) {
+		pushColor(color);
+		drawPolygon(pos, rot_radians, vertices, @(1,1));
+		popColor();
 	}
 
 	fun void square(vec2 pos, float rot_radians, float size, vec3 color) {

@@ -2,7 +2,11 @@
 TODO
 - remove radius from b2_polygon shader (simplify overall)
 
-- pickup effects for health and SP
+- IF rocks stay in game: change rock to dynamicBody, apply initial impulse to left or right.
+    - prevents rocks from overlapping accidentally
+    - need to use contactEvent instead of sensorEvent (remember to enable contact events!!!)
+
+- combine projectile, enemy, and pickup into single EntityPool
 
 */
 
@@ -57,6 +61,16 @@ class G
 GG.camera() @=> G.camera;
 new HashMap @=> G.pickup_map;
 
+// Utility fns
+fun int offscreen(vec2 pos, float threshold) {
+    G.camera.worldPosToNDC(@(pos.x, pos.y, 0)) => vec3 pos_ndc;
+    return (Math.fabs(pos_ndc.x) > threshold || Math.fabs(pos_ndc.y) > threshold);
+}
+
+fun int offscreen(vec2 pos) {
+    return offscreen(pos, 1.0);
+}
+
 // Pickup Type Enums
 0 => int PickupType_Basic;
 1 => int PickupType_Boost;
@@ -64,6 +78,7 @@ new HashMap @=> G.pickup_map;
 3 => int PickupType_SP;
 
 // pickup type colors
+// https://www.rapidtables.com/web/color/RGB_Color.html
 [
     Color.hex(0xFFFFFF),
     Color.hex(0x00ffff),
@@ -79,6 +94,37 @@ new HashMap @=> G.pickup_map;
 ] @=> string pickup_text[];
 
 .25 => float pickup_scale;
+
+
+// ========================================================================
+// Attack Types
+// ========================================================================
+
+class Attack
+{
+    vec3 color;
+    dur rate;
+    string name;
+
+    fun @construct(vec3 c, dur r, string name) {
+        c => this.color;
+        r => this.rate;
+        name => this.name;
+    }
+}
+
+[
+    new Attack(Color.WHITE, .5::second, "Normal"), // Normal
+    new Attack(Color.hex(0xff0000), .75::second, "Triple"), // Triple
+    new Attack(Color.hex(0x00ffff), .2::second, "Rapid"), // Spread
+    new Attack(Color.hex(0x32CD32), .75::second, "Side"),
+
+] @=> Attack attacks[];
+
+attacks[0] @=> Attack Attack_Normal;
+attacks[1] @=> Attack Attack_Triple;
+attacks[2] @=> Attack Attack_Spread;
+attacks[3] @=> Attack Attack_Side;
 
 
 // Math ============================================
@@ -152,8 +198,10 @@ class M
 (1 << 1) => int Category_Player;      // 2
 (1 << 2) => int Category_Projectile;  // 4
 (1 << 3) => int Category_Pickup;      // 8
+(1 << 4) => int Category_Enemy;       // 16
 
 b2WorldDef world_def;
+@(0,0) => world_def.gravity;
 b2.createWorld(world_def) => int world_id;
 int begin_touch_events[0]; // for holding collision data
 int begin_sensor_events[0]; // for holding sensor data
@@ -163,16 +211,6 @@ int begin_sensor_events[0]; // for holding sensor data
     b2.substeps(4);
 }
 
-// projectile b2 definitions
-b2Filter projectile_filter;
-Category_Projectile => projectile_filter.categoryBits;
-0 => projectile_filter.maskBits; // collide with nothing
-
-b2ShapeDef projectile_shape_def;
-projectile_filter @=> projectile_shape_def.filter;
-
-b2BodyDef projectile_body_def;
-b2BodyType.kinematicBody => projectile_body_def.type;
 
 // player ============================================
 
@@ -183,6 +221,8 @@ class Player
     int shape_id;
     float rotation;
     .1 => float radius;
+
+    Attack_Normal @=> Attack attack;
 
     1.0 => float velocity_scale;
     Color.WHITE => vec3 boost_trail_color;
@@ -201,7 +241,7 @@ class Player
         // TODO make player collider match the visual
         b2Filter player_filter;
         Category_Player => player_filter.categoryBits;
-        Category_Pickup => player_filter.maskBits; // nothing
+        Category_Pickup | Category_Enemy => player_filter.maskBits; // nothing
 
         b2ShapeDef shape_def;
         player_filter @=> shape_def.filter;
@@ -320,24 +360,24 @@ fun void shootEffect(dur tween_dur) {
     }
 }
 
-fun void boomEffect(vec2 pos) {
+fun void boomEffect(vec2 pos, float scale) {
     dur elapsed_time;
-    while (elapsed_time < .25::second) {
+    while (elapsed_time < .28::second) {
         GG.nextFrame() => now;
         G.dt +=> elapsed_time;
 
-        if (elapsed_time < .1::second) 
+        if (elapsed_time < .12::second) 
             polygons.drawSquare(
                 pos,
                 0, // rotation
-                .1,
+                scale,
                 Color.WHITE
             );
         else 
             polygons.drawSquare(
                 pos,
                 0, // rotation
-                .1,
+                scale,
                 Color.RED
             );
     }
@@ -527,6 +567,14 @@ fun void blinkEffect(UI_Bool b, float hz, dur d, dur wait) {
     }
 }
 
+// known bug: doesn't dedup by hitFlash generation number
+// would need a hashmap keyed on some unique identifier, so that say multiple rapid hits on a rock don't override each other
+fun void hitFlashEffect(UI_Bool b) {
+    true => b.val;
+    .2::second => now;
+    false => b.val;
+}
+
 // multiple parts
 // 1. color changes from white --> blue after .2 sec
 // 2. after x secs, starts flashing (toggling draw) every .05 seconds 6 times
@@ -576,39 +624,39 @@ fun void pickupEffect(vec2 pos, int type) {
 class TextPool 
 {
     GText text_pool[64]; // shouldn't need more than this?
-    HashMap text_to_index_map; // map from GText to text_pool index
+    0 => int num_active;  // number of text from text_pool actively used
 
-    // populate hashmap, init GText
+    // init GText
     for (int i; i < text_pool.size(); i++) {
-        text_to_index_map.set(text_pool[i], i);
         text_pool[i].text("");
         text_pool[i] --> GG.scene();
         text_pool[i].antialias(false);
     }
 
     fun GText get() {
-        // ==optimize== move from linear search to linked-list of available texts
-        for (int i; i < text_pool.size(); i++) {
-            if (text_pool[i] != null) {
-                text_pool[i] @=> GText text;
-                null @=> text_pool[i]; // set to null to mark borrowed
-                return text;
-            }
-        }
-        T.assert(false, "insufficient GText in TextPool");
-        return null;
+        if (num_active >= text_pool.size()) {
+            T.assert(false, "insufficient GText in TextPool");
+            return null;
+        } 
+
+        num_active++;
+        return text_pool[num_active - 1];
     }
 
     fun void ret(GText text) {
-        text_to_index_map.has(text) => int belongs;
-        T.assert(belongs, "trying to return text that does not belong to TextPool");
+        // ==optimize== linear search to hashmap
 
-        if (belongs) {
-            text_to_index_map.getInt(text) => int i;
-            T.assert(text_pool[i] == null, "text borrowed but still in pool?");
-            text @=> text_pool[i];
-            text.text("");
+        for (int i; i < num_active; i++) {
+            // return and swap with last active
+            if (text_pool[i] == text) {
+                text_pool[num_active - 1] @=> text_pool[i];
+                text @=> text_pool[num_active - 1];
+                text.text("");
+                num_active--;
+                return;
+            }
         }
+        T.assert(false, "GText not found in pool");
     }
 }
 TextPool text_pool;
@@ -618,7 +666,7 @@ fun void textEffect(string text_str, vec2 pos, vec3 color) {
 
     text.color(color);
     text.pos(pos);
-    text.sca(.42);
+    text.sca(.6);
     text.text(text_str);
 
     UI_Bool draw(true);
@@ -712,7 +760,7 @@ fun void spawnPickupTest(vec2 pos) {
     { // cleanup
         // remove from pick up map
         G.pickup_map.del(body_id);
-        <<< "pickup map size: ", G.pickup_map.size() >>>;
+        // <<< "pickup map size: ", G.pickup_map.size() >>>;
     }
 } 
 spork ~ spawnPickupTest(@(1,0));
@@ -731,7 +779,7 @@ fun void spawnPickup(int which_side, int pickup_type)
     GG.nextFrame() => now; // to register as graphics shred
 
     // params
-    .2 => float speed;
+    Math.random2f(.16, .24) => float speed;
     Math.random2f(2.5, 3.5) => float pulse_freq; // for pulsing the health orb
     pickup_colors[pickup_type] => vec3 color;
 
@@ -749,6 +797,8 @@ fun void spawnPickup(int which_side, int pickup_type)
 
         G.camera.NDCToWorldPos(@(-1 * which_side, Math.random2f(-0.66, 0.66), 0.5)) $ vec2 => pickup_body_def.position;
         false => pickup_body_def.enableSleep; // disable otherwise slowly rotating objects will be put to sleep
+        // movement (side to side on screen)
+        speed * @(which_side, 0) => pickup_body_def.linearVelocity;
 
         b2Filter pickup_filter;
         Category_Pickup => pickup_filter.categoryBits;
@@ -772,9 +822,6 @@ fun void spawnPickup(int which_side, int pickup_type)
 
     // register body id in LUT
     G.pickup_map.set(body_id, pickup_type);
-
-    // movement (side to side on screen)
-    b2Body.linearVelocity(body_id, speed * @(which_side, 0));
 
     // draw until destroyed
     while (true) {
@@ -834,61 +881,140 @@ TODO:
 - spawn a gradually expanding boost fade effect
 */
 
+// ========================================================================
+// Shoot System
+// ========================================================================
+
+// projectile b2 definitions
+b2Filter projectile_filter;
+Category_Projectile => projectile_filter.categoryBits;
+Category_Enemy => projectile_filter.maskBits; // collides with enemy
+
+b2ShapeDef projectile_shape_def;
+projectile_filter @=> projectile_shape_def.filter;
+
+b2BodyDef projectile_body_def;
+// b2BodyType.kinematicBody => projectile_body_def.type;
+b2BodyType.dynamicBody => projectile_body_def.type;
+// true => projectile_body_def.isBullet;
+
+class Projectile 
+{
+    int body_id;
+    int shape_id; // for disabling sensor events
+    int pool_index;
+    Attack attack;
+    vec2 dir;
+    float dir_radians;
+}
 
 class ProjectilePool
 {
-    int body_ids[0];
+    Projectile projectiles[0];
+    HashMap projectile_map;
+
     int num_active;
-    .05 => float radius;
-    5 => float speed;
+
+    .025 => float radius;
+    4.2 => float speed;
+    // 1 => float speed;
 
     // debug
     int prev_active;
 
-    fun int _addCollider() {
-        // TODO: how do I stop simulating? just b2.destroyBody() ?
-        // use b2Body.isEnabled().... (rather than awake)
-        b2.createBody(world_id, projectile_body_def) => int body_id;
-        b2Circle circle(radius);
-        b2.createCircleShape(body_id, projectile_shape_def, circle);
-        return body_id;
+    fun void ret(int projectile_body_id) {
+        ret(projectile_map.getObj(projectile_body_id) $ Projectile);
+    }
+
+    fun int active(Projectile p) {
+        return p.pool_index < num_active;
+    }
+
+    fun void ret(Projectile p) {
+        // error handle
+        T.assert(active(p), "returning a projectile that's already inactive!");
+        if (!active(p)) return;
+
+        p.pool_index => int i;
+
+        // swap with last
+        projectiles[num_active - 1] @=> projectiles[i];
+        p @=> projectiles[num_active - 1];
+
+        // update indices
+        num_active - 1 => projectiles[num_active - 1].pool_index;
+        i => projectiles[i].pool_index;
+
+        // disable sensor events
+        b2Shape.enableSensorEvents(p.shape_id, false);
+
+        num_active--;
+
+        T.assert(!active(p), "projectile index incorrect, still active");
     }
 
     // fires a single projectile from given position along the direction
     fun void fire(vec2 position, float dir_radians) {
         // add new body
-        if (num_active >= body_ids.size()) {
-            body_ids << _addCollider();
+        if (num_active >= projectiles.size()) {
+            Projectile p;
+            num_active => p.pool_index;
+            b2.createBody(world_id, projectile_body_def) => p.body_id;
+            b2Circle circle(radius);  // projectile collider will be smaller circle at end
+            b2.createCircleShape(p.body_id, projectile_shape_def, circle) => p.shape_id;
+
+            projectiles << p;
+            projectile_map.set(p.body_id, p);
         } 
 
-        body_ids[num_active++] => int body_id;
+        // save projectile info
+        projectiles[num_active] @=> Projectile p;
+        p.body_id => int body_id;
+        player.attack @=> p.attack;
+        @(Math.cos(dir_radians), Math.sin(dir_radians)) => vec2 dir;
+        dir => p.dir;
+
+        // true sensor events
+        b2Shape.enableSensorEvents(p.shape_id, true);
+
         b2Body.position(body_id, position);
         b2Body.linearVelocity(
             body_id,
-            speed * @(Math.cos(dir_radians), Math.sin(dir_radians)) 
+            speed * dir
         );
+        num_active++;
     }
 
     fun void update() {
         num_active => prev_active;
+
         for (int i; i < num_active; i++) {
-            body_ids[i] => int body_id;
-            b2Body.position(body_ids[i]) => vec2 pos;
+            projectiles[i] @=> Projectile p;
+
+            b2Body.position(p.body_id) => vec2 pos;
             G.camera.worldPosToNDC(@(pos.x, pos.y, 0)) => vec3 pos_ndc;
 
             // if its off the screen, set inactive
             if (Math.fabs(pos_ndc.x) > 1 || Math.fabs(pos_ndc.y) > 1) {
-                // swap with last
-                body_ids[num_active - 1] => body_ids[i];
-                body_id => body_ids[num_active - 1];
+                ret(p);
                 // decrement counter to re-check the newly swapped id
-                num_active--;
+                i--;
                 // projectile boom!
-                spork ~ boomEffect(pos);
-            } else {
-                // else draw the active!
-                circles.drawCircle(pos, radius, .15, Color.WHITE);
-            }
+                spork ~ boomEffect(pos, .1);
+                continue;
+            } 
+
+            // else draw the active!
+            lines.segment(pos, pos + .08 * p.dir, Color.WHITE);
+            lines.segment(pos, pos - .08 * p.dir, p.attack.color);
+
+            // if (p.attack == AttackType_Normal) {
+            // } else if (p.attack == AttackType_Triple) {
+            // } else if (p.attack == AttackType_Spread) {
+            // }
+
+            // debug draw collider
+            circles.drawCircle(pos, radius, .15, Color.WHITE);
         }
 
         // if (num_active != prev_active)
@@ -898,41 +1024,233 @@ class ProjectilePool
 
 ProjectilePool projectile_pool;
 
-int g_fire_mode;
-// fire mode flags
-0 => int FireMode_Normal;
-1 => int FireMode_Triple;
-2 => int FireMode_Spread;
-3 => int FireMode_Count;
-
+// TODO: move into main update()
 fun void shoot() {
-    .1::second => dur attack_rate;
     0::second => dur cooldown;
     while (true) {
         GG.nextFrame() => now; // need to make this a graphics shred to use b2
         G.dt +=> cooldown;
+
+        player.attack.rate => dur attack_rate;
+
         if (cooldown > attack_rate) {
             attack_rate -=> cooldown;
             spork ~ shootEffect(.5 * attack_rate);
 
             player.pos() => vec2 player_pos;
-            // fire mode
-            if (g_fire_mode == FireMode_Normal) {
+
+            // attack
+            if (player.attack == Attack_Normal) {
                 projectile_pool.fire(player_pos, player.rotation);
-            } else if (g_fire_mode == FireMode_Triple) {
-                .1 * M.rot2vec(player.rotation - (Math.pi / 2.0)) => vec2 perp;
-                projectile_pool.fire(player_pos + perp, player.rotation);
-                projectile_pool.fire(player_pos       , player.rotation);
-                projectile_pool.fire(player_pos - perp, player.rotation);
-            } else if (g_fire_mode == FireMode_Spread) {
+            } else if (player.attack == Attack_Triple) {
+                // .1 * M.rot2vec(player.rotation - (Math.pi / 2.0)) => vec2 perp;
                 projectile_pool.fire(player_pos, player.rotation + .2);
                 projectile_pool.fire(player_pos, player.rotation     );
                 projectile_pool.fire(player_pos, player.rotation - .2);
+            } else if (player.attack == Attack_Spread) {
+                Math.pi / 8.0 => float spread;
+                projectile_pool.fire(player_pos, player.rotation + Math.random2f(-spread, spread));
+            } else if (player.attack == Attack_Side) {
+                projectile_pool.fire(player_pos, player.rotation); // forward
+                projectile_pool.fire(player_pos, player.rotation + 0.5 * Math.pi); // up
+                projectile_pool.fire(player_pos, player.rotation - 0.5 * Math.pi ); // down
             }
         }
     }
 } 
 spork ~ shoot();
+
+// ========================================================================
+// Enemies
+// ========================================================================
+
+0 => int EnemyType_None;
+1 => int EnemyType_Rock;
+
+class Enemy
+{
+    int pool_index; // index in EnemyPool.enemies array
+    int body_id;
+    int type;
+
+    float hp;
+    UI_Bool hit_flash;
+    Color.hex(0xFFFFFF) => vec3 hit_color;
+
+    // rock stuff
+    Color.hex(0xFF0000) => vec3 rock_color;
+    vec2 vertices[8];
+    float rock_size;
+}
+
+class EnemyPool
+{ // repeating all this pool logic for now, maybe at some point consolidate all into 1
+    Enemy enemies[32];
+    int num_active;
+    HashMap enemy_map; // map : body_id --> Enemy
+
+    // initialize enemies
+    for (int i; i < enemies.size(); i++) {
+        i => enemies[i].pool_index;
+    }
+
+    fun int active(Enemy e) {
+        return e.pool_index < num_active;
+    }
+
+    fun Enemy get() {
+        if (num_active >= enemies.size()) {
+            T.assert(false, "insufficient Enemy in EnemyPool");
+            enemies << new Enemy;
+            enemies.size() => enemies[-1].pool_index;
+        } 
+
+        num_active++;
+        enemies[num_active - 1] @=> Enemy e;
+        T.assert(e.pool_index == num_active - 1, "pool_index error on Enemy");
+        return e;
+    }
+
+    fun void ret(Enemy e) {
+        T.assert(active(e), "trying to return inactive enemy");
+        if (!active(e)) return;
+
+        e.pool_index => int i;
+
+        // return and swap with last active
+        enemies[num_active - 1] @=> enemies[i];
+        e @=> enemies[num_active - 1];
+
+        // update indices
+        num_active - 1 => e.pool_index;
+        i => enemies[i].pool_index;
+
+        // destroy b2body
+        if (b2Body.isValid(e.body_id)) {
+            b2.destroyBody(e.body_id);
+        }
+
+        // remove from map
+        // TODO: try reusing b2body, only destroy/create shapes.
+        // hashmap body_id --> enemy entries become permanent
+        enemy_map.del(e.body_id);
+
+        // zero out
+        0 => e.body_id;
+        0 => e.type;
+
+        num_active--;
+    }
+
+    // note: b2 polygons can have at most 8 vertices
+    fun Enemy createRock(float size) {
+        // TODO: jank, somehow allow creation outside of a graphics shred? 
+        // this nextFrame is to register the shred as graphics so we can use b2
+        GG.nextFrame() => now; 
+
+        get() @=> Enemy e;
+        EnemyType_Rock => e.type;
+        size => e.rock_size;
+        100.0 => e.hp;
+
+        // movement params
+        Math.random2f(.2, .3) => float speed;
+
+        // generate the rock
+        Math.two_pi / 8.0 => float theta;
+        theta / 4.0 => float angle_variance;
+        size / 4.0 => float size_variance;
+        for (int i; i < 8; i++) {
+            (size + Math.random2f(-size_variance, size_variance)) * 
+            M.rot2vec(i * theta + Math.random2f(-angle_variance, angle_variance)) => e.vertices[i];
+        }
+
+        { // b2 setup (TODO: this is exactly same as pickups except for category, consolidate later)
+            // pick a side
+            1 => int which_side;
+            if (Math.randomf() < .5) -1 *=> which_side; 
+
+            b2BodyDef enemy_body_def;
+            b2BodyType.kinematicBody => enemy_body_def.type;
+            // b2BodyType.dynamicBody => enemy_body_def.type;
+
+            Math.random2f(1.1, 2.1) => float angular_velocity;
+            angular_velocity => enemy_body_def.angularVelocity;
+            // movement (side to side on screen)
+            speed * @(which_side, 0) => enemy_body_def.linearVelocity;
+
+            G.camera.NDCToWorldPos(@(-1.1 * which_side, Math.random2f(-0.8, 0.8), 0.5)) $ vec2 => enemy_body_def.position;
+            false => enemy_body_def.enableSleep; // disable otherwise slowly rotating objects will be put to sleep
+
+            b2Filter filter;
+            Category_Enemy => filter.categoryBits;
+            Category_Player | Category_Projectile => filter.maskBits;
+
+            b2ShapeDef shape_def;
+            true => shape_def.isSensor;
+            filter @=> shape_def.filter;
+
+            b2.createBody(world_id, enemy_body_def) => e.body_id;
+            T.assert(b2Body.isValid(e.body_id), "enemy b2body invalid");
+
+            // physics shape
+            b2.makePolygon(e.vertices, 0.0) @=> b2Polygon polygon;
+            b2.createPolygonShape(e.body_id, shape_def, polygon);
+
+            // register in map
+            enemy_map.set(e.body_id, e);
+        }
+
+        return e;
+    }
+
+    // destroy an enemy
+    fun void destroy(Enemy e) {
+        b2.destroyBody(e.body_id);
+
+        0 => e.body_id;
+
+    }
+
+    fun void update() {
+        for (int i; i < num_active; i++) {
+            enemies[i] @=> Enemy e;
+            b2Body.position(e.body_id) => vec2 pos;
+            b2Body.angle(e.body_id) => float rot_radians;
+
+            // enemies are destroyed if
+            // offscreen
+            // b2body no longer valid
+            if (
+                !b2Body.isValid(e.body_id)
+                ||
+                offscreen(pos, 1.2)
+            ) {
+                ret(e);
+                i--;  // decrement counter to process newly swapped
+                continue;
+            }
+
+            // draw
+            if (e.type == EnemyType_Rock) {
+                e.rock_color => vec3 color;
+                if (e.hit_flash.val()) e.hit_color => color;
+                lines.drawPolygon(pos, rot_radians, e.vertices, color);
+            }
+        }
+    }
+}
+EnemyPool enemy_pool;
+
+
+fun void enemySpawner() {
+    while (1) {
+        spork ~ enemy_pool.createRock(Math.random2f(.2, .35));
+        1::second => now;
+    }
+} spork ~ enemySpawner();
+
+
 
 // gameloop ============================================
 DebugDraw debug_draw;
@@ -941,6 +1259,7 @@ true => debug_draw.drawShapes;
 int keys[0];
 // keys.help();
 
+0 => int player_attack_idx;
 while (true) {
     GG.nextFrame() => now;
     
@@ -989,7 +1308,7 @@ while (true) {
         ||
         GWindow.keyDown(GWindow.Key_Tab)
     ) {
-        (1 + g_fire_mode) % FireMode_Count => g_fire_mode;
+        attacks[(1 + player_attack_idx++) % attacks.size()] @=> player.attack;
     }
 
     // explode test
@@ -1071,56 +1390,106 @@ while (true) {
     }
 
     projectile_pool.update();
+    enemy_pool.update();
 
 
     // collisions (TODO does it matter what order in game loop this happens?)
     {
-        // b2World.contactEvents(world_id, begin_touch_events, null, null);
-        // for (int i; i < begin_touch_events.size(); i++) {
-        //     <<< "begin_touch:", begin_touch_events[i] >>>;
-        // }
+        b2World.contactEvents(world_id, begin_touch_events, null, null);
+        for (int i; i < begin_touch_events.size(); i++) {
+            <<< "begin_touch:", begin_touch_events[i] >>>;
+        }
 
         b2World.sensorEvents(world_id, begin_sensor_events, null);
         for (int i; i < begin_sensor_events.size(); 2 +=> i) {
             // assume for now that only pickups trigger sensor events
             // and that the order is deterministic (sensor, player, sensor, player....) 
-            begin_sensor_events[i] => int pickup_id;
-            begin_sensor_events[i + 1] => int player_id;
+            begin_sensor_events[i] => int sensor_id;
+            begin_sensor_events[i + 1] => int not_sensor_id;
 
-            T.assert(player_id == player.body_id, "non-player triggered sensor event");
+            // if either are invalid, (e.g. destroyed in previous sensor event) skip
+            if (!b2Body.isValid(sensor_id) || !b2Body.isValid(not_sensor_id)) continue;
 
-            // switch on pickup type
-            G.pickup_map.getInt(pickup_id) => int pickup_type;
-            if (pickup_type == PickupType_Basic) {
-                // pickup effect
-                spork ~ rippleEffect(b2Body.position(pickup_id));
+            b2Body.position(sensor_id) => vec2 sensor_pos;
+            b2Body.position(not_sensor_id) => vec2 not_sensor_pos;
 
-                // spawn another!
-                G.camera.NDCToWorldPos(
-                    @(
-                        Math.random2f(-1, 1),
-                        Math.random2f(-1, 1),
-                        .0
-                    )
-                ) $ vec2 => vec2 new_pickup_pos;
-                spork ~ spawnPickupTest(new_pickup_pos);
-            } else { // all other pickup types
-                b2Body.position(pickup_id) => vec2 pickup_pos;
-                spork ~ pickupEffect(pickup_pos, pickup_type);
-                spork ~ textEffect(
-                    pickup_text[pickup_type],
-                    M.randomPointInCircle(pickup_pos, .25, .35),
-                    pickup_colors[pickup_type]
-                );
-            }
+            // sensor was a pickup
+            if (G.pickup_map.has(sensor_id)) {
+                sensor_id => int pickup_id;
+                T.assert(not_sensor_id == player.body_id, "non-player triggered pickup sensor");
 
-            { // cleanup
-                // remove sensor from b2
-                b2.destroyBody(pickup_id);
+                // switch on pickup type
+                G.pickup_map.getInt(pickup_id) => int pickup_type;
+                if (pickup_type == PickupType_Basic) {
+                    // pickup effect
+                    spork ~ rippleEffect(sensor_pos);
+
+                    // spawn another!
+                    G.camera.NDCToWorldPos(
+                        @(
+                            Math.random2f(-1, 1),
+                            Math.random2f(-1, 1),
+                            .0
+                        )
+                    ) $ vec2 => vec2 new_pickup_pos;
+                    spork ~ spawnPickupTest(new_pickup_pos);
+                } else { // all other pickup types
+                    spork ~ pickupEffect(sensor_pos, pickup_type);
+                    spork ~ textEffect(
+                        pickup_text[pickup_type],
+                        M.randomPointInCircle(sensor_pos, .25, .35),
+                        pickup_colors[pickup_type]
+                    );
+                }
+
+                { // cleanup
+                    // remove sensor from b2
+                    b2.destroyBody(pickup_id);
+                }
+            } else {
+                // player collided with enemy
+                sensor_id => int enemy_body_id;
+                T.assert(enemy_pool.enemy_map.has(enemy_body_id), "sensor is not a pickup or enemy?");
+
+                if (not_sensor_id == player.body_id) {
+                    <<< "player hit enemy" >>>;
+                } else if (projectile_pool.projectile_map.has(not_sensor_id)) {
+                    // BUG: sensor events are disabled when we return projectile to pool, yet
+                    // still triggering sensor events in b2. causes a bullet to lazer through multiple
+                    // Temporary soln: only handle bullet collision if bullet is active
+                    // maybe refactoring to use contactEvents will solve this
+                    projectile_pool.projectile_map.getObj(not_sensor_id) $ Projectile @=> Projectile p;
+                    if (projectile_pool.active(p)) {
+                        { // enemy takes damage
+                            enemy_pool.enemy_map.getObj(enemy_body_id) $ Enemy @=> Enemy e;
+
+                            50 -=> e.hp; // 50 dmg fixed for now
+                            
+                            if (e.hp <= 0.01) {
+                                // destroy and return to pool
+                                enemy_pool.ret(e); 
+                                spork ~ boomEffect(sensor_pos, 2*e.rock_size);
+                            } else {
+                                // dmg on hit flash
+                                spork ~ hitFlashEffect(e.hit_flash);
+                            }
+                        }
+
+                        { // projectile bye bye
+                            projectile_pool.ret(p);
+                            spork ~ boomEffect(not_sensor_pos, .1);
+                        }
+                    }
+                } else {
+                    T.assert(false, "thing that hit enemy is neither player nor projectile?");
+                }
+
+                // TODO: actually called *player* hit
+
+                // enemy_pool.hit(enemy_body_id);
             }
         }
     }
-
 
     // flush 
     if (true) {
