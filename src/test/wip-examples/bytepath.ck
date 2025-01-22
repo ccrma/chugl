@@ -8,6 +8,15 @@ TODO
 
 - combine projectile, enemy, and pickup into single EntityPool
 
+=====================
+Simplification of Architecture
+=====================
+Entity superstruct (rfleury style)
+- entity flags: Player, Pickup, Projectile, Enemy
+    - these correspond to b2Filter categories
+- entity_id *is* b2body_id
+- hashmap from b2body_id --> Entity@
+
 */
 
 // import materials for 2D drawing
@@ -50,7 +59,7 @@ class G
     static dur dt;
     static float dtf; // equivalent to G.dt, but cast as float
     1.0 => static float dt_rate; // modifier for time stretch
-    static dur dt_cum;      // cumulative dt (equiv to time-stretched "now")
+    static time dt_cum;      // cumulative dt (equiv to time-stretched "now")
     static float dtf_cum;   // cumulative dtf
 
     static GCamera@ camera;
@@ -69,6 +78,15 @@ fun int offscreen(vec2 pos, float threshold) {
 
 fun int offscreen(vec2 pos) {
     return offscreen(pos, 1.0);
+}
+
+// time-scaled wait (respects G.d_rate time stretch)
+fun int wait(dur d) {
+    G.dt_cum + d => time target;
+    while (G.dt_cum < target) {
+        8::ms => now; // approx 120fps resolution
+    }
+    return true;
 }
 
 // Pickup Type Enums
@@ -221,6 +239,9 @@ class Player
     int shape_id;
     float rotation;
     .1 => float radius;
+
+    UI_Bool invincible(false);
+    UI_Bool invisible(false);
 
     Attack_Normal @=> Attack attack;
 
@@ -460,7 +481,7 @@ fun void explodeEffect(vec2 pos, dur max_dur) {
 // NOTE: not affected by time warp
 int screen_flash_effect_generation;
 fun void screenFlashEffect(float hz, dur duration) {
-    <<< "screen flash EFfect" >>>;
+    // <<< "screen flash EFfect" >>>;
     ++screen_flash_effect_generation => int gen;
 
     (1.0/hz)::second => dur period;
@@ -468,13 +489,13 @@ fun void screenFlashEffect(float hz, dur duration) {
     dur elapsed_time;
     int toggle;
     while (elapsed_time < duration && gen == screen_flash_effect_generation) {
-        <<< "screen flash", toggle >>>;
+        // <<< "screen flash", toggle >>>;
         if (toggle) {
             GG.outputPass().exposure(1.0);
-            <<< "1 exposure" >>>;
+            // <<< "1 exposure" >>>;
         } else {
             GG.outputPass().exposure(0.0);
-            <<< "0 exposure" >>>;
+            // <<< "0 exposure" >>>;
         }
         1 - toggle => toggle;
 
@@ -556,12 +577,12 @@ fun void rippleEffect(vec2 pos) {
 }
 
 // toggles a UI_Bool at hz freq n times after initial wait
-fun void blinkEffect(UI_Bool b, float hz, dur d, dur wait) {
-    wait => now;
+fun void blinkEffect(UI_Bool b, float hz, dur d, dur init_wait) {
+    wait(init_wait);
     (1 / hz)::second => dur T;
     dur elapsed_time;
     while (elapsed_time < d) {
-        G.dt_rate * T => now;
+        wait(T);
         T +=> elapsed_time;
         (1 - b.val()) => b.val;
     }
@@ -571,8 +592,33 @@ fun void blinkEffect(UI_Bool b, float hz, dur d, dur wait) {
 // would need a hashmap keyed on some unique identifier, so that say multiple rapid hits on a rock don't override each other
 fun void hitFlashEffect(UI_Bool b) {
     true => b.val;
-    .2::second => now;
+    wait(.2::second);
     false => b.val;
+}
+
+int invincible_effect_gen;
+fun void invincibleEffect() {
+    ++invincible_effect_gen => int gen;
+    true => player.invincible.val;
+    wait(2::second);
+    if (invincible_effect_gen == gen) {
+        false => player.invincible.val;
+    }
+}
+
+int invisible_effect_gen;
+fun void invisibleEffect() {
+    ++invisible_effect_gen => int gen;
+    dur elapsed_time;
+    while (elapsed_time < 2::second && gen == invisible_effect_gen) {
+        wait(.08::second);
+        .08::second +=> elapsed_time;
+        1 - player.invisible.val() => player.invisible.val;
+    }
+
+    if (gen == invisible_effect_gen) {
+        false => player.invisible.val;
+    }
 }
 
 // multiple parts
@@ -869,7 +915,7 @@ fun void boostSpawner() {
 
         spork ~ spawnPickup(Side_Left, Math.random2(PickupType_Boost, PickupType_Health));
         spork ~ spawnPickup(Side_Right, Math.random2(PickupType_Boost, PickupType_Health));
-    while (2::second => now) {
+    while (wait(2::second)) {
         spork ~ spawnPickup(Side_Left, Math.random2(PickupType_Boost, PickupType_SP));
         spork ~ spawnPickup(Side_Right, Math.random2(PickupType_Boost, PickupType_SP));
     }
@@ -1323,7 +1369,7 @@ while (true) {
         // time warp!
         spork ~ slowEffect(.15, 2::second);
         spork ~ explodeEffect(@(0,0), explode_dur);
-        spork ~ screenFlashEffect(20, .1::second); // TODO add back after fixing screen pass to flash white
+        spork ~ screenFlashEffect(20, .1::second);
     }
 
     // effects test
@@ -1355,20 +1401,20 @@ while (true) {
         G.camera.NDCToWorldPos(player_pos_ndc) $ vec2 => player_pos;
         b2Body.position(player.body_id, player_pos);
 
-        // draw circle at player position
-        // circles.drawCircle(player_pos, player.radius, .15, Color.WHITE);
-
-        lines.drawPolygon(
-            player_pos,
-            -Math.pi / 2 + player.rotation,
-            [
-                1* @(0, .1),
-                // 1* @(-.15, 0),
-                1* @(-.15, -.1),
-                1* @(.15, -.1),
-                // 1* @(.15, 0)
-            ]
-        );
+        // draw ship
+        if (!player.invisible.val()) {
+            lines.drawPolygon(
+                player_pos,
+                -Math.pi / 2 + player.rotation,
+                [
+                    1* @(0, .1),
+                    // 1* @(-.15, 0),
+                    1* @(-.15, -.1),
+                    1* @(.15, -.1),
+                    // 1* @(.15, 0)
+                ]
+            );
+        }
 
         // ship exhaust
         M.rot2vec(player.rotation - (Math.pi / 2.0)) => vec2 player_rot_perp;
@@ -1447,12 +1493,30 @@ while (true) {
                     b2.destroyBody(pickup_id);
                 }
             } else {
-                // player collided with enemy
+                // something collided with enemy
+
                 sensor_id => int enemy_body_id;
                 T.assert(enemy_pool.enemy_map.has(enemy_body_id), "sensor is not a pickup or enemy?");
 
                 if (not_sensor_id == player.body_id) {
-                    <<< "player hit enemy" >>>;
+                    // invincible, nothing happens
+                    if (player.invincible.val()) continue;
+
+                    // player hit enemy
+                    // TODO player damage
+                    .5::second => dur explode_dur;
+                    // shake it up
+                    spork ~ cameraShakeEffect(.08, explode_dur, 30);
+                    // time warp!
+                    spork ~ slowEffect(.5, explode_dur * 2);
+                    spork ~ explodeEffect(not_sensor_pos, explode_dur);
+                    spork ~ screenFlashEffect(20, .1::second);
+
+                    // invincible
+                    spork ~ invincibleEffect();
+                    // invisible
+                    spork ~ invisibleEffect();
+
                 } else if (projectile_pool.projectile_map.has(not_sensor_id)) {
                     // BUG: sensor events are disabled when we return projectile to pool, yet
                     // still triggering sensor events in b2. causes a bullet to lazer through multiple
@@ -1482,6 +1546,7 @@ while (true) {
                     }
                 } else {
                     T.assert(false, "thing that hit enemy is neither player nor projectile?");
+                    
                 }
 
                 // TODO: actually called *player* hit

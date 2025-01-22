@@ -130,6 +130,10 @@ public class T {
         T.printArray(arr, 1);
     }
 
+    fun static void print(int arr[]) {
+        T.printArray(arr, 1);
+    }
+
     fun static void printArray(float arr[]) {
         T.printArray(arr, 1);
     }
