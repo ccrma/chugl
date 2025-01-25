@@ -39,6 +39,8 @@ and these can be used for your drum rack?
 Plot Premise:
 - why are you building up a soundtrack?
     - something about no sound in space, vibrations being amenable to mining...
+        - oh duh, all you hear is your own soundtrack! no sfx from asteroids or anything else
+        - possible motive: silence of space is oppressive, hence upgrading ship sound system
     - are you an outlaw trying to outfit their ship?
     - or are you some corporate miner?
 - Possible name: Major Minor (pun on homophone between Minor and Miner)
@@ -54,6 +56,27 @@ Major Qs:
     - integrate stormfury drum sequencer + euclidean rhythm algo
     - test ImGUI or chugl 2D drum sequencer interface (to at least visualize the sequence)
         - can we go against convention and not just be a square grid?
+
+
+Topograph params
+- tempo
+- kick/snare/hat density
+- map XY
+- mode: original, henri, euclidean
+- per instrument:
+    - rates
+    - volume
+    - playhead pattern (linear forward, reverse, pingpong)
+    - chaos
+- per step
+    - ratchet
+    - FX send
+    - velocity
+- *interpolation/filtering pattern* i.e. how do we blend between patterns? (currently does a bilinear filter)
+
+Topograph integration ideas
+- 
+
 */
 
 @import "topograph.ck"
@@ -61,9 +84,18 @@ Major Qs:
 Topograph topograph;
 T.print(topograph.drum_map[0][2]);
 
-SndBuf kick => dac;
-SndBuf snare => dac;
-SndBuf hat => dac;
+JCRev rev => Echo a => Echo b => Echo c => dac;
+// set max delay for echo
+1000::ms => a.max => b.max => c.max;
+// set delay for echo
+750::ms => a.delay => b.delay => c.delay;
+// set the initial effect mix
+0.0 => a.mix => b.mix => c.mix;
+0 => rev.mix;
+
+SndBuf kick => rev;
+SndBuf snare => rev;
+SndBuf hat => rev;
 me.dir() + "../../../assets/samples/punchy-kick.wav" => kick.read;
 me.dir() + "../../../assets/samples/snare.wav" => snare.read;
 me.dir() + "../../../assets/samples/trap-hihat.wav" => hat.read;
@@ -77,6 +109,8 @@ qt_note / 8.0 => dur step; // 1 drum machine step = 32nd note
 float topograph_xy[2];
 float density[3];
 UI_Bool mode_henri(topograph.mode_henri);
+UI_Float rev_mix(rev.mix());
+UI_Float echo_mix(a.mix());
 
 fun void ui() {
     while (true) {
@@ -90,6 +124,16 @@ fun void ui() {
                 topograph.density(0, density[0]);
                 topograph.density(1, density[1]);
                 topograph.density(2, density[2]);
+            }
+
+            if (UI.slider("Reverb", rev_mix, 0, 1)) {
+                rev_mix.val() => rev.mix;
+            }
+
+            if (UI.slider("Echo", echo_mix, 0, 1)) {
+                echo_mix.val() => a.mix;
+                echo_mix.val() => b.mix;
+                echo_mix.val() => c.mix;
             }
 
             if (UI.checkbox("Mode Henri", mode_henri)) {

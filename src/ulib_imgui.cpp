@@ -271,6 +271,388 @@ CK_DLL_SFUN(ui_set_disabled)
 // IO
 CK_DLL_SFUN(ui_want_capture_mouse);
 CK_DLL_SFUN(ui_want_capture_keyboard);
+CK_DLL_SFUN(ui_AddFontFromFileTTF); // TODO: doesn't work, can't add font between
+                                    // ImGui::newFrame and ImGui::render
+
+CK_DLL_SFUN(ui_io_get_ConfigFlags);
+CK_DLL_SFUN(ui_io_set_ConfigFlags);
+CK_DLL_SFUN(ui_io_get_BackendFlags);
+CK_DLL_SFUN(ui_io_set_BackendFlags);
+CK_DLL_SFUN(ui_io_get_DisplaySize);
+CK_DLL_SFUN(ui_io_get_DeltaTime);
+CK_DLL_SFUN(ui_io_get_IniSavingRate);
+CK_DLL_SFUN(ui_io_set_IniSavingRate);
+CK_DLL_SFUN(ui_io_get_IniFilename);
+CK_DLL_SFUN(ui_io_set_IniFilename);
+CK_DLL_SFUN(ui_io_get_LogFilename);
+CK_DLL_SFUN(ui_io_set_LogFilename);
+CK_DLL_SFUN(ui_io_get_FontGlobalScale);
+CK_DLL_SFUN(ui_io_set_FontGlobalScale);
+
+// ImFontAtlas* Fonts; // <auto>           // Font atlas: load, rasterize and pack one
+// or
+//                     // more fonts into a single texture.
+// bool FontAllowUserScaling; // = false          // Allow user scaling text of
+// individual
+//                            // window with CTRL+Wheel.
+// ImFont* FontDefault; // = NULL           // Font to use on NewFrame(). Use NULL to
+// uses
+//                      // Fonts->Fonts[0].
+// ImVec2 DisplayFramebufferScale; // = (1, 1)         // For retina display or other
+//                                 // situations where window coordinates are different
+//                                 // from framebuffer coordinates. This generally ends
+//                                 up
+//                                 // in ImDrawData::FramebufferScale.
+
+// Docking options (when ImGuiConfigFlags_DockingEnable is set)
+// bool ConfigDockingNoSplit; // = false          // Simplified docking mode: disable
+//                            // window splitting, so docking is limited to merging
+//                            // multiple windows together into tab-bars.
+// bool
+//   ConfigDockingWithShift; // = false          // Enable docking with holding Shift
+//   key
+//                           // (reduce visual noise, allows dropping in wider space)
+// bool ConfigDockingAlwaysTabBar; // = false          // [BETA] [FIXME: This currently
+//                                 // creates regression with auto-sizing and general
+//                                 // overhead] Make every single floating window
+//                                 display
+//                                 // within a docking node.
+// bool
+//   ConfigDockingTransparentPayload; // = false          // [BETA] Make window or
+//   viewport
+//                                    // transparent when docking and only display
+//                                    docking
+//                                    // boxes on the target viewport. Useful if
+//                                    rendering
+//                                    // of multiple viewport cannot be synced. Best
+//                                    used
+//                                    // with ConfigViewportsNoAutoMerge.
+
+// Viewport options (when ImGuiConfigFlags_ViewportsEnable is set)
+// bool
+//   ConfigViewportsNoAutoMerge; // = false;         // Set to make all floating imgui
+//                               // windows always create their own viewport. Otherwise,
+//                               // they are merged into the main host viewports when
+//                               // overlapping it. May also set
+//                               // ImGuiViewportFlags_NoAutoMerge on individual
+//                               viewport.
+// bool
+//   ConfigViewportsNoTaskBarIcon; // = false          // Disable default OS task bar
+//   icon
+//                                 // flag for secondary viewports. When a viewport
+//                                 doesn't
+//                                 // want a task bar icon,
+//                                 // ImGuiViewportFlags_NoTaskBarIcon will be set on
+//                                 it.
+// bool ConfigViewportsNoDecoration; // = true           // Disable default OS window
+//                                   // decoration flag for secondary viewports. When a
+//                                   // viewport doesn't want window decorations,
+//                                   // ImGuiViewportFlags_NoDecoration will be set on
+//                                   it.
+//                                   // Enabling decoration can create subsequent issues
+//                                   at
+//                                   // OS levels (e.g. minimum window size).
+// bool
+//   ConfigViewportsNoDefaultParent; // = false          // Disable default OS parenting
+//   to
+//                                   // main viewport for secondary viewports. By
+//                                   default,
+//                                   // viewports are marked with ParentViewportId =
+//                                   // <main_viewport>, expecting the platform backend
+//                                   to
+//                                   // setup a parent/child relationship between the OS
+//                                   // windows (some backend may ignore this). Set to
+//                                   true
+//                                   // if you want the default to be 0, then all
+//                                   viewports
+//                                   // will be top-level OS windows.
+
+// Miscellaneous options
+// bool MouseDrawCursor; // = false          // Request ImGui to draw a mouse cursor for
+//                       // you (if you are on a platform without a mouse cursor).
+//                       Cannot
+//                       // be easily renamed to 'io.ConfigXXX' because this is
+//                       frequently
+//                       // used by backend implementations.
+// bool
+//   ConfigMacOSXBehaviors; // = defined(__APPLE__) // Swap Cmd<>Ctrl keys + OS X style
+//                          // text editing cursor movement using Alt instead of Ctrl,
+//                          // Shortcuts using Cmd/Super instead of Ctrl, Line/Text
+//                          Start
+//                          // and End using Cmd+Arrows instead of Home/End, Double
+//                          click
+//                          // selects by word instead of selecting whole text,
+//                          // Multi-selection in lists uses Cmd/Super instead of Ctrl.
+// bool
+//   ConfigInputTrickleEventQueue;  // = true           // Enable input queue trickling:
+//                                  // some types of events submitted during the same
+//                                  frame
+//                                  // (e.g. button down + up) will be spread over
+//                                  multiple
+//                                  // frames, improving interactions with low
+//                                  framerates.
+// bool ConfigInputTextCursorBlink; // = true           // Enable blinking cursor
+// (optional
+//                                  // as some users consider it to be distracting).
+// bool
+//   ConfigInputTextEnterKeepActive; // = false          // [BETA] Pressing Enter will
+//   keep
+//                                   // item active and select contents (single-line
+//                                   only).
+// bool ConfigDragClickToInputText;  // = false          // [BETA] Enable turning
+// DragXXX
+//                                   // widgets into text input with a simple mouse
+//                                   // click-release (without moving). Not desirable on
+//                                   // devices without a keyboard.
+// bool
+//   ConfigWindowsResizeFromEdges; // = true           // Enable resizing of windows
+//   from
+//                                 // their edges and from the lower-left corner. This
+//                                 // requires (io.BackendFlags &
+//                                 // ImGuiBackendFlags_HasMouseCursors) because it
+//                                 needs
+//                                 // mouse cursor feedback. (This used to be a
+//                                 per-window
+//                                 // ImGuiWindowFlags_ResizeFromAnySide flag)
+// bool
+//   ConfigWindowsMoveFromTitleBarOnly; // = false       // Enable allowing to move
+//   windows
+//                                      // only when clicking on their title bar. Does
+//                                      not
+//                                      // apply to windows without a title bar.
+// float ConfigMemoryCompactTimer;      // = 60.0f          // Timer (in seconds) to
+// free
+//                                 // transient windows/tables memory buffers when
+//                                 unused.
+//                                 // Set to -1.0f to disable.
+
+// // Inputs Behaviors
+// // (other variables, ones which are expected to be tweaked within UI code, are
+// exposed
+// // in ImGuiStyle)
+// float MouseDoubleClickTime; // = 0.30f          // Time for a double-click, in
+// seconds. float MouseDoubleClickMaxDist; // = 6.0f           // Distance threshold to
+// stay in to
+//                                // validate a double-click, in pixels.
+// float MouseDragThreshold; // = 6.0f           // Distance threshold before
+// considering
+//                           // we are dragging.
+// float
+//   KeyRepeatDelay;    // = 0.275f         // When holding a key/button, time before it
+//                      // starts repeating, in seconds (for buttons in Repeat mode,
+//                      etc.).
+// float KeyRepeatRate; // = 0.050f         // When holding a key/button, rate at which
+// it
+//                      // repeats, in seconds.
+
+// //------------------------------------------------------------------
+// // Debug options
+// //------------------------------------------------------------------
+
+// // Option to enable various debug tools showing buttons that will call the
+// // IM_DEBUG_BREAK() macro.
+// // - The Item Picker tool will be available regardless of this being enabled, in
+// order
+// // to maximize its discoverability.
+// // - Requires a debugger being attached, otherwise IM_DEBUG_BREAK() options will
+// appear
+// // to crash your application.
+// //   e.g. io.ConfigDebugIsDebuggerPresent = ::IsDebuggerPresent() on Win32, or refer
+// to
+// //   ImOsIsDebuggerPresent() imgui_test_engine/imgui_te_utils.cpp for a Unix
+// compatible
+// //   version).
+// bool ConfigDebugIsDebuggerPresent; // = false          // Enable various tools
+// calling
+//                                    // IM_DEBUG_BREAK().
+
+// // Tools to test correct Begin/End and BeginChild/EndChild behaviors.
+// // - Presently Begin()/End() and BeginChild()/EndChild() needs to ALWAYS be called in
+// // tandem, regardless of return value of BeginXXX()
+// // - This is inconsistent with other BeginXXX functions and create confusion for many
+// // users.
+// // - We expect to update the API eventually. In the meanwhile we provide tools to
+// // facilitate checking user-code behavior.
+// bool ConfigDebugBeginReturnValueOnce; // = false          // First-time calls to
+//                                       // Begin()/BeginChild() will return false.
+//                                       NEEDS
+//                                       // TO BE SET AT APPLICATION BOOT TIME if you
+//                                       don't
+//                                       // want to miss windows.
+// bool
+//   ConfigDebugBeginReturnValueLoop; // = false          // Some calls to
+//                                    // Begin()/BeginChild() will return false. Will
+//                                    cycle
+//                                    // through window depths then repeat. Suggested
+//                                    use:
+//                                    // add "io.ConfigDebugBeginReturnValue =
+//                                    io.KeyShift"
+//                                    // in your main loop then occasionally press
+//                                    SHIFT.
+//                                    // Windows should be flickering while running.
+
+// // Option to deactivate io.AddFocusEvent(false) handling.
+// // - May facilitate interactions with a debugger when focus loss leads to clearing
+// // inputs data.
+// // - Backends may have other side-effects on focus loss, so this will reduce
+// // side-effects but not necessary remove all of them.
+// bool ConfigDebugIgnoreFocusLoss; // = false          // Ignore
+// io.AddFocusEvent(false),
+//                                  // consequently not calling io.ClearInputKeys() in
+//                                  // input processing.
+
+// // Option to audit .ini data
+// bool
+//   ConfigDebugIniSettings; // = false          // Save .ini data with extra comments
+//                           // (particularly helpful for Docking, but makes saving
+//                           slower)
+
+// //------------------------------------------------------------------
+// // Platform Functions
+// // (the imgui_impl_xxxx backend files are setting those up for you)
+// //------------------------------------------------------------------
+
+// // Optional: Platform/Renderer backend name (informational only! will be displayed in
+// // About Window) + User data for backend/wrappers to store their own stuff.
+// const char* BackendPlatformName; // = NULL
+// const char* BackendRendererName; // = NULL
+// void* BackendPlatformUserData;   // = NULL           // User data for platform
+// backend void* BackendRendererUserData;   // = NULL           // User data for
+// renderer backend void* BackendLanguageUserData; // = NULL           // User data for
+// non C++ programming
+//                                // language backend
+
+// // Optional: Access OS clipboard
+// // (default to use native Win32 clipboard on Windows, otherwise uses a private
+// // clipboard. Override to access OS clipboard on other architectures)
+// const char* (*GetClipboardTextFn)(void* user_data);
+// void (*SetClipboardTextFn)(void* user_data, const char* text);
+// void* ClipboardUserData;
+
+// // Optional: Notify OS Input Method Editor of the screen position of your cursor for
+// // text input position (e.g. when using Japanese/Chinese IME on Windows) (default to
+// use
+// // native imm32 api on Windows)
+// void (*SetPlatformImeDataFn)(ImGuiViewport* viewport, ImGuiPlatformImeData* data);
+
+// // Optional: Platform locale
+// ImWchar PlatformLocaleDecimalPoint; // '.'              // [Experimental] Configure
+//                                     // decimal point e.g. '.' or ',' useful for some
+//                                     // languages (e.g. German), generally pulled from
+//                                     // *localeconv()->decimal_point
+
+// //------------------------------------------------------------------
+// // Input - Call before calling NewFrame()
+// //------------------------------------------------------------------
+// //------------------------------------------------------------------
+// // Output - Updated by NewFrame() or EndFrame()/Render()
+// // (when reading from the io.WantCaptureMouse, io.WantCaptureKeyboard flags to
+// dispatch
+// // your inputs, it is
+// //  generally easier and more correct to use their state BEFORE calling NewFrame().
+// See
+// //  FAQ for details!)
+// //------------------------------------------------------------------
+
+// bool WantCaptureMouse; // Set when Dear ImGui will use mouse inputs, in this case do
+// not
+//                        // dispatch them to your main game/application (either way,
+//                        // always pass on mouse inputs to imgui). (e.g. unclicked
+//                        mouse
+//                        // is hovering over an imgui window, widget is active, mouse
+//                        was
+//                        // clicked over an imgui window, etc.).
+// bool WantCaptureKeyboard; // Set when Dear ImGui will use keyboard inputs, in this
+// case
+//                           // do not dispatch them to your main game/application
+//                           (either
+//                           // way, always pass keyboard inputs to imgui). (e.g.
+//                           InputText
+//                           // active, or an imgui window is focused and navigation is
+//                           // enabled, etc.).
+// bool WantTextInput; // Mobile/console: when set, you may display an on-screen
+// keyboard.
+//                     // This is set by Dear ImGui when it wants textual keyboard input
+//                     to
+//                     // happen (e.g. when a InputText widget is active).
+// bool WantSetMousePos; // MousePos has been altered, backend should reposition mouse
+// on
+//                       // next frame. Rarely used! Set only when
+//                       // ImGuiConfigFlags_NavEnableSetMousePos flag is enabled.
+// bool
+//   WantSaveIniSettings; // When manual .ini load/save is active (io.IniFilename ==
+//   NULL),
+//                        // this will be set to notify your application that you can
+//                        call
+//                        // SaveIniSettingsToMemory() and save yourself. Important:
+//                        clear
+//                        // io.WantSaveIniSettings yourself after saving!
+// bool NavActive;        // Keyboard/Gamepad navigation is currently allowed (will
+// handle
+//                 // ImGuiKey_NavXXX events) = a window is focused and it doesn't use
+//                 the
+//                 // ImGuiWindowFlags_NoNavInputs flag.
+// bool NavVisible; // Keyboard/Gamepad navigation is visible and allowed (will handle
+//                  // ImGuiKey_NavXXX events).
+// float Framerate; // Estimate of application framerate (rolling average over 60
+// frames,
+//                  // based on io.DeltaTime), in frame per second. Solely for
+//                  convenience.
+//                  // Slow applications may not want to use a moving average or may
+//                  want
+//                  // to reset underlying buffers occasionally.
+// int MetricsRenderVertices; // Vertices output during last call to Render()
+// int MetricsRenderIndices;  // Indices output during last call to Render() = number of
+//                            // triangles * 3
+// int MetricsRenderWindows;  // Number of visible windows
+// int MetricsActiveWindows;  // Number of active windows
+// ImVec2 MouseDelta; // Mouse delta. Note that this is zero if either current or
+// previous
+//                    // position are invalid (-FLT_MAX,-FLT_MAX), so a
+//                    // disappearing/reappearing mouse won't have a huge delta.
+// =============== END ImguiIO struct =============
+
+// ImguiIO MVARs -------------------------------------------------------------
+// CIMGUI_API void ImGuiIO_AddKeyEvent(ImGuiIO* self, ImGuiKey key, bool down); // Queue
+// a new key down/up event. Key should be "translated" (as in, generally ImGuiKey_A
+// matches the key end-user would use to emit an 'A' character) CIMGUI_API void
+// ImGuiIO_AddKeyAnalogEvent(ImGuiIO* self, ImGuiKey key, bool down, float v); // Queue
+// a new key down/up event for analog values (e.g. ImGuiKey_Gamepad_ values). Dead-zones
+// should be handled by the backend. CIMGUI_API void ImGuiIO_AddMousePosEvent(ImGuiIO*
+// self, float x, float y);                                            // Queue a mouse
+// position update. Use -FLT_MAX,-FLT_MAX to signify no mouse (e.g. app not focused and
+// not hovered) CIMGUI_API void ImGuiIO_AddMouseButtonEvent(ImGuiIO* self, int button,
+// bool down);                                    // Queue a mouse button change
+// CIMGUI_API void ImGuiIO_AddMouseWheelEvent(ImGuiIO* self, float wheel_x, float
+// wheel_y);                              // Queue a mouse wheel update. wheel_y<0:
+// scroll down, wheel_y>0: scroll up, wheel_x<0: scroll right, wheel_x>0: scroll left.
+// CIMGUI_API void ImGuiIO_AddMouseSourceEvent(ImGuiIO* self, ImGuiMouseSource source);
+// // Queue a mouse source change (Mouse/TouchScreen/Pen) CIMGUI_API void
+// ImGuiIO_AddMouseViewportEvent(ImGuiIO* self, ImGuiID id); // Queue a mouse hovered
+// viewport. Requires backend to set ImGuiBackendFlags_HasMouseHoveredViewport to call
+// this (for multi-viewport support). CIMGUI_API void ImGuiIO_AddFocusEvent(ImGuiIO*
+// self, bool focused);                                                   // Queue a
+// gain/loss of focus for the application (generally based on OS/platform focus of your
+// window) CIMGUI_API void ImGuiIO_AddInputCharacter(ImGuiIO* self, unsigned int c); //
+// Queue a new character input CIMGUI_API void ImGuiIO_AddInputCharacterUTF16(ImGuiIO*
+// self, ImWchar16 c);                                           // Queue a new
+// character input from a UTF-16 character, it can be a surrogate CIMGUI_API void
+// ImGuiIO_AddInputCharactersUTF8(ImGuiIO* self, const char* str); // Queue a new
+// characters input from a UTF-8 string CIMGUI_API void
+// ImGuiIO_SetKeyEventNativeData(ImGuiIO* self, ImGuiKey key, int native_keycode, int
+// native_scancode);  // Implied native_legacy_index = -1 CIMGUI_API void
+// ImGuiIO_SetKeyEventNativeDataEx(ImGuiIO* self, ImGuiKey key, int native_keycode, int
+// native_scancode, int native_legacy_index /* = -1 */); // [Optional] Specify index for
+// legacy <1.87 IsKeyXXX() functions with native indices + specify native keycode,
+// scancode. CIMGUI_API void ImGuiIO_SetAppAcceptingEvents(ImGuiIO* self, bool
+// accepting_events);                                  // Set master flag for accepting
+// key/mouse/text events (default to true). Useful if you have native dialog boxes that
+// are interrupting your application loop/refresh, and you want to disable events being
+// queued while your app is frozen. CIMGUI_API void ImGuiIO_ClearEventsQueue(ImGuiIO*
+// self);                                                              // Clear all
+// incoming events. CIMGUI_API void ImGuiIO_ClearInputKeys(ImGuiIO* self); // Clear
+// current keyboard/mouse/gamepad state + current frame text input buffer. Equivalent to
+// releasing all keys/buttons.
 
 // Main
 CK_DLL_SFUN(ui_get_style);
@@ -362,6 +744,9 @@ CK_DLL_SFUN(ui_SetScrollFromPosY);
 // use NULL as a shortcut to push default font CIMGUI_API void
 // ImGui_PopFont(void);
 // CK_DLL_SFUN(ui_PushStyleColor);  // ignoring in favor of vec4 version
+
+CK_DLL_SFUN(ui_PushFont); // disabled, see AddFontFromFileTTF
+CK_DLL_SFUN(ui_PopFont);  // disabled, see AddFontFromFileTTF
 CK_DLL_SFUN(ui_PushStyleColorImVec4);
 CK_DLL_SFUN(ui_PushStyleColorImVec3);
 CK_DLL_SFUN(ui_PopStyleColor);
@@ -678,6 +1063,7 @@ CK_DLL_SFUN(ui_MenuItem);
 CK_DLL_SFUN(ui_MenuItemBoolPtr);
 
 // Tooltips
+CK_DLL_SFUN(ui_BeginItemTooltip);
 CK_DLL_SFUN(ui_BeginTooltip);
 CK_DLL_SFUN(ui_EndTooltip);
 CK_DLL_SFUN(ui_SetTooltipUnformatted);
@@ -785,6 +1171,7 @@ CK_DLL_SFUN(ui_DockSpaceOverViewport);
 // ImGuiPayload::IsDataType() to test for the payload type.
 
 // Disabling [BETA API]
+CK_DLL_SFUN(ui_BeginDisabled_true);
 CK_DLL_SFUN(ui_BeginDisabled);
 CK_DLL_SFUN(ui_EndDisabled);
 
@@ -1010,6 +1397,11 @@ CK_DLL_CTOR(ui_float4_ctor_with_value);
 CK_DLL_DTOR(ui_float4_dtor);
 CK_DLL_MFUN(ui_float4_get_value);
 CK_DLL_MFUN(ui_float4_set_value);
+
+// UI_Font
+static t_CKUINT ui_font_ptr_offset = 0;
+#define GET_NEXT_UI_FONT(ARGS)                                                         \
+    (ImFont*)OBJ_MEMBER_UINT(GET_NEXT_OBJECT(ARGS), ui_font_ptr_offset)
 
 // UI_Viewport
 static t_CKUINT ui_viewport_ptr_offset = 0;
@@ -3692,420 +4084,577 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
     QUERY->add_svar(QUERY, "int", "COUNT", true, &ImGuiMouseButton_COUNT);
     QUERY->end_class(QUERY);
 
-    QUERY->begin_class(QUERY, "UI_Key", "Object");
-    QUERY->doc_class(
-      QUERY,
-      "A key identifier (ImGuiKey_XXX or ImGuiMod_XXX value): can represent "
-      "Keyboard, Mouse and Gamepad values..\nAll our named keys are >= 512. "
-      "Keys value 0 to 511 are left unused as legacy native/opaque key values "
-      "(< 1.87)..\nSince >= 1.89 we increased typing (went from int to enum), "
-      "some legacy code may need a cast to ImGuiKey..\nRead details about the "
-      "1.87 and 1.89 transition : "
-      "https:github.com/ocornut/imgui/issues/4921.\nNote that \"Keys\" related "
-      "to physical keys and are not the same concept as input \"Characters\", "
-      "the later are submitted via io.AddInputCharacter()..\nThe keyboard key "
-      "enum values are named after the keys on a standard US keyboard, and on "
-      "other keyboard types the keys reported may not match the "
-      "keycaps..\nForward declared enum type ImGuiKey");
-    static t_CKINT ImGuiKey_None = 0;
-    QUERY->add_svar(QUERY, "int", "None", true, &ImGuiKey_None);
-    static t_CKINT ImGuiKey_Tab = 512;
-    QUERY->add_svar(QUERY, "int", "Tab", true, &ImGuiKey_Tab);
-    QUERY->doc_var(QUERY, "== ImGuiKey_NamedKey_BEGIN");
-    static t_CKINT ImGuiKey_LeftArrow = 513;
-    QUERY->add_svar(QUERY, "int", "LeftArrow", true, &ImGuiKey_LeftArrow);
-    static t_CKINT ImGuiKey_RightArrow = 514;
-    QUERY->add_svar(QUERY, "int", "RightArrow", true, &ImGuiKey_RightArrow);
-    static t_CKINT ImGuiKey_UpArrow = 515;
-    QUERY->add_svar(QUERY, "int", "UpArrow", true, &ImGuiKey_UpArrow);
-    static t_CKINT ImGuiKey_DownArrow = 516;
-    QUERY->add_svar(QUERY, "int", "DownArrow", true, &ImGuiKey_DownArrow);
-    static t_CKINT ImGuiKey_PageUp = 517;
-    QUERY->add_svar(QUERY, "int", "PageUp", true, &ImGuiKey_PageUp);
-    static t_CKINT ImGuiKey_PageDown = 518;
-    QUERY->add_svar(QUERY, "int", "PageDown", true, &ImGuiKey_PageDown);
-    static t_CKINT ImGuiKey_Home = 519;
-    QUERY->add_svar(QUERY, "int", "Home", true, &ImGuiKey_Home);
-    static t_CKINT ImGuiKey_End = 520;
-    QUERY->add_svar(QUERY, "int", "End", true, &ImGuiKey_End);
-    static t_CKINT ImGuiKey_Insert = 521;
-    QUERY->add_svar(QUERY, "int", "Insert", true, &ImGuiKey_Insert);
-    static t_CKINT ImGuiKey_Delete = 522;
-    QUERY->add_svar(QUERY, "int", "Delete", true, &ImGuiKey_Delete);
-    static t_CKINT ImGuiKey_Backspace = 523;
-    QUERY->add_svar(QUERY, "int", "Backspace", true, &ImGuiKey_Backspace);
-    static t_CKINT ImGuiKey_Space = 524;
-    QUERY->add_svar(QUERY, "int", "Space", true, &ImGuiKey_Space);
-    static t_CKINT ImGuiKey_Enter = 525;
-    QUERY->add_svar(QUERY, "int", "Enter", true, &ImGuiKey_Enter);
-    static t_CKINT ImGuiKey_Escape = 526;
-    QUERY->add_svar(QUERY, "int", "Escape", true, &ImGuiKey_Escape);
-    static t_CKINT ImGuiKey_LeftCtrl = 527;
-    QUERY->add_svar(QUERY, "int", "LeftCtrl", true, &ImGuiKey_LeftCtrl);
-    static t_CKINT ImGuiKey_LeftShift = 528;
-    QUERY->add_svar(QUERY, "int", "LeftShift", true, &ImGuiKey_LeftShift);
-    static t_CKINT ImGuiKey_LeftAlt = 529;
-    QUERY->add_svar(QUERY, "int", "LeftAlt", true, &ImGuiKey_LeftAlt);
-    static t_CKINT ImGuiKey_LeftSuper = 530;
-    QUERY->add_svar(QUERY, "int", "LeftSuper", true, &ImGuiKey_LeftSuper);
-    static t_CKINT ImGuiKey_RightCtrl = 531;
-    QUERY->add_svar(QUERY, "int", "RightCtrl", true, &ImGuiKey_RightCtrl);
-    static t_CKINT ImGuiKey_RightShift = 532;
-    QUERY->add_svar(QUERY, "int", "RightShift", true, &ImGuiKey_RightShift);
-    static t_CKINT ImGuiKey_RightAlt = 533;
-    QUERY->add_svar(QUERY, "int", "RightAlt", true, &ImGuiKey_RightAlt);
-    static t_CKINT ImGuiKey_RightSuper = 534;
-    QUERY->add_svar(QUERY, "int", "RightSuper", true, &ImGuiKey_RightSuper);
-    static t_CKINT ImGuiKey_Menu = 535;
-    QUERY->add_svar(QUERY, "int", "Menu", true, &ImGuiKey_Menu);
-    static t_CKINT ImGuiKey_0 = 536;
-    QUERY->add_svar(QUERY, "int", "Num0", true, &ImGuiKey_0);
-    static t_CKINT ImGuiKey_1 = 537;
-    QUERY->add_svar(QUERY, "int", "Num1", true, &ImGuiKey_1);
-    static t_CKINT ImGuiKey_2 = 538;
-    QUERY->add_svar(QUERY, "int", "Num2", true, &ImGuiKey_2);
-    static t_CKINT ImGuiKey_3 = 539;
-    QUERY->add_svar(QUERY, "int", "Num3", true, &ImGuiKey_3);
-    static t_CKINT ImGuiKey_4 = 540;
-    QUERY->add_svar(QUERY, "int", "Num4", true, &ImGuiKey_4);
-    static t_CKINT ImGuiKey_5 = 541;
-    QUERY->add_svar(QUERY, "int", "Num5", true, &ImGuiKey_5);
-    static t_CKINT ImGuiKey_6 = 542;
-    QUERY->add_svar(QUERY, "int", "Num6", true, &ImGuiKey_6);
-    static t_CKINT ImGuiKey_7 = 543;
-    QUERY->add_svar(QUERY, "int", "Num7", true, &ImGuiKey_7);
-    static t_CKINT ImGuiKey_8 = 544;
-    QUERY->add_svar(QUERY, "int", "Num8", true, &ImGuiKey_8);
-    static t_CKINT ImGuiKey_9 = 545;
-    QUERY->add_svar(QUERY, "int", "Num9", true, &ImGuiKey_9);
-    static t_CKINT ImGuiKey_A = 546;
-    QUERY->add_svar(QUERY, "int", "A", true, &ImGuiKey_A);
-    static t_CKINT ImGuiKey_B = 547;
-    QUERY->add_svar(QUERY, "int", "B", true, &ImGuiKey_B);
-    static t_CKINT ImGuiKey_C = 548;
-    QUERY->add_svar(QUERY, "int", "C", true, &ImGuiKey_C);
-    static t_CKINT ImGuiKey_D = 549;
-    QUERY->add_svar(QUERY, "int", "D", true, &ImGuiKey_D);
-    static t_CKINT ImGuiKey_E = 550;
-    QUERY->add_svar(QUERY, "int", "E", true, &ImGuiKey_E);
-    static t_CKINT ImGuiKey_F = 551;
-    QUERY->add_svar(QUERY, "int", "F", true, &ImGuiKey_F);
-    static t_CKINT ImGuiKey_G = 552;
-    QUERY->add_svar(QUERY, "int", "G", true, &ImGuiKey_G);
-    static t_CKINT ImGuiKey_H = 553;
-    QUERY->add_svar(QUERY, "int", "H", true, &ImGuiKey_H);
-    static t_CKINT ImGuiKey_I = 554;
-    QUERY->add_svar(QUERY, "int", "I", true, &ImGuiKey_I);
-    static t_CKINT ImGuiKey_J = 555;
-    QUERY->add_svar(QUERY, "int", "J", true, &ImGuiKey_J);
-    static t_CKINT ImGuiKey_K = 556;
-    QUERY->add_svar(QUERY, "int", "K", true, &ImGuiKey_K);
-    static t_CKINT ImGuiKey_L = 557;
-    QUERY->add_svar(QUERY, "int", "L", true, &ImGuiKey_L);
-    static t_CKINT ImGuiKey_M = 558;
-    QUERY->add_svar(QUERY, "int", "M", true, &ImGuiKey_M);
-    static t_CKINT ImGuiKey_N = 559;
-    QUERY->add_svar(QUERY, "int", "N", true, &ImGuiKey_N);
-    static t_CKINT ImGuiKey_O = 560;
-    QUERY->add_svar(QUERY, "int", "O", true, &ImGuiKey_O);
-    static t_CKINT ImGuiKey_P = 561;
-    QUERY->add_svar(QUERY, "int", "P", true, &ImGuiKey_P);
-    static t_CKINT ImGuiKey_Q = 562;
-    QUERY->add_svar(QUERY, "int", "Q", true, &ImGuiKey_Q);
-    static t_CKINT ImGuiKey_R = 563;
-    QUERY->add_svar(QUERY, "int", "R", true, &ImGuiKey_R);
-    static t_CKINT ImGuiKey_S = 564;
-    QUERY->add_svar(QUERY, "int", "S", true, &ImGuiKey_S);
-    static t_CKINT ImGuiKey_T = 565;
-    QUERY->add_svar(QUERY, "int", "T", true, &ImGuiKey_T);
-    static t_CKINT ImGuiKey_U = 566;
-    QUERY->add_svar(QUERY, "int", "U", true, &ImGuiKey_U);
-    static t_CKINT ImGuiKey_V = 567;
-    QUERY->add_svar(QUERY, "int", "V", true, &ImGuiKey_V);
-    static t_CKINT ImGuiKey_W = 568;
-    QUERY->add_svar(QUERY, "int", "W", true, &ImGuiKey_W);
-    static t_CKINT ImGuiKey_X = 569;
-    QUERY->add_svar(QUERY, "int", "X", true, &ImGuiKey_X);
-    static t_CKINT ImGuiKey_Y = 570;
-    QUERY->add_svar(QUERY, "int", "Y", true, &ImGuiKey_Y);
-    static t_CKINT ImGuiKey_Z = 571;
-    QUERY->add_svar(QUERY, "int", "Z", true, &ImGuiKey_Z);
-    static t_CKINT ImGuiKey_F1 = 572;
-    QUERY->add_svar(QUERY, "int", "F1", true, &ImGuiKey_F1);
-    static t_CKINT ImGuiKey_F2 = 573;
-    QUERY->add_svar(QUERY, "int", "F2", true, &ImGuiKey_F2);
-    static t_CKINT ImGuiKey_F3 = 574;
-    QUERY->add_svar(QUERY, "int", "F3", true, &ImGuiKey_F3);
-    static t_CKINT ImGuiKey_F4 = 575;
-    QUERY->add_svar(QUERY, "int", "F4", true, &ImGuiKey_F4);
-    static t_CKINT ImGuiKey_F5 = 576;
-    QUERY->add_svar(QUERY, "int", "F5", true, &ImGuiKey_F5);
-    static t_CKINT ImGuiKey_F6 = 577;
-    QUERY->add_svar(QUERY, "int", "F6", true, &ImGuiKey_F6);
-    static t_CKINT ImGuiKey_F7 = 578;
-    QUERY->add_svar(QUERY, "int", "F7", true, &ImGuiKey_F7);
-    static t_CKINT ImGuiKey_F8 = 579;
-    QUERY->add_svar(QUERY, "int", "F8", true, &ImGuiKey_F8);
-    static t_CKINT ImGuiKey_F9 = 580;
-    QUERY->add_svar(QUERY, "int", "F9", true, &ImGuiKey_F9);
-    static t_CKINT ImGuiKey_F10 = 581;
-    QUERY->add_svar(QUERY, "int", "F10", true, &ImGuiKey_F10);
-    static t_CKINT ImGuiKey_F11 = 582;
-    QUERY->add_svar(QUERY, "int", "F11", true, &ImGuiKey_F11);
-    static t_CKINT ImGuiKey_F12 = 583;
-    QUERY->add_svar(QUERY, "int", "F12", true, &ImGuiKey_F12);
-    static t_CKINT ImGuiKey_F13 = 584;
-    QUERY->add_svar(QUERY, "int", "F13", true, &ImGuiKey_F13);
-    static t_CKINT ImGuiKey_F14 = 585;
-    QUERY->add_svar(QUERY, "int", "F14", true, &ImGuiKey_F14);
-    static t_CKINT ImGuiKey_F15 = 586;
-    QUERY->add_svar(QUERY, "int", "F15", true, &ImGuiKey_F15);
-    static t_CKINT ImGuiKey_F16 = 587;
-    QUERY->add_svar(QUERY, "int", "F16", true, &ImGuiKey_F16);
-    static t_CKINT ImGuiKey_F17 = 588;
-    QUERY->add_svar(QUERY, "int", "F17", true, &ImGuiKey_F17);
-    static t_CKINT ImGuiKey_F18 = 589;
-    QUERY->add_svar(QUERY, "int", "F18", true, &ImGuiKey_F18);
-    static t_CKINT ImGuiKey_F19 = 590;
-    QUERY->add_svar(QUERY, "int", "F19", true, &ImGuiKey_F19);
-    static t_CKINT ImGuiKey_F20 = 591;
-    QUERY->add_svar(QUERY, "int", "F20", true, &ImGuiKey_F20);
-    static t_CKINT ImGuiKey_F21 = 592;
-    QUERY->add_svar(QUERY, "int", "F21", true, &ImGuiKey_F21);
-    static t_CKINT ImGuiKey_F22 = 593;
-    QUERY->add_svar(QUERY, "int", "F22", true, &ImGuiKey_F22);
-    static t_CKINT ImGuiKey_F23 = 594;
-    QUERY->add_svar(QUERY, "int", "F23", true, &ImGuiKey_F23);
-    static t_CKINT ImGuiKey_F24 = 595;
-    QUERY->add_svar(QUERY, "int", "F24", true, &ImGuiKey_F24);
-    static t_CKINT ImGuiKey_Apostrophe = 596;
-    QUERY->add_svar(QUERY, "int", "Apostrophe", true, &ImGuiKey_Apostrophe);
-    QUERY->doc_var(QUERY, "'");
-    static t_CKINT ImGuiKey_Comma = 597;
-    QUERY->add_svar(QUERY, "int", "Comma", true, &ImGuiKey_Comma);
-    QUERY->doc_var(QUERY, ",");
-    static t_CKINT ImGuiKey_Minus = 598;
-    QUERY->add_svar(QUERY, "int", "Minus", true, &ImGuiKey_Minus);
-    QUERY->doc_var(QUERY, "-");
-    static t_CKINT ImGuiKey_Period = 599;
-    QUERY->add_svar(QUERY, "int", "Period", true, &ImGuiKey_Period);
-    QUERY->doc_var(QUERY, ".");
-    static t_CKINT ImGuiKey_Slash = 600;
-    QUERY->add_svar(QUERY, "int", "Slash", true, &ImGuiKey_Slash);
-    QUERY->doc_var(QUERY, "/");
-    static t_CKINT ImGuiKey_Semicolon = 601;
-    QUERY->add_svar(QUERY, "int", "Semicolon", true, &ImGuiKey_Semicolon);
-    QUERY->doc_var(QUERY, ";");
-    static t_CKINT ImGuiKey_Equal = 602;
-    QUERY->add_svar(QUERY, "int", "Equal", true, &ImGuiKey_Equal);
-    QUERY->doc_var(QUERY, "=");
-    static t_CKINT ImGuiKey_LeftBracket = 603;
-    QUERY->add_svar(QUERY, "int", "LeftBracket", true, &ImGuiKey_LeftBracket);
-    QUERY->doc_var(QUERY, "[");
-    static t_CKINT ImGuiKey_Backslash = 604;
-    QUERY->add_svar(QUERY, "int", "Backslash", true, &ImGuiKey_Backslash);
-    QUERY->doc_var(QUERY,
-                   "\\ (this text inhibit multiline comment caused by backslash)");
-    static t_CKINT ImGuiKey_RightBracket = 605;
-    QUERY->add_svar(QUERY, "int", "RightBracket", true, &ImGuiKey_RightBracket);
-    QUERY->doc_var(QUERY, "]");
-    static t_CKINT ImGuiKey_GraveAccent = 606;
-    QUERY->add_svar(QUERY, "int", "GraveAccent", true, &ImGuiKey_GraveAccent);
-    QUERY->doc_var(QUERY, "`");
-    static t_CKINT ImGuiKey_CapsLock = 607;
-    QUERY->add_svar(QUERY, "int", "CapsLock", true, &ImGuiKey_CapsLock);
-    static t_CKINT ImGuiKey_ScrollLock = 608;
-    QUERY->add_svar(QUERY, "int", "ScrollLock", true, &ImGuiKey_ScrollLock);
-    static t_CKINT ImGuiKey_NumLock = 609;
-    QUERY->add_svar(QUERY, "int", "NumLock", true, &ImGuiKey_NumLock);
-    static t_CKINT ImGuiKey_PrintScreen = 610;
-    QUERY->add_svar(QUERY, "int", "PrintScreen", true, &ImGuiKey_PrintScreen);
-    static t_CKINT ImGuiKey_Pause = 611;
-    QUERY->add_svar(QUERY, "int", "Pause", true, &ImGuiKey_Pause);
-    static t_CKINT ImGuiKey_Keypad0 = 612;
-    QUERY->add_svar(QUERY, "int", "Keypad0", true, &ImGuiKey_Keypad0);
-    static t_CKINT ImGuiKey_Keypad1 = 613;
-    QUERY->add_svar(QUERY, "int", "Keypad1", true, &ImGuiKey_Keypad1);
-    static t_CKINT ImGuiKey_Keypad2 = 614;
-    QUERY->add_svar(QUERY, "int", "Keypad2", true, &ImGuiKey_Keypad2);
-    static t_CKINT ImGuiKey_Keypad3 = 615;
-    QUERY->add_svar(QUERY, "int", "Keypad3", true, &ImGuiKey_Keypad3);
-    static t_CKINT ImGuiKey_Keypad4 = 616;
-    QUERY->add_svar(QUERY, "int", "Keypad4", true, &ImGuiKey_Keypad4);
-    static t_CKINT ImGuiKey_Keypad5 = 617;
-    QUERY->add_svar(QUERY, "int", "Keypad5", true, &ImGuiKey_Keypad5);
-    static t_CKINT ImGuiKey_Keypad6 = 618;
-    QUERY->add_svar(QUERY, "int", "Keypad6", true, &ImGuiKey_Keypad6);
-    static t_CKINT ImGuiKey_Keypad7 = 619;
-    QUERY->add_svar(QUERY, "int", "Keypad7", true, &ImGuiKey_Keypad7);
-    static t_CKINT ImGuiKey_Keypad8 = 620;
-    QUERY->add_svar(QUERY, "int", "Keypad8", true, &ImGuiKey_Keypad8);
-    static t_CKINT ImGuiKey_Keypad9 = 621;
-    QUERY->add_svar(QUERY, "int", "Keypad9", true, &ImGuiKey_Keypad9);
-    static t_CKINT ImGuiKey_KeypadDecimal = 622;
-    QUERY->add_svar(QUERY, "int", "KeypadDecimal", true, &ImGuiKey_KeypadDecimal);
-    static t_CKINT ImGuiKey_KeypadDivide = 623;
-    QUERY->add_svar(QUERY, "int", "KeypadDivide", true, &ImGuiKey_KeypadDivide);
-    static t_CKINT ImGuiKey_KeypadMultiply = 624;
-    QUERY->add_svar(QUERY, "int", "KeypadMultiply", true, &ImGuiKey_KeypadMultiply);
-    static t_CKINT ImGuiKey_KeypadSubtract = 625;
-    QUERY->add_svar(QUERY, "int", "KeypadSubtract", true, &ImGuiKey_KeypadSubtract);
-    static t_CKINT ImGuiKey_KeypadAdd = 626;
-    QUERY->add_svar(QUERY, "int", "KeypadAdd", true, &ImGuiKey_KeypadAdd);
-    static t_CKINT ImGuiKey_KeypadEnter = 627;
-    QUERY->add_svar(QUERY, "int", "KeypadEnter", true, &ImGuiKey_KeypadEnter);
-    static t_CKINT ImGuiKey_KeypadEqual = 628;
-    QUERY->add_svar(QUERY, "int", "KeypadEqual", true, &ImGuiKey_KeypadEqual);
-    static t_CKINT ImGuiKey_AppBack = 629;
-    QUERY->add_svar(QUERY, "int", "AppBack", true, &ImGuiKey_AppBack);
-    QUERY->doc_var(
-      QUERY, "Available on some keyboard/mouses. Often referred as \"Browser Back\"");
-    static t_CKINT ImGuiKey_AppForward = 630;
-    QUERY->add_svar(QUERY, "int", "AppForward", true, &ImGuiKey_AppForward);
-    static t_CKINT ImGuiKey_GamepadStart = 631;
-    QUERY->add_svar(QUERY, "int", "GamepadStart", true, &ImGuiKey_GamepadStart);
-    QUERY->doc_var(QUERY, "Menu (Xbox)      + (Switch)   Start/Options (PS)");
-    static t_CKINT ImGuiKey_GamepadBack = 632;
-    QUERY->add_svar(QUERY, "int", "GamepadBack", true, &ImGuiKey_GamepadBack);
-    QUERY->doc_var(QUERY, "View (Xbox)      - (Switch)   Share (PS)");
-    static t_CKINT ImGuiKey_GamepadFaceLeft = 633;
-    QUERY->add_svar(QUERY, "int", "GamepadFaceLeft", true, &ImGuiKey_GamepadFaceLeft);
-    QUERY->doc_var(
-      QUERY,
-      "X (Xbox)         Y (Switch)   Square (PS)         Tap: Toggle Menu. "
-      "Hold: Windowing mode (Focus/Move/Resize windows)");
-    static t_CKINT ImGuiKey_GamepadFaceRight = 634;
-    QUERY->add_svar(QUERY, "int", "GamepadFaceRight", true, &ImGuiKey_GamepadFaceRight);
-    QUERY->doc_var(QUERY,
-                   "B (Xbox)         A (Switch)   Circle (PS)         Cancel / "
-                   "Close / Exit");
-    static t_CKINT ImGuiKey_GamepadFaceUp = 635;
-    QUERY->add_svar(QUERY, "int", "GamepadFaceUp", true, &ImGuiKey_GamepadFaceUp);
-    QUERY->doc_var(QUERY,
-                   "Y (Xbox)         X (Switch)   Triangle (PS)       Text "
-                   "Input / On-screen Keyboard");
-    static t_CKINT ImGuiKey_GamepadFaceDown = 636;
-    QUERY->add_svar(QUERY, "int", "GamepadFaceDown", true, &ImGuiKey_GamepadFaceDown);
-    QUERY->doc_var(QUERY,
-                   "A (Xbox)         B (Switch)   Cross (PS)          Activate "
-                   "/ Open / Toggle / Tweak");
-    static t_CKINT ImGuiKey_GamepadDpadLeft = 637;
-    QUERY->add_svar(QUERY, "int", "GamepadDpadLeft", true, &ImGuiKey_GamepadDpadLeft);
-    QUERY->doc_var(QUERY,
-                   "D-pad Left                                        Move / "
-                   "Tweak / Resize Window (in Windowing mode)");
-    static t_CKINT ImGuiKey_GamepadDpadRight = 638;
-    QUERY->add_svar(QUERY, "int", "GamepadDpadRight", true, &ImGuiKey_GamepadDpadRight);
-    QUERY->doc_var(QUERY,
-                   "D-pad Right                                       Move / "
-                   "Tweak / Resize Window (in Windowing mode)");
-    static t_CKINT ImGuiKey_GamepadDpadUp = 639;
-    QUERY->add_svar(QUERY, "int", "GamepadDpadUp", true, &ImGuiKey_GamepadDpadUp);
-    QUERY->doc_var(QUERY,
-                   "D-pad Up                                          Move / "
-                   "Tweak / Resize Window (in Windowing mode)");
-    static t_CKINT ImGuiKey_GamepadDpadDown = 640;
-    QUERY->add_svar(QUERY, "int", "GamepadDpadDown", true, &ImGuiKey_GamepadDpadDown);
-    QUERY->doc_var(QUERY,
-                   "D-pad Down                                        Move / "
-                   "Tweak / Resize Window (in Windowing mode)");
-    static t_CKINT ImGuiKey_GamepadL1 = 641;
-    QUERY->add_svar(QUERY, "int", "GamepadL1", true, &ImGuiKey_GamepadL1);
-    QUERY->doc_var(QUERY,
-                   "L Bumper (Xbox)  L (Switch)   L1 (PS)             Tweak "
-                   "Slower / Focus Previous (in Windowing mode)");
-    static t_CKINT ImGuiKey_GamepadR1 = 642;
-    QUERY->add_svar(QUERY, "int", "GamepadR1", true, &ImGuiKey_GamepadR1);
-    QUERY->doc_var(QUERY,
-                   "R Bumper (Xbox)  R (Switch)   R1 (PS)             Tweak "
-                   "Faster / Focus Next (in Windowing mode)");
-    static t_CKINT ImGuiKey_GamepadL2 = 643;
-    QUERY->add_svar(QUERY, "int", "GamepadL2", true, &ImGuiKey_GamepadL2);
-    QUERY->doc_var(QUERY, "L Trig. (Xbox)   ZL (Switch)  L2 (PS) [Analog]");
-    static t_CKINT ImGuiKey_GamepadR2 = 644;
-    QUERY->add_svar(QUERY, "int", "GamepadR2", true, &ImGuiKey_GamepadR2);
-    QUERY->doc_var(QUERY, "R Trig. (Xbox)   ZR (Switch)  R2 (PS) [Analog]");
-    static t_CKINT ImGuiKey_GamepadL3 = 645;
-    QUERY->add_svar(QUERY, "int", "GamepadL3", true, &ImGuiKey_GamepadL3);
-    QUERY->doc_var(QUERY, "L Stick (Xbox)   L3 (Switch)  L3 (PS)");
-    static t_CKINT ImGuiKey_GamepadR3 = 646;
-    QUERY->add_svar(QUERY, "int", "GamepadR3", true, &ImGuiKey_GamepadR3);
-    QUERY->doc_var(QUERY, "R Stick (Xbox)   R3 (Switch)  R3 (PS)");
-    static t_CKINT ImGuiKey_GamepadLStickLeft = 647;
-    QUERY->add_svar(QUERY, "int", "GamepadLStickLeft", true,
-                    &ImGuiKey_GamepadLStickLeft);
-    QUERY->doc_var(QUERY,
-                   "[Analog]                                          Move "
-                   "Window (in Windowing mode)");
-    static t_CKINT ImGuiKey_GamepadLStickRight = 648;
-    QUERY->add_svar(QUERY, "int", "GamepadLStickRight", true,
-                    &ImGuiKey_GamepadLStickRight);
-    QUERY->doc_var(QUERY,
-                   "[Analog]                                          Move "
-                   "Window (in Windowing mode)");
-    static t_CKINT ImGuiKey_GamepadLStickUp = 649;
-    QUERY->add_svar(QUERY, "int", "GamepadLStickUp", true, &ImGuiKey_GamepadLStickUp);
-    QUERY->doc_var(QUERY,
-                   "[Analog]                                          Move "
-                   "Window (in Windowing mode)");
-    static t_CKINT ImGuiKey_GamepadLStickDown = 650;
-    QUERY->add_svar(QUERY, "int", "GamepadLStickDown", true,
-                    &ImGuiKey_GamepadLStickDown);
-    QUERY->doc_var(QUERY,
-                   "[Analog]                                          Move "
-                   "Window (in Windowing mode)");
-    static t_CKINT ImGuiKey_GamepadRStickLeft = 651;
-    QUERY->add_svar(QUERY, "int", "GamepadRStickLeft", true,
-                    &ImGuiKey_GamepadRStickLeft);
-    QUERY->doc_var(QUERY, "[Analog]");
-    static t_CKINT ImGuiKey_GamepadRStickRight = 652;
-    QUERY->add_svar(QUERY, "int", "GamepadRStickRight", true,
-                    &ImGuiKey_GamepadRStickRight);
-    QUERY->doc_var(QUERY, "[Analog]");
-    static t_CKINT ImGuiKey_GamepadRStickUp = 653;
-    QUERY->add_svar(QUERY, "int", "GamepadRStickUp", true, &ImGuiKey_GamepadRStickUp);
-    QUERY->doc_var(QUERY, "[Analog]");
-    static t_CKINT ImGuiKey_GamepadRStickDown = 654;
-    QUERY->add_svar(QUERY, "int", "GamepadRStickDown", true,
-                    &ImGuiKey_GamepadRStickDown);
-    QUERY->doc_var(QUERY, "[Analog]");
-    static t_CKINT ImGuiKey_MouseLeft = 655;
-    QUERY->add_svar(QUERY, "int", "MouseLeft", true, &ImGuiKey_MouseLeft);
-    static t_CKINT ImGuiKey_MouseRight = 656;
-    QUERY->add_svar(QUERY, "int", "MouseRight", true, &ImGuiKey_MouseRight);
-    static t_CKINT ImGuiKey_MouseMiddle = 657;
-    QUERY->add_svar(QUERY, "int", "MouseMiddle", true, &ImGuiKey_MouseMiddle);
-    static t_CKINT ImGuiKey_MouseX1 = 658;
-    QUERY->add_svar(QUERY, "int", "MouseX1", true, &ImGuiKey_MouseX1);
-    static t_CKINT ImGuiKey_MouseX2 = 659;
-    QUERY->add_svar(QUERY, "int", "MouseX2", true, &ImGuiKey_MouseX2);
-    static t_CKINT ImGuiKey_MouseWheelX = 660;
-    QUERY->add_svar(QUERY, "int", "MouseWheelX", true, &ImGuiKey_MouseWheelX);
-    static t_CKINT ImGuiKey_MouseWheelY = 661;
-    QUERY->add_svar(QUERY, "int", "MouseWheelY", true, &ImGuiKey_MouseWheelY);
-    static t_CKINT ImGuiMod_None = 0;
-    QUERY->add_svar(QUERY, "int", "Mod_None", true, &ImGuiMod_None);
-    static t_CKINT ImGuiMod_Ctrl = 4096;
-    QUERY->add_svar(QUERY, "int", "Mod_Ctrl", true, &ImGuiMod_Ctrl);
-    QUERY->doc_var(QUERY, "Ctrl (non-macOS), Cmd (macOS)");
-    static t_CKINT ImGuiMod_Shift = 8192;
-    QUERY->add_svar(QUERY, "int", "Mod_Shift", true, &ImGuiMod_Shift);
-    QUERY->doc_var(QUERY, "Shift");
-    static t_CKINT ImGuiMod_Alt = 16384;
-    QUERY->add_svar(QUERY, "int", "Mod_Alt", true, &ImGuiMod_Alt);
-    QUERY->doc_var(QUERY, "Option/Menu");
-    static t_CKINT ImGuiMod_Super = 32768;
-    QUERY->add_svar(QUERY, "int", "Mod_Super", true, &ImGuiMod_Super);
-    QUERY->doc_var(QUERY, "Windows/Super (non-macOS), Ctrl (macOS)");
-    static t_CKINT ImGuiKey_KeysData_SIZE = 154;
-    QUERY->add_svar(QUERY, "int", "KeysData_SIZE", true, &ImGuiKey_KeysData_SIZE);
-    QUERY->doc_var(QUERY, "Size of KeysData[]: only hold named keys");
-    static t_CKINT ImGuiKey_KeysData_OFFSET = 512;
-    QUERY->add_svar(QUERY, "int", "KeysData_OFFSET", true, &ImGuiKey_KeysData_OFFSET);
-    QUERY->doc_var(QUERY,
-                   "Accesses to io.KeysData[] must use (key - "
-                   "ImGuiKey_KeysData_OFFSET) index.");
-    QUERY->end_class(QUERY);
+    { // UI_Key
+        QUERY->begin_class(QUERY, "UI_Key", "Object");
+        QUERY->doc_class(
+          QUERY,
+          "A key identifier (ImGuiKey_XXX or ImGuiMod_XXX value): can represent "
+          "Keyboard, Mouse and Gamepad values..\nAll our named keys are >= 512. "
+          "Keys value 0 to 511 are left unused as legacy native/opaque key values "
+          "(< 1.87)..\nSince >= 1.89 we increased typing (went from int to enum), "
+          "some legacy code may need a cast to ImGuiKey..\nRead details about the "
+          "1.87 and 1.89 transition : "
+          "https:github.com/ocornut/imgui/issues/4921.\nNote that \"Keys\" related "
+          "to physical keys and are not the same concept as input \"Characters\", "
+          "the later are submitted via io.AddInputCharacter()..\nThe keyboard key "
+          "enum values are named after the keys on a standard US keyboard, and on "
+          "other keyboard types the keys reported may not match the "
+          "keycaps..\nForward declared enum type ImGuiKey");
+        static t_CKINT ImGuiKey_None = 0;
+        QUERY->add_svar(QUERY, "int", "None", true, &ImGuiKey_None);
+        static t_CKINT ImGuiKey_Tab = 512;
+        QUERY->add_svar(QUERY, "int", "Tab", true, &ImGuiKey_Tab);
+        QUERY->doc_var(QUERY, "== ImGuiKey_NamedKey_BEGIN");
+        static t_CKINT ImGuiKey_LeftArrow = 513;
+        QUERY->add_svar(QUERY, "int", "LeftArrow", true, &ImGuiKey_LeftArrow);
+        static t_CKINT ImGuiKey_RightArrow = 514;
+        QUERY->add_svar(QUERY, "int", "RightArrow", true, &ImGuiKey_RightArrow);
+        static t_CKINT ImGuiKey_UpArrow = 515;
+        QUERY->add_svar(QUERY, "int", "UpArrow", true, &ImGuiKey_UpArrow);
+        static t_CKINT ImGuiKey_DownArrow = 516;
+        QUERY->add_svar(QUERY, "int", "DownArrow", true, &ImGuiKey_DownArrow);
+        static t_CKINT ImGuiKey_PageUp = 517;
+        QUERY->add_svar(QUERY, "int", "PageUp", true, &ImGuiKey_PageUp);
+        static t_CKINT ImGuiKey_PageDown = 518;
+        QUERY->add_svar(QUERY, "int", "PageDown", true, &ImGuiKey_PageDown);
+        static t_CKINT ImGuiKey_Home = 519;
+        QUERY->add_svar(QUERY, "int", "Home", true, &ImGuiKey_Home);
+        static t_CKINT ImGuiKey_End = 520;
+        QUERY->add_svar(QUERY, "int", "End", true, &ImGuiKey_End);
+        static t_CKINT ImGuiKey_Insert = 521;
+        QUERY->add_svar(QUERY, "int", "Insert", true, &ImGuiKey_Insert);
+        static t_CKINT ImGuiKey_Delete = 522;
+        QUERY->add_svar(QUERY, "int", "Delete", true, &ImGuiKey_Delete);
+        static t_CKINT ImGuiKey_Backspace = 523;
+        QUERY->add_svar(QUERY, "int", "Backspace", true, &ImGuiKey_Backspace);
+        static t_CKINT ImGuiKey_Space = 524;
+        QUERY->add_svar(QUERY, "int", "Space", true, &ImGuiKey_Space);
+        static t_CKINT ImGuiKey_Enter = 525;
+        QUERY->add_svar(QUERY, "int", "Enter", true, &ImGuiKey_Enter);
+        static t_CKINT ImGuiKey_Escape = 526;
+        QUERY->add_svar(QUERY, "int", "Escape", true, &ImGuiKey_Escape);
+        static t_CKINT ImGuiKey_LeftCtrl = 527;
+        QUERY->add_svar(QUERY, "int", "LeftCtrl", true, &ImGuiKey_LeftCtrl);
+        static t_CKINT ImGuiKey_LeftShift = 528;
+        QUERY->add_svar(QUERY, "int", "LeftShift", true, &ImGuiKey_LeftShift);
+        static t_CKINT ImGuiKey_LeftAlt = 529;
+        QUERY->add_svar(QUERY, "int", "LeftAlt", true, &ImGuiKey_LeftAlt);
+        static t_CKINT ImGuiKey_LeftSuper = 530;
+        QUERY->add_svar(QUERY, "int", "LeftSuper", true, &ImGuiKey_LeftSuper);
+        static t_CKINT ImGuiKey_RightCtrl = 531;
+        QUERY->add_svar(QUERY, "int", "RightCtrl", true, &ImGuiKey_RightCtrl);
+        static t_CKINT ImGuiKey_RightShift = 532;
+        QUERY->add_svar(QUERY, "int", "RightShift", true, &ImGuiKey_RightShift);
+        static t_CKINT ImGuiKey_RightAlt = 533;
+        QUERY->add_svar(QUERY, "int", "RightAlt", true, &ImGuiKey_RightAlt);
+        static t_CKINT ImGuiKey_RightSuper = 534;
+        QUERY->add_svar(QUERY, "int", "RightSuper", true, &ImGuiKey_RightSuper);
+        static t_CKINT ImGuiKey_Menu = 535;
+        QUERY->add_svar(QUERY, "int", "Menu", true, &ImGuiKey_Menu);
+        static t_CKINT ImGuiKey_0 = 536;
+        QUERY->add_svar(QUERY, "int", "Num0", true, &ImGuiKey_0);
+        static t_CKINT ImGuiKey_1 = 537;
+        QUERY->add_svar(QUERY, "int", "Num1", true, &ImGuiKey_1);
+        static t_CKINT ImGuiKey_2 = 538;
+        QUERY->add_svar(QUERY, "int", "Num2", true, &ImGuiKey_2);
+        static t_CKINT ImGuiKey_3 = 539;
+        QUERY->add_svar(QUERY, "int", "Num3", true, &ImGuiKey_3);
+        static t_CKINT ImGuiKey_4 = 540;
+        QUERY->add_svar(QUERY, "int", "Num4", true, &ImGuiKey_4);
+        static t_CKINT ImGuiKey_5 = 541;
+        QUERY->add_svar(QUERY, "int", "Num5", true, &ImGuiKey_5);
+        static t_CKINT ImGuiKey_6 = 542;
+        QUERY->add_svar(QUERY, "int", "Num6", true, &ImGuiKey_6);
+        static t_CKINT ImGuiKey_7 = 543;
+        QUERY->add_svar(QUERY, "int", "Num7", true, &ImGuiKey_7);
+        static t_CKINT ImGuiKey_8 = 544;
+        QUERY->add_svar(QUERY, "int", "Num8", true, &ImGuiKey_8);
+        static t_CKINT ImGuiKey_9 = 545;
+        QUERY->add_svar(QUERY, "int", "Num9", true, &ImGuiKey_9);
+        static t_CKINT ImGuiKey_A = 546;
+        QUERY->add_svar(QUERY, "int", "A", true, &ImGuiKey_A);
+        static t_CKINT ImGuiKey_B = 547;
+        QUERY->add_svar(QUERY, "int", "B", true, &ImGuiKey_B);
+        static t_CKINT ImGuiKey_C = 548;
+        QUERY->add_svar(QUERY, "int", "C", true, &ImGuiKey_C);
+        static t_CKINT ImGuiKey_D = 549;
+        QUERY->add_svar(QUERY, "int", "D", true, &ImGuiKey_D);
+        static t_CKINT ImGuiKey_E = 550;
+        QUERY->add_svar(QUERY, "int", "E", true, &ImGuiKey_E);
+        static t_CKINT ImGuiKey_F = 551;
+        QUERY->add_svar(QUERY, "int", "F", true, &ImGuiKey_F);
+        static t_CKINT ImGuiKey_G = 552;
+        QUERY->add_svar(QUERY, "int", "G", true, &ImGuiKey_G);
+        static t_CKINT ImGuiKey_H = 553;
+        QUERY->add_svar(QUERY, "int", "H", true, &ImGuiKey_H);
+        static t_CKINT ImGuiKey_I = 554;
+        QUERY->add_svar(QUERY, "int", "I", true, &ImGuiKey_I);
+        static t_CKINT ImGuiKey_J = 555;
+        QUERY->add_svar(QUERY, "int", "J", true, &ImGuiKey_J);
+        static t_CKINT ImGuiKey_K = 556;
+        QUERY->add_svar(QUERY, "int", "K", true, &ImGuiKey_K);
+        static t_CKINT ImGuiKey_L = 557;
+        QUERY->add_svar(QUERY, "int", "L", true, &ImGuiKey_L);
+        static t_CKINT ImGuiKey_M = 558;
+        QUERY->add_svar(QUERY, "int", "M", true, &ImGuiKey_M);
+        static t_CKINT ImGuiKey_N = 559;
+        QUERY->add_svar(QUERY, "int", "N", true, &ImGuiKey_N);
+        static t_CKINT ImGuiKey_O = 560;
+        QUERY->add_svar(QUERY, "int", "O", true, &ImGuiKey_O);
+        static t_CKINT ImGuiKey_P = 561;
+        QUERY->add_svar(QUERY, "int", "P", true, &ImGuiKey_P);
+        static t_CKINT ImGuiKey_Q = 562;
+        QUERY->add_svar(QUERY, "int", "Q", true, &ImGuiKey_Q);
+        static t_CKINT ImGuiKey_R = 563;
+        QUERY->add_svar(QUERY, "int", "R", true, &ImGuiKey_R);
+        static t_CKINT ImGuiKey_S = 564;
+        QUERY->add_svar(QUERY, "int", "S", true, &ImGuiKey_S);
+        static t_CKINT ImGuiKey_T = 565;
+        QUERY->add_svar(QUERY, "int", "T", true, &ImGuiKey_T);
+        static t_CKINT ImGuiKey_U = 566;
+        QUERY->add_svar(QUERY, "int", "U", true, &ImGuiKey_U);
+        static t_CKINT ImGuiKey_V = 567;
+        QUERY->add_svar(QUERY, "int", "V", true, &ImGuiKey_V);
+        static t_CKINT ImGuiKey_W = 568;
+        QUERY->add_svar(QUERY, "int", "W", true, &ImGuiKey_W);
+        static t_CKINT ImGuiKey_X = 569;
+        QUERY->add_svar(QUERY, "int", "X", true, &ImGuiKey_X);
+        static t_CKINT ImGuiKey_Y = 570;
+        QUERY->add_svar(QUERY, "int", "Y", true, &ImGuiKey_Y);
+        static t_CKINT ImGuiKey_Z = 571;
+        QUERY->add_svar(QUERY, "int", "Z", true, &ImGuiKey_Z);
+        static t_CKINT ImGuiKey_F1 = 572;
+        QUERY->add_svar(QUERY, "int", "F1", true, &ImGuiKey_F1);
+        static t_CKINT ImGuiKey_F2 = 573;
+        QUERY->add_svar(QUERY, "int", "F2", true, &ImGuiKey_F2);
+        static t_CKINT ImGuiKey_F3 = 574;
+        QUERY->add_svar(QUERY, "int", "F3", true, &ImGuiKey_F3);
+        static t_CKINT ImGuiKey_F4 = 575;
+        QUERY->add_svar(QUERY, "int", "F4", true, &ImGuiKey_F4);
+        static t_CKINT ImGuiKey_F5 = 576;
+        QUERY->add_svar(QUERY, "int", "F5", true, &ImGuiKey_F5);
+        static t_CKINT ImGuiKey_F6 = 577;
+        QUERY->add_svar(QUERY, "int", "F6", true, &ImGuiKey_F6);
+        static t_CKINT ImGuiKey_F7 = 578;
+        QUERY->add_svar(QUERY, "int", "F7", true, &ImGuiKey_F7);
+        static t_CKINT ImGuiKey_F8 = 579;
+        QUERY->add_svar(QUERY, "int", "F8", true, &ImGuiKey_F8);
+        static t_CKINT ImGuiKey_F9 = 580;
+        QUERY->add_svar(QUERY, "int", "F9", true, &ImGuiKey_F9);
+        static t_CKINT ImGuiKey_F10 = 581;
+        QUERY->add_svar(QUERY, "int", "F10", true, &ImGuiKey_F10);
+        static t_CKINT ImGuiKey_F11 = 582;
+        QUERY->add_svar(QUERY, "int", "F11", true, &ImGuiKey_F11);
+        static t_CKINT ImGuiKey_F12 = 583;
+        QUERY->add_svar(QUERY, "int", "F12", true, &ImGuiKey_F12);
+        static t_CKINT ImGuiKey_F13 = 584;
+        QUERY->add_svar(QUERY, "int", "F13", true, &ImGuiKey_F13);
+        static t_CKINT ImGuiKey_F14 = 585;
+        QUERY->add_svar(QUERY, "int", "F14", true, &ImGuiKey_F14);
+        static t_CKINT ImGuiKey_F15 = 586;
+        QUERY->add_svar(QUERY, "int", "F15", true, &ImGuiKey_F15);
+        static t_CKINT ImGuiKey_F16 = 587;
+        QUERY->add_svar(QUERY, "int", "F16", true, &ImGuiKey_F16);
+        static t_CKINT ImGuiKey_F17 = 588;
+        QUERY->add_svar(QUERY, "int", "F17", true, &ImGuiKey_F17);
+        static t_CKINT ImGuiKey_F18 = 589;
+        QUERY->add_svar(QUERY, "int", "F18", true, &ImGuiKey_F18);
+        static t_CKINT ImGuiKey_F19 = 590;
+        QUERY->add_svar(QUERY, "int", "F19", true, &ImGuiKey_F19);
+        static t_CKINT ImGuiKey_F20 = 591;
+        QUERY->add_svar(QUERY, "int", "F20", true, &ImGuiKey_F20);
+        static t_CKINT ImGuiKey_F21 = 592;
+        QUERY->add_svar(QUERY, "int", "F21", true, &ImGuiKey_F21);
+        static t_CKINT ImGuiKey_F22 = 593;
+        QUERY->add_svar(QUERY, "int", "F22", true, &ImGuiKey_F22);
+        static t_CKINT ImGuiKey_F23 = 594;
+        QUERY->add_svar(QUERY, "int", "F23", true, &ImGuiKey_F23);
+        static t_CKINT ImGuiKey_F24 = 595;
+        QUERY->add_svar(QUERY, "int", "F24", true, &ImGuiKey_F24);
+        static t_CKINT ImGuiKey_Apostrophe = 596;
+        QUERY->add_svar(QUERY, "int", "Apostrophe", true, &ImGuiKey_Apostrophe);
+        QUERY->doc_var(QUERY, "'");
+        static t_CKINT ImGuiKey_Comma = 597;
+        QUERY->add_svar(QUERY, "int", "Comma", true, &ImGuiKey_Comma);
+        QUERY->doc_var(QUERY, ",");
+        static t_CKINT ImGuiKey_Minus = 598;
+        QUERY->add_svar(QUERY, "int", "Minus", true, &ImGuiKey_Minus);
+        QUERY->doc_var(QUERY, "-");
+        static t_CKINT ImGuiKey_Period = 599;
+        QUERY->add_svar(QUERY, "int", "Period", true, &ImGuiKey_Period);
+        QUERY->doc_var(QUERY, ".");
+        static t_CKINT ImGuiKey_Slash = 600;
+        QUERY->add_svar(QUERY, "int", "Slash", true, &ImGuiKey_Slash);
+        QUERY->doc_var(QUERY, "/");
+        static t_CKINT ImGuiKey_Semicolon = 601;
+        QUERY->add_svar(QUERY, "int", "Semicolon", true, &ImGuiKey_Semicolon);
+        QUERY->doc_var(QUERY, ";");
+        static t_CKINT ImGuiKey_Equal = 602;
+        QUERY->add_svar(QUERY, "int", "Equal", true, &ImGuiKey_Equal);
+        QUERY->doc_var(QUERY, "=");
+        static t_CKINT ImGuiKey_LeftBracket = 603;
+        QUERY->add_svar(QUERY, "int", "LeftBracket", true, &ImGuiKey_LeftBracket);
+        QUERY->doc_var(QUERY, "[");
+        static t_CKINT ImGuiKey_Backslash = 604;
+        QUERY->add_svar(QUERY, "int", "Backslash", true, &ImGuiKey_Backslash);
+        QUERY->doc_var(QUERY,
+                       "\\ (this text inhibit multiline comment caused by backslash)");
+        static t_CKINT ImGuiKey_RightBracket = 605;
+        QUERY->add_svar(QUERY, "int", "RightBracket", true, &ImGuiKey_RightBracket);
+        QUERY->doc_var(QUERY, "]");
+        static t_CKINT ImGuiKey_GraveAccent = 606;
+        QUERY->add_svar(QUERY, "int", "GraveAccent", true, &ImGuiKey_GraveAccent);
+        QUERY->doc_var(QUERY, "`");
+        static t_CKINT ImGuiKey_CapsLock = 607;
+        QUERY->add_svar(QUERY, "int", "CapsLock", true, &ImGuiKey_CapsLock);
+        static t_CKINT ImGuiKey_ScrollLock = 608;
+        QUERY->add_svar(QUERY, "int", "ScrollLock", true, &ImGuiKey_ScrollLock);
+        static t_CKINT ImGuiKey_NumLock = 609;
+        QUERY->add_svar(QUERY, "int", "NumLock", true, &ImGuiKey_NumLock);
+        static t_CKINT ImGuiKey_PrintScreen = 610;
+        QUERY->add_svar(QUERY, "int", "PrintScreen", true, &ImGuiKey_PrintScreen);
+        static t_CKINT ImGuiKey_Pause = 611;
+        QUERY->add_svar(QUERY, "int", "Pause", true, &ImGuiKey_Pause);
+        static t_CKINT ImGuiKey_Keypad0 = 612;
+        QUERY->add_svar(QUERY, "int", "Keypad0", true, &ImGuiKey_Keypad0);
+        static t_CKINT ImGuiKey_Keypad1 = 613;
+        QUERY->add_svar(QUERY, "int", "Keypad1", true, &ImGuiKey_Keypad1);
+        static t_CKINT ImGuiKey_Keypad2 = 614;
+        QUERY->add_svar(QUERY, "int", "Keypad2", true, &ImGuiKey_Keypad2);
+        static t_CKINT ImGuiKey_Keypad3 = 615;
+        QUERY->add_svar(QUERY, "int", "Keypad3", true, &ImGuiKey_Keypad3);
+        static t_CKINT ImGuiKey_Keypad4 = 616;
+        QUERY->add_svar(QUERY, "int", "Keypad4", true, &ImGuiKey_Keypad4);
+        static t_CKINT ImGuiKey_Keypad5 = 617;
+        QUERY->add_svar(QUERY, "int", "Keypad5", true, &ImGuiKey_Keypad5);
+        static t_CKINT ImGuiKey_Keypad6 = 618;
+        QUERY->add_svar(QUERY, "int", "Keypad6", true, &ImGuiKey_Keypad6);
+        static t_CKINT ImGuiKey_Keypad7 = 619;
+        QUERY->add_svar(QUERY, "int", "Keypad7", true, &ImGuiKey_Keypad7);
+        static t_CKINT ImGuiKey_Keypad8 = 620;
+        QUERY->add_svar(QUERY, "int", "Keypad8", true, &ImGuiKey_Keypad8);
+        static t_CKINT ImGuiKey_Keypad9 = 621;
+        QUERY->add_svar(QUERY, "int", "Keypad9", true, &ImGuiKey_Keypad9);
+        static t_CKINT ImGuiKey_KeypadDecimal = 622;
+        QUERY->add_svar(QUERY, "int", "KeypadDecimal", true, &ImGuiKey_KeypadDecimal);
+        static t_CKINT ImGuiKey_KeypadDivide = 623;
+        QUERY->add_svar(QUERY, "int", "KeypadDivide", true, &ImGuiKey_KeypadDivide);
+        static t_CKINT ImGuiKey_KeypadMultiply = 624;
+        QUERY->add_svar(QUERY, "int", "KeypadMultiply", true, &ImGuiKey_KeypadMultiply);
+        static t_CKINT ImGuiKey_KeypadSubtract = 625;
+        QUERY->add_svar(QUERY, "int", "KeypadSubtract", true, &ImGuiKey_KeypadSubtract);
+        static t_CKINT ImGuiKey_KeypadAdd = 626;
+        QUERY->add_svar(QUERY, "int", "KeypadAdd", true, &ImGuiKey_KeypadAdd);
+        static t_CKINT ImGuiKey_KeypadEnter = 627;
+        QUERY->add_svar(QUERY, "int", "KeypadEnter", true, &ImGuiKey_KeypadEnter);
+        static t_CKINT ImGuiKey_KeypadEqual = 628;
+        QUERY->add_svar(QUERY, "int", "KeypadEqual", true, &ImGuiKey_KeypadEqual);
+        static t_CKINT ImGuiKey_AppBack = 629;
+        QUERY->add_svar(QUERY, "int", "AppBack", true, &ImGuiKey_AppBack);
+        QUERY->doc_var(
+          QUERY,
+          "Available on some keyboard/mouses. Often referred as \"Browser Back\"");
+        static t_CKINT ImGuiKey_AppForward = 630;
+        QUERY->add_svar(QUERY, "int", "AppForward", true, &ImGuiKey_AppForward);
+        static t_CKINT ImGuiKey_GamepadStart = 631;
+        QUERY->add_svar(QUERY, "int", "GamepadStart", true, &ImGuiKey_GamepadStart);
+        QUERY->doc_var(QUERY, "Menu (Xbox)      + (Switch)   Start/Options (PS)");
+        static t_CKINT ImGuiKey_GamepadBack = 632;
+        QUERY->add_svar(QUERY, "int", "GamepadBack", true, &ImGuiKey_GamepadBack);
+        QUERY->doc_var(QUERY, "View (Xbox)      - (Switch)   Share (PS)");
+        static t_CKINT ImGuiKey_GamepadFaceLeft = 633;
+        QUERY->add_svar(QUERY, "int", "GamepadFaceLeft", true,
+                        &ImGuiKey_GamepadFaceLeft);
+        QUERY->doc_var(
+          QUERY,
+          "X (Xbox)         Y (Switch)   Square (PS)         Tap: Toggle Menu. "
+          "Hold: Windowing mode (Focus/Move/Resize windows)");
+        static t_CKINT ImGuiKey_GamepadFaceRight = 634;
+        QUERY->add_svar(QUERY, "int", "GamepadFaceRight", true,
+                        &ImGuiKey_GamepadFaceRight);
+        QUERY->doc_var(QUERY,
+                       "B (Xbox)         A (Switch)   Circle (PS)         Cancel / "
+                       "Close / Exit");
+        static t_CKINT ImGuiKey_GamepadFaceUp = 635;
+        QUERY->add_svar(QUERY, "int", "GamepadFaceUp", true, &ImGuiKey_GamepadFaceUp);
+        QUERY->doc_var(QUERY,
+                       "Y (Xbox)         X (Switch)   Triangle (PS)       Text "
+                       "Input / On-screen Keyboard");
+        static t_CKINT ImGuiKey_GamepadFaceDown = 636;
+        QUERY->add_svar(QUERY, "int", "GamepadFaceDown", true,
+                        &ImGuiKey_GamepadFaceDown);
+        QUERY->doc_var(QUERY,
+                       "A (Xbox)         B (Switch)   Cross (PS)          Activate "
+                       "/ Open / Toggle / Tweak");
+        static t_CKINT ImGuiKey_GamepadDpadLeft = 637;
+        QUERY->add_svar(QUERY, "int", "GamepadDpadLeft", true,
+                        &ImGuiKey_GamepadDpadLeft);
+        QUERY->doc_var(QUERY,
+                       "D-pad Left                                        Move / "
+                       "Tweak / Resize Window (in Windowing mode)");
+        static t_CKINT ImGuiKey_GamepadDpadRight = 638;
+        QUERY->add_svar(QUERY, "int", "GamepadDpadRight", true,
+                        &ImGuiKey_GamepadDpadRight);
+        QUERY->doc_var(QUERY,
+                       "D-pad Right                                       Move / "
+                       "Tweak / Resize Window (in Windowing mode)");
+        static t_CKINT ImGuiKey_GamepadDpadUp = 639;
+        QUERY->add_svar(QUERY, "int", "GamepadDpadUp", true, &ImGuiKey_GamepadDpadUp);
+        QUERY->doc_var(QUERY,
+                       "D-pad Up                                          Move / "
+                       "Tweak / Resize Window (in Windowing mode)");
+        static t_CKINT ImGuiKey_GamepadDpadDown = 640;
+        QUERY->add_svar(QUERY, "int", "GamepadDpadDown", true,
+                        &ImGuiKey_GamepadDpadDown);
+        QUERY->doc_var(QUERY,
+                       "D-pad Down                                        Move / "
+                       "Tweak / Resize Window (in Windowing mode)");
+        static t_CKINT ImGuiKey_GamepadL1 = 641;
+        QUERY->add_svar(QUERY, "int", "GamepadL1", true, &ImGuiKey_GamepadL1);
+        QUERY->doc_var(QUERY,
+                       "L Bumper (Xbox)  L (Switch)   L1 (PS)             Tweak "
+                       "Slower / Focus Previous (in Windowing mode)");
+        static t_CKINT ImGuiKey_GamepadR1 = 642;
+        QUERY->add_svar(QUERY, "int", "GamepadR1", true, &ImGuiKey_GamepadR1);
+        QUERY->doc_var(QUERY,
+                       "R Bumper (Xbox)  R (Switch)   R1 (PS)             Tweak "
+                       "Faster / Focus Next (in Windowing mode)");
+        static t_CKINT ImGuiKey_GamepadL2 = 643;
+        QUERY->add_svar(QUERY, "int", "GamepadL2", true, &ImGuiKey_GamepadL2);
+        QUERY->doc_var(QUERY, "L Trig. (Xbox)   ZL (Switch)  L2 (PS) [Analog]");
+        static t_CKINT ImGuiKey_GamepadR2 = 644;
+        QUERY->add_svar(QUERY, "int", "GamepadR2", true, &ImGuiKey_GamepadR2);
+        QUERY->doc_var(QUERY, "R Trig. (Xbox)   ZR (Switch)  R2 (PS) [Analog]");
+        static t_CKINT ImGuiKey_GamepadL3 = 645;
+        QUERY->add_svar(QUERY, "int", "GamepadL3", true, &ImGuiKey_GamepadL3);
+        QUERY->doc_var(QUERY, "L Stick (Xbox)   L3 (Switch)  L3 (PS)");
+        static t_CKINT ImGuiKey_GamepadR3 = 646;
+        QUERY->add_svar(QUERY, "int", "GamepadR3", true, &ImGuiKey_GamepadR3);
+        QUERY->doc_var(QUERY, "R Stick (Xbox)   R3 (Switch)  R3 (PS)");
+        static t_CKINT ImGuiKey_GamepadLStickLeft = 647;
+        QUERY->add_svar(QUERY, "int", "GamepadLStickLeft", true,
+                        &ImGuiKey_GamepadLStickLeft);
+        QUERY->doc_var(QUERY,
+                       "[Analog]                                          Move "
+                       "Window (in Windowing mode)");
+        static t_CKINT ImGuiKey_GamepadLStickRight = 648;
+        QUERY->add_svar(QUERY, "int", "GamepadLStickRight", true,
+                        &ImGuiKey_GamepadLStickRight);
+        QUERY->doc_var(QUERY,
+                       "[Analog]                                          Move "
+                       "Window (in Windowing mode)");
+        static t_CKINT ImGuiKey_GamepadLStickUp = 649;
+        QUERY->add_svar(QUERY, "int", "GamepadLStickUp", true,
+                        &ImGuiKey_GamepadLStickUp);
+        QUERY->doc_var(QUERY,
+                       "[Analog]                                          Move "
+                       "Window (in Windowing mode)");
+        static t_CKINT ImGuiKey_GamepadLStickDown = 650;
+        QUERY->add_svar(QUERY, "int", "GamepadLStickDown", true,
+                        &ImGuiKey_GamepadLStickDown);
+        QUERY->doc_var(QUERY,
+                       "[Analog]                                          Move "
+                       "Window (in Windowing mode)");
+        static t_CKINT ImGuiKey_GamepadRStickLeft = 651;
+        QUERY->add_svar(QUERY, "int", "GamepadRStickLeft", true,
+                        &ImGuiKey_GamepadRStickLeft);
+        QUERY->doc_var(QUERY, "[Analog]");
+        static t_CKINT ImGuiKey_GamepadRStickRight = 652;
+        QUERY->add_svar(QUERY, "int", "GamepadRStickRight", true,
+                        &ImGuiKey_GamepadRStickRight);
+        QUERY->doc_var(QUERY, "[Analog]");
+        static t_CKINT ImGuiKey_GamepadRStickUp = 653;
+        QUERY->add_svar(QUERY, "int", "GamepadRStickUp", true,
+                        &ImGuiKey_GamepadRStickUp);
+        QUERY->doc_var(QUERY, "[Analog]");
+        static t_CKINT ImGuiKey_GamepadRStickDown = 654;
+        QUERY->add_svar(QUERY, "int", "GamepadRStickDown", true,
+                        &ImGuiKey_GamepadRStickDown);
+        QUERY->doc_var(QUERY, "[Analog]");
+        static t_CKINT ImGuiKey_MouseLeft = 655;
+        QUERY->add_svar(QUERY, "int", "MouseLeft", true, &ImGuiKey_MouseLeft);
+        static t_CKINT ImGuiKey_MouseRight = 656;
+        QUERY->add_svar(QUERY, "int", "MouseRight", true, &ImGuiKey_MouseRight);
+        static t_CKINT ImGuiKey_MouseMiddle = 657;
+        QUERY->add_svar(QUERY, "int", "MouseMiddle", true, &ImGuiKey_MouseMiddle);
+        static t_CKINT ImGuiKey_MouseX1 = 658;
+        QUERY->add_svar(QUERY, "int", "MouseX1", true, &ImGuiKey_MouseX1);
+        static t_CKINT ImGuiKey_MouseX2 = 659;
+        QUERY->add_svar(QUERY, "int", "MouseX2", true, &ImGuiKey_MouseX2);
+        static t_CKINT ImGuiKey_MouseWheelX = 660;
+        QUERY->add_svar(QUERY, "int", "MouseWheelX", true, &ImGuiKey_MouseWheelX);
+        static t_CKINT ImGuiKey_MouseWheelY = 661;
+        QUERY->add_svar(QUERY, "int", "MouseWheelY", true, &ImGuiKey_MouseWheelY);
+        static t_CKINT ImGuiMod_None = 0;
+        QUERY->add_svar(QUERY, "int", "Mod_None", true, &ImGuiMod_None);
+        static t_CKINT ImGuiMod_Ctrl = 4096;
+        QUERY->add_svar(QUERY, "int", "Mod_Ctrl", true, &ImGuiMod_Ctrl);
+        QUERY->doc_var(QUERY, "Ctrl (non-macOS), Cmd (macOS)");
+        static t_CKINT ImGuiMod_Shift = 8192;
+        QUERY->add_svar(QUERY, "int", "Mod_Shift", true, &ImGuiMod_Shift);
+        QUERY->doc_var(QUERY, "Shift");
+        static t_CKINT ImGuiMod_Alt = 16384;
+        QUERY->add_svar(QUERY, "int", "Mod_Alt", true, &ImGuiMod_Alt);
+        QUERY->doc_var(QUERY, "Option/Menu");
+        static t_CKINT ImGuiMod_Super = 32768;
+        QUERY->add_svar(QUERY, "int", "Mod_Super", true, &ImGuiMod_Super);
+        QUERY->doc_var(QUERY, "Windows/Super (non-macOS), Ctrl (macOS)");
+        static t_CKINT ImGuiKey_KeysData_SIZE = 154;
+        QUERY->add_svar(QUERY, "int", "KeysData_SIZE", true, &ImGuiKey_KeysData_SIZE);
+        QUERY->doc_var(QUERY, "Size of KeysData[]: only hold named keys");
+        static t_CKINT ImGuiKey_KeysData_OFFSET = 512;
+        QUERY->add_svar(QUERY, "int", "KeysData_OFFSET", true,
+                        &ImGuiKey_KeysData_OFFSET);
+        QUERY->doc_var(QUERY,
+                       "Accesses to io.KeysData[] must use (key - "
+                       "ImGuiKey_KeysData_OFFSET) index.");
+        QUERY->end_class(QUERY);
+    } // UI_Key
+
+    { // UI_ConfigFlags
+        QUERY->begin_class(QUERY, "UI_ConfigFlags", "Object");
+        QUERY->doc_class(QUERY,
+                         "Configuration flags stored in io.ConfigFlags. Set by "
+                         "user/application..\n");
+        static t_CKINT ImGuiConfigFlags_None = 0;
+        QUERY->add_svar(QUERY, "int", "None", true, &ImGuiConfigFlags_None);
+        static t_CKINT ImGuiConfigFlags_NavEnableKeyboard = 1;
+        QUERY->add_svar(QUERY, "int", "NavEnableKeyboard", true,
+                        &ImGuiConfigFlags_NavEnableKeyboard);
+        QUERY->doc_var(QUERY,
+                       "Master keyboard navigation enable flag. Enable full "
+                       "Tabbing + directional arrows + space/enter to activate.");
+        static t_CKINT ImGuiConfigFlags_NavEnableGamepad = 2;
+        QUERY->add_svar(QUERY, "int", "NavEnableGamepad", true,
+                        &ImGuiConfigFlags_NavEnableGamepad);
+        QUERY->doc_var(QUERY,
+                       "Master gamepad navigation enable flag. Backend also needs "
+                       "to set ImGuiBackendFlags_HasGamepad.");
+        static t_CKINT ImGuiConfigFlags_NavEnableSetMousePos = 4;
+        QUERY->add_svar(QUERY, "int", "NavEnableSetMousePos", true,
+                        &ImGuiConfigFlags_NavEnableSetMousePos);
+        QUERY->doc_var(
+          QUERY,
+          "Instruct navigation to move the mouse cursor. May be useful on "
+          "TV/console systems where moving a virtual mouse is awkward. Will update "
+          "io.MousePos and set io.WantSetMousePos=true. If enabled you MUST honor "
+          "io.WantSetMousePos requests in your backend, otherwise ImGui will react "
+          "as if the mouse is jumping around back and forth.");
+        static t_CKINT ImGuiConfigFlags_NavNoCaptureKeyboard = 8;
+        QUERY->add_svar(QUERY, "int", "NavNoCaptureKeyboard", true,
+                        &ImGuiConfigFlags_NavNoCaptureKeyboard);
+        QUERY->doc_var(QUERY,
+                       "Instruct navigation to not set the io.WantCaptureKeyboard "
+                       "flag when io.NavActive is set.");
+        static t_CKINT ImGuiConfigFlags_NoMouse = 16;
+        QUERY->add_svar(QUERY, "int", "NoMouse", true, &ImGuiConfigFlags_NoMouse);
+        QUERY->doc_var(
+          QUERY,
+          "Instruct imgui to clear mouse position/buttons in NewFrame(). This "
+          "allows ignoring the mouse information set by the backend.");
+        static t_CKINT ImGuiConfigFlags_NoMouseCursorChange = 32;
+        QUERY->add_svar(QUERY, "int", "NoMouseCursorChange", true,
+                        &ImGuiConfigFlags_NoMouseCursorChange);
+        QUERY->doc_var(
+          QUERY,
+          "Instruct backend to not alter mouse cursor shape and visibility. Use if "
+          "the backend cursor changes are interfering with yours and you don't "
+          "want to use SetMouseCursor() to change mouse cursor. You may want to "
+          "honor requests from imgui by reading GetMouseCursor() yourself "
+          "instead.");
+        static t_CKINT ImGuiConfigFlags_DockingEnable = 64;
+        QUERY->add_svar(QUERY, "int", "DockingEnable", true,
+                        &ImGuiConfigFlags_DockingEnable);
+        QUERY->doc_var(QUERY, "Docking enable flags.");
+        static t_CKINT ImGuiConfigFlags_ViewportsEnable = 1024;
+        QUERY->add_svar(QUERY, "int", "ViewportsEnable", true,
+                        &ImGuiConfigFlags_ViewportsEnable);
+        QUERY->doc_var(
+          QUERY,
+          "Viewport enable flags (require both "
+          "ImGuiBackendFlags_PlatformHasViewports + "
+          "ImGuiBackendFlags_RendererHasViewports set by the respective backends)");
+        static t_CKINT ImGuiConfigFlags_DpiEnableScaleViewports = 16384;
+        QUERY->add_svar(QUERY, "int", "DpiEnableScaleViewports", true,
+                        &ImGuiConfigFlags_DpiEnableScaleViewports);
+        QUERY->doc_var(
+          QUERY,
+          "[BETA: Don't use] FIXME-DPI: Reposition and resize imgui windows when "
+          "the DpiScale of a viewport changed (mostly useful for the main viewport "
+          "hosting other window). Note that resizing the main window itself is up "
+          "to your application.");
+        static t_CKINT ImGuiConfigFlags_DpiEnableScaleFonts = 32768;
+        QUERY->add_svar(QUERY, "int", "DpiEnableScaleFonts", true,
+                        &ImGuiConfigFlags_DpiEnableScaleFonts);
+        QUERY->doc_var(QUERY,
+                       "[BETA: Don't use] FIXME-DPI: Request bitmap-scaled fonts "
+                       "to match DpiScale. This is a very low-quality workaround. "
+                       "The correct way to handle DPI is _currently_ to replace "
+                       "the atlas and/or fonts in the Platform_OnChangedViewport "
+                       "callback, but this is all early work in progress.");
+        static t_CKINT ImGuiConfigFlags_IsSRGB = 1048576;
+        QUERY->add_svar(QUERY, "int", "IsSRGB", true, &ImGuiConfigFlags_IsSRGB);
+        QUERY->doc_var(QUERY, "Application is SRGB-aware.");
+        static t_CKINT ImGuiConfigFlags_IsTouchScreen = 2097152;
+        QUERY->add_svar(QUERY, "int", "IsTouchScreen", true,
+                        &ImGuiConfigFlags_IsTouchScreen);
+        QUERY->doc_var(QUERY,
+                       "Application is using a touch screen instead of a mouse.");
+        QUERY->end_class(QUERY);
+    } // UI_ConfigFlags
+
+    { // UI_BackendFlags
+        QUERY->begin_class(QUERY, "UI_BackendFlags", "Object");
+        QUERY->doc_class(QUERY,
+                         "Backend capabilities flags stored in io.BackendFlags. "
+                         "Set by imgui_impl_xxx or custom backend..\n");
+        static t_CKINT ImGuiBackendFlags_None = 0;
+        QUERY->add_svar(QUERY, "int", "None", true, &ImGuiBackendFlags_None);
+        static t_CKINT ImGuiBackendFlags_HasGamepad = 1;
+        QUERY->add_svar(QUERY, "int", "HasGamepad", true,
+                        &ImGuiBackendFlags_HasGamepad);
+        QUERY->doc_var(
+          QUERY, "Backend Platform supports gamepad and currently has one connected.");
+        static t_CKINT ImGuiBackendFlags_HasMouseCursors = 2;
+        QUERY->add_svar(QUERY, "int", "HasMouseCursors", true,
+                        &ImGuiBackendFlags_HasMouseCursors);
+        QUERY->doc_var(QUERY,
+                       "Backend Platform supports honoring GetMouseCursor() value "
+                       "to change the OS cursor shape.");
+        static t_CKINT ImGuiBackendFlags_HasSetMousePos = 4;
+        QUERY->add_svar(QUERY, "int", "HasSetMousePos", true,
+                        &ImGuiBackendFlags_HasSetMousePos);
+        QUERY->doc_var(QUERY,
+                       "Backend Platform supports io.WantSetMousePos requests to "
+                       "reposition the OS mouse position (only used if "
+                       "ImGuiConfigFlags_NavEnableSetMousePos is set).");
+        static t_CKINT ImGuiBackendFlags_RendererHasVtxOffset = 8;
+        QUERY->add_svar(QUERY, "int", "RendererHasVtxOffset", true,
+                        &ImGuiBackendFlags_RendererHasVtxOffset);
+        QUERY->doc_var(
+          QUERY,
+          "Backend Renderer supports ImDrawCmd::VtxOffset. This enables output of "
+          "large meshes (64K+ vertices) while still using 16-bit indices.");
+        static t_CKINT ImGuiBackendFlags_PlatformHasViewports = 1024;
+        QUERY->add_svar(QUERY, "int", "PlatformHasViewports", true,
+                        &ImGuiBackendFlags_PlatformHasViewports);
+        QUERY->doc_var(QUERY, "Backend Platform supports multiple viewports.");
+        static t_CKINT ImGuiBackendFlags_HasMouseHoveredViewport = 2048;
+        QUERY->add_svar(QUERY, "int", "HasMouseHoveredViewport", true,
+                        &ImGuiBackendFlags_HasMouseHoveredViewport);
+        QUERY->doc_var(
+          QUERY,
+          "Backend Platform supports calling io.AddMouseViewportEvent() with the "
+          "viewport under the mouse. IF POSSIBLE, ignore viewports with the "
+          "ImGuiViewportFlags_NoInputs flag (Win32 backend, GLFW 3.30+ backend can "
+          "do this, SDL backend cannot). If this cannot be done, Dear ImGui needs "
+          "to use a flawed heuristic to find the viewport under.");
+        static t_CKINT ImGuiBackendFlags_RendererHasViewports = 4096;
+        QUERY->add_svar(QUERY, "int", "RendererHasViewports", true,
+                        &ImGuiBackendFlags_RendererHasViewports);
+        QUERY->doc_var(QUERY, "Backend Renderer supports multiple viewports.");
+        QUERY->end_class(QUERY);
+    } // UI_BackendFlags
 
     QUERY->begin_class(QUERY, "UI_MouseCursor", "Object");
     QUERY->doc_class(
@@ -4615,2140 +5164,2263 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
     // "UI_InputTextCallback",
     //                        "handler");
 
-    // UI ---------------------------------------------------------------------
-    QUERY->begin_class(QUERY, "UI", "Object");
-    ADD_EX("deep/ckfxr.ck");
-
-    // ChuGL widgets
-    SFUN(ui_scenegraph, "void", "scenegraph");
-    ARG(SG_CKNames[SG_COMPONENT_TRANSFORM], "root");
-    QUERY->doc_func(QUERY,
-                    "Scene tree widget. "
-                    "View data about a given GGen and all its children. "
-                    "A simple version of a typical Editor Scenegraph");
-
-    // config
-    SFUN(ui_set_disabled, "void", "disabled");
-    ARG("int", "disabled");
-    DOC_FUNC(
-      "Set whether imgui is disabled (does not call call new frame, does not "
-      "submit UI draw lists to renderer)"
-      "Do this if your application does not render UI and needs the extra "
-      "performance from skipping UI overhead. Saves ~2ms on the render thread."
-      "While UI.disabled == true, DO NOT call any other UI functions. Doing so "
-      "results in undefined behavior");
-
-    // IO helpers
-    SFUN(ui_want_capture_mouse, "int", "wantCaptureMouse");
-    DOC_FUNC(
-      "When wantCaptureMouse=true, the mouse is interacting with UI widgets, "
-      "so you know to discard/hide the mouse inputs from your underlying "
-      "application.");
-
-    SFUN(ui_want_capture_keyboard, "int", "wantCaptureKeyboard");
-    DOC_FUNC(
-      "When wantCaptureKeyboard=true, the keyboard is interacting with UI "
-      "widgets, so you know to discard/hide the keyboard inputs from your "
-      "underlying application.");
-
-    // Main
-    SFUN(ui_get_style, "UI_Style", "getStyle");
-    DOC_FUNC(
-      "access the Style structure (colors, sizes). Always use "
-      "PushStyleColor(), PushStyleVar() to modify style mid-frame!");
-
-    // Demo, Debug, Information
-    QUERY->add_sfun(QUERY, ui_ShowDemoWindow, "void", "showDemoWindow");
-    QUERY->add_arg(QUERY, "UI_Bool", "p_open");
-    QUERY->doc_func(QUERY,
-                    "create Demo window. demonstrate most ImGui features. call "
-                    "this to learn about the library! try to make it always "
-                    "available in your application!");
-    QUERY->add_sfun(QUERY, ui_ShowMetricsWindow, "void", "showMetricsWindow");
-    QUERY->add_arg(QUERY, "UI_Bool", "p_open");
-    QUERY->doc_func(
-      QUERY,
-      "create Metrics/Debugger window. display Dear ImGui internals: windows, "
-      "draw commands, various internal state, etc.");
-    QUERY->add_sfun(QUERY, ui_ShowDebugLogWindow, "void", "showDebugLogWindow");
-    QUERY->add_arg(QUERY, "UI_Bool", "p_open");
-    QUERY->doc_func(QUERY,
-                    "create Debug Log window. display a simplified log of "
-                    "important dear imgui events.");
-    QUERY->add_sfun(QUERY, ui_showStyleEditor, "void", "showStyleEditor");
-    QUERY->doc_func(QUERY,
-                    "add style selector block (not a window), essentially a "
-                    "combo listing the default styles.");
-
-    SFUN(ui_ShowIDStackToolWindowEx, "void", "showIDStackToolWindow");
-    ARG("UI_Bool", "p_open");
-    DOC_FUNC(
-      "create Stack Tool window. hover items with mouse to query "
-      "information about the source of their unique ID.");
-
-    SFUN(ui_ShowAboutWindow, "void", "showAboutWindow");
-    ARG("UI_Bool", "p_open");
-    DOC_FUNC(
-      "create About window. display Dear ImGui version, credits and "
-      "build/system information.");
-
-    SFUN(ui_ShowStyleSelector, "int", "showStyleSelector");
-    ARG("string", "label");
-    DOC_FUNC(
-      "add style selector block (not a window), essentially a combo "
-      "listing the default styles.");
-
-    SFUN(ui_ShowFontSelector, "void", "showFontSelector");
-    ARG("string", "label");
-    DOC_FUNC(
-      "add font selector block (not a window), essentially a combo "
-      "listing the loaded fonts.");
-
-    SFUN(ui_ShowUserGuide, "void", "showUserGuide");
-    DOC_FUNC(
-      "add basic help/info block (not a window): how to manipulate ImGui "
-      "as an end-user (mouse/keyboard controls).");
-
-    SFUN(ui_GetVersion, "string", "getVersion");
-    DOC_FUNC(
-      "get the compiled version string e.g. \"1.80 WIP\" (essentially "
-      "the value for IMGUI_VERSION from the compiled version of "
-      "imgui.cpp)");
-
-    // Windows
-    QUERY->add_sfun(QUERY, ui_begin, "int", "begin");
-    QUERY->add_arg(QUERY, "string", "name");
-    QUERY->add_arg(QUERY, "UI_Bool", "p_open");
-    QUERY->add_arg(QUERY, "int", "flags"); // ImGuiWindowFlags
-    DOC_FUNC(
-      " `flags` of type UI_WindowFlags.  "
-      "- UI.begin() = push window to the stack and start appending to it. UI.end() = "
-      "pop window from the stack. "
-      "- Passing 'UI_Bool p_open != NULL' shows a window-closing widget in the "
-      "upper-right corner of the window, "
-      "  which clicking will set the boolean to false when clicked. "
-      "- You may append multiple times to the same window during the same frame by "
-      "calling Begin()/End() pairs multiple times. "
-      "  Some information such as 'flags' or 'p_open' will only be considered by the "
-      "first call to Begin(). "
-      "- Begin() return false to indicate the window is collapsed or fully clipped, so "
-      "you may early out and omit submitting "
-      "  anything to the window. Always call a matching End() for each Begin() call, "
-      "regardless of its return value! ");
-
-    SFUN(ui_begin_no_options, "int", "begin");
-    ARG("string", "name");
-    DOC_FUNC("Equivalent to UI.begin(name, null, 0)");
-
-    QUERY->add_sfun(QUERY, ui_end, "void", "end");
-
-    // Child windows
-    QUERY->add_sfun(QUERY, ui_BeginChild, "int", "beginChild");
-    QUERY->add_arg(QUERY, "string", "str_id");
-    QUERY->add_arg(QUERY, "vec2", "size");        // map ImVec2 --> vec2
-    QUERY->add_arg(QUERY, "int", "child_flags");  // ImGuiChildFlags
-    QUERY->add_arg(QUERY, "int", "window_flags"); // ImGuiWindowFlags
-    DOC_FUNC(
-      "Manual sizing (each axis can use a different setting e.g. ImVec2(0.0f, "
-      "400.0f)):\n"
-      "  == 0.0f: use remaining parent window size for this axis.\n"
-      "  > 0.0f: use specified size for this axis.\n"
-      "  < 0.0f: right/bottom-align to specified distance from available "
-      "content boundaries.\n"
-      "Specifying UI_ChildFlags.AutoResizeX or UI_ChildFlags.AutoResizeY"
-      "makes the sizing automatic based on child contents.\n"
-      "Combining both UI_ChildFlags.AutoResizeX _and_ "
-      "UI_ChildFlags.AutoResizeY defeats purpose of a scrolling region and is "
-      "NOT recommended.\n"
-      "BeginChild() returns false to indicate the window is collapsed or fully "
-      "clipped, so you may early out and omit submitting anything to the "
-      "window. Always call a matching EndChild() for each BeginChild() call, "
-      "regardless of its return value.");
-
-    QUERY->add_sfun(QUERY, ui_EndChild, "void", "endChild");
-
-    // Windows utilities
-    SFUN(ui_IsWindowAppearing, "int", "isWindowAppearing");
-
-    SFUN(ui_IsWindowCollapsed, "int", "isWindowCollapsed");
-
-    SFUN(ui_IsWindowFocused, "int", "isWindowFocused");
-    ARG("int", "ui_focused_flags");
-    DOC_FUNC(
-      "is current window focused? or its root/child, depending on flags. "
-      "flags are of type UI_FocusedFlags.");
-
-    SFUN(ui_IsWindowHovered, "int", "isWindowHovered");
-    ARG("int", "ui_hovered_flags");
-    DOC_FUNC(
-      "is current window hovered and hoverable (e.g. not blocked by a "
-      "popup/modal)? flags are of type UI_HoveredFlags.");
-
-    SFUN(ui_GetWindowDpiScale, "float", "getWindowDpiScale");
-    DOC_FUNC("get DPI scale currently associated to the current window's viewport.");
-
-    SFUN(ui_GetWindowPos, "vec2", "getWindowPos");
-    DOC_FUNC(
-      "get current window position in screen space (note: it is unlikely you "
-      "need to use this. Consider using current layout pos instead, "
-      "GetCursorScreenPos())");
-
-    SFUN(ui_GetWindowSize, "vec2", "getWindowSize");
-    DOC_FUNC(
-      "get current window size (note: it is unlikely you need to use this. "
-      "Consider using GetCursorScreenPos() and e.g. GetContentRegionAvail() "
-      "instead)");
-
-    SFUN(ui_GetWindowWidth, "float", "getWindowWidth");
-    DOC_FUNC("get current window width (shortcut for GetWindowSize().x)");
-
-    SFUN(ui_GetWindowHeight, "float", "getWindowHeight");
-    DOC_FUNC("get current window height (shortcut for GetWindowSize().y)");
-
-    SFUN(ui_GetWindowViewport, "UI_Viewport", "getWindowViewport");
-    DOC_FUNC("get viewport currently associated to the current window.");
-
-    // Window manipulation
-    QUERY->add_sfun(QUERY, ui_SetNextWindowPos, "void", "setNextWindowPos");
-    QUERY->add_arg(QUERY, "vec2", "pos");
-    QUERY->add_arg(QUERY, "int", "cond" /*ImGuiCond*/);
-    QUERY->doc_func(QUERY, "Implied pivot = ImVec2(0, 0)");
-
-    QUERY->add_sfun(QUERY, ui_SetNextWindowPosEx, "void", "setNextWindowPosEx");
-    QUERY->add_arg(QUERY, "vec2", "pos");
-    QUERY->add_arg(QUERY, "int", "cond");
-    QUERY->add_arg(QUERY, "vec2", "pivot");
-    QUERY->doc_func(QUERY,
-                    "set next window position. call before Begin(). "
-                    "use pivot=(0.5f,0.5f) to center on given point, etc.");
-
-    QUERY->add_sfun(QUERY, ui_SetNextWindowSize, "void", "setNextWindowSize");
-    QUERY->add_arg(QUERY, "vec2", "size");
-    QUERY->add_arg(QUERY, "int", "cond");
-    QUERY->doc_func(QUERY,
-                    "set next window size. set axis to 0.0f to force an "
-                    "auto-fit on this axis. call before Begin()");
-
-    QUERY->add_sfun(QUERY, ui_SetNextWindowSizeConstraints, "void",
-                    "setNextWindowSizeConstraints");
-    QUERY->add_arg(QUERY, "vec2", "size_min");
-    QUERY->add_arg(QUERY, "vec2", "size_max");
-    QUERY->add_arg(QUERY, "UI_SizeCallback", "custom_callback");
-    QUERY->doc_func(QUERY,
-                    "set next window size limits. use 0.0f or FLT_MAX if you "
-                    "don't want limits. Use -1 for both min and max of same "
-                    "axis to preserve current size (which itself is a "
-                    "constraint). Use callback to apply non-trivial programmatic "
-                    "constraints.");
-
-    QUERY->add_sfun(QUERY, ui_SetNextWindowContentSize, "void",
-                    "setNextWindowContentSize");
-    QUERY->add_arg(QUERY, "vec2", "size");
-    QUERY->doc_func(
-      QUERY,
-      "set next window content size (~ scrollable client area, which enforce "
-      "the range of scrollbars). Not including window decorations (title bar, "
-      "menu bar, etc.) nor WindowPadding. set an axis to 0.0f to leave it "
-      "automatic. call before Begin()");
-
-    QUERY->add_sfun(QUERY, ui_SetNextWindowCollapsed, "void", "setNextWindowCollapsed");
-    QUERY->add_arg(QUERY, "int", "collapsed");
-    QUERY->add_arg(QUERY, "int", "cond" /*ImGuiCond*/);
-    QUERY->doc_func(QUERY, "set next window collapsed state. call before Begin()");
-
-    QUERY->add_sfun(QUERY, ui_SetNextWindowFocus, "void", "setNextWindowFocus");
-    QUERY->doc_func(QUERY,
-                    "set next window to be focused / top-most. call before Begin()");
-
-    QUERY->add_sfun(QUERY, ui_SetNextWindowScroll, "void", "setNextWindowScroll");
-    QUERY->add_arg(QUERY, "vec2", "scroll");
-    QUERY->doc_func(QUERY,
-                    "set next window scrolling value (use < 0.0f to not affect "
-                    "a given axis).");
-
-    QUERY->add_sfun(QUERY, ui_SetNextWindowBgAlpha, "void", "setNextWindowBgAlpha");
-    QUERY->add_arg(QUERY, "float", "alpha");
-    QUERY->doc_func(
-      QUERY,
-      "set next window background color alpha. helper to easily override the "
-      "Alpha component of ImGuiCol_WindowBg/ChildBg/PopupBg. you may also use "
-      "ImGuiWindowFlags_NoBackground.");
-
-    // multiple viewports currently unsupported in webgpu
-    // Being added in: https://github.com/ocornut/imgui/pull/7557
-    // TODO: after viewport support is added for webgpu native, impl this
-    // binding QUERY->add_sfun(QUERY, ui_SetNextWindowViewport, "void",
-    //                 "setNextWindowViewport");
-    // QUERY->add_arg(QUERY, "int", "viewport_id");
-    // QUERY->doc_func(QUERY, "set next window viewport");
-
-    // Content region -------------------------------------------------------
-    QUERY->add_sfun(QUERY, ui_GetContentRegionAvail, "vec2", "getContentRegionAvail");
-    QUERY->doc_func(QUERY, "equivalent to GetContentRegionMax() - GetCursorPos()");
-
-    QUERY->add_sfun(QUERY, ui_GetContentRegionMax, "vec2", "getContentRegionMax");
-    QUERY->doc_func(QUERY,
-                    "current content boundaries (typically window boundaries including "
-                    "scrolling, or current column boundaries), in windows coordinates");
-
-    QUERY->add_sfun(QUERY, ui_GetWindowContentRegionMin, "vec2",
-                    "getWindowContentRegionMin");
-    QUERY->doc_func(QUERY,
-                    "content boundaries min for the full window (roughly "
-                    "(0,0)-Scroll), in window coordinates");
-
-    QUERY->add_sfun(QUERY, ui_GetWindowContentRegionMax, "vec2",
-                    "getWindowContentRegionMax");
-    QUERY->doc_func(QUERY,
-                    "content boundaries max for the full window (roughly "
-                    "(0,0)+Size-Scroll) where Size can be overridden with "
-                    "SetNextWindowContentSize(), in window coordinates");
-
-    // Windows Scrolling ----------------------------------------------------
-
-    QUERY->add_sfun(QUERY, ui_GetScrollX, "float", "getScrollX");
-    QUERY->doc_func(QUERY, "get scrolling amount [0 .. GetScrollMaxX()]");
-
-    QUERY->add_sfun(QUERY, ui_GetScrollY, "float", "getScrollY");
-    QUERY->doc_func(QUERY, "get scrolling amount [0 .. GetScrollMaxY()]");
-
-    QUERY->add_sfun(QUERY, ui_SetScrollX, "void", "setScrollX");
-    QUERY->add_arg(QUERY, "float", "scroll_x");
-    QUERY->doc_func(QUERY, "set scrolling amount [0 .. GetScrollMaxX()]");
-
-    QUERY->add_sfun(QUERY, ui_SetScrollY, "void", "setScrollY");
-    QUERY->add_arg(QUERY, "float", "scroll_y");
-    QUERY->doc_func(QUERY, "set scrolling amount [0 .. GetScrollMaxY()]");
-
-    QUERY->add_sfun(QUERY, ui_GetScrollMaxX, "float", "getScrollMaxX");
-    QUERY->doc_func(QUERY,
-                    "get maximum scrolling amount ~~ ContentSize.x - "
-                    "WindowSize.x - DecorationsSize.x");
-
-    QUERY->add_sfun(QUERY, ui_GetScrollMaxY, "float", "getScrollMaxY");
-    QUERY->doc_func(QUERY,
-                    "get maximum scrolling amount ~~ ContentSize.y - "
-                    "WindowSize.y - DecorationsSize.y");
-
-    QUERY->add_sfun(QUERY, ui_SetScrollHereX, "void", "setScrollHereX");
-    QUERY->add_arg(QUERY, "float", "center_x_ratio");
-    QUERY->doc_func(QUERY,
-                    "adjust scrolling amount to make current cursor position "
-                    "visible. center_x_ratio=0.0: left, 0.5: center, 1.0: "
-                    "right. When using to make a \"default/current item\" "
-                    "visible, consider using SetItemDefaultFocus() instead.");
-
-    QUERY->add_sfun(QUERY, ui_SetScrollHereY, "void", "setScrollHereY");
-    QUERY->add_arg(QUERY, "float", "center_y_ratio");
-    QUERY->doc_func(QUERY,
-                    "adjust scrolling amount to make current cursor position "
-                    "visible. center_y_ratio=0.0: top, 0.5: center, 1.0: "
-                    "bottom. When using to make a \"default/current item\" "
-                    "visible, consider using SetItemDefaultFocus() instead.");
-
-    QUERY->add_sfun(QUERY, ui_SetScrollFromPosX, "void", "setScrollFromPosX");
-    QUERY->add_arg(QUERY, "float", "local_x");
-    QUERY->add_arg(QUERY, "float", "center_x_ratio");
-    QUERY->doc_func(QUERY,
-                    "adjust scrolling amount to make given position visible. Generally "
-                    "GetCursorStartPos() + offset to compute a valid position.");
-
-    QUERY->add_sfun(QUERY, ui_SetScrollFromPosY, "void", "setScrollFromPosY");
-    QUERY->add_arg(QUERY, "float", "local_y");
-    QUERY->add_arg(QUERY, "float", "center_y_ratio");
-    QUERY->doc_func(QUERY,
-                    "adjust scrolling amount to make given position visible. Generally "
-                    "GetCursorStartPos() + offset to compute a valid position.");
-
-    // Parameters stacks (shared) ------------------------------------------
-
-    QUERY->add_sfun(QUERY, ui_PushStyleColorImVec4, "void", "pushStyleColor");
-    QUERY->add_arg(QUERY, "int", "idx" /*ImGuiCol*/);
-    QUERY->add_arg(QUERY, "vec4", "color");
-    QUERY->doc_func(QUERY, "parameter idx an enum of type UI_Color");
-
-    SFUN(ui_PushStyleColorImVec3, "void", "pushStyleColor");
-    ARG("int", "idx" /*ImGuiCol*/);
-    ARG("vec3", "color");
-    DOC_FUNC("parameter idx an enum of type UI_Color");
-
-    QUERY->add_sfun(QUERY, ui_PopStyleColor, "void", "popStyleColor");
-    QUERY->doc_func(QUERY, "implied count = 1");
-
-    QUERY->add_sfun(QUERY, ui_PopStyleColorEx, "void", "popStyleColor");
-    QUERY->add_arg(QUERY, "int", "count");
-
-    QUERY->add_sfun(QUERY, ui_PushStyleVar, "void", "pushStyleVar");
-    QUERY->add_arg(QUERY, "int", "idx" /*ImGuiStyleVar*/);
-    QUERY->add_arg(QUERY, "float", "val");
-    QUERY->doc_func(QUERY,
-                    "modify a style float variable. always use this if "
-                    "you modify the style after NewFrame(). \n Parameter `idx` "
-                    "is an enum of type UI_StyleVar");
-
-    QUERY->add_sfun(QUERY, ui_PushStyleVarImVec2, "void", "pushStyleVar");
-    QUERY->add_arg(QUERY, "int", "idx" /*ImGuiStyleVar*/);
-    QUERY->add_arg(QUERY, "vec2", "val");
-    QUERY->doc_func(QUERY,
-                    "modify a style ImVec2 variable. always use this if "
-                    "you modify the style after NewFrame(). \n Parameter `idx` "
-                    "is an enum of type UI_StyleVar");
-
-    QUERY->add_sfun(QUERY, ui_PopStyleVar, "void", "popStyleVar");
-    QUERY->doc_func(QUERY, "implied count = 1");
-
-    QUERY->add_sfun(QUERY, ui_PopStyleVarEx, "void", "popStyleVar");
-    QUERY->add_arg(QUERY, "int", "count");
-
-    QUERY->add_sfun(QUERY, ui_PushTabStop, "void", "pushTabStop");
-    QUERY->add_arg(QUERY, "int", "tab_stop");
-    QUERY->doc_func(QUERY,
-                    "allow focusing using TAB/Shift-TAB, enabled by default "
-                    "but you can disable it for certain widgets");
-
-    QUERY->add_sfun(QUERY, ui_PopTabStop, "void", "popTabStop");
-
-    QUERY->add_sfun(QUERY, ui_PushButtonRepeat, "void", "pushButtonRepeat");
-    QUERY->add_arg(QUERY, "int", "repeat");
-    QUERY->doc_func(QUERY,
-                    "in 'repeat' mode, Button*() functions return repeated "
-                    "true in a typematic manner (using "
-                    "io.KeyRepeatDelay/io.KeyRepeatRate setting). Note that "
-                    "you can call IsItemActive() after any Button() to tell if "
-                    "the button is held in the current frame.");
-
-    QUERY->add_sfun(QUERY, ui_PopButtonRepeat, "void", "popButtonRepeat");
-
-    // Parameters stacks (current window) -----------------------------------
-    SFUN(ui_PushItemWidth, "void", "pushItemWidth");
-    ARG("float", "item_width");
-    DOC_FUNC(
-      "push width of items for common large \"item+label\" widgets. "
-      ">0.0f: width in pixels, <0.0f align xx pixels to the right of "
-      "window (so -FLT_MIN always align width to the right side).");
-
-    SFUN(ui_PopItemWidth, "void", "popItemWidth");
-    DOC_FUNC("pop width of items for common large \"item+label\" widgets.");
-
-    SFUN(ui_SetNextItemWidth, "void", "setNextItemWidth");
-    ARG("float", "item_width");
-    DOC_FUNC(
-      "set width of the _next_ common large \"item+label\" widget. "
-      ">0.0f: width in pixels, <0.0f align xx pixels to the right of "
-      "window (so -FLT_MIN always align width to the right side)");
-
-    SFUN(ui_CalcItemWidth, "float", "calcItemWidth");
-    DOC_FUNC(
-      "width of item given pushed settings and current cursor position. "
-      "NOT necessarily the width of last item unlike most 'Item' "
-      "functions.");
-
-    SFUN(ui_PushTextWrapPos, "void", "pushTextWrapPos");
-    ARG("float", "wrap_local_pos_x");
-    DOC_FUNC(
-      "push word-wrapping position for Text*() commands. < 0.0f: no "
-      "wrapping; 0.0f: wrap to end of window (or column); > 0.0f: wrap "
-      "at 'wrap_pos_x' position in window local space");
-
-    SFUN(ui_PopTextWrapPos, "void", "popTextWrapPos");
-    DOC_FUNC("pop word-wrapping position for Text*() commands.");
-
-    // Style read access ----------------------------------------------------
-    QUERY->add_sfun(QUERY, ui_GetFontSize, "float", "getFontSize");
-    QUERY->doc_func(QUERY,
-                    "get current font size (= height in pixels) of "
-                    "current font with current scale applied");
-
-    QUERY->add_sfun(QUERY, ui_GetFontTexUvWhitePixel, "vec2", "getFontTexUvWhitePixel");
-    QUERY->doc_func(QUERY,
-                    "get UV coordinate for a white pixel, useful to "
-                    "draw custom shapes via the ImDrawList API");
-
-    QUERY->add_sfun(QUERY, ui_GetColorU32, "int", "getColorU32");
-    QUERY->add_arg(QUERY, "int", "idx" /*ImGuiCol*/);
-    QUERY->doc_func(QUERY,
-                    "implied alpha_mul = 1.0f. retrieve given style color with "
-                    "style alpha applied and optional extra alpha multiplier, "
-                    "packed as a 32-bit value suitable for ImDrawList\n"
-                    "Parameter `idx` is an enum of type UI_Color");
-
-    QUERY->add_sfun(QUERY, ui_GetColorU32Ex, "int", "getColorU32");
-    QUERY->add_arg(QUERY, "int", "idx" /*ImGuiCol*/);
-    QUERY->add_arg(QUERY, "float", "alpha_mul");
-    QUERY->doc_func(QUERY,
-                    "retrieve given style color with style alpha applied and "
-                    "optional extra alpha multiplier, packed as a 32-bit value "
-                    "suitable for ImDrawList\n"
-                    "Parameter `idx` is an enum of type UI_color");
-
-    QUERY->add_sfun(QUERY, ui_GetColorU32ImVec4, "int", "getColorU32");
-    QUERY->add_arg(QUERY, "vec4", "col");
-    QUERY->doc_func(QUERY,
-                    "retrieve given color with style alpha applied, packed as a "
-                    "32-bit value suitable for ImDrawList");
-
-    QUERY->add_sfun(QUERY, ui_GetStyleColorVec4, "vec4", "getStyleColorVec4");
-    QUERY->add_arg(QUERY, "int", "idx" /*ImGuiCol*/);
-    QUERY->doc_func(QUERY,
-                    "retrieve style color as stored in ImGuiStyle structure. "
-                    "use to feed back into PushStyleColor(), otherwise use "
-                    "GetColorU32() to get style color with style alpha baked "
-                    "in.\n"
-                    "Parameter `idx` is an enum of type UI_Color");
-
-    // Layout cursor positioning
-    QUERY->add_sfun(QUERY, ui_GetCursorScreenPos, "vec2", "getCursorScreenPos");
-    QUERY->doc_func(QUERY,
-                    "cursor position in absolute coordinates (prefer using "
-                    "this, also more useful to work with ImDrawList API)");
-
-    QUERY->add_sfun(QUERY, ui_SetCursorScreenPos, "vec2", "setCursorScreenPos");
-    QUERY->add_arg(QUERY, "vec2", "pos");
-    QUERY->doc_func(QUERY, "cursor position in absolute coordinates");
-
-    QUERY->add_sfun(QUERY, ui_GetCursorPos, "vec2", "getCursorPos");
-    QUERY->doc_func(QUERY,
-                    "cursor position in window coordinates (relative to window "
-                    "position)");
-
-    QUERY->add_sfun(QUERY, ui_GetCursorPosX, "float", "getCursorPosX");
-
-    QUERY->add_sfun(QUERY, ui_GetCursorPosY, "float", "getCursorPosY");
-
-    QUERY->add_sfun(QUERY, ui_SetCursorPos, "void", "setCursorPos");
-    QUERY->add_arg(QUERY, "vec2", "local_pos");
-
-    QUERY->add_sfun(QUERY, ui_SetCursorPosX, "void", "setCursorPosX");
-    QUERY->add_arg(QUERY, "float", "local_x");
-
-    QUERY->add_sfun(QUERY, ui_SetCursorPosY, "void", "setCursorPosY");
-    QUERY->add_arg(QUERY, "float", "local_y");
-
-    QUERY->add_sfun(QUERY, ui_GetCursorStartPos, "vec2", "getCursorStartPos");
-    QUERY->doc_func(QUERY, "initial cursor position, in window coordinates");
-
-    // Other layout functions ------------------------------------------------
-
-    QUERY->add_sfun(QUERY, ui_Separator, "void", "separator");
-    QUERY->doc_func(QUERY,
-                    "separator, generally horizontal. inside a menu "
-                    "bar or in horizontal layout mode, this becomes a "
-                    "vertical separator.");
-
-    QUERY->add_sfun(QUERY, ui_SameLine, "void", "sameLine");
-    QUERY->doc_func(QUERY, "implied offset_from_start_x = 0.0f, spacing = -1.0f");
-
-    QUERY->add_sfun(QUERY, ui_SameLineEx, "void", "sameLine");
-    QUERY->add_arg(QUERY, "float", "offset_from_start_x");
-    QUERY->add_arg(QUERY, "float", "spacing");
-    QUERY->doc_func(QUERY,
-                    "call between widgets or groups to layout them "
-                    "horizontally. X position given in window coordinates.");
-
-    QUERY->add_sfun(QUERY, ui_NewLine, "void", "newLine");
-    QUERY->doc_func(QUERY,
-                    "undo a SameLine() or force a new line when in a "
-                    "horizontal-layout context.");
-
-    QUERY->add_sfun(QUERY, ui_Spacing, "void", "spacing");
-    QUERY->doc_func(QUERY, "add vertical spacing.");
-
-    QUERY->add_sfun(QUERY, ui_Dummy, "void", "dummy");
-    QUERY->add_arg(QUERY, "vec2", "size");
-    QUERY->doc_func(QUERY,
-                    "add a dummy item of given size. unlike InvisibleButton(), "
-                    "Dummy() won't take the mouse click or be navigable into.");
-
-    QUERY->add_sfun(QUERY, ui_Indent, "void", "indent");
-    QUERY->doc_func(QUERY, "implied indent_w = 0.0f");
-
-    QUERY->add_sfun(QUERY, ui_IndentEx, "void", "indent");
-    QUERY->add_arg(QUERY, "float", "indent_w");
-    QUERY->doc_func(QUERY,
-                    "move content position toward the right, by indent_w, or "
-                    "style.IndentSpacing if indent_w <= 0");
-
-    QUERY->add_sfun(QUERY, ui_Unindent, "void", "unindent");
-    QUERY->doc_func(QUERY, "implied indent_w = 0.0f");
-
-    QUERY->add_sfun(QUERY, ui_UnindentEx, "void", "unindent");
-    QUERY->add_arg(QUERY, "float", "indent_w");
-    QUERY->doc_func(QUERY,
-                    "move content position back to the left, by indent_w, or "
-                    "style.IndentSpacing if indent_w <= 0");
-
-    QUERY->add_sfun(QUERY, ui_BeginGroup, "void", "beginGroup");
-    QUERY->doc_func(QUERY, "lock horizontal starting position");
-
-    QUERY->add_sfun(QUERY, ui_EndGroup, "void", "endGroup");
-    QUERY->doc_func(QUERY,
-                    "unlock horizontal starting position + capture the whole "
-                    "group bounding box into one \"item\" (so you can use "
-                    "IsItemHovered() or layout primitives such as SameLine() on "
-                    "whole group, etc.)");
-
-    QUERY->add_sfun(QUERY, ui_AlignTextToFramePadding, "void",
-                    "alignTextToFramePadding");
-    QUERY->doc_func(QUERY,
-                    "vertically align upcoming text baseline to FramePadding.y "
-                    "so that it will align properly to regularly framed items "
-                    "(call if you have text on a line before a framed item)");
-
-    QUERY->add_sfun(QUERY, ui_GetTextLineHeight, "float", "getTextLineHeight");
-    QUERY->doc_func(QUERY, "~ FontSize");
-
-    QUERY->add_sfun(QUERY, ui_GetTextLineHeightWithSpacing, "float",
-                    "getTextLineHeightWithSpacing");
-    QUERY->doc_func(QUERY,
-                    "~ FontSize + style.ItemSpacing.y (distance in pixels "
-                    "between 2 consecutive lines of text)");
-
-    QUERY->add_sfun(QUERY, ui_GetFrameHeight, "float", "getFrameHeight");
-    QUERY->doc_func(QUERY, "~ FontSize + style.FramePadding.y * 2");
-
-    QUERY->add_sfun(QUERY, ui_GetFrameHeightWithSpacing, "float",
-                    "getFrameHeightWithSpacing");
-    QUERY->doc_func(QUERY,
-                    "~ FontSize + style.FramePadding.y * 2 + "
-                    "style.ItemSpacing.y (distance in pixels between 2 "
-                    "consecutive lines of framed widgets)");
-
-    // ID stack/scopes -------------------------------------------------------
-
-    QUERY->add_sfun(QUERY, ui_PushID, "void", "pushID");
-    QUERY->add_arg(QUERY, "string", "str_id");
-    QUERY->doc_func(QUERY,
-                    "push string into the ID stack (will hash string)."
-                    "Read the FAQ (docs/FAQ.md or http://dearimgui.com/faq) "
-                    "for more details about how ID are handled in dear imgui.");
-
-    QUERY->add_sfun(QUERY, ui_PushIDStr, "void", "pushID");
-    QUERY->add_arg(QUERY, "string", "str_id_begin");
-    QUERY->add_arg(QUERY, "string", "str_id_end");
-    QUERY->doc_func(QUERY, "push string into the ID stack (will hash string).");
-
-    QUERY->add_sfun(QUERY, ui_PushIDInt, "void", "pushID");
-    QUERY->add_arg(QUERY, "int", "int_id");
-    QUERY->doc_func(QUERY, "push integer into the ID stack (will hash integer).");
-
-    QUERY->add_sfun(QUERY, ui_PopID, "void", "popID");
-    QUERY->doc_func(QUERY, "pop from the ID stack.");
-
-    QUERY->add_sfun(QUERY, ui_GetID, "int", "getID");
-    QUERY->add_arg(QUERY, "string", "str_id");
-    QUERY->doc_func(QUERY,
-                    "calculate unique ID (hash of whole ID stack + given "
-                    "parameter). e.g. if you want to query into ImGuiStorage "
-                    "yourself");
-
-    QUERY->add_sfun(QUERY, ui_GetIDStr, "int", "getID");
-    QUERY->add_arg(QUERY, "string", "str_id_begin");
-    QUERY->add_arg(QUERY, "string", "str_id_end");
-
-    // Widgets: Text ---------------------------------------------------------
-
-    QUERY->add_sfun(QUERY, ui_TextUnformatted, "void", "text");
-    QUERY->add_arg(QUERY, "string", "text");
-    QUERY->doc_func(QUERY, "implied text_end = NULL");
-
-    QUERY->add_sfun(QUERY, ui_TextUnformattedEx, "void", "text");
-    QUERY->add_arg(QUERY, "string", "text");
-    QUERY->add_arg(QUERY, "string", "text_end");
-    QUERY->doc_func(QUERY,
-                    "raw text without formatting. Roughly equivalent to "
-                    "Text(\"%s\", text) but: A) doesn't require null "
-                    "terminated string if 'text_end' is specified, B) it's "
-                    "faster, no memory copy is done, no buffer size limits, "
-                    "recommended for long chunks of text.");
-
-    QUERY->add_sfun(QUERY, ui_TextColoredUnformatted, "void", "textColored");
-    QUERY->add_arg(QUERY, "vec4", "col");
-    QUERY->add_arg(QUERY, "string", "text");
-    QUERY->doc_func(QUERY,
-                    "shortcut for PushStyleColor(ImGuiCol_Text, col); "
-                    "Text(fmt, ...); PopStyleColor();");
-
-    QUERY->add_sfun(QUERY, ui_TextDisabledUnformatted, "void", "textDisabled");
-    QUERY->add_arg(QUERY, "string", "text");
-    QUERY->doc_func(QUERY,
-                    "shortcut for PushStyleColor(ImGuiCol_Text, "
-                    "style.Colors[ImGuiCol_TextDisabled]); Text(fmt, ...); "
-                    "PopStyleColor();");
-
-    QUERY->add_sfun(QUERY, ui_TextWrappedUnformatted, "void", "textWrapped");
-    QUERY->add_arg(QUERY, "string", "text");
-    QUERY->doc_func(QUERY,
-                    "shortcut for PushTextWrapPos(0.0f); Text(fmt, ...); "
-                    "PopTextWrapPos();. Note that this won't work on an "
-                    "auto-resizing window if there's no other widgets to extend "
-                    "the window width, you may need to set a size using "
-                    "SetNextWindowSize().");
-
-    QUERY->add_sfun(QUERY, ui_LabelTextUnformatted, "void", "labelText");
-    QUERY->add_arg(QUERY, "string", "label");
-    QUERY->add_arg(QUERY, "string", "text");
-    QUERY->doc_func(QUERY,
-                    "display text+label aligned the same way as value+label "
-                    "widgets");
-
-    QUERY->add_sfun(QUERY, ui_BulletTextUnformatted, "void", "bulletText");
-    QUERY->add_arg(QUERY, "string", "text");
-    QUERY->doc_func(QUERY, "shortcut for Bullet()+Text()");
-
-    QUERY->add_sfun(QUERY, ui_SeparatorText, "void", "separatorText");
-    QUERY->add_arg(QUERY, "string", "label");
-    QUERY->doc_func(QUERY, "currently: formatted text with an horizontal line");
-
-    // Widgets: Main ---------------------------------------------------------
-
-    QUERY->add_sfun(QUERY, ui_Button, "int", "button");
-    QUERY->add_arg(QUERY, "string", "label");
-    QUERY->doc_func(QUERY, "implied size = ImVec2(0, 0)");
-
-    QUERY->add_sfun(QUERY, ui_ButtonEx, "int", "button");
-    QUERY->add_arg(QUERY, "string", "label");
-    QUERY->add_arg(QUERY, "vec2", "size");
-
-    QUERY->add_sfun(QUERY, ui_SmallButton, "int", "smallButton");
-    QUERY->add_arg(QUERY, "string", "label");
-    QUERY->doc_func(QUERY, "button with (FramePadding.y == 0)");
-
-    QUERY->add_sfun(QUERY, ui_InvisibleButton, "int", "invisibleButton");
-    QUERY->add_arg(QUERY, "string", "str_id");
-    QUERY->add_arg(QUERY, "vec2", "size");
-    QUERY->add_arg(QUERY, "int", "flags");
-    QUERY->doc_func(QUERY,
-                    "flexible button behavior without the visuals, frequently "
-                    "useful to build custom behaviors using the public api "
-                    "(along with IsItemActive, IsItemHovered, etc.)"
-                    "param `flags` is an enum of type UI_ButtonFlags");
-
-    QUERY->add_sfun(QUERY, ui_ArrowButton, "int", "arrowButton");
-    QUERY->add_arg(QUERY, "string", "str_id");
-    QUERY->add_arg(QUERY, "int", "direction");
-    QUERY->doc_func(QUERY,
-                    "square button with an arrow shape. param `direction` is "
-                    "an enum of type UI_Direction");
-
-    QUERY->add_sfun(QUERY, ui_Checkbox, "int", "checkbox");
-    QUERY->add_arg(QUERY, "string", "label");
-    QUERY->add_arg(QUERY, "UI_Bool", "v");
-
-    QUERY->add_sfun(QUERY, ui_CheckboxFlagsIntPtr, "int", "checkboxFlags");
-    QUERY->add_arg(QUERY, "string", "label");
-    QUERY->add_arg(QUERY, "UI_Int", "flags");
-    QUERY->add_arg(QUERY, "int", "flags_value");
-
-    QUERY->add_sfun(QUERY, ui_RadioButton, "int", "radioButton");
-    QUERY->add_arg(QUERY, "string", "label");
-    QUERY->add_arg(QUERY, "int", "active");
-    QUERY->doc_func(QUERY,
-                    "use with e.g. if (RadioButton(\"one\", my_value==1)) { "
-                    "my_value = 1; }");
-
-    QUERY->add_sfun(QUERY, ui_RadioButtonIntPtr, "int", "radioButton");
-    QUERY->add_arg(QUERY, "string", "label");
-    QUERY->add_arg(QUERY, "UI_Int", "v");
-    QUERY->add_arg(QUERY, "int", "v_button");
-    QUERY->doc_func(QUERY,
-                    "shortcut to handle the above pattern when value is an "
-                    "integer");
-
-    QUERY->add_sfun(QUERY, ui_ProgressBar, "void", "progressBar");
-    QUERY->add_arg(QUERY, "float", "fraction");
-    QUERY->add_arg(QUERY, "vec2", "size_arg");
-    QUERY->add_arg(QUERY, "string", "overlay");
-
-    QUERY->add_sfun(QUERY, ui_Bullet, "void", "bullet");
-    QUERY->doc_func(QUERY,
-                    "draw a small circle + keep the cursor on the same line. "
-                    "advance cursor x position by GetTreeNodeToLabelSpacing(), "
-                    "same distance that TreeNode() uses");
-
-    // Widgets: Combo --------------------------------------------------------
-
-    QUERY->add_sfun(QUERY, ui_BeginCombo, "int", "beginCombo");
-    QUERY->add_arg(QUERY, "string", "label");
-    QUERY->add_arg(QUERY, "string", "preview_value");
-    QUERY->add_arg(QUERY, "int", "flags");
-    QUERY->doc_func(
-      QUERY,
-      "The BeginCombo()/EndCombo() api allows you to manage your contents and "
-      "selection state however you want it, by creating e.g. Selectable() "
-      "items.\n"
-      "// - The old Combo() api are helpers over BeginCombo()/EndCombo() which "
-      "are kept available for convenience purpose. This is analogous to how "
-      "ListBox are created.\n"
-      "`flags` param is an enum of type UI_ComboFlags");
-
-    QUERY->add_sfun(QUERY, ui_EndCombo, "void", "endCombo");
-    QUERY->doc_func(QUERY, "only call EndCombo() if BeginCombo() returns true!");
-
-    QUERY->add_sfun(QUERY, ui_ComboChar, "int", "combo");
-    QUERY->add_arg(QUERY, "string", "label");
-    QUERY->add_arg(QUERY, "UI_Int", "current_item");
-    QUERY->add_arg(QUERY, "string[]", "items");
-    QUERY->doc_func(QUERY, "implied popup_max_height_in_items = -1");
-
-    QUERY->add_sfun(QUERY, ui_ComboCharEx, "int", "combo");
-    QUERY->add_arg(QUERY, "string", "label");
-    QUERY->add_arg(QUERY, "UI_Int", "current_item");
-    QUERY->add_arg(QUERY, "string[]", "items");
-    QUERY->add_arg(QUERY, "int", "popup_max_height_in_items");
-
-    // TODO: ui_Combo doesn't work with chuck strings
-    // cannot seem to escape \0 (gets copied literally) by
-    // API->object->str(Chuck_String*)
-
-    // QUERY->add_sfun(QUERY, ui_Combo, "int", "combo");
-    // QUERY->add_arg(QUERY, "string", "label");
-    // QUERY->add_arg(QUERY, "UI_Int", "current_item");
-    // QUERY->add_arg(QUERY, "string", "items_separated_by_zeros");
-    // QUERY->doc_func(QUERY, "implied popup_max_height_in_items = -1");
-
-    // SFUN(ui_ComboEx, "int", "combo");
-    // ARG("string", "label");
-    // ARG("UI_Int", "current_item");
-    // ARG("string", "items_separated_by_zeros");
-    // ARG("int", "popup_max_height_in_items");
-    // DOC_FUNC(
-    //   "Separate items with \\0 within a string, end "
-    //   "item-list with \\0\\0. e.g. \"One\\0Two\\0Three\\0\\0\"");
-
-    // Widgets: Drag ---------------------------------------------------------
-
-    SFUN(ui_DragFloat, "int", "drag");
-    ARG("string", "label");
-    ARG("UI_Float", "v");
-    DOC_FUNC(
-      "Implied v_speed = 1.0f, v_min = 0.0f, v_max = 0.0f, format = "
-      "\"%.3f\", flags = 0");
-
-    SFUN(ui_DragFloatEx, "int", "drag");
-    ARG("string", "label");
-    ARG("UI_Float", "v");
-    ARG("float", "v_speed");
-    ARG("float", "v_min");
-    ARG("float", "v_max");
-    ARG("string", "format");
-    ARG("int", "flags");
-    DOC_FUNC(
-      "If v_min >= v_max we have no bound. Parameter `flags` is an enum of "
-      "type UI_SliderFlags");
-
-    SFUN(ui_DragFloat2, "int", "drag");
-    ARG("string", "label");
-    ARG("UI_Float2", "v");
-    DOC_FUNC(
-      "Implied v_speed = 1.0f, v_min = 0.0f, v_max = 0.0f, format = "
-      "\"%.3f\", flags = 0");
-
-    SFUN(ui_DragFloat2Ex, "int", "drag");
-    ARG("string", "label");
-    ARG("UI_Float2", "v");
-    ARG("float", "v_speed");
-    ARG("float", "v_min");
-    ARG("float", "v_max");
-    ARG("string", "format");
-    ARG("int", "flags");
-    DOC_FUNC(
-      "If v_min >= v_max we have no bound. Parameter `flags` is an enum of "
-      "type UI_SliderFlags");
-
-    SFUN(ui_DragFloat2Speed, "int", "drag");
-    ARG("string", "label");
-    ARG("UI_Float2", "v");
-    ARG("float", "v_speed");
-    DOC_FUNC("Implied v_min = 0.0f, v_max = 0.0f, format = \"%.3f\", flags = 0");
-
-    SFUN(ui_DragFloat3, "int", "drag");
-    ARG("string", "label");
-    ARG("UI_Float3", "v");
-    DOC_FUNC(
-      "Implied v_speed = 1.0f, v_min = 0.0f, v_max = 0.0f, format = "
-      "\"%.3f\", flags = 0");
-
-    SFUN(ui_DragFloat3Ex, "int", "drag");
-    ARG("string", "label");
-    ARG("UI_Float3", "v");
-    ARG("float", "v_speed");
-    ARG("float", "v_min");
-    ARG("float", "v_max");
-    ARG("string", "format");
-    ARG("int", "flags");
-    DOC_FUNC(
-      "If v_min >= v_max we have no bound. Parameter `flags` is an enum of "
-      "type UI_SliderFlags");
-
-    SFUN(ui_DragFloat3Speed, "int", "drag");
-    ARG("string", "label");
-    ARG("UI_Float3", "v");
-    ARG("float", "v_speed");
-    DOC_FUNC("Implied v_min = 0.0f, v_max = 0.0f, format = \"%.3f\", flags = 0");
-
-    SFUN(ui_DragFloat4, "int", "drag");
-    ARG("string", "label");
-    ARG("UI_Float4", "v");
-    DOC_FUNC(
-      "Implied v_speed = 1.0f, v_min = 0.0f, v_max = 0.0f, format = "
-      "\"%.3f\", flags = 0");
-
-    SFUN(ui_DragFloat4Ex, "int", "drag");
-    ARG("string", "label");
-    ARG("UI_Float4", "v");
-    ARG("float", "v_speed");
-    ARG("float", "v_min");
-    ARG("float", "v_max");
-    ARG("string", "format");
-    ARG("int", "flags");
-    DOC_FUNC(
-      "If v_min >= v_max we have no bound. Parameter `flags` is an enum of "
-      "type UI_SliderFlags");
-
-    SFUN(ui_DragFloatRange2, "int", "drag");
-    ARG("string", "label");
-    ARG("UI_Float", "v_current_min");
-    ARG("UI_Float", "v_current_max");
-    DOC_FUNC(
-      "Implied v_speed = 1.0f, v_min = 0.0f, v_max = 0.0f, format = "
-      "\"%.3f\", format_max = NULL, flags = 0");
-
-    SFUN(ui_DragFloatRange2Ex, "int", "drag");
-    ARG("string", "label");
-    ARG("UI_Float", "v_current_min");
-    ARG("UI_Float", "v_current_max");
-    ARG("float", "v_speed");
-    ARG("float", "v_min");
-    ARG("float", "v_max");
-    ARG("string", "format");
-    ARG("string", "format_max");
-    ARG("int", "flags");
-    DOC_FUNC("Parameter `flags` is an enum of type UI_SliderFlags");
-
-    SFUN(ui_DragInt, "int", "drag");
-    ARG("string", "label");
-    ARG("UI_Int", "v");
-    DOC_FUNC(
-      "Implied v_speed = 1.0f, v_min = 0, v_max = 0, format = \"%d\", flags = "
-      "0");
-
-    SFUN(ui_DragIntEx, "int", "drag");
-    ARG("string", "label");
-    ARG("UI_Int", "v");
-    ARG("float", "v_speed");
-    ARG("int", "v_min");
-    ARG("int", "v_max");
-    ARG("string", "format");
-    ARG("int", "flags");
-    DOC_FUNC(
-      "If v_min >= v_max we have no bound. Parameter `flags` is an enum of "
-      "type UI_SliderFlags");
-
-    SFUN(ui_DragInt2, "int", "drag");
-    ARG("string", "label");
-    ARG("UI_Int2", "v");
-    DOC_FUNC(
-      "Implied v_speed = 1.0f, v_min = 0, v_max = 0, format = \"%d\", flags = "
-      "0");
-
-    SFUN(ui_DragInt2Ex, "int", "drag");
-    ARG("string", "label");
-    ARG("UI_Int2", "v");
-    ARG("float", "v_speed");
-    ARG("int", "v_min");
-    ARG("int", "v_max");
-    ARG("string", "format");
-    ARG("int", "flags");
-    DOC_FUNC(
-      "If v_min >= v_max we have no bound. Parameter `flags` is an enum of "
-      "type UI_SliderFlags");
-
-    SFUN(ui_DragInt3, "int", "drag");
-    ARG("string", "label");
-    ARG("UI_Int3", "v");
-    DOC_FUNC(
-      "Implied v_speed = 1.0f, v_min = 0, v_max = 0, format = \"%d\", flags = "
-      "0");
-
-    SFUN(ui_DragInt3Ex, "int", "drag");
-    ARG("string", "label");
-    ARG("UI_Int3", "v");
-    ARG("float", "v_speed");
-    ARG("int", "v_min");
-    ARG("int", "v_max");
-    ARG("string", "format");
-    ARG("int", "flags");
-    DOC_FUNC(
-      "If v_min >= v_max we have no bound. Parameter `flags` is an enum of "
-      "type UI_SliderFlags");
-
-    SFUN(ui_DragInt4, "int", "drag");
-    ARG("string", "label");
-    ARG("UI_Int4", "v");
-    DOC_FUNC(
-      "Implied v_speed = 1.0f, v_min = 0, v_max = 0, format = \"%d\", flags = "
-      "0");
-
-    SFUN(ui_DragInt4Ex, "int", "drag");
-    ARG("string", "label");
-    ARG("UI_Int4", "v");
-    ARG("float", "v_speed");
-    ARG("int", "v_min");
-    ARG("int", "v_max");
-    ARG("string", "format");
-    ARG("int", "flags");
-    DOC_FUNC(
-      "If v_min >= v_max we have no bound. Parameter `flags` is an enum of "
-      "type UI_SliderFlags");
-
-    SFUN(ui_DragIntRange2, "int", "drag");
-    ARG("string", "label");
-    ARG("UI_Int", "v_current_min");
-    ARG("UI_Int", "v_current_max");
-    DOC_FUNC(
-      "Implied v_speed = 1.0f, v_min = 0, v_max = 0, format = \"%d\", "
-      "format_max = NULL, flags = 0");
-
-    SFUN(ui_DragIntRange2Ex, "int", "drag");
-    ARG("string", "label");
-    ARG("UI_Int", "v_current_min");
-    ARG("UI_Int", "v_current_max");
-    ARG("float", "v_speed");
-    ARG("int", "v_min");
-    ARG("int", "v_max");
-    ARG("string", "format");
-    ARG("string", "format_max");
-    ARG("int", "flags");
-    DOC_FUNC("Parameter `flags` is an enum of type UI_SliderFlags");
-
-    SFUN(ui_DragScalarN_CKINT, "int", "drag");
-    ARG("string", "label");
-    ARG("int[]", "data");
-
-    SFUN(ui_DragScalarNEx_CKINT, "int", "drag");
-    ARG("string", "label");
-    ARG("int[]", "data");
-    ARG("float", "v_speed");
-    ARG("int", "v_min");
-    ARG("int", "v_max");
-    ARG("string", "format");
-    ARG("int", "flags");
-    DOC_FUNC("Parameter `flags` is an enum of type UI_SliderFlags");
-
-    SFUN(ui_DragScalarN_CKFLOAT, "int", "drag");
-    ARG("string", "label");
-    ARG("float[]", "data");
-
-    SFUN(ui_DragScalarNEx_CKFLOAT, "int", "drag");
-    ARG("string", "label");
-    ARG("float[]", "data");
-    ARG("float", "v_speed");
-    ARG("float", "v_min");
-    ARG("float", "v_max");
-    ARG("string", "format");
-    ARG("int", "flags");
-    DOC_FUNC("Parameter `flags` is an enum of type UI_SliderFlags");
-
-    // Widgets: Slider -------------------------------------------------------
-
-    SFUN(ui_SliderFloat, "int", "slider");
-    ARG("string", "label");
-    ARG("UI_Float", "v");
-    ARG("float", "v_min");
-    ARG("float", "v_max");
-    DOC_FUNC("Implied format = \"%.3f\", flags = 0");
-
-    SFUN(ui_SliderFloatEx, "int", "slider");
-    ARG("string", "label");
-    ARG("UI_Float", "v");
-    ARG("float", "v_min");
-    ARG("float", "v_max");
-    ARG("string", "format");
-    ARG("int", "flags");
-    DOC_FUNC(
-      "adjust format to decorate the value with a prefix or a suffix for in-"
-      "slider labels or unit display. `flags` is an enum of type "
-      "UI_SliderFlags");
-
-    SFUN(ui_SliderAngle, "int", "sliderAngle");
-    ARG("string", "label");
-    ARG("UI_Float", "v_rad");
-    DOC_FUNC(
-      "Implied v_degrees_min = -360.0f, v_degrees_max = +360.0f, format = "
-      "\"%.0f deg\", flags = 0");
-
-    SFUN(ui_SliderAngleEx, "int", "sliderAngle");
-    ARG("string", "label");
-    ARG("UI_Float", "v_rad");
-    ARG("float", "v_degrees_min");
-    ARG("float", "v_degrees_max");
-    ARG("string", "format");
-    ARG("int", "flags");
-    DOC_FUNC("Parameter `flags` is an enum of type UI_SliderFlags");
-
-    SFUN(ui_SliderInt, "int", "slider");
-    ARG("string", "label");
-    ARG("UI_Int", "v");
-    ARG("int", "v_min");
-    ARG("int", "v_max");
-    DOC_FUNC("Implied format = \"%d\", flags = 0");
-
-    SFUN(ui_SliderIntEx, "int", "slider");
-    ARG("string", "label");
-    ARG("UI_Int", "v");
-    ARG("int", "v_min");
-    ARG("int", "v_max");
-    ARG("string", "format");
-    ARG("int", "flags");
-    DOC_FUNC("Parameter `flags` is an enum of type UI_SliderFlags");
-
-    SFUN(ui_SliderScalarN_CKINT, "int", "slider");
-    ARG("string", "label");
-    ARG("int[]", "data");
-    ARG("int", "v_min");
-    ARG("int", "v_max");
-
-    SFUN(ui_SliderScalarNEx_CKINT, "int", "slider");
-    ARG("string", "label");
-    ARG("int[]", "data");
-    ARG("int", "v_min");
-    ARG("int", "v_max");
-    ARG("string", "format");
-    ARG("int", "flags");
-    DOC_FUNC("Parameter `flags` is an enum of type UI_SliderFlags");
-
-    SFUN(ui_SliderScalarN_CKFLOAT, "int", "slider");
-    ARG("string", "label");
-    ARG("float[]", "data");
-    ARG("float", "v_min");
-    ARG("float", "v_max");
-
-    SFUN(ui_SliderScalarNEx_CKFLOAT, "int", "slider");
-    ARG("string", "label");
-    ARG("float[]", "data");
-    ARG("float", "v_min");
-    ARG("float", "v_max");
-    ARG("string", "format");
-    ARG("int", "flags");
-    DOC_FUNC("Parameter `flags` is an enum of type UI_SliderFlags");
-
-    SFUN(ui_VSliderFloat, "int", "vslider");
-    ARG("string", "label");
-    ARG("vec2", "size");
-    ARG("UI_Float", "v");
-    ARG("float", "v_min");
-    ARG("float", "v_max");
-    DOC_FUNC("Implied format = \"%.3f\", flags = 0");
-
-    SFUN(ui_VSliderFloatEx, "int", "vslider");
-    ARG("string", "label");
-    ARG("vec2", "size");
-    ARG("UI_Float", "v");
-    ARG("float", "v_min");
-    ARG("float", "v_max");
-    ARG("string", "format");
-    ARG("int", "flags");
-    DOC_FUNC("Parameter `flags` is an enum of type UI_SliderFlags");
-
-    SFUN(ui_VSliderInt, "int", "vslider");
-    ARG("string", "label");
-    ARG("vec2", "size");
-    ARG("UI_Int", "v");
-    ARG("int", "v_min");
-    ARG("int", "v_max");
-    DOC_FUNC("Implied format = \"%d\", flags = 0");
-
-    SFUN(ui_VSliderIntEx, "int", "vslider");
-    ARG("string", "label");
-    ARG("vec2", "size");
-    ARG("UI_Int", "v");
-    ARG("int", "v_min");
-    ARG("int", "v_max");
-    ARG("string", "format");
-    ARG("int", "flags");
-    DOC_FUNC("Parameter `flags` is an enum of type UI_SliderFlags");
-
-    // Widgets: Input --------------------------------------------------------
-
-    SFUN(ui_InputText, "int", "inputText");
-    ARG("string", "label");
-    ARG("UI_String", "buf");
-    DOC_FUNC(
-      "Implied max_input_length = 256, flags = 0, callback = NULL, user_data = "
-      "NULL. `flags` is an enum of type UI_InputTextFlags");
-
-    SFUN(ui_InputTextEx, "int", "inputText");
-    ARG("string", "label");
-    ARG("UI_String", "buf");
-    ARG("int", "max_input_length");
-    ARG("int", "flags");
-    // ARG("UI_InputTextCallback", "callback");  // ignoring for now
-    DOC_FUNC("Parameter `flags` is an enum of type UI_InputTextFlags");
-
-    SFUN(ui_InputTextMultiline, "int", "inputTextMultiline");
-    ARG("string", "label");
-    ARG("UI_String", "buf");
-    DOC_FUNC(
-      "Implied size = ImVec2(0, 0), flags = 0, callback = NULL, "
-      "user_data = NULL");
-
-    SFUN(ui_InputTextMultilineEx, "int", "inputTextMultiline");
-    ARG("string", "label");
-    ARG("UI_String", "buf");
-    ARG("int", "max_input_length");
-    ARG("vec2", "size");
-    ARG("int", "flags");
-    // ARG("UI_InputTextCallback", "callback");  // ignoring for now
-    DOC_FUNC("Parameter `flags` is an enum of type UI_InputTextFlags");
-
-    SFUN(ui_InputTextWithHint, "int", "inputTextWithHint");
-    ARG("string", "label");
-    ARG("string", "hint");
-    ARG("UI_String", "buf");
-    DOC_FUNC(
-      "Implied max_input_length = 256, flags = 0, callback = NULL, user_data = "
-      "NULL.");
-
-    SFUN(ui_InputTextWithHintEx, "int", "inputTextWithHint");
-    ARG("string", "label");
-    ARG("string", "hint");
-    ARG("UI_String", "buf");
-    ARG("int", "max_input_length");
-    ARG("int", "flags");
-    // ARG("UI_InputTextCallback", "callback");  // ignoring for now
-    DOC_FUNC("Parameter `flags` is an enum of type UI_InputTextFlags");
-
-    SFUN(ui_InputFloat, "int", "inputFloat");
-    ARG("string", "label");
-    ARG("UI_Float", "v");
-    DOC_FUNC(
-      "Implied step = 0.0f, step_fast = 0.0f, format = \"%.3f\", flags = "
-      "0");
-
-    SFUN(ui_InputFloatEx, "int", "inputFloat");
-    ARG("string", "label");
-    ARG("UI_Float", "v");
-    ARG("float", "step");
-    ARG("float", "step_fast");
-    ARG("string", "format");
-    ARG("int", "flags");
-    DOC_FUNC("Parameter `flags` is an enum of type UI_InputTextFlags");
-
-    SFUN(ui_InputScalarN_CKFLOAT, "int", "inputFloat");
-    ARG("string", "label");
-    ARG("float[]", "data");
-    DOC_FUNC("Implied p_step = NULL, p_step_fast = NULL, format = NULL, flags = 0");
-
-    SFUN(ui_InputScalarNEx_CKFLOAT, "int", "inputFloat");
-    ARG("string", "label");
-    ARG("float[]", "data");
-    ARG("float", "step");
-    ARG("float", "step_fast");
-    ARG("string", "format");
-    ARG("int", "flags");
-    DOC_FUNC("Parameter `flags` is an enum of type UI_InputTextFlags");
-
-    SFUN(ui_InputInt, "int", "inputInt");
-    ARG("string", "label");
-    ARG("UI_Int", "v");
-    DOC_FUNC("Implied step = 1, step_fast = 100, flags = 0");
-
-    SFUN(ui_InputIntEx, "int", "inputInt");
-    ARG("string", "label");
-    ARG("UI_Int", "v");
-    ARG("int", "step");
-    ARG("int", "step_fast");
-    ARG("int", "flags");
-    DOC_FUNC("Parameter `flags` is an enum of type UI_InputTextFlags");
-
-    SFUN(ui_InputScalarN_CKINT, "int", "inputInt");
-    ARG("string", "label");
-    ARG("int[]", "data");
-    DOC_FUNC("Implied p_step = NULL, p_step_fast = NULL, format = NULL, flags = 0");
-
-    SFUN(ui_InputScalarNEx_CKINT, "int", "inputInt");
-    ARG("string", "label");
-    ARG("int[]", "data");
-    ARG("int", "step");
-    ARG("int", "step_fast");
-    ARG("string", "format");
-    ARG("int", "flags");
-    DOC_FUNC("Parameter `flags` is an enum of type UI_InputTextFlags");
-
-    // Widgets: Color --------------------------------------------------------
-
-    SFUN(ui_ColorEdit3, "int", "colorEdit");
-    ARG("string", "label");
-    ARG("UI_Float3", "col");
-    ARG("int", "flags");
-    DOC_FUNC("`flags` is an enum of type UI_ColorEditFlags");
-
-    SFUN(ui_ColorEdit4, "int", "colorEdit");
-    ARG("string", "label");
-    ARG("UI_Float4", "col");
-    ARG("int", "flags");
-    DOC_FUNC("`flags` is an enum of type UI_ColorEditFlags");
-
-    SFUN(ui_ColorPicker3, "int", "colorPicker");
-    ARG("string", "label");
-    ARG("UI_Float3", "col");
-    ARG("int", "flags");
-    DOC_FUNC("`flags` is an enum of type UI_ColorEditFlags");
-
-    SFUN(ui_ColorPicker4, "int", "colorPicker");
-    ARG("string", "label");
-    ARG("UI_Float4", "color");
-    ARG("int", "flags");
-    ARG("vec4", "reference_color");
-
-    SFUN(ui_ColorPicker4_no_ref_col, "int", "colorPicker");
-    ARG("string", "label");
-    ARG("UI_Float4", "color");
-    ARG("int", "flags");
-
-    SFUN(ui_ColorButton, "int", "colorButton");
-    ARG("string", "desc_id");
-    ARG("vec4", "col");
-    ARG("int", "flags");
-    DOC_FUNC(
-      "Implied size = ImVec2(0, 0). `flags` is an enum of type "
-      "UI_ColorEditFlags");
-
-    SFUN(ui_ColorButtonEx, "int", "colorButton");
-    ARG("string", "desc_id");
-    ARG("vec4", "col");
-    ARG("int", "flags");
-    ARG("vec2", "size");
-    DOC_FUNC(
-      "`flags` is an enum of type UI_ColorEditFlags. display a color "
-      "square/button, hover for details, return true when pressed.");
-
-    SFUN(ui_SetColorEditOptions, "void", "setColorEditOptions");
-    ARG("int", "flags");
-    DOC_FUNC(
-      "initialize current options (generally on application startup) if you "
-      "want to select a default format, picker type, etc. User will be able to "
-      "change many settings, unless you pass the _NoOptions flag to your "
-      "calls.");
-
-    // Widgets: Trees --------------------------------------------------------
-
-    SFUN(ui_TreeNode, "int", "treeNode");
-    ARG("string", "label");
-    DOC_FUNC(
-      "return true when the node is open, in which case you need to call "
-      "TreePop()");
-
-    SFUN(ui_TreeNodeStrUnformatted, "int", "treeNode");
-    ARG("string", "str_id");
-    ARG("string", "text");
-
-    SFUN(ui_TreeNodeEx, "int", "treeNode");
-    ARG("string", "label");
-    ARG("int", "flags");
-    DOC_FUNC("`flags` is an enum of type UI_TreeNodeFlags");
-
-    SFUN(ui_TreeNodeExStrUnformatted, "int", "treeNode");
-    ARG("string", "str_id");
-    ARG("int", "flags");
-    ARG("string", "text");
-
-    SFUN(ui_TreePush, "void", "treePush");
-    ARG("string", "str_id");
-    DOC_FUNC(
-      "Indent()+PushID(). Already called by TreeNode() when returning "
-      "true, but you can call TreePush/TreePop yourself if desired.");
-
-    SFUN(ui_TreePop, "void", "treePop");
-    DOC_FUNC("~ Unindent()+PopID()");
-
-    SFUN(ui_GetTreeNodeToLabelSpacing, "float", "getTreeNodeToLabelSpacing");
-    DOC_FUNC(
-      "horizontal distance preceding label when using TreeNode*() or Bullet() "
-      "== (g.FontSize + style.FramePadding.x*2) for a regular unframed "
-      "TreeNode");
-
-    SFUN(ui_CollapsingHeader, "int", "collapsingHeader");
-    ARG("string", "label");
-    ARG("int", "flags");
-    DOC_FUNC(
-      "`flags` is an enum of type UI_TreeNodeFlags. if returning 'true' "
-      "the header is open. doesn't indent nor push on ID stack. user "
-      "doesn't have to call TreePop().");
-
-    SFUN(ui_CollapsingHeaderBoolPtr, "int", "collapsingHeader");
-    ARG("string", "label");
-    ARG("UI_Bool", "p_visible");
-    ARG("int", "flags");
-    DOC_FUNC(
-      "when 'p_visible != NULL': if '*p_visible==true' display an additional "
-      "small close button on upper right of the header which will set the bool "
-      "to false when clicked, if '*p_visible==false' don't display the "
-      "header.");
-
-    SFUN(ui_SetNextItemOpen, "void", "setNextItemOpen");
-    ARG("int", "is_open");
-    ARG("int", "cond");
-    DOC_FUNC(
-      "set next TreeNode/CollapsingHeader open state. `Cond` is an enum of "
-      "type UI_Cond");
-
-    // Widgets: Selectable ---------------------------------------------------
-
-    SFUN(ui_Selectable, "int", "selectable");
-    ARG("string", "label");
-    DOC_FUNC("Implied selected = false, flags = 0, size = ImVec2(0, 0)");
-
-    SFUN(ui_SelectableEx, "int", "selectable");
-    ARG("string", "label");
-    ARG("int", "selected");
-    ARG("int", "flags");
-    ARG("vec2", "size");
-    DOC_FUNC(
-      "`selected` carry the selection state (read-only). Selectable() is "
-      "clicked is returns true so you can modify your selection state. "
-      "`size.x==0.0`: use remaining width, `size.x>0.0`: specify width. "
-      "`size.y==0.0`: use label height, `size.y>0.0`: specify height");
-
-    SFUN(ui_SelectableBoolPtr, "int", "selectable");
-    ARG("string", "label");
-    ARG("UI_Bool", "p_selected");
-    ARG("int", "flags");
-    DOC_FUNC(
-      "`p_selected` points to the selection state (read-write), as a "
-      "convenient "
-      "helper. `flags` is an enum of type UI_SelectableFlags");
-
-    SFUN(ui_SelectableBoolPtrEx, "int", "selectable");
-    ARG("string", "label");
-    ARG("UI_Bool", "p_selected");
-    ARG("int", "flags");
-    ARG("vec2", "size");
-    DOC_FUNC(
-      "`p_selected` points to the selection state (read-write), as a "
-      "convenient helper. `flags` is an enum of type UI_SelectableFlags");
-
-    // Widgets: List Boxes ---------------------------------------------------
-
-    SFUN(ui_BeginListBox, "int", "beginListBox");
-    ARG("string", "label");
-    ARG("vec2", "size");
-    DOC_FUNC(
-      "This is essentially a thin wrapper to using BeginChild/EndChild with "
-      "the ImGuiChildFlags_FrameStyle flag for stylistic changes + displaying "
-      "a label.\n"
-      "You can submit contents and manage your selection state however you "
-      "want it, by creating e.g. Selectable() or any other items.\n"
-      "The simplified/old ListBox() api are helpers over "
-      "BeginListBox()/EndListBox() which are kept available for convenience "
-      "purpose. This is analoguous to how Combos are created.\n"
-      "Choose frame width:   size.x > 0.0f: custom  /  size.x < 0.0f or "
-      "-FLT_MIN: right-align   /  size.x = 0.0f (default): use current "
-      "ItemWidth\n"
-      "Choose frame height:  size.y > 0.0f: custom  /  size.y < 0.0f or "
-      "-FLT_MIN: bottom-align  /  size.y = 0.0f (default): arbitrary default "
-      "height which can fit ~7 items"
-      "This function opens a framed scrolling region.");
-
-    SFUN(ui_EndListBox, "void", "endListBox");
-    DOC_FUNC("only call EndListBox() if BeginListBox() returned true!");
-
-    SFUN(ui_ListBox, "int", "listBox");
-    ARG("string", "label");
-    ARG("UI_Int", "current_item");
-    ARG("string[]", "items");
-    ARG("int", "height_in_items");
-    DOC_FUNC("set `height_in_items` to -1 to use the default");
-
-    SFUN(ui_ListBox_default, "int", "listBox");
-    ARG("string", "label");
-    ARG("UI_Int", "current_item");
-    ARG("string[]", "items");
-    DOC_FUNC("listbox ui widget, uses default item height");
-
-    // Widgets: Data Plotting ------------------------------------------------
-
-    SFUN(ui_PlotLines, "void", "plotLines");
-    ARG("string", "label");
-    ARG("float[]", "values");
-    DOC_FUNC(
-      "Implied values_offset = 0, overlay_text = NULL, scale_min = FLT_MAX, "
-      "scale_max = FLT_MAX, graph_size = ImVec2(0, 0), stride = sizeof(float)");
-
-    SFUN(ui_PlotLinesEx, "void", "plotLines");
-    ARG("string", "label");
-    ARG("float[]", "values");
-    ARG("int", "values_offset");
-    ARG("string", "overlay_text");
-    ARG("float", "scale_min");
-    ARG("float", "scale_max");
-    ARG("vec2", "graph_size");
-
-    SFUN(ui_PlotHistogram, "void", "plotHistogram");
-    ARG("string", "label");
-    ARG("float[]", "values");
-    DOC_FUNC(
-      "Implied values_offset = 0, overlay_text = NULL, scale_min = FLT_MAX, "
-      "scale_max = FLT_MAX, graph_size = ImVec2(0, 0), stride = sizeof(float)");
-
-    SFUN(ui_PlotHistogramEx, "void", "plotHistogram");
-    ARG("string", "label");
-    ARG("float[]", "values");
-    ARG("int", "values_offset");
-    ARG("string", "overlay_text");
-    ARG("float", "scale_min");
-    ARG("float", "scale_max");
-    ARG("vec2", "graph_size");
-
-    // Widgets: Menus --------------------------------------------------------
-
-    SFUN(ui_BeginMenuBar, "int", "beginMenuBar");
-    DOC_FUNC(
-      "append to menu-bar of current window (requires ImGuiWindowFlags_MenuBar "
-      "flag set on parent window)");
-
-    SFUN(ui_EndMenuBar, "void", "endMenuBar");
-    DOC_FUNC("only call EndMenuBar() if BeginMenuBar() returns true!");
-
-    SFUN(ui_BeginMainMenuBar, "int", "beginMainMenuBar");
-    DOC_FUNC("create and append to a full screen menu-bar.");
-
-    SFUN(ui_EndMainMenuBar, "void", "endMainMenuBar");
-    DOC_FUNC("only call EndMainMenuBar() if BeginMainMenuBar() returns true!");
-
-    SFUN(ui_BeginMenu, "int", "beginMenu");
-    ARG("string", "label");
-    DOC_FUNC("Implied enabled = true");
-
-    SFUN(ui_BeginMenuEx, "int", "beginMenu");
-    ARG("string", "label");
-    ARG("int", "enabled");
-    DOC_FUNC("create a sub-menu entry. only call EndMenu() if this returns true!");
-
-    SFUN(ui_EndMenu, "void", "endMenu");
-    DOC_FUNC("only call EndMenu() if BeginMenu() returns true!");
-
-    SFUN(ui_MenuItem, "int", "menuItem");
-    ARG("string", "label");
-    DOC_FUNC("Implied shortcut = NULL, selected = false, enabled = true");
-
-    SFUN(ui_MenuItemBoolPtr, "int", "menuItem");
-    ARG("string", "label");
-    ARG("string", "shortcut");
-    ARG("UI_Bool", "p_selected");
-    ARG("int", "enabled");
-    DOC_FUNC(
-      "return true when activated + toggle (*p_selected) if p_selected != "
-      "NULL");
-
-    // Tooltips ---------------------------------------------------------------
-
-    SFUN(ui_BeginTooltip, "int", "beginTooltip");
-    DOC_FUNC("begin/append a tooltip window.");
-
-    SFUN(ui_EndTooltip, "void", "endTooltip");
-    DOC_FUNC(
-      "only call EndTooltip() if BeginTooltip()/BeginItemTooltip() returns "
-      "true!");
-
-    SFUN(ui_SetTooltipUnformatted, "void", "tooltip");
-    ARG("string", "text");
-    DOC_FUNC(
-      "set a text-only tooltip. Often used after a ImGui::IsItemHovered() "
-      "check. Override any previous call to SetTooltip().\n"
-      "SetTooltip() is more or less a shortcut for the 'if (BeginTooltip()) { "
-      "Text(...); EndTooltip(); }' idiom (with a subtlety that it discard any "
-      "previously submitted tooltip)");
-
-    SFUN(ui_SetItemTooltipUnformatted, "void", "itemTooltip");
-    ARG("string", "text");
-    DOC_FUNC(
-      "set a text-only tooltip if preceding item was hovered. override any "
-      "previous call to SetTooltip().\n"
-      "itemTooltip() is a shortcut for the 'if "
-      "(IsItemHovered(ImGuiHoveredFlags_ForTooltip)) { SetTooltip(...); }' "
-      "idiom.");
-
-    // Popups, Modals --------------------------------------------------------
-
-    SFUN(ui_BeginPopup, "int", "beginPopup");
-    ARG("string", "str_id");
-    ARG("int", "flags");
-    DOC_FUNC(
-      "return true if the popup is open, and you can start outputting to "
-      "it. `flags` is an enum of type UI_WindowFlags\n"
-      "beginPopup(): query popup state, if open start appending into the "
-      "window. Call endPopup() afterwards if returned true. UI_WindowFlags "
-      "are forwarded to the window.");
-
-    SFUN(ui_BeginPopupModal, "int", "beginPopupModal");
-    ARG("string", "name");
-    ARG("UI_Bool", "p_open");
-    ARG("int", "flags");
-    DOC_FUNC(
-      "return true if the modal is open, and you can start outputting to it. "
-      "`flags` is an enum of type UI_WindowFlags\n"
-      "beginPopupModal(): block every interaction behind the window, cannot be "
-      "closed by user, add a dimming background, has a title bar.");
-
-    SFUN(ui_EndPopup, "void", "endPopup");
-
-    SFUN(ui_OpenPopup, "void", "openPopup");
-    ARG("string", "str_id");
-    ARG("int", "popup_flags");
-    DOC_FUNC(
-      "call to mark popup as open (don't call every frame!). `popup_flags` is "
-      "an enum of type UI_PopupFlags");
-
-    SFUN(ui_OpenPopupOnItemClick, "void", "openPopupOnItemClick");
-    ARG("string", "str_id");
-    ARG("int", "popup_flags");
-    DOC_FUNC(
-      "helper to open popup when clicked on last item. Default to "
-      "UI_PopupFlags.MouseButtonRight == 1. (note: actually triggers on the "
-      "mouse _released_ event to be consistent with popup behaviors)\n"
-      "`popup_flags` is an enum of type UI_PopupFlags");
-
-    SFUN(ui_CloseCurrentPopup, "void", "closeCurrentPopup");
-    DOC_FUNC("manually close the popup we have begin-ed into.");
-
-    SFUN(ui_BeginPopupContextItem, "int", "beginPopupContextItem");
-    DOC_FUNC("Implied str_id = NULL, popup_flags = 1");
-
-    SFUN(ui_BeginPopupContextItemEx, "int", "beginPopupContextItem");
-    ARG("string", "str_id");
-    ARG("int", "popup_flags");
-    DOC_FUNC(
-      "open+begin popup when clicked on last item. Use str_id==NULL to "
-      "associate the popup to previous item. If you want to use that on a "
-      "non-interactive item such as Text() you need to pass in an explicit ID "
-      "here. read comments in .cpp!");
-
-    SFUN(ui_BeginPopupContextWindow, "int", "beginPopupContextWindow");
-    DOC_FUNC("Implied str_id = NULL, popup_flags = 1");
-
-    SFUN(ui_BeginPopupContextWindowEx, "int", "beginPopupContextWindow");
-    ARG("string", "str_id");
-    ARG("int", "popup_flags");
-    DOC_FUNC("open+begin popup when clicked on current window.");
-
-    SFUN(ui_BeginPopupContextVoid, "int", "beginPopupContextVoid");
-    DOC_FUNC("Implied str_id = NULL, popup_flags = 1");
-
-    SFUN(ui_BeginPopupContextVoidEx, "int", "beginPopupContextVoid");
-    ARG("string", "str_id");
-    ARG("int", "popup_flags");
-    DOC_FUNC("open+begin popup when clicked in void (where there are no windows).");
-
-    SFUN(ui_IsPopupOpen, "int", "isPopupOpen");
-    ARG("string", "str_id");
-    ARG("int", "flags");
-    DOC_FUNC(
-      "return true if the popup is open. `flags` is an enum of type "
-      "UI_PopupFlags");
-
-    // Tables ----------------------------------------------------------------
-
-    SFUN(ui_BeginTable, "int", "beginTable");
-    ARG("string", "str_id");
-    ARG("int", "column");
-    ARG("int", "flags");
-    DOC_FUNC(
-      "Implied outer_size = ImVec2(0.0f, 0.0f), inner_width = 0.0f\n"
-      "`flags` is an enum of type UI_TableFlags");
-
-    SFUN(ui_BeginTableEx, "int", "beginTable");
-    ARG("string", "str_id");
-    ARG("int", "column");
-    ARG("int", "flags");
-    ARG("vec2", "outer_size");
-    ARG("float", "inner_width");
-    DOC_FUNC("`flags` is an enum of type UI_TableFlags");
-
-    SFUN(ui_EndTable, "void", "endTable");
-    DOC_FUNC("only call EndTable() if BeginTable() returns true!");
-
-    SFUN(ui_TableNextRow, "void", "tableNextRow");
-    DOC_FUNC("Implied row_flags = 0, min_row_height = 0.0f");
-
-    SFUN(ui_TableNextRowEx, "void", "tableNextRow");
-    ARG("int", "row_flags");
-    ARG("float", "min_row_height");
-    DOC_FUNC("append into the first cell of a new row.");
-
-    SFUN(ui_TableNextColumn, "int", "tableNextColumn");
-    DOC_FUNC(
-      "append into the next column (or first column of next row if "
-      "currently in last column). Return true when column is visible.");
-
-    SFUN(ui_TableSetColumnIndex, "int", "tableSetColumnIndex");
-    ARG("int", "column_n");
-    DOC_FUNC(
-      "append into the specified column. Return true when column is "
-      "visible.");
-
-    SFUN(ui_TableSetupColumn, "void", "tableSetupColumn");
-    ARG("string", "label");
-    ARG("int", "flags");
-    DOC_FUNC(
-      "Implied init_width_or_weight = 0.0f, user_id = 0\n"
-      "`flags` is an enum of type UI_TableColumnFlags");
-
-    SFUN(ui_TableSetupColumnEx, "void", "tableSetupColumn");
-    ARG("string", "label");
-    ARG("int", "flags");
-    ARG("float", "init_width_or_weight");
-    ARG("int", "user_id");
-
-    SFUN(ui_TableSetupScrollFreeze, "void", "tableSetupScrollFreeze");
-    ARG("int", "cols");
-    ARG("int", "rows");
-    DOC_FUNC("lock columns/rows so they stay visible when scrolled.");
-
-    SFUN(ui_TableHeader, "void", "tableHeader");
-    ARG("string", "label");
-    DOC_FUNC("submit one header cell manually (rarely used)");
-
-    SFUN(ui_TableHeadersRow, "void", "tableHeadersRow");
-    DOC_FUNC(
-      "submit a row with headers cells based on data provided to "
-      "TableSetupColumn() + submit context menu");
-
-    SFUN(ui_TableAngledHeadersRow, "void", "tableAngledHeadersRow");
-    DOC_FUNC(
-      "submit a row with angled headers for every column with the "
-      "ImGuiTableColumnFlags_AngledHeader flag. MUST BE FIRST ROW.");
-
-    SFUN(ui_TableGetColumnCount, "int", "tableGetColumnCount");
-    DOC_FUNC("return number of columns (value passed to BeginTable)");
-
-    SFUN(ui_TableGetColumnIndex, "int", "tableGetColumnIndex");
-    DOC_FUNC("return current column index.");
-
-    SFUN(ui_TableGetRowIndex, "int", "tableGetRowIndex");
-    DOC_FUNC("return current row index.");
-
-    SFUN(ui_TableGetColumnName, "string", "tableGetColumnName");
-    ARG("int", "column_n");
-    DOC_FUNC(
-      "return \"\" if column didn't have a name declared by "
-      "TableSetupColumn(). Pass -1 to use current column.");
-
-    SFUN(ui_TableGetColumnFlags, "int", "tableGetColumnFlags");
-    ARG("int", "column_n");
-    DOC_FUNC(
-      "return column flags so you can query their Enabled/Visible/Sorted/"
-      "Hovered status flags. Pass -1 to use current column.");
-
-    SFUN(ui_TableSetColumnEnabled, "void", "tableSetColumnEnabled");
-    ARG("int", "column_n");
-    ARG("int", "v");
-    DOC_FUNC(
-      "change user accessible enabled/disabled state of a column. Set to "
-      "false to hide the column. User can use the context menu to change "
-      "this themselves (right-click in headers, or right-click in columns "
-      "body with UI_TableFlags.ContextMenuInBody)");
-
-    SFUN(ui_TableSetBgColor, "void", "tableSetBgColor");
-    ARG("int", "ui_table_bg_target_flag");
-    ARG("vec4", "color");
-    ARG("int", "column_n");
-    DOC_FUNC(
-      "change the color of a cell, row, or column. UI_TableBgTarget "
-      "flags for details.");
-
-    // Tab Bars, Tabs --------------------------------------------------------
-
-    SFUN(ui_BeginTabBar, "int", "beginTabBar");
-    ARG("string", "str_id");
-    ARG("int", "flags");
-    DOC_FUNC(
-      "`flags` is an enum of type UI_TabBarFlags\n"
-      "create and append into a TabBar");
-
-    SFUN(ui_EndTabBar, "void", "endTabBar");
-    DOC_FUNC("only call EndTabBar() if BeginTabBar() returns true!");
-
-    SFUN(ui_BeginTabItem, "int", "beginTabItem");
-    ARG("string", "label");
-    ARG("UI_Bool", "p_open");
-    ARG("int", "flags");
-    DOC_FUNC(
-      "create a Tab. Returns true if the Tab is selected.\n"
-      "`flags` is an enum of type UI_TabItemFlags");
-
-    SFUN(ui_EndTabItem, "void", "endTabItem");
-    DOC_FUNC("only call EndTabItem() if BeginTabItem() returns true!");
-
-    SFUN(ui_TabItemButton, "int", "tabItemButton");
-    ARG("string", "label");
-    ARG("int", "flags");
-    DOC_FUNC(
-      "create a Tab behaving like a button. Returns true when clicked.\n"
-      "cannot be selected in the tab bar.\n"
-      "`flags` is an enum of type UI_TabItemFlags");
-
-    SFUN(ui_SetTabItemClosed, "void", "setTabItemClosed");
-    ARG("string", "tab_or_docked_window_label");
-    DOC_FUNC(
-      "notify TabBar or Docking system of a closed tab/window ahead (useful to "
-      "reduce visual flicker on reorderable tab bars). For tab-bar: call after "
-      "BeginTabBar() and before Tab submissions. Otherwise call with a window "
-      "name.");
-
-    // Docking -------------------------------------------------------------
-
-    SFUN(ui_DockSpaceOverViewport, "int", "dockSpaceOverViewport");
-    DOC_FUNC("Implied dockspace_id = 0, viewport = NULL, flags = 0");
-
-    // Disabling -------------------------------------------------------------
-
-    SFUN(ui_BeginDisabled, "void", "beginDisabled");
-    ARG("int", "disabled");
-    DOC_FUNC(
-      "Disable all user interactions and dim items visuals (applying "
-      "style.DisabledAlpha over current colors)\n"
-      "Those can be nested but it cannot be used to enable an already disabled "
-      "section (a single BeginDisabled(true) in the stack is enough to keep "
-      "everything disabled)\n"
-      "BeginDisabled(false) essentially does nothing useful but is provided to "
-      "facilitate use of boolean expressions. If you can avoid calling "
-      "BeginDisabled(False)/EndDisabled() best to avoid it.");
-
-    SFUN(ui_EndDisabled, "void", "endDisabled");
-
-    // Clipping --------------------------------------------------------------
-
-    SFUN(ui_PushClipRect, "void", "pushClipRect");
-    ARG("vec2", "clip_rect_min");
-    ARG("vec2", "clip_rect_max");
-    ARG("int", "intersect_with_current_clip_rect");
-    DOC_FUNC(
-      "Mouse hovering is affected by ImGui::PushClipRect() calls, unlike "
-      "direct calls to ImDrawList::PushClipRect() which are render only.");
-
-    SFUN(ui_PopClipRect, "void", "popClipRect");
-
-    // Focus, Activation -----------------------------------------------------
-
-    SFUN(ui_SetItemDefaultFocus, "void", "setItemDefaultFocus");
-    DOC_FUNC("make last item the default focused item of a window.");
-
-    SFUN(ui_SetKeyboardFocusHere, "void", "setKeyboardFocusHere");
-    DOC_FUNC("Implied offset = 0");
-
-    SFUN(ui_SetKeyboardFocusHereEx, "void", "setKeyboardFocusHere");
-    ARG("int", "offset");
-    DOC_FUNC(
-      "focus keyboard on the next widget. Use positive 'offset' to access sub "
-      "components of a multiple component widget. Use -1 to access previous "
-      "widget.");
-
-    // Overlapping Mode -------------------------------------------------------
-
-    SFUN(ui_SetNextItemAllowOverlap, "void", "nextItemAllowOverlap");
-    DOC_FUNC(
-      "allow next item to be overlapped by a subsequent item. Useful with "
-      "invisible buttons, selectable, treenode covering an area where "
-      "subsequent items may need to be added. Note that both Selectable() and "
-      "TreeNode() have dedicated flags doing this.");
-
-    // Item/Widgets Utilities and Query Functions
-    // --------------------------------
-
-    SFUN(ui_IsItemHovered, "int", "isItemHovered");
-    ARG("int", "ui_hovered_flags");
-    DOC_FUNC(
-      "is the last item hovered? (and usable, aka not blocked by a popup, "
-      "etc.). See UI_HoveredFlags for more options.");
-
-    SFUN(ui_IsItemActive, "int", "isItemActive");
-    DOC_FUNC(
-      "is the last item active? (e.g. button being held, text field being "
-      "edited. This will continuously return true while holding mouse button "
-      "on an item. Items that don't interact will always return false)");
-
-    SFUN(ui_IsItemFocused, "int", "isItemFocused");
-    DOC_FUNC("is the last item focused for keyboard/gamepad navigation?");
-
-    SFUN(ui_IsItemClicked, "int", "isItemClicked");
-    DOC_FUNC("Implied mouse_button = 0");
-
-    SFUN(ui_IsItemClickedEx, "int", "isItemClicked");
-    ARG("int", "mouse_button");
-    DOC_FUNC(
-      "is the last item hovered and mouse clicked on? (**)  == IsMouseClicked("
-      "mouse_button) && IsItemHovered(). Important. (**) this is NOT "
-      "equivalent "
-      "to the behavior of e.g. Button(). Read comments in function definition."
-      "mouse_button is an enum of type UI_MouseButton");
-
-    SFUN(ui_IsItemVisible, "int", "isItemVisible");
-    DOC_FUNC(
-      "is the last item visible? (items may be out of sight because of "
-      "clipping/scrolling)");
-
-    SFUN(ui_IsItemEdited, "int", "isItemEdited");
-    DOC_FUNC(
-      "did the last item modify its underlying value this frame? or was "
-      "pressed? This is generally the same as the 'bool' return value of many "
-      "widgets.");
-
-    SFUN(ui_IsItemActivated, "int", "isItemActivated");
-    DOC_FUNC("was the last item just made active (item was previously inactive).");
-
-    SFUN(ui_IsItemDeactivated, "int", "isItemDeactivated");
-    DOC_FUNC(
-      "was the last item just made inactive (item was previously active). "
-      "Useful for Undo/Redo patterns with widgets that require continuous "
-      "editing.");
-
-    SFUN(ui_IsItemDeactivatedAfterEdit, "int", "isItemDeactivatedAfterEdit");
-    DOC_FUNC(
-      "was the last item just made inactive and made a value change when it "
-      "was "
-      "active? (e.g. Slider/Drag moved). Useful for Undo/Redo patterns with "
-      "widgets that require continuous editing. Note that you may get false "
-      "positives (some widgets such as Combo()/ListBox()/Selectable() will "
-      "return true even when clicking an already selected item).");
-
-    SFUN(ui_IsItemToggledOpen, "int", "isItemToggledOpen");
-    DOC_FUNC("was the last item open state toggled? set by TreeNode().");
-
-    SFUN(ui_IsAnyItemHovered, "int", "isAnyItemHovered");
-    DOC_FUNC("is any item hovered?");
-
-    SFUN(ui_IsAnyItemActive, "int", "isAnyItemActive");
-    DOC_FUNC("is any item active?");
-
-    SFUN(ui_IsAnyItemFocused, "int", "isAnyItemFocused");
-    DOC_FUNC("is any item focused?");
-
-    SFUN(ui_GetItemID, "int", "getItemID");
-    DOC_FUNC("get ID of last item (~~ often same ImGui::GetID(label) beforehand)");
-
-    SFUN(ui_GetItemRectMin, "vec2", "getItemRectMin");
-    DOC_FUNC("get upper-left bounding rectangle of the last item (screen space)");
-
-    SFUN(ui_GetItemRectMax, "vec2", "getItemRectMax");
-    DOC_FUNC("get lower-right bounding rectangle of the last item (screen space)");
-
-    SFUN(ui_GetItemRectSize, "vec2", "getItemRectSize");
-    DOC_FUNC("get size of last item");
-
-    // Viewports ------------------------------------------------------------
-
-    SFUN(ui_GetMainViewport, "UI_Viewport", "getMainViewport");
-    DOC_FUNC("Return primary/default viewport. This can never be NULL.");
-
-    // Text Utilities ---------------------------------------------------------
-
-    SFUN(ui_CalcTextSize, "vec2", "calcTextSize");
-    ARG("string", "text");
-    DOC_FUNC(
-      "Implied text_end = NULL, hide_text_after_double_hash = false, "
-      "wrap_width = -1.0f");
-
-    SFUN(ui_CalcTextSizeEx, "vec2", "calcTextSize");
-    ARG("string", "text");
-    ARG("string", "text_end");
-    ARG("int", "hide_text_after_double_hash");
-    ARG("float", "wrap_width");
-    DOC_FUNC("default hide_text_after_double_hash = false, wrap_width = -1.0f");
-
-    // Color Utilities --------------------------------------------------------
-
-    SFUN(ui_ColorConvertRGBtoHSV, "vec3", "convertRGBtoHSV");
-    ARG("vec3", "rgb");
-
-    SFUN(ui_ColorConvertHSVtoRGB, "vec3", "convertHSVtoRGB");
-    ARG("vec3", "hsv");
-
-    // Inputs Utilities: Keyboard/Mouse/Gamepad --------------------------------
-
-    SFUN(ui_IsKeyDown, "int", "isKeyDown");
-    ARG("int", "key");
-    DOC_FUNC("is key being held. `key` is an enum of type UI_Key");
-
-    SFUN(ui_IsKeyPressed, "int", "isKeyPressed");
-    ARG("int", "key");
-    DOC_FUNC("Implied repeat = true. `key` is an enum of type UI_Key");
-
-    SFUN(ui_IsKeyPressedEx, "int", "isKeyPressed");
-    ARG("int", "key");
-    ARG("int", "repeat");
-    DOC_FUNC(
-      "was key pressed (went from !Down to Down)? if repeat=true, uses "
-      "io.KeyRepeatDelay / KeyRepeatRate. `key` is an enum of type UI_Key");
-
-    SFUN(ui_IsKeyReleased, "int", "isKeyReleased");
-    ARG("int", "key");
-    DOC_FUNC(
-      "was key released (went from Down to !Down)? `key` is an enum of type "
-      "UI_Key");
-
-    SFUN(ui_IsKeyChordPressed, "int", "isKeyChordPressed");
-    ARG("int", "key_chord");
-    DOC_FUNC(
-      "was key chord (UI_Key.Mod* + UI_Key) pressed, e.g. you can pass "
-      "'UI_Key.Mod_Ctrl | UI_Key.S' as a key-chord. This doesn't do any "
-      "routing or "
-      "focus check, please consider using Shortcut() function instead.");
-
-    SFUN(ui_GetKeyPressedAmount, "int", "keyPressedAmount");
-    ARG("int", "key");
-    ARG("float", "repeat_delay");
-    ARG("float", "rate");
-    DOC_FUNC(
-      "uses provided repeat rate/delay. return a count, most often 0 or 1 but "
-      "might be >1 if "
-      "RepeatRate is small enough that DeltaTime > RepeatRate. `key` is an "
-      "enum of type UI_Key");
-
-    SFUN(ui_GetKeyName, "string", "keyName");
-    ARG("int", "key");
-    DOC_FUNC(
-      "`key` is a UI_Key enum, e.g. UI_Key.Backspace. Returns English name of the key. "
-      "Those names are provided for debugging and are not meant to be saved "
-      "persistently or compared.");
-
-    SFUN(ui_SetNextFrameWantCaptureKeyboard, "void", "setNextFrameWantCaptureKeyboard");
-    ARG("int", "want_capture_keyboard");
-    DOC_FUNC(
-      "Override io.WantCaptureKeyboard flag next frame (said flag is left for "
-      "your application to handle, typically when true it instructs your app "
-      "to ignore inputs). e.g. force capture keyboard when your widget is "
-      "being hovered. This is equivalent to setting \"io.WantCaptureKeyboard = "
-      "want_capture_keyboard\"; after the next NewFrame() call.");
-
-    // Inputs Utilities: Mouse specific ---------------------------------------
-
-    SFUN(ui_IsMouseDown, "int", "isMouseDown");
-    ARG("int", "button");
-    DOC_FUNC("is mouse button held. `button` is an enum of type UI_MouseButton");
-
-    SFUN(ui_IsMouseClicked, "int", "isMouseClicked");
-    ARG("int", "button");
-    DOC_FUNC("Implied repeat = false. `button` is an enum of type UI_MouseButton");
-
-    SFUN(ui_IsMouseClickedEx, "int", "isMouseClicked");
-    ARG("int", "button");
-    ARG("int", "repeat");
-    DOC_FUNC(
-      "did mouse button clicked? (went from !Down to Down). Same as "
-      "GetMouseClickedCount() == 1. `button` is an enum of type "
-      "UI_MouseButton");
-
-    SFUN(ui_IsMouseReleased, "int", "isMouseReleased");
-    ARG("int", "button");
-    DOC_FUNC(
-      "did mouse button released? (went from Down to !Down). `button` is an "
-      "enum of type UI_MouseButton");
-
-    SFUN(ui_IsMouseDoubleClicked, "int", "isMouseDoubleClicked");
-    ARG("int", "button");
-    DOC_FUNC(
-      "did mouse button double-clicked? Same as GetMouseClickedCount() == 2. "
-      "`button` is an enum of type UI_MouseButton");
-
-    SFUN(ui_GetMouseClickedCount, "int", "getMouseClickedCount");
-    ARG("int", "button");
-    DOC_FUNC(
-      "return the number of successive mouse-clicks at the time where a click "
-      "happen (otherwise 0). `button` is an enum of type UI_MouseButton");
-
-    SFUN(ui_IsMouseHoveringRect, "int", "isMouseHoveringRect");
-    ARG("vec2", "r_min");
-    ARG("vec2", "r_max");
-    DOC_FUNC("Implied clip = true");
-
-    SFUN(ui_IsMouseHoveringRectEx, "int", "isMouseHoveringRect");
-    ARG("vec2", "r_min");
-    ARG("vec2", "r_max");
-    ARG("int", "clip");
-    DOC_FUNC(
-      "is mouse hovering given bounding rect (in screen space). clipped by "
-      "current clipping settings, but disregarding of other consideration of "
-      "focus/window ordering/popup-block.");
-
-    SFUN(ui_IsMousePosValid, "int", "isMousePosValid");
-    // ARG("vec2", "mouse_pos");
-    DOC_FUNC(
-      "by convention we use (-FLT_MAX,-FLT_MAX) to denote that there is no "
-      "mouse available");
-
-    SFUN(ui_GetMousePos, "vec2", "getMousePos");
-    DOC_FUNC(
-      "shortcut to ImGui::GetIO().MousePos provided by user, to be "
-      "consistent with other calls");
-
-    SFUN(ui_GetMousePosOnOpeningCurrentPopup, "vec2",
-         "getMousePosOnOpeningCurrentPopup");
-    DOC_FUNC(
-      "retrieve mouse position at the time of opening popup we have "
-      "BeginPopup() into "
-      "(helper to avoid user backing that value themselves)");
-
-    SFUN(ui_IsMouseDragging, "int", "isMouseDragging");
-    ARG("int", "button");
-    ARG("float", "lock_threshold");
-    DOC_FUNC(
-      "is mouse dragging? (uses io.MouseDraggingThreshold if lock_threshold < "
-      "0.0f). `button` is an enum of type UI_MouseButton");
-
-    SFUN(ui_GetMouseDragDelta, "vec2", "getMouseDragDelta");
-    ARG("int", "button");
-    ARG("float", "lock_threshold");
-    DOC_FUNC(
-      "return the delta from the initial clicking position while the mouse "
-      "button is pressed or was just released. This is locked and return "
-      "0.0f until the mouse moves past a distance threshold at least once "
-      "(uses io.MouseDraggingThreshold if lock_threshold < 0.0f)\n"
-      "`button` is an enum of type UI_MouseButton");
-
-    SFUN(ui_ResetMouseDragDelta, "void", "resetMouseDragDelta");
-    DOC_FUNC("Implied button = 0");
-
-    SFUN(ui_ResetMouseDragDeltaEx, "void", "resetMouseDragDelta");
-    ARG("int", "button");
-    DOC_FUNC("`button` is an enum of type UI_MouseButton");
-
-    SFUN(ui_GetMouseCursor, "int", "mouseCursor");
-    DOC_FUNC(
-      "get desired mouse cursor shape. Important: reset in ImGui::NewFrame(), "
-      "this is updated during the frame. valid before Render(). If you use "
-      "software rendering by setting io.MouseDrawCursor ImGui will render "
-      "those for you");
-
-    SFUN(ui_SetMouseCursor, "void", "setMouseCursor");
-    ARG("int", "cursor_type");
-    DOC_FUNC(
-      "set desired mouse cursor shape. `cursor_type` is an enum of type "
-      "UI_MouseCursor");
-
-    SFUN(ui_SetNextFrameWantCaptureMouse, "void", "setNextFrameWantCaptureMouse");
-    ARG("int", "want_capture_mouse");
-    DOC_FUNC(
-      "Override io.WantCaptureMouse flag next frame (said flag is left for "
-      "your application to handle, typical when true it instucts your app to "
-      "ignore inputs). This is equivalent to setting \"io.WantCaptureMouse = "
-      "want_capture_mouse;\" after the next NewFrame() call.");
-
-    // Clipboard Utilities ---------------------------------------------------
-
-    SFUN(ui_GetClipboardText, "string", "clipboardText");
-    DOC_FUNC("get current text from the clipboard (e.g. result of Ctrl+C)");
-
-    SFUN(ui_SetClipboardText, "void", "clipboardText");
-    ARG("string", "text");
-    DOC_FUNC("set the clipboard text");
-
-    // styles ----------------------------------------------------------------
-    QUERY->add_sfun(QUERY, ui_styleColorsDark, "void", "styleColorsDark");
-    QUERY->add_sfun(QUERY, ui_styleColorsLight, "void", "styleColorsLight");
-    QUERY->add_sfun(QUERY, ui_styleColorsClassic, "void", "styleColorsClassic");
-
-    QUERY->end_class(QUERY); // UI
+    { // ImGui Font
+        BEGIN_CLASS("UI_Font", "Object");
+        DOC_CLASS(
+          "Placeholder class for ImFont. WORK IN PROGRESS. Do not instantiate "
+          "directly. Create from UI.addFontFromFileTTF()");
+
+        ui_font_ptr_offset = MVAR("int", "@ui_font_ptr", false);
+
+        END_CLASS();
+    } // ImGui Font
+
+    // ImGuiIO ---------------------------------------------------------------------
+    {
+        BEGIN_CLASS("UI_IO", "Object");
+
+        SFUN(ui_io_get_ConfigFlags, "int", "configFlags");
+        DOC_FUNC(
+          "default = 0. See UI_ConfigFlags enum. Set by user/application. "
+          "Gamepad/keyboard navigation options, etc.");
+
+        SFUN(ui_io_set_ConfigFlags, "void", "configFlags");
+        ARG("int", "config_flags");
+        DOC_FUNC("See UI_ConfigFlags enum");
+
+        SFUN(ui_io_get_BackendFlags, "int", "backendFlags");
+        DOC_FUNC(
+          "See UI_BackendFlags enum. Set by backend (imgui_impl_xxx files or custom "
+          "backend) to communicate features supported by the backend.");
+
+        SFUN(ui_io_set_BackendFlags, "void", "backendFlags");
+        ARG("int", "flags");
+        DOC_FUNC(
+          "See UI_BackendFlags enum. Set by backend (imgui_impl_xxx files or custom "
+          "backend) to communicate features supported by the backend.");
+
+        SFUN(ui_io_get_DisplaySize, "vec2", "displaySize");
+        DOC_FUNC(
+          "Main display size, in pixels (generally == GetMainViewport()->Size). May "
+          "change every frame.");
+
+        SFUN(ui_io_get_DeltaTime, "float", "deltaTime");
+        DOC_FUNC("Time elapsed since last frame, in seconds. May change every frame.");
+
+        SFUN(ui_io_get_IniSavingRate, "float", "iniSavingRate");
+        DOC_FUNC(
+          "default 5.0f. Get minimum time between saving positions/sizes to .ini file, "
+          "in seconds.");
+
+        SFUN(ui_io_set_IniSavingRate, "void", "iniSavingRate");
+        ARG("float", "rate");
+        DOC_FUNC(
+          "default 5.0f. Set minimum time between saving positions/sizes to .ini file, "
+          "in seconds.");
+
+        SFUN(ui_io_get_IniFilename, "string", "iniFilename");
+        DOC_FUNC(
+          "Get path to .ini file (important: default \"imgui.ini\" is relative to "
+          "current working dir!). Set NULL to disable automatic .ini loading/saving or "
+          "if you want to manually call LoadIniSettingsXXX() / SaveIniSettingsXXX() "
+          "functions.");
+
+        SFUN(ui_io_set_IniFilename, "void", "iniFilename");
+        ARG("string", "filename");
+        DOC_FUNC(
+          "Set path to .ini file (important: default \"imgui.ini\" is relative to "
+          "current working dir!). Set NULL to disable automatic .ini loading/saving or "
+          "if you want to manually call LoadIniSettingsXXX() / SaveIniSettingsXXX() "
+          "functions.");
+
+        SFUN(ui_io_get_LogFilename, "string", "logFilename");
+        DOC_FUNC(
+          "default \"imgui_log.txt\". Get path to .log file (default parameter to "
+          "ImGui::LogToFile when no file is specified).");
+
+        SFUN(ui_io_set_LogFilename, "void", "logFilename");
+        ARG("string", "filename");
+        DOC_FUNC(
+          "default \"imgui_log.txt\" Set path to .log file (default parameter to "
+          "ImGui::LogToFile when no file is specified).");
+
+        SFUN(ui_io_get_FontGlobalScale, "float", "fontGlobalScale");
+        DOC_FUNC("Default 1.0f. Get global scale of all fonts");
+
+        SFUN(ui_io_set_FontGlobalScale, "void", "fontGlobalScale");
+        ARG("float", "scale");
+        DOC_FUNC("Default 1.0f. Set global scale of all fonts");
+
+        END_CLASS();
+    }
+
+    { // UI ---------------------------------------------------------------------
+        QUERY->begin_class(QUERY, "UI", "Object");
+        ADD_EX("deep/ckfxr.ck");
+
+        // ChuGL widgets
+        SFUN(ui_scenegraph, "void", "scenegraph");
+        ARG(SG_CKNames[SG_COMPONENT_TRANSFORM], "root");
+        QUERY->doc_func(QUERY,
+                        "Scene tree widget. "
+                        "View data about a given GGen and all its children. "
+                        "A simple version of a typical Editor Scenegraph");
+
+        // config
+        SFUN(ui_set_disabled, "void", "disabled");
+        ARG("int", "disabled");
+        DOC_FUNC(
+          "Set whether imgui is disabled (does not call call new frame, does not "
+          "submit UI draw lists to renderer)"
+          "Do this if your application does not render UI and needs the extra "
+          "performance from skipping UI overhead. Saves ~2ms on the render thread."
+          "While UI.disabled == true, DO NOT call any other UI functions. Doing so "
+          "results in undefined behavior");
+
+        // IO helpers
+        SFUN(ui_want_capture_mouse, "int", "wantCaptureMouse");
+        DOC_FUNC(
+          "When wantCaptureMouse=true, the mouse is interacting with UI widgets, "
+          "so you know to discard/hide the mouse inputs from your underlying "
+          "application.");
+
+        SFUN(ui_want_capture_keyboard, "int", "wantCaptureKeyboard");
+        DOC_FUNC(
+          "When wantCaptureKeyboard=true, the keyboard is interacting with UI "
+          "widgets, so you know to discard/hide the keyboard inputs from your "
+          "underlying application.");
+
+        // SFUN(ui_AddFontFromFileTTF, "UI_Font", "addFontFromFileTTF");
+        // ARG("string", "filename");
+        // ARG("float", "size_pixels");
+        // DOC_FUNC("Load a TTF/OTF font.");
+
+        // Main
+        SFUN(ui_get_style, "UI_Style", "getStyle");
+        DOC_FUNC(
+          "access the Style structure (colors, sizes). Always use "
+          "PushStyleColor(), PushStyleVar() to modify style mid-frame!");
+
+        // Demo, Debug, Information
+        QUERY->add_sfun(QUERY, ui_ShowDemoWindow, "void", "showDemoWindow");
+        QUERY->add_arg(QUERY, "UI_Bool", "p_open");
+        QUERY->doc_func(QUERY,
+                        "create Demo window. demonstrate most ImGui features. call "
+                        "this to learn about the library! try to make it always "
+                        "available in your application!");
+        QUERY->add_sfun(QUERY, ui_ShowMetricsWindow, "void", "showMetricsWindow");
+        QUERY->add_arg(QUERY, "UI_Bool", "p_open");
+        QUERY->doc_func(
+          QUERY,
+          "create Metrics/Debugger window. display Dear ImGui internals: windows, "
+          "draw commands, various internal state, etc.");
+        QUERY->add_sfun(QUERY, ui_ShowDebugLogWindow, "void", "showDebugLogWindow");
+        QUERY->add_arg(QUERY, "UI_Bool", "p_open");
+        QUERY->doc_func(QUERY,
+                        "create Debug Log window. display a simplified log of "
+                        "important dear imgui events.");
+        QUERY->add_sfun(QUERY, ui_showStyleEditor, "void", "showStyleEditor");
+        QUERY->doc_func(QUERY,
+                        "add style selector block (not a window), essentially a "
+                        "combo listing the default styles.");
+
+        SFUN(ui_ShowIDStackToolWindowEx, "void", "showIDStackToolWindow");
+        ARG("UI_Bool", "p_open");
+        DOC_FUNC(
+          "create Stack Tool window. hover items with mouse to query "
+          "information about the source of their unique ID.");
+
+        SFUN(ui_ShowAboutWindow, "void", "showAboutWindow");
+        ARG("UI_Bool", "p_open");
+        DOC_FUNC(
+          "create About window. display Dear ImGui version, credits and "
+          "build/system information.");
+
+        SFUN(ui_ShowStyleSelector, "int", "showStyleSelector");
+        ARG("string", "label");
+        DOC_FUNC(
+          "add style selector block (not a window), essentially a combo "
+          "listing the default styles.");
+
+        SFUN(ui_ShowFontSelector, "void", "showFontSelector");
+        ARG("string", "label");
+        DOC_FUNC(
+          "add font selector block (not a window), essentially a combo "
+          "listing the loaded fonts.");
+
+        SFUN(ui_ShowUserGuide, "void", "showUserGuide");
+        DOC_FUNC(
+          "add basic help/info block (not a window): how to manipulate ImGui "
+          "as an end-user (mouse/keyboard controls).");
+
+        SFUN(ui_GetVersion, "string", "getVersion");
+        DOC_FUNC(
+          "get the compiled version string e.g. \"1.80 WIP\" (essentially "
+          "the value for IMGUI_VERSION from the compiled version of "
+          "imgui.cpp)");
+
+        // Windows
+        QUERY->add_sfun(QUERY, ui_begin, "int", "begin");
+        QUERY->add_arg(QUERY, "string", "name");
+        QUERY->add_arg(QUERY, "UI_Bool", "p_open");
+        QUERY->add_arg(QUERY, "int", "flags"); // ImGuiWindowFlags
+        DOC_FUNC(
+          " `flags` of type UI_WindowFlags.  "
+          "- UI.begin() = push window to the stack and start appending to it. UI.end() "
+          "= "
+          "pop window from the stack. "
+          "- Passing 'UI_Bool p_open != NULL' shows a window-closing widget in the "
+          "upper-right corner of the window, "
+          "  which clicking will set the boolean to false when clicked. "
+          "- You may append multiple times to the same window during the same frame by "
+          "calling Begin()/End() pairs multiple times. "
+          "  Some information such as 'flags' or 'p_open' will only be considered by "
+          "the "
+          "first call to Begin(). "
+          "- Begin() return false to indicate the window is collapsed or fully "
+          "clipped, so "
+          "you may early out and omit submitting "
+          "  anything to the window. Always call a matching End() for each Begin() "
+          "call, "
+          "regardless of its return value! ");
+
+        SFUN(ui_begin_no_options, "int", "begin");
+        ARG("string", "name");
+        DOC_FUNC("Equivalent to UI.begin(name, null, 0)");
+
+        QUERY->add_sfun(QUERY, ui_end, "void", "end");
+
+        // Child windows
+        QUERY->add_sfun(QUERY, ui_BeginChild, "int", "beginChild");
+        QUERY->add_arg(QUERY, "string", "str_id");
+        QUERY->add_arg(QUERY, "vec2", "size");        // map ImVec2 --> vec2
+        QUERY->add_arg(QUERY, "int", "child_flags");  // ImGuiChildFlags
+        QUERY->add_arg(QUERY, "int", "window_flags"); // ImGuiWindowFlags
+        DOC_FUNC(
+          "Manual sizing (each axis can use a different setting e.g. ImVec2(0.0f, "
+          "400.0f)):\n"
+          "  == 0.0f: use remaining parent window size for this axis.\n"
+          "  > 0.0f: use specified size for this axis.\n"
+          "  < 0.0f: right/bottom-align to specified distance from available "
+          "content boundaries.\n"
+          "Specifying UI_ChildFlags.AutoResizeX or UI_ChildFlags.AutoResizeY"
+          "makes the sizing automatic based on child contents.\n"
+          "Combining both UI_ChildFlags.AutoResizeX _and_ "
+          "UI_ChildFlags.AutoResizeY defeats purpose of a scrolling region and is "
+          "NOT recommended.\n"
+          "BeginChild() returns false to indicate the window is collapsed or fully "
+          "clipped, so you may early out and omit submitting anything to the "
+          "window. Always call a matching EndChild() for each BeginChild() call, "
+          "regardless of its return value.");
+
+        QUERY->add_sfun(QUERY, ui_EndChild, "void", "endChild");
+
+        // Windows utilities
+        SFUN(ui_IsWindowAppearing, "int", "isWindowAppearing");
+
+        SFUN(ui_IsWindowCollapsed, "int", "isWindowCollapsed");
+
+        SFUN(ui_IsWindowFocused, "int", "isWindowFocused");
+        ARG("int", "ui_focused_flags");
+        DOC_FUNC(
+          "is current window focused? or its root/child, depending on flags. "
+          "flags are of type UI_FocusedFlags.");
+
+        SFUN(ui_IsWindowHovered, "int", "isWindowHovered");
+        ARG("int", "ui_hovered_flags");
+        DOC_FUNC(
+          "is current window hovered and hoverable (e.g. not blocked by a "
+          "popup/modal)? flags are of type UI_HoveredFlags.");
+
+        SFUN(ui_GetWindowDpiScale, "float", "getWindowDpiScale");
+        DOC_FUNC(
+          "get DPI scale currently associated to the current window's viewport.");
+
+        SFUN(ui_GetWindowPos, "vec2", "getWindowPos");
+        DOC_FUNC(
+          "get current window position in screen space (note: it is unlikely you "
+          "need to use this. Consider using current layout pos instead, "
+          "GetCursorScreenPos())");
+
+        SFUN(ui_GetWindowSize, "vec2", "getWindowSize");
+        DOC_FUNC(
+          "get current window size (note: it is unlikely you need to use this. "
+          "Consider using GetCursorScreenPos() and e.g. GetContentRegionAvail() "
+          "instead)");
+
+        SFUN(ui_GetWindowWidth, "float", "getWindowWidth");
+        DOC_FUNC("get current window width (shortcut for GetWindowSize().x)");
+
+        SFUN(ui_GetWindowHeight, "float", "getWindowHeight");
+        DOC_FUNC("get current window height (shortcut for GetWindowSize().y)");
+
+        SFUN(ui_GetWindowViewport, "UI_Viewport", "getWindowViewport");
+        DOC_FUNC("get viewport currently associated to the current window.");
+
+        // Window manipulation
+        QUERY->add_sfun(QUERY, ui_SetNextWindowPos, "void", "setNextWindowPos");
+        QUERY->add_arg(QUERY, "vec2", "pos");
+        QUERY->add_arg(QUERY, "int", "cond" /*ImGuiCond*/);
+        QUERY->doc_func(QUERY, "Implied pivot = ImVec2(0, 0)");
+
+        QUERY->add_sfun(QUERY, ui_SetNextWindowPosEx, "void", "setNextWindowPosEx");
+        QUERY->add_arg(QUERY, "vec2", "pos");
+        QUERY->add_arg(QUERY, "int", "cond");
+        QUERY->add_arg(QUERY, "vec2", "pivot");
+        QUERY->doc_func(QUERY,
+                        "set next window position. call before Begin(). "
+                        "use pivot=(0.5f,0.5f) to center on given point, etc.");
+
+        QUERY->add_sfun(QUERY, ui_SetNextWindowSize, "void", "setNextWindowSize");
+        QUERY->add_arg(QUERY, "vec2", "size");
+        QUERY->add_arg(QUERY, "int", "cond");
+        QUERY->doc_func(QUERY,
+                        "set next window size. set axis to 0.0f to force an "
+                        "auto-fit on this axis. call before Begin()");
+
+        QUERY->add_sfun(QUERY, ui_SetNextWindowSizeConstraints, "void",
+                        "setNextWindowSizeConstraints");
+        QUERY->add_arg(QUERY, "vec2", "size_min");
+        QUERY->add_arg(QUERY, "vec2", "size_max");
+        QUERY->add_arg(QUERY, "UI_SizeCallback", "custom_callback");
+        QUERY->doc_func(QUERY,
+                        "set next window size limits. use 0.0f or FLT_MAX if you "
+                        "don't want limits. Use -1 for both min and max of same "
+                        "axis to preserve current size (which itself is a "
+                        "constraint). Use callback to apply non-trivial programmatic "
+                        "constraints.");
+
+        QUERY->add_sfun(QUERY, ui_SetNextWindowContentSize, "void",
+                        "setNextWindowContentSize");
+        QUERY->add_arg(QUERY, "vec2", "size");
+        QUERY->doc_func(
+          QUERY,
+          "set next window content size (~ scrollable client area, which enforce "
+          "the range of scrollbars). Not including window decorations (title bar, "
+          "menu bar, etc.) nor WindowPadding. set an axis to 0.0f to leave it "
+          "automatic. call before Begin()");
+
+        QUERY->add_sfun(QUERY, ui_SetNextWindowCollapsed, "void",
+                        "setNextWindowCollapsed");
+        QUERY->add_arg(QUERY, "int", "collapsed");
+        QUERY->add_arg(QUERY, "int", "cond" /*ImGuiCond*/);
+        QUERY->doc_func(QUERY, "set next window collapsed state. call before Begin()");
+
+        QUERY->add_sfun(QUERY, ui_SetNextWindowFocus, "void", "setNextWindowFocus");
+        QUERY->doc_func(
+          QUERY, "set next window to be focused / top-most. call before Begin()");
+
+        QUERY->add_sfun(QUERY, ui_SetNextWindowScroll, "void", "setNextWindowScroll");
+        QUERY->add_arg(QUERY, "vec2", "scroll");
+        QUERY->doc_func(QUERY,
+                        "set next window scrolling value (use < 0.0f to not affect "
+                        "a given axis).");
+
+        QUERY->add_sfun(QUERY, ui_SetNextWindowBgAlpha, "void", "setNextWindowBgAlpha");
+        QUERY->add_arg(QUERY, "float", "alpha");
+        QUERY->doc_func(
+          QUERY,
+          "set next window background color alpha. helper to easily override the "
+          "Alpha component of ImGuiCol_WindowBg/ChildBg/PopupBg. you may also use "
+          "ImGuiWindowFlags_NoBackground.");
+
+        // multiple viewports currently unsupported in webgpu
+        // Being added in: https://github.com/ocornut/imgui/pull/7557
+        // TODO: after viewport support is added for webgpu native, impl this
+        // binding QUERY->add_sfun(QUERY, ui_SetNextWindowViewport, "void",
+        //                 "setNextWindowViewport");
+        // QUERY->add_arg(QUERY, "int", "viewport_id");
+        // QUERY->doc_func(QUERY, "set next window viewport");
+
+        // Content region -------------------------------------------------------
+        QUERY->add_sfun(QUERY, ui_GetContentRegionAvail, "vec2",
+                        "getContentRegionAvail");
+        QUERY->doc_func(QUERY, "equivalent to GetContentRegionMax() - GetCursorPos()");
+
+        QUERY->add_sfun(QUERY, ui_GetContentRegionMax, "vec2", "getContentRegionMax");
+        QUERY->doc_func(
+          QUERY,
+          "current content boundaries (typically window boundaries including "
+          "scrolling, or current column boundaries), in windows coordinates");
+
+        QUERY->add_sfun(QUERY, ui_GetWindowContentRegionMin, "vec2",
+                        "getWindowContentRegionMin");
+        QUERY->doc_func(QUERY,
+                        "content boundaries min for the full window (roughly "
+                        "(0,0)-Scroll), in window coordinates");
+
+        QUERY->add_sfun(QUERY, ui_GetWindowContentRegionMax, "vec2",
+                        "getWindowContentRegionMax");
+        QUERY->doc_func(QUERY,
+                        "content boundaries max for the full window (roughly "
+                        "(0,0)+Size-Scroll) where Size can be overridden with "
+                        "SetNextWindowContentSize(), in window coordinates");
+
+        // Windows Scrolling ----------------------------------------------------
+
+        QUERY->add_sfun(QUERY, ui_GetScrollX, "float", "getScrollX");
+        QUERY->doc_func(QUERY, "get scrolling amount [0 .. GetScrollMaxX()]");
+
+        QUERY->add_sfun(QUERY, ui_GetScrollY, "float", "getScrollY");
+        QUERY->doc_func(QUERY, "get scrolling amount [0 .. GetScrollMaxY()]");
+
+        QUERY->add_sfun(QUERY, ui_SetScrollX, "void", "setScrollX");
+        QUERY->add_arg(QUERY, "float", "scroll_x");
+        QUERY->doc_func(QUERY, "set scrolling amount [0 .. GetScrollMaxX()]");
+
+        QUERY->add_sfun(QUERY, ui_SetScrollY, "void", "setScrollY");
+        QUERY->add_arg(QUERY, "float", "scroll_y");
+        QUERY->doc_func(QUERY, "set scrolling amount [0 .. GetScrollMaxY()]");
+
+        QUERY->add_sfun(QUERY, ui_GetScrollMaxX, "float", "getScrollMaxX");
+        QUERY->doc_func(QUERY,
+                        "get maximum scrolling amount ~~ ContentSize.x - "
+                        "WindowSize.x - DecorationsSize.x");
+
+        QUERY->add_sfun(QUERY, ui_GetScrollMaxY, "float", "getScrollMaxY");
+        QUERY->doc_func(QUERY,
+                        "get maximum scrolling amount ~~ ContentSize.y - "
+                        "WindowSize.y - DecorationsSize.y");
+
+        QUERY->add_sfun(QUERY, ui_SetScrollHereX, "void", "setScrollHereX");
+        QUERY->add_arg(QUERY, "float", "center_x_ratio");
+        QUERY->doc_func(QUERY,
+                        "adjust scrolling amount to make current cursor position "
+                        "visible. center_x_ratio=0.0: left, 0.5: center, 1.0: "
+                        "right. When using to make a \"default/current item\" "
+                        "visible, consider using SetItemDefaultFocus() instead.");
+
+        QUERY->add_sfun(QUERY, ui_SetScrollHereY, "void", "setScrollHereY");
+        QUERY->add_arg(QUERY, "float", "center_y_ratio");
+        QUERY->doc_func(QUERY,
+                        "adjust scrolling amount to make current cursor position "
+                        "visible. center_y_ratio=0.0: top, 0.5: center, 1.0: "
+                        "bottom. When using to make a \"default/current item\" "
+                        "visible, consider using SetItemDefaultFocus() instead.");
+
+        QUERY->add_sfun(QUERY, ui_SetScrollFromPosX, "void", "setScrollFromPosX");
+        QUERY->add_arg(QUERY, "float", "local_x");
+        QUERY->add_arg(QUERY, "float", "center_x_ratio");
+        QUERY->doc_func(
+          QUERY,
+          "adjust scrolling amount to make given position visible. Generally "
+          "GetCursorStartPos() + offset to compute a valid position.");
+
+        QUERY->add_sfun(QUERY, ui_SetScrollFromPosY, "void", "setScrollFromPosY");
+        QUERY->add_arg(QUERY, "float", "local_y");
+        QUERY->add_arg(QUERY, "float", "center_y_ratio");
+        QUERY->doc_func(
+          QUERY,
+          "adjust scrolling amount to make given position visible. Generally "
+          "GetCursorStartPos() + offset to compute a valid position.");
+
+        // Parameters stacks (shared) ------------------------------------------
+        // SFUN(ui_PushFont, "void", "pushFont");
+        // ARG("UI_Font", "font");
+        // DOC_FUNC(
+        //   "Add a new font to use. Use NULL as a shortcut to push the default font");
+
+        // SFUN(ui_PopFont, "void", "popFont");
+        // DOC_FUNC("Pop the font stack.");
+
+        QUERY->add_sfun(QUERY, ui_PushStyleColorImVec4, "void", "pushStyleColor");
+        QUERY->add_arg(QUERY, "int", "idx" /*ImGuiCol*/);
+        QUERY->add_arg(QUERY, "vec4", "color");
+        QUERY->doc_func(QUERY, "parameter idx an enum of type UI_Color");
+
+        SFUN(ui_PushStyleColorImVec3, "void", "pushStyleColor");
+        ARG("int", "idx" /*ImGuiCol*/);
+        ARG("vec3", "color");
+        DOC_FUNC("parameter idx an enum of type UI_Color");
+
+        QUERY->add_sfun(QUERY, ui_PopStyleColor, "void", "popStyleColor");
+        QUERY->doc_func(QUERY, "implied count = 1");
+
+        QUERY->add_sfun(QUERY, ui_PopStyleColorEx, "void", "popStyleColor");
+        QUERY->add_arg(QUERY, "int", "count");
+
+        QUERY->add_sfun(QUERY, ui_PushStyleVar, "void", "pushStyleVar");
+        QUERY->add_arg(QUERY, "int", "idx" /*ImGuiStyleVar*/);
+        QUERY->add_arg(QUERY, "float", "val");
+        QUERY->doc_func(QUERY,
+                        "modify a style float variable. always use this if "
+                        "you modify the style after NewFrame(). \n Parameter `idx` "
+                        "is an enum of type UI_StyleVar");
+
+        QUERY->add_sfun(QUERY, ui_PushStyleVarImVec2, "void", "pushStyleVar");
+        QUERY->add_arg(QUERY, "int", "idx" /*ImGuiStyleVar*/);
+        QUERY->add_arg(QUERY, "vec2", "val");
+        QUERY->doc_func(QUERY,
+                        "modify a style ImVec2 variable. always use this if "
+                        "you modify the style after NewFrame(). \n Parameter `idx` "
+                        "is an enum of type UI_StyleVar");
+
+        QUERY->add_sfun(QUERY, ui_PopStyleVar, "void", "popStyleVar");
+        QUERY->doc_func(QUERY, "implied count = 1");
+
+        QUERY->add_sfun(QUERY, ui_PopStyleVarEx, "void", "popStyleVar");
+        QUERY->add_arg(QUERY, "int", "count");
+
+        QUERY->add_sfun(QUERY, ui_PushTabStop, "void", "pushTabStop");
+        QUERY->add_arg(QUERY, "int", "tab_stop");
+        QUERY->doc_func(QUERY,
+                        "allow focusing using TAB/Shift-TAB, enabled by default "
+                        "but you can disable it for certain widgets");
+
+        QUERY->add_sfun(QUERY, ui_PopTabStop, "void", "popTabStop");
+
+        QUERY->add_sfun(QUERY, ui_PushButtonRepeat, "void", "pushButtonRepeat");
+        QUERY->add_arg(QUERY, "int", "repeat");
+        QUERY->doc_func(QUERY,
+                        "in 'repeat' mode, Button*() functions return repeated "
+                        "true in a typematic manner (using "
+                        "io.KeyRepeatDelay/io.KeyRepeatRate setting). Note that "
+                        "you can call IsItemActive() after any Button() to tell if "
+                        "the button is held in the current frame.");
+
+        QUERY->add_sfun(QUERY, ui_PopButtonRepeat, "void", "popButtonRepeat");
+
+        // Parameters stacks (current window) -----------------------------------
+        SFUN(ui_PushItemWidth, "void", "pushItemWidth");
+        ARG("float", "item_width");
+        DOC_FUNC(
+          "push width of items for common large \"item+label\" widgets. "
+          ">0.0f: width in pixels, <0.0f align xx pixels to the right of "
+          "window (so -FLT_MIN always align width to the right side).");
+
+        SFUN(ui_PopItemWidth, "void", "popItemWidth");
+        DOC_FUNC("pop width of items for common large \"item+label\" widgets.");
+
+        SFUN(ui_SetNextItemWidth, "void", "setNextItemWidth");
+        ARG("float", "item_width");
+        DOC_FUNC(
+          "set width of the _next_ common large \"item+label\" widget. "
+          ">0.0f: width in pixels, <0.0f align xx pixels to the right of "
+          "window (so -FLT_MIN always align width to the right side)");
+
+        SFUN(ui_CalcItemWidth, "float", "calcItemWidth");
+        DOC_FUNC(
+          "width of item given pushed settings and current cursor position. "
+          "NOT necessarily the width of last item unlike most 'Item' "
+          "functions.");
+
+        SFUN(ui_PushTextWrapPos, "void", "pushTextWrapPos");
+        ARG("float", "wrap_local_pos_x");
+        DOC_FUNC(
+          "push word-wrapping position for Text*() commands. < 0.0f: no "
+          "wrapping; 0.0f: wrap to end of window (or column); > 0.0f: wrap "
+          "at 'wrap_pos_x' position in window local space");
+
+        SFUN(ui_PopTextWrapPos, "void", "popTextWrapPos");
+        DOC_FUNC("pop word-wrapping position for Text*() commands.");
+
+        // Style read access ----------------------------------------------------
+        QUERY->add_sfun(QUERY, ui_GetFontSize, "float", "getFontSize");
+        QUERY->doc_func(QUERY,
+                        "get current font size (= height in pixels) of "
+                        "current font with current scale applied");
+
+        QUERY->add_sfun(QUERY, ui_GetFontTexUvWhitePixel, "vec2",
+                        "getFontTexUvWhitePixel");
+        QUERY->doc_func(QUERY,
+                        "get UV coordinate for a white pixel, useful to "
+                        "draw custom shapes via the ImDrawList API");
+
+        QUERY->add_sfun(QUERY, ui_GetColorU32, "int", "getColorU32");
+        QUERY->add_arg(QUERY, "int", "idx" /*ImGuiCol*/);
+        QUERY->doc_func(QUERY,
+                        "implied alpha_mul = 1.0f. retrieve given style color with "
+                        "style alpha applied and optional extra alpha multiplier, "
+                        "packed as a 32-bit value suitable for ImDrawList\n"
+                        "Parameter `idx` is an enum of type UI_Color");
+
+        QUERY->add_sfun(QUERY, ui_GetColorU32Ex, "int", "getColorU32");
+        QUERY->add_arg(QUERY, "int", "idx" /*ImGuiCol*/);
+        QUERY->add_arg(QUERY, "float", "alpha_mul");
+        QUERY->doc_func(QUERY,
+                        "retrieve given style color with style alpha applied and "
+                        "optional extra alpha multiplier, packed as a 32-bit value "
+                        "suitable for ImDrawList\n"
+                        "Parameter `idx` is an enum of type UI_color");
+
+        QUERY->add_sfun(QUERY, ui_GetColorU32ImVec4, "int", "getColorU32");
+        QUERY->add_arg(QUERY, "vec4", "col");
+        QUERY->doc_func(QUERY,
+                        "retrieve given color with style alpha applied, packed as a "
+                        "32-bit value suitable for ImDrawList");
+
+        QUERY->add_sfun(QUERY, ui_GetStyleColorVec4, "vec4", "getStyleColorVec4");
+        QUERY->add_arg(QUERY, "int", "idx" /*ImGuiCol*/);
+        QUERY->doc_func(QUERY,
+                        "retrieve style color as stored in ImGuiStyle structure. "
+                        "use to feed back into PushStyleColor(), otherwise use "
+                        "GetColorU32() to get style color with style alpha baked "
+                        "in.\n"
+                        "Parameter `idx` is an enum of type UI_Color");
+
+        // Layout cursor positioning
+        QUERY->add_sfun(QUERY, ui_GetCursorScreenPos, "vec2", "getCursorScreenPos");
+        QUERY->doc_func(QUERY,
+                        "cursor position in absolute coordinates (prefer using "
+                        "this, also more useful to work with ImDrawList API)");
+
+        QUERY->add_sfun(QUERY, ui_SetCursorScreenPos, "vec2", "setCursorScreenPos");
+        QUERY->add_arg(QUERY, "vec2", "pos");
+        QUERY->doc_func(QUERY, "cursor position in absolute coordinates");
+
+        QUERY->add_sfun(QUERY, ui_GetCursorPos, "vec2", "getCursorPos");
+        QUERY->doc_func(QUERY,
+                        "cursor position in window coordinates (relative to window "
+                        "position)");
+
+        QUERY->add_sfun(QUERY, ui_GetCursorPosX, "float", "getCursorPosX");
+
+        QUERY->add_sfun(QUERY, ui_GetCursorPosY, "float", "getCursorPosY");
+
+        QUERY->add_sfun(QUERY, ui_SetCursorPos, "void", "setCursorPos");
+        QUERY->add_arg(QUERY, "vec2", "local_pos");
+
+        QUERY->add_sfun(QUERY, ui_SetCursorPosX, "void", "setCursorPosX");
+        QUERY->add_arg(QUERY, "float", "local_x");
+
+        QUERY->add_sfun(QUERY, ui_SetCursorPosY, "void", "setCursorPosY");
+        QUERY->add_arg(QUERY, "float", "local_y");
+
+        QUERY->add_sfun(QUERY, ui_GetCursorStartPos, "vec2", "getCursorStartPos");
+        QUERY->doc_func(QUERY, "initial cursor position, in window coordinates");
+
+        // Other layout functions ------------------------------------------------
+
+        QUERY->add_sfun(QUERY, ui_Separator, "void", "separator");
+        QUERY->doc_func(QUERY,
+                        "separator, generally horizontal. inside a menu "
+                        "bar or in horizontal layout mode, this becomes a "
+                        "vertical separator.");
+
+        QUERY->add_sfun(QUERY, ui_SameLine, "void", "sameLine");
+        QUERY->doc_func(QUERY, "implied offset_from_start_x = 0.0f, spacing = -1.0f");
+
+        QUERY->add_sfun(QUERY, ui_SameLineEx, "void", "sameLine");
+        QUERY->add_arg(QUERY, "float", "offset_from_start_x");
+        QUERY->add_arg(QUERY, "float", "spacing");
+        QUERY->doc_func(QUERY,
+                        "call between widgets or groups to layout them "
+                        "horizontally. X position given in window coordinates.");
+
+        QUERY->add_sfun(QUERY, ui_NewLine, "void", "newLine");
+        QUERY->doc_func(QUERY,
+                        "undo a SameLine() or force a new line when in a "
+                        "horizontal-layout context.");
+
+        QUERY->add_sfun(QUERY, ui_Spacing, "void", "spacing");
+        QUERY->doc_func(QUERY, "add vertical spacing.");
+
+        QUERY->add_sfun(QUERY, ui_Dummy, "void", "dummy");
+        QUERY->add_arg(QUERY, "vec2", "size");
+        QUERY->doc_func(QUERY,
+                        "add a dummy item of given size. unlike InvisibleButton(), "
+                        "Dummy() won't take the mouse click or be navigable into.");
+
+        QUERY->add_sfun(QUERY, ui_Indent, "void", "indent");
+        QUERY->doc_func(QUERY, "implied indent_w = 0.0f");
+
+        QUERY->add_sfun(QUERY, ui_IndentEx, "void", "indent");
+        QUERY->add_arg(QUERY, "float", "indent_w");
+        QUERY->doc_func(QUERY,
+                        "move content position toward the right, by indent_w, or "
+                        "style.IndentSpacing if indent_w <= 0");
+
+        QUERY->add_sfun(QUERY, ui_Unindent, "void", "unindent");
+        QUERY->doc_func(QUERY, "implied indent_w = 0.0f");
+
+        QUERY->add_sfun(QUERY, ui_UnindentEx, "void", "unindent");
+        QUERY->add_arg(QUERY, "float", "indent_w");
+        QUERY->doc_func(QUERY,
+                        "move content position back to the left, by indent_w, or "
+                        "style.IndentSpacing if indent_w <= 0");
+
+        QUERY->add_sfun(QUERY, ui_BeginGroup, "void", "beginGroup");
+        QUERY->doc_func(QUERY, "lock horizontal starting position");
+
+        QUERY->add_sfun(QUERY, ui_EndGroup, "void", "endGroup");
+        QUERY->doc_func(QUERY,
+                        "unlock horizontal starting position + capture the whole "
+                        "group bounding box into one \"item\" (so you can use "
+                        "IsItemHovered() or layout primitives such as SameLine() on "
+                        "whole group, etc.)");
+
+        QUERY->add_sfun(QUERY, ui_AlignTextToFramePadding, "void",
+                        "alignTextToFramePadding");
+        QUERY->doc_func(QUERY,
+                        "vertically align upcoming text baseline to FramePadding.y "
+                        "so that it will align properly to regularly framed items "
+                        "(call if you have text on a line before a framed item)");
+
+        QUERY->add_sfun(QUERY, ui_GetTextLineHeight, "float", "getTextLineHeight");
+        QUERY->doc_func(QUERY, "~ FontSize");
+
+        QUERY->add_sfun(QUERY, ui_GetTextLineHeightWithSpacing, "float",
+                        "getTextLineHeightWithSpacing");
+        QUERY->doc_func(QUERY,
+                        "~ FontSize + style.ItemSpacing.y (distance in pixels "
+                        "between 2 consecutive lines of text)");
+
+        QUERY->add_sfun(QUERY, ui_GetFrameHeight, "float", "getFrameHeight");
+        QUERY->doc_func(QUERY, "~ FontSize + style.FramePadding.y * 2");
+
+        QUERY->add_sfun(QUERY, ui_GetFrameHeightWithSpacing, "float",
+                        "getFrameHeightWithSpacing");
+        QUERY->doc_func(QUERY,
+                        "~ FontSize + style.FramePadding.y * 2 + "
+                        "style.ItemSpacing.y (distance in pixels between 2 "
+                        "consecutive lines of framed widgets)");
+
+        // ID stack/scopes -------------------------------------------------------
+
+        QUERY->add_sfun(QUERY, ui_PushID, "void", "pushID");
+        QUERY->add_arg(QUERY, "string", "str_id");
+        QUERY->doc_func(QUERY,
+                        "push string into the ID stack (will hash string)."
+                        "Read the FAQ (docs/FAQ.md or http://dearimgui.com/faq) "
+                        "for more details about how ID are handled in dear imgui.");
+
+        QUERY->add_sfun(QUERY, ui_PushIDStr, "void", "pushID");
+        QUERY->add_arg(QUERY, "string", "str_id_begin");
+        QUERY->add_arg(QUERY, "string", "str_id_end");
+        QUERY->doc_func(QUERY, "push string into the ID stack (will hash string).");
+
+        QUERY->add_sfun(QUERY, ui_PushIDInt, "void", "pushID");
+        QUERY->add_arg(QUERY, "int", "int_id");
+        QUERY->doc_func(QUERY, "push integer into the ID stack (will hash integer).");
+
+        QUERY->add_sfun(QUERY, ui_PopID, "void", "popID");
+        QUERY->doc_func(QUERY, "pop from the ID stack.");
+
+        QUERY->add_sfun(QUERY, ui_GetID, "int", "getID");
+        QUERY->add_arg(QUERY, "string", "str_id");
+        QUERY->doc_func(QUERY,
+                        "calculate unique ID (hash of whole ID stack + given "
+                        "parameter). e.g. if you want to query into ImGuiStorage "
+                        "yourself");
+
+        QUERY->add_sfun(QUERY, ui_GetIDStr, "int", "getID");
+        QUERY->add_arg(QUERY, "string", "str_id_begin");
+        QUERY->add_arg(QUERY, "string", "str_id_end");
+
+        // Widgets: Text ---------------------------------------------------------
+
+        QUERY->add_sfun(QUERY, ui_TextUnformatted, "void", "text");
+        QUERY->add_arg(QUERY, "string", "text");
+        QUERY->doc_func(QUERY, "implied text_end = NULL");
+
+        QUERY->add_sfun(QUERY, ui_TextUnformattedEx, "void", "text");
+        QUERY->add_arg(QUERY, "string", "text");
+        QUERY->add_arg(QUERY, "string", "text_end");
+        QUERY->doc_func(QUERY,
+                        "raw text without formatting. Roughly equivalent to "
+                        "Text(\"%s\", text) but: A) doesn't require null "
+                        "terminated string if 'text_end' is specified, B) it's "
+                        "faster, no memory copy is done, no buffer size limits, "
+                        "recommended for long chunks of text.");
+
+        QUERY->add_sfun(QUERY, ui_TextColoredUnformatted, "void", "textColored");
+        QUERY->add_arg(QUERY, "vec4", "col");
+        QUERY->add_arg(QUERY, "string", "text");
+        QUERY->doc_func(QUERY,
+                        "shortcut for PushStyleColor(ImGuiCol_Text, col); "
+                        "Text(fmt, ...); PopStyleColor();");
+
+        QUERY->add_sfun(QUERY, ui_TextDisabledUnformatted, "void", "textDisabled");
+        QUERY->add_arg(QUERY, "string", "text");
+        QUERY->doc_func(QUERY,
+                        "shortcut for PushStyleColor(ImGuiCol_Text, "
+                        "style.Colors[ImGuiCol_TextDisabled]); Text(fmt, ...); "
+                        "PopStyleColor();");
+
+        QUERY->add_sfun(QUERY, ui_TextWrappedUnformatted, "void", "textWrapped");
+        QUERY->add_arg(QUERY, "string", "text");
+        QUERY->doc_func(QUERY,
+                        "shortcut for PushTextWrapPos(0.0f); Text(fmt, ...); "
+                        "PopTextWrapPos();. Note that this won't work on an "
+                        "auto-resizing window if there's no other widgets to extend "
+                        "the window width, you may need to set a size using "
+                        "SetNextWindowSize().");
+
+        QUERY->add_sfun(QUERY, ui_LabelTextUnformatted, "void", "labelText");
+        QUERY->add_arg(QUERY, "string", "label");
+        QUERY->add_arg(QUERY, "string", "text");
+        QUERY->doc_func(QUERY,
+                        "display text+label aligned the same way as value+label "
+                        "widgets");
+
+        QUERY->add_sfun(QUERY, ui_BulletTextUnformatted, "void", "bulletText");
+        QUERY->add_arg(QUERY, "string", "text");
+        QUERY->doc_func(QUERY, "shortcut for Bullet()+Text()");
+
+        QUERY->add_sfun(QUERY, ui_SeparatorText, "void", "separatorText");
+        QUERY->add_arg(QUERY, "string", "label");
+        QUERY->doc_func(QUERY, "currently: formatted text with an horizontal line");
+
+        // Widgets: Main ---------------------------------------------------------
+
+        QUERY->add_sfun(QUERY, ui_Button, "int", "button");
+        QUERY->add_arg(QUERY, "string", "label");
+        QUERY->doc_func(QUERY, "implied size = ImVec2(0, 0)");
+
+        QUERY->add_sfun(QUERY, ui_ButtonEx, "int", "button");
+        QUERY->add_arg(QUERY, "string", "label");
+        QUERY->add_arg(QUERY, "vec2", "size");
+
+        QUERY->add_sfun(QUERY, ui_SmallButton, "int", "smallButton");
+        QUERY->add_arg(QUERY, "string", "label");
+        QUERY->doc_func(QUERY, "button with (FramePadding.y == 0)");
+
+        QUERY->add_sfun(QUERY, ui_InvisibleButton, "int", "invisibleButton");
+        QUERY->add_arg(QUERY, "string", "str_id");
+        QUERY->add_arg(QUERY, "vec2", "size");
+        QUERY->add_arg(QUERY, "int", "flags");
+        QUERY->doc_func(QUERY,
+                        "flexible button behavior without the visuals, frequently "
+                        "useful to build custom behaviors using the public api "
+                        "(along with IsItemActive, IsItemHovered, etc.)"
+                        "param `flags` is an enum of type UI_ButtonFlags");
+
+        QUERY->add_sfun(QUERY, ui_ArrowButton, "int", "arrowButton");
+        QUERY->add_arg(QUERY, "string", "str_id");
+        QUERY->add_arg(QUERY, "int", "direction");
+        QUERY->doc_func(QUERY,
+                        "square button with an arrow shape. param `direction` is "
+                        "an enum of type UI_Direction");
+
+        QUERY->add_sfun(QUERY, ui_Checkbox, "int", "checkbox");
+        QUERY->add_arg(QUERY, "string", "label");
+        QUERY->add_arg(QUERY, "UI_Bool", "v");
+
+        QUERY->add_sfun(QUERY, ui_CheckboxFlagsIntPtr, "int", "checkboxFlags");
+        QUERY->add_arg(QUERY, "string", "label");
+        QUERY->add_arg(QUERY, "UI_Int", "flags");
+        QUERY->add_arg(QUERY, "int", "flags_value");
+
+        QUERY->add_sfun(QUERY, ui_RadioButton, "int", "radioButton");
+        QUERY->add_arg(QUERY, "string", "label");
+        QUERY->add_arg(QUERY, "int", "active");
+        QUERY->doc_func(QUERY,
+                        "use with e.g. if (RadioButton(\"one\", my_value==1)) { "
+                        "my_value = 1; }");
+
+        QUERY->add_sfun(QUERY, ui_RadioButtonIntPtr, "int", "radioButton");
+        QUERY->add_arg(QUERY, "string", "label");
+        QUERY->add_arg(QUERY, "UI_Int", "v");
+        QUERY->add_arg(QUERY, "int", "v_button");
+        QUERY->doc_func(QUERY,
+                        "shortcut to handle the above pattern when value is an "
+                        "integer");
+
+        QUERY->add_sfun(QUERY, ui_ProgressBar, "void", "progressBar");
+        QUERY->add_arg(QUERY, "float", "fraction");
+        QUERY->add_arg(QUERY, "vec2", "size_arg");
+        QUERY->add_arg(QUERY, "string", "overlay");
+
+        QUERY->add_sfun(QUERY, ui_Bullet, "void", "bullet");
+        QUERY->doc_func(QUERY,
+                        "draw a small circle + keep the cursor on the same line. "
+                        "advance cursor x position by GetTreeNodeToLabelSpacing(), "
+                        "same distance that TreeNode() uses");
+
+        // Widgets: Combo --------------------------------------------------------
+
+        QUERY->add_sfun(QUERY, ui_BeginCombo, "int", "beginCombo");
+        QUERY->add_arg(QUERY, "string", "label");
+        QUERY->add_arg(QUERY, "string", "preview_value");
+        QUERY->add_arg(QUERY, "int", "flags");
+        QUERY->doc_func(
+          QUERY,
+          "The BeginCombo()/EndCombo() api allows you to manage your contents and "
+          "selection state however you want it, by creating e.g. Selectable() "
+          "items.\n"
+          "// - The old Combo() api are helpers over BeginCombo()/EndCombo() which "
+          "are kept available for convenience purpose. This is analogous to how "
+          "ListBox are created.\n"
+          "`flags` param is an enum of type UI_ComboFlags");
+
+        QUERY->add_sfun(QUERY, ui_EndCombo, "void", "endCombo");
+        QUERY->doc_func(QUERY, "only call EndCombo() if BeginCombo() returns true!");
+
+        QUERY->add_sfun(QUERY, ui_ComboChar, "int", "combo");
+        QUERY->add_arg(QUERY, "string", "label");
+        QUERY->add_arg(QUERY, "UI_Int", "current_item");
+        QUERY->add_arg(QUERY, "string[]", "items");
+        QUERY->doc_func(QUERY, "implied popup_max_height_in_items = -1");
+
+        QUERY->add_sfun(QUERY, ui_ComboCharEx, "int", "combo");
+        QUERY->add_arg(QUERY, "string", "label");
+        QUERY->add_arg(QUERY, "UI_Int", "current_item");
+        QUERY->add_arg(QUERY, "string[]", "items");
+        QUERY->add_arg(QUERY, "int", "popup_max_height_in_items");
+
+        // TODO: ui_Combo doesn't work with chuck strings
+        // cannot seem to escape \0 (gets copied literally) by
+        // API->object->str(Chuck_String*)
+
+        // QUERY->add_sfun(QUERY, ui_Combo, "int", "combo");
+        // QUERY->add_arg(QUERY, "string", "label");
+        // QUERY->add_arg(QUERY, "UI_Int", "current_item");
+        // QUERY->add_arg(QUERY, "string", "items_separated_by_zeros");
+        // QUERY->doc_func(QUERY, "implied popup_max_height_in_items = -1");
+
+        // SFUN(ui_ComboEx, "int", "combo");
+        // ARG("string", "label");
+        // ARG("UI_Int", "current_item");
+        // ARG("string", "items_separated_by_zeros");
+        // ARG("int", "popup_max_height_in_items");
+        // DOC_FUNC(
+        //   "Separate items with \\0 within a string, end "
+        //   "item-list with \\0\\0. e.g. \"One\\0Two\\0Three\\0\\0\"");
+
+        // Widgets: Drag ---------------------------------------------------------
+
+        SFUN(ui_DragFloat, "int", "drag");
+        ARG("string", "label");
+        ARG("UI_Float", "v");
+        DOC_FUNC(
+          "Implied v_speed = 1.0f, v_min = 0.0f, v_max = 0.0f, format = "
+          "\"%.3f\", flags = 0");
+
+        SFUN(ui_DragFloatEx, "int", "drag");
+        ARG("string", "label");
+        ARG("UI_Float", "v");
+        ARG("float", "v_speed");
+        ARG("float", "v_min");
+        ARG("float", "v_max");
+        ARG("string", "format");
+        ARG("int", "flags");
+        DOC_FUNC(
+          "If v_min >= v_max we have no bound. Parameter `flags` is an enum of "
+          "type UI_SliderFlags");
+
+        SFUN(ui_DragFloat2, "int", "drag");
+        ARG("string", "label");
+        ARG("UI_Float2", "v");
+        DOC_FUNC(
+          "Implied v_speed = 1.0f, v_min = 0.0f, v_max = 0.0f, format = "
+          "\"%.3f\", flags = 0");
+
+        SFUN(ui_DragFloat2Ex, "int", "drag");
+        ARG("string", "label");
+        ARG("UI_Float2", "v");
+        ARG("float", "v_speed");
+        ARG("float", "v_min");
+        ARG("float", "v_max");
+        ARG("string", "format");
+        ARG("int", "flags");
+        DOC_FUNC(
+          "If v_min >= v_max we have no bound. Parameter `flags` is an enum of "
+          "type UI_SliderFlags");
+
+        SFUN(ui_DragFloat2Speed, "int", "drag");
+        ARG("string", "label");
+        ARG("UI_Float2", "v");
+        ARG("float", "v_speed");
+        DOC_FUNC("Implied v_min = 0.0f, v_max = 0.0f, format = \"%.3f\", flags = 0");
+
+        SFUN(ui_DragFloat3, "int", "drag");
+        ARG("string", "label");
+        ARG("UI_Float3", "v");
+        DOC_FUNC(
+          "Implied v_speed = 1.0f, v_min = 0.0f, v_max = 0.0f, format = "
+          "\"%.3f\", flags = 0");
+
+        SFUN(ui_DragFloat3Ex, "int", "drag");
+        ARG("string", "label");
+        ARG("UI_Float3", "v");
+        ARG("float", "v_speed");
+        ARG("float", "v_min");
+        ARG("float", "v_max");
+        ARG("string", "format");
+        ARG("int", "flags");
+        DOC_FUNC(
+          "If v_min >= v_max we have no bound. Parameter `flags` is an enum of "
+          "type UI_SliderFlags");
+
+        SFUN(ui_DragFloat3Speed, "int", "drag");
+        ARG("string", "label");
+        ARG("UI_Float3", "v");
+        ARG("float", "v_speed");
+        DOC_FUNC("Implied v_min = 0.0f, v_max = 0.0f, format = \"%.3f\", flags = 0");
+
+        SFUN(ui_DragFloat4, "int", "drag");
+        ARG("string", "label");
+        ARG("UI_Float4", "v");
+        DOC_FUNC(
+          "Implied v_speed = 1.0f, v_min = 0.0f, v_max = 0.0f, format = "
+          "\"%.3f\", flags = 0");
+
+        SFUN(ui_DragFloat4Ex, "int", "drag");
+        ARG("string", "label");
+        ARG("UI_Float4", "v");
+        ARG("float", "v_speed");
+        ARG("float", "v_min");
+        ARG("float", "v_max");
+        ARG("string", "format");
+        ARG("int", "flags");
+        DOC_FUNC(
+          "If v_min >= v_max we have no bound. Parameter `flags` is an enum of "
+          "type UI_SliderFlags");
+
+        SFUN(ui_DragFloatRange2, "int", "drag");
+        ARG("string", "label");
+        ARG("UI_Float", "v_current_min");
+        ARG("UI_Float", "v_current_max");
+        DOC_FUNC(
+          "Implied v_speed = 1.0f, v_min = 0.0f, v_max = 0.0f, format = "
+          "\"%.3f\", format_max = NULL, flags = 0");
+
+        SFUN(ui_DragFloatRange2Ex, "int", "drag");
+        ARG("string", "label");
+        ARG("UI_Float", "v_current_min");
+        ARG("UI_Float", "v_current_max");
+        ARG("float", "v_speed");
+        ARG("float", "v_min");
+        ARG("float", "v_max");
+        ARG("string", "format");
+        ARG("string", "format_max");
+        ARG("int", "flags");
+        DOC_FUNC("Parameter `flags` is an enum of type UI_SliderFlags");
+
+        SFUN(ui_DragInt, "int", "drag");
+        ARG("string", "label");
+        ARG("UI_Int", "v");
+        DOC_FUNC(
+          "Implied v_speed = 1.0f, v_min = 0, v_max = 0, format = \"%d\", flags = "
+          "0");
+
+        SFUN(ui_DragIntEx, "int", "drag");
+        ARG("string", "label");
+        ARG("UI_Int", "v");
+        ARG("float", "v_speed");
+        ARG("int", "v_min");
+        ARG("int", "v_max");
+        ARG("string", "format");
+        ARG("int", "flags");
+        DOC_FUNC(
+          "If v_min >= v_max we have no bound. Parameter `flags` is an enum of "
+          "type UI_SliderFlags");
+
+        SFUN(ui_DragInt2, "int", "drag");
+        ARG("string", "label");
+        ARG("UI_Int2", "v");
+        DOC_FUNC(
+          "Implied v_speed = 1.0f, v_min = 0, v_max = 0, format = \"%d\", flags = "
+          "0");
+
+        SFUN(ui_DragInt2Ex, "int", "drag");
+        ARG("string", "label");
+        ARG("UI_Int2", "v");
+        ARG("float", "v_speed");
+        ARG("int", "v_min");
+        ARG("int", "v_max");
+        ARG("string", "format");
+        ARG("int", "flags");
+        DOC_FUNC(
+          "If v_min >= v_max we have no bound. Parameter `flags` is an enum of "
+          "type UI_SliderFlags");
+
+        SFUN(ui_DragInt3, "int", "drag");
+        ARG("string", "label");
+        ARG("UI_Int3", "v");
+        DOC_FUNC(
+          "Implied v_speed = 1.0f, v_min = 0, v_max = 0, format = \"%d\", flags = "
+          "0");
+
+        SFUN(ui_DragInt3Ex, "int", "drag");
+        ARG("string", "label");
+        ARG("UI_Int3", "v");
+        ARG("float", "v_speed");
+        ARG("int", "v_min");
+        ARG("int", "v_max");
+        ARG("string", "format");
+        ARG("int", "flags");
+        DOC_FUNC(
+          "If v_min >= v_max we have no bound. Parameter `flags` is an enum of "
+          "type UI_SliderFlags");
+
+        SFUN(ui_DragInt4, "int", "drag");
+        ARG("string", "label");
+        ARG("UI_Int4", "v");
+        DOC_FUNC(
+          "Implied v_speed = 1.0f, v_min = 0, v_max = 0, format = \"%d\", flags = "
+          "0");
+
+        SFUN(ui_DragInt4Ex, "int", "drag");
+        ARG("string", "label");
+        ARG("UI_Int4", "v");
+        ARG("float", "v_speed");
+        ARG("int", "v_min");
+        ARG("int", "v_max");
+        ARG("string", "format");
+        ARG("int", "flags");
+        DOC_FUNC(
+          "If v_min >= v_max we have no bound. Parameter `flags` is an enum of "
+          "type UI_SliderFlags");
+
+        SFUN(ui_DragIntRange2, "int", "drag");
+        ARG("string", "label");
+        ARG("UI_Int", "v_current_min");
+        ARG("UI_Int", "v_current_max");
+        DOC_FUNC(
+          "Implied v_speed = 1.0f, v_min = 0, v_max = 0, format = \"%d\", "
+          "format_max = NULL, flags = 0");
+
+        SFUN(ui_DragIntRange2Ex, "int", "drag");
+        ARG("string", "label");
+        ARG("UI_Int", "v_current_min");
+        ARG("UI_Int", "v_current_max");
+        ARG("float", "v_speed");
+        ARG("int", "v_min");
+        ARG("int", "v_max");
+        ARG("string", "format");
+        ARG("string", "format_max");
+        ARG("int", "flags");
+        DOC_FUNC("Parameter `flags` is an enum of type UI_SliderFlags");
+
+        SFUN(ui_DragScalarN_CKINT, "int", "drag");
+        ARG("string", "label");
+        ARG("int[]", "data");
+
+        SFUN(ui_DragScalarNEx_CKINT, "int", "drag");
+        ARG("string", "label");
+        ARG("int[]", "data");
+        ARG("float", "v_speed");
+        ARG("int", "v_min");
+        ARG("int", "v_max");
+        ARG("string", "format");
+        ARG("int", "flags");
+        DOC_FUNC("Parameter `flags` is an enum of type UI_SliderFlags");
+
+        SFUN(ui_DragScalarN_CKFLOAT, "int", "drag");
+        ARG("string", "label");
+        ARG("float[]", "data");
+
+        SFUN(ui_DragScalarNEx_CKFLOAT, "int", "drag");
+        ARG("string", "label");
+        ARG("float[]", "data");
+        ARG("float", "v_speed");
+        ARG("float", "v_min");
+        ARG("float", "v_max");
+        ARG("string", "format");
+        ARG("int", "flags");
+        DOC_FUNC("Parameter `flags` is an enum of type UI_SliderFlags");
+
+        // Widgets: Slider -------------------------------------------------------
+
+        SFUN(ui_SliderFloat, "int", "slider");
+        ARG("string", "label");
+        ARG("UI_Float", "v");
+        ARG("float", "v_min");
+        ARG("float", "v_max");
+        DOC_FUNC("Implied format = \"%.3f\", flags = 0");
+
+        SFUN(ui_SliderFloatEx, "int", "slider");
+        ARG("string", "label");
+        ARG("UI_Float", "v");
+        ARG("float", "v_min");
+        ARG("float", "v_max");
+        ARG("string", "format");
+        ARG("int", "flags");
+        DOC_FUNC(
+          "adjust format to decorate the value with a prefix or a suffix for in-"
+          "slider labels or unit display. `flags` is an enum of type "
+          "UI_SliderFlags");
+
+        SFUN(ui_SliderAngle, "int", "sliderAngle");
+        ARG("string", "label");
+        ARG("UI_Float", "v_rad");
+        DOC_FUNC(
+          "Implied v_degrees_min = -360.0f, v_degrees_max = +360.0f, format = "
+          "\"%.0f deg\", flags = 0");
+
+        SFUN(ui_SliderAngleEx, "int", "sliderAngle");
+        ARG("string", "label");
+        ARG("UI_Float", "v_rad");
+        ARG("float", "v_degrees_min");
+        ARG("float", "v_degrees_max");
+        ARG("string", "format");
+        ARG("int", "flags");
+        DOC_FUNC("Parameter `flags` is an enum of type UI_SliderFlags");
+
+        SFUN(ui_SliderInt, "int", "slider");
+        ARG("string", "label");
+        ARG("UI_Int", "v");
+        ARG("int", "v_min");
+        ARG("int", "v_max");
+        DOC_FUNC("Implied format = \"%d\", flags = 0");
+
+        SFUN(ui_SliderIntEx, "int", "slider");
+        ARG("string", "label");
+        ARG("UI_Int", "v");
+        ARG("int", "v_min");
+        ARG("int", "v_max");
+        ARG("string", "format");
+        ARG("int", "flags");
+        DOC_FUNC("Parameter `flags` is an enum of type UI_SliderFlags");
+
+        SFUN(ui_SliderScalarN_CKINT, "int", "slider");
+        ARG("string", "label");
+        ARG("int[]", "data");
+        ARG("int", "v_min");
+        ARG("int", "v_max");
+
+        SFUN(ui_SliderScalarNEx_CKINT, "int", "slider");
+        ARG("string", "label");
+        ARG("int[]", "data");
+        ARG("int", "v_min");
+        ARG("int", "v_max");
+        ARG("string", "format");
+        ARG("int", "flags");
+        DOC_FUNC("Parameter `flags` is an enum of type UI_SliderFlags");
+
+        SFUN(ui_SliderScalarN_CKFLOAT, "int", "slider");
+        ARG("string", "label");
+        ARG("float[]", "data");
+        ARG("float", "v_min");
+        ARG("float", "v_max");
+
+        SFUN(ui_SliderScalarNEx_CKFLOAT, "int", "slider");
+        ARG("string", "label");
+        ARG("float[]", "data");
+        ARG("float", "v_min");
+        ARG("float", "v_max");
+        ARG("string", "format");
+        ARG("int", "flags");
+        DOC_FUNC("Parameter `flags` is an enum of type UI_SliderFlags");
+
+        SFUN(ui_VSliderFloat, "int", "vslider");
+        ARG("string", "label");
+        ARG("vec2", "size");
+        ARG("UI_Float", "v");
+        ARG("float", "v_min");
+        ARG("float", "v_max");
+        DOC_FUNC("Implied format = \"%.3f\", flags = 0");
+
+        SFUN(ui_VSliderFloatEx, "int", "vslider");
+        ARG("string", "label");
+        ARG("vec2", "size");
+        ARG("UI_Float", "v");
+        ARG("float", "v_min");
+        ARG("float", "v_max");
+        ARG("string", "format");
+        ARG("int", "flags");
+        DOC_FUNC("Parameter `flags` is an enum of type UI_SliderFlags");
+
+        SFUN(ui_VSliderInt, "int", "vslider");
+        ARG("string", "label");
+        ARG("vec2", "size");
+        ARG("UI_Int", "v");
+        ARG("int", "v_min");
+        ARG("int", "v_max");
+        DOC_FUNC("Implied format = \"%d\", flags = 0");
+
+        SFUN(ui_VSliderIntEx, "int", "vslider");
+        ARG("string", "label");
+        ARG("vec2", "size");
+        ARG("UI_Int", "v");
+        ARG("int", "v_min");
+        ARG("int", "v_max");
+        ARG("string", "format");
+        ARG("int", "flags");
+        DOC_FUNC("Parameter `flags` is an enum of type UI_SliderFlags");
+
+        // Widgets: Input --------------------------------------------------------
+
+        SFUN(ui_InputText, "int", "inputText");
+        ARG("string", "label");
+        ARG("UI_String", "buf");
+        DOC_FUNC(
+          "Implied max_input_length = 256, flags = 0, callback = NULL, user_data = "
+          "NULL. `flags` is an enum of type UI_InputTextFlags");
+
+        SFUN(ui_InputTextEx, "int", "inputText");
+        ARG("string", "label");
+        ARG("UI_String", "buf");
+        ARG("int", "max_input_length");
+        ARG("int", "flags");
+        // ARG("UI_InputTextCallback", "callback");  // ignoring for now
+        DOC_FUNC("Parameter `flags` is an enum of type UI_InputTextFlags");
+
+        SFUN(ui_InputTextMultiline, "int", "inputTextMultiline");
+        ARG("string", "label");
+        ARG("UI_String", "buf");
+        DOC_FUNC(
+          "Implied size = ImVec2(0, 0), flags = 0, callback = NULL, "
+          "user_data = NULL");
+
+        SFUN(ui_InputTextMultilineEx, "int", "inputTextMultiline");
+        ARG("string", "label");
+        ARG("UI_String", "buf");
+        ARG("int", "max_input_length");
+        ARG("vec2", "size");
+        ARG("int", "flags");
+        // ARG("UI_InputTextCallback", "callback");  // ignoring for now
+        DOC_FUNC("Parameter `flags` is an enum of type UI_InputTextFlags");
+
+        SFUN(ui_InputTextWithHint, "int", "inputTextWithHint");
+        ARG("string", "label");
+        ARG("string", "hint");
+        ARG("UI_String", "buf");
+        DOC_FUNC(
+          "Implied max_input_length = 256, flags = 0, callback = NULL, user_data = "
+          "NULL.");
+
+        SFUN(ui_InputTextWithHintEx, "int", "inputTextWithHint");
+        ARG("string", "label");
+        ARG("string", "hint");
+        ARG("UI_String", "buf");
+        ARG("int", "max_input_length");
+        ARG("int", "flags");
+        // ARG("UI_InputTextCallback", "callback");  // ignoring for now
+        DOC_FUNC("Parameter `flags` is an enum of type UI_InputTextFlags");
+
+        SFUN(ui_InputFloat, "int", "inputFloat");
+        ARG("string", "label");
+        ARG("UI_Float", "v");
+        DOC_FUNC(
+          "Implied step = 0.0f, step_fast = 0.0f, format = \"%.3f\", flags = "
+          "0");
+
+        SFUN(ui_InputFloatEx, "int", "inputFloat");
+        ARG("string", "label");
+        ARG("UI_Float", "v");
+        ARG("float", "step");
+        ARG("float", "step_fast");
+        ARG("string", "format");
+        ARG("int", "flags");
+        DOC_FUNC("Parameter `flags` is an enum of type UI_InputTextFlags");
+
+        SFUN(ui_InputScalarN_CKFLOAT, "int", "inputFloat");
+        ARG("string", "label");
+        ARG("float[]", "data");
+        DOC_FUNC("Implied p_step = NULL, p_step_fast = NULL, format = NULL, flags = 0");
+
+        SFUN(ui_InputScalarNEx_CKFLOAT, "int", "inputFloat");
+        ARG("string", "label");
+        ARG("float[]", "data");
+        ARG("float", "step");
+        ARG("float", "step_fast");
+        ARG("string", "format");
+        ARG("int", "flags");
+        DOC_FUNC("Parameter `flags` is an enum of type UI_InputTextFlags");
+
+        SFUN(ui_InputInt, "int", "inputInt");
+        ARG("string", "label");
+        ARG("UI_Int", "v");
+        DOC_FUNC("Implied step = 1, step_fast = 100, flags = 0");
+
+        SFUN(ui_InputIntEx, "int", "inputInt");
+        ARG("string", "label");
+        ARG("UI_Int", "v");
+        ARG("int", "step");
+        ARG("int", "step_fast");
+        ARG("int", "flags");
+        DOC_FUNC("Parameter `flags` is an enum of type UI_InputTextFlags");
+
+        SFUN(ui_InputScalarN_CKINT, "int", "inputInt");
+        ARG("string", "label");
+        ARG("int[]", "data");
+        DOC_FUNC("Implied p_step = NULL, p_step_fast = NULL, format = NULL, flags = 0");
+
+        SFUN(ui_InputScalarNEx_CKINT, "int", "inputInt");
+        ARG("string", "label");
+        ARG("int[]", "data");
+        ARG("int", "step");
+        ARG("int", "step_fast");
+        ARG("string", "format");
+        ARG("int", "flags");
+        DOC_FUNC("Parameter `flags` is an enum of type UI_InputTextFlags");
+
+        // Widgets: Color --------------------------------------------------------
+
+        SFUN(ui_ColorEdit3, "int", "colorEdit");
+        ARG("string", "label");
+        ARG("UI_Float3", "col");
+        ARG("int", "flags");
+        DOC_FUNC("`flags` is an enum of type UI_ColorEditFlags");
+
+        SFUN(ui_ColorEdit4, "int", "colorEdit");
+        ARG("string", "label");
+        ARG("UI_Float4", "col");
+        ARG("int", "flags");
+        DOC_FUNC("`flags` is an enum of type UI_ColorEditFlags");
+
+        SFUN(ui_ColorPicker3, "int", "colorPicker");
+        ARG("string", "label");
+        ARG("UI_Float3", "col");
+        ARG("int", "flags");
+        DOC_FUNC("`flags` is an enum of type UI_ColorEditFlags");
+
+        SFUN(ui_ColorPicker4, "int", "colorPicker");
+        ARG("string", "label");
+        ARG("UI_Float4", "color");
+        ARG("int", "flags");
+        ARG("vec4", "reference_color");
+
+        SFUN(ui_ColorPicker4_no_ref_col, "int", "colorPicker");
+        ARG("string", "label");
+        ARG("UI_Float4", "color");
+        ARG("int", "flags");
+
+        SFUN(ui_ColorButton, "int", "colorButton");
+        ARG("string", "desc_id");
+        ARG("vec4", "col");
+        ARG("int", "flags");
+        DOC_FUNC(
+          "Implied size = ImVec2(0, 0). `flags` is an enum of type "
+          "UI_ColorEditFlags");
+
+        SFUN(ui_ColorButtonEx, "int", "colorButton");
+        ARG("string", "desc_id");
+        ARG("vec4", "col");
+        ARG("int", "flags");
+        ARG("vec2", "size");
+        DOC_FUNC(
+          "`flags` is an enum of type UI_ColorEditFlags. display a color "
+          "square/button, hover for details, return true when pressed.");
+
+        SFUN(ui_SetColorEditOptions, "void", "setColorEditOptions");
+        ARG("int", "flags");
+        DOC_FUNC(
+          "initialize current options (generally on application startup) if you "
+          "want to select a default format, picker type, etc. User will be able to "
+          "change many settings, unless you pass the _NoOptions flag to your "
+          "calls.");
+
+        // Widgets: Trees --------------------------------------------------------
+
+        SFUN(ui_TreeNode, "int", "treeNode");
+        ARG("string", "label");
+        DOC_FUNC(
+          "return true when the node is open, in which case you need to call "
+          "TreePop()");
+
+        SFUN(ui_TreeNodeStrUnformatted, "int", "treeNode");
+        ARG("string", "str_id");
+        ARG("string", "text");
+
+        SFUN(ui_TreeNodeEx, "int", "treeNode");
+        ARG("string", "label");
+        ARG("int", "flags");
+        DOC_FUNC("`flags` is an enum of type UI_TreeNodeFlags");
+
+        SFUN(ui_TreeNodeExStrUnformatted, "int", "treeNode");
+        ARG("string", "str_id");
+        ARG("int", "flags");
+        ARG("string", "text");
+
+        SFUN(ui_TreePush, "void", "treePush");
+        ARG("string", "str_id");
+        DOC_FUNC(
+          "Indent()+PushID(). Already called by TreeNode() when returning "
+          "true, but you can call TreePush/TreePop yourself if desired.");
+
+        SFUN(ui_TreePop, "void", "treePop");
+        DOC_FUNC("~ Unindent()+PopID()");
+
+        SFUN(ui_GetTreeNodeToLabelSpacing, "float", "getTreeNodeToLabelSpacing");
+        DOC_FUNC(
+          "horizontal distance preceding label when using TreeNode*() or Bullet() "
+          "== (g.FontSize + style.FramePadding.x*2) for a regular unframed "
+          "TreeNode");
+
+        SFUN(ui_CollapsingHeader, "int", "collapsingHeader");
+        ARG("string", "label");
+        ARG("int", "flags");
+        DOC_FUNC(
+          "`flags` is an enum of type UI_TreeNodeFlags. if returning 'true' "
+          "the header is open. doesn't indent nor push on ID stack. user "
+          "doesn't have to call TreePop().");
+
+        SFUN(ui_CollapsingHeaderBoolPtr, "int", "collapsingHeader");
+        ARG("string", "label");
+        ARG("UI_Bool", "p_visible");
+        ARG("int", "flags");
+        DOC_FUNC(
+          "when 'p_visible != NULL': if '*p_visible==true' display an additional "
+          "small close button on upper right of the header which will set the bool "
+          "to false when clicked, if '*p_visible==false' don't display the "
+          "header.");
+
+        SFUN(ui_SetNextItemOpen, "void", "setNextItemOpen");
+        ARG("int", "is_open");
+        ARG("int", "cond");
+        DOC_FUNC(
+          "set next TreeNode/CollapsingHeader open state. `Cond` is an enum of "
+          "type UI_Cond");
+
+        // Widgets: Selectable ---------------------------------------------------
+
+        SFUN(ui_Selectable, "int", "selectable");
+        ARG("string", "label");
+        DOC_FUNC("Implied selected = false, flags = 0, size = ImVec2(0, 0)");
+
+        SFUN(ui_SelectableEx, "int", "selectable");
+        ARG("string", "label");
+        ARG("int", "selected");
+        ARG("int", "flags");
+        ARG("vec2", "size");
+        DOC_FUNC(
+          "`selected` carry the selection state (read-only). Selectable() is "
+          "clicked is returns true so you can modify your selection state. "
+          "`size.x==0.0`: use remaining width, `size.x>0.0`: specify width. "
+          "`size.y==0.0`: use label height, `size.y>0.0`: specify height");
+
+        SFUN(ui_SelectableBoolPtr, "int", "selectable");
+        ARG("string", "label");
+        ARG("UI_Bool", "p_selected");
+        ARG("int", "flags");
+        DOC_FUNC(
+          "`p_selected` points to the selection state (read-write), as a "
+          "convenient "
+          "helper. `flags` is an enum of type UI_SelectableFlags");
+
+        SFUN(ui_SelectableBoolPtrEx, "int", "selectable");
+        ARG("string", "label");
+        ARG("UI_Bool", "p_selected");
+        ARG("int", "flags");
+        ARG("vec2", "size");
+        DOC_FUNC(
+          "`p_selected` points to the selection state (read-write), as a "
+          "convenient helper. `flags` is an enum of type UI_SelectableFlags");
+
+        // Widgets: List Boxes ---------------------------------------------------
+
+        SFUN(ui_BeginListBox, "int", "beginListBox");
+        ARG("string", "label");
+        ARG("vec2", "size");
+        DOC_FUNC(
+          "This is essentially a thin wrapper to using BeginChild/EndChild with "
+          "the ImGuiChildFlags_FrameStyle flag for stylistic changes + displaying "
+          "a label.\n"
+          "You can submit contents and manage your selection state however you "
+          "want it, by creating e.g. Selectable() or any other items.\n"
+          "The simplified/old ListBox() api are helpers over "
+          "BeginListBox()/EndListBox() which are kept available for convenience "
+          "purpose. This is analoguous to how Combos are created.\n"
+          "Choose frame width:   size.x > 0.0f: custom  /  size.x < 0.0f or "
+          "-FLT_MIN: right-align   /  size.x = 0.0f (default): use current "
+          "ItemWidth\n"
+          "Choose frame height:  size.y > 0.0f: custom  /  size.y < 0.0f or "
+          "-FLT_MIN: bottom-align  /  size.y = 0.0f (default): arbitrary default "
+          "height which can fit ~7 items"
+          "This function opens a framed scrolling region.");
+
+        SFUN(ui_EndListBox, "void", "endListBox");
+        DOC_FUNC("only call EndListBox() if BeginListBox() returned true!");
+
+        SFUN(ui_ListBox, "int", "listBox");
+        ARG("string", "label");
+        ARG("UI_Int", "current_item");
+        ARG("string[]", "items");
+        ARG("int", "height_in_items");
+        DOC_FUNC("set `height_in_items` to -1 to use the default");
+
+        SFUN(ui_ListBox_default, "int", "listBox");
+        ARG("string", "label");
+        ARG("UI_Int", "current_item");
+        ARG("string[]", "items");
+        DOC_FUNC("listbox ui widget, uses default item height");
+
+        // Widgets: Data Plotting ------------------------------------------------
+
+        SFUN(ui_PlotLines, "void", "plotLines");
+        ARG("string", "label");
+        ARG("float[]", "values");
+        DOC_FUNC(
+          "Implied values_offset = 0, overlay_text = NULL, scale_min = FLT_MAX, "
+          "scale_max = FLT_MAX, graph_size = ImVec2(0, 0), stride = sizeof(float)");
+
+        SFUN(ui_PlotLinesEx, "void", "plotLines");
+        ARG("string", "label");
+        ARG("float[]", "values");
+        ARG("int", "values_offset");
+        ARG("string", "overlay_text");
+        ARG("float", "scale_min");
+        ARG("float", "scale_max");
+        ARG("vec2", "graph_size");
+
+        SFUN(ui_PlotHistogram, "void", "plotHistogram");
+        ARG("string", "label");
+        ARG("float[]", "values");
+        DOC_FUNC(
+          "Implied values_offset = 0, overlay_text = NULL, scale_min = FLT_MAX, "
+          "scale_max = FLT_MAX, graph_size = ImVec2(0, 0), stride = sizeof(float)");
+
+        SFUN(ui_PlotHistogramEx, "void", "plotHistogram");
+        ARG("string", "label");
+        ARG("float[]", "values");
+        ARG("int", "values_offset");
+        ARG("string", "overlay_text");
+        ARG("float", "scale_min");
+        ARG("float", "scale_max");
+        ARG("vec2", "graph_size");
+
+        // Widgets: Menus --------------------------------------------------------
+
+        SFUN(ui_BeginMenuBar, "int", "beginMenuBar");
+        DOC_FUNC(
+          "append to menu-bar of current window (requires ImGuiWindowFlags_MenuBar "
+          "flag set on parent window)");
+
+        SFUN(ui_EndMenuBar, "void", "endMenuBar");
+        DOC_FUNC("only call EndMenuBar() if BeginMenuBar() returns true!");
+
+        SFUN(ui_BeginMainMenuBar, "int", "beginMainMenuBar");
+        DOC_FUNC("create and append to a full screen menu-bar.");
+
+        SFUN(ui_EndMainMenuBar, "void", "endMainMenuBar");
+        DOC_FUNC("only call EndMainMenuBar() if BeginMainMenuBar() returns true!");
+
+        SFUN(ui_BeginMenu, "int", "beginMenu");
+        ARG("string", "label");
+        DOC_FUNC("Implied enabled = true");
+
+        SFUN(ui_BeginMenuEx, "int", "beginMenu");
+        ARG("string", "label");
+        ARG("int", "enabled");
+        DOC_FUNC("create a sub-menu entry. only call EndMenu() if this returns true!");
+
+        SFUN(ui_EndMenu, "void", "endMenu");
+        DOC_FUNC("only call EndMenu() if BeginMenu() returns true!");
+
+        SFUN(ui_MenuItem, "int", "menuItem");
+        ARG("string", "label");
+        DOC_FUNC("Implied shortcut = NULL, selected = false, enabled = true");
+
+        SFUN(ui_MenuItemBoolPtr, "int", "menuItem");
+        ARG("string", "label");
+        ARG("string", "shortcut");
+        ARG("UI_Bool", "p_selected");
+        ARG("int", "enabled");
+        DOC_FUNC(
+          "return true when activated + toggle (*p_selected) if p_selected != "
+          "NULL");
+
+        // Tooltips ---------------------------------------------------------------
+        SFUN(ui_BeginItemTooltip, "int", "beginItemTooltip");
+        DOC_FUNC(
+          "Adds a tooltip on hover for the previous UI item. Remember to call "
+          "UI.endToolTip() if this returns true");
+
+        SFUN(ui_BeginTooltip, "int", "beginTooltip");
+        DOC_FUNC("begin/append a tooltip window.");
+
+        SFUN(ui_EndTooltip, "void", "endTooltip");
+        DOC_FUNC(
+          "only call EndTooltip() if BeginTooltip()/BeginItemTooltip() returns "
+          "true!");
+
+        SFUN(ui_SetTooltipUnformatted, "void", "tooltip");
+        ARG("string", "text");
+        DOC_FUNC(
+          "set a text-only tooltip. Often used after a ImGui::IsItemHovered() "
+          "check. Override any previous call to SetTooltip().\n"
+          "SetTooltip() is more or less a shortcut for the 'if (BeginTooltip()) { "
+          "Text(...); EndTooltip(); }' idiom (with a subtlety that it discard any "
+          "previously submitted tooltip)");
+
+        SFUN(ui_SetItemTooltipUnformatted, "void", "itemTooltip");
+        ARG("string", "text");
+        DOC_FUNC(
+          "set a text-only tooltip if preceding item was hovered. override any "
+          "previous call to SetTooltip().\n"
+          "itemTooltip() is a shortcut for the 'if "
+          "(IsItemHovered(ImGuiHoveredFlags_ForTooltip)) { SetTooltip(...); }' "
+          "idiom.");
+
+        // Popups, Modals --------------------------------------------------------
+
+        SFUN(ui_BeginPopup, "int", "beginPopup");
+        ARG("string", "str_id");
+        ARG("int", "flags");
+        DOC_FUNC(
+          "return true if the popup is open, and you can start outputting to "
+          "it. `flags` is an enum of type UI_WindowFlags\n"
+          "beginPopup(): query popup state, if open start appending into the "
+          "window. Call endPopup() afterwards if returned true. UI_WindowFlags "
+          "are forwarded to the window.");
+
+        SFUN(ui_BeginPopupModal, "int", "beginPopupModal");
+        ARG("string", "name");
+        ARG("UI_Bool", "p_open");
+        ARG("int", "flags");
+        DOC_FUNC(
+          "return true if the modal is open, and you can start outputting to it. "
+          "`flags` is an enum of type UI_WindowFlags\n"
+          "beginPopupModal(): block every interaction behind the window, cannot be "
+          "closed by user, add a dimming background, has a title bar.");
+
+        SFUN(ui_EndPopup, "void", "endPopup");
+
+        SFUN(ui_OpenPopup, "void", "openPopup");
+        ARG("string", "str_id");
+        ARG("int", "popup_flags");
+        DOC_FUNC(
+          "call to mark popup as open (don't call every frame!). `popup_flags` is "
+          "an enum of type UI_PopupFlags");
+
+        SFUN(ui_OpenPopupOnItemClick, "void", "openPopupOnItemClick");
+        ARG("string", "str_id");
+        ARG("int", "popup_flags");
+        DOC_FUNC(
+          "helper to open popup when clicked on last item. Default to "
+          "UI_PopupFlags.MouseButtonRight == 1. (note: actually triggers on the "
+          "mouse _released_ event to be consistent with popup behaviors)\n"
+          "`popup_flags` is an enum of type UI_PopupFlags");
+
+        SFUN(ui_CloseCurrentPopup, "void", "closeCurrentPopup");
+        DOC_FUNC("manually close the popup we have begin-ed into.");
+
+        SFUN(ui_BeginPopupContextItem, "int", "beginPopupContextItem");
+        DOC_FUNC("Implied str_id = NULL, popup_flags = 1");
+
+        SFUN(ui_BeginPopupContextItemEx, "int", "beginPopupContextItem");
+        ARG("string", "str_id");
+        ARG("int", "popup_flags");
+        DOC_FUNC(
+          "open+begin popup when clicked on last item. Use str_id==NULL to "
+          "associate the popup to previous item. If you want to use that on a "
+          "non-interactive item such as Text() you need to pass in an explicit ID "
+          "here. read comments in .cpp!");
+
+        SFUN(ui_BeginPopupContextWindow, "int", "beginPopupContextWindow");
+        DOC_FUNC("Implied str_id = NULL, popup_flags = 1");
+
+        SFUN(ui_BeginPopupContextWindowEx, "int", "beginPopupContextWindow");
+        ARG("string", "str_id");
+        ARG("int", "popup_flags");
+        DOC_FUNC("open+begin popup when clicked on current window.");
+
+        SFUN(ui_BeginPopupContextVoid, "int", "beginPopupContextVoid");
+        DOC_FUNC("Implied str_id = NULL, popup_flags = 1");
+
+        SFUN(ui_BeginPopupContextVoidEx, "int", "beginPopupContextVoid");
+        ARG("string", "str_id");
+        ARG("int", "popup_flags");
+        DOC_FUNC("open+begin popup when clicked in void (where there are no windows).");
+
+        SFUN(ui_IsPopupOpen, "int", "isPopupOpen");
+        ARG("string", "str_id");
+        ARG("int", "flags");
+        DOC_FUNC(
+          "return true if the popup is open. `flags` is an enum of type "
+          "UI_PopupFlags");
+
+        // Tables ----------------------------------------------------------------
+
+        SFUN(ui_BeginTable, "int", "beginTable");
+        ARG("string", "str_id");
+        ARG("int", "column");
+        ARG("int", "flags");
+        DOC_FUNC(
+          "Implied outer_size = ImVec2(0.0f, 0.0f), inner_width = 0.0f\n"
+          "`flags` is an enum of type UI_TableFlags");
+
+        SFUN(ui_BeginTableEx, "int", "beginTable");
+        ARG("string", "str_id");
+        ARG("int", "column");
+        ARG("int", "flags");
+        ARG("vec2", "outer_size");
+        ARG("float", "inner_width");
+        DOC_FUNC("`flags` is an enum of type UI_TableFlags");
+
+        SFUN(ui_EndTable, "void", "endTable");
+        DOC_FUNC("only call EndTable() if BeginTable() returns true!");
+
+        SFUN(ui_TableNextRow, "void", "tableNextRow");
+        DOC_FUNC("Implied row_flags = 0, min_row_height = 0.0f");
+
+        SFUN(ui_TableNextRowEx, "void", "tableNextRow");
+        ARG("int", "row_flags");
+        ARG("float", "min_row_height");
+        DOC_FUNC("append into the first cell of a new row.");
+
+        SFUN(ui_TableNextColumn, "int", "tableNextColumn");
+        DOC_FUNC(
+          "append into the next column (or first column of next row if "
+          "currently in last column). Return true when column is visible.");
+
+        SFUN(ui_TableSetColumnIndex, "int", "tableSetColumnIndex");
+        ARG("int", "column_n");
+        DOC_FUNC(
+          "append into the specified column. Return true when column is "
+          "visible.");
+
+        SFUN(ui_TableSetupColumn, "void", "tableSetupColumn");
+        ARG("string", "label");
+        ARG("int", "flags");
+        DOC_FUNC(
+          "Implied init_width_or_weight = 0.0f, user_id = 0\n"
+          "`flags` is an enum of type UI_TableColumnFlags");
+
+        SFUN(ui_TableSetupColumnEx, "void", "tableSetupColumn");
+        ARG("string", "label");
+        ARG("int", "flags");
+        ARG("float", "init_width_or_weight");
+        ARG("int", "user_id");
+
+        SFUN(ui_TableSetupScrollFreeze, "void", "tableSetupScrollFreeze");
+        ARG("int", "cols");
+        ARG("int", "rows");
+        DOC_FUNC("lock columns/rows so they stay visible when scrolled.");
+
+        SFUN(ui_TableHeader, "void", "tableHeader");
+        ARG("string", "label");
+        DOC_FUNC("submit one header cell manually (rarely used)");
+
+        SFUN(ui_TableHeadersRow, "void", "tableHeadersRow");
+        DOC_FUNC(
+          "submit a row with headers cells based on data provided to "
+          "TableSetupColumn() + submit context menu");
+
+        SFUN(ui_TableAngledHeadersRow, "void", "tableAngledHeadersRow");
+        DOC_FUNC(
+          "submit a row with angled headers for every column with the "
+          "ImGuiTableColumnFlags_AngledHeader flag. MUST BE FIRST ROW.");
+
+        SFUN(ui_TableGetColumnCount, "int", "tableGetColumnCount");
+        DOC_FUNC("return number of columns (value passed to BeginTable)");
+
+        SFUN(ui_TableGetColumnIndex, "int", "tableGetColumnIndex");
+        DOC_FUNC("return current column index.");
+
+        SFUN(ui_TableGetRowIndex, "int", "tableGetRowIndex");
+        DOC_FUNC("return current row index.");
+
+        SFUN(ui_TableGetColumnName, "string", "tableGetColumnName");
+        ARG("int", "column_n");
+        DOC_FUNC(
+          "return \"\" if column didn't have a name declared by "
+          "TableSetupColumn(). Pass -1 to use current column.");
+
+        SFUN(ui_TableGetColumnFlags, "int", "tableGetColumnFlags");
+        ARG("int", "column_n");
+        DOC_FUNC(
+          "return column flags so you can query their Enabled/Visible/Sorted/"
+          "Hovered status flags. Pass -1 to use current column.");
+
+        SFUN(ui_TableSetColumnEnabled, "void", "tableSetColumnEnabled");
+        ARG("int", "column_n");
+        ARG("int", "v");
+        DOC_FUNC(
+          "change user accessible enabled/disabled state of a column. Set to "
+          "false to hide the column. User can use the context menu to change "
+          "this themselves (right-click in headers, or right-click in columns "
+          "body with UI_TableFlags.ContextMenuInBody)");
+
+        SFUN(ui_TableSetBgColor, "void", "tableSetBgColor");
+        ARG("int", "ui_table_bg_target_flag");
+        ARG("vec4", "color");
+        ARG("int", "column_n");
+        DOC_FUNC(
+          "change the color of a cell, row, or column. UI_TableBgTarget "
+          "flags for details.");
+
+        // Tab Bars, Tabs --------------------------------------------------------
+
+        SFUN(ui_BeginTabBar, "int", "beginTabBar");
+        ARG("string", "str_id");
+        ARG("int", "flags");
+        DOC_FUNC(
+          "`flags` is an enum of type UI_TabBarFlags\n"
+          "create and append into a TabBar");
+
+        SFUN(ui_EndTabBar, "void", "endTabBar");
+        DOC_FUNC("only call EndTabBar() if BeginTabBar() returns true!");
+
+        SFUN(ui_BeginTabItem, "int", "beginTabItem");
+        ARG("string", "label");
+        ARG("UI_Bool", "p_open");
+        ARG("int", "flags");
+        DOC_FUNC(
+          "create a Tab. Returns true if the Tab is selected.\n"
+          "`flags` is an enum of type UI_TabItemFlags");
+
+        SFUN(ui_EndTabItem, "void", "endTabItem");
+        DOC_FUNC("only call EndTabItem() if BeginTabItem() returns true!");
+
+        SFUN(ui_TabItemButton, "int", "tabItemButton");
+        ARG("string", "label");
+        ARG("int", "flags");
+        DOC_FUNC(
+          "create a Tab behaving like a button. Returns true when clicked.\n"
+          "cannot be selected in the tab bar.\n"
+          "`flags` is an enum of type UI_TabItemFlags");
+
+        SFUN(ui_SetTabItemClosed, "void", "setTabItemClosed");
+        ARG("string", "tab_or_docked_window_label");
+        DOC_FUNC(
+          "notify TabBar or Docking system of a closed tab/window ahead (useful to "
+          "reduce visual flicker on reorderable tab bars). For tab-bar: call after "
+          "BeginTabBar() and before Tab submissions. Otherwise call with a window "
+          "name.");
+
+        // Docking -------------------------------------------------------------
+
+        SFUN(ui_DockSpaceOverViewport, "int", "dockSpaceOverViewport");
+        DOC_FUNC("Implied dockspace_id = 0, viewport = NULL, flags = 0");
+
+        // Disabling -------------------------------------------------------------
+
+        SFUN(ui_BeginDisabled, "void", "beginDisabled");
+        ARG("int", "disabled");
+        DOC_FUNC(
+          "Disable all user interactions and dim items visuals (applying "
+          "style.DisabledAlpha over current colors)\n"
+          "Those can be nested but it cannot be used to enable an already disabled "
+          "section (a single BeginDisabled(true) in the stack is enough to keep "
+          "everything disabled)\n"
+          "BeginDisabled(false) essentially does nothing useful but is provided to "
+          "facilitate use of boolean expressions. If you can avoid calling "
+          "BeginDisabled(False)/EndDisabled() best to avoid it.");
+
+        SFUN(ui_BeginDisabled_true, "void", "beginDisabled");
+        DOC_FUNC("Equivalent to beginDisabled(true)");
+
+        SFUN(ui_EndDisabled, "void", "endDisabled");
+
+        // Clipping --------------------------------------------------------------
+
+        SFUN(ui_PushClipRect, "void", "pushClipRect");
+        ARG("vec2", "clip_rect_min");
+        ARG("vec2", "clip_rect_max");
+        ARG("int", "intersect_with_current_clip_rect");
+        DOC_FUNC(
+          "Mouse hovering is affected by ImGui::PushClipRect() calls, unlike "
+          "direct calls to ImDrawList::PushClipRect() which are render only.");
+
+        SFUN(ui_PopClipRect, "void", "popClipRect");
+
+        // Focus, Activation -----------------------------------------------------
+
+        SFUN(ui_SetItemDefaultFocus, "void", "setItemDefaultFocus");
+        DOC_FUNC("make last item the default focused item of a window.");
+
+        SFUN(ui_SetKeyboardFocusHere, "void", "setKeyboardFocusHere");
+        DOC_FUNC("Implied offset = 0");
+
+        SFUN(ui_SetKeyboardFocusHereEx, "void", "setKeyboardFocusHere");
+        ARG("int", "offset");
+        DOC_FUNC(
+          "focus keyboard on the next widget. Use positive 'offset' to access sub "
+          "components of a multiple component widget. Use -1 to access previous "
+          "widget.");
+
+        // Overlapping Mode -------------------------------------------------------
+
+        SFUN(ui_SetNextItemAllowOverlap, "void", "nextItemAllowOverlap");
+        DOC_FUNC(
+          "allow next item to be overlapped by a subsequent item. Useful with "
+          "invisible buttons, selectable, treenode covering an area where "
+          "subsequent items may need to be added. Note that both Selectable() and "
+          "TreeNode() have dedicated flags doing this.");
+
+        // Item/Widgets Utilities and Query Functions
+        // --------------------------------
+
+        SFUN(ui_IsItemHovered, "int", "isItemHovered");
+        ARG("int", "ui_hovered_flags");
+        DOC_FUNC(
+          "is the last item hovered? (and usable, aka not blocked by a popup, "
+          "etc.). See UI_HoveredFlags for more options.");
+
+        SFUN(ui_IsItemActive, "int", "isItemActive");
+        DOC_FUNC(
+          "is the last item active? (e.g. button being held, text field being "
+          "edited. This will continuously return true while holding mouse button "
+          "on an item. Items that don't interact will always return false)");
+
+        SFUN(ui_IsItemFocused, "int", "isItemFocused");
+        DOC_FUNC("is the last item focused for keyboard/gamepad navigation?");
+
+        SFUN(ui_IsItemClicked, "int", "isItemClicked");
+        DOC_FUNC("Implied mouse_button = 0");
+
+        SFUN(ui_IsItemClickedEx, "int", "isItemClicked");
+        ARG("int", "mouse_button");
+        DOC_FUNC(
+          "is the last item hovered and mouse clicked on? (**)  == IsMouseClicked("
+          "mouse_button) && IsItemHovered(). Important. (**) this is NOT "
+          "equivalent "
+          "to the behavior of e.g. Button(). Read comments in function definition."
+          "mouse_button is an enum of type UI_MouseButton");
+
+        SFUN(ui_IsItemVisible, "int", "isItemVisible");
+        DOC_FUNC(
+          "is the last item visible? (items may be out of sight because of "
+          "clipping/scrolling)");
+
+        SFUN(ui_IsItemEdited, "int", "isItemEdited");
+        DOC_FUNC(
+          "did the last item modify its underlying value this frame? or was "
+          "pressed? This is generally the same as the 'bool' return value of many "
+          "widgets.");
+
+        SFUN(ui_IsItemActivated, "int", "isItemActivated");
+        DOC_FUNC("was the last item just made active (item was previously inactive).");
+
+        SFUN(ui_IsItemDeactivated, "int", "isItemDeactivated");
+        DOC_FUNC(
+          "was the last item just made inactive (item was previously active). "
+          "Useful for Undo/Redo patterns with widgets that require continuous "
+          "editing.");
+
+        SFUN(ui_IsItemDeactivatedAfterEdit, "int", "isItemDeactivatedAfterEdit");
+        DOC_FUNC(
+          "was the last item just made inactive and made a value change when it "
+          "was "
+          "active? (e.g. Slider/Drag moved). Useful for Undo/Redo patterns with "
+          "widgets that require continuous editing. Note that you may get false "
+          "positives (some widgets such as Combo()/ListBox()/Selectable() will "
+          "return true even when clicking an already selected item).");
+
+        SFUN(ui_IsItemToggledOpen, "int", "isItemToggledOpen");
+        DOC_FUNC("was the last item open state toggled? set by TreeNode().");
+
+        SFUN(ui_IsAnyItemHovered, "int", "isAnyItemHovered");
+        DOC_FUNC("is any item hovered?");
+
+        SFUN(ui_IsAnyItemActive, "int", "isAnyItemActive");
+        DOC_FUNC("is any item active?");
+
+        SFUN(ui_IsAnyItemFocused, "int", "isAnyItemFocused");
+        DOC_FUNC("is any item focused?");
+
+        SFUN(ui_GetItemID, "int", "getItemID");
+        DOC_FUNC("get ID of last item (~~ often same ImGui::GetID(label) beforehand)");
+
+        SFUN(ui_GetItemRectMin, "vec2", "getItemRectMin");
+        DOC_FUNC("get upper-left bounding rectangle of the last item (screen space)");
+
+        SFUN(ui_GetItemRectMax, "vec2", "getItemRectMax");
+        DOC_FUNC("get lower-right bounding rectangle of the last item (screen space)");
+
+        SFUN(ui_GetItemRectSize, "vec2", "getItemRectSize");
+        DOC_FUNC("get size of last item");
+
+        // Viewports ------------------------------------------------------------
+
+        SFUN(ui_GetMainViewport, "UI_Viewport", "getMainViewport");
+        DOC_FUNC("Return primary/default viewport. This can never be NULL.");
+
+        // Text Utilities ---------------------------------------------------------
+
+        SFUN(ui_CalcTextSize, "vec2", "calcTextSize");
+        ARG("string", "text");
+        DOC_FUNC(
+          "Implied text_end = NULL, hide_text_after_double_hash = false, "
+          "wrap_width = -1.0f");
+
+        SFUN(ui_CalcTextSizeEx, "vec2", "calcTextSize");
+        ARG("string", "text");
+        ARG("string", "text_end");
+        ARG("int", "hide_text_after_double_hash");
+        ARG("float", "wrap_width");
+        DOC_FUNC("default hide_text_after_double_hash = false, wrap_width = -1.0f");
+
+        // Color Utilities --------------------------------------------------------
+
+        SFUN(ui_ColorConvertRGBtoHSV, "vec3", "convertRGBtoHSV");
+        ARG("vec3", "rgb");
+
+        SFUN(ui_ColorConvertHSVtoRGB, "vec3", "convertHSVtoRGB");
+        ARG("vec3", "hsv");
+
+        // Inputs Utilities: Keyboard/Mouse/Gamepad --------------------------------
+
+        SFUN(ui_IsKeyDown, "int", "isKeyDown");
+        ARG("int", "key");
+        DOC_FUNC("is key being held. `key` is an enum of type UI_Key");
+
+        SFUN(ui_IsKeyPressed, "int", "isKeyPressed");
+        ARG("int", "key");
+        DOC_FUNC("Implied repeat = true. `key` is an enum of type UI_Key");
+
+        SFUN(ui_IsKeyPressedEx, "int", "isKeyPressed");
+        ARG("int", "key");
+        ARG("int", "repeat");
+        DOC_FUNC(
+          "was key pressed (went from !Down to Down)? if repeat=true, uses "
+          "io.KeyRepeatDelay / KeyRepeatRate. `key` is an enum of type UI_Key");
+
+        SFUN(ui_IsKeyReleased, "int", "isKeyReleased");
+        ARG("int", "key");
+        DOC_FUNC(
+          "was key released (went from Down to !Down)? `key` is an enum of type "
+          "UI_Key");
+
+        SFUN(ui_IsKeyChordPressed, "int", "isKeyChordPressed");
+        ARG("int", "key_chord");
+        DOC_FUNC(
+          "was key chord (UI_Key.Mod* + UI_Key) pressed, e.g. you can pass "
+          "'UI_Key.Mod_Ctrl | UI_Key.S' as a key-chord. This doesn't do any "
+          "routing or "
+          "focus check, please consider using Shortcut() function instead.");
+
+        SFUN(ui_GetKeyPressedAmount, "int", "keyPressedAmount");
+        ARG("int", "key");
+        ARG("float", "repeat_delay");
+        ARG("float", "rate");
+        DOC_FUNC(
+          "uses provided repeat rate/delay. return a count, most often 0 or 1 but "
+          "might be >1 if "
+          "RepeatRate is small enough that DeltaTime > RepeatRate. `key` is an "
+          "enum of type UI_Key");
+
+        SFUN(ui_GetKeyName, "string", "keyName");
+        ARG("int", "key");
+        DOC_FUNC(
+          "`key` is a UI_Key enum, e.g. UI_Key.Backspace. Returns English name of the "
+          "key. "
+          "Those names are provided for debugging and are not meant to be saved "
+          "persistently or compared.");
+
+        SFUN(ui_SetNextFrameWantCaptureKeyboard, "void",
+             "setNextFrameWantCaptureKeyboard");
+        ARG("int", "want_capture_keyboard");
+        DOC_FUNC(
+          "Override io.WantCaptureKeyboard flag next frame (said flag is left for "
+          "your application to handle, typically when true it instructs your app "
+          "to ignore inputs). e.g. force capture keyboard when your widget is "
+          "being hovered. This is equivalent to setting \"io.WantCaptureKeyboard = "
+          "want_capture_keyboard\"; after the next NewFrame() call.");
+
+        // Inputs Utilities: Mouse specific ---------------------------------------
+
+        SFUN(ui_IsMouseDown, "int", "isMouseDown");
+        ARG("int", "button");
+        DOC_FUNC("is mouse button held. `button` is an enum of type UI_MouseButton");
+
+        SFUN(ui_IsMouseClicked, "int", "isMouseClicked");
+        ARG("int", "button");
+        DOC_FUNC("Implied repeat = false. `button` is an enum of type UI_MouseButton");
+
+        SFUN(ui_IsMouseClickedEx, "int", "isMouseClicked");
+        ARG("int", "button");
+        ARG("int", "repeat");
+        DOC_FUNC(
+          "did mouse button clicked? (went from !Down to Down). Same as "
+          "GetMouseClickedCount() == 1. `button` is an enum of type "
+          "UI_MouseButton");
+
+        SFUN(ui_IsMouseReleased, "int", "isMouseReleased");
+        ARG("int", "button");
+        DOC_FUNC(
+          "did mouse button released? (went from Down to !Down). `button` is an "
+          "enum of type UI_MouseButton");
+
+        SFUN(ui_IsMouseDoubleClicked, "int", "isMouseDoubleClicked");
+        ARG("int", "button");
+        DOC_FUNC(
+          "did mouse button double-clicked? Same as GetMouseClickedCount() == 2. "
+          "`button` is an enum of type UI_MouseButton");
+
+        SFUN(ui_GetMouseClickedCount, "int", "getMouseClickedCount");
+        ARG("int", "button");
+        DOC_FUNC(
+          "return the number of successive mouse-clicks at the time where a click "
+          "happen (otherwise 0). `button` is an enum of type UI_MouseButton");
+
+        SFUN(ui_IsMouseHoveringRect, "int", "isMouseHoveringRect");
+        ARG("vec2", "r_min");
+        ARG("vec2", "r_max");
+        DOC_FUNC("Implied clip = true");
+
+        SFUN(ui_IsMouseHoveringRectEx, "int", "isMouseHoveringRect");
+        ARG("vec2", "r_min");
+        ARG("vec2", "r_max");
+        ARG("int", "clip");
+        DOC_FUNC(
+          "is mouse hovering given bounding rect (in screen space). clipped by "
+          "current clipping settings, but disregarding of other consideration of "
+          "focus/window ordering/popup-block.");
+
+        SFUN(ui_IsMousePosValid, "int", "isMousePosValid");
+        // ARG("vec2", "mouse_pos");
+        DOC_FUNC(
+          "by convention we use (-FLT_MAX,-FLT_MAX) to denote that there is no "
+          "mouse available");
+
+        SFUN(ui_GetMousePos, "vec2", "getMousePos");
+        DOC_FUNC(
+          "shortcut to ImGui::GetIO().MousePos provided by user, to be "
+          "consistent with other calls");
+
+        SFUN(ui_GetMousePosOnOpeningCurrentPopup, "vec2",
+             "getMousePosOnOpeningCurrentPopup");
+        DOC_FUNC(
+          "retrieve mouse position at the time of opening popup we have "
+          "BeginPopup() into "
+          "(helper to avoid user backing that value themselves)");
+
+        SFUN(ui_IsMouseDragging, "int", "isMouseDragging");
+        ARG("int", "button");
+        ARG("float", "lock_threshold");
+        DOC_FUNC(
+          "is mouse dragging? (uses io.MouseDraggingThreshold if lock_threshold < "
+          "0.0f). `button` is an enum of type UI_MouseButton");
+
+        SFUN(ui_GetMouseDragDelta, "vec2", "getMouseDragDelta");
+        ARG("int", "button");
+        ARG("float", "lock_threshold");
+        DOC_FUNC(
+          "return the delta from the initial clicking position while the mouse "
+          "button is pressed or was just released. This is locked and return "
+          "0.0f until the mouse moves past a distance threshold at least once "
+          "(uses io.MouseDraggingThreshold if lock_threshold < 0.0f)\n"
+          "`button` is an enum of type UI_MouseButton");
+
+        SFUN(ui_ResetMouseDragDelta, "void", "resetMouseDragDelta");
+        DOC_FUNC("Implied button = 0");
+
+        SFUN(ui_ResetMouseDragDeltaEx, "void", "resetMouseDragDelta");
+        ARG("int", "button");
+        DOC_FUNC("`button` is an enum of type UI_MouseButton");
+
+        SFUN(ui_GetMouseCursor, "int", "mouseCursor");
+        DOC_FUNC(
+          "get desired mouse cursor shape. Important: reset in ImGui::NewFrame(), "
+          "this is updated during the frame. valid before Render(). If you use "
+          "software rendering by setting io.MouseDrawCursor ImGui will render "
+          "those for you");
+
+        SFUN(ui_SetMouseCursor, "void", "setMouseCursor");
+        ARG("int", "cursor_type");
+        DOC_FUNC(
+          "set desired mouse cursor shape. `cursor_type` is an enum of type "
+          "UI_MouseCursor");
+
+        SFUN(ui_SetNextFrameWantCaptureMouse, "void", "setNextFrameWantCaptureMouse");
+        ARG("int", "want_capture_mouse");
+        DOC_FUNC(
+          "Override io.WantCaptureMouse flag next frame (said flag is left for "
+          "your application to handle, typical when true it instucts your app to "
+          "ignore inputs). This is equivalent to setting \"io.WantCaptureMouse = "
+          "want_capture_mouse;\" after the next NewFrame() call.");
+
+        // Clipboard Utilities ---------------------------------------------------
+
+        SFUN(ui_GetClipboardText, "string", "clipboardText");
+        DOC_FUNC("get current text from the clipboard (e.g. result of Ctrl+C)");
+
+        SFUN(ui_SetClipboardText, "void", "clipboardText");
+        ARG("string", "text");
+        DOC_FUNC("set the clipboard text");
+
+        // styles ----------------------------------------------------------------
+        QUERY->add_sfun(QUERY, ui_styleColorsDark, "void", "styleColorsDark");
+        QUERY->add_sfun(QUERY, ui_styleColorsLight, "void", "styleColorsLight");
+        QUERY->add_sfun(QUERY, ui_styleColorsClassic, "void", "styleColorsClassic");
+
+        QUERY->end_class(QUERY);
+    } // UI
 }
 
 // ============================================================================
@@ -6765,6 +7437,108 @@ CK_DLL_SFUN(ui_want_capture_keyboard)
 {
     if (!verifyInitialization(SHRED)) return;
     RETURN->v_int = cimgui::ImGui_GetIO()->WantCaptureKeyboard;
+}
+
+CK_DLL_SFUN(ui_AddFontFromFileTTF)
+{
+    if (!verifyInitialization(SHRED)) return;
+    const char* filename = API->object->str(GET_NEXT_STRING(ARGS));
+    float size           = GET_NEXT_FLOAT(ARGS);
+    ImFont* font         = ImGui::GetIO().Fonts->AddFontFromFileTTF(filename, size);
+
+    // UI_Font CTOR
+    Chuck_Object* font_ckobj = chugin_createCkObj("UI_Font", false, SHRED);
+    OBJ_MEMBER_UINT(font_ckobj, ui_font_ptr_offset) = (t_CKUINT)font;
+
+    RETURN->v_object = font_ckobj;
+}
+
+CK_DLL_SFUN(ui_io_get_ConfigFlags)
+{
+    if (!verifyInitialization(SHRED)) return;
+    RETURN->v_int = cimgui::ImGui_GetIO()->ConfigFlags;
+}
+
+CK_DLL_SFUN(ui_io_set_ConfigFlags)
+{
+    if (!verifyInitialization(SHRED)) return;
+    cimgui::ImGui_GetIO()->ConfigFlags = GET_NEXT_INT(ARGS);
+}
+
+CK_DLL_SFUN(ui_io_get_BackendFlags)
+{
+    if (!verifyInitialization(SHRED)) return;
+    RETURN->v_int = cimgui::ImGui_GetIO()->BackendFlags;
+}
+
+CK_DLL_SFUN(ui_io_set_BackendFlags)
+{
+    if (!verifyInitialization(SHRED)) return;
+    cimgui::ImGui_GetIO()->BackendFlags = GET_NEXT_INT(ARGS);
+}
+
+CK_DLL_SFUN(ui_io_get_DisplaySize)
+{
+    if (!verifyInitialization(SHRED)) return;
+    cimgui::ImVec2 ds = cimgui::ImGui_GetIO()->DisplaySize;
+    RETURN->v_vec2    = { ds.x, ds.y };
+}
+
+CK_DLL_SFUN(ui_io_get_DeltaTime)
+{
+    if (!verifyInitialization(SHRED)) return;
+    RETURN->v_float = cimgui::ImGui_GetIO()->DeltaTime;
+}
+
+CK_DLL_SFUN(ui_io_get_IniSavingRate)
+{
+    if (!verifyInitialization(SHRED)) return;
+    RETURN->v_float = cimgui::ImGui_GetIO()->IniSavingRate;
+}
+
+CK_DLL_SFUN(ui_io_set_IniSavingRate)
+{
+    if (!verifyInitialization(SHRED)) return;
+    cimgui::ImGui_GetIO()->IniSavingRate = GET_NEXT_FLOAT(ARGS);
+}
+
+CK_DLL_SFUN(ui_io_get_IniFilename)
+{
+    if (!verifyInitialization(SHRED)) return;
+    RETURN->v_string = chugin_createCkString(cimgui::ImGui_GetIO()->IniFilename, false);
+}
+
+CK_DLL_SFUN(ui_io_set_IniFilename)
+{
+    if (!verifyInitialization(SHRED)) return;
+    // KNOWN MEM LEAK (but this should be very rarely called so w/e)
+    cimgui::ImGui_GetIO()->IniFilename
+      = strdup(API->object->str(GET_NEXT_STRING(ARGS)));
+}
+
+CK_DLL_SFUN(ui_io_get_LogFilename)
+{
+    if (!verifyInitialization(SHRED)) return;
+    RETURN->v_string = chugin_createCkString(cimgui::ImGui_GetIO()->LogFilename, false);
+}
+
+CK_DLL_SFUN(ui_io_set_LogFilename)
+{
+    if (!verifyInitialization(SHRED)) return;
+    cimgui::ImGui_GetIO()->LogFilename
+      = strdup(API->object->str(GET_NEXT_STRING(ARGS)));
+}
+
+CK_DLL_SFUN(ui_io_get_FontGlobalScale)
+{
+    if (!verifyInitialization(SHRED)) return;
+    RETURN->v_float = cimgui::ImGui_GetIO()->FontGlobalScale;
+}
+
+CK_DLL_SFUN(ui_io_set_FontGlobalScale)
+{
+    if (!verifyInitialization(SHRED)) return;
+    cimgui::ImGui_GetIO()->FontGlobalScale = GET_NEXT_FLOAT(ARGS);
 }
 
 // ============================================================================
@@ -9096,6 +9870,19 @@ CK_DLL_SFUN(ui_SetScrollFromPosY)
 // Parameters stacks (shared)
 // ============================================================================
 
+CK_DLL_SFUN(ui_PushFont)
+{
+    if (!verifyInitialization(SHRED)) return;
+    ImFont* font = GET_NEXT_UI_FONT(ARGS);
+    ImGui::PushFont(font);
+}
+
+CK_DLL_SFUN(ui_PopFont)
+{
+    if (!verifyInitialization(SHRED)) return;
+    ImGui::PopFont();
+}
+
 CK_DLL_SFUN(ui_PushStyleColorImVec4)
 {
     if (!verifyInitialization(SHRED)) return;
@@ -11097,6 +11884,12 @@ CK_DLL_SFUN(ui_MenuItemBoolPtr)
 // Tooltips
 // ============================================================================
 
+CK_DLL_SFUN(ui_BeginItemTooltip)
+{
+    if (!verifyInitialization(SHRED)) return;
+    RETURN->v_int = cimgui::ImGui_BeginItemTooltip();
+}
+
 CK_DLL_SFUN(ui_BeginTooltip)
 {
     if (!verifyInitialization(SHRED)) return;
@@ -11452,6 +12245,12 @@ CK_DLL_SFUN(ui_BeginDisabled)
     if (!verifyInitialization(SHRED)) return;
     int disabled = GET_NEXT_INT(ARGS);
     cimgui::ImGui_BeginDisabled(disabled);
+}
+
+CK_DLL_SFUN(ui_BeginDisabled_true)
+{
+    if (!verifyInitialization(SHRED)) return;
+    cimgui::ImGui_BeginDisabled(true);
 }
 
 CK_DLL_SFUN(ui_EndDisabled)
@@ -11885,8 +12684,7 @@ CK_DLL_SFUN(ui_SetNextFrameWantCaptureMouse)
 
 CK_DLL_SFUN(ui_GetClipboardText)
 {
-    RETURN->v_string
-      = chugin_createCkString(cimgui::ImGui_GetClipboardText(), false);
+    RETURN->v_string = chugin_createCkString(cimgui::ImGui_GetClipboardText(), false);
 }
 
 CK_DLL_SFUN(ui_SetClipboardText)

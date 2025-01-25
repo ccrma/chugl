@@ -60,6 +60,8 @@ static_assert(sizeof(u32) == sizeof(b2WorldId), "b2WorldId != u32");
 #include "core/hashmap.h"
 #include "core/log.h"
 
+#include "compressed_fonts.h"
+
 // Usage:
 //  static ImDrawDataSnapshot snapshot; // Important: make persistent accross
 //  frames to reuse buffers. snapshot.SnapUsingSwap(ImGui::GetDrawData(),
@@ -380,6 +382,18 @@ struct App {
               |= ImGuiConfigFlags_NavEnableGamepad;           // Enable Gamepad Controls
             io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; // Enable Docking
             io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; // Enable Multi-Viewport
+
+            // load builtin fonts
+            io.Fonts->AddFontDefault();
+            // io.Fonts->AddFontFromFileTTF(
+            //   "/Users/Andrew/Google-Drive/Stanford/chugl/assets/fonts/DroidSans.ttf",
+            //   16);
+            ImFontConfig font_cfg = ImFontConfig();
+            font_cfg.SizePixels   = 16.0f;
+            ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name),
+                           "CousineRegular.ttf, %dpx", (int)font_cfg.SizePixels);
+            io.Fonts->AddFontFromMemoryCompressedBase85TTF( // works but no filename
+              cousine_regular_compressed_data_base85, font_cfg.SizePixels, &font_cfg);
 
             // Setup Dear ImGui style
             ImGui::StyleColorsDark();

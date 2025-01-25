@@ -6,7 +6,7 @@ TODO
     - prevents rocks from overlapping accidentally
     - need to use contactEvent instead of sensorEvent (remember to enable contact events!!!)
 
-- combine projectile, enemy, and pickup into single EntityPool
+- Maybe: combine projectile, enemy, and pickup into single EntityPool
 
 =====================
 Simplification of Architecture
@@ -90,7 +90,7 @@ fun int wait(dur d) {
 }
 
 // Pickup Type Enums
-0 => int PickupType_Basic;
+0 => int PickupType_Exp;
 1 => int PickupType_Boost;
 2 => int PickupType_Health;
 3 => int PickupType_SP;
@@ -206,7 +206,29 @@ class M
             Math.random2f(0, w),
             Math.random2f(0, h)
         );
+    }
 
+    // given an event happens once every `period_secs`, returns
+    // the amount of time you need to wait until the next occurance.
+    // Assumes the wait interval is 1 frame at 60fps
+    // returns the amount of time in seconds until the next event occurs
+    fun static float poisson(float period_sec) {
+        // chance / chunk = period_secs
+        // e.g. if you're checking every 10::ms and you want the 
+        // event to happen every 1::second, then the check needs 
+        // to only pass with probability 10::ms / 1::sec = 1%
+        (1 / 1000.0) => float dt_sec;
+        dt_sec / period_sec => float success_rate;
+
+        if (success_rate <= 0) {
+            T.assert(false, "poisson success_rate <= 0");
+            return 0;
+        }
+
+        0 => int count;
+        while (Math.randomf() > success_rate) count++;
+
+        return count * dt_sec;
     }
 }
 
@@ -239,6 +261,7 @@ class Player
     int shape_id;
     float rotation;
     .1 => float radius;
+    int exp;
 
     UI_Bool invincible(false);
     UI_Bool invisible(false);
@@ -732,7 +755,7 @@ fun void textEffect(string text_str, vec2 pos, vec3 color) {
 
 
 // ==optimize== group all under projectile pool if there are ever enough to matter
-fun void spawnPickupTest(vec2 pos) {
+fun void spawnPickupExp(vec2 pos) {
     GG.nextFrame() => now; // to register as graphics shred
 
     // params
@@ -763,7 +786,7 @@ fun void spawnPickupTest(vec2 pos) {
     b2.createPolygonShape(body_id, pickup_shape_def, polygon);
 
     // register body id in LUT
-    G.pickup_map.set(body_id, PickupType_Basic);
+    G.pickup_map.set(body_id, PickupType_Exp);
 
     polygon.vertices() @=> vec2 vertices[];
 
@@ -809,7 +832,6 @@ fun void spawnPickupTest(vec2 pos) {
         // <<< "pickup map size: ", G.pickup_map.size() >>>;
     }
 } 
-spork ~ spawnPickupTest(@(1,0));
 
 
 // boost pickup
@@ -1112,6 +1134,8 @@ spork ~ shoot();
 
 0 => int EnemyType_None;
 1 => int EnemyType_Rock;
+
+class EnemyType {}
 
 class Enemy
 {
@@ -1466,19 +1490,11 @@ while (true) {
 
                 // switch on pickup type
                 G.pickup_map.getInt(pickup_id) => int pickup_type;
-                if (pickup_type == PickupType_Basic) {
+                if (pickup_type == PickupType_Exp) {
                     // pickup effect
                     spork ~ rippleEffect(sensor_pos);
-
-                    // spawn another!
-                    G.camera.NDCToWorldPos(
-                        @(
-                            Math.random2f(-1, 1),
-                            Math.random2f(-1, 1),
-                            .0
-                        )
-                    ) $ vec2 => vec2 new_pickup_pos;
-                    spork ~ spawnPickupTest(new_pickup_pos);
+                    player.exp++; 
+                    <<< "player exp", player.exp>>>;
                 } else { // all other pickup types
                     spork ~ pickupEffect(sensor_pos, pickup_type);
                     spork ~ textEffect(
@@ -1529,10 +1545,15 @@ while (true) {
 
                             50 -=> e.hp; // 50 dmg fixed for now
                             
+                            // ENEMY ONDEATH
                             if (e.hp <= 0.01) {
                                 // destroy and return to pool
                                 enemy_pool.ret(e); 
                                 spork ~ boomEffect(sensor_pos, 2*e.rock_size);
+                                // spawn exp (TODO pool the pickup logic)
+                                repeat (2) {
+                                    spork ~ spawnPickupExp(M.randomPointInCircle(sensor_pos, 0, .35)); 
+                                }
                             } else {
                                 // dmg on hit flash
                                 spork ~ hitFlashEffect(e.hit_flash);
