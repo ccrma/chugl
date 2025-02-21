@@ -88,6 +88,11 @@ CK_DLL_SFUN(gwindow_opacity);
 CK_DLL_SFUN(gwindow_get_mouse_pos);
 CK_DLL_SFUN(gwindow_get_mouse_delta_pos);
 CK_DLL_SFUN(gwindow_set_mouse_mode); // normal, disabled, hidden
+CK_DLL_SFUN(gwindow_get_mouse_mode); // normal, disabled, hidden
+static t_CKINT mouse_mode_normal   = 0;
+static t_CKINT mouse_mode_hidden   = 1;
+static t_CKINT mouse_mode_disabled = 2;
+static t_CKINT mouse_mode_current  = 0;
 CK_DLL_SFUN(gwindow_get_mouse_scroll_dx);
 CK_DLL_SFUN(gwindow_get_mouse_scroll_dy);
 CK_DLL_SFUN(gwindow_get_mouse_scroll);
@@ -561,10 +566,6 @@ void ulib_window_query(Chuck_DL_Query* QUERY)
     SFUN(gwindow_get_mouse_delta_pos, "vec2", "mouseDeltaPos");
     DOC_FUNC("Get the change in mouse position since the last call");
 
-    static t_CKINT mouse_mode_normal   = 0;
-    static t_CKINT mouse_mode_hidden   = 1;
-    static t_CKINT mouse_mode_disabled = 2;
-
     SVAR("int", "MouseMode_Normal", &mouse_mode_normal);
     DOC_VAR(
       "Normal mouse mode, the cursor is visible and behaves normally. Set via "
@@ -583,6 +584,17 @@ void ulib_window_query(Chuck_DL_Query* QUERY)
     ARG("int", "mode");
     DOC_FUNC(
       "Set the mouse mode. Possible values are: GWindow.MouseMode_Normal (0) , "
+      "GWindow.MouseMode_Disabled (1), and GWindow.MouseMode_Hidden (2)"
+      "Normal mode is the default mode, the cursor is visible and behaves "
+      "normally."
+      "Disabled mode hides the cursor and locks it to the window, useful for "
+      "first-person games."
+      "Hidden mode hides the cursor when it is focused and hovering over the "
+      "window, but does not lock it to the window.");
+
+    SFUN(gwindow_get_mouse_mode, "int", "mouseMode");
+    DOC_FUNC(
+      "Get the current mouse mode. Possible values are: GWindow.MouseMode_Normal (0) , "
       "GWindow.MouseMode_Disabled (1), and GWindow.MouseMode_Hidden (2)"
       "Normal mode is the default mode, the cursor is visible and behaves "
       "normally."
@@ -905,7 +917,13 @@ CK_DLL_SFUN(gwindow_get_mouse_delta_pos)
 
 CK_DLL_SFUN(gwindow_set_mouse_mode)
 {
-    CQ_PushCommand_MouseMode(GET_NEXT_INT(ARGS));
+    mouse_mode_current = GET_NEXT_INT(ARGS);
+    CQ_PushCommand_MouseMode(mouse_mode_current);
+}
+
+CK_DLL_SFUN(gwindow_get_mouse_mode)
+{
+    RETURN->v_int = mouse_mode_current;
 }
 
 CK_DLL_SFUN(gwindow_get_mouse_scroll_dx)

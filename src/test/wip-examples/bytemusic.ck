@@ -10,6 +10,10 @@ Inspos
     - https://www.youtube.com/watch?v=vHXi__0HQrk&ab_channel=CaptainPikant
 - Drum and Bass
 - Techno
+- synthwave
+    - airglow, memory bank (bytepath soundtrack)
+        - https://airglow-strat.bandcamp.com/album/airglow-memory-bank
+        
 
 Techniques
 - Ratchet
@@ -80,8 +84,8 @@ Topograph integration ideas
 */
 
 @import "topograph.ck"
-
 Topograph topograph;
+
 T.print(topograph.drum_map[0][2]);
 
 JCRev rev => Echo a => Echo b => Echo c => dac;
@@ -142,7 +146,8 @@ fun void ui() {
         }
         UI.end();
     }
-} spork ~ ui();
+} 
+spork ~ ui();
 
 // 1::eon => now;
 while (true) {

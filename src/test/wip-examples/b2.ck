@@ -269,7 +269,7 @@ public class b2DebugDraw_SolidPolygon extends GGen
 		u_polygon_colors << 1.0;
 	}
 
-	fun void drawBox(
+	fun void box(
 		vec2 position,
 		float rotation_radians,
 		float width,
@@ -287,13 +287,23 @@ public class b2DebugDraw_SolidPolygon extends GGen
 		);
 	}
 
+	fun void box(vec2 top_left, vec2 bottom_right, vec3 color) {
+		box(
+			(top_left + bottom_right) * .5, // pos
+			0, // rot
+			Math.fabs(top_left.x - bottom_right.x), // w
+			Math.fabs(top_left.y - bottom_right.y), // h
+			color
+		);
+	}
+
 	fun void drawSquare(
 		vec2 position,
 		float rotation_radians,
 		float l,
 		vec3 color
 	) {
-		this.drawBox(position, rotation_radians, l, l, color);
+		this.box(position, rotation_radians, l, l, color);
 	}
 
 	fun void update() {
@@ -337,7 +347,7 @@ public class b2DebugDraw_Lines extends GGen
 	ShaderDesc shader_desc;
 	shader_path => shader_desc.vertexPath;
 	shader_path => shader_desc.fragmentPath;
-	[VertexFormat.Float2, VertexFormat.Float3] @=> shader_desc.vertexLayout; // no vertex layout
+	[VertexFormat.Float2, VertexFormat.Float3] @=> shader_desc.vertexLayout;
 
 	// material shader (draws all line segments in 1 draw call)
 	Shader shader(shader_desc);
@@ -377,8 +387,25 @@ public class b2DebugDraw_Lines extends GGen
 		u_colors << color << color;
 	}
 
+	fun void dotted(vec2 p1, vec2 p2, vec3 color, float segment_length) {
+		p2 - p1 => vec2 d;
+		Math.euclidean(p1, p2) => float dist;
+		d / dist => vec2 dir;
+		dist / segment_length => float N;
+
+		for (int i; i < N; 2 +=> i) {
+			segment(
+				(p1 + i * segment_length * dir),
+				(p1 + Math.min((i + 1), N) * segment_length * dir),
+				color
+			);
+		}
+	}
+
 	// draws a polygon outline at given position and rotation
 	fun void drawPolygon(vec2 pos, float rot_radians, vec2 vertices[], vec2 scale) {
+		if (vertices.size() < 2) return;
+
         Math.cos(rot_radians) => float cos_a;
         Math.sin(rot_radians) => float sin_a;
 
@@ -433,9 +460,16 @@ public class b2DebugDraw_Lines extends GGen
 		popColor();
 	}
 
+	[@(0.5, 0.5), @(-0.5, 0.5), @(-0.5, -0.5), @(0.5, -0.5)] @=> vec2 square_vertices[];
+	fun void box(vec2 center, float width, float height, vec3 color) {
+		pushColor(color);
+		drawPolygon(center, 0, square_vertices, @(width, height));
+		popColor();
+	}
+
 	fun void square(vec2 pos, float rot_radians, float size, vec3 color) {
 		pushColor(color);
-		drawPolygon(pos, rot_radians, [@(0.5, 0.5), @(-0.5, 0.5), @(-0.5, -0.5), @(0.5, -0.5)], @(size, size));
+		drawPolygon(pos, rot_radians, square_vertices, @(size, size));
 		popColor();
 	}
 
@@ -452,6 +486,21 @@ public class b2DebugDraw_Lines extends GGen
 		}
 		drawSegment(pos + radians * circle_vertices[-1], pos + radians * circle_vertices[0]);
 		popColor();
+	}
+
+	vec2 dotted_circle_vertices[0];
+	fun void dottedCircle(vec2 pos, float radius, float start_theta, vec3 color) {
+		dotted_circle_vertices.clear();
+		// draw every other segment
+		for (int i; i < 32; i++) {
+			(Math.two_pi * i / 32) + start_theta => float theta;
+			pos + radius * @(Math.cos(theta), Math.sin(theta)) => vec2 vertex;
+			dotted_circle_vertices << vertex;
+		}
+
+		for (int i; i < 32; 2 +=> i) {
+			segment(dotted_circle_vertices[i], dotted_circle_vertices[i+1], color);
+		}
 	}
 
 	fun void update()
@@ -624,12 +673,13 @@ public class DebugDraw extends b2DebugDraw
 
 	// draws a polygon outline
 	fun void drawPolygon(vec2 vertices[], vec3 color) {
+		if (vertices.size() < 2) return;
 		// just draw as individual line segments for now
 		for (int i; i < vertices.size() - 1; i++)
 			lines.drawSegment(vertices[i], vertices[i+1]);
 
 		// to close the loop
-		lines.drawSegment(vertices[-1], vertices[0]);
+		if (vertices.size() > 2) lines.drawSegment(vertices[-1], vertices[0]);
 	}
 
 	fun void drawCircle(vec2 center, float radius, vec3 color) {

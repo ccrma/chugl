@@ -5803,9 +5803,16 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
         QUERY->add_sfun(QUERY, ui_SameLineEx, "void", "sameLine");
         QUERY->add_arg(QUERY, "float", "offset_from_start_x");
         QUERY->add_arg(QUERY, "float", "spacing");
-        QUERY->doc_func(QUERY,
-                        "call between widgets or groups to layout them "
-                        "horizontally. X position given in window coordinates.");
+        QUERY->doc_func(
+          QUERY,
+          "call between widgets or groups to layout them "
+          "horizontally. X position given in window coordinates. "
+          "offset_from_start_x == 0 : follow right after previous item. "
+          "offset_from_start_x != 0 : align to specified x position (relative to "
+          "window/group left). "
+          "spacing < 0            : use default spacing if offset_from_start_x == 0, "
+          "no spacing if offset_from_start_x != 0. "
+          "spacing >= 0           : enforce spacing amount. ");
 
         QUERY->add_sfun(QUERY, ui_NewLine, "void", "newLine");
         QUERY->doc_func(QUERY,
