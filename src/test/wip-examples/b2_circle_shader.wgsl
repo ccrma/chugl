@@ -1,5 +1,4 @@
 #include FRAME_UNIFORMS
-
 #include DRAW_UNIFORMS
 
 /*
@@ -28,7 +27,7 @@ struct VertexOutput {
 };
 
 @group(1) @binding(0) var<storage> u_center_radius_thickness : array<vec4f>; // .xy is center, .z is radius, .w is thickness
-@group(1) @binding(1) var<storage> u_color : array<vec4f>;  // vec3f color
+@group(1) @binding(1) var<storage> u_color : array<vec4f>;
 @group(1) @binding(2) var<uniform> u_antialias : i32;
 
 @vertex
@@ -60,7 +59,6 @@ fn vs_main(
 }
 
 // begin fragment shader ----------------------------
-
 // derivative anti-aliasing from http://www.numb3r23.net/2015/08/17/using-fwidth-for-distance-based-anti-aliasing/
 @fragment
 fn fs_main(in : VertexOutput) -> @location(0) vec4f {

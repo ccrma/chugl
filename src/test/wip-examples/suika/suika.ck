@@ -57,6 +57,7 @@ whereas difference in area is 8^2 = 64
 */
 
 @import "../b2.ck"
+@import "g2d"
 
 GG.camera().orthographic();
 GG.camera().viewSize(10); // viewport height is 10 meters
@@ -65,6 +66,23 @@ GWindow.mouseMode(GWindow.MouseMode_Disabled);
 // game state enum
 0 => int GameState_Start;
 1 => int GameState_GameOver;
+
+// Math helper
+class M {
+    fun static int choose(float pdf[]) {
+        0.0 => float total;
+        0.0 => float accum;
+
+        for (auto p : pdf) p +=> total;
+        Math.random2f(0.0, total) => float pick;
+
+        for (int i; i < pdf.size(); i++) {
+            pdf[i] +=> accum;
+            if (accum >= pick) return i;
+        }
+        return pdf.size() - 1;
+    }
+}
 
 // config constants
 class Config {
@@ -75,19 +93,41 @@ class Config {
     .1 => float CONTAINER_THICKNESS;
     CONTAINER_HH => float GAME_OVER_HEIGHT;
 
+    // shared chugl resources
+    CircleGeometry circle_geo;
+    TextureSampler sprite_sampler;
+    TextureSampler.Filter_Nearest => sprite_sampler.filterMin;
+    TextureSampler.Filter_Nearest => sprite_sampler.filterMag;
+    TextureSampler.Filter_Nearest => sprite_sampler.filterMip;
+
+
+    // drop selection pdf
+    [30.0, 25, 20, 15, 10] @=> float drop_selection_pdf[];
+
     // mergeable ball sizes
     CONTAINER_HW / 16.0 => float BASE_BALL_RADIUS; // smallest ball is 1/16 the container
     1 => float BASE_BALL_DENSITY;
 
     1::second => dur CHECK_GAMEOVER_COOLDOWN; // only check for gameover state this much time after last merge
-
 } Config conf;
+
+// layer enum
+0 => int Layer_Base;
+1 => int Layer_Droppable;
+2 => int Layer_Text;
 
 // global gamestate
 class GS {
     GameState_Start => int gamestate;
 
+    // container
+    int left_wall_b2_body_id;
+    int right_wall_b2_body_id;
+
     // drop logic
+    int curr_drop_type;
+    int next_drop_type;
+
     @(0, conf.CONTAINER_HH + .5) => vec2 drop_pos;
     int drop_waiting_on;  // the b2bodyid of the mergeable we last dropped and are waiting to fall
 
@@ -107,21 +147,54 @@ class GS {
 } GS gs;
 
 { // init gamestate
+    // b2 world creation
+    b2WorldDef world_def;
+    // false => world_def.enableSleep;  // disable sleep on entire world so suika balls always trigger collisions
+    // .05 => world_def.hitEventThreshold;
+    b2.createWorld(world_def) => gs.b2_world_id;
+    { // simulation config (eventually group these into single function/command/struct)
+        b2.world(gs.b2_world_id);
+        // b2.substeps(1);
+    }
+
+    b2CreateStaticBody([
+        @(-conf.CONTAINER_HW, conf.CONTAINER_HH),
+        @(-conf.CONTAINER_HW - conf.CONTAINER_THICKNESS, conf.CONTAINER_HH),
+        @(-conf.CONTAINER_HW - conf.CONTAINER_THICKNESS, -conf.CONTAINER_HH),
+        @(-conf.CONTAINER_HW, -conf.CONTAINER_HH),
+    ]) => gs.left_wall_b2_body_id;
+
+    b2CreateStaticBody([
+        @(conf.CONTAINER_HW + conf.CONTAINER_THICKNESS, conf.CONTAINER_HH),
+        @(conf.CONTAINER_HW, conf.CONTAINER_HH),
+        @(conf.CONTAINER_HW, -conf.CONTAINER_HH),
+        @(conf.CONTAINER_HW + conf.CONTAINER_THICKNESS, -conf.CONTAINER_HH),
+    ]) => gs.right_wall_b2_body_id;
+
+    b2CreateStaticBody([
+        @(conf.CONTAINER_HW + conf.CONTAINER_THICKNESS, -conf.CONTAINER_HH),
+        @(-conf.CONTAINER_HW - conf.CONTAINER_THICKNESS, -conf.CONTAINER_HH),
+        @(-conf.CONTAINER_HW - conf.CONTAINER_THICKNESS, -conf.CONTAINER_HH - conf.CONTAINER_THICKNESS),
+        @(conf.CONTAINER_HW + conf.CONTAINER_THICKNESS, -conf.CONTAINER_HH - conf.CONTAINER_THICKNESS),
+    ]);
+
     // gs.score_text.pos(@(-1.2 * conf.CONTAINER_HW, conf.CONTAINER_HH));
     gs.score_text.pos(@(0, conf.CONTAINER_HH));
     gs.score_text.sca(.5);
 
     gs.game_over_text.sca(.5);
     gs.game_over_text.text("GAME OVER");
+    Layer_Text => gs.game_over_text.posZ;
 
     gs.retry_text.sca(0.5);
     gs.retry_text.translateY(-1);
     gs.retry_text.text("PRESS <space> TO RETRY");
+    Layer_Text => gs.retry_text.posZ;
+
+    enterGamestate(GameState_Start);
 }
 
 fun void enterGamestate(int state) {
-    if (state == gs.gamestate) return;
-
     { // leaving logic
     }
 
@@ -134,13 +207,19 @@ fun void enterGamestate(int state) {
         }
         else if (state  == GameState_Start) {
             // TODO animate the destruction of existing mergeables
+
+            // select next drops
+            M.choose(conf.drop_selection_pdf) => gs.curr_drop_type;
+            M.choose(conf.drop_selection_pdf) => gs.next_drop_type;
+
+            // update high score
             Math.max(gs.score, gs.high_score) => gs.high_score;
             0 => gs.score;
 
             // delete all existing entities
             for (auto e : gs.entities) {
                 if (b2Body.isValid(e.b2_body_id)) {
-                    // b2.destroyBody(e.b2_body_id); // TODO crashes
+                    b2.destroyBody(e.b2_body_id); // TODO crashes
                 }
             }
 
@@ -188,18 +267,8 @@ DebugDraw debug_draw;
 true => debug_draw.drawShapes;
 // true => debug_draw.drawAABBs; // calls drawPolygon, not drawSegment
 
-// b2 world creation
-b2WorldDef world_def;
-// false => world_def.enableSleep;  // disable sleep on entire world so suika balls always trigger collisions
-// .05 => world_def.hitEventThreshold;
-b2.createWorld(world_def) => gs.b2_world_id;
-{ // simulation config (eventually group these into single function/command/struct)
-    b2.world(gs.b2_world_id);
-    // b2.substeps(1);
-}
-
 // b2 static bodies
-fun void b2CreateStaticBody(vec2 vertices[]) {
+fun int b2CreateStaticBody(vec2 vertices[]) {
     // body def
     b2BodyDef static_body_def;
     b2BodyType.staticBody => static_body_def.type;
@@ -214,28 +283,9 @@ fun void b2CreateStaticBody(vec2 vertices[]) {
 
     // shape
     b2.createPolygonShape(body_id, shape_def, polygon);
+
+    return body_id;
 }
-
-b2CreateStaticBody([
-    @(-conf.CONTAINER_HW, conf.CONTAINER_HH),
-    @(-conf.CONTAINER_HW - conf.CONTAINER_THICKNESS, conf.CONTAINER_HH),
-    @(-conf.CONTAINER_HW - conf.CONTAINER_THICKNESS, -conf.CONTAINER_HH),
-    @(-conf.CONTAINER_HW, -conf.CONTAINER_HH),
-]);
-
-b2CreateStaticBody([
-    @(conf.CONTAINER_HW + conf.CONTAINER_THICKNESS, conf.CONTAINER_HH),
-    @(conf.CONTAINER_HW, conf.CONTAINER_HH),
-    @(conf.CONTAINER_HW, -conf.CONTAINER_HH),
-    @(conf.CONTAINER_HW + conf.CONTAINER_THICKNESS, -conf.CONTAINER_HH),
-]);
-
-b2CreateStaticBody([
-    @(conf.CONTAINER_HW + conf.CONTAINER_THICKNESS, -conf.CONTAINER_HH),
-    @(-conf.CONTAINER_HW - conf.CONTAINER_THICKNESS, -conf.CONTAINER_HH),
-    @(-conf.CONTAINER_HW - conf.CONTAINER_THICKNESS, -conf.CONTAINER_HH - conf.CONTAINER_THICKNESS),
-    @(conf.CONTAINER_HW + conf.CONTAINER_THICKNESS, -conf.CONTAINER_HH - conf.CONTAINER_THICKNESS),
-]);
 
 class Entity
 {
@@ -243,11 +293,21 @@ class Entity
     int pl_type;
     int b2_body_id;
     float bounding_radius;
+    FlatMaterial@ sprite_material;
+    GMesh@ sprite_mesh;
 
     fun @construct(int pl_type, int b2_body_id, float radius) {
         pl_type => this.pl_type;
         b2_body_id => this.b2_body_id;
         radius => this.bounding_radius;
+
+        new FlatMaterial @=> this.sprite_material;
+        Color.random() => this.sprite_material.color;
+        this.sprite_material.sampler(conf.sprite_sampler);
+        new GMesh(conf.circle_geo, this.sprite_material) @=> this.sprite_mesh;
+        this.sprite_mesh.sca(radius*2*.9);
+        this.sprite_mesh --> GG.scene();
+        Layer_Droppable => this.sprite_mesh.posZ;
     }
 }
 
@@ -257,7 +317,6 @@ fun Entity addBody(int which, vec2 pos)
 {
     if (which >= merge_types.size()) return null; // can't merge 2 watermelons
 
-
     merge_types[which] @=> MergeType mt;
 
     // body def
@@ -265,6 +324,7 @@ fun Entity addBody(int which, vec2 pos)
     b2BodyType.dynamicBody => dynamic_body_def.type;
     pos => dynamic_body_def.position;
     .5 * Math.random2f(-Math.pi,Math.pi) => dynamic_body_def.angularVelocity; // initial roll
+    0.5 => dynamic_body_def.angularDamping;
 
 
     // @(Math.random2f(-4.0, 4.0), Math.random2f(6.0, 12.0)) => dynamic_body_def.position;
@@ -351,7 +411,7 @@ while (1) {
         // update drop pos
         GWindow.mouseDeltaPos().x => float mouse_dx;
         mouse_dx * dt +=> gs.drop_pos.x;
-        Math.clampf(gs.drop_pos.x, .8 * -conf.CONTAINER_HW, .8 * conf.CONTAINER_HW) => gs.drop_pos.x;
+        Math.clampf(gs.drop_pos.x, .98 * -conf.CONTAINER_HW, .98 * conf.CONTAINER_HW) => gs.drop_pos.x;
 
         // toggle mouse mode
         if (GWindow.keyDown(GWindow.Key_Tab)) {
@@ -362,7 +422,9 @@ while (1) {
         }
 
         if (GWindow.mouseLeftDown() && gs.drop_waiting_on == 0) {
-            dropBody(0);
+            dropBody(gs.curr_drop_type);
+            gs.next_drop_type => gs.curr_drop_type;
+            M.choose(conf.drop_selection_pdf) => gs.next_drop_type;
         }
 
         if (gs.gamestate == GameState_GameOver) {
@@ -384,6 +446,13 @@ while (1) {
                 begin_touch_events[i] => int id0;
                 begin_touch_events[i+1] => int id1;
 
+                // ignore collisions with the side walls
+                if (
+                    id0 == gs.left_wall_b2_body_id || id0 == gs.right_wall_b2_body_id
+                    ||
+                    id1 == gs.left_wall_b2_body_id || id1 == gs.right_wall_b2_body_id
+                ) continue;
+
                 // reset drop cooldown after collision
                 if (id0 == gs.drop_waiting_on || id1 == gs.drop_waiting_on) {
                     0 => gs.drop_waiting_on; // our last drop has collided
@@ -397,13 +466,6 @@ while (1) {
                 Math.equal(b2Body.mass(id0), b2Body.mass(id1)) => int same_type;
                 if (same_type) {
                     // TODO improve merge 
-                    
-                    // log merge time
-                    now => gs.last_merge_time;
-
-                    // get positions
-                    b2Body.position(id0) => vec2 pos0;
-                    b2Body.position(id1) => vec2 pos1;
 
                     // get entities
                     gs.entity_map.getObj(id0) $ Entity @=> Entity e0;
@@ -412,19 +474,34 @@ while (1) {
                     T.assert(e1 != null, "entity not found for b2_body_id: " + id1);
                     T.assert(e0.pl_type == e1.pl_type, "merge on different types");
 
-                    // spawn new 
-                    addBody(e0.pl_type + 1, 0.5 * (pos0 + pos1));
+                    e0.pl_type == merge_types.size() - 1 => int suika;
 
-                    // add score
-                    merge_types[e0.pl_type].score +=> gs.score;
+                    // for now, don't merge highest tier
+                    if (!suika) {
+                        // log merge time
+                        now => gs.last_merge_time;
 
-                    // destroy old 
-                    // (Removed from gs.entities array in gameover check)
-                    // TODO: add hashmap_iter, can do away with array (returns HashmapItem which is a key : value struct)
-                    b2.destroyBody(id0);
-                    b2.destroyBody(id1);
-                    gs.entity_map.del(id0);
-                    gs.entity_map.del(id1);
+                        // get positions
+                        b2Body.position(id0) => vec2 pos0;
+                        b2Body.position(id1) => vec2 pos1;
+
+
+                        // spawn new 
+                        addBody(e0.pl_type + 1, 0.5 * (pos0 + pos1));
+
+                        // add score
+                        merge_types[e0.pl_type].score +=> gs.score;
+
+                        // destroy old 
+                        // (Removed from gs.entities array in gameover check)
+                        // TODO: add hashmap_iter, can do away with array (returns HashmapItem which is a key : value struct)
+                        b2.destroyBody(id0);
+                        b2.destroyBody(id1);
+                        gs.entity_map.del(id0);
+                        gs.entity_map.del(id1);
+                        e0.sprite_mesh.detach();
+                        e1.sprite_mesh.detach();
+                    }
                 }
             }
 
@@ -447,6 +524,7 @@ while (1) {
                     // ignore checking the ball we just dropped
                     if (gs.drop_waiting_on == e.b2_body_id) continue;
 
+
                     if (b2Body.position(e.b2_body_id).y > conf.GAME_OVER_HEIGHT) {
                         enterGamestate(GameState_GameOver);
                         break;
@@ -463,6 +541,22 @@ while (1) {
 
         // score
         gs.score_text.text("Score: " + gs.score);
+        
+        // balls
+        for (int i; i < gs.entities.size(); i++) {
+            gs.entities[i] @=> Entity e;
+
+            if (!b2Body.isValid(e.b2_body_id)) {
+                // entity deleted during merge, remove and reprocess
+                // ==optimize==: use pool and swap instead of pop out
+                gs.entities.popOut(i);
+                i--;
+                continue;
+            }
+
+            // track position
+            b2Body.position(e.b2_body_id) => e.sprite_mesh.pos;
+        }
         
 
     }

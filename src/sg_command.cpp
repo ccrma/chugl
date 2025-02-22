@@ -797,12 +797,20 @@ void CQ_PushCommand_MaterialSetStorageBuffer(SG_Material* material, int location
             data_count
               = g_chuglAPI->object->array_float_size((Chuck_ArrayFloat*)ck_arr);
         } break;
-        case SG_MATERIAL_UNIFORM_INT: {
-            data_count = g_chuglAPI->object->array_int_size((Chuck_ArrayInt*)ck_arr);
+        case SG_MATERIAL_UNIFORM_VEC2F: {
+            data_count
+              = 2 * g_chuglAPI->object->array_vec2_size((Chuck_ArrayVec2*)ck_arr);
+        } break;
+        case SG_MATERIAL_UNIFORM_VEC3F: {
+            data_count
+              = 3 * g_chuglAPI->object->array_vec3_size((Chuck_ArrayVec3*)ck_arr);
         } break;
         case SG_MATERIAL_UNIFORM_VEC4F: {
             data_count
               = 4 * g_chuglAPI->object->array_vec4_size((Chuck_ArrayVec4*)ck_arr);
+        } break;
+        case SG_MATERIAL_UNIFORM_INT: {
+            data_count = g_chuglAPI->object->array_int_size((Chuck_ArrayInt*)ck_arr);
         } break;
         default: ASSERT(false); // unsupported type
     }
@@ -817,11 +825,17 @@ void CQ_PushCommand_MaterialSetStorageBuffer(SG_Material* material, int location
             chugin_copyCkFloatArray((Chuck_ArrayFloat*)ck_arr, (f32*)memory,
                                     data_count);
         } break;
-        case SG_MATERIAL_UNIFORM_INT: {
-            chugin_copyCkIntArray((Chuck_ArrayInt*)ck_arr, (i32*)memory, data_count);
+        case SG_MATERIAL_UNIFORM_VEC2F: {
+            chugin_copyCkVec2Array((Chuck_ArrayVec2*)ck_arr, (f32*)memory);
+        } break;
+        case SG_MATERIAL_UNIFORM_VEC3F: {
+            chugin_copyCkVec3Array((Chuck_ArrayVec3*)ck_arr, (f32*)memory);
         } break;
         case SG_MATERIAL_UNIFORM_VEC4F: {
             chugin_copyCkVec4Array((Chuck_ArrayVec4*)ck_arr, (f32*)memory);
+        } break;
+        case SG_MATERIAL_UNIFORM_INT: {
+            chugin_copyCkIntArray((Chuck_ArrayInt*)ck_arr, (i32*)memory, data_count);
         } break;
         default: ASSERT(false); // unsupported type
     }

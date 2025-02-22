@@ -103,6 +103,8 @@ thread
     - setStorageBuffer() instead of taking a ck_FloatArray, takes a GPUBuffer component
 */
 CK_DLL_MFUN(material_set_storage_buffer);
+CK_DLL_MFUN(material_set_storage_buffer_vec2);
+CK_DLL_MFUN(material_set_storage_buffer_vec3);
 CK_DLL_MFUN(material_set_storage_buffer_vec4);
 CK_DLL_MFUN(material_set_storage_buffer_integer);
 CK_DLL_MFUN(material_set_storage_buffer_external);
@@ -583,6 +585,16 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
     MFUN(material_set_storage_buffer, "void", "storageBuffer");
     ARG("int", "location");
     ARG("float[]", "storageBuffer");
+    DOC_FUNC("Bind the given array data as a storage buffer at the given location.");
+
+    MFUN(material_set_storage_buffer_vec2, "void", "storageBuffer");
+    ARG("int", "location");
+    ARG("vec2[]", "storageBuffer");
+    DOC_FUNC("Bind the given array data as a storage buffer at the given location.");
+
+    MFUN(material_set_storage_buffer_vec3, "void", "storageBuffer");
+    ARG("int", "location");
+    ARG("vec3[]", "storageBuffer");
     DOC_FUNC("Bind the given array data as a storage buffer at the given location.");
 
     MFUN(material_set_storage_buffer_vec4, "void", "storageBuffer");
@@ -1444,25 +1456,49 @@ CK_DLL_MFUN(material_get_uniform_int4)
 
 CK_DLL_MFUN(material_set_storage_buffer)
 {
-    SG_Material* material    = GET_MATERIAL(SELF);
-    t_CKINT location         = GET_NEXT_INT(ARGS);
-    Chuck_ArrayFloat* ck_arr = GET_NEXT_FLOAT_ARRAY(ARGS);
+    SG_Material* material = GET_MATERIAL(SELF);
+    t_CKINT location      = GET_NEXT_INT(ARGS);
+    Chuck_Object* ck_arr  = GET_NEXT_OBJECT(ARGS);
 
     SG_Material::setStorageBuffer(material, location);
 
-    CQ_PushCommand_MaterialSetStorageBuffer(material, location, (Chuck_Object*)ck_arr,
+    CQ_PushCommand_MaterialSetStorageBuffer(material, location, ck_arr,
                                             SG_MATERIAL_UNIFORM_FLOAT);
+}
+
+CK_DLL_MFUN(material_set_storage_buffer_vec2)
+{
+    SG_Material* material = GET_MATERIAL(SELF);
+    t_CKINT location      = GET_NEXT_INT(ARGS);
+    Chuck_Object* ck_arr  = GET_NEXT_OBJECT(ARGS);
+
+    SG_Material::setStorageBuffer(material, location);
+
+    CQ_PushCommand_MaterialSetStorageBuffer(material, location, ck_arr,
+                                            SG_MATERIAL_UNIFORM_VEC2F);
+}
+
+CK_DLL_MFUN(material_set_storage_buffer_vec3)
+{
+    SG_Material* material = GET_MATERIAL(SELF);
+    t_CKINT location      = GET_NEXT_INT(ARGS);
+    Chuck_Object* ck_arr  = GET_NEXT_OBJECT(ARGS);
+
+    SG_Material::setStorageBuffer(material, location);
+
+    CQ_PushCommand_MaterialSetStorageBuffer(material, location, ck_arr,
+                                            SG_MATERIAL_UNIFORM_VEC3F);
 }
 
 CK_DLL_MFUN(material_set_storage_buffer_vec4)
 {
-    SG_Material* material    = GET_MATERIAL(SELF);
-    t_CKINT location         = GET_NEXT_INT(ARGS);
-    Chuck_ArrayFloat* ck_arr = GET_NEXT_FLOAT_ARRAY(ARGS);
+    SG_Material* material = GET_MATERIAL(SELF);
+    t_CKINT location      = GET_NEXT_INT(ARGS);
+    Chuck_Object* ck_arr  = GET_NEXT_OBJECT(ARGS);
 
     SG_Material::setStorageBuffer(material, location);
 
-    CQ_PushCommand_MaterialSetStorageBuffer(material, location, (Chuck_Object*)ck_arr,
+    CQ_PushCommand_MaterialSetStorageBuffer(material, location, ck_arr,
                                             SG_MATERIAL_UNIFORM_VEC4F);
 }
 
