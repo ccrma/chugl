@@ -73,6 +73,20 @@ GWindow.mouseMode(GWindow.MouseMode_Disabled);
 
 // Math helper
 class M {
+
+    // ---------- Tweens ----------
+    fun static float easeOutQuad(float x) {
+        return 1 - (1 - x) * (1 - x);
+    }
+
+    fun static float easeInOutCubic(float x) {
+        if (x < 0.5) 
+            return 4 * x * x * x;
+        else 
+            return 1 - Math.pow(-2 * x + 2, 3) / 2;
+    }
+
+
     fun static float mag(vec2 n) {
         return  Math.hypot(n.x, n.y); 
     }
@@ -224,10 +238,10 @@ class MergeType
     MergeType.add(16.5/9.0, 6,       4,         1.08,    Color.WHITE,     me.dir() + "./assets/ableton.png");        // 2
     MergeType.add(18.5/9.0, 10,      2,         1.0,     Color.WHITE,     me.dir() + "./assets/csound.png");        // 3
     MergeType.add(23.0/9.0, 15,      1,         1.0,     Color.WHITE,     me.dir() + "./assets/super_collider.png");        // 4
-    MergeType.add(29.5/9.0, 21,      1,         1.0,     Color.WHITE,     me.dir() + "./assets/tidal_cycles.png");        // 5
-    MergeType.add(35.0/9.0, 28,      1,         1.1,     Color.WHITE,     me.dir() + "./assets/sibelius.png");        // 6
-    MergeType.add(41.5/9.0, 36,      1,         1.0,     Color.WHITE,     me.dir() + "./assets/musescore.png");        // 7
-    MergeType.add(47.5/9.0, 45,      0.5,       1.0,     Color.WHITE,     me.dir() + "./assets/faust.png");      // 8
+    MergeType.add(29.5/9.0, 21,      1,         1.1,     Color.WHITE,     me.dir() + "./assets/sibelius.png");        // 6
+    MergeType.add(35.0/9.0, 28,      1,         1.0,     Color.WHITE,     me.dir() + "./assets/musescore.png");        // 7
+    MergeType.add(41.5/9.0, 36,      1,         1.0,     Color.WHITE,     me.dir() + "./assets/faust.png");      // 8
+    MergeType.add(47.5/9.0, 45,      0.5,       1.0,     Color.WHITE,     me.dir() + "./assets/juce.png");        // 5
     MergeType.add(59.0/9.0, 56,      0.5,       .66,     Color.WHITE,     me.dir() + "./assets/pure_data.png");      // 9
     MergeType.add(72.0/9.0, 66,      0.25,      .96,     Color.BLACK,     me.dir() + "./assets/chuck.png");     // 10
 
@@ -374,6 +388,29 @@ fun void enterGamestate(int state) {
         }
     }
 }
+
+class FX
+{
+    // slowly expanding ring
+    fun void ripple(vec2 pos, float start_radius, float end_radius) {
+        .5 => float end_radius;
+        .5::second => dur effect_dur;
+
+        dur elapsed_time;
+        while (elapsed_time < effect_dur) {
+            GG.nextFrame() => now;
+            GG.dt()::second +=> elapsed_time;
+            M.easeOutQuad(elapsed_time / effect_dur) => float t;
+
+            g2d.circle(
+                pos, 
+                start_radius + (end_radius - start_radius) * t, 
+                .2 * (1 - t), 
+                Color.WHITE * (1 - t)
+            );
+        }
+    }
+} FX fx;
 
 
 DebugDraw debug_draw;
@@ -596,17 +633,35 @@ fun void gameoverWarningLineDrawer() {
 class Sound
 {
     load("special:dope") @=> LiSa lisa;
+    PoleZero blocker => NRev reverb => dac;
+    // connect
+    lisa.chan(0) => blocker;
+    // reverb mix
+    .03 => reverb.mix;
+    // pole location to block DC and ultra low frequencies
+    .99 => blocker.blockZero;
 
-    fun void play(float rate) {
+    // scale (needs size = #balls)
+    // C2 Bb     G      F      Eb     C    Cb      G      F       Eb     C 
+      [2.0, 9.0/5, 3.0/2, 4.0/3, 6.0/5, 1.0, 9.0/10, 3.0/4, 4.0/6, 6.0/10, 1.0/2]
+      @=> float rates[];
+      .5 => float rate_mod;
+
+    // pl_type ranges from [0, 10]
+    fun void play(int pl_type) {
         // get a voice to use
         lisa.getVoice() => int voice;
 
         // if available
         voice > -1 => int voice_available;
         if (voice_available) {
+            // determine pitch from pl_type according to minor penta scale
+            rate_mod * rates[pl_type] => float rate;
+
+            // lisa.voiceGain(voice, 1.0);
             lisa.rate( voice, rate );
             lisa.playPos( voice, 0::samp);
-            // lisa.rampUp( voice, rampUp );
+            lisa.rampUp( voice, 0::samp);
             // (grainLen - rampUp) => now;
             // lisa.rampDown( voice, rampDown );
             // rampDown => now;
@@ -631,9 +686,12 @@ class Sound
         }
         
         // set LiSa parameters
-        lisa.play( false );
-        lisa.loop( false );
         lisa.maxVoices( conf.LISA_MAX_VOICES );
+        for (int i; i < lisa.maxVoices(); i++) {
+            lisa.play(i, false);
+            lisa.loop(i, false);
+        }
+
         
         return lisa;
     }
@@ -734,9 +792,22 @@ while (1) {
                         // get positions
                         b2Body.position(id0) => vec2 pos0;
                         b2Body.position(id1) => vec2 pos1;
+                        0.5 * (pos0 + pos1) => vec2 merge_pos;
+
 
                         // spawn new 
-                        addBody(e0.pl_type + 1, 0.5 * (pos0 + pos1));
+                        addBody(e0.pl_type + 1, merge_pos);
+
+                        // play sound effect!
+                        // (pitch according to minor penta scale)
+                        s.play(e0.pl_type);
+
+                        // ripple
+                        // spork ~ fx.ripple(
+                        //     merge_pos, 
+                        //     merge_types[e0.pl_type].radius,
+                        //     merge_types[e0.pl_type].radius * 3
+                        // );
 
                         // add score
                         merge_types[e0.pl_type].score +=> gs.score;

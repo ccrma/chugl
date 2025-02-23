@@ -2,6 +2,8 @@
 
 Immediate-mode vector graphics library
 
+TODO add depth/layer option
+
 */
 
 public class G2D
