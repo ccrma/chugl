@@ -208,6 +208,7 @@ CK_DLL_MFUN(ggen_set_scale_uniform);
 
 CK_DLL_MFUN(ggen_get_scale_world);
 CK_DLL_MFUN(ggen_set_scale_world);
+CK_DLL_MFUN(ggen_set_scale_world_uniform);
 
 // transformation matrix API
 CK_DLL_MFUN(ggen_local_pos_to_world_pos);
@@ -487,6 +488,11 @@ static void ulib_ggen_query(Chuck_DL_Query* QUERY)
         QUERY->add_mfun(QUERY, ggen_set_scale_world, "GGen", "scaWorld");
         QUERY->add_arg(QUERY, "vec3", "scale");
         QUERY->doc_func(QUERY, "Set object scale in world space");
+
+        QUERY->add_mfun(QUERY, ggen_set_scale_world_uniform, "GGen", "scaWorld");
+        QUERY->add_arg(QUERY, "float", "scale");
+        QUERY->doc_func(QUERY,
+                        "Set object scale in world space uniformly across all axes");
 
         // Matrix transform API
         // ===============================================================
@@ -996,6 +1002,15 @@ CK_DLL_MFUN(ggen_set_scale_world)
     CQ_PushCommand_SetScale(xform);
 }
 
+CK_DLL_MFUN(ggen_set_scale_world_uniform)
+{
+    SG_Transform* xform = SG_GetTransform(OBJ_MEMBER_UINT(SELF, component_offset_id));
+    t_CKFLOAT sca       = GET_NEXT_FLOAT(ARGS);
+    SG_Transform::worldScale(xform, glm::vec3(sca, sca, sca));
+    RETURN->v_object = SELF;
+    CQ_PushCommand_SetScale(xform);
+}
+
 // Transformation API
 // ===============================================================
 
@@ -1101,7 +1116,6 @@ CK_DLL_MFUN(ggen_get_child_default)
 
 CK_DLL_MFUN(ggen_get_child)
 {
-
     SG_Transform* xform = SG_GetTransform(OBJ_MEMBER_UINT(SELF, component_offset_id));
     SG_Transform* child = SG_Transform::child(xform, GET_NEXT_INT(ARGS));
     RETURN->v_object    = child ? child->ckobj : NULL;
@@ -1914,27 +1928,22 @@ CK_DLL_CTOR(gcube_ctor)
 }
 CK_DLL_CTOR(gsphere_ctor)
 {
-
     ulib_mesh_create_gshape(SELF, SG_GEOMETRY_SPHERE, SG_MATERIAL_PHONG, SHRED);
 }
 CK_DLL_CTOR(gtorus_ctor)
 {
-
     ulib_mesh_create_gshape(SELF, SG_GEOMETRY_TORUS, SG_MATERIAL_PHONG, SHRED);
 }
 CK_DLL_CTOR(gcylinder_ctor)
 {
-
     ulib_mesh_create_gshape(SELF, SG_GEOMETRY_CYLINDER, SG_MATERIAL_PHONG, SHRED);
 }
 CK_DLL_CTOR(gknot_ctor)
 {
-
     ulib_mesh_create_gshape(SELF, SG_GEOMETRY_KNOT, SG_MATERIAL_PHONG, SHRED);
 }
 CK_DLL_CTOR(gsuzanne_ctor)
 {
-
     ulib_mesh_create_gshape(SELF, SG_GEOMETRY_SUZANNE, SG_MATERIAL_PHONG, SHRED);
 }
 

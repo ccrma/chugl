@@ -104,7 +104,7 @@ public class G2D
 		polygon(pos, rot_radians, square_vertices, @(size, size), color);
 	}
 
-	16 => int circle_segments;
+	32 => int circle_segments;
 	vec2 circle_vertices[circle_segments];
 	for (int i; i < circle_segments; i++) {
 		Math.two_pi * i / circle_segments => float theta;
