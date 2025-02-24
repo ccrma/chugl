@@ -60,6 +60,7 @@ whereas difference in area is 8^2 = 64
 @import "g2d"
 
 G2D g2d;
+GText.defaultFont(me.dir() + "../m5x7.ttf");
 
 GG.outputPass().tonemap(OutputPass.ToneMap_None);
 GG.camera().orthographic();
@@ -118,6 +119,7 @@ class Config {
 
     // UI
     0.6 => float vspace;
+    0.6 => float font_scale;
 
     // b2
     UI_Bool b2_debug_draw(false);
@@ -169,6 +171,7 @@ class GS {
     int left_wall_b2_body_id;
     int right_wall_b2_body_id;
 
+
     // ball state
     float highest_body_pos; // ignoring the one we just dropped
 
@@ -199,6 +202,14 @@ class GS {
     GText game_over_text --> game_over_plane;
     GText retry_text --> game_over_plane;
 
+    // chain of evolution
+    GGen chain_of_evolution --> GG.scene();
+    GText chain_of_evolution_text --> chain_of_evolution;
+    FlatMaterial chain_of_evolution_materials[11];
+    GMesh@ chain_of_evolution_meshes[11];
+    GText chain_of_evolution_texts[11];
+    
+
     int b2_world_id;
 
     Entity entities[0];
@@ -210,6 +221,8 @@ class GS {
 MergeType merge_types[0];
 class MergeType
 {
+    false => int unlocked;
+    string name;
     float radius; // b2 collider radius
     int   score;
     float density; 
@@ -217,8 +230,9 @@ class MergeType
     vec3 bg_col;
     Texture@ color_map;
 
-    fun static void add(float r, int s, float d, float draw_radius_mod, vec3 bg_col, string tex_path ) {
+    fun static void add(string name, float r, int s, float d, float draw_radius_mod, vec3 bg_col, string tex_path ) {
         MergeType m;
+        name => m.name;
         conf.BASE_BALL_RADIUS * r => m.radius;
         s => m.score;
         d => m.density;
@@ -232,18 +246,18 @@ class MergeType
 { // init gamestate
 
     // load textures and merge types
-    //            radius    score    density    draw_mod        path                                          id
-    MergeType.add(8.0/9.0,  1,       8,         1.0,     Color.WHITE,     me.dir() + "./assets/vcv.png");        // 0
-    MergeType.add(11.5/9.0, 3,       6,         1.0,     Color.WHITE,     me.dir() + "./assets/max_msp.png");        // 1
-    MergeType.add(16.5/9.0, 6,       4,         1.08,    Color.WHITE,     me.dir() + "./assets/ableton.png");        // 2
-    MergeType.add(18.5/9.0, 10,      2,         1.0,     Color.WHITE,     me.dir() + "./assets/csound.png");        // 3
-    MergeType.add(23.0/9.0, 15,      1,         1.0,     Color.WHITE,     me.dir() + "./assets/super_collider.png");        // 4
-    MergeType.add(29.5/9.0, 21,      1,         1.1,     Color.WHITE,     me.dir() + "./assets/sibelius.png");        // 6
-    MergeType.add(35.0/9.0, 28,      1,         1.0,     Color.WHITE,     me.dir() + "./assets/musescore.png");        // 7
-    MergeType.add(41.5/9.0, 36,      1,         1.0,     Color.WHITE,     me.dir() + "./assets/faust.png");      // 8
-    MergeType.add(47.5/9.0, 45,      0.5,       1.0,     Color.WHITE,     me.dir() + "./assets/juce.png");        // 5
-    MergeType.add(59.0/9.0, 56,      0.5,       .66,     Color.WHITE,     me.dir() + "./assets/pure_data.png");      // 9
-    MergeType.add(72.0/9.0, 66,      0.25,      .96,     Color.BLACK,     me.dir() + "./assets/chuck.png");     // 10
+    //            name                radius    score    density    draw_mod bg_color         path                                    
+    MergeType.add("VCV Rack",         8.0/9.0,  1,       8,         1.0,     Color.WHITE,     me.dir() + "./assets/vcv.png");
+    MergeType.add("Max MSP",          11.5/9.0, 3,       6,         1.0,     Color.WHITE,     me.dir() + "./assets/max_msp.png");
+    MergeType.add("Ableton",          16.5/9.0, 6,       4,         1.08,    Color.WHITE,     me.dir() + "./assets/ableton.png");
+    MergeType.add("Csound",           18.5/9.0, 10,      2,         1.0,     Color.WHITE,     me.dir() + "./assets/csound.png");
+    MergeType.add("SuperCollider",    23.0/9.0, 15,      1,         1.0,     Color.WHITE,     me.dir() + "./assets/super_collider.png");
+    MergeType.add("Sibelius",         29.5/9.0, 21,      1,         1.1,     Color.WHITE,     me.dir() + "./assets/sibelius.png");
+    MergeType.add("MuseScore",        35.0/9.0, 28,      1,         1.0,     Color.WHITE,     me.dir() + "./assets/musescore.png");
+    MergeType.add("Faust",            41.5/9.0, 36,      1,         1.0,     Color.WHITE,     me.dir() + "./assets/faust.png");
+    MergeType.add("JUCE",             47.5/9.0, 45,      0.5,       1.0,     Color.WHITE,     me.dir() + "./assets/juce.png");
+    MergeType.add("Pure Data",        59.0/9.0, 56,      0.5,       .66,     Color.WHITE,     me.dir() + "./assets/pure_data.png");
+    MergeType.add("ChucK",            72.0/9.0, 66,      0.25,      .96,     Color.BLACK,     me.dir() + "./assets/chuck.png");
 
 
     // b2 world creation
@@ -252,6 +266,9 @@ class MergeType
     // .05 => world_def.hitEventThreshold;
     b2.createWorld(world_def) => gs.b2_world_id;
     { // simulation config (eventually group these into single function/command/struct)
+    // TODO: follow the lisa playback model. e.g. one-time set loop/rate/etc params on a voice and it auto plays.
+    // same should be with physics: world = voice, playback rate = physics simulation rate, #concurrent threads, etc...
+    // put params in struct so we can add more without breaking the API (e.g. #threads will be added after enkiTS task scheduler )
         b2.world(gs.b2_world_id);
         // b2.substeps(1);
     }
@@ -308,19 +325,21 @@ class MergeType
     }
 
 
-    gs.score_text.sca(.5);
+    gs.score_text.controlPoints(@(0.5, 1.0));
+    gs.score_text.sca(conf.font_scale);
     gs.score_text.pos(@(-1.67 * conf.CONTAINER_HW, conf.CONTAINER_HH));
     gs.score_text.text("Score");
 
-    gs.score_number_text.sca(.5);
+    gs.score_number_text.sca(conf.font_scale);
     gs.score_number_text.pos(gs.score_text.pos() - @(0, conf.vspace, 0));
     gs.score_number_text.text(gs.score + "");
 
-    gs.high_score_text.sca(.5);
+    gs.high_score_text.controlPoints(@(0.5, 1.0));
+    gs.high_score_text.sca(conf.font_scale);
     gs.high_score_text.pos(gs.score_number_text.pos() - @(0, 2*conf.vspace, 0));
     gs.high_score_text.text("High Score");
 
-    gs.high_score_number_text.sca(.5);
+    gs.high_score_number_text.sca(conf.font_scale);
     gs.high_score_number_text.pos(gs.high_score_text.pos() - @(0, conf.vspace, 0));
     gs.high_score_number_text.text(gs.high_score + "");
 
@@ -329,19 +348,51 @@ class MergeType
     gs.game_over_plane.scaY(2);
     gs.game_over_plane.posZ(Layer_Text);
 
-    gs.game_over_text.scaWorld(.5);
+    gs.game_over_text.sca(conf.font_scale);
     gs.game_over_text.posWorld(@(0, 0.5, 0));
     gs.game_over_text.text("GAME OVER");
     Layer_Text => gs.game_over_text.posZ;
 
-    gs.retry_text.scaWorld(0.5);
+    gs.retry_text.sca(conf.font_scale);
     gs.retry_text.posWorld(@(0, -0.5, 0));
     gs.retry_text.text("PRESS <space> TO RETRY");
     Layer_Text => gs.retry_text.posZ;
 
-    gs.next_text.sca(0.5);
+    gs.next_text.controlPoints(@(0.5, 1.0));
+    gs.next_text.sca(conf.font_scale);
     gs.next_text.text("Next");
     Layer_Text => gs.next_text.posZ;
+
+    gs.chain_of_evolution.pos(@(
+        gs.next_region.pos().x,
+        gs.high_score_text.pos().y
+    ));
+
+    gs.chain_of_evolution_text.controlPoints(@(0.5, 1.0));
+    gs.chain_of_evolution_text.sca(conf.font_scale);
+    gs.chain_of_evolution_text.text("Chain of\nEvolution");
+    Layer_Text => gs.chain_of_evolution_text.posZ;
+
+    { // chain of evolution
+        for (int i; i < gs.chain_of_evolution_meshes.size(); i++) {
+            GGen row --> gs.chain_of_evolution;
+            row.posY(-(i) * conf.vspace * .5 - 2*conf.vspace);
+            row.posX(-.3);
+            row.sca(.22);
+
+            0.6 => float hspace;
+
+            new GMesh(conf.sprite_geo, gs.chain_of_evolution_materials[i]) @=> gs.chain_of_evolution_meshes[i];
+            gs.chain_of_evolution_meshes[i] --> row;
+            gs.chain_of_evolution_meshes[i].posX(-hspace);
+            gs.chain_of_evolution_materials[i].color(Color.BLACK);
+
+            gs.chain_of_evolution_texts[i].controlPoints(@(0.0, 0.5));
+            gs.chain_of_evolution_texts[i] --> row;
+            gs.chain_of_evolution_texts[i].posX(hspace);
+            gs.chain_of_evolution_texts[i].text("???");
+        }
+    }
     
 
     enterGamestate(GameState_Start);
@@ -499,6 +550,14 @@ fun Entity addBody(int which, vec2 pos)
     if (which >= merge_types.size()) return null; // can't merge 2 watermelons
 
     merge_types[which] @=> MergeType mt;
+    true => mt.unlocked;
+
+    { // chain of evolution
+        mt.color_map => gs.chain_of_evolution_materials[which].colorMap;
+        gs.chain_of_evolution_materials[which].color(Color.WHITE);
+        gs.chain_of_evolution_texts[which].text(mt.name);
+    }
+
 
     // body def
     b2BodyDef dynamic_body_def;
@@ -866,7 +925,6 @@ while (1) {
                 Color.WHITE
             );
         }
-
 
 
         merge_types[gs.curr_drop_type] @=> MergeType curr_mt;
