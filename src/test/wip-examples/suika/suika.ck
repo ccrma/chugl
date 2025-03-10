@@ -214,7 +214,17 @@ class GS {
 
     Entity entities[0];
     HashMap entity_map; // b2_body_id --> Entity
+
+    // audio related
+    int measure_beat_drop;
+
 } GS gs;
+
+fun void drop() {
+    dropBody(gs.curr_drop_type);
+    gs.next_drop_type => gs.curr_drop_type;
+    M.choose(conf.drop_selection_pdf) => gs.next_drop_type;
+}
 
 // gs.entities.help();
 
@@ -348,12 +358,12 @@ class MergeType
     gs.game_over_plane.scaY(2);
     gs.game_over_plane.posZ(Layer_Text);
 
-    gs.game_over_text.sca(conf.font_scale);
+    gs.game_over_text.scaWorld(conf.font_scale);
     gs.game_over_text.posWorld(@(0, 0.5, 0));
     gs.game_over_text.text("GAME OVER");
     Layer_Text => gs.game_over_text.posZ;
 
-    gs.retry_text.sca(conf.font_scale);
+    gs.retry_text.scaWorld(conf.font_scale);
     gs.retry_text.posWorld(@(0, -0.5, 0));
     gs.retry_text.text("PRESS <space> TO RETRY");
     Layer_Text => gs.retry_text.posZ;
@@ -693,10 +703,12 @@ class Sound
 {
     load("special:dope") @=> LiSa lisa;
     PoleZero blocker => NRev reverb => dac;
+    // PoleZero blocker => Plateau reverb => dac;
     // connect
     lisa.chan(0) => blocker;
     // reverb mix
-    .03 => reverb.mix;
+    .05 => reverb.mix;
+    // .5 =>  reverb.wet;
     // pole location to block DC and ultra low frequencies
     .99 => blocker.blockZero;
 
@@ -705,6 +717,29 @@ class Sound
       [2.0, 9.0/5, 3.0/2, 4.0/3, 6.0/5, 1.0, 9.0/10, 3.0/4, 4.0/6, 6.0/10, 1.0/2]
       @=> float rates[];
       .5 => float rate_mod;
+
+    // soundtrack
+    SndBuf kick => dac;
+    SndBuf snare => reverb;
+    SndBuf hat => reverb;
+    me.dir() + "../../../../assets/samples/punchy-kick.wav" => kick.read;
+    0 => kick.rate;
+    120 => float BPM;
+    (60.0 / BPM)::second => dur qt_note;
+
+    fun void soundtrack() {
+        0 => int beat;
+        while (true) {
+            beat++;
+            0 => kick.pos;
+            1.0 => kick.rate;
+            0 => kick.gain;
+            qt_note => now;
+
+            if (beat % 4 == 0) true => gs.measure_beat_drop;
+        }
+    } 
+    // spork ~ soundtrack();
 
     // pl_type ranges from [0, 10]
     fun void play(int pl_type) {
@@ -785,12 +820,16 @@ while (1) {
             }
 
             if (
-                (GWindow.keyDown(GWindow.Key_Space) || GWindow.mouseLeftDown())
-                && gs.drop_waiting_on == 0
+                gs.measure_beat_drop 
+                ||
+                ((GWindow.keyDown(GWindow.Key_Space) || GWindow.mouseLeftDown())
+                && gs.drop_waiting_on == 0)
             ) {
-                dropBody(gs.curr_drop_type);
-                gs.next_drop_type => gs.curr_drop_type;
-                M.choose(conf.drop_selection_pdf) => gs.next_drop_type;
+                // dropBody(gs.curr_drop_type);
+                // gs.next_drop_type => gs.curr_drop_type;
+                // M.choose(conf.drop_selection_pdf) => gs.next_drop_type;
+                drop();
+                false => gs.measure_beat_drop;
             }
         }
 

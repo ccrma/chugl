@@ -13,12 +13,14 @@ public class G2D
     G2D_Lines lines;
     G2D_SolidPolygon polygons;
     // G2D_Sprite sprites; // TODO wip. might require texture atlas. 
+    G2D_Capsule capsules;
 
     // connect to scene
     circles.mesh --> GG.scene();
     lines.mesh --> GG.scene();
     polygons.mesh --> GG.scene();
     // sprites.mesh --> GG.scene();
+	capsules.mesh --> GG.scene();
 
 
     // ----------- circle ----------
@@ -27,7 +29,6 @@ public class G2D
 	}
 
     // ----------- line -----------
-
     // draws a dashed line from p1 to p2, each dash is length `segment_length`
 	fun void dashed(vec2 p1, vec2 p2, vec3 color, float segment_length) {
 		p2 - p1 => vec2 d;
@@ -42,6 +43,10 @@ public class G2D
 				color
 			);
 		}
+	}
+
+	fun void line(vec2 p1, vec2 p2, vec3 color) {
+		lines.segment(p1, p2, color);
 	}
 
 	// draws a polygon outline at given position and rotation
@@ -172,6 +177,12 @@ public class G2D
 		boxFilled(position, rotation_radians, l, l, color);
 	}
 
+	fun void capsuleFilled(
+		vec2 p1, vec2 p2, float radius, vec3 color
+	) {
+		capsules.capsule(p1, p2, radius, @(color.r, color.g, color.b, 1.0));
+	}
+
     // -----------------------------------------
 
     fun void update() {
@@ -179,6 +190,7 @@ public class G2D
         lines.update();
         polygons.update();
         // sprites.update();
+		capsules.update();
     }
 }
 
@@ -458,6 +470,71 @@ public class G2D_Sprite
 }
 
 
+public class G2D_Capsule
+{	
+	me.dir() + "./g2d_capsule_shader.wgsl" @=> string shader_path;
+
+	// set drawing shader
+	ShaderDesc shader_desc;
+	shader_path => shader_desc.vertexPath;
+	shader_path => shader_desc.fragmentPath;
+	null @=> shader_desc.vertexLayout; 
+
+	// material shader (draws all line segments in 1 draw call)
+	Shader shader(shader_desc);
+	Material material;
+	material.shader(shader);
+
+	// default bindings
+	float empty_float_arr[4];
+	initStorageBuffers();
+
+	// vertex buffers
+	vec2 u_positions[0];
+	float u_radius[0];
+	vec4 u_colors[0];
+
+	Geometry geo;
+	geo.vertexCount(0);
+	GMesh mesh(geo, material);
+
+	fun void initStorageBuffers() {
+		material.storageBuffer(0, empty_float_arr); // p1, p2
+		material.storageBuffer(1, empty_float_arr); // radius
+		material.storageBuffer(2, empty_float_arr); // color
+		antialias(true); // default antialias true
+	}
+
+	fun void antialias(int a) {
+		material.uniformInt(3, a);
+	}
+
+	fun void capsule(vec2 p1, vec2 p2, float radius, vec4 color) {
+		u_positions << p1 << p2;
+		u_radius << radius;
+		u_colors << color;
+	}
+
+    fun void update() {
+		if (u_radius.size() == 0) {
+			initStorageBuffers(); // needed because empty storage buffers cause WGPU to crash on bindgroup creation
+			return;
+		}
+
+		// update GPU vertex buffers
+		material.storageBuffer(0, u_positions); // p1, p2
+		material.storageBuffer(1, u_radius); // radius
+		material.storageBuffer(2, u_colors); // color
+		geo.vertexCount(6 * u_radius.size());
+
+		// reset
+        u_positions.clear();
+        u_radius.clear();
+        u_colors.clear();
+    }
+}
+
+
 
 G2D g2d;
 
@@ -465,17 +542,17 @@ fun void test() {
     while (1) {
         GG.nextFrame() => now;
 
-        g2d.dashed(@(-1,1), @(1,-1), Color.WHITE, .2);
-        g2d.circle(@(0,0), 1.0, Math.fabs(Math.sin(now/second)), Color.GREEN);
-        g2d.circle(@(0,0), 0.5, Math.fabs(Math.sin(.7 * (now/second))), Color.RED);
-        g2d.circle(@(0,0), 0.7, Math.fabs(Math.sin(.5 * (now/second))), Color.WHITE);
+        // g2d.dashed(@(-1,1), @(1,-1), Color.WHITE, .2);
+        // g2d.circle(@(0,0), 1.0, Math.fabs(Math.sin(now/second)), Color.GREEN);
+        // g2d.circle(@(0,0), 0.5, Math.fabs(Math.sin(.7 * (now/second))), Color.RED);
+        // g2d.circle(@(0,0), 0.7, Math.fabs(Math.sin(.5 * (now/second))), Color.WHITE);
+        // g2d.boxFilled(@(0,0), @(1, -1), Color.BLUE);
+        // g2d.boxFilled(@(-1,0), @(0, -1), Color.PINK);
 
-        g2d.boxFilled(@(0,0), @(1, -1), Color.BLUE);
-        g2d.boxFilled(@(-1,0), @(0, -1), Color.PINK);
-
+        g2d.capsuleFilled(@(-1,1), @(1,-1), Math.fabs(Math.sin(now/second)), Color.WHITE);
 
         g2d.update();
     }
 }
 
-// test();
+test();

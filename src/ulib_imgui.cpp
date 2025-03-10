@@ -25,9 +25,6 @@
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  SOFTWARE.
 -----------------------------------------------------------------------------*/
-// exploratory handwritten binding for dear imgui
-// hopefully can figure out how to generate this automatically
-
 // Wrap this in a namespace to keep it separate from the C++ API
 namespace cimgui
 {
@@ -37,6 +34,9 @@ namespace cimgui
 #include "sg_command.h"
 #include "sg_component.h"
 #include "ulib_helper.h"
+
+// imgui knobs library
+#include <imgui-knobs/imgui-knobs.cpp>
 
 static bool verifyInitialization(Chuck_VM_Shred* shred)
 {
@@ -1061,6 +1061,13 @@ CK_DLL_SFUN(ui_BeginMenuEx);
 CK_DLL_SFUN(ui_EndMenu);
 CK_DLL_SFUN(ui_MenuItem);
 CK_DLL_SFUN(ui_MenuItemBoolPtr);
+
+// Widgets: Knobs
+// Ported from https://github.com/altschuler/imgui-knobs/tree/main
+CK_DLL_SFUN(ui_Knob);
+CK_DLL_SFUN(ui_KnobInt);
+CK_DLL_SFUN(ui_KnobEx);
+CK_DLL_SFUN(ui_KnobIntEx);
 
 // Tooltips
 CK_DLL_SFUN(ui_BeginItemTooltip);
@@ -4076,13 +4083,74 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
                      "enums provided for convenience..\n");
     static t_CKINT ImGuiMouseButton_Left = 0;
     QUERY->add_svar(QUERY, "int", "Left", true, &ImGuiMouseButton_Left);
+    DOC_VAR("UI_MouseButton.Left = 0");
     static t_CKINT ImGuiMouseButton_Right = 1;
     QUERY->add_svar(QUERY, "int", "Right", true, &ImGuiMouseButton_Right);
+    DOC_VAR("UI_MouseButton.Right = 1");
     static t_CKINT ImGuiMouseButton_Middle = 2;
     QUERY->add_svar(QUERY, "int", "Middle", true, &ImGuiMouseButton_Middle);
-    static t_CKINT ImGuiMouseButton_COUNT = 5;
-    QUERY->add_svar(QUERY, "int", "COUNT", true, &ImGuiMouseButton_COUNT);
+    DOC_VAR("UI_MouseButton.Middle = 2");
     QUERY->end_class(QUERY);
+
+    { // UI_KnobFlags
+        static t_CKINT UI_KnobFlags_NoTitle        = ImGuiKnobFlags_NoTitle;
+        static t_CKINT UI_KnobFlags_NoInput        = ImGuiKnobFlags_NoInput;
+        static t_CKINT UI_KnobFlags_ValueTooltip   = ImGuiKnobFlags_ValueTooltip;
+        static t_CKINT UI_KnobFlags_DragHorizontal = ImGuiKnobFlags_DragHorizontal;
+        static t_CKINT UI_KnobFlags_DragVertical   = ImGuiKnobFlags_DragVertical;
+        static t_CKINT UI_KnobFlags_Logarithmic    = ImGuiKnobFlags_Logarithmic;
+        static t_CKINT UI_KnobFlags_AlwaysClamp    = ImGuiKnobFlags_AlwaysClamp;
+
+        BEGIN_CLASS("UI_KnobFlags", "Object");
+        DOC_CLASS(
+          "Knob behavior flags. See "
+          "https://github.com/altschuler/imgui-knobs/for more info");
+
+        SVAR("int", "NoTitle", &UI_KnobFlags_NoTitle);
+        DOC_VAR("Hide the top title.");
+        SVAR("int", "NoInput", &UI_KnobFlags_NoInput);
+        DOC_VAR("Hide the bottom drag input.");
+        SVAR("int", "ValueTooltip", &UI_KnobFlags_ValueTooltip);
+        DOC_VAR("Show a tooltip with the current value on hover.");
+        SVAR("int", "DragHorizontal", &UI_KnobFlags_DragHorizontal);
+        DOC_VAR("Use horizontal dragging only (default is bi-directional).");
+        SVAR("int", "DragVertical", &UI_KnobFlags_DragVertical);
+        DOC_VAR("Use vertical dragging only (default is bi-directional).");
+        SVAR("int", "Logarithmic", &UI_KnobFlags_Logarithmic);
+        DOC_VAR(
+          "Clamp input values that the user types into the input field. If not set, "
+          "it's possible to override the min/max range via the input field.");
+        SVAR("int", "AlwaysClamp", &UI_KnobFlags_AlwaysClamp);
+        DOC_VAR("Use logarithmic scale for the knob (otherwise linear).");
+
+        END_CLASS();
+
+    } // UI_KnobFlags
+
+    { // UI_KnobVariant
+        static t_CKINT UI_KnobVariant_Tick      = ImGuiKnobVariant_Tick;
+        static t_CKINT UI_KnobVariant_Dot       = ImGuiKnobVariant_Dot;
+        static t_CKINT UI_KnobVariant_Wiper     = ImGuiKnobVariant_Wiper;
+        static t_CKINT UI_KnobVariant_WiperOnly = ImGuiKnobVariant_WiperOnly;
+        static t_CKINT UI_KnobVariant_WiperDot  = ImGuiKnobVariant_WiperDot;
+        static t_CKINT UI_KnobVariant_Stepped   = ImGuiKnobVariant_Stepped;
+        static t_CKINT UI_KnobVariant_Space     = ImGuiKnobVariant_Space;
+
+        BEGIN_CLASS("UI_KnobVariant", "Object");
+        DOC_CLASS(
+          "These flags determine the visual look of the knob. See "
+          "https://github.com/altschuler/imgui-knobs/for more info");
+
+        SVAR("int", "Tick", &UI_KnobVariant_Tick);
+        SVAR("int", "Dot", &UI_KnobVariant_Dot);
+        SVAR("int", "Wiper", &UI_KnobVariant_Wiper);
+        SVAR("int", "WiperOnly", &UI_KnobVariant_WiperOnly);
+        SVAR("int", "WiperDot", &UI_KnobVariant_WiperDot);
+        SVAR("int", "Stepped", &UI_KnobVariant_Stepped);
+        SVAR("int", "Space", &UI_KnobVariant_Space);
+
+        END_CLASS();
+    } // UI_KnobVariant
 
     { // UI_Key
         QUERY->begin_class(QUERY, "UI_Key", "Object");
@@ -6809,6 +6877,64 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
         DOC_FUNC(
           "return true when activated + toggle (*p_selected) if p_selected != "
           "NULL");
+
+        SFUN(ui_Knob, "int", "knob");
+        ARG("string", "label");
+        ARG("UI_Float", "value");
+        ARG("float", "min");
+        ARG("float", "max");
+        DOC_FUNC("Knob Widget. See https://github.com/altschuler/imgui-knobs/");
+
+        SFUN(ui_KnobInt, "int", "knob");
+        ARG("string", "label");
+        ARG("UI_Int", "value");
+        ARG("int", "min");
+        ARG("int", "max");
+        DOC_FUNC("Knob Widget. See https://github.com/altschuler/imgui-knobs/");
+
+        // bool ImGuiKnobs::Knob(
+        // label, *value, min, max,
+        // [speed, format, variant, size, flags, steps, angle_min, angle_max])
+
+        SFUN(ui_KnobEx, "int", "knob");
+        ARG("string", "label");
+        ARG("UI_Float", "value");
+        ARG("float", "min");
+        ARG("float", "max");
+        ARG("float", "speed");
+        ARG("string", "format");
+        ARG("int", "UI_KnobVariant");
+        ARG("float", "size");
+        ARG("int", "UI_KnobFlags");
+        ARG("int", "steps");
+        ARG("float", "angle_min");
+        ARG("float", "angle_max");
+        DOC_FUNC(
+          "Knob Widget. See https://github.com/altschuler/imgui-knobs/ "
+          "set `speed=0` to use default sensitivity. "
+          "`format` is for numerical formating, e.g. \"%.1fHz\". "
+          "`steps` is number of ticks on knob if using UI_KnobVariant.Stepped. "
+          "`angle_min` and `angle_max` are in radiams. ");
+
+        SFUN(ui_KnobIntEx, "int", "knob");
+        ARG("string", "label");
+        ARG("UI_Int", "value");
+        ARG("int", "min");
+        ARG("int", "max");
+        ARG("float", "speed");
+        ARG("string", "format");
+        ARG("int", "UI_KnobVariant");
+        ARG("float", "size");
+        ARG("int", "UI_KnobFlags");
+        ARG("int", "steps");
+        ARG("float", "angle_min");
+        ARG("float", "angle_max");
+        DOC_FUNC(
+          "Knob Widget. See https://github.com/altschuler/imgui-knobs/ "
+          "set `speed=0` to use default sensitivity. "
+          "`format` is for numerical formating, e.g. \"%.1fHz\". "
+          "`steps` is number of ticks on knob if using UI_KnobVariant.Stepped. "
+          "`angle_min` and `angle_max` are in radiams. ");
 
         // Tooltips ---------------------------------------------------------------
         SFUN(ui_BeginItemTooltip, "int", "beginItemTooltip");
@@ -11885,6 +12011,82 @@ CK_DLL_SFUN(ui_MenuItemBoolPtr)
 
     bool enabled  = GET_NEXT_INT(ARGS);
     RETURN->v_int = cimgui::ImGui_MenuItemBoolPtr(label, shortcut, selected, enabled);
+}
+
+CK_DLL_SFUN(ui_Knob)
+{
+    if (!verifyInitialization(SHRED)) return;
+    const char* label = API->object->str(GET_NEXT_STRING(ARGS));
+
+    Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
+    float* v          = (float*)OBJ_MEMBER_UINT(obj, ui_float_ptr_offset);
+
+    float v_min = GET_NEXT_FLOAT(ARGS);
+    float v_max = GET_NEXT_FLOAT(ARGS);
+
+    RETURN->v_int = ImGuiKnobs::Knob(label, v, v_min, v_max);
+}
+
+CK_DLL_SFUN(ui_KnobInt)
+{
+    if (!verifyInitialization(SHRED)) return;
+
+    const char* label = API->object->str(GET_NEXT_STRING(ARGS));
+
+    Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
+    int* v            = (int*)OBJ_MEMBER_UINT(obj, ui_int_ptr_offset);
+
+    int v_min = GET_NEXT_INT(ARGS);
+    int v_max = GET_NEXT_INT(ARGS);
+
+    RETURN->v_int = ImGuiKnobs::KnobInt(label, v, v_min, v_max);
+}
+
+CK_DLL_SFUN(ui_KnobEx)
+{
+    if (!verifyInitialization(SHRED)) return;
+    const char* label = API->object->str(GET_NEXT_STRING(ARGS));
+
+    Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
+    float* v          = (float*)OBJ_MEMBER_UINT(obj, ui_float_ptr_offset);
+
+    float v_min     = GET_NEXT_FLOAT(ARGS);
+    float v_max     = GET_NEXT_FLOAT(ARGS);
+    float speed     = GET_NEXT_FLOAT(ARGS);
+    const char* fmt = API->object->str(GET_NEXT_STRING(ARGS));
+    int variant     = GET_NEXT_INT(ARGS);
+    float size      = GET_NEXT_FLOAT(ARGS);
+    int flags       = GET_NEXT_INT(ARGS);
+    int steps       = GET_NEXT_INT(ARGS);
+    float angle_min = GET_NEXT_FLOAT(ARGS);
+    float angle_max = GET_NEXT_FLOAT(ARGS);
+
+    RETURN->v_int = ImGuiKnobs::Knob(label, v, v_min, v_max, speed, fmt, variant, size,
+                                     flags, steps, angle_min, angle_max);
+}
+
+CK_DLL_SFUN(ui_KnobIntEx)
+{
+    if (!verifyInitialization(SHRED)) return;
+    const char* label = API->object->str(GET_NEXT_STRING(ARGS));
+
+    Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
+    int* v            = (int*)OBJ_MEMBER_UINT(obj, ui_int_ptr_offset);
+
+    int v_min = GET_NEXT_INT(ARGS);
+    int v_max = GET_NEXT_INT(ARGS);
+
+    float speed     = GET_NEXT_FLOAT(ARGS);
+    const char* fmt = API->object->str(GET_NEXT_STRING(ARGS));
+    int variant     = GET_NEXT_INT(ARGS);
+    float size      = GET_NEXT_FLOAT(ARGS);
+    int flags       = GET_NEXT_INT(ARGS);
+    int steps       = GET_NEXT_INT(ARGS);
+    float angle_min = GET_NEXT_FLOAT(ARGS);
+    float angle_max = GET_NEXT_FLOAT(ARGS);
+
+    RETURN->v_int = ImGuiKnobs::KnobInt(label, v, v_min, v_max, speed, fmt, variant,
+                                        size, flags, steps, angle_min, angle_max);
 }
 
 // ============================================================================

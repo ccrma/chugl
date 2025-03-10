@@ -129,6 +129,7 @@
     "algorithm": "cpp",
     "sr_webcam_internal.h": "c",
     "*.tcc": "cpp",
-    "numeric": "cpp"
+    "numeric": "cpp",
+    "typeindex": "cpp"
   }
 }
