@@ -406,20 +406,19 @@ static void _Transform_RebuildDescendants(R_Scene* scene, R_Transform* xform,
 
 void R_Transform::rebuildMatrices(R_Scene* root, Arena* arena)
 {
-    // push root onto stack
-    SG_ID* base = ARENA_PUSH_ZERO_TYPE(arena, SG_ID);
-    *base       = root->id;
-    SG_ID* top  = (SG_ID*)Arena::top(arena);
-
-    ASSERT(base + 1 == top);
-
     glm::mat4 identityMat = MAT_IDENTITY;
+    u64 arena_orig_size   = arena->curr;
+
+    // push root onto stack
+    *ARENA_PUSH_TYPE(arena, SG_ID) = root->id;
 
     // while stack is not empty
-    while (top != base) {
+    while (arena->curr != arena_orig_size) {
         // pop id from stack
-        SG_ID xformID = top[-1];
         Arena::pop(arena, sizeof(SG_ID));
+        // update stack top
+        SG_ID xformID = *(SG_ID*)Arena::top(arena);
+
         R_Transform* xform = Component_GetXform(xformID);
         ASSERT(xform != NULL);
 
@@ -447,9 +446,6 @@ void R_Transform::rebuildMatrices(R_Scene* root, Arena* arena)
 
         // always set fresh
         xform->_stale = R_Transform_STALE_NONE;
-
-        // update stack top
-        top = (SG_ID*)Arena::top(arena);
     }
 }
 

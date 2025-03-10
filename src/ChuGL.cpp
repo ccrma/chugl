@@ -140,13 +140,13 @@ static void autoUpdateScenegraph(Arena* arena, SG_Scene* scene, Chuck_VM* VM,
     theArg.kind          = kindof_FLOAT;
     theArg.value.v_float = g_last_dt;
 
-    void* arena_orig_top             = Arena::top(arena);
+    u64 arena_orig_size              = arena->curr;
     *(ARENA_PUSH_TYPE(arena, SG_ID)) = scene->id;
 
     // BFS through graph
     // TODO: can just walk linearly through entity arenas instead?
     // but then how do we know if something is part of the active scene graph?
-    while (Arena::top(arena) != arena_orig_top) {
+    while (arena->curr != arena_orig_size) {
         ARENA_POP_TYPE(arena, SG_ID);
         SG_ID sg_id = *(SG_ID*)Arena::top(arena);
 
