@@ -792,6 +792,7 @@ SG_Texture* ulib_texture_load(const char* filepath, SG_TextureLoadDesc* load_des
     desc.dimension      = WGPUTextureDimension_2D;
     desc.format         = WGPUTextureFormat_RGBA8Unorm;
     desc.usage          = WGPUTextureUsage_All;
+    desc.mips           = load_desc->gen_mips ? 0 : 1;
 
     SG_Texture* tex = SG_CreateTexture(&desc, NULL, shred, false);
 

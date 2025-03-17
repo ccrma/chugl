@@ -1,0 +1,1 @@
+texture mips:  1 
