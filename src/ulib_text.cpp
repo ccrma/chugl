@@ -256,8 +256,14 @@ CK_DLL_MFUN(gtext_get_text)
 
 CK_DLL_MFUN(gtext_set_font)
 {
-    SG_Text* text   = GET_TEXT(SELF);
-    text->font_path = API->object->str(GET_NEXT_STRING(ARGS));
+    SG_Text* text           = GET_TEXT(SELF);
+    Chuck_String* ck_string = GET_NEXT_STRING(ARGS);
+    if (!ck_string) {
+        log_warn("Setting GText.font(null) is not supported behavior");
+        return;
+    }
+
+    text->font_path = API->object->str(ck_string);
 
     CQ_PushCommand_TextRebuild(text);
 }

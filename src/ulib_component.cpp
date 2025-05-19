@@ -210,6 +210,8 @@ CK_DLL_MFUN(ggen_get_scale_world);
 CK_DLL_MFUN(ggen_set_scale_world);
 CK_DLL_MFUN(ggen_set_scale_world_uniform);
 
+CK_DLL_MFUN(ggen_set_scale_2d);
+
 // transformation matrix API
 CK_DLL_MFUN(ggen_local_pos_to_world_pos);
 
@@ -493,6 +495,10 @@ static void ulib_ggen_query(Chuck_DL_Query* QUERY)
         QUERY->add_arg(QUERY, "float", "scale");
         QUERY->doc_func(QUERY,
                         "Set object scale in world space uniformly across all axes");
+
+        MFUN(ggen_set_scale_2d, "GGen", "sca");
+        ARG("vec2", "scale_xy");
+        DOC_FUNC("Sets object x and y scale (useful for 2d)");
 
         // Matrix transform API
         // ===============================================================
@@ -1008,6 +1014,16 @@ CK_DLL_MFUN(ggen_set_scale_world_uniform)
     t_CKFLOAT sca       = GET_NEXT_FLOAT(ARGS);
     SG_Transform::worldScale(xform, glm::vec3(sca, sca, sca));
     RETURN->v_object = SELF;
+    CQ_PushCommand_SetScale(xform);
+}
+
+CK_DLL_MFUN(ggen_set_scale_2d)
+{
+    SG_Transform* xform = SG_GetTransform(OBJ_MEMBER_UINT(SELF, component_offset_id));
+    t_CKVEC2 vec        = GET_NEXT_VEC2(ARGS);
+    xform->sca.x        = vec.x;
+    xform->sca.y        = vec.y;
+    RETURN->v_object    = SELF;
     CQ_PushCommand_SetScale(xform);
 }
 
