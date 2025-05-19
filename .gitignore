@@ -48,3 +48,9 @@ imgui.ini
 
 # assets
 assets/
+
+# chugins
+*.chug
+
+# audio files
+*.wav
