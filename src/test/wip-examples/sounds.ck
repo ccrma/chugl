@@ -97,8 +97,8 @@ fun void play() {
 
 
 // Plateau
-// Solar42Drone drone => LPF lpf => Plateau rev => dac;
-Solar42Drone drone => LPF lpf => Plateau rev => blackhole;
+Solar42Drone drone => LPF lpf => Plateau rev => dac;
+// Solar42Drone drone => LPF lpf => Plateau rev => blackhole;
 drone.gain(.1);
 drone.midi(48);
 // <<< rev.wet(), rev.decay(), rev.size(), rev.delay(), rev.diffuse() >>>;

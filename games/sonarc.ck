@@ -16,12 +16,18 @@ MVP
 
 TODO
 - b2 collision testing
+- add explosion sound effect / fart noise when someone dies
 - add center and left-align options to GText
     - also add #characters to allow for rpg-like rolling text
     - also be able to query size of characters in base font, so we know how to rescale
     when screen size changes.
         - what ever the default font size we rasterize at, give worldspace dimensions of a character 
         given .sca == 1
+
+VR Lab Feedback
+- when player wins, change font color to that player, add fireworks in that color in the background
+- slow-motion hit-stop when someone dies (watch sakurai's video)
+- have number of players NOT mapped to arrow keys
 
 Ideas for progression/scaling difficulty:
 - trails grow longer over time (add food to eat to grow longer like slither.io?)
@@ -67,9 +73,7 @@ adc => adc_square;
 SndBuf replay_audio => dac;
 
 // filter pole position
-// UI_Float env_exp(.05);
-UI_Float env_down_slew(3.98);
-UI_Float env_low_cut(.1);
+UI_Float env_low_cut(.08);
 UI_Float env_exp(.22);
 UI_Float env_pol_last;
 UI_Float env_pole_pos(.9998);
@@ -124,7 +128,7 @@ class GameState {
         Color.hex(0x00ffff),
         Color.hex(0xffa500),
         Color.hex(0x32CD32),
-        Color.GOLD,
+        Color.hex(0xFF0f00),
     ] @=> vec3 player_colors[];
 
     [
@@ -405,7 +409,7 @@ class MatchRoom extends Room {
     fun void update(float dt) {
         { // sound update
             if (match_state == Match_Replay) {
-                replay_mic_gain.readLine().trim().toFloat() => gs.mic_volume;
+                if (replay_mic_gain.more()) replay_mic_gain.readLine().trim().toFloat() => gs.mic_volume;
             } else {
                 Math.max(
                     0,
@@ -701,7 +705,6 @@ while (1) {
     //         gs.mic_volume => env_pol_last.val;
     //         UI.slider("Mic Low Cut", env_low_cut, 0.00, 1.);
     //         UI.slider("Mic Exponent", env_exp, 0.00, 1.);
-    //         UI.slider("Mic Down Slew", env_down_slew, 0.00, 1.);
     //         if (UI.slider("Mic Pole", env_pole_pos, 0.95, 1.)) env_pole_pos.val() => env_follower.pole;
     //         UI.slider("Mic Scaled Volume", env_pol_last, 0.00, 1.);
 
