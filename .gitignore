@@ -54,3 +54,7 @@ assets/
 
 # audio files
 *.wav
+
+# media files
+*.jpg
+*.mpg
