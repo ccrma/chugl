@@ -58,3 +58,7 @@ assets/
 # media files
 *.jpg
 *.mpg
+
+# auto-generated html
+*.html
+*.css
