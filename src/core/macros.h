@@ -31,6 +31,8 @@
 #define ASSERT(expression) NULL;
 #endif
 
+#define UNREACHABLE ASSERT(false);
+
 #define FORCE_CRASH *(int*)0 = 0
 
 #define _CODE(...) #__VA_ARGS__
@@ -122,3 +124,5 @@ typedef double f64;
 
 // next multiple of m, m must be power of 2
 #define NEXT_MULT(x, m) (((x) + (m) - 1) & ~((m) - 1))
+
+#define ALIGN_NON_POW2(n, m) ((((n) + ((m) - 1)) / (m)) * (m))

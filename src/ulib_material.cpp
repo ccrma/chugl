@@ -1217,10 +1217,10 @@ CK_DLL_MFUN(material_uniform_active_locations)
 {
     SG_Material* material = GET_MATERIAL(SELF);
 
-    int active_locations[SG_MATERIAL_MAX_UNIFORMS];
+    int active_locations[CHUGL_MATERIAL_MAX_BINDINGS];
     int active_locations_count = 0;
 
-    for (int i = 0; i < SG_MATERIAL_MAX_UNIFORMS; i++) {
+    for (int i = 0; i < CHUGL_MATERIAL_MAX_BINDINGS; i++) {
         if (material->uniforms[i].type != SG_MATERIAL_UNIFORM_NONE) {
             active_locations[active_locations_count++] = i;
         }

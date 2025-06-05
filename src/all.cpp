@@ -32,7 +32,6 @@
 
 #include "graphics.cpp"
 #include "geometry.cpp"
-// #include "entity.cpp"
 #include "sync.cpp"
 #include "sg_component.cpp" // chugl scenegraph API
 #include "sg_command.cpp"

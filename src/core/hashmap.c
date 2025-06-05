@@ -196,6 +196,16 @@ struct hashmap* hashmap_new(size_t elsize, size_t cap, uint64_t seed0, uint64_t 
                                       compare, elfree, udata);
 }
 
+// simplified hashmap_new
+struct hashmap*
+hashmap_new_simple(size_t elsize,
+                   uint64_t (*hash)(const void* item, uint64_t seed0, uint64_t seed1),
+                   int (*compare)(const void* a, const void* b, void* udata))
+{
+    return hashmap_new_with_allocator(NULL, NULL, NULL, elsize, 0, 0, 0, hash, compare,
+                                      NULL, NULL);
+}
+
 static void free_elements(struct hashmap* map)
 {
     if (map->elfree) {
@@ -511,12 +521,10 @@ static uint64_t SIP64(const uint8_t* in, const size_t inlen, uint64_t seed0,
                       uint64_t seed1)
 {
 #define U8TO64_LE(p)                                                                   \
-    {                                                                                  \
-        (((uint64_t)((p)[0])) | ((uint64_t)((p)[1]) << 8) | ((uint64_t)((p)[2]) << 16) \
-         | ((uint64_t)((p)[3]) << 24) | ((uint64_t)((p)[4]) << 32)                     \
-         | ((uint64_t)((p)[5]) << 40) | ((uint64_t)((p)[6]) << 48)                     \
-         | ((uint64_t)((p)[7]) << 56))                                                 \
-    }
+    { (((uint64_t)((p)[0])) | ((uint64_t)((p)[1]) << 8) | ((uint64_t)((p)[2]) << 16)   \
+       | ((uint64_t)((p)[3]) << 24) | ((uint64_t)((p)[4]) << 32)                       \
+       | ((uint64_t)((p)[5]) << 40) | ((uint64_t)((p)[6]) << 48)                       \
+       | ((uint64_t)((p)[7]) << 56)) }
 #define U64TO8_LE(p, v)                                                                \
     {                                                                                  \
         U32TO8_LE((p), (uint32_t)((v)));                                               \

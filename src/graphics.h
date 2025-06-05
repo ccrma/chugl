@@ -27,7 +27,9 @@
 -----------------------------------------------------------------------------*/
 #pragma once
 
+#include "chugl_defines.h"
 #include "core/macros.h"
+#include "core/memory.h"
 
 #include <glfw3webgpu/glfw3webgpu.h>
 #include <webgpu/webgpu.h>
@@ -72,6 +74,7 @@ struct GraphicsContext {
     WGPUQueue queue;
     WGPUSurface surface;
     WGPUSurfaceTexture surface_texture;
+    WGPUTextureFormat surface_preferred_format;
     WGPUTextureFormat surface_format;
 
     WGPUTexture multisampled_texture;
@@ -100,6 +103,61 @@ struct GraphicsContext {
 // ============================================================================
 // Buffers
 // =============================================================================
+
+struct G_UniformBuffer {
+    Arena cpu_buffer;
+    WGPUBuffer gpu_buffer;
+    u32 GPU_OFFSET_ALIGNMENT_BYTES;
+
+    // TODO: does this need an id?
+
+    void init(WGPULimits* limits)
+    {
+        GPU_OFFSET_ALIGNMENT_BYTES = limits->minUniformBufferOffsetAlignment;
+
+        // init CPU buffer to size of max material bindings
+        Arena::init(&this->cpu_buffer,
+                    CHUGL_MATERIAL_MAX_BINDINGS * this->GPU_OFFSET_ALIGNMENT_BYTES);
+    }
+
+    // @return: byte offset of the write position
+    void write(void* data, int size_bytes)
+    {
+        ASSERT(cpu_buffer.curr % GPU_OFFSET_ALIGNMENT_BYTES == 0);
+
+        // align allocation size to uniform alignment
+        int aligned_size_bytes = ALIGN_NON_POW2(size_bytes, GPU_OFFSET_ALIGNMENT_BYTES);
+        ASSERT(aligned_size_bytes % GPU_OFFSET_ALIGNMENT_BYTES == 0);
+
+        // resize CPU buffer if needed (aligned to GPU page size)
+        void* dst = Arena::pushZero(&cpu_buffer, aligned_size_bytes);
+
+        // copy the data
+        memcpy(dst, data, size_bytes);
+    }
+
+    void uploadAndReset(WGPUDevice device, WGPUQueue queue)
+    {
+        // recreate GPU buffer if needed
+        bool gpu_buffer_too_small = wgpuBufferGetSize(gpu_buffer) < cpu_buffer.curr;
+        if (gpu_buffer == NULL || gpu_buffer_too_small) {
+            WGPU_DESTROY_AND_RELEASE_BUFFER(
+              gpu_buffer); // destroys GPU memory via destroy(), then driver-side CPU
+                           // memory via release()
+
+            WGPUBufferDescriptor desc = {};
+            desc.size                 = cpu_buffer.cap;
+            desc.usage = WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst;
+            gpu_buffer = wgpuDeviceCreateBuffer(device, &desc);
+        }
+
+        // copy CPU -> GPU
+        wgpuQueueWriteBuffer(queue, gpu_buffer, 0, cpu_buffer.base, cpu_buffer.curr);
+
+        // clear cpu buffer
+        Arena::clear(&cpu_buffer);
+    }
+};
 
 // grows buffer to new size, copying old data
 struct GPU_Buffer {
@@ -209,9 +267,9 @@ struct VertexBufferLayout {
     WGPUVertexAttribute attributes[VERTEX_BUFFER_LAYOUT_MAX_ENTRIES];
     u8 attribute_count;
 
-    static void init(VertexBufferLayout* layout, u8 attribute_count,
-                     u32* attribute_strides // stride in count NOT bytes
-    );
+    // static void init(VertexBufferLayout* layout, u8 attribute_count,
+    //                  u32* attribute_strides // stride in count NOT bytes
+    // );
 
     static void init(VertexBufferLayout* layout, u8 format_count,
                      WGPUVertexFormat* formats // stride in count NOT bytes
@@ -354,35 +412,6 @@ WGPUSampler Graphics_GetSampler(GraphicsContext* gctx, SamplerConfig config);
 SamplerConfig Graphics_SamplerConfigFromDesciptor(WGPUSamplerDescriptor* desc);
 
 // ============================================================================
-// Material TODO: delete this
-// ============================================================================
-
-/// @brief Material instance provides uniforms/textures/etc
-/// and bindGroup for a given render pipeline.
-/// Each render pipeline is associated with particular material type
-// struct Material {
-//     WGPUBindGroup bindGroup;
-//     WGPUBuffer uniformBuffer;
-//     // glm::vec4 color;
-//     Texture* texture; // multiple materials can share same texture
-//     WGPUSampler _sampler;
-
-//     // bind group entries
-//     WGPUBindGroupEntry entries[3]; // uniforms, texture, sampler
-//     WGPUBindGroupDescriptor desc;
-
-//     // TODO: store MaterialUniforms struct (struct inheritance, like Obj)
-
-//     static void init(GraphicsContext* ctx, Material* material,
-//                      RenderPipeline* pipeline, Texture* texture);
-
-//     static void setTexture(GraphicsContext* ctx, Material* material,
-//                            Texture* texture);
-
-//     static void release(Material* material);
-// };
-
-// ============================================================================
 // MipMapGenerator
 // ============================================================================
 
@@ -429,3 +458,10 @@ WGPUTextureView G_createTextureViewAtMipLevel(WGPUTexture texture, u32 base_mip_
 
 int G_componentsPerTexel(WGPUTextureFormat format);
 int G_bytesPerTexel(WGPUTextureFormat format);
+
+struct G_Util {
+
+    static WGPUTextureFormat textureFormatSrgbVariant(WGPUTextureFormat format);
+
+    static bool isStripTopology(WGPUPrimitiveTopology topology);
+};

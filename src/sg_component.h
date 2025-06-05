@@ -485,8 +485,6 @@ enum SG_EnvmapBlendMode : u8 {
     SG_ENVMAP_BLEND_MIX,
 };
 
-#define SG_MATERIAL_MAX_UNIFORMS 32 // @group(1) @binding(0 - 31)
-
 enum SG_MaterialUniformType : u8 {
     SG_MATERIAL_UNIFORM_NONE = 0,
     SG_MATERIAL_UNIFORM_FLOAT,
@@ -574,7 +572,7 @@ struct SG_Material : SG_Component {
     SG_MaterialPipelineState pso; // keep it copy by value
 
     // uniforms
-    SG_MaterialUniform uniforms[SG_MATERIAL_MAX_UNIFORMS];
+    SG_MaterialUniform uniforms[CHUGL_MATERIAL_MAX_BINDINGS];
 
     // fns
     static void removeUniform(SG_Material* mat, int location);
@@ -773,15 +771,6 @@ enum SG_PassType : u8 {
     SG_PassType_Screen,
     SG_PassType_Bloom, // hacking in bloom for now
 };
-
-// union SG_PassParams {
-//     // RenderPass params
-//     struct {
-//         SG_ID scene_id;
-//         SG_ID camera_id;
-//         SG_ID resolve_target_id;
-//     } render;
-// };
 
 struct SG_Pass : public SG_Component {
     SG_ID next_pass_id;

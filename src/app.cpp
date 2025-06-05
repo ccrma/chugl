@@ -282,6 +282,7 @@ struct App {
     SG_ID root_pass_id;
     hashmap*
       frame_uniforms_map; // map from <pipeline_id, camera_id, scene_id> to bindgroup
+    G_Graph rendergraph;
 
     // ============================================================================
     // App API
@@ -296,6 +297,9 @@ struct App {
         app->ckapi = api;
 
         Arena::init(&app->frameArena, MEGABYTE); // 1MB
+
+        // init rendergraph
+        app->rendergraph.init();
 
         // b2 sim defaults
         ASSERT(app->b2_sim_desc.substeps == 4);
@@ -667,7 +671,6 @@ struct App {
         // renderer.RenderScene(&scene, scene.GetMainCamera());
 
         // if window minimized, don't render
-
         bool minimized = glfwGetWindowAttrib(app->window, GLFW_ICONIFIED);
         if (minimized || !GraphicsContext::prepareFrame(&app->gctx)) {
             return;
@@ -715,7 +718,7 @@ struct App {
         R_Pass* root_pass = Component_GetPass(app->root_pass_id);
         R_Pass* pass      = Component_GetPass(root_pass->sg_pass.next_pass_id);
 
-        ASSERT(!(app->window_fb_height == 0 || app->window_fb_width == 0));
+        // slowly integrating graph...
 
         while (pass) {
             switch (pass->sg_pass.pass_type) {
@@ -790,9 +793,7 @@ struct App {
                     // cleanup
                     WGPU_RELEASE_RESOURCE(TextureView, resolve_target_view);
                 } break;
-                case SG_PassType_Screen: {
-                    // TODO support passing texture from chuck
-
+                case SG_PassType_Screen: { // aka OutputPass
                     // by default we render to the swapchain backbuffer
                     bool user_supplied_render_texture       = false;
                     WGPUTextureFormat screen_texture_format = app->gctx.surface_format;
@@ -819,38 +820,66 @@ struct App {
                     }
 
                     R_Pass::updateScreenPassDesc(&app->gctx, pass, screen_texture_view);
-                    WGPURenderPassEncoder render_pass
-                      = wgpuCommandEncoderBeginRenderPass(app->gctx.commandEncoder,
-                                                          &pass->screen_pass_desc);
+
+                    // WGPURenderPassEncoder render_pass
+                    //   = wgpuCommandEncoderBeginRenderPass(app->gctx.commandEncoder,
+                    //                                       &pass->screen_pass_desc);
+
                     R_Material* material
                       = Component_GetMaterial(pass->sg_pass.screen_material_id);
-                    SG_ID shader_id = material ? material->pso.sg_shader_id : 0;
+                    // SG_ID shader_id = material ? material->pso.sg_shader_id : 0;
 
-                    R_ScreenPassPipeline screen_pass_pipeline = R_GetScreenPassPipeline(
-                      &app->gctx, screen_texture_format, shader_id);
+                    // R_ScreenPassPipeline screen_pass_pipeline =
+                    // R_GetScreenPassPipeline(
+                    //   &app->gctx, screen_texture_format, shader_id);
 
-                    wgpuRenderPassEncoderSetPipeline(render_pass,
-                                                     screen_pass_pipeline.gpu_pipeline);
+                    // wgpuRenderPassEncoderSetPipeline(render_pass,
+                    //                                  screen_pass_pipeline.gpu_pipeline);
 
+                    const int screen_pass_binding_location = 0;
                     if (material) {
                         // set bind groups
-                        const int screen_pass_binding_location = 0;
 
-                        WGPUBindGroup bind_group = R_Material::createBindGroup(
-                          material, &app->gctx,
-                          screen_pass_pipeline.frame_group_layout);
+                        // WGPUBindGroup bind_group = R_Material::createBindGroup(
+                        //   material, &app->gctx,
+                        //   screen_pass_pipeline.frame_group_layout);
 
-                        wgpuRenderPassEncoderSetBindGroup(render_pass,
-                                                          screen_pass_binding_location,
-                                                          bind_group, 0, NULL);
+                        // wgpuRenderPassEncoderSetBindGroup(render_pass,
+                        //                                   screen_pass_binding_location,
+                        //                                   bind_group, 0, NULL);
 
-                        WGPU_RELEASE_RESOURCE(BindGroup, bind_group);
+                        // WGPU_RELEASE_RESOURCE(BindGroup, bind_group);
                     }
 
-                    wgpuRenderPassEncoderDraw(render_pass, 3, 1, 0, 0);
+                    // create draw call
+                    G_DrawCallListID dc_list = app->rendergraph.addDrawCallList();
+                    if (material) {
+                        G_DrawCall* d = app->rendergraph.addDraw();
+                        d->sort_key   = G_SortKey::create(false, G_RenderingLayer_World,
+                                                          material->id, 0, 1);
+                        d->vertex_count   = 3;
+                        d->instance_count = 1;
+                        R_Material::createBindGroupEntries(
+                          material, &d->bind_group_list[screen_pass_binding_location],
+                          &app->gctx);
+                        d->pipeline_desc
+                          = { material->pso.sg_shader_id, material->pso.cull_mode,
+                              material->pso.primitive_topology, false };
+                    }
 
-                    wgpuRenderPassEncoderEnd(render_pass);
-                    wgpuRenderPassEncoderRelease(render_pass);
+                    // set G_Pass
+                    G_Pass* g_pass = app->rendergraph.addPass();
+                    g_pass->type   = G_PassType_Render;
+                    g_pass->color_target
+                      = { screen_texture_view, screen_texture_format };
+                    g_pass->color_load_op    = WGPULoadOp_Clear;
+                    g_pass->color_store_op   = WGPUStoreOp_Store;
+                    g_pass->clear_color      = WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f };
+                    g_pass->drawcall_list_id = dc_list;
+
+                    // wgpuRenderPassEncoderDraw(render_pass, 3, 1, 0, 0);
+                    // wgpuRenderPassEncoderEnd(render_pass);
+                    // wgpuRenderPassEncoderRelease(render_pass);
                 } break;
                 case SG_PassType_Compute: {
                     R_Shader* compute_shader
@@ -1099,6 +1128,10 @@ struct App {
 
             pass = Component_GetPass(pass->sg_pass.next_pass_id);
         }
+
+        // TODO: consolidate with GraphicsContext::present/prepareFrame
+        // and with imgui pass
+        app->rendergraph.executeAndReset(app->gctx.device, app->gctx.commandEncoder);
 
         // imgui render pass
         if (do_ui && !resized_this_frame) {

@@ -381,6 +381,7 @@ bool GraphicsContext::init(GraphicsContext* context, GLFWwindow* window)
         wgpuSurfaceGetCapabilities(context->surface, adapter, &surface_capabilities);
         ASSERT(surface_capabilities.formatCount > 0);
         WGPUTextureFormat preferred_format = surface_capabilities.formats[0];
+        context->surface_preferred_format  = preferred_format;
         switch (preferred_format) {
             case WGPUTextureFormat_BGRA8Unorm: {
                 context->surface_format = WGPUTextureFormat_BGRA8UnormSrgb;
@@ -511,38 +512,38 @@ void GraphicsContext::release(GraphicsContext* ctx)
     *ctx = {};
 }
 
-void VertexBufferLayout::init(VertexBufferLayout* layout, u8 attribute_count,
-                              u32* attribute_strides)
-{
-    WGPUVertexFormat format = WGPUVertexFormat_Undefined;
+// void VertexBufferLayout::init(VertexBufferLayout* layout, u8 attribute_count,
+//                               u32* attribute_strides)
+// {
+//     WGPUVertexFormat format = WGPUVertexFormat_Undefined;
 
-    for (u8 i = 0; i < attribute_count; i++) {
-        // determine format
-        switch (attribute_strides[i]) {
-            case 0: return; // assume first 0 means end of list
-            case 1: format = WGPUVertexFormat_Float32; break;
-            case 2: format = WGPUVertexFormat_Float32x2; break;
-            case 3: format = WGPUVertexFormat_Float32x3; break;
-            case 4: format = WGPUVertexFormat_Float32x4; break;
-            default: format = WGPUVertexFormat_Undefined; break;
-        }
+//     for (u8 i = 0; i < attribute_count; i++) {
+//         // determine format
+//         switch (attribute_strides[i]) {
+//             case 0: return; // assume first 0 means end of list
+//             case 1: format = WGPUVertexFormat_Float32; break;
+//             case 2: format = WGPUVertexFormat_Float32x2; break;
+//             case 3: format = WGPUVertexFormat_Float32x3; break;
+//             case 4: format = WGPUVertexFormat_Float32x4; break;
+//             default: format = WGPUVertexFormat_Undefined; break;
+//         }
 
-        layout->attribute_count = i + 1;
+//         layout->attribute_count = i + 1;
 
-        layout->attributes[i] = {
-            format, // format
-            0,      // offset
-            i,      // shader location
-        };
+//         layout->attributes[i] = {
+//             format, // format
+//             0,      // offset
+//             i,      // shader location
+//         };
 
-        layout->layouts[i] = {
-            sizeof(f32) * attribute_strides[i], // arrayStride
-            WGPUVertexStepMode_Vertex,          // stepMode
-            1,                                  // attribute count
-            layout->attributes + i,             // vertexAttribute
-        };
-    }
-}
+//         layout->layouts[i] = {
+//             sizeof(f32) * attribute_strides[i], // arrayStride
+//             WGPUVertexStepMode_Vertex,          // stepMode
+//             1,                                  // attribute count
+//             layout->attributes + i,             // vertexAttribute
+//         };
+//     }
+// }
 
 static u64 wgpuVertexFormatSize(WGPUVertexFormat format)
 {
@@ -600,7 +601,7 @@ static u64 wgpuVertexFormatSize(WGPUVertexFormat format)
 void VertexBufferLayout::init(VertexBufferLayout* layout, u8 format_count,
                               WGPUVertexFormat* formats)
 {
-    layout->attribute_count = 0;
+    layout->attribute_count = format_count;
     for (u32 i = 0; i < format_count; i++) {
         if (formats[i] == 0) {
             layout->attribute_count = i;
@@ -1749,4 +1750,20 @@ bool GPU_Buffer::resizeNoCopy(GraphicsContext* gctx, GPU_Buffer* gpu_buffer,
     gpu_buffer->usage    = desc.usage;
     gpu_buffer->size     = new_size;
     return true;
+}
+
+WGPUTextureFormat G_Util::textureFormatSrgbVariant(WGPUTextureFormat format)
+{
+    if (format == WGPUTextureFormat_BGRA8Unorm) return WGPUTextureFormat_BGRA8UnormSrgb;
+    if (format == WGPUTextureFormat_RGBA8Unorm) return WGPUTextureFormat_RGBA8UnormSrgb;
+
+    ASSERT(format == WGPUTextureFormat_BGRA8UnormSrgb
+           || format == WGPUTextureFormat_RGBA8UnormSrgb);
+    return format;
+}
+
+bool G_Util::isStripTopology(WGPUPrimitiveTopology topology)
+{
+    return (topology == WGPUPrimitiveTopology_LineStrip
+            || topology == WGPUPrimitiveTopology_TriangleStrip);
 }

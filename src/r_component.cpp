@@ -739,17 +739,75 @@ void MaterialTextureView::init(MaterialTextureView* view)
     view->scale[1] = 1.0f;
 }
 
+void R_Material::createBindGroupEntries(R_Material* mat, Arena* bind_group,
+                                        GraphicsContext* gctx)
+{
+    ASSERT(bind_group->curr == 0);
+
+    // create bindgroups for all bindings
+    ASSERT(CHUGL_MATERIAL_MAX_BINDINGS == ARRAY_LENGTH(mat->bindings));
+    for (int i = 0; i < CHUGL_MATERIAL_MAX_BINDINGS; ++i) {
+        R_Binding* binding = &mat->bindings[i];
+        if (binding->type == R_BIND_EMPTY) continue;
+
+        WGPUBindGroupEntry* bind_group_entry
+          = ARENA_PUSH_ZERO_TYPE(bind_group, WGPUBindGroupEntry);
+        bind_group_entry->binding = i; // binding location
+
+        switch (binding->type) {
+            case R_BIND_UNIFORM: {
+                bind_group_entry->offset
+                  = MAX(gctx->limits.minUniformBufferOffsetAlignment,
+                        sizeof(SG_MaterialUniformData))
+                    * i;
+                bind_group_entry->size   = sizeof(SG_MaterialUniformData);
+                bind_group_entry->buffer = mat->uniform_buffer;
+            } break;
+            case R_BIND_STORAGE: {
+                bind_group_entry->offset = 0;
+                bind_group_entry->size   = binding->size;
+                bind_group_entry->buffer = binding->as.storage_buffer.buf;
+            } break;
+            case R_BIND_SAMPLER: {
+                bind_group_entry->sampler
+                  = Graphics_GetSampler(gctx, binding->as.samplerConfig);
+            } break;
+            case R_BIND_TEXTURE_ID: {
+                R_Texture* rTexture = Component_GetTexture(binding->as.textureID);
+                bind_group_entry->textureView = rTexture->gpu_texture_view;
+                ASSERT(bind_group_entry->textureView);
+                ASSERT(binding->size == sizeof(SG_ID));
+                binding->generation = rTexture->generation;
+            } break;
+            case R_BIND_STORAGE_EXTERNAL: {
+                bind_group_entry->offset = 0;
+                bind_group_entry->size   = binding->size;
+                bind_group_entry->buffer = binding->as.storage_external->buf;
+            } break;
+            case R_BIND_TEXTURE_VIEW: {
+                ASSERT(binding->as.textureView);
+                bind_group_entry->textureView = binding->as.textureView;
+            } break;
+            case R_BIND_STORAGE_TEXTURE_ID: {
+                ASSERT(binding->as.textureView);
+                bind_group_entry->textureView = binding->as.textureView;
+            } break;
+            default: ASSERT(false);
+        }
+    }
+}
+
 WGPUBindGroup R_Material::createBindGroup(R_Material* mat, GraphicsContext* gctx,
                                           WGPUBindGroupLayout layout)
 {
     // ==optimize== cache bind group layout
 
     // create bindgroups for all bindings
-    WGPUBindGroupEntry new_bind_group_entries[SG_MATERIAL_MAX_UNIFORMS] = {};
-    int bind_group_index                                                = 0;
-    ASSERT(SG_MATERIAL_MAX_UNIFORMS == ARRAY_LENGTH(mat->bindings));
+    WGPUBindGroupEntry new_bind_group_entries[CHUGL_MATERIAL_MAX_BINDINGS] = {};
+    int bind_group_index                                                   = 0;
+    ASSERT(CHUGL_MATERIAL_MAX_BINDINGS == ARRAY_LENGTH(mat->bindings));
 
-    for (u32 i = 0; i < SG_MATERIAL_MAX_UNIFORMS; ++i) {
+    for (u32 i = 0; i < CHUGL_MATERIAL_MAX_BINDINGS; ++i) {
         R_Binding* binding = &mat->bindings[i];
         if (binding->type == R_BIND_EMPTY) continue;
 
@@ -766,7 +824,7 @@ WGPUBindGroup R_Material::createBindGroup(R_Material* mat, GraphicsContext* gctx
                         sizeof(SG_MaterialUniformData))
                     * i;
                 bind_group_entry->size   = sizeof(SG_MaterialUniformData);
-                bind_group_entry->buffer = mat->uniform_buffer.buf;
+                bind_group_entry->buffer = mat->uniform_buffer;
             } break;
             case R_BIND_STORAGE: {
                 bind_group_entry->offset = 0;
@@ -885,9 +943,9 @@ void R_Material::setBinding(GraphicsContext* gctx, R_Material* mat, u32 location
             size_t offset = MAX(gctx->limits.minUniformBufferOffsetAlignment,
                                 sizeof(SG_MaterialUniformData))
                             * location;
-            // write unfiform data to corresponding GPU location
-            GPU_Buffer::write(gctx, &mat->uniform_buffer, WGPUBufferUsage_Uniform,
-                              offset, data, bytes);
+            // ==optimize== set uniform buffer stale flag, flush the whole buffer at
+            // once before traversing the rendergraph
+            wgpuQueueWriteBuffer(gctx->queue, mat->uniform_buffer, offset, data, bytes);
         } break;
         case R_BIND_TEXTURE_ID: {
             ASSERT(bytes == sizeof(SG_ID));
@@ -1971,11 +2029,14 @@ R_Material* Component_CreateMaterial(GraphicsContext* gctx,
         mat->id   = cmd->sg_id;
         mat->type = SG_COMPONENT_MATERIAL;
 
+        const int UNIFORM_OFFSET = MAX(gctx->limits.minUniformBufferOffsetAlignment,
+                                       sizeof(SG_MaterialUniformData));
+
         // init uniform buffer
-        GPU_Buffer::init(gctx, &mat->uniform_buffer, WGPUBufferUsage_Uniform,
-                         MAX(sizeof(SG_MaterialUniformData),
-                             gctx->limits.minUniformBufferOffsetAlignment)
-                           * ARRAY_LENGTH(mat->bindings));
+        WGPUBufferDescriptor desc = {};
+        desc.size                 = UNIFORM_OFFSET * ARRAY_LENGTH(mat->bindings);
+        desc.usage                = WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst;
+        mat->uniform_buffer       = wgpuDeviceCreateBuffer(gctx->device, &desc);
 
         mat->pso = cmd->pso;
     }

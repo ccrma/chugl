@@ -21,6 +21,15 @@ hashmap_new(size_t elsize, size_t cap, uint64_t seed0, uint64_t seed1,
             int (*compare)(const void* a, const void* b, void* udata),
             void (*elfree)(void* item), void* udata);
 
+// simplified version of hashmap_new
+struct hashmap* hashmap_new_simple(size_t elsize,
+                            uint64_t (*hash)(const void* item, uint64_t seed0,
+                                             uint64_t seed1),
+                            int (*compare)(
+                              const void* a, const void* b, void* udata
+                            ));
+
+
 struct hashmap* hashmap_new_with_allocator(
   void* (*malloc)(size_t), void* (*realloc)(void*, size_t), void (*free)(void*),
   size_t elsize, size_t cap, uint64_t seed0, uint64_t seed1,

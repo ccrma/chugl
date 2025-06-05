@@ -27,6 +27,7 @@
 -----------------------------------------------------------------------------*/
 #pragma once
 
+#include "chugl_defines.h"
 #include "graphics.h"
 #include "sg_command.h"
 #include "sg_component.h"
@@ -415,6 +416,7 @@ struct R_Binding {
     } as;
 };
 
+// currently unused
 struct MaterialTextureView {
     // material texture view (not same as wgpu texture view)
     i32 texcoord; // 1 for TEXCOORD_1, etc.
@@ -434,14 +436,14 @@ struct R_Material : public R_Component {
     // b32 bind_group_layout_stale; // set if modified by chuck user, need to rebuild
     // bind
     //                              // group layout
-
     // R_ID pipelineID; // renderpipeline this material belongs to
 
     // bindgroup state (uniforms, storage buffers, textures, samplers)
-    R_Binding bindings[SG_MATERIAL_MAX_UNIFORMS];
-    GPU_Buffer uniform_buffer; // maps 1:1 with uniform location, initializesd in
-                               // Component_MaterialCreate
-    // WGPUBindGroup bind_group;
+    R_Binding bindings[CHUGL_MATERIAL_MAX_BINDINGS];
+    // ==optimize== use R_UniformBuffer, add stale flag and batch uniform upload
+    WGPUBuffer uniform_buffer;
+    // GPU_Buffer uniform_buffer; // maps 1:1 with uniform location, initializesd in
+    //                            // Component_MaterialCreate
 
     // after updating to webgpu v22.1.0.5, bind_group_layout is now part of bind_group,
     // so we cache here in order to check if we need to rebuild the bindgroup (e.g. when
@@ -449,8 +451,15 @@ struct R_Material : public R_Component {
     // WGPUBindGroupLayout bind_group_layout; // render pipeline layout at @group(1)
 
     // bind group fns --------------------------------------------
+
+    // pushes bind group entries to bind_group arena
+    static void createBindGroupEntries(R_Material* mat, Arena* bind_group,
+                                       GraphicsContext* gctx);
+
+    // TODO deprecate
     static WGPUBindGroup createBindGroup(R_Material* mat, GraphicsContext* gctx,
                                          WGPUBindGroupLayout layout);
+
     static void setBinding(GraphicsContext* gctx, R_Material* mat, u32 location,
                            R_BindType type, void* data, size_t bytes);
     static void setUniformBinding(GraphicsContext* gctx, R_Material* mat, u32 location,
@@ -1042,3 +1051,642 @@ Enforcing pointer safety:
     boundaries (within is ok)
     - also enables a more controllable GC system
 */
+
+// =============================================================================
+// RenderGraph, DrawCall, Cache
+// =============================================================================
+
+struct G_DrawCallPipelineDesc {
+    SG_ID sg_shader_id;
+    WGPUCullMode cull_mode;
+    WGPUPrimitiveTopology primitive_topology;
+    bool is_transparent; // TODO support other blend modes (subtrative, additive etc)
+};
+
+struct G_CachePipelineKey {
+    G_DrawCallPipelineDesc drawcall_pipeline_desc;
+    WGPUTextureFormat color_target_format;
+    WGPUTextureFormat depth_target_format;
+};
+
+struct G_CachePipelineVal {
+    WGPURenderPipeline pipeline;
+    WGPUBindGroupLayout
+      bind_group_layout_list[CHUGL_MAX_BINDGROUPS]; // TODO free on delete
+
+    // lazy evaluate bindGroups because getting bindGroupLayout of
+    // a group that doesn't exist throughs a WGPU validation error
+    WGPUBindGroupLayout bindGroupLayout(int index)
+    {
+        if (bind_group_layout_list[index] == NULL) {
+            log_trace("calling wgpuRenderPipelineGetBindGroupLayout(%d)", index);
+            bind_group_layout_list[index]
+              = wgpuRenderPipelineGetBindGroupLayout(pipeline, index);
+        }
+        return bind_group_layout_list[index];
+    }
+};
+
+struct G_CachePipeline {
+    G_CachePipelineKey key;
+    G_CachePipelineVal val;
+
+    static u64 hash(const void* item, uint64_t seed0, uint64_t seed1)
+    {
+        G_CachePipeline* entry = (G_CachePipeline*)item;
+        ASSERT(sizeof(entry->key) == sizeof(G_CachePipelineKey));
+        return hashmap_xxhash3(&entry->key, sizeof(entry->key), seed0, seed1);
+    }
+
+    static int compare(const void* a, const void* b, void* udata)
+    {
+        G_CachePipeline* ga = (G_CachePipeline*)a;
+        G_CachePipeline* gb = (G_CachePipeline*)b;
+        return memcmp(&ga->key, &gb->key, sizeof(ga->key));
+    }
+};
+
+struct G_CacheBindGroupKey {
+    WGPUBindGroupLayout layout;
+    int bg_entry_count;
+    WGPUBindGroupEntry
+      bg_entry_list[CHUGL_MATERIAL_MAX_BINDINGS]; // TODO get this size down
+};
+
+struct G_CacheBindGroupVal {
+    WGPUBindGroup bg;
+    int frames_till_expired = CHUGL_CACHE_BINDGROUP_FRAMES_TILL_EXPIRED;
+};
+
+struct G_CacheBindGroup {
+    G_CacheBindGroupKey key;
+    G_CacheBindGroupVal val;
+
+    static u64 hash(const void* item, uint64_t seed0, uint64_t seed1)
+    {
+        // ==optimize== cache the hash
+        G_CacheBindGroupKey* key = (G_CacheBindGroupKey*)item;
+        const size_t base_len    = offsetof(G_CacheBindGroupKey, bg_entry_list);
+
+        return hashmap_xxhash3(
+          key, base_len + key->bg_entry_count * sizeof(key->bg_entry_list[0]), seed0,
+          seed1);
+    }
+
+    static int compare(const void* a, const void* b, void* udata)
+    {
+        G_CacheBindGroupKey* ga = (G_CacheBindGroupKey*)a;
+        G_CacheBindGroupKey* gb = (G_CacheBindGroupKey*)b;
+        return memcmp(ga, gb, sizeof(*ga));
+    }
+
+    static void free(void* item)
+    {
+        G_CacheBindGroup* bg = (G_CacheBindGroup*)item;
+        ASSERT(bg->val.frames_till_expired <= 0);
+        WGPU_RELEASE_RESOURCE(BindGroup, bg->val.bg);
+        // TODO: do we need to reference count the sampler/buffer/textureView??
+    }
+};
+
+// eventually this will become more like WGPUTextureDesc
+struct G_CacheRenderTargetDesc {
+    WGPUTextureFormat view_format;
+    u32 width;
+    u32 height;
+};
+
+struct G_Cache {
+    hashmap* pipeline_map;
+    hashmap* bindgroup_map;
+
+    Arena deletion_queue;
+
+    void init()
+    {
+        pipeline_map = hashmap_new_simple(
+          sizeof(G_CachePipeline), G_CachePipeline::hash, G_CachePipeline::compare);
+
+        bindgroup_map
+          = hashmap_new(sizeof(G_CacheBindGroup), 128, 0, 0, G_CacheBindGroup::hash,
+                        G_CacheBindGroup::compare, G_CacheBindGroup::free, NULL);
+    }
+
+    void free()
+    {
+        // not implemented because there's only 1 G_Cache (in App)
+        // and we let OS do clean up when chugl exits
+    }
+
+    G_CachePipelineVal* renderPipeline(G_CachePipelineKey key, WGPUDevice device)
+    {
+        G_CachePipeline* result = (G_CachePipeline*)hashmap_get(pipeline_map, &key);
+
+        if (result == NULL) {
+            log_trace("Cache miss [Pipeline], creating new from Shader %d",
+                      key.drawcall_pipeline_desc.sg_shader_id);
+
+            ///////////////////////////////////
+            // create GPUPipelineDesc from R_PipelineDesc
+
+            // TODO: maybe hash the shader module / shader types to remove dependency on
+            // scene graph
+            R_Shader* shader
+              = Component_GetShader(key.drawcall_pipeline_desc.sg_shader_id);
+            ASSERT(shader);
+
+            bool is_render_pipeline = (shader->vertex_shader_module != NULL);
+            // bool is_compute_pipeline = (shader->compute_shader_module != NULL);
+            ASSERT(is_render_pipeline);
+
+            // build pipeline desc
+            WGPURenderPipelineDescriptor pipeline_desc = {};
+            pipeline_desc.layout                       = NULL; // Using layout: auto
+            pipeline_desc.primitive.cullMode = key.drawcall_pipeline_desc.cull_mode;
+            pipeline_desc.primitive.topology
+              = key.drawcall_pipeline_desc.primitive_topology;
+            pipeline_desc.primitive.stripIndexFormat
+              = G_Util::isStripTopology(key.drawcall_pipeline_desc.primitive_topology) ?
+                  WGPUIndexFormat_Uint32 :
+                  WGPUIndexFormat_Undefined;
+
+            VertexBufferLayout vertex_layout = {};
+            VertexBufferLayout::init(&vertex_layout,
+                                     ARRAY_LENGTH(shader->vertex_layout),
+                                     shader->vertex_layout);
+            pipeline_desc.vertex.bufferCount = vertex_layout.attribute_count;
+            pipeline_desc.vertex.buffers     = vertex_layout.layouts;
+            pipeline_desc.vertex.module      = shader->vertex_shader_module;
+            pipeline_desc.vertex.entryPoint  = VS_ENTRY_POINT;
+
+            // TODO what happens if fragment shader is not defined?
+            WGPUBlendState blend_state = G_createBlendState(
+              key.drawcall_pipeline_desc.is_transparent); // TODO transparency
+            WGPUColorTargetState colorTargetState = {};
+            colorTargetState.format               = key.color_target_format;
+            colorTargetState.blend                = &blend_state;
+            colorTargetState.writeMask            = WGPUColorWriteMask_All;
+            WGPUFragmentState fragmentState       = {};
+            fragmentState.module                  = shader->fragment_shader_module;
+            fragmentState.entryPoint              = FS_ENTRY_POINT;
+            fragmentState.targetCount             = 1; // fix 1 color target for now
+            fragmentState.targets                 = &colorTargetState;
+
+            pipeline_desc.fragment = &fragmentState;
+
+            WGPUDepthStencilState depth_stencil_state
+              = G_createDepthStencilState(key.depth_target_format, true);
+            pipeline_desc.depthStencil
+              = key.depth_target_format ? &depth_stencil_state : NULL;
+
+            pipeline_desc.multisample = G_createMultisampleState(1);
+
+            char pipeline_label[64] = {};
+            snprintf(pipeline_label, sizeof(pipeline_label),
+                     "RenderPipeline: Shader[%d] %s", shader->id, shader->name);
+            pipeline_desc.label = pipeline_label;
+
+            WGPURenderPipeline pipeline
+              = wgpuDeviceCreateRenderPipeline(device, &pipeline_desc);
+
+            // add to cache
+            G_CachePipeline pipeline_item = {};
+            pipeline_item.key             = key;
+            pipeline_item.val.pipeline    = pipeline;
+
+            const void* replaced = hashmap_set(pipeline_map, &pipeline_item);
+            ASSERT(!replaced);
+
+            result = (G_CachePipeline*)hashmap_get(pipeline_map, &pipeline_item);
+            ASSERT(result);
+        }
+
+        return &result->val;
+    }
+
+    WGPUBindGroup bindGroup(WGPUDevice device, WGPUBindGroupEntry* bg_entry_list,
+                            int bg_entry_count, WGPUBindGroupLayout layout)
+    {
+        G_CacheBindGroup item = {};
+        ASSERT(bg_entry_count <= ARRAY_LENGTH(item.key.bg_entry_list));
+        item.key.layout         = layout;
+        item.key.bg_entry_count = bg_entry_count;
+        memcpy(item.key.bg_entry_list, bg_entry_list,
+               sizeof(*bg_entry_list)
+                 * MIN(bg_entry_count, ARRAY_LENGTH(item.key.bg_entry_list)));
+
+        G_CacheBindGroup* result
+          = (G_CacheBindGroup*)hashmap_get(bindgroup_map, &item.key);
+
+        if (result == NULL) {
+            log_trace("Cache miss [BindGroup], creating new");
+
+            WGPUBindGroupDescriptor desc = {};
+            desc.layout                  = layout;
+            desc.entryCount              = bg_entry_count;
+            desc.entries                 = bg_entry_list;
+
+            item.val.bg                  = wgpuDeviceCreateBindGroup(device, &desc);
+            item.val.frames_till_expired = CHUGL_CACHE_BINDGROUP_FRAMES_TILL_EXPIRED;
+
+            const void* replaced = hashmap_set(bindgroup_map, &item);
+            ASSERT(!replaced);
+
+            return item.val.bg;
+        }
+
+        // reset lifetime counter
+        result->val.frames_till_expired = CHUGL_CACHE_BINDGROUP_FRAMES_TILL_EXPIRED;
+        return result->val.bg;
+    }
+
+    void update()
+    {
+        ASSERT(deletion_queue.curr == 0);
+
+        // TODO: loop over all pipelines, and if associated R_Shader is destroyed,
+        // free the pipeline, WGPU_RELEASE the cached bindgroup layouts
+
+        // loop over bindgroups. delete expired.
+        size_t bindgroup_map_idx_DONT_USE = 0;
+        G_CacheBindGroup* cache_bg        = NULL;
+        while (
+          hashmap_iter(bindgroup_map, &bindgroup_map_idx_DONT_USE, (void**)&cache_bg)) {
+            if (--cache_bg->val.frames_till_expired <= 0) {
+                *ARENA_PUSH_TYPE(&deletion_queue, G_CacheBindGroup) = *cache_bg;
+            }
+        }
+        int num_bg_to_delete = ARENA_LENGTH(&deletion_queue, G_CacheBindGroup);
+        for (int i = 0; i < num_bg_to_delete; i++) {
+            G_CacheBindGroup* bg_del
+              = ARENA_GET_TYPE(&deletion_queue, G_CacheBindGroup, i);
+            hashmap_delete(bindgroup_map, bg_del);
+        }
+        Arena::clearZero(&deletion_queue);
+    };
+};
+
+enum G_RenderingLayer : u8 {
+    G_RenderingLayer_World = 0x00,
+    G_RenderingLayer_Background
+    = 0x10, // draw background first bc world may have translucent objects
+    G_RenderingLayer_Overlay
+    = 0x20, // actually, would this just be a separate rendergraph node?
+    // maybe don't need as many layers because the rendergraph acts as a layering
+    // system...
+};
+
+/* sort key bit flags
+opaque:         0LLLLLLL MMMMMMMM MMMMMMMM MMMMMMMM MMMMMMMM DDDDDDDD DDDDDDDD
+DDDDDDDD translucent: :  1LLLLLLL DDDDDDDD DDDDDDDD DDDDDDDD MMMMMMMM MMMMMMMM
+MMMMMMMM MMMMMMMM
+*/
+struct G_SortKey {
+    const static u64 TRANLUCENT_MASK = (1ULL << 63);
+    const static u8 LAYER_MASK       = 0b01111111;
+    const static u32 MATERIAL_MASK   = 0xFFFFFFFF;
+    const static u32 DEPTH_MASK      = 0x00FFFFFF;
+    const static u32 MAX_DEPTH       = 1000; // should be far plane of camera
+
+    static u64 create(bool translucent, u8 layer, R_ID material_id, float depth,
+                      float camera_far)
+    {
+        // validate
+        ASSERT(layer <= LAYER_MASK);
+
+        u64 sort_key = 0;
+        sort_key |= (u64)(layer & LAYER_MASK) << 56ULL;
+
+        // calculate depth
+        // Input depth here is: 0 is the closest to the camera, positive values are
+        // further away. Negative values (behind camera) are clamped to 0.
+        // normalized_depth: 0.0 is closest to camera, 1.0 is farthest from camera.
+        // These values are inverted if transparent because we want to render in
+        // reverse order (back to front)
+        float normalized_depth = CLAMP(depth, 0, camera_far) / camera_far;
+        if (translucent) normalized_depth = 1.0 - normalized_depth;
+        u32 depth_key = (u32)(normalized_depth * DEPTH_MASK) & DEPTH_MASK;
+
+        if (translucent) {
+            sort_key |= TRANLUCENT_MASK;
+            sort_key |= ((u64)depth_key << 32ULL);
+            sort_key |= material_id;
+        } else {
+            sort_key |= depth_key;
+            sort_key |= (material_id << 24);
+        }
+
+        return sort_key;
+    }
+};
+
+struct G_DrawCall {
+    u64 sort_key;
+    // name : string     = "";
+
+    u32 vertex_count;
+    WGPUBuffer vertex_buffer_list[R_GEOMETRY_MAX_VERTEX_ATTRIBUTES];
+    u64 vertex_buffer_offset_list[R_GEOMETRY_MAX_VERTEX_ATTRIBUTES];
+    u64 vertex_buffer_size_list[R_GEOMETRY_MAX_VERTEX_ATTRIBUTES];
+
+    u32 index_count;
+    WGPUBuffer index_buffer;
+    u64 index_buffer_offset;
+    u64 index_buffer_size;
+
+    u32 instance_count;
+
+    Arena bind_group_list[4]; // each is an array of WGPUBindGroupEntry
+    // no dynamic offsets for now (until we make C port of webgpu-utils shader
+    // parser) dynamic_offsets = new Array<Array<number>>(4);
+
+    G_DrawCallPipelineDesc pipeline_desc;
+};
+
+struct G_DrawCallList {
+    int drawcall_start_idx;
+    int drawcall_count;
+    bool sorted;
+
+    void execute(WGPUDevice device,
+                 WGPURenderPassEncoder pass_encoder, // TODO this comes from rendergraph
+                 WGPUTextureFormat color_target_format,
+                 WGPUTextureFormat depth_target_format, G_Cache* cache,
+                 Arena* drawcall_pool)
+    {
+        G_DrawCall* start
+          = ARENA_GET_TYPE(drawcall_pool, G_DrawCall, drawcall_start_idx);
+
+        if (sorted) {
+            qsort(start, drawcall_count, sizeof(G_DrawCall),
+                  [](const void* a, const void* b) -> int {
+                      u64 sort_key_a = ((G_DrawCall*)a)->sort_key;
+                      u64 sort_key_b = ((G_DrawCall*)b)->sort_key;
+
+                      return sort_key_a - sort_key_b; // sorts in ascending order
+                  });
+            sorted = true;
+        }
+
+        // ==optimize== only need to update pipeline/bindgroup if they changed
+        // so somehow track curr_pipeline, curr_bindgroup etc
+        for (int i = 0; i < drawcall_count; i++) {
+            G_DrawCall* d
+              = ARENA_GET_TYPE(drawcall_pool, G_DrawCall, drawcall_start_idx + i);
+
+            G_CachePipelineVal* cached_pipeline = cache->renderPipeline(
+              {
+                d->pipeline_desc,
+                color_target_format,
+                depth_target_format,
+              },
+              device);
+
+            // set pipeline
+            wgpuRenderPassEncoderSetPipeline(pass_encoder, cached_pipeline->pipeline);
+
+            // set bindgroups
+            int max_bg = ARRAY_LENGTH(d->bind_group_list);
+            for (int bg_idx = 0; bg_idx < max_bg; bg_idx++) {
+                Arena* bg_entry_list = &d->bind_group_list[bg_idx];
+                int num_bindings     = ARENA_LENGTH(bg_entry_list, WGPUBindGroupEntry);
+                if (num_bindings > 0) {
+                    WGPUBindGroup bg = cache->bindGroup(
+                      device, (WGPUBindGroupEntry*)bg_entry_list->base, num_bindings,
+                      cached_pipeline->bindGroupLayout(bg_idx));
+                    ASSERT(bg);
+                    wgpuRenderPassEncoderSetBindGroup(pass_encoder, bg_idx, bg, 0,
+                                                      NULL);
+                }
+            }
+
+            // set vertex buffer
+            for (int vertex_buffer_idx = 0;
+                 vertex_buffer_idx < ARRAY_LENGTH(d->vertex_buffer_list);
+                 vertex_buffer_idx++) {
+                if (d->vertex_buffer_list[vertex_buffer_idx]) {
+                    wgpuRenderPassEncoderSetVertexBuffer(
+                      pass_encoder, vertex_buffer_idx,
+                      d->vertex_buffer_list[vertex_buffer_idx],
+                      d->vertex_buffer_offset_list[vertex_buffer_idx],
+                      d->vertex_buffer_size_list[vertex_buffer_idx]);
+                }
+            }
+
+            // set index buffer
+            bool draw_indexed = (d->index_buffer != NULL);
+            if (draw_indexed) {
+                wgpuRenderPassEncoderSetIndexBuffer(
+                  pass_encoder, d->index_buffer, WGPUIndexFormat_Uint32,
+                  d->index_buffer_offset, d->index_buffer_size);
+                wgpuRenderPassEncoderDrawIndexed(pass_encoder, d->index_count,
+                                                 d->instance_count, 0, 0, 0);
+            } else {
+                wgpuRenderPassEncoderDraw(pass_encoder, d->vertex_count,
+                                          d->instance_count, 0, 0);
+            }
+        }
+    }
+};
+
+enum G_PassType : u8 {
+    G_PassType_None = 0,
+    G_PassType_Render,
+    G_PassType_Compute,
+    G_PassType_Count,
+};
+
+struct G_RenderTarget {
+    WGPUTextureView texture_view;
+    WGPUTextureFormat view_format;
+
+    // // aka surface texture
+    // G_RenderTarget canvas(bool srgb, GraphicsContext* gctx)
+    // {
+    //     G_RenderTarget rt = {};
+    //     rt.type           = G_RenderTargetType_Canvas,
+    //     rt.view_format
+    //       = srgb ?
+    //       G_Util::textureFormatSrgbVariant(gctx->surface_preferred_format) :
+    //                gctx->surface_preferred_format;
+    //     return rt;
+    // }
+};
+
+typedef int G_DrawCallListID;
+
+struct G_Pass {
+    G_PassType type;
+
+    G_RenderTarget color_target;
+    WGPUColor clear_color;
+    WGPULoadOp color_load_op;
+    WGPUStoreOp color_store_op;
+
+    G_RenderTarget depth_target;
+
+    float viewport_x;
+    float viewport_y;
+    float viewport_w;
+    float viewport_h;
+    bool viewport_custom;
+
+    G_DrawCallListID drawcall_list_id;
+
+    // set viewport in pixels
+    void viewport(float x, float y, float w, float h, WGPULimits* limits)
+    {
+        // TODO
+        ASSERT(false);
+    }
+};
+
+struct G_Graph {
+    G_Cache cache;
+
+    // drawcall pool
+    Arena drawcall_pool;
+
+    G_DrawCallList drawcall_list_pool[CHUGL_RENDERGRAPH_MAX_PASSES];
+    int drawcall_list_count;
+
+    // pass pool
+    G_Pass pass_list[CHUGL_RENDERGRAPH_MAX_PASSES];
+    int pass_count;
+
+    void init()
+    {
+        cache.init();
+    }
+
+    G_DrawCall* addDraw() // adds a draw to the last drawcall list
+    {
+        ASSERT(drawcall_list_count > 0);
+
+        ++drawcall_list_pool[drawcall_list_count - 1].drawcall_count;
+        G_DrawCall* draw = ARENA_PUSH_ZERO_TYPE(&drawcall_pool, G_DrawCall);
+
+        return draw;
+    }
+
+    G_DrawCallListID addDrawCallList()
+    {
+        // TODO drawcall bindgroup arenas are leaking
+        // either clear the bindgroup arenas in cache update,
+        // or (like renderpass) keep contiguous bindgroup pool
+        // and add bindgroups to drawcall from pool, then reset bg pool
+        drawcall_list_pool[drawcall_list_count].drawcall_start_idx
+          = ARENA_LENGTH(&drawcall_pool, G_DrawCall);
+        return drawcall_list_count++;
+    }
+
+    G_Pass* addPass()
+    {
+        if (pass_count == CHUGL_RENDERGRAPH_MAX_PASSES) {
+            log_error("Reached max pass count %d", pass_count);
+            return NULL;
+        }
+        return &this->pass_list[pass_count++];
+    }
+
+    void executeAndReset(WGPUDevice device, WGPUCommandEncoder command_encoder)
+    {
+        // TODO add debug labels
+        // TODO add profiling/timing
+        for (int i = 0; i < pass_count; i++) {
+            G_Pass* pass = &this->pass_list[i];
+            switch (pass->type) {
+                case G_PassType_None: break;
+                case G_PassType_Render: {
+                    // create pass desc
+                    WGPURenderPassDescriptor render_pass_desc = {};
+                    WGPURenderPassColorAttachment ca          = {};
+                    WGPURenderPassDepthStencilAttachment ds   = {};
+
+                    bool has_color_target = (pass->color_target.texture_view != NULL);
+                    if (has_color_target) {
+                        ca.view       = pass->color_target.texture_view;
+                        ca.loadOp     = pass->color_load_op;
+                        ca.storeOp    = pass->color_store_op;
+                        ca.clearValue = pass->clear_color;
+                        ca.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
+
+                        render_pass_desc.colorAttachmentCount = 1;
+                        render_pass_desc.colorAttachments     = &ca;
+                    }
+
+                    bool has_depth_target = (pass->depth_target.texture_view != NULL);
+                    if (has_depth_target) {
+                        ds.view = pass->depth_target.texture_view;
+
+                        // defaults for render pass depth/stencil attachment
+                        // The initial value of the depth buffer, meaning "far"
+                        ds.depthClearValue = 1.0f;
+                        ds.depthLoadOp     = WGPULoadOp_Clear;
+                        ds.depthStoreOp    = WGPUStoreOp_Store;
+                        // we could turn off writing to the depth buffer globally
+                        // here
+                        ds.depthReadOnly = false;
+
+                        // Stencil setup, mandatory but unused
+                        ds.stencilClearValue = 0;
+                        ds.stencilLoadOp     = WGPULoadOp_Clear;
+                        ds.stencilStoreOp    = WGPUStoreOp_Store;
+                        ds.stencilReadOnly   = false;
+
+                        render_pass_desc.depthStencilAttachment = &ds;
+                    }
+
+                    // render_pass_desc.label = pass->sg_pass.name; // TODO
+
+                    WGPURenderPassEncoder render_pass_encoder
+                      = wgpuCommandEncoderBeginRenderPass(command_encoder,
+                                                          &render_pass_desc);
+
+                    if (pass->viewport_custom) {
+                        wgpuRenderPassEncoderSetViewport(
+                          render_pass_encoder, pass->viewport_x, pass->viewport_y,
+                          pass->viewport_w, pass->viewport_h, 0.0, 1.0);
+                    }
+
+                    ASSERT(pass->drawcall_list_id >= 0
+                           && pass->drawcall_list_id < drawcall_list_count);
+                    drawcall_list_pool[pass->drawcall_list_id].execute(
+                      device, render_pass_encoder, pass->color_target.view_format,
+                      pass->depth_target.view_format, &cache, &drawcall_pool);
+
+                    wgpuRenderPassEncoderEnd(render_pass_encoder);
+                    wgpuRenderPassEncoderRelease(render_pass_encoder);
+                } break;
+                case G_PassType_Compute: {
+                    UNREACHABLE
+                } break;
+                default: UNREACHABLE
+            }
+
+            // resolve targets (if not already resolved)
+            // this.cache.resolveRenderTarget(pass.color_target);
+            // this.cache.resolveRenderTarget(pass.depth_target);
+            // pass.execute(this.cache, command_encoder);
+        }
+
+        // reset
+        ZERO_ARRAY(pass_list);
+        pass_count = 0;
+
+        ZERO_ARRAY(drawcall_list_pool);
+        drawcall_list_count = 0;
+
+        // TODO ==optimize== add bindgroup pool
+        for (int i = 0; i < ARENA_LENGTH(&drawcall_pool, G_DrawCall); i++) {
+            G_DrawCall* dc = ARENA_GET_TYPE(&drawcall_pool, G_DrawCall, i);
+
+            for (int j = 0; j < ARRAY_LENGTH(dc->bind_group_list); j++) {
+                Arena::free(&dc->bind_group_list[j]); // this many frees is BAD
+            }
+        }
+        Arena::clear(&drawcall_pool);
+
+        cache.update();
+    }
+};
