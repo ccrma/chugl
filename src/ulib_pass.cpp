@@ -41,8 +41,7 @@ SG_Material* chugl_createInternalMaterial(SG_MaterialType material_type,
                                           SG_Shader* shader)
 {
     // internal materials are not connected to chuck objects
-    SG_Material* material                  = SG_CreateMaterial(NULL, material_type);
-    material->pso.exclude_from_render_pass = true;
+    SG_Material* material = SG_CreateMaterial(NULL, material_type);
     SG_Material::shader(material, shader);
 
     CQ_PushCommand_MaterialCreate(material);

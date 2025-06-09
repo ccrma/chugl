@@ -559,9 +559,6 @@ struct SG_MaterialPipelineState {
     SG_ID sg_shader_id;
     WGPUCullMode cull_mode                   = WGPUCullMode_None;
     WGPUPrimitiveTopology primitive_topology = WGPUPrimitiveTopology_TriangleList;
-    bool exclude_from_render_pass
-      = false; // if true, this material is internal to
-               // screen pass or compute pass, EXCLUDE from R_RenderPipeline
 };
 
 struct SG_Material : SG_Component {

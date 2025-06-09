@@ -404,14 +404,10 @@ bool GraphicsContext::init(GraphicsContext* context, GLFWwindow* window)
         log_debug("Preferred swap chain format: %d", context->surface_format);
     }
 
-    int windowWidth = 1, windowHeight = 1;
-    glfwGetWindowSize(window, &windowWidth, &windowHeight);
-    GraphicsContext_ConfigureSurface(context, (u32)windowWidth, (u32)windowHeight);
-
-#ifdef WGPU_OLD_VERSION
-    // Create the swap chain
-    if (!createSwapChain(context, windowWidth, windowHeight)) return false;
-#endif
+    int framebuffer_width = 1, framebuffer_height = 1;
+    glfwGetFramebufferSize(window, &framebuffer_width, &framebuffer_height);
+    GraphicsContext_ConfigureSurface(context, (u32)framebuffer_width,
+                                     (u32)framebuffer_height);
 
     // init mip map generator
     MipMapGenerator_init(context);

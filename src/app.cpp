@@ -842,7 +842,6 @@ struct App {
 
                     // validation
                     if (compute_material) {
-                        ASSERT(compute_material->pso.exclude_from_render_pass);
                         ASSERT(compute_material->pso.sg_shader_id
                                == (compute_shader ? compute_shader->id : 0));
                     }
@@ -944,7 +943,6 @@ struct App {
                           pass->sg_pass.bloom_downsample_material_id);
                         R_Shader* bloom_downscale_shader = Component_GetShader(
                           bloom_downscale_material->pso.sg_shader_id);
-                        ASSERT(bloom_downscale_material->pso.exclude_from_render_pass);
 
                         R_ScreenPassPipeline downscale_pipeline
                           = R_GetScreenPassPipeline(&app->gctx,
@@ -1009,7 +1007,6 @@ struct App {
                           pass->sg_pass.bloom_upsample_material_id);
                         R_Shader* bloom_upscale_shader = Component_GetShader(
                           bloom_upscale_material->pso.sg_shader_id);
-                        ASSERT(bloom_upscale_material->pso.exclude_from_render_pass);
 
                         R_ScreenPassPipeline upscale_pipeline = R_GetScreenPassPipeline(
                           &app->gctx, output_texture->desc.format,

@@ -45,7 +45,7 @@ static spinlock waitingShredsLock;
 static u64 waitingShreds              = 0; // guarded by waitingShredsLock
 static i64 waiting_shreds_frame_count = 0; // guarded by waitingShredsLock
 
-static std::mutex gameLoopLock;
+static std::mutex gameLoopLock; // lock for condition variable
 static std::condition_variable gameLoopConditionVar;
 static bool shouldRender = false;
 
