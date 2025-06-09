@@ -57,6 +57,7 @@ struct R_Scene;
 struct R_Font;
 struct hashmap;
 struct R_RenderPipeline;
+struct G_DrawCall;
 
 typedef SG_ID R_ID; // negative for R_Components NOT mapped to SG_Components
 
@@ -171,11 +172,9 @@ struct R_Geometry : public R_Component {
     u8 vertex_attribute_num_components[R_GEOMETRY_MAX_VERTEX_ATTRIBUTES];
 
     // storage buffers for vertex pulling
-    GPU_Buffer pull_buffers[SG_GEOMETRY_MAX_VERTEX_PULL_BUFFERS];
-    // WGPUBindGroup pull_bind_group;
+    GPU_Buffer pull_buffers[CHUGL_GEOMETRY_MAX_PULLED_VERTEX_BUFFERS];
     int vertex_count  = -1; // if set, overrides vertex count from vertices
     int indices_count = -1; // if set, overrides index count from indices
-    bool pull_bind_group_dirty;
 
     static void init(R_Geometry* geo);
 
@@ -198,6 +197,7 @@ struct R_Geometry : public R_Component {
 
     static WGPUBindGroup createPullBindGroup(GraphicsContext* gctx, R_Geometry* geo,
                                              WGPUBindGroupLayout layout);
+    static void addPullBindGroupEntries(R_Geometry* geo, G_DrawCall* d);
 
     static void setPulledVertexAttribute(GraphicsContext* gctx, R_Geometry* geo,
                                          u32 location, void* data, size_t size_bytes);
@@ -221,6 +221,9 @@ struct R_Texture : public R_Component {
     // for now sticking with awkward situation where some texture bindings create their
     // own TextureViews, and texture_id uses this default gpu_texture_view
     WGPUTextureView gpu_texture_view; // default view of entire gpu_texture + mip chain
+
+    WGPUTextureView render_attachment_view; // TEMPORARY caching to prevent leak before
+                                            // I rework the entire rendergraph system
 
     u32 generation = 0;  // incremented every time texture is modified
     SG_TextureDesc desc; // TODO redundant with R_Texture.gpu_texture
@@ -300,6 +303,10 @@ struct R_Texture : public R_Component {
             desc.height         = height;
             desc.mips           = G_mipLevels(width, height);
             R_Texture::init(gctx, r_tex, &desc);
+
+            WGPU_RELEASE_RESOURCE(TextureView, r_tex->render_attachment_view);
+            r_tex->render_attachment_view = G_createTextureViewAtMipLevel(
+              r_tex->gpu_texture, 0, "renderpass target view");
         }
     }
 
@@ -453,7 +460,7 @@ struct R_Material : public R_Component {
     // bind group fns --------------------------------------------
 
     // pushes bind group entries to bind_group arena
-    static void createBindGroupEntries(R_Material* mat, Arena* bind_group,
+    static void createBindGroupEntries(R_Material* mat, int group, G_DrawCall* drawcall,
                                        GraphicsContext* gctx);
 
     // TODO deprecate
@@ -543,10 +550,22 @@ struct R_Light : public R_Transform {
 
 struct R_Scene : R_Transform {
     SG_SceneDesc sg_scene_desc;
-    hashmap* geo_to_xform;          // map from (Material, Geometry) to list of xforms
-    hashmap* light_id_set;          // set of SG_IDs
-    GPU_Buffer light_info_buffer;   // lighting storage buffer
-    u64 light_info_last_fc_updated; // frame count of last light update
+    hashmap* geo_to_xform;        // map from (Material, Geometry) to list of xforms
+    hashmap* light_id_set;        // set of SG_IDs
+    GPU_Buffer light_info_buffer; // lighting storage buffer
+    u64 last_fc_updated;          // frame count of last light update
+
+    void update(GraphicsContext* gctx, u64 frame_count, Arena* frame_arena)
+    {
+        if (frame_count == last_fc_updated) return;
+        last_fc_updated = frame_count;
+
+        // Update all transforms
+        R_Transform::rebuildMatrices(this, frame_arena);
+
+        // update lights
+        R_Scene::rebuildLightInfoBuffer(gctx, this);
+    }
 
     static void initFromSG(GraphicsContext* gctx, R_Scene* r_scene, SG_ID scene_id,
                            SG_SceneDesc* sg_scene_desc);
@@ -554,7 +573,7 @@ struct R_Scene : R_Transform {
     static void removeSubgraphFromRenderState(R_Scene* scene, R_Transform* xform);
     static void addSubgraphToRenderState(R_Scene* scene, R_Transform* xform);
 
-    static void rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene, u64 fc);
+    static void rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene);
 
     static i32 numLights(R_Scene* scene)
     {
@@ -1308,6 +1327,8 @@ struct G_Cache {
         // free the pipeline, WGPU_RELEASE the cached bindgroup layouts
 
         // loop over bindgroups. delete expired.
+        // intentionally NOT refcounting WGPU resources here under assumption that
+        // chuck-side refcounting will handle that for us
         size_t bindgroup_map_idx_DONT_USE = 0;
         G_CacheBindGroup* cache_bg        = NULL;
         while (
@@ -1341,6 +1362,8 @@ opaque:         0LLLLLLL MMMMMMMM MMMMMMMM MMMMMMMM MMMMMMMM DDDDDDDD DDDDDDDD
 DDDDDDDD translucent: :  1LLLLLLL DDDDDDDD DDDDDDDD DDDDDDDD MMMMMMMM MMMMMMMM
 MMMMMMMM MMMMMMMM
 */
+// ==optimize== store 16 bit offset of Material AND Shader in resource pool
+// to minimize number of pipeline switches
 struct G_SortKey {
     const static u64 TRANLUCENT_MASK = (1ULL << 63);
     const static u8 LAYER_MASK       = 0b01111111;
@@ -1385,9 +1408,11 @@ struct G_DrawCall {
     // name : string     = "";
 
     u32 vertex_count;
-    WGPUBuffer vertex_buffer_list[R_GEOMETRY_MAX_VERTEX_ATTRIBUTES];
-    u64 vertex_buffer_offset_list[R_GEOMETRY_MAX_VERTEX_ATTRIBUTES];
-    u64 vertex_buffer_size_list[R_GEOMETRY_MAX_VERTEX_ATTRIBUTES];
+    struct {
+        WGPUBuffer buffer;
+        u64 offset;
+        u64 size;
+    } vertex_buffer_list[R_GEOMETRY_MAX_VERTEX_ATTRIBUTES];
 
     u32 index_count;
     WGPUBuffer index_buffer;
@@ -1398,9 +1423,42 @@ struct G_DrawCall {
 
     Arena bind_group_list[4]; // each is an array of WGPUBindGroupEntry
     // no dynamic offsets for now (until we make C port of webgpu-utils shader
-    // parser) dynamic_offsets = new Array<Array<number>>(4);
+    // parser)
+    // dynamic_offsets = new Array<Array<number>>(4);
 
     G_DrawCallPipelineDesc pipeline_desc;
+
+    void vertexBuffer(int slot, WGPUBuffer buffer, u64 offset, u64 size)
+    {
+        vertex_buffer_list[slot] = { buffer, offset, size };
+    }
+
+    void buffer(int group, int binding, WGPUBuffer buffer, uint64_t offset,
+                uint64_t size)
+    {
+        WGPUBindGroupEntry* entry
+          = ARENA_PUSH_ZERO_TYPE(bind_group_list + group, WGPUBindGroupEntry);
+        entry->binding = binding;
+        entry->buffer  = buffer;
+        entry->offset  = offset;
+        entry->size    = size;
+    }
+
+    void sampler(int group, int binding, WGPUSampler sampler)
+    {
+        WGPUBindGroupEntry* entry
+          = ARENA_PUSH_ZERO_TYPE(bind_group_list + group, WGPUBindGroupEntry);
+        entry->binding = binding;
+        entry->sampler = sampler;
+    }
+
+    void texture(int group, int binding, WGPUTextureView view)
+    {
+        WGPUBindGroupEntry* entry
+          = ARENA_PUSH_ZERO_TYPE(bind_group_list + group, WGPUBindGroupEntry);
+        entry->binding     = binding;
+        entry->textureView = view;
+    }
 };
 
 struct G_DrawCallList {
@@ -1408,6 +1466,8 @@ struct G_DrawCallList {
     int drawcall_count;
     bool sorted;
 
+    // ==optimize== only rebind pipeline if it's actually changed
+    // see R_RenderSceneOld for how
     void execute(WGPUDevice device,
                  WGPURenderPassEncoder pass_encoder, // TODO this comes from rendergraph
                  WGPUTextureFormat color_target_format,
@@ -1417,7 +1477,7 @@ struct G_DrawCallList {
         G_DrawCall* start
           = ARENA_GET_TYPE(drawcall_pool, G_DrawCall, drawcall_start_idx);
 
-        if (sorted) {
+        if (!sorted) {
             qsort(start, drawcall_count, sizeof(G_DrawCall),
                   [](const void* a, const void* b) -> int {
                       u64 sort_key_a = ((G_DrawCall*)a)->sort_key;
@@ -1433,6 +1493,15 @@ struct G_DrawCallList {
         for (int i = 0; i < drawcall_count; i++) {
             G_DrawCall* d
               = ARENA_GET_TYPE(drawcall_pool, G_DrawCall, drawcall_start_idx + i);
+            bool draw_indexed = (d->index_buffer != NULL);
+
+#ifdef CHUGL_DEBUG // drawcall validation
+            if (d->instance_count == 0) log_warn("drawcall instance count of 0");
+            if (draw_indexed && d->index_count == 0)
+                log_warn("drawcall index count of 0");
+            if (!draw_indexed && d->vertex_count == 0)
+                log_warn("drawcall vertex count of 0");
+#endif
 
             G_CachePipelineVal* cached_pipeline = cache->renderPipeline(
               {
@@ -1464,17 +1533,16 @@ struct G_DrawCallList {
             for (int vertex_buffer_idx = 0;
                  vertex_buffer_idx < ARRAY_LENGTH(d->vertex_buffer_list);
                  vertex_buffer_idx++) {
-                if (d->vertex_buffer_list[vertex_buffer_idx]) {
+                if (d->vertex_buffer_list[vertex_buffer_idx].buffer) {
                     wgpuRenderPassEncoderSetVertexBuffer(
                       pass_encoder, vertex_buffer_idx,
-                      d->vertex_buffer_list[vertex_buffer_idx],
-                      d->vertex_buffer_offset_list[vertex_buffer_idx],
-                      d->vertex_buffer_size_list[vertex_buffer_idx]);
+                      d->vertex_buffer_list[vertex_buffer_idx].buffer,
+                      d->vertex_buffer_list[vertex_buffer_idx].offset,
+                      d->vertex_buffer_list[vertex_buffer_idx].size);
                 }
             }
 
             // set index buffer
-            bool draw_indexed = (d->index_buffer != NULL);
             if (draw_indexed) {
                 wgpuRenderPassEncoderSetIndexBuffer(
                   pass_encoder, d->index_buffer, WGPUIndexFormat_Uint32,
@@ -1559,11 +1627,14 @@ struct G_Graph {
         cache.init();
     }
 
-    G_DrawCall* addDraw() // adds a draw to the last drawcall list
+    G_DrawCall*
+    addDraw(G_DrawCallListID dc_list) // adds a draw to the last drawcall list
     {
         ASSERT(drawcall_list_count > 0);
+        ASSERT(dc_list == drawcall_list_count - 1);
+        UNUSED_VAR(dc_list);
 
-        ++drawcall_list_pool[drawcall_list_count - 1].drawcall_count;
+        ++drawcall_list_pool[dc_list].drawcall_count;
         G_DrawCall* draw = ARENA_PUSH_ZERO_TYPE(&drawcall_pool, G_DrawCall);
 
         return draw;

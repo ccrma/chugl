@@ -120,10 +120,8 @@ static struct {
 struct GG_Config {
     SG_ID mainScene;
     SG_ID mainCamera;
-    SG_ID hud_scene_id;
     SG_ID root_pass_id;
     SG_ID default_render_pass_id;
-    SG_ID hud_render_pass_id;
     SG_ID default_output_pass_id;
 
     // options

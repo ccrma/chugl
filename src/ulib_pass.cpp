@@ -191,7 +191,6 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
           " If RenderPass.camera() is not set, will default to the scene's main "
           "camera: "
           "GG.scene().camera()");
-        ADD_EX("basic/hud.ck");
 
         CTOR(renderpass_ctor);
 

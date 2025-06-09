@@ -234,8 +234,8 @@ struct App;
 
 static void _R_HandleCommand(App* app, SG_Command* command);
 
-static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
-                           WGPURenderPassEncoder render_pass, int msaa_sample_count);
+static G_DrawCallListID _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
+                                       int msaa_sample_count);
 
 static void _R_glfwErrorCallback(int error, const char* description)
 {
@@ -676,24 +676,6 @@ struct App {
             return;
         }
 
-        // scene
-        // TODO RenderPass
-        /*
-        Refactor render loop
-        walk the render graph
-        for each RenderPass,
-        - create new renderPassDesc, begin and end new render pass
-        - call RenderScene with correct params
-        - handle window resize
-        - handle loadOp [load/clear] and add clearcolor (to scene?)
-            - to draw one renderpass on top of another, use loadOp: load
-            - need to specify for both color and depth
-        - move imgui into it's own non-multisamppled render pass
-        - GGen::update() auto update, do on every scene that's in the render
-        graph (can test by adding builtin camera controller on chugl side)
-        - check window minize still works
-        */
-
         { // update webcam textures
             size_t webcam_idx = 0;
             R_Webcam* webcam  = NULL;
@@ -719,7 +701,6 @@ struct App {
         R_Pass* pass      = Component_GetPass(root_pass->sg_pass.next_pass_id);
 
         // slowly integrating graph...
-
         while (pass) {
             switch (pass->sg_pass.pass_type) {
                 case SG_PassType_Render: {
@@ -761,37 +742,40 @@ struct App {
                     }
 
                     // descriptor for view at mip 0
-                    WGPUTextureView resolve_target_view = G_createTextureViewAtMipLevel(
-                      r_tex->gpu_texture, 0, "renderpass target view");
                     WGPUTextureFormat color_attachment_format = r_tex->desc.format;
 
                     ASSERT(color_attachment_format
                            == wgpuTextureGetFormat(r_tex->gpu_texture));
-                    ASSERT(scene && resolve_target_view && camera);
+                    ASSERT(scene && r_tex->render_attachment_view && camera);
                     {
                         R_Pass::updateRenderPassDesc(
                           &app->gctx, pass, r_tex->desc.width, r_tex->desc.height,
                           pass->sg_pass.render_pass_msaa_sample_count,
-                          resolve_target_view, color_attachment_format,
+                          r_tex->render_attachment_view, color_attachment_format,
                           scene->sg_scene_desc.bg_color);
 
-                        // log_info("render pass width %d, height %d",
-                        // r_tex->desc.width,
-                        //          r_tex->desc.height);
+                        const WGPUTextureFormat depth_texture_format
+                          = WGPUTextureFormat_Depth24PlusStencil8;
 
-                        WGPURenderPassEncoder render_pass
-                          = wgpuCommandEncoderBeginRenderPass(app->gctx.commandEncoder,
-                                                              &pass->render_pass_desc);
+                        // set G_Pass
+                        G_Pass* g_pass = app->rendergraph.addPass();
+                        g_pass->type   = G_PassType_Render;
+                        g_pass->color_target
+                          = { r_tex->render_attachment_view, color_attachment_format };
+                        g_pass->clear_color = WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f };
+                        g_pass->color_load_op
+                          = pass->sg_pass.color_target_clear_on_load ?
+                              WGPULoadOp_Clear :
+                              WGPULoadOp_Load;
+                        g_pass->color_store_op = WGPUStoreOp_Store;
+                        g_pass->depth_target   = {
+                            pass->framebuffer.depth_view, depth_texture_format
+                        }; // TODO change depth to no stencil?
 
-                        _R_RenderScene(app, scene, camera, render_pass,
-                                       pass->sg_pass.render_pass_msaa_sample_count);
-
-                        wgpuRenderPassEncoderEnd(render_pass);
-                        wgpuRenderPassEncoderRelease(render_pass);
+                        g_pass->drawcall_list_id
+                          = _R_RenderScene(app, scene, camera,
+                                           pass->sg_pass.render_pass_msaa_sample_count);
                     }
-
-                    // cleanup
-                    WGPU_RELEASE_RESOURCE(TextureView, resolve_target_view);
                 } break;
                 case SG_PassType_Screen: { // aka OutputPass
                     // by default we render to the swapchain backbuffer
@@ -821,47 +805,20 @@ struct App {
 
                     R_Pass::updateScreenPassDesc(&app->gctx, pass, screen_texture_view);
 
-                    // WGPURenderPassEncoder render_pass
-                    //   = wgpuCommandEncoderBeginRenderPass(app->gctx.commandEncoder,
-                    //                                       &pass->screen_pass_desc);
-
                     R_Material* material
                       = Component_GetMaterial(pass->sg_pass.screen_material_id);
-                    // SG_ID shader_id = material ? material->pso.sg_shader_id : 0;
-
-                    // R_ScreenPassPipeline screen_pass_pipeline =
-                    // R_GetScreenPassPipeline(
-                    //   &app->gctx, screen_texture_format, shader_id);
-
-                    // wgpuRenderPassEncoderSetPipeline(render_pass,
-                    //                                  screen_pass_pipeline.gpu_pipeline);
 
                     const int screen_pass_binding_location = 0;
-                    if (material) {
-                        // set bind groups
-
-                        // WGPUBindGroup bind_group = R_Material::createBindGroup(
-                        //   material, &app->gctx,
-                        //   screen_pass_pipeline.frame_group_layout);
-
-                        // wgpuRenderPassEncoderSetBindGroup(render_pass,
-                        //                                   screen_pass_binding_location,
-                        //                                   bind_group, 0, NULL);
-
-                        // WGPU_RELEASE_RESOURCE(BindGroup, bind_group);
-                    }
-
                     // create draw call
                     G_DrawCallListID dc_list = app->rendergraph.addDrawCallList();
                     if (material) {
-                        G_DrawCall* d = app->rendergraph.addDraw();
+                        G_DrawCall* d = app->rendergraph.addDraw(dc_list);
                         d->sort_key   = G_SortKey::create(false, G_RenderingLayer_World,
                                                           material->id, 0, 1);
                         d->vertex_count   = 3;
                         d->instance_count = 1;
                         R_Material::createBindGroupEntries(
-                          material, &d->bind_group_list[screen_pass_binding_location],
-                          &app->gctx);
+                          material, screen_pass_binding_location, d, &app->gctx);
                         d->pipeline_desc
                           = { material->pso.sg_shader_id, material->pso.cull_mode,
                               material->pso.primitive_topology, false };
@@ -876,10 +833,6 @@ struct App {
                     g_pass->color_store_op   = WGPUStoreOp_Store;
                     g_pass->clear_color      = WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f };
                     g_pass->drawcall_list_id = dc_list;
-
-                    // wgpuRenderPassEncoderDraw(render_pass, 3, 1, 0, 0);
-                    // wgpuRenderPassEncoderEnd(render_pass);
-                    // wgpuRenderPassEncoderRelease(render_pass);
                 } break;
                 case SG_PassType_Compute: {
                     R_Shader* compute_shader
@@ -1356,15 +1309,190 @@ struct SceneDrawCall {
     SG_ID geo_id;
 };
 
-static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
-                           WGPURenderPassEncoder render_pass, int msaa_sample_count)
+// move this into R_Scene, call build drawcall struct?
+static G_DrawCallListID _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
+                                       int msaa_sample_count)
+{
+    scene->update(&app->gctx, app->fc, &app->frameArena);
+    ASSERT(scene->last_fc_updated == app->fc);
+
+    // update camera
+    i32 width, height;
+    glfwGetWindowSize(app->window, &width, &height);
+    f32 aspect = (width > 0 && height > 0) ? (f32)width / (f32)height : 1.0f;
+
+    // write per-frame uniforms
+    // TODO consider moving per-frame uniforms to R_Pass struct
+    f32 time                    = (f32)glfwGetTime();
+    FrameUniforms frameUniforms = {};
+    frameUniforms.projection    = R_Camera::projectionMatrix(camera, aspect);
+    frameUniforms.view          = R_Camera::viewMatrix(camera);
+    // remove translation component from view matrix
+    // so that skybox is always centered around camera
+    frameUniforms.projection_view_inverse_no_translation = glm::inverse(
+      frameUniforms.projection * glm::mat4(glm::mat3(frameUniforms.view)));
+
+    frameUniforms.camera_pos       = camera->_pos;
+    frameUniforms.time             = time;
+    frameUniforms.ambient_light    = scene->sg_scene_desc.ambient_light;
+    frameUniforms.num_lights       = R_Scene::numLights(scene);
+    frameUniforms.background_color = scene->sg_scene_desc.bg_color;
+
+    // update frame-level uniforms (storing on camera because same scene can be
+    // rendered from multiple camera angles) every camera belongs to a single scene,
+    // but a scene can have multiple cameras
+    // TODO: simplify, can just have a fixed-size GPU buffer on camera
+    bool frame_uniforms_recreated = GPU_Buffer::write(
+      &app->gctx, &camera->frame_uniform_buffer, WGPUBufferUsage_Uniform,
+      &frameUniforms, sizeof(frameUniforms));
+    camera->frame_uniform_buffer_fc = app->fc;
+    ASSERT(!frame_uniforms_recreated);
+    UNUSED_VAR(frame_uniforms_recreated);
+
+    // TODO dc_list only needs to be built once per frame. check the fc staleness
+    G_DrawCallListID dc_list = app->rendergraph.addDrawCallList();
+
+    // form draw call list and sort
+    size_t hashmap_idx_DONT_USE = 0;
+    GeometryToXforms* primitive = NULL;
+    int num_draw_calls          = 0;
+    while (
+      hashmap_iter(scene->geo_to_xform, &hashmap_idx_DONT_USE, (void**)&primitive)) {
+        int instance_count = GeometryToXforms::count(primitive);
+        ASSERT(instance_count > 0);
+
+        ++num_draw_calls;
+
+        // Get shader id from material
+        R_Material* material = Component_GetMaterial(primitive->key.mat_id);
+        ASSERT(material);
+        R_Geometry* geo  = Component_GetGeometry(primitive->key.geo_id);
+        SG_ID shader_id  = material->pso.sg_shader_id;
+        R_Shader* shader = Component_GetShader(shader_id);
+
+        // add to draw call list
+        G_DrawCall* d = app->rendergraph.addDraw(dc_list);
+        float depth   = 0.0; // TODO calculate depth for transparent items
+        d->sort_key          // TODO add transparency here
+          = G_SortKey::create(false, G_RenderingLayer_World, material->id, depth,
+                              camera->params.far_plane);
+
+        d->instance_count = instance_count;
+
+        // populate index buffer
+        d->index_count    = R_Geometry::indexCount(geo);
+        bool indexed_draw = (d->index_count > 0);
+        if (indexed_draw) {
+            d->index_buffer        = geo->gpu_index_buffer.buf;
+            d->index_buffer_offset = 0;
+            d->index_buffer_size   = geo->gpu_index_buffer.size;
+        } else {
+            // TODO come up with a better way to set a custom number of vertices to draw
+            // having -1 actually mean ALL is confusing 2 different states.
+            u32 vertex_count                = R_Geometry::vertexCount(geo);
+            bool user_provided_vertex_count = geo->vertex_count >= 0;
+            d->vertex_count
+              = user_provided_vertex_count ? geo->vertex_count : vertex_count;
+        }
+
+        // set pso
+        d->pipeline_desc
+          = { shader_id, material->pso.cull_mode, material->pso.primitive_topology,
+              false }; // TODO add blendmode / transparency here
+
+        { // set bindgroups
+            // camera frame uniform buffer needs to already be updated
+            ASSERT(camera->frame_uniform_buffer_fc == app->fc);
+
+            { // set frame uniforms
+                d->buffer(PER_FRAME_GROUP, 0, camera->frame_uniform_buffer.buf, 0,
+                          camera->frame_uniform_buffer.size);
+                if (shader->includes.lit)
+                    d->buffer(PER_FRAME_GROUP, 1, scene->light_info_buffer.buf, 0,
+                              MAX(scene->light_info_buffer.size, 1));
+
+                if (shader->includes.uses_env_map) {
+                    R_Texture* envmap
+                      = Component_GetTexture(scene->sg_scene_desc.env_map_id);
+                    ASSERT(envmap && envmap->gpu_texture_view)
+                    d->texture(PER_FRAME_GROUP, 2, envmap->gpu_texture_view);
+                }
+            }
+
+            // set material uniforms
+            // ==optimize== can sort/cache material bindgroupentries per frame
+            // so we don't need to recreate multiple times for a single material
+            R_Material::createBindGroupEntries(material, PER_MATERIAL_GROUP, d,
+                                               &app->gctx);
+
+            // set @group(3) per-instance bindings (xform matrices)
+            GeometryToXforms::updateStorageBuffer(&app->gctx, scene, primitive,
+                                                  &app->frameArena);
+            d->buffer(PER_DRAW_GROUP, 0, primitive->xform_storage_buffer.buf, 0,
+                      primitive->xform_storage_buffer.size);
+
+            // set @group(4) pulled-vertex attribs
+            R_Geometry::addPullBindGroupEntries(geo, d);
+        }
+
+        // set vertex attributes
+        for (int vertex_slot = 0; vertex_slot < ARRAY_LENGTH(geo->gpu_vertex_buffers);
+             ++vertex_slot) {
+            GPU_Buffer* gpu_buffer = &geo->gpu_vertex_buffers[vertex_slot];
+            if (gpu_buffer->buf && gpu_buffer->size > 0)
+                d->vertexBuffer(vertex_slot, gpu_buffer->buf, 0, gpu_buffer->size);
+        }
+    }
+
+    { // skybox pass
+        R_Material* skybox_material
+          = Component_GetMaterial(scene->sg_scene_desc.skybox_material_id);
+        if (!skybox_material) return dc_list;
+
+        G_DrawCall* d = app->rendergraph.addDraw(dc_list);
+        d->sort_key
+          = G_SortKey::create(false, G_RenderingLayer_Background, skybox_material->id,
+                              camera->params.far_plane, camera->params.far_plane);
+        d->vertex_count   = 3;
+        d->instance_count = 1;
+        d->pipeline_desc  = {
+            skybox_material->pso.sg_shader_id, skybox_material->pso.cull_mode,
+            skybox_material->pso.primitive_topology,
+            false, // not transparent
+        };
+
+        R_Shader* skybox_shader
+          = Component_GetShader(skybox_material->pso.sg_shader_id);
+        { // bind @group(0) copied from earlier in function
+            d->buffer(PER_FRAME_GROUP, 0, camera->frame_uniform_buffer.buf, 0,
+                      camera->frame_uniform_buffer.size);
+            if (skybox_shader->includes.lit)
+                d->buffer(PER_FRAME_GROUP, 1, scene->light_info_buffer.buf, 0,
+                          MAX(scene->light_info_buffer.size, 1));
+
+            if (skybox_shader->includes.uses_env_map) {
+                R_Texture* envmap
+                  = Component_GetTexture(scene->sg_scene_desc.env_map_id);
+                ASSERT(envmap && envmap->gpu_texture_view)
+                d->texture(PER_FRAME_GROUP, 2, envmap->gpu_texture_view);
+            }
+        }
+
+        R_Material::createBindGroupEntries(skybox_material, PER_MATERIAL_GROUP, d,
+                                           &app->gctx);
+    }
+    return dc_list;
+}
+
+static void _R_RenderSceneOld(App* app, R_Scene* scene, R_Camera* camera,
+                              WGPURenderPassEncoder render_pass, int msaa_sample_count)
 {
     // Update all transforms
     R_Transform::rebuildMatrices(scene, &app->frameArena);
     // R_Transform::print(main_scene, 0);
 
     // update lights
-    R_Scene::rebuildLightInfoBuffer(&app->gctx, scene, app->fc);
+    R_Scene::rebuildLightInfoBuffer(&app->gctx, scene);
 
     // update camera
     i32 width, height;

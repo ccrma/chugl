@@ -1,5 +1,7 @@
 @import "../lib/g2d/ChuGL_debug.chug"
 
+// inspo: https://www.shadertoy.com/view/4tGfDW
+
 // TODO: release chugl should also crash / error on shader compilation failure
 // TODO switch to screen pass shader
 
@@ -13,6 +15,13 @@ Cool Parameters
     - intensity
 - viscocity
 - background color aka fade color (go from fading to white to fading to black)
+
+Liu Shui
+- in the harmonics at end of 72 gun fu, go from white background to black,
+    - the ink on paper become stars in night sky (celestial)
+- motion track hands and/or fingers during 72 gun fu, use these nodes 
+as velocity sources for the fluid sim (so it looks like pools/vortexes moving across screen)
+    - maybe also lerp color to blue
 
 
 */

@@ -570,12 +570,24 @@ bool R_Geometry::usesVertexPulling(R_Geometry* geo)
     return false;
 }
 
+void R_Geometry::addPullBindGroupEntries(R_Geometry* geo, G_DrawCall* d)
+{
+    for (u32 i = 0; i < ARRAY_LENGTH(geo->pull_buffers); i++) {
+        if (geo->pull_buffers[i].buf == NULL) {
+            continue;
+        }
+
+        d->buffer(VERTEX_PULL_GROUP, i, geo->pull_buffers[i].buf, 0,
+                  geo->pull_buffers[i].size);
+    }
+}
+
 WGPUBindGroup R_Geometry::createPullBindGroup(GraphicsContext* gctx, R_Geometry* geo,
                                               WGPUBindGroupLayout layout)
 {
-    WGPUBindGroupEntry entries[SG_GEOMETRY_MAX_VERTEX_PULL_BUFFERS] = {};
-    int num_entries                                                 = 0;
-    for (u32 i = 0; i < SG_GEOMETRY_MAX_VERTEX_PULL_BUFFERS; i++) {
+    WGPUBindGroupEntry entries[CHUGL_GEOMETRY_MAX_PULLED_VERTEX_BUFFERS] = {};
+    int num_entries                                                      = 0;
+    for (u32 i = 0; i < CHUGL_GEOMETRY_MAX_PULLED_VERTEX_BUFFERS; i++) {
         if (geo->pull_buffers[i].buf == NULL) {
             continue;
         }
@@ -598,13 +610,8 @@ WGPUBindGroup R_Geometry::createPullBindGroup(GraphicsContext* gctx, R_Geometry*
 void R_Geometry::setPulledVertexAttribute(GraphicsContext* gctx, R_Geometry* geo,
                                           u32 location, void* data, size_t size_bytes)
 {
-    int prev_size  = geo->pull_buffers[location].size;
-    bool recreated = GPU_Buffer::write(gctx, &geo->pull_buffers[location],
-                                       WGPUBufferUsage_Storage, data, size_bytes);
-    if (recreated || prev_size != size_bytes) {
-        // need to update bindgroup size
-        geo->pull_bind_group_dirty = true;
-    }
+    GPU_Buffer::write(gctx, &geo->pull_buffers[location], WGPUBufferUsage_Storage, data,
+                      size_bytes);
 }
 
 // ============================================================================
@@ -739,10 +746,10 @@ void MaterialTextureView::init(MaterialTextureView* view)
     view->scale[1] = 1.0f;
 }
 
-void R_Material::createBindGroupEntries(R_Material* mat, Arena* bind_group,
-                                        GraphicsContext* gctx)
+void R_Material::createBindGroupEntries(R_Material* mat, int group,
+                                        G_DrawCall* drawcall, GraphicsContext* gctx)
 {
-    ASSERT(bind_group->curr == 0);
+    ASSERT(drawcall->bind_group_list[group].curr == 0);
 
     // create bindgroups for all bindings
     ASSERT(CHUGL_MATERIAL_MAX_BINDINGS == ARRAY_LENGTH(mat->bindings));
@@ -750,47 +757,40 @@ void R_Material::createBindGroupEntries(R_Material* mat, Arena* bind_group,
         R_Binding* binding = &mat->bindings[i];
         if (binding->type == R_BIND_EMPTY) continue;
 
-        WGPUBindGroupEntry* bind_group_entry
-          = ARENA_PUSH_ZERO_TYPE(bind_group, WGPUBindGroupEntry);
-        bind_group_entry->binding = i; // binding location
-
         switch (binding->type) {
             case R_BIND_UNIFORM: {
-                bind_group_entry->offset
+                const int UNIFORM_OFFSET
                   = MAX(gctx->limits.minUniformBufferOffsetAlignment,
-                        sizeof(SG_MaterialUniformData))
-                    * i;
-                bind_group_entry->size   = sizeof(SG_MaterialUniformData);
-                bind_group_entry->buffer = mat->uniform_buffer;
+                        sizeof(SG_MaterialUniformData));
+                drawcall->buffer(group, i, mat->uniform_buffer, UNIFORM_OFFSET * i,
+                                 sizeof(SG_MaterialUniformData));
             } break;
             case R_BIND_STORAGE: {
-                bind_group_entry->offset = 0;
-                bind_group_entry->size   = binding->size;
-                bind_group_entry->buffer = binding->as.storage_buffer.buf;
+                drawcall->buffer(group, i, binding->as.storage_buffer.buf, 0,
+                                 binding->size);
             } break;
             case R_BIND_SAMPLER: {
-                bind_group_entry->sampler
-                  = Graphics_GetSampler(gctx, binding->as.samplerConfig);
+                drawcall->sampler(group, i,
+                                  Graphics_GetSampler(gctx, binding->as.samplerConfig));
             } break;
             case R_BIND_TEXTURE_ID: {
                 R_Texture* rTexture = Component_GetTexture(binding->as.textureID);
-                bind_group_entry->textureView = rTexture->gpu_texture_view;
-                ASSERT(bind_group_entry->textureView);
+                drawcall->texture(group, i, rTexture->gpu_texture_view);
+                ASSERT(rTexture->gpu_texture_view);
                 ASSERT(binding->size == sizeof(SG_ID));
-                binding->generation = rTexture->generation;
+                binding->generation = rTexture->generation; // TODO remove
             } break;
             case R_BIND_STORAGE_EXTERNAL: {
-                bind_group_entry->offset = 0;
-                bind_group_entry->size   = binding->size;
-                bind_group_entry->buffer = binding->as.storage_external->buf;
+                drawcall->buffer(group, i, binding->as.storage_external->buf, 0,
+                                 binding->size);
             } break;
             case R_BIND_TEXTURE_VIEW: {
                 ASSERT(binding->as.textureView);
-                bind_group_entry->textureView = binding->as.textureView;
+                drawcall->texture(group, i, binding->as.textureView);
             } break;
             case R_BIND_STORAGE_TEXTURE_ID: {
                 ASSERT(binding->as.textureView);
-                bind_group_entry->textureView = binding->as.textureView;
+                drawcall->texture(group, i, binding->as.textureView);
             } break;
             default: ASSERT(false);
         }
@@ -995,11 +995,8 @@ struct GeometryToXformKey {
 
 struct GeometryToXforms {
     GeometryToXformKey key;
-    // Arena xform_ids;       // value, array of SG_IDs
-    hashmap* xform_id_set; // kept in sync with xform_ids, use for quick lookup
-    // WGPUBindGroup xform_bind_group;
+    hashmap* xform_id_set; // xforms that are using this geometry
     GPU_Buffer xform_storage_buffer;
-    // R_ID pipeline_id; // the pipeline this bindgroup belongs to
     bool buffer_stale; // if true, need to update storage buffer
 
     static int count(GeometryToXforms* g2x)
@@ -1046,55 +1043,58 @@ struct GeometryToXforms {
         hashmap_free(g2x->xform_id_set);
     }
 
+    static void updateStorageBuffer(GraphicsContext* gctx, R_Scene* scene,
+                                    GeometryToXforms* g2x, Arena* frame_arena)
+    {
+        // should be nonempty (if empty, should have already been deleted)
+        ASSERT(hashmap_count(g2x->xform_id_set) > 0);
+        if (!g2x->buffer_stale) return;
+
+        // rebuild storage buffer
+        defer(g2x->buffer_stale = false);
+
+        // build new array of matrices on CPU
+        u64 model_matrices_offset = frame_arena->curr;
+
+        size_t hashmap_idx_DONT_USE = 0;
+        SG_ID* xform_id             = NULL;
+        while (
+          hashmap_iter(g2x->xform_id_set, &hashmap_idx_DONT_USE, (void**)&xform_id)) {
+            R_Transform* xform = Component_GetXform(*xform_id);
+
+            // all xforms should be valid here (can't delete xforms while
+            // iterating)
+            bool xform_same_mesh
+              = (xform->_geoID == g2x->key.geo_id && xform->_matID == g2x->key.mat_id);
+            bool xform_same_scene = (xform->scene_id == scene->id);
+            ASSERT(xform && xform_same_mesh && xform_same_scene);
+            UNUSED_VAR(xform_same_mesh);
+            UNUSED_VAR(xform_same_scene);
+
+            // world matrix should already have been computed by now
+            ASSERT(xform->_stale == R_Transform_STALE_NONE);
+
+            // add xform matrix to arena
+            DrawUniforms* draw_uniforms = ARENA_PUSH_TYPE(frame_arena, DrawUniforms);
+            draw_uniforms->model        = xform->world;
+            // TODO add inv normal matrix here
+            draw_uniforms->id = xform->id;
+        }
+
+        u64 write_size = frame_arena->curr - model_matrices_offset;
+        GPU_Buffer::write(gctx, &g2x->xform_storage_buffer, WGPUBufferUsage_Storage,
+                          Arena::get(frame_arena, model_matrices_offset), write_size);
+
+        // pop arena after copying data to GPU
+        Arena::pop(frame_arena, write_size);
+        ASSERT(model_matrices_offset == frame_arena->curr);
+    }
+
     static WGPUBindGroup createBindGroup(GraphicsContext* gctx, R_Scene* scene,
                                          GeometryToXforms* g2x,
                                          WGPUBindGroupLayout layout, Arena* frame_arena)
     {
-
-        // should be nonempty (if empty, should have already been deleted)
-        ASSERT(hashmap_count(g2x->xform_id_set) > 0);
-
-        // rebuild storage buffer
-        if (g2x->buffer_stale) {
-            defer(g2x->buffer_stale = false);
-
-            // build new array of matrices on CPU
-            u64 model_matrices_offset = frame_arena->curr;
-
-            size_t hashmap_idx_DONT_USE = 0;
-            SG_ID* xform_id             = NULL;
-            while (hashmap_iter(g2x->xform_id_set, &hashmap_idx_DONT_USE,
-                                (void**)&xform_id)) {
-                R_Transform* xform = Component_GetXform(*xform_id);
-
-                // all xforms should be valid here (can't delete xforms while
-                // iterating)
-                bool xform_same_mesh  = (xform->_geoID == g2x->key.geo_id
-                                        && xform->_matID == g2x->key.mat_id);
-                bool xform_same_scene = (xform->scene_id == scene->id);
-                ASSERT(xform && xform_same_mesh && xform_same_scene);
-                UNUSED_VAR(xform_same_mesh);
-                UNUSED_VAR(xform_same_scene);
-
-                // world matrix should already have been computed by now
-                ASSERT(xform->_stale == R_Transform_STALE_NONE);
-
-                // add xform matrix to arena
-                DrawUniforms* draw_uniforms
-                  = ARENA_PUSH_TYPE(frame_arena, DrawUniforms);
-                draw_uniforms->model = xform->world;
-                draw_uniforms->id    = xform->id;
-            }
-
-            u64 write_size = frame_arena->curr - model_matrices_offset;
-            GPU_Buffer::write(gctx, &g2x->xform_storage_buffer, WGPUBufferUsage_Storage,
-                              Arena::get(frame_arena, model_matrices_offset),
-                              write_size);
-
-            // pop arena after copying data to GPU
-            Arena::pop(frame_arena, write_size);
-            ASSERT(model_matrices_offset == frame_arena->curr);
-        }
+        updateStorageBuffer(gctx, scene, g2x, frame_arena);
 
         // recreate bindgroup
         WGPUBindGroupEntry entry = {};
@@ -1218,11 +1218,8 @@ void R_Scene::addSubgraphToRenderState(R_Scene* scene, R_Transform* root)
     }
 }
 
-void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene, u64 fc)
+void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene)
 {
-    if (scene->light_info_last_fc_updated == fc) return;
-    scene->light_info_last_fc_updated = fc;
-
     static Arena light_info_arena{};
     ASSERT(light_info_arena.curr == 0);
     defer(Arena::clear(&light_info_arena));

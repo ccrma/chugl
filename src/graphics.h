@@ -217,11 +217,6 @@ struct GPU_Buffer {
             new_capacity     = NEXT_MULT(new_capacity, 4); // align to 4 bytes
             ASSERT(new_capacity % 4 == 0);
 
-            // TODO: how to copy data between buffers?
-            // what is going on with mapping?
-            // is copying a synchronous or asynchronous operation?
-            // when is it safe to release the old buffer?
-
             WGPUBufferDescriptor desc = {};
             desc.usage                = usage_flags | WGPUBufferUsage_CopyDst;
             desc.size                 = new_capacity;

@@ -351,7 +351,7 @@ union SG_GeometryParams {
 #define SG_GEOMETRY_NORMAL_ATTRIBUTE_LOCATION 1
 #define SG_GEOMETRY_UV_ATTRIBUTE_LOCATION 2
 
-#define SG_GEOMETRY_MAX_VERTEX_PULL_BUFFERS 4
+#define CHUGL_GEOMETRY_MAX_PULLED_VERTEX_BUFFERS 4
 
 struct SG_Geometry : SG_Component {
     SG_GeometryType geo_type;
@@ -363,7 +363,7 @@ struct SG_Geometry : SG_Component {
     Arena indices;
 
     // buffers to hold pull data
-    Arena vertex_pull_buffers[SG_GEOMETRY_MAX_VERTEX_PULL_BUFFERS];
+    Arena vertex_pull_buffers[CHUGL_GEOMETRY_MAX_PULLED_VERTEX_BUFFERS];
 
     static u32 vertexCount(SG_Geometry* geo);
     static u32 indexCount(SG_Geometry* geo);
@@ -782,7 +782,7 @@ struct SG_Pass : public SG_Component {
     SG_ID resolve_target_id;
     int render_pass_resolve_target_width  = 0;
     int render_pass_resolve_target_height = 0;
-    int render_pass_msaa_sample_count     = 4;
+    int render_pass_msaa_sample_count     = 1; // TODO remove msaa resolves
     bool color_target_clear_on_load       = true;
 
     // ScreenPass params
