@@ -760,19 +760,19 @@ struct App {
                         // set G_Pass
                         G_Pass* g_pass = app->rendergraph.addPass();
                         g_pass->type   = G_PassType_Render;
-                        g_pass->color_target
+                        g_pass->rp.color_target
                           = { r_tex->render_attachment_view, color_attachment_format };
-                        g_pass->clear_color = WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f };
-                        g_pass->color_load_op
+                        g_pass->rp.clear_color = WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f };
+                        g_pass->rp.color_load_op
                           = pass->sg_pass.color_target_clear_on_load ?
                               WGPULoadOp_Clear :
                               WGPULoadOp_Load;
-                        g_pass->color_store_op = WGPUStoreOp_Store;
-                        g_pass->depth_target   = {
+                        g_pass->rp.color_store_op = WGPUStoreOp_Store;
+                        g_pass->rp.depth_target   = {
                             pass->framebuffer.depth_view, depth_texture_format
                         }; // TODO change depth to no stencil?
 
-                        g_pass->drawcall_list_id
+                        g_pass->rp.drawcall_list_id
                           = _R_RenderScene(app, scene, camera,
                                            pass->sg_pass.render_pass_msaa_sample_count);
                     }
@@ -818,7 +818,8 @@ struct App {
                         d->vertex_count   = 3;
                         d->instance_count = 1;
                         R_Material::createBindGroupEntries(
-                          material, screen_pass_binding_location, d, &app->gctx);
+                          material, screen_pass_binding_location, &app->rendergraph, d,
+                          &app->gctx);
                         d->pipeline_desc
                           = { material->pso.sg_shader_id, material->pso.cull_mode,
                               material->pso.primitive_topology, false };
@@ -827,12 +828,12 @@ struct App {
                     // set G_Pass
                     G_Pass* g_pass = app->rendergraph.addPass();
                     g_pass->type   = G_PassType_Render;
-                    g_pass->color_target
+                    g_pass->rp.color_target
                       = { screen_texture_view, screen_texture_format };
-                    g_pass->color_load_op    = WGPULoadOp_Clear;
-                    g_pass->color_store_op   = WGPUStoreOp_Store;
-                    g_pass->clear_color      = WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f };
-                    g_pass->drawcall_list_id = dc_list;
+                    g_pass->rp.color_load_op    = WGPULoadOp_Clear;
+                    g_pass->rp.color_store_op   = WGPUStoreOp_Store;
+                    g_pass->rp.clear_color      = WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f };
+                    g_pass->rp.drawcall_list_id = dc_list;
                 } break;
                 case SG_PassType_Compute: {
                     R_Shader* compute_shader
@@ -849,37 +850,14 @@ struct App {
                     bool valid_compute_pass = compute_material && compute_shader;
                     if (!valid_compute_pass) break;
 
-                    R_ComputePassPipeline pipeline
-                      = R_GetComputePassPipeline(&app->gctx, compute_shader);
-
-                    WGPUComputePassEncoder compute_pass
-                      = wgpuCommandEncoderBeginComputePass(app->gctx.commandEncoder,
-                                                           NULL);
-
-                    wgpuComputePassEncoderSetPipeline(compute_pass,
-                                                      pipeline.gpu_pipeline);
-
-                    { // update bind groups
-                        const int compute_pass_binding_location = 0;
-
-                        WGPUBindGroup bind_group = R_Material::createBindGroup(
-                          compute_material, &app->gctx, pipeline.bind_group_layout);
-
-                        wgpuComputePassEncoderSetBindGroup(
-                          compute_pass, compute_pass_binding_location, bind_group, 0,
-                          NULL);
-
-                        WGPU_RELEASE_RESOURCE(BindGroup, bind_group);
-                    }
-
-                    // dispatch
-                    wgpuComputePassEncoderDispatchWorkgroups(
-                      compute_pass, pass->sg_pass.workgroup.x,
+                    app->rendergraph.addComputePass(
+                      compute_shader->compute_shader_module, pass->sg_pass.workgroup.x,
                       pass->sg_pass.workgroup.y, pass->sg_pass.workgroup.z);
 
-                    // cleanup
-                    wgpuComputePassEncoderEnd(compute_pass);
-                    WGPU_RELEASE_RESOURCE(ComputePassEncoder, compute_pass);
+                    const int compute_pass_binding_location = 0;
+                    R_Material::createBindGroupEntries(
+                      compute_material, compute_pass_binding_location,
+                      &app->rendergraph, NULL, &app->gctx);
                 }; break;
                 case SG_PassType_Bloom: {
                     R_Texture* render_texture = Component_GetTexture(
@@ -1402,34 +1380,38 @@ static G_DrawCallListID _R_RenderScene(App* app, R_Scene* scene, R_Camera* camer
             ASSERT(camera->frame_uniform_buffer_fc == app->fc);
 
             { // set frame uniforms
-                d->buffer(PER_FRAME_GROUP, 0, camera->frame_uniform_buffer.buf, 0,
-                          camera->frame_uniform_buffer.size);
+                app->rendergraph.bindBuffer(d, PER_FRAME_GROUP, 0,
+                                            camera->frame_uniform_buffer.buf, 0,
+                                            camera->frame_uniform_buffer.size);
                 if (shader->includes.lit)
-                    d->buffer(PER_FRAME_GROUP, 1, scene->light_info_buffer.buf, 0,
-                              MAX(scene->light_info_buffer.size, 1));
+                    app->rendergraph.bindBuffer(d, PER_FRAME_GROUP, 1,
+                                                scene->light_info_buffer.buf, 0,
+                                                MAX(scene->light_info_buffer.size, 1));
 
                 if (shader->includes.uses_env_map) {
                     R_Texture* envmap
                       = Component_GetTexture(scene->sg_scene_desc.env_map_id);
                     ASSERT(envmap && envmap->gpu_texture_view)
-                    d->texture(PER_FRAME_GROUP, 2, envmap->gpu_texture_view);
+                    app->rendergraph.bindTexture(d, PER_FRAME_GROUP, 2,
+                                                 envmap->gpu_texture_view);
                 }
             }
 
             // set material uniforms
             // ==optimize== can sort/cache material bindgroupentries per frame
             // so we don't need to recreate multiple times for a single material
-            R_Material::createBindGroupEntries(material, PER_MATERIAL_GROUP, d,
-                                               &app->gctx);
+            R_Material::createBindGroupEntries(material, PER_MATERIAL_GROUP,
+                                               &app->rendergraph, d, &app->gctx);
 
             // set @group(3) per-instance bindings (xform matrices)
             GeometryToXforms::updateStorageBuffer(&app->gctx, scene, primitive,
                                                   &app->frameArena);
-            d->buffer(PER_DRAW_GROUP, 0, primitive->xform_storage_buffer.buf, 0,
-                      primitive->xform_storage_buffer.size);
+            app->rendergraph.bindBuffer(d, PER_DRAW_GROUP, 0,
+                                        primitive->xform_storage_buffer.buf, 0,
+                                        primitive->xform_storage_buffer.size);
 
             // set @group(4) pulled-vertex attribs
-            R_Geometry::addPullBindGroupEntries(geo, d);
+            R_Geometry::addPullBindGroupEntries(geo, &app->rendergraph, d);
         }
 
         // set vertex attributes
@@ -1437,7 +1419,8 @@ static G_DrawCallListID _R_RenderScene(App* app, R_Scene* scene, R_Camera* camer
              ++vertex_slot) {
             GPU_Buffer* gpu_buffer = &geo->gpu_vertex_buffers[vertex_slot];
             if (gpu_buffer->buf && gpu_buffer->size > 0)
-                d->vertexBuffer(vertex_slot, gpu_buffer->buf, 0, gpu_buffer->size);
+                app->rendergraph.vertexBuffer(d, vertex_slot, gpu_buffer->buf, 0,
+                                              gpu_buffer->size);
         }
     }
 
@@ -1461,22 +1444,26 @@ static G_DrawCallListID _R_RenderScene(App* app, R_Scene* scene, R_Camera* camer
         R_Shader* skybox_shader
           = Component_GetShader(skybox_material->pso.sg_shader_id);
         { // bind @group(0) copied from earlier in function
-            d->buffer(PER_FRAME_GROUP, 0, camera->frame_uniform_buffer.buf, 0,
-                      camera->frame_uniform_buffer.size);
+            app->rendergraph.bindBuffer(d, PER_FRAME_GROUP, 0,
+                                        camera->frame_uniform_buffer.buf, 0,
+                                        camera->frame_uniform_buffer.size);
             if (skybox_shader->includes.lit)
-                d->buffer(PER_FRAME_GROUP, 1, scene->light_info_buffer.buf, 0,
-                          MAX(scene->light_info_buffer.size, 1));
+                app->rendergraph.bindBuffer(d, PER_FRAME_GROUP, 1,
+                                            scene->light_info_buffer.buf, 0,
+                                            MAX(scene->light_info_buffer.size, 1));
 
             if (skybox_shader->includes.uses_env_map) {
                 R_Texture* envmap
                   = Component_GetTexture(scene->sg_scene_desc.env_map_id);
                 ASSERT(envmap && envmap->gpu_texture_view)
-                d->texture(PER_FRAME_GROUP, 2, envmap->gpu_texture_view);
+
+                app->rendergraph.bindTexture(d, PER_FRAME_GROUP, 2,
+                                             envmap->gpu_texture_view);
             }
         }
 
-        R_Material::createBindGroupEntries(skybox_material, PER_MATERIAL_GROUP, d,
-                                           &app->gctx);
+        R_Material::createBindGroupEntries(skybox_material, PER_MATERIAL_GROUP,
+                                           &app->rendergraph, d, &app->gctx);
     }
     return dc_list;
 }

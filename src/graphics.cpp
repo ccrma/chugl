@@ -1763,3 +1763,23 @@ bool G_Util::isStripTopology(WGPUPrimitiveTopology topology)
     return (topology == WGPUPrimitiveTopology_LineStrip
             || topology == WGPUPrimitiveTopology_TriangleStrip);
 }
+
+void G_Util::printBindGroupEntry(WGPUBindGroupEntry* entry)
+{
+    printf(
+      "WGPUBindGroupEntry {\n"
+      "   binding: %d, \n"
+      "   buffer : %p, \n"
+      "   offset : %llu, \n"
+      "   size   : %llu, \n"
+      "   sampler: %p, \n"
+      "   texture: %p,  \n"
+      "}\n",
+      entry->binding, (void*)entry->buffer, entry->offset, entry->size,
+      (void*)entry->sampler, (void*)entry->textureView);
+}
+
+void G_Util::printBindGroupEntryList(WGPUBindGroupEntry* entry, int count)
+{
+    for (int i = 0; i < count; ++i) printBindGroupEntry(entry + i);
+}

@@ -58,6 +58,7 @@ struct R_Font;
 struct hashmap;
 struct R_RenderPipeline;
 struct G_DrawCall;
+struct G_Graph;
 
 typedef SG_ID R_ID; // negative for R_Components NOT mapped to SG_Components
 
@@ -197,7 +198,7 @@ struct R_Geometry : public R_Component {
 
     static WGPUBindGroup createPullBindGroup(GraphicsContext* gctx, R_Geometry* geo,
                                              WGPUBindGroupLayout layout);
-    static void addPullBindGroupEntries(R_Geometry* geo, G_DrawCall* d);
+    static void addPullBindGroupEntries(R_Geometry* geo, G_Graph* graph, G_DrawCall* d);
 
     static void setPulledVertexAttribute(GraphicsContext* gctx, R_Geometry* geo,
                                          u32 location, void* data, size_t size_bytes);
@@ -460,8 +461,8 @@ struct R_Material : public R_Component {
     // bind group fns --------------------------------------------
 
     // pushes bind group entries to bind_group arena
-    static void createBindGroupEntries(R_Material* mat, int group, G_DrawCall* drawcall,
-                                       GraphicsContext* gctx);
+    static void createBindGroupEntries(R_Material* mat, int group, G_Graph* graph,
+                                       G_DrawCall* drawcall, GraphicsContext* gctx);
 
     // TODO deprecate
     static WGPUBindGroup createBindGroup(R_Material* mat, GraphicsContext* gctx,
@@ -1082,13 +1083,36 @@ struct G_DrawCallPipelineDesc {
     bool is_transparent; // TODO support other blend modes (subtrative, additive etc)
 };
 
-struct G_CachePipelineKey {
+struct G_CacheComputePipeline {
+    WGPUShaderModule key;
+    struct {
+        WGPUComputePipeline pipeline;
+        WGPUBindGroupLayout bind_group_layout; // currently compute pipelines are only
+                                               // allowed to use @group(0)
+    } val;
+
+    static u64 hash(const void* item, uint64_t seed0, uint64_t seed1)
+    {
+        G_CacheComputePipeline* entry = (G_CacheComputePipeline*)item;
+        return hashmap_xxhash3(&entry->key, sizeof(entry->key), seed0, seed1);
+    }
+
+    static int compare(const void* a, const void* b, void* udata)
+    {
+        G_CacheComputePipeline* ga = (G_CacheComputePipeline*)a;
+        G_CacheComputePipeline* gb = (G_CacheComputePipeline*)b;
+        ASSERT(sizeof(ga->key) == sizeof(WGPUShaderModule));
+        return memcmp(&ga->key, &gb->key, sizeof(ga->key));
+    }
+};
+
+struct G_CacheRenderPipelineKey {
     G_DrawCallPipelineDesc drawcall_pipeline_desc;
     WGPUTextureFormat color_target_format;
     WGPUTextureFormat depth_target_format;
 };
 
-struct G_CachePipelineVal {
+struct G_CacheRenderPipelineVal {
     WGPURenderPipeline pipeline;
     WGPUBindGroupLayout
       bind_group_layout_list[CHUGL_MAX_BINDGROUPS]; // TODO free on delete
@@ -1106,21 +1130,21 @@ struct G_CachePipelineVal {
     }
 };
 
-struct G_CachePipeline {
-    G_CachePipelineKey key;
-    G_CachePipelineVal val;
+struct G_CacheRenderPipeline {
+    G_CacheRenderPipelineKey key;
+    G_CacheRenderPipelineVal val;
 
     static u64 hash(const void* item, uint64_t seed0, uint64_t seed1)
     {
-        G_CachePipeline* entry = (G_CachePipeline*)item;
-        ASSERT(sizeof(entry->key) == sizeof(G_CachePipelineKey));
+        G_CacheRenderPipeline* entry = (G_CacheRenderPipeline*)item;
+        ASSERT(sizeof(entry->key) == sizeof(G_CacheRenderPipelineKey));
         return hashmap_xxhash3(&entry->key, sizeof(entry->key), seed0, seed1);
     }
 
     static int compare(const void* a, const void* b, void* udata)
     {
-        G_CachePipeline* ga = (G_CachePipeline*)a;
-        G_CachePipeline* gb = (G_CachePipeline*)b;
+        G_CacheRenderPipeline* ga = (G_CacheRenderPipeline*)a;
+        G_CacheRenderPipeline* gb = (G_CacheRenderPipeline*)b;
         return memcmp(&ga->key, &gb->key, sizeof(ga->key));
     }
 };
@@ -1159,12 +1183,10 @@ struct G_CacheBindGroup {
         return memcmp(ga, gb, sizeof(*ga));
     }
 
-    static void free(void* item)
+    static void free(G_CacheBindGroup* bg)
     {
-        G_CacheBindGroup* bg = (G_CacheBindGroup*)item;
         ASSERT(bg->val.frames_till_expired <= 0);
         WGPU_RELEASE_RESOURCE(BindGroup, bg->val.bg);
-        // TODO: do we need to reference count the sampler/buffer/textureView??
     }
 };
 
@@ -1176,19 +1198,24 @@ struct G_CacheRenderTargetDesc {
 };
 
 struct G_Cache {
-    hashmap* pipeline_map;
+    hashmap* render_pipeline_map;
+    hashmap* compute_pipeline_map;
     hashmap* bindgroup_map;
 
     Arena deletion_queue;
 
     void init()
     {
-        pipeline_map = hashmap_new_simple(
-          sizeof(G_CachePipeline), G_CachePipeline::hash, G_CachePipeline::compare);
+        render_pipeline_map = hashmap_new_simple(sizeof(G_CacheRenderPipeline),
+                                                 G_CacheRenderPipeline::hash,
+                                                 G_CacheRenderPipeline::compare);
 
-        bindgroup_map
-          = hashmap_new(sizeof(G_CacheBindGroup), 128, 0, 0, G_CacheBindGroup::hash,
-                        G_CacheBindGroup::compare, G_CacheBindGroup::free, NULL);
+        compute_pipeline_map = hashmap_new_simple(sizeof(G_CacheComputePipeline),
+                                                  G_CacheComputePipeline::hash,
+                                                  G_CacheComputePipeline::compare);
+
+        bindgroup_map = hashmap_new_simple(
+          sizeof(G_CacheBindGroup), G_CacheBindGroup::hash, G_CacheBindGroup::compare);
     }
 
     void free()
@@ -1197,12 +1224,48 @@ struct G_Cache {
         // and we let OS do clean up when chugl exits
     }
 
-    G_CachePipelineVal* renderPipeline(G_CachePipelineKey key, WGPUDevice device)
+    G_CacheComputePipeline computePipeline(WGPUShaderModule module, WGPUDevice device,
+                                           const char* label)
     {
-        G_CachePipeline* result = (G_CachePipeline*)hashmap_get(pipeline_map, &key);
+        G_CacheComputePipeline* result
+          = (G_CacheComputePipeline*)hashmap_get(compute_pipeline_map, &module);
+
+        if (result == NULL) { // create new pipeline
+            log_trace("Cache miss [ComputePipeline], creating new from %p", module);
+
+            WGPUComputePipelineDescriptor desc = {};
+            desc.label                         = label;
+            desc.compute.module                = module;
+            desc.compute.entryPoint            = CHUGL_COMPUTE_ENTRY_POINT;
+
+            WGPUComputePipeline pipeline
+              = wgpuDeviceCreateComputePipeline(device, &desc);
+            G_CacheComputePipeline item
+              = { module,
+                  {
+                    pipeline,
+                    wgpuComputePipelineGetBindGroupLayout(
+                      pipeline, 0) // caching because this wgpu call leaks memory
+                  } };
+
+            const void* replaced = hashmap_set(compute_pipeline_map, &item);
+            ASSERT(!replaced);
+
+            result = (G_CacheComputePipeline*)hashmap_get(compute_pipeline_map, &item);
+            ASSERT(result);
+        }
+
+        return *result;
+    }
+
+    G_CacheRenderPipelineVal* renderPipeline(G_CacheRenderPipelineKey key,
+                                             WGPUDevice device)
+    {
+        G_CacheRenderPipeline* result
+          = (G_CacheRenderPipeline*)hashmap_get(render_pipeline_map, &key);
 
         if (result == NULL) {
-            log_trace("Cache miss [Pipeline], creating new from Shader %d",
+            log_trace("Cache miss [RenderPipeline], creating new from Shader %d",
                       key.drawcall_pipeline_desc.sg_shader_id);
 
             ///////////////////////////////////
@@ -1269,14 +1332,15 @@ struct G_Cache {
               = wgpuDeviceCreateRenderPipeline(device, &pipeline_desc);
 
             // add to cache
-            G_CachePipeline pipeline_item = {};
-            pipeline_item.key             = key;
-            pipeline_item.val.pipeline    = pipeline;
+            G_CacheRenderPipeline pipeline_item = {};
+            pipeline_item.key                   = key;
+            pipeline_item.val.pipeline          = pipeline;
 
-            const void* replaced = hashmap_set(pipeline_map, &pipeline_item);
+            const void* replaced = hashmap_set(render_pipeline_map, &pipeline_item);
             ASSERT(!replaced);
 
-            result = (G_CachePipeline*)hashmap_get(pipeline_map, &pipeline_item);
+            result = (G_CacheRenderPipeline*)hashmap_get(render_pipeline_map,
+                                                         &pipeline_item);
             ASSERT(result);
         }
 
@@ -1298,7 +1362,10 @@ struct G_Cache {
           = (G_CacheBindGroup*)hashmap_get(bindgroup_map, &item.key);
 
         if (result == NULL) {
-            log_trace("Cache miss [BindGroup], creating new");
+#ifdef CHUGL_DEBUG
+            log_trace("Cache miss [BindGroup], creating new for layout %p", layout);
+            G_Util::printBindGroupEntryList(bg_entry_list, bg_entry_count);
+#endif
 
             WGPUBindGroupDescriptor desc = {};
             desc.layout                  = layout;
@@ -1326,6 +1393,9 @@ struct G_Cache {
         // TODO: loop over all pipelines, and if associated R_Shader is destroyed,
         // free the pipeline, WGPU_RELEASE the cached bindgroup layouts
 
+        // Actually, for compute pipelines, the graphics thread GC can explicitly
+        // tell the rendergraph to release the compute pipeline and bind group layout!
+
         // loop over bindgroups. delete expired.
         // intentionally NOT refcounting WGPU resources here under assumption that
         // chuck-side refcounting will handle that for us
@@ -1342,6 +1412,11 @@ struct G_Cache {
             G_CacheBindGroup* bg_del
               = ARENA_GET_TYPE(&deletion_queue, G_CacheBindGroup, i);
             hashmap_delete(bindgroup_map, bg_del);
+            G_CacheBindGroup::free(bg_del);
+
+            // log_trace("deleting expired bindgroup");
+            // G_Util::printBindGroupEntryList(bg_del->key.bg_entry_list,
+            //                                 bg_del->key.bg_entry_count);
         }
         Arena::clearZero(&deletion_queue);
     };
@@ -1421,44 +1496,15 @@ struct G_DrawCall {
 
     u32 instance_count;
 
-    Arena bind_group_list[4]; // each is an array of WGPUBindGroupEntry
+    struct {
+        u32 start, count;
+    } bg_list[CHUGL_MAX_BINDGROUPS];
+
     // no dynamic offsets for now (until we make C port of webgpu-utils shader
     // parser)
     // dynamic_offsets = new Array<Array<number>>(4);
 
     G_DrawCallPipelineDesc pipeline_desc;
-
-    void vertexBuffer(int slot, WGPUBuffer buffer, u64 offset, u64 size)
-    {
-        vertex_buffer_list[slot] = { buffer, offset, size };
-    }
-
-    void buffer(int group, int binding, WGPUBuffer buffer, uint64_t offset,
-                uint64_t size)
-    {
-        WGPUBindGroupEntry* entry
-          = ARENA_PUSH_ZERO_TYPE(bind_group_list + group, WGPUBindGroupEntry);
-        entry->binding = binding;
-        entry->buffer  = buffer;
-        entry->offset  = offset;
-        entry->size    = size;
-    }
-
-    void sampler(int group, int binding, WGPUSampler sampler)
-    {
-        WGPUBindGroupEntry* entry
-          = ARENA_PUSH_ZERO_TYPE(bind_group_list + group, WGPUBindGroupEntry);
-        entry->binding = binding;
-        entry->sampler = sampler;
-    }
-
-    void texture(int group, int binding, WGPUTextureView view)
-    {
-        WGPUBindGroupEntry* entry
-          = ARENA_PUSH_ZERO_TYPE(bind_group_list + group, WGPUBindGroupEntry);
-        entry->binding     = binding;
-        entry->textureView = view;
-    }
 };
 
 struct G_DrawCallList {
@@ -1472,7 +1518,7 @@ struct G_DrawCallList {
                  WGPURenderPassEncoder pass_encoder, // TODO this comes from rendergraph
                  WGPUTextureFormat color_target_format,
                  WGPUTextureFormat depth_target_format, G_Cache* cache,
-                 Arena* drawcall_pool)
+                 Arena* drawcall_pool, Arena bind_group_list[4])
     {
         G_DrawCall* start
           = ARENA_GET_TYPE(drawcall_pool, G_DrawCall, drawcall_start_idx);
@@ -1503,7 +1549,7 @@ struct G_DrawCallList {
                 log_warn("drawcall vertex count of 0");
 #endif
 
-            G_CachePipelineVal* cached_pipeline = cache->renderPipeline(
+            G_CacheRenderPipelineVal* cached_pipeline = cache->renderPipeline(
               {
                 d->pipeline_desc,
                 color_target_format,
@@ -1515,14 +1561,16 @@ struct G_DrawCallList {
             wgpuRenderPassEncoderSetPipeline(pass_encoder, cached_pipeline->pipeline);
 
             // set bindgroups
-            int max_bg = ARRAY_LENGTH(d->bind_group_list);
+            int max_bg = ARRAY_LENGTH(d->bg_list);
             for (int bg_idx = 0; bg_idx < max_bg; bg_idx++) {
-                Arena* bg_entry_list = &d->bind_group_list[bg_idx];
-                int num_bindings     = ARENA_LENGTH(bg_entry_list, WGPUBindGroupEntry);
+                int num_bindings = d->bg_list[bg_idx].count;
+                int start        = d->bg_list[bg_idx].start;
                 if (num_bindings > 0) {
                     WGPUBindGroup bg = cache->bindGroup(
-                      device, (WGPUBindGroupEntry*)bg_entry_list->base, num_bindings,
-                      cached_pipeline->bindGroupLayout(bg_idx));
+                      device,
+                      ARENA_GET_TYPE(bind_group_list + bg_idx, WGPUBindGroupEntry,
+                                     start),
+                      num_bindings, cached_pipeline->bindGroupLayout(bg_idx));
                     ASSERT(bg);
                     wgpuRenderPassEncoderSetBindGroup(pass_encoder, bg_idx, bg, 0,
                                                       NULL);
@@ -1582,10 +1630,9 @@ struct G_RenderTarget {
 };
 
 typedef int G_DrawCallListID;
+typedef int G_DrawCallID;
 
-struct G_Pass {
-    G_PassType type;
-
+struct G_RenderPassParams {
     G_RenderTarget color_target;
     WGPUColor clear_color;
     WGPULoadOp color_load_op;
@@ -1600,11 +1647,27 @@ struct G_Pass {
     bool viewport_custom;
 
     G_DrawCallListID drawcall_list_id;
+};
+
+struct G_ComputePassParams {
+    WGPUShaderModule module;
+    u32 x, y, z;            // workgroup size
+    u32 bg_start, bg_count; // bindgroup entries
+};
+
+struct G_Pass {
+    G_PassType type;
+
+    union {
+        G_RenderPassParams rp;
+        G_ComputePassParams cp;
+    };
 
     // set viewport in pixels
     void viewport(float x, float y, float w, float h, WGPULimits* limits)
     {
         // TODO
+        ASSERT(type == G_PassType_Render);
         ASSERT(false);
     }
 };
@@ -1612,8 +1675,11 @@ struct G_Pass {
 struct G_Graph {
     G_Cache cache;
 
+    Arena bind_group_entry_list[CHUGL_MAX_BINDGROUPS]; // type WGPUBindGroupEntry
+
     // drawcall pool
     Arena drawcall_pool;
+    G_DrawCall* current_draw;
 
     G_DrawCallList drawcall_list_pool[CHUGL_RENDERGRAPH_MAX_PASSES];
     int drawcall_list_count;
@@ -1637,7 +1703,90 @@ struct G_Graph {
         ++drawcall_list_pool[dc_list].drawcall_count;
         G_DrawCall* draw = ARENA_PUSH_ZERO_TYPE(&drawcall_pool, G_DrawCall);
 
+        for (int i = 0; i < CHUGL_MAX_BINDGROUPS; i++) {
+            draw->bg_list[i].start
+              = ARENA_LENGTH(bind_group_entry_list + i, WGPUBindGroupEntry);
+        }
+
+        current_draw = draw;
         return draw;
+    }
+
+    void vertexBuffer(G_DrawCall* d, int slot, WGPUBuffer buffer, u64 offset, u64 size)
+    {
+        ASSERT(d == current_draw);
+        d->vertex_buffer_list[slot] = { buffer, offset, size };
+    }
+
+    void bindBuffer(G_DrawCall* d, int group, int binding, WGPUBuffer buffer,
+                    uint64_t offset, uint64_t size)
+    {
+        ASSERT(d == current_draw);
+        WGPUBindGroupEntry* entry
+          = ARENA_PUSH_ZERO_TYPE(bind_group_entry_list + group, WGPUBindGroupEntry);
+        entry->binding = binding;
+        entry->buffer  = buffer;
+        entry->offset  = offset;
+        entry->size    = size;
+
+        ++d->bg_list[group].count;
+    }
+
+    void bindSampler(G_DrawCall* d, int group, int binding, WGPUSampler sampler)
+    {
+        ASSERT(d == current_draw);
+        WGPUBindGroupEntry* entry
+          = ARENA_PUSH_ZERO_TYPE(bind_group_entry_list + group, WGPUBindGroupEntry);
+        entry->binding = binding;
+        entry->sampler = sampler;
+
+        ++d->bg_list[group].count;
+    }
+
+    void bindTexture(G_DrawCall* d, int group, int binding, WGPUTextureView view)
+    {
+        ASSERT(d == current_draw);
+        WGPUBindGroupEntry* entry
+          = ARENA_PUSH_ZERO_TYPE(bind_group_entry_list + group, WGPUBindGroupEntry);
+        entry->binding     = binding;
+        entry->textureView = view;
+
+        ++d->bg_list[group].count;
+    }
+
+    void computePassBindBuffer(int binding, WGPUBuffer buffer, uint64_t offset,
+                               uint64_t size)
+    {
+        ASSERT(pass_list[pass_count - 1].type == G_PassType_Compute);
+        WGPUBindGroupEntry* entry
+          = ARENA_PUSH_ZERO_TYPE(bind_group_entry_list, WGPUBindGroupEntry);
+        entry->binding = binding;
+        entry->buffer  = buffer;
+        entry->offset  = offset;
+        entry->size    = size;
+
+        ++pass_list[pass_count - 1].cp.bg_count;
+    }
+
+    void computePassBindSampler(int binding, WGPUSampler sampler)
+    {
+        ASSERT(pass_list[pass_count - 1].type == G_PassType_Compute);
+        WGPUBindGroupEntry* entry
+          = ARENA_PUSH_ZERO_TYPE(bind_group_entry_list, WGPUBindGroupEntry);
+        entry->binding = binding;
+        entry->sampler = sampler;
+
+        ++pass_list[pass_count - 1].cp.bg_count;
+    }
+
+    void computePassBindTexture(int binding, WGPUTextureView view)
+    {
+        ASSERT(pass_list[pass_count - 1].type == G_PassType_Compute);
+        WGPUBindGroupEntry* entry
+          = ARENA_PUSH_ZERO_TYPE(bind_group_entry_list, WGPUBindGroupEntry);
+        entry->binding     = binding;
+        entry->textureView = view;
+        ++pass_list[pass_count - 1].cp.bg_count;
     }
 
     G_DrawCallListID addDrawCallList()
@@ -1660,6 +1809,23 @@ struct G_Graph {
         return &this->pass_list[pass_count++];
     }
 
+    void addComputePass(WGPUShaderModule module, u32 x, u32 y, u32 z)
+    {
+        if (pass_count == CHUGL_RENDERGRAPH_MAX_PASSES) {
+            log_error("Reached max pass count %d", pass_count);
+            return;
+        }
+        G_Pass* compute_pass = &pass_list[pass_count++];
+        compute_pass->type   = G_PassType_Compute;
+        compute_pass->cp
+          = { module,
+              x,
+              y,
+              z,
+              (u32)ARENA_LENGTH(&bind_group_entry_list[0], WGPUBindGroupEntry),
+              0 };
+    }
+
     void executeAndReset(WGPUDevice device, WGPUCommandEncoder command_encoder)
     {
         // TODO add debug labels
@@ -1674,21 +1840,23 @@ struct G_Graph {
                     WGPURenderPassColorAttachment ca          = {};
                     WGPURenderPassDepthStencilAttachment ds   = {};
 
-                    bool has_color_target = (pass->color_target.texture_view != NULL);
+                    bool has_color_target
+                      = (pass->rp.color_target.texture_view != NULL);
                     if (has_color_target) {
-                        ca.view       = pass->color_target.texture_view;
-                        ca.loadOp     = pass->color_load_op;
-                        ca.storeOp    = pass->color_store_op;
-                        ca.clearValue = pass->clear_color;
+                        ca.view       = pass->rp.color_target.texture_view;
+                        ca.loadOp     = pass->rp.color_load_op;
+                        ca.storeOp    = pass->rp.color_store_op;
+                        ca.clearValue = pass->rp.clear_color;
                         ca.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 
                         render_pass_desc.colorAttachmentCount = 1;
                         render_pass_desc.colorAttachments     = &ca;
                     }
 
-                    bool has_depth_target = (pass->depth_target.texture_view != NULL);
+                    bool has_depth_target
+                      = (pass->rp.depth_target.texture_view != NULL);
                     if (has_depth_target) {
-                        ds.view = pass->depth_target.texture_view;
+                        ds.view = pass->rp.depth_target.texture_view;
 
                         // defaults for render pass depth/stencil attachment
                         // The initial value of the depth buffer, meaning "far"
@@ -1714,34 +1882,57 @@ struct G_Graph {
                       = wgpuCommandEncoderBeginRenderPass(command_encoder,
                                                           &render_pass_desc);
 
-                    if (pass->viewport_custom) {
+                    if (pass->rp.viewport_custom) {
                         wgpuRenderPassEncoderSetViewport(
-                          render_pass_encoder, pass->viewport_x, pass->viewport_y,
-                          pass->viewport_w, pass->viewport_h, 0.0, 1.0);
+                          render_pass_encoder, pass->rp.viewport_x, pass->rp.viewport_y,
+                          pass->rp.viewport_w, pass->rp.viewport_h, 0.0, 1.0);
                     }
 
-                    ASSERT(pass->drawcall_list_id >= 0
-                           && pass->drawcall_list_id < drawcall_list_count);
-                    drawcall_list_pool[pass->drawcall_list_id].execute(
-                      device, render_pass_encoder, pass->color_target.view_format,
-                      pass->depth_target.view_format, &cache, &drawcall_pool);
+                    ASSERT(pass->rp.drawcall_list_id >= 0
+                           && pass->rp.drawcall_list_id < drawcall_list_count);
+                    drawcall_list_pool[pass->rp.drawcall_list_id].execute(
+                      device, render_pass_encoder, pass->rp.color_target.view_format,
+                      pass->rp.depth_target.view_format, &cache, &drawcall_pool,
+                      bind_group_entry_list);
 
                     wgpuRenderPassEncoderEnd(render_pass_encoder);
-                    wgpuRenderPassEncoderRelease(render_pass_encoder);
+                    WGPU_RELEASE_RESOURCE(RenderPassEncoder, render_pass_encoder);
                 } break;
                 case G_PassType_Compute: {
-                    UNREACHABLE
+                    G_CacheComputePipeline cp
+                      = cache.computePipeline(pass->cp.module, device, NULL);
+                    WGPUComputePassEncoder compute_pass
+                      = wgpuCommandEncoderBeginComputePass(command_encoder, NULL);
+                    wgpuComputePassEncoderSetPipeline(compute_pass, cp.val.pipeline);
+
+                    WGPUBindGroup bg = cache.bindGroup(
+                      device,
+                      ARENA_GET_TYPE(bind_group_entry_list, WGPUBindGroupEntry,
+                                     pass->cp.bg_start),
+                      pass->cp.bg_count, cp.val.bind_group_layout);
+                    const int compute_pass_binding_location = 0;
+                    wgpuComputePassEncoderSetBindGroup(
+                      compute_pass, compute_pass_binding_location, bg, 0, NULL);
+
+                    // dispatch
+                    wgpuComputePassEncoderDispatchWorkgroups(compute_pass, pass->cp.x,
+                                                             pass->cp.y, pass->cp.z);
+
+                    // cleanup
+                    wgpuComputePassEncoderEnd(compute_pass);
+                    WGPU_RELEASE_RESOURCE(ComputePassEncoder, compute_pass);
                 } break;
                 default: UNREACHABLE
             }
-
-            // resolve targets (if not already resolved)
-            // this.cache.resolveRenderTarget(pass.color_target);
-            // this.cache.resolveRenderTarget(pass.depth_target);
-            // pass.execute(this.cache, command_encoder);
         }
 
-        // reset
+        // reset ----------------------------------------
+        current_draw = NULL;
+
+        for (int i = 0; i < ARRAY_LENGTH(bind_group_entry_list); i++) {
+            Arena::clear(bind_group_entry_list + i);
+        }
+
         ZERO_ARRAY(pass_list);
         pass_count = 0;
 
@@ -1749,13 +1940,6 @@ struct G_Graph {
         drawcall_list_count = 0;
 
         // TODO ==optimize== add bindgroup pool
-        for (int i = 0; i < ARENA_LENGTH(&drawcall_pool, G_DrawCall); i++) {
-            G_DrawCall* dc = ARENA_GET_TYPE(&drawcall_pool, G_DrawCall, i);
-
-            for (int j = 0; j < ARRAY_LENGTH(dc->bind_group_list); j++) {
-                Arena::free(&dc->bind_group_list[j]); // this many frees is BAD
-            }
-        }
         Arena::clear(&drawcall_pool);
 
         cache.update();

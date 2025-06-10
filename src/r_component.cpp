@@ -570,15 +570,15 @@ bool R_Geometry::usesVertexPulling(R_Geometry* geo)
     return false;
 }
 
-void R_Geometry::addPullBindGroupEntries(R_Geometry* geo, G_DrawCall* d)
+void R_Geometry::addPullBindGroupEntries(R_Geometry* geo, G_Graph* graph, G_DrawCall* d)
 {
     for (u32 i = 0; i < ARRAY_LENGTH(geo->pull_buffers); i++) {
         if (geo->pull_buffers[i].buf == NULL) {
             continue;
         }
 
-        d->buffer(VERTEX_PULL_GROUP, i, geo->pull_buffers[i].buf, 0,
-                  geo->pull_buffers[i].size);
+        graph->bindBuffer(d, VERTEX_PULL_GROUP, i, geo->pull_buffers[i].buf, 0,
+                          geo->pull_buffers[i].size);
     }
 }
 
@@ -746,12 +746,13 @@ void MaterialTextureView::init(MaterialTextureView* view)
     view->scale[1] = 1.0f;
 }
 
-void R_Material::createBindGroupEntries(R_Material* mat, int group,
+void R_Material::createBindGroupEntries(R_Material* mat, int group, G_Graph* graph,
                                         G_DrawCall* drawcall, GraphicsContext* gctx)
 {
-    ASSERT(drawcall->bind_group_list[group].curr == 0);
-
     // create bindgroups for all bindings
+
+    // super jank rn, if drawcall is NULL we assume we are adding bindings to a compute
+    // pass
     ASSERT(CHUGL_MATERIAL_MAX_BINDINGS == ARRAY_LENGTH(mat->bindings));
     for (int i = 0; i < CHUGL_MATERIAL_MAX_BINDINGS; ++i) {
         R_Binding* binding = &mat->bindings[i];
@@ -762,35 +763,51 @@ void R_Material::createBindGroupEntries(R_Material* mat, int group,
                 const int UNIFORM_OFFSET
                   = MAX(gctx->limits.minUniformBufferOffsetAlignment,
                         sizeof(SG_MaterialUniformData));
-                drawcall->buffer(group, i, mat->uniform_buffer, UNIFORM_OFFSET * i,
-                                 sizeof(SG_MaterialUniformData));
+                drawcall ? graph->bindBuffer(drawcall, group, i, mat->uniform_buffer,
+                                             UNIFORM_OFFSET * i,
+                                             sizeof(SG_MaterialUniformData)) :
+                           graph->computePassBindBuffer(i, mat->uniform_buffer,
+                                                        UNIFORM_OFFSET * i,
+                                                        sizeof(SG_MaterialUniformData));
             } break;
             case R_BIND_STORAGE: {
-                drawcall->buffer(group, i, binding->as.storage_buffer.buf, 0,
-                                 binding->size);
+                drawcall ?
+                  graph->bindBuffer(drawcall, group, i, binding->as.storage_buffer.buf,
+                                    0, binding->size) :
+                  graph->computePassBindBuffer(i, binding->as.storage_buffer.buf, 0,
+                                               binding->size);
             } break;
             case R_BIND_SAMPLER: {
-                drawcall->sampler(group, i,
-                                  Graphics_GetSampler(gctx, binding->as.samplerConfig));
+                drawcall ? graph->bindSampler(
+                             drawcall, group, i,
+                             Graphics_GetSampler(gctx, binding->as.samplerConfig)) :
+                           graph->computePassBindSampler(
+                             i, Graphics_GetSampler(gctx, binding->as.samplerConfig));
             } break;
             case R_BIND_TEXTURE_ID: {
                 R_Texture* rTexture = Component_GetTexture(binding->as.textureID);
-                drawcall->texture(group, i, rTexture->gpu_texture_view);
+
+                drawcall ?
+                  graph->bindTexture(drawcall, group, i, rTexture->gpu_texture_view) :
+                  graph->computePassBindTexture(i, rTexture->gpu_texture_view);
+
                 ASSERT(rTexture->gpu_texture_view);
                 ASSERT(binding->size == sizeof(SG_ID));
                 binding->generation = rTexture->generation; // TODO remove
             } break;
             case R_BIND_STORAGE_EXTERNAL: {
-                drawcall->buffer(group, i, binding->as.storage_external->buf, 0,
-                                 binding->size);
+                drawcall ? graph->bindBuffer(drawcall, group, i,
+                                             binding->as.storage_external->buf, 0,
+                                             binding->size) :
+                           graph->computePassBindBuffer(
+                             i, binding->as.storage_external->buf, 0, binding->size);
             } break;
-            case R_BIND_TEXTURE_VIEW: {
-                ASSERT(binding->as.textureView);
-                drawcall->texture(group, i, binding->as.textureView);
-            } break;
+            case R_BIND_TEXTURE_VIEW:
             case R_BIND_STORAGE_TEXTURE_ID: {
                 ASSERT(binding->as.textureView);
-                drawcall->texture(group, i, binding->as.textureView);
+                drawcall ?
+                  graph->bindTexture(drawcall, group, i, binding->as.textureView) :
+                  graph->computePassBindTexture(i, binding->as.textureView);
             } break;
             default: ASSERT(false);
         }

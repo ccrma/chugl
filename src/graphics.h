@@ -457,6 +457,7 @@ int G_bytesPerTexel(WGPUTextureFormat format);
 struct G_Util {
 
     static WGPUTextureFormat textureFormatSrgbVariant(WGPUTextureFormat format);
-
     static bool isStripTopology(WGPUPrimitiveTopology topology);
+    static void printBindGroupEntry(WGPUBindGroupEntry* entry);
+    static void printBindGroupEntryList(WGPUBindGroupEntry* entry, int count);
 };

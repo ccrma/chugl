@@ -1,7 +1,8 @@
 TODO
 
+- add bloompass to render graph
 - test if we can move outputpass vertex shader to @group(1)
-- add expire frame lifetime to all cache resources (pipelines, etc)
+- add pipeline/bindgroup gc for R_Shader
   - want to prevent memory leak from say CHydra building new shaders every frame
 - remove R_Binding->generation
 
@@ -31,3 +32,6 @@ TODO
         -  Ryan fleury arena talk
         -  eskil steenberg how I program C leak checker
         -  stb leak check
+
+- curious: why does changing window size trigger a bunch of bindgroup cache misses and rebuilds?
+  - helpful to add visualizer / imgui debug view for render graph
