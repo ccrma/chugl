@@ -908,7 +908,8 @@ SG_Texture* SG_CreateTexture(SG_TextureDesc* desc, Chuck_Object* ckobj,
     CK_DL_API API = g_chuglAPI;
 
     // create ckobj
-    // NOTE: reference counting here depends on context; e.g., add_ref would false if the texture created is to be returned (without retain)
+    // NOTE: reference counting here depends on context; e.g., add_ref would false if
+    // the texture created is to be returned (without retain)
     Chuck_Object* texture_obj
       = ckobj ? ckobj :
                 chugin_createCkObj(SG_CKNames[SG_COMPONENT_TEXTURE], add_ref, shred);
@@ -1661,16 +1662,6 @@ void SG_Pass::screenTexture(SG_Pass* pass, SG_Texture* texture)
     SG_AddRef(texture);
     SG_DecrementRef(pass->screen_texture_id);
     pass->screen_texture_id = texture ? texture->id : 0;
-}
-
-void SG_Pass::computeShader(SG_Pass* pass, SG_Material* material, SG_Shader* shader)
-{
-    SG_AddRef(shader);
-    SG_DecrementRef(pass->compute_shader_id);
-    pass->compute_shader_id = shader ? shader->id : 0;
-
-    // the material is internal, ckobj=NULL so no need to refcount
-    pass->compute_material_id = material ? material->id : 0;
 }
 
 void SG_Pass::bloomOutputRenderTexture(SG_Pass* pass, SG_Texture* tex)

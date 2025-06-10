@@ -836,10 +836,10 @@ struct App {
                     g_pass->rp.drawcall_list_id = dc_list;
                 } break;
                 case SG_PassType_Compute: {
-                    R_Shader* compute_shader
-                      = Component_GetShader(pass->sg_pass.compute_shader_id);
                     R_Material* compute_material
                       = Component_GetMaterial(pass->sg_pass.compute_material_id);
+                    R_Shader* compute_shader
+                      = Component_GetShader(compute_material->pso.sg_shader_id);
 
                     // validation
                     if (compute_material) {
@@ -851,8 +851,10 @@ struct App {
                     if (!valid_compute_pass) break;
 
                     app->rendergraph.addComputePass(
-                      compute_shader->compute_shader_module, pass->sg_pass.workgroup.x,
-                      pass->sg_pass.workgroup.y, pass->sg_pass.workgroup.z);
+                      compute_shader->compute_shader_module,
+                      pass->sg_pass.compute_workgroup.x,
+                      pass->sg_pass.compute_workgroup.y,
+                      pass->sg_pass.compute_workgroup.z);
 
                     const int compute_pass_binding_location = 0;
                     R_Material::createBindGroupEntries(

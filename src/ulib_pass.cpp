@@ -871,7 +871,9 @@ CK_DLL_CTOR(computepass_ctor)
     ASSERT(pass->pass_type == SG_PassType_Compute);
     OBJ_MEMBER_UINT(SELF, component_offset_id) = pass->id;
 
-    chugl_createInternalMaterial(SG_MATERIAL_COMPUTE, NULL);
+    // the material is internal, ckobj=NULL so no need to refcount
+    SG_Material* mat          = chugl_createInternalMaterial(SG_MATERIAL_COMPUTE, NULL);
+    pass->compute_material_id = mat->id;
 
     CQ_PushCommand_PassUpdate(pass);
 }
@@ -881,14 +883,8 @@ CK_DLL_MFUN(computepass_set_shader)
     SG_Pass* pass = GET_PASS(SELF);
     SG_Shader* shader
       = SG_GetShader(OBJ_MEMBER_UINT(GET_NEXT_OBJECT(ARGS), component_offset_id));
-
-    SG_Material* mat = (pass->compute_material_id == 0) ?
-                         chugl_createInternalMaterial(SG_MATERIAL_COMPUTE, shader) :
-                         SG_GetMaterial(pass->compute_material_id);
-
-    SG_Pass::computeShader(pass, mat, shader);
-
-    CQ_PushCommand_PassUpdate(pass);
+    SG_Material* mat = SG_GetMaterial(pass->compute_material_id);
+    chugl_materialSetShader(mat, shader);
 }
 
 CK_DLL_MFUN(computepass_set_uniform_float)
@@ -899,9 +895,7 @@ CK_DLL_MFUN(computepass_set_uniform_float)
     t_CKINT location        = GET_NEXT_INT(ARGS);
     t_CKFLOAT uniform_value = GET_NEXT_FLOAT(ARGS);
 
-    SG_Material* material = (pass->compute_material_id == 0) ?
-                              chugl_createInternalMaterial(SG_MATERIAL_COMPUTE, NULL) :
-                              SG_GetMaterial(pass->compute_material_id);
+    SG_Material* material = SG_GetMaterial(pass->compute_material_id);
 
     // set uniform
     SG_Material::uniformFloat(material, location, uniform_value);
@@ -916,9 +910,7 @@ CK_DLL_MFUN(computepass_set_uniform_float2)
     t_CKINT location       = GET_NEXT_INT(ARGS);
     t_CKVEC2 uniform_value = GET_NEXT_VEC2(ARGS);
 
-    SG_Material* material = (pass->compute_material_id == 0) ?
-                              chugl_createInternalMaterial(SG_MATERIAL_COMPUTE, NULL) :
-                              SG_GetMaterial(pass->compute_material_id);
+    SG_Material* material = SG_GetMaterial(pass->compute_material_id);
 
     // set uniform
     SG_Material::uniformVec2f(material, location, { uniform_value.x, uniform_value.y });
@@ -933,11 +925,8 @@ CK_DLL_MFUN(computepass_set_uniform_float3)
     t_CKINT location       = GET_NEXT_INT(ARGS);
     t_CKVEC3 uniform_value = GET_NEXT_VEC3(ARGS);
 
-    SG_Material* material = (pass->compute_material_id == 0) ?
-                              chugl_createInternalMaterial(SG_MATERIAL_COMPUTE, NULL) :
-                              SG_GetMaterial(pass->compute_material_id);
+    SG_Material* material = SG_GetMaterial(pass->compute_material_id);
 
-    // set uniform
     SG_Material::uniformVec3f(material, location,
                               { uniform_value.x, uniform_value.y, uniform_value.z });
     CQ_PushCommand_MaterialSetUniform(material, location);
@@ -951,9 +940,7 @@ CK_DLL_MFUN(computepass_set_uniform_float4)
     t_CKINT location       = GET_NEXT_INT(ARGS);
     t_CKVEC4 uniform_value = GET_NEXT_VEC4(ARGS);
 
-    SG_Material* material = (pass->compute_material_id == 0) ?
-                              chugl_createInternalMaterial(SG_MATERIAL_COMPUTE, NULL) :
-                              SG_GetMaterial(pass->compute_material_id);
+    SG_Material* material = SG_GetMaterial(pass->compute_material_id);
 
     // set uniform
     SG_Material::uniformVec4f(
@@ -972,12 +959,9 @@ CK_DLL_MFUN(computepass_set_texture)
     if (!tex_ckobj) return;
 
     SG_Texture* tex = SG_GetTexture(OBJ_MEMBER_UINT(tex_ckobj, component_offset_id));
-    SG_Material* material = (pass->compute_material_id == 0) ?
-                              chugl_createInternalMaterial(SG_MATERIAL_COMPUTE, NULL) :
-                              SG_GetMaterial(pass->compute_material_id);
+    SG_Material* material = SG_GetMaterial(pass->compute_material_id);
 
     SG_Material::setTexture(material, location, tex);
-
     CQ_PushCommand_MaterialSetUniform(material, location);
 }
 
@@ -989,11 +973,8 @@ CK_DLL_MFUN(computepass_set_storage_buffer)
     t_CKINT location     = GET_NEXT_INT(ARGS);
     Chuck_Object* buffer = GET_NEXT_OBJECT(ARGS);
 
-    SG_Material* material = (pass->compute_material_id == 0) ?
-                              chugl_createInternalMaterial(SG_MATERIAL_COMPUTE, NULL) :
-                              SG_GetMaterial(pass->compute_material_id);
-
-    SG_Buffer* sg_buffer = SG_GetBuffer(OBJ_MEMBER_UINT(buffer, component_offset_id));
+    SG_Material* material = SG_GetMaterial(pass->compute_material_id);
+    SG_Buffer* sg_buffer  = SG_GetBuffer(OBJ_MEMBER_UINT(buffer, component_offset_id));
 
     // set storage buffer
     SG_Material::storageBuffer(material, location, sg_buffer);
@@ -1010,12 +991,9 @@ CK_DLL_MFUN(computepass_set_storage_texture)
     if (!tex_ckobj) return;
 
     SG_Texture* tex = SG_GetTexture(OBJ_MEMBER_UINT(tex_ckobj, component_offset_id));
-    SG_Material* material = (pass->compute_material_id == 0) ?
-                              chugl_createInternalMaterial(SG_MATERIAL_COMPUTE, NULL) :
-                              SG_GetMaterial(pass->compute_material_id);
+    SG_Material* material = SG_GetMaterial(pass->compute_material_id);
 
     SG_Material::setStorageTexture(material, location, tex);
-
     CQ_PushCommand_MaterialSetUniform(material, location);
 }
 
@@ -1024,12 +1002,11 @@ CK_DLL_MFUN(computepass_set_workgroup)
     SG_Pass* pass = GET_PASS(SELF);
     ASSERT(pass->pass_type == SG_PassType_Compute);
 
-    t_CKINT x = GET_NEXT_INT(ARGS);
-    t_CKINT y = GET_NEXT_INT(ARGS);
-    t_CKINT z = GET_NEXT_INT(ARGS);
+    u32 x = GET_NEXT_INT(ARGS);
+    u32 y = GET_NEXT_INT(ARGS);
+    u32 z = GET_NEXT_INT(ARGS);
 
-    SG_Pass::workgroupSize(pass, x, y, z);
-
+    pass->compute_workgroup = { x, y, z };
     CQ_PushCommand_PassUpdate(pass);
 }
 
@@ -1041,9 +1018,7 @@ CK_DLL_MFUN(computepass_set_uniform_int)
     t_CKINT location      = GET_NEXT_INT(ARGS);
     t_CKINT uniform_value = GET_NEXT_INT(ARGS);
 
-    SG_Material* material = (pass->compute_material_id == 0) ?
-                              chugl_createInternalMaterial(SG_MATERIAL_COMPUTE, NULL) :
-                              SG_GetMaterial(pass->compute_material_id);
+    SG_Material* material = SG_GetMaterial(pass->compute_material_id);
 
     // set uniform
     SG_Material::uniformInt(material, location, uniform_value);

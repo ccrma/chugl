@@ -3478,34 +3478,3 @@ R_ScreenPassPipeline R_GetScreenPassPipeline(GraphicsContext* gctx,
 
     return *pipeline;
 }
-
-static int r_compute_pass_pipeline_count                  = 0;
-static R_ComputePassPipeline r_compute_pass_pipelines[64] = {};
-
-R_ComputePassPipeline R_GetComputePassPipeline(GraphicsContext* gctx, R_Shader* shader)
-{
-    // first linear search
-    for (int i = 0; i < r_compute_pass_pipeline_count; i++) {
-        if (r_compute_pass_pipelines[i].shader_id == shader->id) {
-            return r_compute_pass_pipelines[i];
-        }
-    }
-
-    WGPUComputePipelineDescriptor desc = {};
-    desc.compute.module                = shader->compute_shader_module;
-    desc.compute.entryPoint            = "main";
-
-    char pipeline_label[64] = {};
-    snprintf(pipeline_label, sizeof(pipeline_label), "ComputePass Pipeline %d %s",
-             shader->id, shader->name);
-    desc.label = pipeline_label;
-
-    R_ComputePassPipeline* pipeline
-      = &r_compute_pass_pipelines[r_compute_pass_pipeline_count++];
-    pipeline->shader_id         = shader->id;
-    pipeline->gpu_pipeline      = wgpuDeviceCreateComputePipeline(gctx->device, &desc);
-    pipeline->bind_group_layout = wgpuComputePipelineGetBindGroupLayout(
-      pipeline->gpu_pipeline, 0); // caching because this wgpu call leaks memory
-
-    return *pipeline;
-}

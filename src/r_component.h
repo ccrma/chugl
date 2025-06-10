@@ -831,13 +831,6 @@ struct R_ScreenPassPipeline {
 R_ScreenPassPipeline R_GetScreenPassPipeline(GraphicsContext* gctx,
                                              WGPUTextureFormat format, SG_ID shader_id);
 
-struct R_ComputePassPipeline {
-    SG_ID shader_id;
-    WGPUComputePipeline gpu_pipeline;
-    WGPUBindGroupLayout bind_group_layout;
-};
-R_ComputePassPipeline R_GetComputePassPipeline(GraphicsContext* gctx, R_Shader* shader);
-
 // =============================================================================
 // R_Buffer
 // =============================================================================

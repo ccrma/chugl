@@ -789,9 +789,12 @@ struct SG_Pass : public SG_Component {
     SG_ID screen_shader_id;
 
     // ComputePass params
-    SG_ID compute_shader_id;
+    // SG_ID compute_shader_id; // get compute shader from material
     SG_ID compute_material_id; // created implicitly, material.pos.shader_id =
                                // compute_shader_id
+    struct {
+        u32 x, y, z;
+    } compute_workgroup;
 
     // bloom pass params
     SG_ID bloom_downsample_material_id;
@@ -799,10 +802,6 @@ struct SG_Pass : public SG_Component {
     SG_ID bloom_input_render_texture_id;
     SG_ID bloom_output_render_texture_id;
     int bloom_num_blur_levels = 7;
-
-    struct {
-        u32 x, y, z;
-    } workgroup;
 
     // true if pass_a and pass_b are connected by any number of steps
     static bool isConnected(SG_Pass* pass_a, SG_Pass* pass_b);
@@ -822,13 +821,8 @@ struct SG_Pass : public SG_Component {
     static void screenTexture(SG_Pass* pass, SG_Texture* texture);
 
     // computepass methods
-    static void computeShader(SG_Pass* pass, SG_Material* material, SG_Shader* shader);
-    static void workgroupSize(SG_Pass* pass, u32 x, u32 y, u32 z)
-    {
-        pass->workgroup.x = x;
-        pass->workgroup.y = y;
-        pass->workgroup.z = z;
-    }
+    // static void computeShader(SG_Pass* pass, SG_Material* material, SG_Shader*
+    // shader);
 
     // bloom pass methods
     static void bloomInputRenderTexture(SG_Pass* pass, SG_Texture* tex);

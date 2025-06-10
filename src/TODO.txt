@@ -1,6 +1,17 @@
 TODO
 
 - add bloompass to render graph
+- impl transparency
+- impl screenPass properly and make a little chugl-shaderToy playground example
+  - make actual chugl example.
+  - use UI.text() as text editor field lol, or GText
+- Change chugl RenderPass to ScenePass, fix methods
+  - e.g. RenderPass should NOT be responsible for setting resolution, RenderTarget should be 
+    - (because a RenderTarget can belong to multiple render passes)
+- remove the srgb default, it's messing up colors
+  - a basic 2D scene (no bloom/tonemapping) can just be GG.rootPass() --> GG.scenePass();
+  - add gamma back to OutputPass
+- implement RenderTarget class
 - test if we can move outputpass vertex shader to @group(1)
 - add pipeline/bindgroup gc for R_Shader
   - want to prevent memory leak from say CHydra building new shaders every frame
@@ -26,6 +37,9 @@ TODO
         - but maybe the memory is only picked up by tracker when writing/reading??? (i believe this ithe case on windows, so you can init an arena to several gigs no problem, see ryan fleury post)
         - 
   -  ==Address all of this as part of the great chugl garbage collection refactor==
+     - to prevent cycles, remove the GGen.getChild() method. Children GGens only point to their parent, to prevent refcount cycles
+        - this way, disconnecting a subgraph will actually free the entire subgraph, because the leaf nodes of
+        that subgraph will have refcounts of 0
      -  other resources to look at:
         -  how does box2c track memory? look at their API for requesting memory usage
            -  ideally ChuGL can do the same
@@ -35,3 +49,8 @@ TODO
 
 - curious: why does changing window size trigger a bunch of bindgroup cache misses and rebuilds?
   - helpful to add visualizer / imgui debug view for render graph
+
+
+== Examples ====================
+- Mirrors
+- Portals
