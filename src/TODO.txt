@@ -1,7 +1,9 @@
 TODO
 
 - add bloompass to render graph
+- remove all the old R_RenderPipeline stuff
 - impl transparency
+  - test with skybox to make sure transparent is drawn after
 - impl screenPass properly and make a little chugl-shaderToy playground example
   - make actual chugl example.
   - use UI.text() as text editor field lol, or GText
@@ -16,6 +18,7 @@ TODO
 - add pipeline/bindgroup gc for R_Shader
   - want to prevent memory leak from say CHydra building new shaders every frame
 - remove R_Binding->generation
+- add logging and labels to figure out this weird bindgroup re-generation bug
 
 - add dt to FrameUniforms
 - add gamma and per-channel gamma to OutputPass (so u can replicate the Matrix color curve)
@@ -47,10 +50,9 @@ TODO
         -  eskil steenberg how I program C leak checker
         -  stb leak check
 
-- curious: why does changing window size trigger a bunch of bindgroup cache misses and rebuilds?
-  - helpful to add visualizer / imgui debug view for render graph
-
 
 == Examples ====================
 - Mirrors
 - Portals
+- GUI overlay
+- additive blending particle system

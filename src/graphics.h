@@ -34,6 +34,11 @@
 #include <glfw3webgpu/glfw3webgpu.h>
 #include <webgpu/webgpu.h>
 
+#define WGPU_REFERENCE_RESOURCE(Type, Name)                                            \
+    if (Name) {                                                                        \
+        wgpu##Type##Reference(Name);                                                   \
+    }
+
 #define WGPU_RELEASE_RESOURCE(Type, Name)                                              \
     if (Name) {                                                                        \
         wgpu##Type##Release(Name);                                                     \
@@ -460,4 +465,10 @@ struct G_Util {
     static bool isStripTopology(WGPUPrimitiveTopology topology);
     static void printBindGroupEntry(WGPUBindGroupEntry* entry);
     static void printBindGroupEntryList(WGPUBindGroupEntry* entry, int count);
+    static bool isDepthTextureFormat(WGPUTextureFormat format);
+
+    // WGPU Enum --> string
+    static const char* textureFormatToString(WGPUTextureFormat format);
+    static const char* cullModeToString(WGPUCullMode mode);
+    static const char* topologyToString(WGPUPrimitiveTopology top);
 };

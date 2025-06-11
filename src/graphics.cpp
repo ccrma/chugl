@@ -1783,3 +1783,138 @@ void G_Util::printBindGroupEntryList(WGPUBindGroupEntry* entry, int count)
 {
     for (int i = 0; i < count; ++i) printBindGroupEntry(entry + i);
 }
+
+bool G_Util::isDepthTextureFormat(WGPUTextureFormat format)
+{
+    return (format == WGPUTextureFormat_Depth16Unorm
+            || format == WGPUTextureFormat_Depth24Plus
+            || format == WGPUTextureFormat_Depth24PlusStencil8
+            || format == WGPUTextureFormat_Depth32Float
+            || format == WGPUTextureFormat_Depth32FloatStencil8);
+}
+
+const char* G_Util::textureFormatToString(WGPUTextureFormat format)
+{
+    switch (format) {
+        case WGPUTextureFormat_Undefined: return "Undefined";
+        case WGPUTextureFormat_R8Unorm: return "R8Unorm";
+        case WGPUTextureFormat_R8Snorm: return "R8Snorm";
+        case WGPUTextureFormat_R8Uint: return "R8Uint";
+        case WGPUTextureFormat_R8Sint: return "R8Sint";
+        case WGPUTextureFormat_R16Uint: return "R16Uint";
+        case WGPUTextureFormat_R16Sint: return "R16Sint";
+        case WGPUTextureFormat_R16Float: return "R16Float";
+        case WGPUTextureFormat_RG8Unorm: return "RG8Unorm";
+        case WGPUTextureFormat_RG8Snorm: return "RG8Snorm";
+        case WGPUTextureFormat_RG8Uint: return "RG8Uint";
+        case WGPUTextureFormat_RG8Sint: return "RG8Sint";
+        case WGPUTextureFormat_R32Float: return "R32Float";
+        case WGPUTextureFormat_R32Uint: return "R32Uint";
+        case WGPUTextureFormat_R32Sint: return "R32Sint";
+        case WGPUTextureFormat_RG16Uint: return "RG16Uint";
+        case WGPUTextureFormat_RG16Sint: return "RG16Sint";
+        case WGPUTextureFormat_RG16Float: return "RG16Float";
+        case WGPUTextureFormat_RGBA8Unorm: return "RGBA8Unorm";
+        case WGPUTextureFormat_RGBA8UnormSrgb: return "RGBA8UnormSrgb";
+        case WGPUTextureFormat_RGBA8Snorm: return "RGBA8Snorm";
+        case WGPUTextureFormat_RGBA8Uint: return "RGBA8Uint";
+        case WGPUTextureFormat_RGBA8Sint: return "RGBA8Sint";
+        case WGPUTextureFormat_BGRA8Unorm: return "BGRA8Unorm";
+        case WGPUTextureFormat_BGRA8UnormSrgb: return "BGRA8UnormSrgb";
+        case WGPUTextureFormat_RGB10A2Uint: return "RGB10A2Uint";
+        case WGPUTextureFormat_RGB10A2Unorm: return "RGB10A2Unorm";
+        case WGPUTextureFormat_RG11B10Ufloat: return "RG11B10Ufloat";
+        case WGPUTextureFormat_RGB9E5Ufloat: return "RGB9E5Ufloat";
+        case WGPUTextureFormat_RG32Float: return "RG32Float";
+        case WGPUTextureFormat_RG32Uint: return "RG32Uint";
+        case WGPUTextureFormat_RG32Sint: return "RG32Sint";
+        case WGPUTextureFormat_RGBA16Uint: return "RGBA16Uint";
+        case WGPUTextureFormat_RGBA16Sint: return "RGBA16Sint";
+        case WGPUTextureFormat_RGBA16Float: return "RGBA16Float";
+        case WGPUTextureFormat_RGBA32Float: return "RGBA32Float";
+        case WGPUTextureFormat_RGBA32Uint: return "RGBA32Uint";
+        case WGPUTextureFormat_RGBA32Sint: return "RGBA32Sint";
+        case WGPUTextureFormat_Stencil8: return "Stencil8";
+        case WGPUTextureFormat_Depth16Unorm: return "Depth16Unorm";
+        case WGPUTextureFormat_Depth24Plus: return "Depth24Plus";
+        case WGPUTextureFormat_Depth24PlusStencil8: return "Depth24PlusStencil8";
+        case WGPUTextureFormat_Depth32Float: return "Depth32Float";
+        case WGPUTextureFormat_Depth32FloatStencil8: return "Depth32FloatStencil8";
+        case WGPUTextureFormat_BC1RGBAUnorm: return "BC1RGBAUnorm";
+        case WGPUTextureFormat_BC1RGBAUnormSrgb: return "BC1RGBAUnormSrgb";
+        case WGPUTextureFormat_BC2RGBAUnorm: return "BC2RGBAUnorm";
+        case WGPUTextureFormat_BC2RGBAUnormSrgb: return "BC2RGBAUnormSrgb";
+        case WGPUTextureFormat_BC3RGBAUnorm: return "BC3RGBAUnorm";
+        case WGPUTextureFormat_BC3RGBAUnormSrgb: return "BC3RGBAUnormSrgb";
+        case WGPUTextureFormat_BC4RUnorm: return "BC4RUnorm";
+        case WGPUTextureFormat_BC4RSnorm: return "BC4RSnorm";
+        case WGPUTextureFormat_BC5RGUnorm: return "BC5RGUnorm";
+        case WGPUTextureFormat_BC5RGSnorm: return "BC5RGSnorm";
+        case WGPUTextureFormat_BC6HRGBUfloat: return "BC6HRGBUfloat";
+        case WGPUTextureFormat_BC6HRGBFloat: return "BC6HRGBFloat";
+        case WGPUTextureFormat_BC7RGBAUnorm: return "BC7RGBAUnorm";
+        case WGPUTextureFormat_BC7RGBAUnormSrgb: return "BC7RGBAUnormSrgb";
+        case WGPUTextureFormat_ETC2RGB8Unorm: return "ETC2RGB8Unorm";
+        case WGPUTextureFormat_ETC2RGB8UnormSrgb: return "ETC2RGB8UnormSrgb";
+        case WGPUTextureFormat_ETC2RGB8A1Unorm: return "ETC2RGB8A1Unorm";
+        case WGPUTextureFormat_ETC2RGB8A1UnormSrgb: return "ETC2RGB8A1UnormSrgb";
+        case WGPUTextureFormat_ETC2RGBA8Unorm: return "ETC2RGBA8Unorm";
+        case WGPUTextureFormat_ETC2RGBA8UnormSrgb: return "ETC2RGBA8UnormSrgb";
+        case WGPUTextureFormat_EACR11Unorm: return "EACR11Unorm";
+        case WGPUTextureFormat_EACR11Snorm: return "EACR11Snorm";
+        case WGPUTextureFormat_EACRG11Unorm: return "EACRG11Unorm";
+        case WGPUTextureFormat_EACRG11Snorm: return "EACRG11Snorm";
+        case WGPUTextureFormat_ASTC4x4Unorm: return "ASTC4x4Unorm";
+        case WGPUTextureFormat_ASTC4x4UnormSrgb: return "ASTC4x4UnormSrgb";
+        case WGPUTextureFormat_ASTC5x4Unorm: return "ASTC5x4Unorm";
+        case WGPUTextureFormat_ASTC5x4UnormSrgb: return "ASTC5x4UnormSrgb";
+        case WGPUTextureFormat_ASTC5x5Unorm: return "ASTC5x5Unorm";
+        case WGPUTextureFormat_ASTC5x5UnormSrgb: return "ASTC5x5UnormSrgb";
+        case WGPUTextureFormat_ASTC6x5Unorm: return "ASTC6x5Unorm";
+        case WGPUTextureFormat_ASTC6x5UnormSrgb: return "ASTC6x5UnormSrgb";
+        case WGPUTextureFormat_ASTC6x6Unorm: return "ASTC6x6Unorm";
+        case WGPUTextureFormat_ASTC6x6UnormSrgb: return "ASTC6x6UnormSrgb";
+        case WGPUTextureFormat_ASTC8x5Unorm: return "ASTC8x5Unorm";
+        case WGPUTextureFormat_ASTC8x5UnormSrgb: return "ASTC8x5UnormSrgb";
+        case WGPUTextureFormat_ASTC8x6Unorm: return "ASTC8x6Unorm";
+        case WGPUTextureFormat_ASTC8x6UnormSrgb: return "ASTC8x6UnormSrgb";
+        case WGPUTextureFormat_ASTC8x8Unorm: return "ASTC8x8Unorm";
+        case WGPUTextureFormat_ASTC8x8UnormSrgb: return "ASTC8x8UnormSrgb";
+        case WGPUTextureFormat_ASTC10x5Unorm: return "ASTC10x5Unorm";
+        case WGPUTextureFormat_ASTC10x5UnormSrgb: return "ASTC10x5UnormSrgb";
+        case WGPUTextureFormat_ASTC10x6Unorm: return "ASTC10x6Unorm";
+        case WGPUTextureFormat_ASTC10x6UnormSrgb: return "ASTC10x6UnormSrgb";
+        case WGPUTextureFormat_ASTC10x8Unorm: return "ASTC10x8Unorm";
+        case WGPUTextureFormat_ASTC10x8UnormSrgb: return "ASTC10x8UnormSrgb";
+        case WGPUTextureFormat_ASTC10x10Unorm: return "ASTC10x10Unorm";
+        case WGPUTextureFormat_ASTC10x10UnormSrgb: return "ASTC10x10UnormSrgb";
+        case WGPUTextureFormat_ASTC12x10Unorm: return "ASTC12x10Unorm";
+        case WGPUTextureFormat_ASTC12x10UnormSrgb: return "ASTC12x10UnormSrgb";
+        case WGPUTextureFormat_ASTC12x12Unorm: return "ASTC12x12Unorm";
+        case WGPUTextureFormat_ASTC12x12UnormSrgb: return "ASTC12x12UnormSrgb";
+        case WGPUTextureFormat_Force32: return "Force32";
+    }
+    return "INVALID_FORMAT";
+}
+
+const char* G_Util::cullModeToString(WGPUCullMode mode)
+{
+    switch (mode) {
+        case WGPUCullMode_None: return "None";
+        case WGPUCullMode_Front: return "Front";
+        case WGPUCullMode_Back: return "Back";
+        default: return "INVALID_CULL_MODE";
+    }
+}
+
+const char* G_Util::topologyToString(WGPUPrimitiveTopology top)
+{
+    switch (top) {
+        case WGPUPrimitiveTopology_PointList: return "PointList";
+        case WGPUPrimitiveTopology_LineList: return "LineList";
+        case WGPUPrimitiveTopology_LineStrip: return "LineStrip";
+        case WGPUPrimitiveTopology_TriangleList: return "TriangleList";
+        case WGPUPrimitiveTopology_TriangleStrip: return "TriangleStrip";
+        default: return "INVALID_TOPOLOGY";
+    }
+}

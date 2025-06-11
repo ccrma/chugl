@@ -234,8 +234,8 @@ struct App;
 
 static void _R_HandleCommand(App* app, SG_Command* command);
 
-static G_DrawCallListID _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
-                                       int msaa_sample_count);
+static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
+                           int msaa_sample_count, G_DrawCallListID dc_list);
 
 static void _R_glfwErrorCallback(int error, const char* description)
 {
@@ -743,38 +743,43 @@ struct App {
 
                     // descriptor for view at mip 0
                     WGPUTextureFormat color_attachment_format = r_tex->desc.format;
+                    WGPUTextureView render_attachment_view
+                      = G_createTextureViewAtMipLevel(r_tex->gpu_texture, 0,
+                                                      "renderpass target view");
 
                     ASSERT(color_attachment_format
                            == wgpuTextureGetFormat(r_tex->gpu_texture));
-                    ASSERT(scene && r_tex->render_attachment_view && camera);
+                    ASSERT(scene && render_attachment_view && camera);
+
                     {
                         R_Pass::updateRenderPassDesc(
                           &app->gctx, pass, r_tex->desc.width, r_tex->desc.height,
                           pass->sg_pass.render_pass_msaa_sample_count,
-                          r_tex->render_attachment_view, color_attachment_format,
+                          render_attachment_view, color_attachment_format,
                           scene->sg_scene_desc.bg_color);
 
                         const WGPUTextureFormat depth_texture_format
                           = WGPUTextureFormat_Depth24PlusStencil8;
 
                         // set G_Pass
-                        G_Pass* g_pass = app->rendergraph.addPass();
-                        g_pass->type   = G_PassType_Render;
-                        g_pass->rp.color_target
-                          = { r_tex->render_attachment_view, color_attachment_format };
-                        g_pass->rp.clear_color = WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f };
-                        g_pass->rp.color_load_op
-                          = pass->sg_pass.color_target_clear_on_load ?
-                              WGPULoadOp_Clear :
-                              WGPULoadOp_Load;
-                        g_pass->rp.color_store_op = WGPUStoreOp_Store;
-                        g_pass->rp.depth_target   = {
-                            pass->framebuffer.depth_view, depth_texture_format
-                        }; // TODO change depth to no stencil?
+                        app->rendergraph.addRenderPass("Scene Pass");
+                        app->rendergraph.renderPassColorTarget(render_attachment_view,
+                                                               color_attachment_format);
+                        app->rendergraph.renderPassColorOp(
+                          WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f },
+                          pass->sg_pass.color_target_clear_on_load ? WGPULoadOp_Clear :
+                                                                     WGPULoadOp_Load,
+                          WGPUStoreOp_Store);
 
-                        g_pass->rp.drawcall_list_id
-                          = _R_RenderScene(app, scene, camera,
-                                           pass->sg_pass.render_pass_msaa_sample_count);
+                        // TODO store depth texture somewhere else...
+                        app->rendergraph.renderPassDepthTarget(
+                          pass->framebuffer.depth_view, depth_texture_format);
+
+                        G_DrawCallListID dc_list
+                          = app->rendergraph.renderPassAddDrawCallList();
+                        _R_RenderScene(app, scene, camera,
+                                       pass->sg_pass.render_pass_msaa_sample_count,
+                                       dc_list);
                     }
                 } break;
                 case SG_PassType_Screen: { // aka OutputPass
@@ -805,12 +810,21 @@ struct App {
 
                     R_Pass::updateScreenPassDesc(&app->gctx, pass, screen_texture_view);
 
+                    // set G_Pass
+                    app->rendergraph.addRenderPass("Output Pass");
+                    app->rendergraph.renderPassColorTarget(screen_texture_view,
+                                                           screen_texture_format);
+                    app->rendergraph.renderPassColorOp(
+                      WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f }, WGPULoadOp_Clear,
+                      WGPUStoreOp_Store);
+                    G_DrawCallListID dc_list
+                      = app->rendergraph.renderPassAddDrawCallList();
+
                     R_Material* material
                       = Component_GetMaterial(pass->sg_pass.screen_material_id);
 
                     const int screen_pass_binding_location = 0;
                     // create draw call
-                    G_DrawCallListID dc_list = app->rendergraph.addDrawCallList();
                     if (material) {
                         G_DrawCall* d = app->rendergraph.addDraw(dc_list);
                         d->sort_key   = G_SortKey::create(false, G_RenderingLayer_World,
@@ -820,20 +834,10 @@ struct App {
                         R_Material::createBindGroupEntries(
                           material, screen_pass_binding_location, &app->rendergraph, d,
                           &app->gctx);
-                        d->pipeline_desc
-                          = { material->pso.sg_shader_id, material->pso.cull_mode,
-                              material->pso.primitive_topology, false };
+                        d->pipelineDesc(material->pso.sg_shader_id,
+                                        material->pso.cull_mode,
+                                        material->pso.primitive_topology, false);
                     }
-
-                    // set G_Pass
-                    G_Pass* g_pass = app->rendergraph.addPass();
-                    g_pass->type   = G_PassType_Render;
-                    g_pass->rp.color_target
-                      = { screen_texture_view, screen_texture_format };
-                    g_pass->rp.color_load_op    = WGPULoadOp_Clear;
-                    g_pass->rp.color_store_op   = WGPUStoreOp_Store;
-                    g_pass->rp.clear_color      = WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f };
-                    g_pass->rp.drawcall_list_id = dc_list;
                 } break;
                 case SG_PassType_Compute: {
                     R_Material* compute_material
@@ -1287,8 +1291,8 @@ struct SceneDrawCall {
 };
 
 // move this into R_Scene, call build drawcall struct?
-static G_DrawCallListID _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
-                                       int msaa_sample_count)
+static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
+                           int msaa_sample_count, G_DrawCallListID dc_list)
 {
     scene->update(&app->gctx, app->fc, &app->frameArena);
     ASSERT(scene->last_fc_updated == app->fc);
@@ -1318,16 +1322,12 @@ static G_DrawCallListID _R_RenderScene(App* app, R_Scene* scene, R_Camera* camer
     // update frame-level uniforms (storing on camera because same scene can be
     // rendered from multiple camera angles) every camera belongs to a single scene,
     // but a scene can have multiple cameras
-    // TODO: simplify, can just have a fixed-size GPU buffer on camera
     bool frame_uniforms_recreated = GPU_Buffer::write(
       &app->gctx, &camera->frame_uniform_buffer, WGPUBufferUsage_Uniform,
       &frameUniforms, sizeof(frameUniforms));
     camera->frame_uniform_buffer_fc = app->fc;
     ASSERT(!frame_uniforms_recreated);
     UNUSED_VAR(frame_uniforms_recreated);
-
-    // TODO dc_list only needs to be built once per frame. check the fc staleness
-    G_DrawCallListID dc_list = app->rendergraph.addDrawCallList();
 
     // form draw call list and sort
     size_t hashmap_idx_DONT_USE = 0;
@@ -1373,9 +1373,10 @@ static G_DrawCallListID _R_RenderScene(App* app, R_Scene* scene, R_Camera* camer
         }
 
         // set pso
-        d->pipeline_desc
-          = { shader_id, material->pso.cull_mode, material->pso.primitive_topology,
-              false }; // TODO add blendmode / transparency here
+        d->pipelineDesc(shader_id, material->pso.cull_mode,
+                        material->pso.primitive_topology,
+                        false // TODO add blendmode / transparency here
+        );
 
         { // set bindgroups
             // camera frame uniform buffer needs to already be updated
@@ -1429,7 +1430,7 @@ static G_DrawCallListID _R_RenderScene(App* app, R_Scene* scene, R_Camera* camer
     { // skybox pass
         R_Material* skybox_material
           = Component_GetMaterial(scene->sg_scene_desc.skybox_material_id);
-        if (!skybox_material) return dc_list;
+        if (!skybox_material) return;
 
         G_DrawCall* d = app->rendergraph.addDraw(dc_list);
         d->sort_key
@@ -1437,11 +1438,11 @@ static G_DrawCallListID _R_RenderScene(App* app, R_Scene* scene, R_Camera* camer
                               camera->params.far_plane, camera->params.far_plane);
         d->vertex_count   = 3;
         d->instance_count = 1;
-        d->pipeline_desc  = {
-            skybox_material->pso.sg_shader_id, skybox_material->pso.cull_mode,
-            skybox_material->pso.primitive_topology,
-            false, // not transparent
-        };
+        d->pipelineDesc(skybox_material->pso.sg_shader_id,
+                        skybox_material->pso.cull_mode,
+                        skybox_material->pso.primitive_topology,
+                        false // not transparent
+        );
 
         R_Shader* skybox_shader
           = Component_GetShader(skybox_material->pso.sg_shader_id);
@@ -1467,7 +1468,6 @@ static G_DrawCallListID _R_RenderScene(App* app, R_Scene* scene, R_Camera* camer
         R_Material::createBindGroupEntries(skybox_material, PER_MATERIAL_GROUP,
                                            &app->rendergraph, d, &app->gctx);
     }
-    return dc_list;
 }
 
 static void _R_RenderSceneOld(App* app, R_Scene* scene, R_Camera* camera,
@@ -1963,8 +1963,7 @@ static void _R_HandleCommand(App* app, SG_Command* command)
             R_Component* component = Component_GetComponent(cmd->sg_id);
             char* new_name         = (char*)CQ_ReadCommandGetOffset(cmd->name_offset);
 
-            strncpy(component->name, new_name, strlen(new_name));
-            // component->name        = new_name;
+            snprintf(component->name, sizeof(component->name), "%s", new_name);
 
             // if backed by a wgpu type, update the label
             switch (component->type) {

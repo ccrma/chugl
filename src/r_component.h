@@ -223,9 +223,6 @@ struct R_Texture : public R_Component {
     // own TextureViews, and texture_id uses this default gpu_texture_view
     WGPUTextureView gpu_texture_view; // default view of entire gpu_texture + mip chain
 
-    WGPUTextureView render_attachment_view; // TEMPORARY caching to prevent leak before
-                                            // I rework the entire rendergraph system
-
     u32 generation = 0;  // incremented every time texture is modified
     SG_TextureDesc desc; // TODO redundant with R_Texture.gpu_texture
 
@@ -304,10 +301,6 @@ struct R_Texture : public R_Component {
             desc.height         = height;
             desc.mips           = G_mipLevels(width, height);
             R_Texture::init(gctx, r_tex, &desc);
-
-            WGPU_RELEASE_RESOURCE(TextureView, r_tex->render_attachment_view);
-            r_tex->render_attachment_view = G_createTextureViewAtMipLevel(
-              r_tex->gpu_texture, 0, "renderpass target view");
         }
     }
 
@@ -1073,7 +1066,7 @@ struct G_DrawCallPipelineDesc {
     SG_ID sg_shader_id;
     WGPUCullMode cull_mode;
     WGPUPrimitiveTopology primitive_topology;
-    bool is_transparent; // TODO support other blend modes (subtrative, additive etc)
+    u32 is_transparent; // TODO support other blend modes (subtrative, additive etc)
 };
 
 struct G_CacheComputePipeline {
@@ -1103,6 +1096,24 @@ struct G_CacheRenderPipelineKey {
     G_DrawCallPipelineDesc drawcall_pipeline_desc;
     WGPUTextureFormat color_target_format;
     WGPUTextureFormat depth_target_format;
+
+    void print()
+    {
+        R_Shader* shader = Component_GetShader(drawcall_pipeline_desc.sg_shader_id);
+        printf(
+          "Shader[%d:%s]\n"
+          "Cull_Mode: %s\n"
+          "Topology: %s\n"
+          "Transparent: %s\n"
+          "Color Format %s\n"
+          "Depth Format %s\n",
+          shader->id, shader->name,
+          G_Util::cullModeToString(drawcall_pipeline_desc.cull_mode),
+          G_Util::topologyToString(drawcall_pipeline_desc.primitive_topology),
+          drawcall_pipeline_desc.is_transparent ? "true" : "false",
+          G_Util::textureFormatToString(color_target_format),
+          G_Util::textureFormatToString(depth_target_format));
+    }
 };
 
 struct G_CacheRenderPipelineVal {
@@ -1162,11 +1173,13 @@ struct G_CacheBindGroup {
     {
         // ==optimize== cache the hash
         G_CacheBindGroupKey* key = (G_CacheBindGroupKey*)item;
-        const size_t base_len    = offsetof(G_CacheBindGroupKey, bg_entry_list);
+        // const size_t base_len    = offsetof(G_CacheBindGroupKey, bg_entry_list);
 
-        return hashmap_xxhash3(
-          key, base_len + key->bg_entry_count * sizeof(key->bg_entry_list[0]), seed0,
-          seed1);
+        return hashmap_xxhash3(key, sizeof(*key), seed0, seed1);
+
+        // return hashmap_xxhash3(
+        //   key, base_len + key->bg_entry_count * sizeof(key->bg_entry_list[0]), seed0,
+        //   seed1);
     }
 
     static int compare(const void* a, const void* b, void* udata)
@@ -1251,24 +1264,70 @@ struct G_Cache {
         return *result;
     }
 
-    G_CacheRenderPipelineVal* renderPipeline(G_CacheRenderPipelineKey key,
-                                             WGPUDevice device)
+    G_CacheRenderPipeline* renderPipeline(G_CacheRenderPipelineKey key,
+                                          WGPUDevice device)
     {
         G_CacheRenderPipeline* result
           = (G_CacheRenderPipeline*)hashmap_get(render_pipeline_map, &key);
 
         if (result == NULL) {
-            log_trace("Cache miss [RenderPipeline], creating new from Shader %d",
-                      key.drawcall_pipeline_desc.sg_shader_id);
-
-            ///////////////////////////////////
-            // create GPUPipelineDesc from R_PipelineDesc
-
             // TODO: maybe hash the shader module / shader types to remove dependency on
             // scene graph
             R_Shader* shader
               = Component_GetShader(key.drawcall_pipeline_desc.sg_shader_id);
             ASSERT(shader);
+
+            log_trace("Cache miss [RenderPipeline], creating new from Shader[%d:%s]",
+                      key.drawcall_pipeline_desc.sg_shader_id, shader->name);
+
+#if 0 // uncomment to debug pipeline creation
+      // print the key
+            key.print();
+
+            printf("--------hashmap current contents---------\n");
+
+            size_t pipeline_map_idx_DONT_USE      = 0;
+            G_CacheRenderPipeline* cache_pipeline = NULL;
+            while (hashmap_iter(render_pipeline_map, &pipeline_map_idx_DONT_USE,
+                                (void**)&cache_pipeline)) {
+                R_Shader* cache_shader = Component_GetShader(
+                  cache_pipeline->key.drawcall_pipeline_desc.sg_shader_id);
+
+                if (cache_shader->id == shader->id) {
+                    hexDump("new pipeline key", &key, sizeof(key));
+                    hexDump("cached pipeline key", &cache_pipeline->key,
+                            sizeof(cache_pipeline->key));
+                }
+
+                printf(
+                  "Shader[%d:%s]\n"
+                  "Equals: %s\n"
+                  "Cull_Mode: %s\n"
+                  "Topology: %s\n"
+                  "Transparent: %s\n"
+                  "Color Format %s\n"
+                  "Depth Format %s\n",
+                  cache_shader->id, cache_shader->name,
+                  G_CacheRenderPipeline::compare(&key, &cache_pipeline->key, NULL)
+                      == 0 ?
+                    "true" :
+                    "false",
+                  G_Util::cullModeToString(
+                    cache_pipeline->key.drawcall_pipeline_desc.cull_mode),
+                  G_Util::topologyToString(
+                    cache_pipeline->key.drawcall_pipeline_desc.primitive_topology),
+                  cache_pipeline->key.drawcall_pipeline_desc.is_transparent ? "true" :
+                                                                              "false",
+                  G_Util::textureFormatToString(
+                    cache_pipeline->key.color_target_format),
+                  G_Util::textureFormatToString(
+                    cache_pipeline->key.depth_target_format));
+                printf("-------\n");
+            }
+#endif
+
+            ///////////////////////////////////
+            // create GPUPipelineDesc from R_PipelineDesc
 
             bool is_render_pipeline = (shader->vertex_shader_module != NULL);
             // bool is_compute_pipeline = (shader->compute_shader_module != NULL);
@@ -1337,26 +1396,30 @@ struct G_Cache {
             ASSERT(result);
         }
 
-        return &result->val;
+        return result;
     }
 
     WGPUBindGroup bindGroup(WGPUDevice device, WGPUBindGroupEntry* bg_entry_list,
-                            int bg_entry_count, WGPUBindGroupLayout layout)
+                            int bg_entry_count, WGPUBindGroupLayout layout,
+
+                            // debug info
+                            int group)
     {
         G_CacheBindGroup item = {};
         ASSERT(bg_entry_count <= ARRAY_LENGTH(item.key.bg_entry_list));
         item.key.layout         = layout;
         item.key.bg_entry_count = bg_entry_count;
         memcpy(item.key.bg_entry_list, bg_entry_list,
-               sizeof(*bg_entry_list)
-                 * MIN(bg_entry_count, ARRAY_LENGTH(item.key.bg_entry_list)));
+               sizeof(*bg_entry_list) * bg_entry_count);
 
         G_CacheBindGroup* result
           = (G_CacheBindGroup*)hashmap_get(bindgroup_map, &item.key);
 
         if (result == NULL) {
-#ifdef CHUGL_DEBUG
-            log_trace("Cache miss [BindGroup], creating new for layout %p", layout);
+            log_trace("Cache miss [BindGroup] @group(%d) creating new for layout %p",
+                      group, layout);
+#if 0
+            if (cache_pipeline) cache_pipeline->key.print();
             G_Util::printBindGroupEntryList(bg_entry_list, bg_entry_count);
 #endif
 
@@ -1367,6 +1430,7 @@ struct G_Cache {
 
             item.val.bg                  = wgpuDeviceCreateBindGroup(device, &desc);
             item.val.frames_till_expired = CHUGL_CACHE_BINDGROUP_FRAMES_TILL_EXPIRED;
+            log_trace("created bind group %p", (void*)item.val.bg);
 
             const void* replaced = hashmap_set(bindgroup_map, &item);
             ASSERT(!replaced);
@@ -1405,9 +1469,9 @@ struct G_Cache {
             G_CacheBindGroup* bg_del
               = ARENA_GET_TYPE(&deletion_queue, G_CacheBindGroup, i);
             hashmap_delete(bindgroup_map, bg_del);
+            log_trace("deleting expired bindgroup %p", (void*)bg_del->val.bg);
             G_CacheBindGroup::free(bg_del);
 
-            // log_trace("deleting expired bindgroup");
             // G_Util::printBindGroupEntryList(bg_del->key.bg_entry_list,
             //                                 bg_del->key.bg_entry_count);
         }
@@ -1497,7 +1561,25 @@ struct G_DrawCall {
     // parser)
     // dynamic_offsets = new Array<Array<number>>(4);
 
-    G_DrawCallPipelineDesc pipeline_desc;
+    G_DrawCallPipelineDesc _pipeline_desc;
+
+    void pipelineDesc(SG_ID sg_shader_id, WGPUCullMode cull_mode,
+                      WGPUPrimitiveTopology primitive_topology, bool is_transparent)
+    {
+        _pipeline_desc                    = {};
+        _pipeline_desc.sg_shader_id       = sg_shader_id;
+        _pipeline_desc.cull_mode          = cull_mode;
+        _pipeline_desc.primitive_topology = primitive_topology;
+
+        // doing this to avoid a horrible bug where setting a bool directly
+        // didn't zero out all the padded memory
+        _pipeline_desc.is_transparent = is_transparent ? 1UL : 0UL;
+    }
+
+    SG_ID sg_shader_id;
+    WGPUCullMode cull_mode;
+    WGPUPrimitiveTopology primitive_topology;
+    u32 is_transparent; // TODO support other blend modes (subtrative, additive etc)
 };
 
 struct G_DrawCallList {
@@ -1542,16 +1624,17 @@ struct G_DrawCallList {
                 log_warn("drawcall vertex count of 0");
 #endif
 
-            G_CacheRenderPipelineVal* cached_pipeline = cache->renderPipeline(
+            G_CacheRenderPipeline* cached_pipeline = cache->renderPipeline(
               {
-                d->pipeline_desc,
+                d->_pipeline_desc,
                 color_target_format,
                 depth_target_format,
               },
               device);
 
             // set pipeline
-            wgpuRenderPassEncoderSetPipeline(pass_encoder, cached_pipeline->pipeline);
+            wgpuRenderPassEncoderSetPipeline(pass_encoder,
+                                             cached_pipeline->val.pipeline);
 
             // set bindgroups
             int max_bg = ARRAY_LENGTH(d->bg_list);
@@ -1563,7 +1646,8 @@ struct G_DrawCallList {
                       device,
                       ARENA_GET_TYPE(bind_group_list + bg_idx, WGPUBindGroupEntry,
                                      start),
-                      num_bindings, cached_pipeline->bindGroupLayout(bg_idx));
+                      num_bindings, cached_pipeline->val.bindGroupLayout(bg_idx),
+                      bg_idx);
                     ASSERT(bg);
                     wgpuRenderPassEncoderSetBindGroup(pass_encoder, bg_idx, bg, 0,
                                                       NULL);
@@ -1602,6 +1686,7 @@ enum G_PassType : u8 {
     G_PassType_None = 0,
     G_PassType_Render,
     G_PassType_Compute,
+    G_PassType_Bloom, // hard-coded in for now
     G_PassType_Count,
 };
 
@@ -1626,12 +1711,12 @@ typedef int G_DrawCallListID;
 typedef int G_DrawCallID;
 
 struct G_RenderPassParams {
-    G_RenderTarget color_target;
+    G_RenderTarget _color_target;
     WGPUColor clear_color;
     WGPULoadOp color_load_op;
     WGPUStoreOp color_store_op;
 
-    G_RenderTarget depth_target;
+    G_RenderTarget _depth_target;
 
     float viewport_x;
     float viewport_y;
@@ -1650,19 +1735,11 @@ struct G_ComputePassParams {
 
 struct G_Pass {
     G_PassType type;
-
+    char name[64];
     union {
         G_RenderPassParams rp;
         G_ComputePassParams cp;
     };
-
-    // set viewport in pixels
-    void viewport(float x, float y, float w, float h, WGPULimits* limits)
-    {
-        // TODO
-        ASSERT(type == G_PassType_Render);
-        ASSERT(false);
-    }
 };
 
 struct G_Graph {
@@ -1686,12 +1763,62 @@ struct G_Graph {
         cache.init();
     }
 
+    // renderpass methods ======================================
+    void addRenderPass(const char* name)
+    {
+        if (pass_count == CHUGL_RENDERGRAPH_MAX_PASSES) {
+            log_error("Reached max pass count %d", pass_count);
+            return;
+        }
+        G_Pass* pass = &pass_list[pass_count++];
+        pass->type   = G_PassType_Render;
+        strncpy(pass->name, name, ARRAY_LENGTH(pass->name) - 1);
+    }
+
+    G_DrawCallListID renderPassAddDrawCallList()
+    {
+        G_Pass* pass = pass_list + (pass_count - 1);
+        ASSERT(pass->type == G_PassType_Render);
+
+        drawcall_list_pool[drawcall_list_count].drawcall_start_idx
+          = ARENA_LENGTH(&drawcall_pool, G_DrawCall);
+
+        pass->rp.drawcall_list_id = drawcall_list_count;
+        return drawcall_list_count++;
+    }
+
+    void renderPassColorOp(WGPUColor color, WGPULoadOp load, WGPUStoreOp store)
+    {
+        G_Pass* pass = pass_list + (pass_count - 1);
+        ASSERT(pass->type == G_PassType_Render);
+
+        pass->rp.clear_color    = color;
+        pass->rp.color_load_op  = load;
+        pass->rp.color_store_op = store;
+    }
+
+    void renderPassColorTarget(WGPUTextureView view, WGPUTextureFormat format)
+    {
+        G_Pass* pass = pass_list + (pass_count - 1);
+        ASSERT(pass->type == G_PassType_Render);
+        WGPU_REFERENCE_RESOURCE(TextureView, view);
+        pass->rp._color_target = { view, format };
+    }
+
+    void renderPassDepthTarget(WGPUTextureView view, WGPUTextureFormat format)
+    {
+        G_Pass* pass = pass_list + (pass_count - 1);
+        ASSERT(pass->type == G_PassType_Render);
+        ASSERT(G_Util::isDepthTextureFormat(format));
+        WGPU_REFERENCE_RESOURCE(TextureView, view);
+        pass->rp._depth_target = { view, format };
+    }
+
     G_DrawCall*
     addDraw(G_DrawCallListID dc_list) // adds a draw to the last drawcall list
     {
         ASSERT(drawcall_list_count > 0);
         ASSERT(dc_list == drawcall_list_count - 1);
-        UNUSED_VAR(dc_list);
 
         ++drawcall_list_pool[dc_list].drawcall_count;
         G_DrawCall* draw = ARENA_PUSH_ZERO_TYPE(&drawcall_pool, G_DrawCall);
@@ -1782,26 +1909,6 @@ struct G_Graph {
         ++pass_list[pass_count - 1].cp.bg_count;
     }
 
-    G_DrawCallListID addDrawCallList()
-    {
-        // TODO drawcall bindgroup arenas are leaking
-        // either clear the bindgroup arenas in cache update,
-        // or (like renderpass) keep contiguous bindgroup pool
-        // and add bindgroups to drawcall from pool, then reset bg pool
-        drawcall_list_pool[drawcall_list_count].drawcall_start_idx
-          = ARENA_LENGTH(&drawcall_pool, G_DrawCall);
-        return drawcall_list_count++;
-    }
-
-    G_Pass* addPass()
-    {
-        if (pass_count == CHUGL_RENDERGRAPH_MAX_PASSES) {
-            log_error("Reached max pass count %d", pass_count);
-            return NULL;
-        }
-        return &this->pass_list[pass_count++];
-    }
-
     void addComputePass(WGPUShaderModule module, u32 x, u32 y, u32 z)
     {
         if (pass_count == CHUGL_RENDERGRAPH_MAX_PASSES) {
@@ -1828,15 +1935,16 @@ struct G_Graph {
             switch (pass->type) {
                 case G_PassType_None: break;
                 case G_PassType_Render: {
+                    // log_trace("Beginning RenderPass: %s", pass->name);
                     // create pass desc
                     WGPURenderPassDescriptor render_pass_desc = {};
                     WGPURenderPassColorAttachment ca          = {};
                     WGPURenderPassDepthStencilAttachment ds   = {};
 
                     bool has_color_target
-                      = (pass->rp.color_target.texture_view != NULL);
+                      = (pass->rp._color_target.texture_view != NULL);
                     if (has_color_target) {
-                        ca.view       = pass->rp.color_target.texture_view;
+                        ca.view       = pass->rp._color_target.texture_view;
                         ca.loadOp     = pass->rp.color_load_op;
                         ca.storeOp    = pass->rp.color_store_op;
                         ca.clearValue = pass->rp.clear_color;
@@ -1847,9 +1955,9 @@ struct G_Graph {
                     }
 
                     bool has_depth_target
-                      = (pass->rp.depth_target.texture_view != NULL);
+                      = (pass->rp._depth_target.texture_view != NULL);
                     if (has_depth_target) {
-                        ds.view = pass->rp.depth_target.texture_view;
+                        ds.view = pass->rp._depth_target.texture_view;
 
                         // defaults for render pass depth/stencil attachment
                         // The initial value of the depth buffer, meaning "far"
@@ -1884,12 +1992,17 @@ struct G_Graph {
                     ASSERT(pass->rp.drawcall_list_id >= 0
                            && pass->rp.drawcall_list_id < drawcall_list_count);
                     drawcall_list_pool[pass->rp.drawcall_list_id].execute(
-                      device, render_pass_encoder, pass->rp.color_target.view_format,
-                      pass->rp.depth_target.view_format, &cache, &drawcall_pool,
+                      device, render_pass_encoder, pass->rp._color_target.view_format,
+                      pass->rp._depth_target.view_format, &cache, &drawcall_pool,
                       bind_group_entry_list);
-
                     wgpuRenderPassEncoderEnd(render_pass_encoder);
                     WGPU_RELEASE_RESOURCE(RenderPassEncoder, render_pass_encoder);
+
+                    // release render target texture views
+                    WGPU_RELEASE_RESOURCE(TextureView,
+                                          pass->rp._color_target.texture_view);
+                    WGPU_RELEASE_RESOURCE(TextureView,
+                                          pass->rp._depth_target.texture_view);
                 } break;
                 case G_PassType_Compute: {
                     G_CacheComputePipeline cp
@@ -1898,12 +2011,13 @@ struct G_Graph {
                       = wgpuCommandEncoderBeginComputePass(command_encoder, NULL);
                     wgpuComputePassEncoderSetPipeline(compute_pass, cp.val.pipeline);
 
-                    WGPUBindGroup bg = cache.bindGroup(
+                    const int compute_pass_binding_location = 0;
+                    WGPUBindGroup bg                        = cache.bindGroup(
                       device,
                       ARENA_GET_TYPE(bind_group_entry_list, WGPUBindGroupEntry,
-                                     pass->cp.bg_start),
-                      pass->cp.bg_count, cp.val.bind_group_layout);
-                    const int compute_pass_binding_location = 0;
+                                                            pass->cp.bg_start),
+                      pass->cp.bg_count, cp.val.bind_group_layout,
+                      compute_pass_binding_location);
                     wgpuComputePassEncoderSetBindGroup(
                       compute_pass, compute_pass_binding_location, bg, 0, NULL);
 
@@ -1914,6 +2028,9 @@ struct G_Graph {
                     // cleanup
                     wgpuComputePassEncoderEnd(compute_pass);
                     WGPU_RELEASE_RESOURCE(ComputePassEncoder, compute_pass);
+                } break;
+                case G_PassType_Bloom: {
+
                 } break;
                 default: UNREACHABLE
             }

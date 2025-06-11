@@ -82,10 +82,7 @@ CK_DLL_MFUN(component_get_name)
 
 void ulib_component_set_name(SG_Component* component, const char* name)
 {
-    int str_len = (int)MAX(0, MIN(strlen(name), sizeof(component->name) - 1));
-    strncpy(component->name, name, str_len);
-    component->name[str_len] = 0;
-
+    snprintf(component->name, sizeof(component->name), "%s", name);
     CQ_PushCommand_ComponentUpdateName(component);
 }
 
