@@ -42,6 +42,7 @@
 #define ARRAY_LENGTH(array) (sizeof(array) / sizeof((array)[0]))
 #define ZERO_ARRAY(array) (memset((array), 0, sizeof(array)))
 #define COPY_STRUCT(dst, src, type) (memcpy((dst), (src), sizeof(type)))
+#define COPY_STRING(dst, src) (snprintf(dst, sizeof(dst), "%s", src));
 
 // ============================================================================
 // defer

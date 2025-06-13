@@ -65,7 +65,6 @@ typedef SG_ID R_ID; // negative for R_Components NOT mapped to SG_Components
 struct R_Component {
     SG_ID id; // SG_Component this R_Component is mapped to
     SG_ComponentType type;
-    // std::string name = ""; // TODO move off std::string
     char name[64];
 };
 
@@ -1575,11 +1574,6 @@ struct G_DrawCall {
         // didn't zero out all the padded memory
         _pipeline_desc.is_transparent = is_transparent ? 1UL : 0UL;
     }
-
-    SG_ID sg_shader_id;
-    WGPUCullMode cull_mode;
-    WGPUPrimitiveTopology primitive_topology;
-    u32 is_transparent; // TODO support other blend modes (subtrative, additive etc)
 };
 
 struct G_DrawCallList {
@@ -1772,7 +1766,7 @@ struct G_Graph {
         }
         G_Pass* pass = &pass_list[pass_count++];
         pass->type   = G_PassType_Render;
-        strncpy(pass->name, name, ARRAY_LENGTH(pass->name) - 1);
+        COPY_STRING(pass->name, name);
     }
 
     G_DrawCallListID renderPassAddDrawCallList()
@@ -1909,14 +1903,15 @@ struct G_Graph {
         ++pass_list[pass_count - 1].cp.bg_count;
     }
 
-    void addComputePass(WGPUShaderModule module, u32 x, u32 y, u32 z)
+    void addComputePass(const char* name, WGPUShaderModule module, u32 x, u32 y, u32 z)
     {
         if (pass_count == CHUGL_RENDERGRAPH_MAX_PASSES) {
             log_error("Reached max pass count %d", pass_count);
             return;
         }
         G_Pass* compute_pass = &pass_list[pass_count++];
-        compute_pass->type   = G_PassType_Compute;
+        COPY_STRING(compute_pass->name, name);
+        compute_pass->type = G_PassType_Compute;
         compute_pass->cp
           = { module,
               x,
@@ -1938,6 +1933,7 @@ struct G_Graph {
                     // log_trace("Beginning RenderPass: %s", pass->name);
                     // create pass desc
                     WGPURenderPassDescriptor render_pass_desc = {};
+                    render_pass_desc.label                    = pass->name;
                     WGPURenderPassColorAttachment ca          = {};
                     WGPURenderPassDepthStencilAttachment ds   = {};
 
@@ -2007,6 +2003,8 @@ struct G_Graph {
                 case G_PassType_Compute: {
                     G_CacheComputePipeline cp
                       = cache.computePipeline(pass->cp.module, device, NULL);
+                    WGPUComputePassDescriptor cp_desc = {};
+                    cp_desc.label                     = pass->name;
                     WGPUComputePassEncoder compute_pass
                       = wgpuCommandEncoderBeginComputePass(command_encoder, NULL);
                     wgpuComputePassEncoderSetPipeline(compute_pass, cp.val.pipeline);
