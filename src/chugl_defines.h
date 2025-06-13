@@ -6,7 +6,7 @@
 
 // how many frames does a bindgroup need to be unused before we evict it from our
 // rendergraph cache
-#define CHUGL_CACHE_BINDGROUP_FRAMES_TILL_EXPIRED 4
+#define CHUGL_CACHE_BINDGROUP_FRAMES_TILL_EXPIRED 60
 
 #define CHUGL_GEOMETRY_MAX_PULLED_VERTEX_BUFFERS 4 // @group(4) storage buffers
 

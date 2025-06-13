@@ -106,9 +106,6 @@ scenegraph will be skipped every frame!
 // ============================================================================
 // Forward Declarations
 // ============================================================================
-//
-// set for materials to create pipelines for
-static hashmap* materials_with_new_pso = NULL;
 
 static SG_ID _componentIDCounter = 1; // reserve 0 for NULL
 
@@ -582,31 +579,6 @@ void R_Geometry::addPullBindGroupEntries(R_Geometry* geo, G_Graph* graph, G_Draw
     }
 }
 
-WGPUBindGroup R_Geometry::createPullBindGroup(GraphicsContext* gctx, R_Geometry* geo,
-                                              WGPUBindGroupLayout layout)
-{
-    WGPUBindGroupEntry entries[CHUGL_GEOMETRY_MAX_PULLED_VERTEX_BUFFERS] = {};
-    int num_entries                                                      = 0;
-    for (u32 i = 0; i < CHUGL_GEOMETRY_MAX_PULLED_VERTEX_BUFFERS; i++) {
-        if (geo->pull_buffers[i].buf == NULL) {
-            continue;
-        }
-
-        WGPUBindGroupEntry* entry = &entries[num_entries++];
-        entry->binding            = i;
-        entry->buffer             = geo->pull_buffers[i].buf;
-        entry->offset             = 0;
-        entry->size               = geo->pull_buffers[i].size;
-    }
-
-    WGPUBindGroupDescriptor desc = {};
-    desc.layout                  = layout;
-    desc.entryCount              = num_entries;
-    desc.entries                 = entries;
-
-    return wgpuDeviceCreateBindGroup(gctx->device, &desc);
-}
-
 void R_Geometry::setPulledVertexAttribute(GraphicsContext* gctx, R_Geometry* geo,
                                           u32 location, void* data, size_t size_bytes)
 {
@@ -784,16 +756,18 @@ void R_Material::createBindGroupEntries(R_Material* mat, int group, G_Graph* gra
                            graph->computePassBindSampler(
                              i, Graphics_GetSampler(gctx, binding->as.samplerConfig));
             } break;
-            case R_BIND_TEXTURE_ID: {
-                R_Texture* rTexture = Component_GetTexture(binding->as.textureID);
+            case R_BIND_TEXTURE: {
+                R_Texture* r_texture
+                  = Component_GetTexture(binding->as.texture.texture_id);
+                G_CacheTextureViewDesc view_desc
+                  = { r_texture->gpu_texture, binding->as.texture.base_mip_level,
+                      binding->as.texture.mip_level_count };
 
-                drawcall ?
-                  graph->bindTexture(drawcall, group, i, rTexture->gpu_texture_view) :
-                  graph->computePassBindTexture(i, rTexture->gpu_texture_view);
+                drawcall ? graph->bindTexture(drawcall, group, i, view_desc) :
+                           graph->computePassBindTexture(i, view_desc);
 
-                ASSERT(rTexture->gpu_texture_view);
-                ASSERT(binding->size == sizeof(SG_ID));
-                binding->generation = rTexture->generation; // TODO remove
+                ASSERT(r_texture->gpu_texture);
+                ASSERT(binding->size == sizeof(R_TextureBinding));
             } break;
             case R_BIND_STORAGE_EXTERNAL: {
                 drawcall ? graph->bindBuffer(drawcall, group, i,
@@ -802,90 +776,9 @@ void R_Material::createBindGroupEntries(R_Material* mat, int group, G_Graph* gra
                            graph->computePassBindBuffer(
                              i, binding->as.storage_external->buf, 0, binding->size);
             } break;
-            case R_BIND_TEXTURE_VIEW:
-            case R_BIND_STORAGE_TEXTURE_ID: {
-                ASSERT(binding->as.textureView);
-                drawcall ?
-                  graph->bindTexture(drawcall, group, i, binding->as.textureView) :
-                  graph->computePassBindTexture(i, binding->as.textureView);
-            } break;
             default: ASSERT(false);
         }
     }
-}
-
-WGPUBindGroup R_Material::createBindGroup(R_Material* mat, GraphicsContext* gctx,
-                                          WGPUBindGroupLayout layout)
-{
-    // ==optimize== cache bind group layout
-
-    // create bindgroups for all bindings
-    WGPUBindGroupEntry new_bind_group_entries[CHUGL_MATERIAL_MAX_BINDINGS] = {};
-    int bind_group_index                                                   = 0;
-    ASSERT(CHUGL_MATERIAL_MAX_BINDINGS == ARRAY_LENGTH(mat->bindings));
-
-    for (u32 i = 0; i < CHUGL_MATERIAL_MAX_BINDINGS; ++i) {
-        R_Binding* binding = &mat->bindings[i];
-        if (binding->type == R_BIND_EMPTY) continue;
-
-        WGPUBindGroupEntry* bind_group_entry
-          = &new_bind_group_entries[bind_group_index++];
-        *bind_group_entry = {};
-
-        bind_group_entry->binding = i; // binding location
-
-        switch (binding->type) {
-            case R_BIND_UNIFORM: {
-                bind_group_entry->offset
-                  = MAX(gctx->limits.minUniformBufferOffsetAlignment,
-                        sizeof(SG_MaterialUniformData))
-                    * i;
-                bind_group_entry->size   = sizeof(SG_MaterialUniformData);
-                bind_group_entry->buffer = mat->uniform_buffer;
-            } break;
-            case R_BIND_STORAGE: {
-                bind_group_entry->offset = 0;
-                bind_group_entry->size   = binding->size;
-                bind_group_entry->buffer = binding->as.storage_buffer.buf;
-            } break;
-            case R_BIND_SAMPLER: {
-                bind_group_entry->sampler
-                  = Graphics_GetSampler(gctx, binding->as.samplerConfig);
-            } break;
-            case R_BIND_TEXTURE_ID: {
-                R_Texture* rTexture = Component_GetTexture(binding->as.textureID);
-                bind_group_entry->textureView = rTexture->gpu_texture_view;
-                ASSERT(bind_group_entry->textureView);
-                ASSERT(binding->size == sizeof(SG_ID));
-                binding->generation = rTexture->generation;
-            } break;
-            case R_BIND_STORAGE_EXTERNAL: {
-                bind_group_entry->offset = 0;
-                bind_group_entry->size   = binding->size;
-                bind_group_entry->buffer = binding->as.storage_external->buf;
-            } break;
-            case R_BIND_TEXTURE_VIEW: {
-                ASSERT(binding->as.textureView);
-                bind_group_entry->textureView = binding->as.textureView;
-            } break;
-            case R_BIND_STORAGE_TEXTURE_ID: {
-                ASSERT(binding->as.textureView);
-                bind_group_entry->textureView = binding->as.textureView;
-            } break;
-            default: ASSERT(false);
-        }
-    }
-
-    // create new bindgroup
-    char bind_group_label[128] = {};
-    snprintf(bind_group_label, sizeof(bind_group_label),
-             "Material[%d] Shader[%d] Bindgroup", mat->id, mat->pso.sg_shader_id);
-    WGPUBindGroupDescriptor bg_desc = {};
-    bg_desc.label                   = bind_group_label;
-    bg_desc.layout                  = layout;
-    bg_desc.entryCount              = bind_group_index;
-    bg_desc.entries                 = new_bind_group_entries;
-    return wgpuDeviceCreateBindGroup(gctx->device, &bg_desc);
 }
 
 static SamplerConfig samplerConfigFromSGSampler(SG_Sampler sg_sampler)
@@ -909,21 +802,6 @@ void R_Material::setSamplerBinding(GraphicsContext* gctx, R_Material* mat, u32 l
                            sizeof(sampler_config));
 }
 
-void R_Material::setTextureBinding(GraphicsContext* gctx, R_Material* mat, u32 location,
-                                   SG_ID texture_id)
-{
-    R_Material::setBinding(gctx, mat, location, R_BIND_TEXTURE_ID, &texture_id,
-                           sizeof(texture_id));
-}
-
-void R_Material::setTextureViewBinding(GraphicsContext* gctx, R_Material* mat,
-                                       u32 location, WGPUTextureView view)
-{
-    ASSERT(view);
-    R_Material::setBinding(gctx, mat, location, R_BIND_TEXTURE_VIEW, &view,
-                           sizeof(WGPUTextureView));
-}
-
 void R_Material::setExternalStorageBinding(GraphicsContext* gctx, R_Material* mat,
                                            u32 location, GPU_Buffer* buffer)
 {
@@ -932,27 +810,19 @@ void R_Material::setExternalStorageBinding(GraphicsContext* gctx, R_Material* ma
                            buffer->size);
 }
 
-void R_Material::setStorageTextureBinding(GraphicsContext* gctx, R_Material* mat,
-                                          u32 location, SG_ID texture_id)
+void R_Material::bindTexture(GraphicsContext* gctx, R_Material* mat, u32 location,
+                             R_TextureBinding bind_desc)
 {
-    R_Material::setBinding(gctx, mat, location, R_BIND_STORAGE_TEXTURE_ID, &texture_id,
-                           sizeof(texture_id));
+    R_Material::setBinding(gctx, mat, location, R_BIND_TEXTURE, &bind_desc,
+                           sizeof(bind_desc));
 }
 
 void R_Material::setBinding(GraphicsContext* gctx, R_Material* mat, u32 location,
                             R_BindType type, void* data, size_t bytes)
 {
     R_Binding* binding = &mat->bindings[location];
-
-    R_BindType prev_bind_type = binding->type;
-    binding->type             = type;
-    binding->size             = bytes;
-
-    // cleanup previous
-    if (prev_bind_type == R_BIND_STORAGE_TEXTURE_ID) {
-        // free previous storage texture view
-        WGPU_RELEASE_RESOURCE(TextureView, binding->as.textureView);
-    }
+    binding->type      = type;
+    binding->size      = bytes;
 
     // create new binding
     switch (type) {
@@ -964,17 +834,10 @@ void R_Material::setBinding(GraphicsContext* gctx, R_Material* mat, u32 location
             // once before traversing the rendergraph
             wgpuQueueWriteBuffer(gctx->queue, mat->uniform_buffer, offset, data, bytes);
         } break;
-        case R_BIND_TEXTURE_ID: {
-            ASSERT(bytes == sizeof(SG_ID));
-            R_Texture* tex        = Component_GetTexture(*(SG_ID*)data);
-            binding->as.textureID = tex->id;
-            binding->generation   = tex->generation;
+        case R_BIND_TEXTURE: {
+            ASSERT(bytes == sizeof(R_TextureBinding));
+            binding->as.texture = *(R_TextureBinding*)data;
         } break;
-        case R_BIND_TEXTURE_VIEW: {
-            ASSERT(bytes == sizeof(WGPUTextureView));
-            binding->as.textureView = *(WGPUTextureView*)data;
-            break;
-        }
         case R_BIND_SAMPLER: {
             ASSERT(bytes == sizeof(SamplerConfig));
             binding->as.samplerConfig = *(SamplerConfig*)data;
@@ -986,11 +849,6 @@ void R_Material::setBinding(GraphicsContext* gctx, R_Material* mat, u32 location
         case R_BIND_STORAGE_EXTERNAL: {
             // external storage buffer
             binding->as.storage_external = (GPU_Buffer*)data;
-        } break;
-        case R_BIND_STORAGE_TEXTURE_ID: {
-            // TODO: allow creating storage texture at other mip levels
-            binding->as.textureView = G_createTextureViewAtMipLevel(
-              Component_GetTexture(*(SG_ID*)data)->gpu_texture, 0, "storage texture");
         } break;
         default:
             // if the new binding is also STORAGE reuse the memory, don't
@@ -1389,150 +1247,6 @@ void R_Scene::initFromSG(GraphicsContext* gctx, R_Scene* r_scene, SG_ID scene_id
 }
 
 // ============================================================================
-// Render Pipeline Definitions
-// ============================================================================
-
-WGPUBindGroupLayout R_RenderPipeline::getBindGroupLayout(R_RenderPipeline* pipeline,
-                                                         u32 index)
-{
-    // lazy evaluation
-    ASSERT(index <= 3);
-    if (pipeline->_bind_group_layouts[index] == NULL) {
-        pipeline->_bind_group_layouts[index]
-          = wgpuRenderPipelineGetBindGroupLayout(pipeline->gpu_pipeline, index);
-        // wgpuBindGroupLayoutSetLabel(pipeline->_bind_group_layouts[index],
-        // pipeline->name);
-    }
-    return pipeline->_bind_group_layouts[index];
-}
-
-void R_RenderPipeline::init(GraphicsContext* gctx, R_RenderPipeline* pipeline,
-                            const R_PSO* config)
-{
-    ASSERT(pipeline->gpu_pipeline == NULL);
-    ASSERT(pipeline->rid == 0);
-
-    pipeline->rid = getNewRID();
-    ASSERT(pipeline->rid < 0);
-
-    pipeline->pso = *config;
-
-    WGPUPrimitiveState primitiveState = {};
-    primitiveState.topology           = config->sg_state.primitive_topology;
-    primitiveState.stripIndexFormat
-      = (primitiveState.topology == WGPUPrimitiveTopology_TriangleStrip
-         || primitiveState.topology == WGPUPrimitiveTopology_LineStrip) ?
-          WGPUIndexFormat_Uint32 :
-          WGPUIndexFormat_Undefined;
-    primitiveState.frontFace = WGPUFrontFace_CCW;
-    primitiveState.cullMode  = config->sg_state.cull_mode;
-
-    // TODO transparency (dissallow partial transparency, see if fragment
-    // discard writes to the depth buffer)
-    WGPUBlendState blendState = G_createBlendState(true);
-
-    WGPUColorTargetState colorTargetState = {};
-    // colorTargetState.format               = gctx->swapChainFormat;
-    colorTargetState.format    = WGPUTextureFormat_RGBA16Float; // for now force HDR
-    colorTargetState.blend     = &blendState;
-    colorTargetState.writeMask = WGPUColorWriteMask_All;
-
-    WGPUDepthStencilState depth_stencil_state
-      = G_createDepthStencilState(WGPUTextureFormat_Depth24PlusStencil8, true);
-
-    // Setup shader module
-    R_Shader* shader = Component_GetShader(config->sg_state.sg_shader_id);
-    if (!shader) {
-        log_error(
-          "Error: failed creating render pipeline from material with shader id = %llu",
-          config->sg_state.sg_shader_id);
-    }
-    ASSERT(shader);
-
-    VertexBufferLayout vertexBufferLayout = {};
-    VertexBufferLayout::init(&vertexBufferLayout, ARRAY_LENGTH(shader->vertex_layout),
-                             shader->vertex_layout);
-
-    // vertex state
-    WGPUVertexState vertexState = {};
-    vertexState.bufferCount     = vertexBufferLayout.attribute_count;
-    vertexState.buffers         = vertexBufferLayout.layouts;
-    vertexState.module          = shader->vertex_shader_module;
-    vertexState.entryPoint      = VS_ENTRY_POINT;
-
-    // fragment state
-    WGPUFragmentState fragmentState = {};
-    fragmentState.module            = shader->fragment_shader_module;
-    fragmentState.entryPoint        = FS_ENTRY_POINT;
-    fragmentState.targetCount       = 1;
-    fragmentState.targets           = &colorTargetState;
-
-    // multisample state
-    WGPUMultisampleState multisampleState
-      = G_createMultisampleState(config->msaa_sample_count);
-
-    char pipeline_label[128] = {};
-    snprintf(pipeline_label, sizeof(pipeline_label),
-             "RenderPipeline[%d] Shader[%d] %s cullmode: %d topology: %d",
-             pipeline->rid, shader->id, shader->name, primitiveState.cullMode,
-             primitiveState.topology);
-    strncpy(pipeline->name, pipeline_label, sizeof(pipeline->name));
-    WGPURenderPipelineDescriptor pipeline_desc = {};
-    pipeline_desc.label                        = pipeline_label;
-    pipeline_desc.layout                       = NULL; // Using layout: auto
-    pipeline_desc.primitive                    = primitiveState;
-    pipeline_desc.vertex                       = vertexState;
-    pipeline_desc.fragment                     = &fragmentState;
-    pipeline_desc.depthStencil                 = &depth_stencil_state;
-    pipeline_desc.multisample                  = multisampleState;
-
-    pipeline->gpu_pipeline
-      = wgpuDeviceCreateRenderPipeline(gctx->device, &pipeline_desc);
-    ASSERT(pipeline->gpu_pipeline);
-
-    log_trace("init render pipeline %d", pipeline->rid);
-
-    // add pipeline to shader for future Garbage Collection
-    R_Shader::addPipeline(shader, pipeline->rid);
-}
-
-/*
-Tricky: a material can only ever be bound to a single pipeline,
-BUT it might switch pipelines over the course of its lifetime.
-E.g. the user switches a material from being single-sided to double-sided,
-or from being opaque to transparent.
-How to support this?
-
-Add a function R_MaterialConfig GetRenderPipelineConfig() to R_Material
-
-Option 1: before rendering, do a pass over all materials in material arena.
-Get its renderPipelineConfig, and see if its tied to the correct pipeline.
-If not, remove from the current and add to the new.
-- cons: requires a second pass over all materials, which is not cache
-efficient
-
-Option 2: check the material WHEN doing the render pass over all
-RenderPipeline. Same logic, GetRenderPipelineConfig() and if its different,
-add to correct pipeline.
-- cons: if the material gets added to a pipeline that was ALREADY processed,
-it will be missed and only rendered on the NEXT frame. (that might be fine)
-
-Going with option 2 for now
-
-*/
-
-void R_RenderPipeline::free(R_RenderPipeline* pipeline)
-{
-    WGPU_RELEASE_RESOURCE(RenderPipeline, pipeline->gpu_pipeline);
-
-    for (int i = 0; i < ARRAY_LENGTH(pipeline->_bind_group_layouts); i++) {
-        WGPU_RELEASE_RESOURCE(BindGroupLayout, pipeline->_bind_group_layouts[i]);
-    }
-
-    log_trace("freeing render pipeline %s", pipeline->name);
-}
-
-// ============================================================================
 // Component Manager Definitions
 // ============================================================================
 
@@ -1545,22 +1259,14 @@ static Arena materialArena;
 static Arena textureArena;
 static Arena passArena;
 static Arena bufferArena;
-static Arena _RenderPipelineArena;
 static Arena cameraArena;
 static Arena textArena;
 static Arena lightArena;
 static Arena videoArena;
 static Arena webcamArena;
 
-// default textures
-static Texture opaqueWhitePixel      = {};
-static Texture transparentBlackPixel = {};
-static Texture defaultNormalPixel    = {};
-
 // maps from id --> offset
-static hashmap* r_locator                 = NULL;
-static hashmap* render_pipeline_pso_table = NULL; // lookup by pso
-static hashmap* _RenderPipelineMap;               // lookup by rid
+static hashmap* r_locator = NULL;
 
 // fonts
 // each font is 600bytes, 128 fonts is 76.8KB
@@ -1597,42 +1303,6 @@ struct R_Location {
     Arena* arena; // where to find
 };
 
-struct RenderPipelinePSOTableItem {
-    R_PSO pso;           // key
-    u64 pipeline_offset; // item
-
-    static int compare(const void* a, const void* b, void* udata)
-    {
-        RenderPipelinePSOTableItem* ga = (RenderPipelinePSOTableItem*)a;
-        RenderPipelinePSOTableItem* gb = (RenderPipelinePSOTableItem*)b;
-        return memcmp(&ga->pso, &gb->pso, sizeof(ga->pso));
-    }
-
-    static u64 hash(const void* item, uint64_t seed0, uint64_t seed1)
-    {
-        RenderPipelinePSOTableItem* g2x = (RenderPipelinePSOTableItem*)item;
-        return hashmap_xxhash3(&g2x->pso, sizeof(g2x->pso), seed0, seed1);
-    }
-};
-
-struct RenderPipelineIDTableItem {
-    R_ID id;             // key
-    u64 pipeline_offset; // item
-
-    static int compare(const void* a, const void* b, void* udata)
-    {
-        RenderPipelineIDTableItem* ga = (RenderPipelineIDTableItem*)a;
-        RenderPipelineIDTableItem* gb = (RenderPipelineIDTableItem*)b;
-        return memcmp(&ga->id, &gb->id, sizeof(ga->id));
-    }
-
-    static u64 hash(const void* item, uint64_t seed0, uint64_t seed1)
-    {
-        RenderPipelineIDTableItem* g2x = (RenderPipelineIDTableItem*)item;
-        return hashmap_xxhash3(&g2x->id, sizeof(g2x->id), seed0, seed1);
-    }
-};
-
 static int R_CompareLocation(const void* a, const void* b, void* udata)
 {
     R_Location* locA = (R_Location*)a;
@@ -1657,7 +1327,6 @@ void Component_Init(GraphicsContext* gctx)
     Arena::init(&geoArena, sizeof(R_Geometry) * 128);
     Arena::init(&shaderArena, sizeof(R_Shader) * 64);
     Arena::init(&materialArena, sizeof(R_Material) * 64);
-    Arena::init(&_RenderPipelineArena, sizeof(R_RenderPipeline) * 8);
     Arena::init(&textureArena, sizeof(R_Texture) * 64);
     Arena::init(&cameraArena, sizeof(R_Camera) * 4);
     Arena::init(&textArena, sizeof(R_Text) * 64);
@@ -1667,29 +1336,11 @@ void Component_Init(GraphicsContext* gctx)
     Arena::init(&videoArena, sizeof(R_Video) * 16);
     Arena::init(&webcamArena, sizeof(R_Webcam) * 8);
 
-    // initialize default textures
-    static u8 white[4]  = { 255, 255, 255, 255 };
-    static u8 black[4]  = { 0, 0, 0, 0 };
-    static u8 normal[4] = { 128, 128, 255, 255 };
-    Texture::initSinglePixel(gctx, &opaqueWhitePixel, white);
-    Texture::initSinglePixel(gctx, &transparentBlackPixel, black);
-    Texture::initSinglePixel(gctx, &defaultNormalPixel, normal);
-
     // init locator
     int seed = time(NULL);
     srand(seed);
     r_locator = hashmap_new(sizeof(R_Location), 0, seed, seed, R_HashLocation,
                             R_CompareLocation, NULL, NULL);
-    render_pipeline_pso_table
-      = hashmap_new(sizeof(RenderPipelinePSOTableItem), 0, seed, seed,
-                    RenderPipelinePSOTableItem::hash,
-                    RenderPipelinePSOTableItem::compare, NULL, NULL);
-
-    _RenderPipelineMap = hashmap_new(sizeof(RenderPipelineIDTableItem), 0, seed, seed,
-                                     RenderPipelineIDTableItem::hash,
-                                     RenderPipelineIDTableItem::compare, NULL, NULL);
-    materials_with_new_pso
-      = hashmap_new(sizeof(SG_ID), 0, seed, seed, hashSGID, compareSGIDs, NULL, NULL);
 }
 
 void Component_Free()
@@ -1702,17 +1353,11 @@ void Component_Free()
     Arena::free(&geoArena);
     Arena::free(&shaderArena);
     Arena::free(&materialArena);
-    Arena::free(&_RenderPipelineArena);
     Arena::free(&textureArena);
     Arena::free(&cameraArena);
     Arena::free(&textArena);
     Arena::free(&passArena);
     // Arena::free(&bufferArena);
-
-    // free default textures
-    Texture::release(&opaqueWhitePixel);
-    Texture::release(&transparentBlackPixel);
-    Texture::release(&defaultNormalPixel);
 
     // free locator
     hashmap_free(r_locator);
@@ -1864,9 +1509,60 @@ R_Camera* Component_CreateCamera(GraphicsContext* gctx, SG_Command_CameraCreate*
     return cam;
 }
 
-static void R_Text_updateFromCommand(R_Text* text, SG_Command_TextRebuild* cmd)
+R_Text* Component_CreateText(GraphicsContext* gctx, FT_Library ft,
+                             SG_Command_TextRebuild* cmd, R_Font* default_font)
 {
-    // TODO other fields (control point, etc)
+    // see if text is already created
+    R_Text* text = Component_GetText(cmd->text_id);
+    if (text == NULL) { // else lazily create
+        // OOP is creeping in here....
+        // can factor these out into separate fns: createMaterialImpl,
+        // createGeometryImpl, createMeshImpl
+
+        // initialize material
+        R_Material* mat = Component_GetMaterial(cmd->material_id);
+        ASSERT(mat);
+
+        // init geometry
+        R_Geometry* geo = ARENA_PUSH_TYPE(&geoArena, R_Geometry);
+        {
+            *geo              = {};
+            geo->id           = getNewRID();
+            geo->type         = SG_COMPONENT_GEOMETRY;
+            geo->vertex_count = -1; // -1 means draw all vertices
+
+            // store offset
+            R_Location loc = { geo->id, Arena::offsetOf(&geoArena, geo), &geoArena };
+            const void* result = hashmap_set(r_locator, &loc);
+            ASSERT(result == NULL); // ensure id is unique
+            UNUSED_VAR(result);
+        }
+
+        // init text
+        text = ARENA_PUSH_ZERO_TYPE(&textArena,
+                                    R_Text); // can also add void* udata to R_Transform
+                                             // to support these kinds of renderables
+        {
+            R_Transform_init(text, cmd->text_id,
+                             SG_COMPONENT_MESH); // text or mesh type?
+
+            // init mesh
+            text->_geoID = geo->id;
+            text->_matID = mat->id;
+
+            // store offset
+            R_Location loc
+              = { text->id, Arena::offsetOf(&textArena, text), &textArena };
+            const void* result = hashmap_set(r_locator, &loc);
+            ASSERT(result == NULL); // ensure id is unique
+            UNUSED_VAR(result);
+
+            // make sure these are internal
+            ASSERT(text->_geoID < 0);
+        }
+    }
+
+    // build text
     text->text
       = std::string((const char*)CQ_ReadCommandGetOffset(cmd->text_str_offset));
     text->font_path
@@ -1874,67 +1570,9 @@ static void R_Text_updateFromCommand(R_Text* text, SG_Command_TextRebuild* cmd)
     text->vertical_spacing = cmd->vertical_spacing;
     text->control_points   = cmd->control_point;
 
-    // defer font construction to end of frame (TODO change name...)
-    hashmap_set(materials_with_new_pso, &text->id);
-}
-
-R_Text* Component_CreateText(GraphicsContext* gctx, FT_Library ft,
-                             SG_Command_TextRebuild* cmd)
-{
-    // see if text is already created
-    R_Text* text = Component_GetText(cmd->text_id);
-    if (text) {
-        R_Text_updateFromCommand(text, cmd);
-        return text;
-    }
-
-    // else lazily create
-
-    // OOP is creeping in here....
-    // can factor these out into separate fns: createMaterialImpl, createGeometryImpl,
-    // createMeshImpl
-
-    // initialize material
-    R_Material* mat = Component_GetMaterial(cmd->material_id);
-    ASSERT(mat);
-
-    // init geometry
-    R_Geometry* geo = ARENA_PUSH_TYPE(&geoArena, R_Geometry);
-    {
-        *geo              = {};
-        geo->id           = getNewRID();
-        geo->type         = SG_COMPONENT_GEOMETRY;
-        geo->vertex_count = -1; // -1 means draw all vertices
-
-        // store offset
-        R_Location loc     = { geo->id, Arena::offsetOf(&geoArena, geo), &geoArena };
-        const void* result = hashmap_set(r_locator, &loc);
-        ASSERT(result == NULL); // ensure id is unique
-        UNUSED_VAR(result);
-    }
-
-    // init text
-    text = ARENA_PUSH_ZERO_TYPE(&textArena,
-                                R_Text); // can also add void* udata to R_Transform to
-                                         // support these kinds of renderables
-    {
-        R_Transform_init(text, cmd->text_id, SG_COMPONENT_MESH); // text or mesh type?
-
-        // init mesh
-        text->_geoID = geo->id;
-        text->_matID = mat->id;
-
-        // store offset
-        R_Location loc = { text->id, Arena::offsetOf(&textArena, text), &textArena };
-        const void* result = hashmap_set(r_locator, &loc);
-        ASSERT(result == NULL); // ensure id is unique
-        UNUSED_VAR(result);
-
-        // make sure these are internal
-        ASSERT(text->_geoID < 0);
-
-        R_Text_updateFromCommand(text, cmd);
-    }
+    R_Font* font = Component_GetFont(gctx, ft, text->font_path.c_str());
+    if (!font) font = default_font;
+    R_Font::updateText(gctx, font, text);
 
     return text;
 }
@@ -2062,35 +1700,6 @@ R_Material* Component_CreateMaterial(GraphicsContext* gctx,
     UNUSED_VAR(result);
 
     return mat;
-}
-
-// called by renderer after flushing all commands
-void Material_batchUpdatePipelines(GraphicsContext* gctx, FT_Library ft_lib,
-                                   R_Font* default_font)
-{
-    size_t hashmap_index_DONT_USE = 0;
-    SG_ID* sg_id                  = NULL;
-    while (
-      hashmap_iter(materials_with_new_pso, &hashmap_index_DONT_USE, (void**)&sg_id)) {
-        R_Component* comp = Component_GetComponent(*sg_id);
-        switch (comp->type) {
-            // TODO: remove material batch update pipeline from PSO
-            // we do pipeline creation JIT during render scene now
-            case SG_COMPONENT_MESH: {
-                // for now assuming text is the only mesh type that needs to update
-                // why is this font creation even deferred??
-                R_Text* rtext = (R_Text*)comp;
-                R_Font* font
-                  = Component_GetFont(gctx, ft_lib, rtext->font_path.c_str());
-                if (!font) font = default_font;
-                R_Font::updateText(gctx, font, rtext);
-            } break;
-            default: ASSERT(false);
-        }
-    }
-
-    // clear hashmap
-    hashmap_clear(materials_with_new_pso, false);
 }
 
 R_Texture* Component_CreateTexture(GraphicsContext* gctx, SG_Command_TextureCreate* cmd)
@@ -2542,11 +2151,6 @@ bool Component_MaterialIter(size_t* i, R_Material** material)
     return true;
 }
 
-int Component_RenderPipelineCount()
-{
-    return ARENA_LENGTH(&_RenderPipelineArena, R_RenderPipeline);
-}
-
 bool Component_VideoIter(size_t* i, R_Video** video)
 {
     if (*i >= ARENA_LENGTH(&videoArena, R_Video)) {
@@ -2571,44 +2175,6 @@ bool Component_WebcamIter(size_t* i, R_Webcam** webcam)
     return true;
 }
 
-R_RenderPipeline* Component_GetOrCreatePipeline(GraphicsContext* gctx, R_PSO* pso)
-{
-    RenderPipelinePSOTableItem* rp_item
-      = (RenderPipelinePSOTableItem*)hashmap_get(render_pipeline_pso_table, pso);
-    if (rp_item)
-        return (R_RenderPipeline*)Arena::get(&_RenderPipelineArena,
-                                             rp_item->pipeline_offset);
-
-    // else create a new one
-    R_RenderPipeline* rPipeline
-      = ARENA_PUSH_ZERO_TYPE(&_RenderPipelineArena, R_RenderPipeline);
-    u64 pipelineOffset = Arena::offsetOf(&_RenderPipelineArena, rPipeline);
-    log_info("creating new pipeline with shader %d", pso->sg_state.sg_shader_id);
-    R_RenderPipeline::init(gctx, rPipeline, pso);
-
-    ASSERT(!hashmap_get(_RenderPipelineMap, &rPipeline->rid))
-    RenderPipelineIDTableItem new_ri_item = { rPipeline->rid, pipelineOffset };
-    hashmap_set(_RenderPipelineMap, &new_ri_item);
-
-    RenderPipelinePSOTableItem new_rp_item = { *pso, pipelineOffset };
-    hashmap_set(render_pipeline_pso_table, &new_rp_item);
-
-    return rPipeline;
-}
-
-R_RenderPipeline* Component_GetPipeline(R_ID rid)
-{
-    RenderPipelineIDTableItem* rp_item
-      = (RenderPipelineIDTableItem*)hashmap_get(_RenderPipelineMap, &rid);
-    if (!rp_item) return NULL;
-    R_RenderPipeline* pipeline
-      = (R_RenderPipeline*)Arena::get(&_RenderPipelineArena, rp_item->pipeline_offset);
-    // make sure it's been initialized
-    ASSERT(pipeline->rid == rid);
-    ASSERT(pipeline->gpu_pipeline);
-    return pipeline;
-}
-
 // =============================================================================
 // R_Shader
 // =============================================================================
@@ -2620,9 +2186,6 @@ void R_Shader::init(GraphicsContext* gctx, R_Shader* shader, const char* vertex_
                     const char* compute_filepath, SG_ShaderIncludes* includes)
 {
     shader->includes = *includes;
-
-    // zero out pipeline ids
-    memset(shader->pipeline_ids, 0, sizeof(shader->pipeline_ids));
 
     char vertex_shader_label[32] = {};
     snprintf(vertex_shader_label, sizeof(vertex_shader_label), "vertex shader %d",
@@ -2686,85 +2249,11 @@ void R_Shader::init(GraphicsContext* gctx, R_Shader* shader, const char* vertex_
     }
 }
 
-void R_Shader::addPipeline(R_Shader* shader, R_ID pipeline_id)
-{
-    // assume 0 means the slot is free
-    for (int i = 0; i < ARRAY_LENGTH(shader->pipeline_ids); ++i) {
-        if (shader->pipeline_ids[i] == 0) {
-            shader->pipeline_ids[i] = pipeline_id;
-            return;
-        }
-    }
-
-    // should never reach here
-    log_error("R_Shader[%d] no free slots for pipeline id %d", shader->id, pipeline_id);
-    ASSERT(false);
-}
-
 void R_Shader::free(R_Shader* shader)
 {
     WGPU_RELEASE_RESOURCE(ShaderModule, shader->vertex_shader_module);
     WGPU_RELEASE_RESOURCE(ShaderModule, shader->fragment_shader_module);
     WGPU_RELEASE_RESOURCE(ShaderModule, shader->compute_shader_module);
-
-    // free all pipelines created from this shader
-    for (int i = 0; i < ARRAY_LENGTH(shader->pipeline_ids); ++i) {
-        R_ID pipeline_id = shader->pipeline_ids[i];
-        if (pipeline_id == 0) continue;
-
-        R_RenderPipeline* pipeline = Component_GetPipeline(pipeline_id);
-        ASSERT(pipeline);
-
-        // delete the old pipeline hashmap entries
-        RenderPipelineIDTableItem* rid_deletion_result
-          = (RenderPipelineIDTableItem*)hashmap_delete(_RenderPipelineMap,
-                                                       &pipeline->rid);
-        UNUSED_VAR(rid_deletion_result);
-        ASSERT(rid_deletion_result);
-        RenderPipelinePSOTableItem* pso_deletion_result
-          = (RenderPipelinePSOTableItem*)hashmap_delete(render_pipeline_pso_table,
-                                                        &pipeline->pso);
-        UNUSED_VAR(pso_deletion_result);
-        ASSERT(pso_deletion_result);
-        ASSERT(pso_deletion_result->pso.sg_state.sg_shader_id == shader->id);
-        ASSERT(rid_deletion_result->pipeline_offset
-               == pso_deletion_result->pipeline_offset);
-
-        // free pipeline struct
-        R_RenderPipeline::free(pipeline);
-
-        // remove from pipeline arena
-        int offset = rid_deletion_result->pipeline_offset;
-        ASSERT(offset % sizeof(R_RenderPipeline) == 0);
-        int pipeline_arena_index = offset / sizeof(R_RenderPipeline);
-        ARENA_SWAP_DELETE(&_RenderPipelineArena, R_RenderPipeline,
-                          pipeline_arena_index);
-        // pipeline = NULL;
-
-        // update the newly swapped pipeline, if there is one
-        if (pipeline_arena_index
-            < ARENA_LENGTH(&_RenderPipelineArena, R_RenderPipeline)) {
-            R_RenderPipeline* swapped_pipeline = ARENA_GET_TYPE(
-              &_RenderPipelineArena, R_RenderPipeline, pipeline_arena_index);
-
-            ASSERT(offset == Arena::offsetOf(&_RenderPipelineArena, swapped_pipeline));
-
-            // update offsets
-            RenderPipelinePSOTableItem* pso_item
-              = (RenderPipelinePSOTableItem*)hashmap_get(render_pipeline_pso_table,
-                                                         &swapped_pipeline->pso);
-            ASSERT(pso_item);
-            ASSERT(pso_item->pipeline_offset != offset);
-            pso_item->pipeline_offset = offset;
-
-            RenderPipelineIDTableItem* rid_item
-              = (RenderPipelineIDTableItem*)hashmap_get(_RenderPipelineMap,
-                                                        &swapped_pipeline->rid);
-            ASSERT(rid_item);
-            ASSERT(rid_item->pipeline_offset != offset);
-            rid_item->pipeline_offset = offset;
-        }
-    }
 }
 
 // =============================================================================
@@ -3383,98 +2872,4 @@ void R_Font::prepareGlyphsForText(GraphicsContext* gctx, R_Font* font, const cha
         // 3080 PCI has 32GB/s bandwidth, these buffers are nothing
         R_Font_uploadBuffers(gctx, font);
     }
-}
-
-// =============================================================================
-// R_Pass
-// =============================================================================
-
-// static array of ScreenPass render pipelines
-// all supported texture formats created on app start
-static int r_screen_pass_pipeline_count                 = 0;
-static R_ScreenPassPipeline r_screen_pass_pipelines[32] = {};
-WGPUShaderModule screen_pass_default_passthrough_vs     = NULL;
-WGPUShaderModule screen_pass_default_passthrough_fs     = NULL;
-
-R_ScreenPassPipeline R_GetScreenPassPipeline(GraphicsContext* gctx,
-                                             WGPUTextureFormat format, SG_ID shader_id)
-{
-
-    if (!screen_pass_default_passthrough_vs || !screen_pass_default_passthrough_fs) {
-        screen_pass_default_passthrough_vs = G_createShaderModule(
-          gctx, default_postprocess_shader_string, "ScreenPass Default VS");
-        screen_pass_default_passthrough_fs = G_createShaderModule(
-          gctx, default_postprocess_shader_string, "ScreenPass Default FS");
-    }
-
-    for (int i = 0; i < r_screen_pass_pipeline_count; i++) {
-        if (r_screen_pass_pipelines[i].format == format
-            && r_screen_pass_pipelines[i].shader_id == shader_id) {
-            return r_screen_pass_pipelines[i];
-        }
-    }
-    // else create
-    ASSERT(r_screen_pass_pipeline_count < ARRAY_LENGTH(r_screen_pass_pipelines));
-
-    WGPUPrimitiveState primitiveState = {};
-    primitiveState.topology           = WGPUPrimitiveTopology_TriangleList;
-    primitiveState.cullMode           = WGPUCullMode_Back;
-
-    // TODO transparency (dissallow partial transparency, see if fragment
-    // discard writes to the depth buffer)
-    WGPUBlendState blendState = G_createBlendState(false);
-
-    WGPUColorTargetState colorTargetState = {};
-    colorTargetState.format               = format;
-    colorTargetState.blend                = &blendState;
-    colorTargetState.writeMask            = WGPUColorWriteMask_All;
-
-    // Setup shader module (defaults to passthrough shader)
-    WGPUShaderModule vs_module = screen_pass_default_passthrough_vs;
-    WGPUShaderModule fs_module = screen_pass_default_passthrough_fs;
-    R_Shader* shader           = Component_GetShader(shader_id);
-    if (shader && shader->vertex_shader_module && shader->fragment_shader_module) {
-        vs_module = shader->vertex_shader_module;
-        fs_module = shader->fragment_shader_module;
-    }
-
-    // vertex state
-    WGPUVertexState vertexState = {};
-    vertexState.module          = vs_module;
-    vertexState.entryPoint      = VS_ENTRY_POINT;
-
-    // fragment state
-    WGPUFragmentState fragmentState = {};
-    fragmentState.module            = fs_module;
-    fragmentState.entryPoint        = FS_ENTRY_POINT;
-    fragmentState.targetCount       = 1;
-    fragmentState.targets           = &colorTargetState;
-
-    // multisample state
-    WGPUMultisampleState multisampleState = G_createMultisampleState(1);
-
-    char pipeline_label[64] = {};
-    if (shader) {
-        snprintf(pipeline_label, sizeof(pipeline_label),
-                 "ScreenPass RenderPipeline %d %s", shader->id, shader->name);
-    }
-    WGPURenderPipelineDescriptor pipeline_desc = {};
-    pipeline_desc.label                        = pipeline_label;
-    pipeline_desc.layout                       = NULL; // Using layout: auto
-    pipeline_desc.primitive                    = primitiveState;
-    pipeline_desc.vertex                       = vertexState;
-    pipeline_desc.fragment                     = &fragmentState;
-    pipeline_desc.depthStencil                 = NULL;
-    pipeline_desc.multisample                  = multisampleState;
-
-    R_ScreenPassPipeline* pipeline
-      = &r_screen_pass_pipelines[r_screen_pass_pipeline_count++];
-    pipeline->format    = format;
-    pipeline->shader_id = shader_id;
-    pipeline->gpu_pipeline
-      = wgpuDeviceCreateRenderPipeline(gctx->device, &pipeline_desc);
-    pipeline->frame_group_layout = wgpuRenderPipelineGetBindGroupLayout(
-      pipeline->gpu_pipeline, 0); // 0 is the frame bind group
-
-    return *pipeline;
 }

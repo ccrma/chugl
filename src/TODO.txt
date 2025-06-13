@@ -1,7 +1,7 @@
 TODO
-
-- add bloompass to render graph
-- remove all the old R_RenderPipeline stuff
+- fix gtext crash on empty string
+- screen resize bug, maybe will be fixed after we correctly impl render targets
+- re-impl shader freeing gc
 - impl transparency
   - test with skybox to make sure transparent is drawn after
 - impl screenPass properly and make a little chugl-shaderToy playground example
@@ -17,8 +17,8 @@ TODO
 - test if we can move outputpass vertex shader to @group(1)
 - add pipeline/bindgroup gc for R_Shader
   - want to prevent memory leak from say CHydra building new shaders every frame
-- remove R_Binding->generation
-- add logging and labels to figure out this weird bindgroup re-generation bug
+- check if imgui has multi-window support now for webgpu backend
+- add anti aliasing back
 
 - add dt to FrameUniforms
 - add gamma and per-channel gamma to OutputPass (so u can replicate the Matrix color curve)
@@ -50,9 +50,41 @@ TODO
         -  eskil steenberg how I program C leak checker
         -  stb leak check
 
+Long-Term
+- read wgpu release notes, see about updating to new version and any useful features
+- C-port of webgpu-utils shader pipeline layout generator
+- study Raylib opengl batcher, can chugl make use of a batcher?
+- swap out glm for handmade math
+- skeletal animation
+  - see obsidian note
+  - study raylib gltf importer and animator
+- study jdh retro games from scratch (minecraft, doom), impl as chugl examples?
+- for PBR, IBL
+  - see webgpu-typescript-starter notes.txt
+  - anything we can use from https://github.com/google/filament
+- add more builtin-shapes
+  - see raylib 3d mesh generator
+  - https://prideout.net/shapes
+
+
+2d immediate mode vector graphics libraries to base g2d off of
+- raylib 
+- freya shapes
+- paperjs
+- processing/p5
+- love.graphics
 
 == Examples ====================
 - Mirrors
 - Portals
 - GUI overlay
 - additive blending particle system
+- shadertoy in chugl
+- pokemon cries!
+- fluid sim
+  - https://github.com/kishimisu/WebGPU-Fluid-Simulation?tab=readme-ov-file
+    - also impl as webgpu-native example
+    - CPU implementation, 2003
+  - https://www.dgp.toronto.edu/public_user/stam/reality/Research/pdf/GDC03.pdf
+  - https://www.shadertoy.com/view/4tGfDW
+    - based on https://inria.hal.science/inria-00596050/document published 2011

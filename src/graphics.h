@@ -73,7 +73,6 @@
 // =========================================================================================
 // TODO request maximum device feature limits
 struct GraphicsContext {
-    void* base; //
     // WebGPU API objects --------
     WGPUDevice device;
     WGPUQueue queue;
@@ -82,14 +81,9 @@ struct GraphicsContext {
     WGPUTextureFormat surface_preferred_format;
     WGPUTextureFormat surface_format;
 
-    WGPUTexture multisampled_texture;
-    WGPUTextureView multisampled_texture_view;
-
     // Per frame resources --------
     WGPUTextureView backbufferView;
     WGPUCommandEncoder commandEncoder;
-    WGPURenderPassDepthStencilAttachment depthStencilAttachment;
-    WGPUCommandBuffer commandBuffer;
 
     // Window --------
     bool window_minimized;
@@ -109,7 +103,7 @@ struct GraphicsContext {
 // Buffers
 // =============================================================================
 
-struct G_UniformBuffer {
+struct G_DynamicUniformBuffer { // for use with dynamic bg offsets
     Arena cpu_buffer;
     WGPUBuffer gpu_buffer;
     u32 GPU_OFFSET_ALIGNMENT_BYTES;
@@ -274,101 +268,6 @@ struct VertexBufferLayout {
     static void init(VertexBufferLayout* layout, u8 format_count,
                      WGPUVertexFormat* formats // stride in count NOT bytes
     );
-};
-
-// ============================================================================
-// Shaders
-// ============================================================================
-
-struct ShaderModule {
-    WGPUShaderModule module;
-    WGPUShaderModuleDescriptor desc;
-
-    // only support wgsl for now (can change into union later)
-    WGPUShaderModuleWGSLDescriptor wgsl_desc;
-
-    static void init(GraphicsContext* ctx, ShaderModule* module, const char* code,
-                     const char* label);
-
-    static void release(ShaderModule* module);
-};
-
-// ============================================================================
-// Bind Group
-// ============================================================================
-
-struct BindGroup {
-    WGPUBindGroup bindGroup;
-    WGPUBindGroupDescriptor desc;
-    WGPUBuffer uniformBuffer;
-
-    // unsupported:
-    // WGPUSampler sampler;
-    // WGPUTextureView textureView;
-
-    static void init(GraphicsContext* ctx, BindGroup* bindGroup,
-                     WGPUBindGroupLayout layout, u64 bufferSize);
-};
-
-// ============================================================================
-// Depth Texture
-// ============================================================================
-
-// TODO: unused, remove?
-
-struct DepthTexture {
-    WGPUTexture texture;
-    WGPUTextureView view;
-    WGPUTextureFormat format;
-
-    static void init(GraphicsContext* ctx, DepthTexture* depthTexture,
-                     WGPUTextureFormat format);
-
-    static void release(DepthTexture* depthTexture);
-};
-
-// ============================================================================
-// Texture
-// ============================================================================
-
-struct Texture {
-    u32 width;
-    u32 height;
-    u32 depth;
-    u32 mip_level_count;
-    u32 sample_count;
-
-    WGPUTextureFormat format;
-    WGPUTextureDimension dimension;
-    WGPUTextureUsageFlags usage;
-
-    WGPUTexture texture;
-    WGPUTextureView view;
-    // WGPUSampler sampler;
-
-    static void init(GraphicsContext* gctx, Texture* texture, u32 width, u32 height,
-                     u32 depth, bool gen_mipmaps, const char* label,
-                     WGPUTextureFormat format, WGPUTextureUsageFlags usage,
-                     WGPUTextureDimension dimension);
-
-    static void initFromFile(GraphicsContext* ctx, Texture* texture,
-                             const char* filename, bool genMipMaps,
-                             WGPUTextureUsageFlags usage_flags);
-
-    // initializes from image data read into memory, NOT raw buffer
-    static void initFromBuff(GraphicsContext* ctx, Texture* texture, const u8* data,
-                             u64 dataLen);
-
-    static void initSinglePixel(GraphicsContext* ctx, Texture* texture,
-                                u8 pixelData[4]);
-
-    static void initFromPixelData(GraphicsContext* ctx, Texture* gpu_texture,
-                                  const char* label, const void* pixelData,
-                                  int pixel_width, int pixel_height, bool genMipMaps,
-                                  WGPUTextureUsageFlags usage_flags,
-                                  int component_size);
-
-    static void release(Texture* texture);
 };
 
 // ============================================================================

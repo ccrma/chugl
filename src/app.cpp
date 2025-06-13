@@ -637,9 +637,6 @@ struct App {
             SG_Command* cmd = NULL;
             while (CQ_ReadCommandQueueIter(&cmd)) _R_HandleCommand(app, cmd);
             CQ_ReadCommandQueueClear();
-            // tasks to do after command queue is flushed (batched)
-            Material_batchUpdatePipelines(&app->gctx, app->FTLibrary,
-                                          app->default_font);
         }
 
         // handle window resize (special case b/c needs to happen before
@@ -869,23 +866,23 @@ struct App {
                       &app->rendergraph, NULL, &app->gctx);
                 }; break;
                 case SG_PassType_Bloom: {
-                    R_Texture* render_texture = Component_GetTexture(
+                    R_Texture* input_texture = Component_GetTexture(
                       pass->sg_pass.bloom_input_render_texture_id);
 
                     R_Texture* output_texture = Component_GetTexture(
                       pass->sg_pass.bloom_output_render_texture_id);
 
-                    if (!render_texture || !output_texture) break;
+                    if (!input_texture || !output_texture) break;
 
                     // resize output texture
                     R_Texture::resize(&app->gctx, output_texture,
-                                      render_texture->desc.width,
-                                      render_texture->desc.height);
+                                      input_texture->desc.width,
+                                      input_texture->desc.height);
 
-                    glm::uvec2 full_res_size = glm::uvec2(render_texture->desc.width,
-                                                          render_texture->desc.height);
+                    glm::uvec2 full_res_size = glm::uvec2(input_texture->desc.width,
+                                                          input_texture->desc.height);
                     ASSERT(sizeof(full_res_size) == 2 * sizeof(u32));
-                    ASSERT(render_texture->desc.usage
+                    ASSERT(input_texture->desc.usage
                            & WGPUTextureUsage_RenderAttachment);
 
                     SG_Sampler bloom_sampler = {
@@ -896,18 +893,18 @@ struct App {
                     };
 
                     u32 bloom_mip_levels = G_mipLevelsLimit(
-                      render_texture->desc.width, render_texture->desc.height, 1);
+                      input_texture->desc.width, input_texture->desc.height, 1);
                     bloom_mip_levels
                       = MIN(bloom_mip_levels, pass->sg_pass.bloom_num_blur_levels);
 
-                    ASSERT(bloom_mip_levels <= render_texture->desc.mips);
+                    ASSERT(bloom_mip_levels <= input_texture->desc.mips);
                     if (bloom_mip_levels == 0) break;
 
                     // create texture views for downsample chain at all mip levels
                     WGPUTextureView downsample_texture_views[16] = {};
                     for (int i = 0; i < bloom_mip_levels; i++) {
                         downsample_texture_views[i] = G_createTextureViewAtMipLevel(
-                          render_texture->gpu_texture, i,
+                          input_texture->gpu_texture, i,
                           "bloom downsample texture view");
                     }
                     defer(WGPU_RELEASE_RESOURCE_ARRAY(
@@ -927,12 +924,6 @@ struct App {
                     { // downscale
                         R_Material* bloom_downscale_material = Component_GetMaterial(
                           pass->sg_pass.bloom_downsample_material_id);
-                        // R_Shader* bloom_downscale_shader = Component_GetShader(
-                        //   bloom_downscale_material->pso.sg_shader_id);
-                        // R_ScreenPassPipeline downscale_pipeline
-                        //   = R_GetScreenPassPipeline(&app->gctx,
-                        //                             output_texture->desc.format,
-                        //                             bloom_downscale_shader->id);
 
                         // set the material uniforms that only need to be set once,
                         // not per mip level dispatch
@@ -944,14 +935,14 @@ struct App {
                           sizeof(full_res_size));
 
                         // downsample, writing from from mip level i --> i + 1
-                        for (u32 i = 0; i < bloom_mip_levels - 1; i++) {
+                        for (int i = 0; i < bloom_mip_levels - 1; i++) {
                             char render_pass_label[64] = {};
                             snprintf(render_pass_label, sizeof(render_pass_label),
                                      "bloom downscale to mip level %d", i + 1);
 
-                            R_Material::setTextureViewBinding(
-                              &app->gctx, bloom_downscale_material, 0,
-                              downsample_texture_views[i]);
+                            R_Material::bindTexture(&app->gctx,
+                                                    bloom_downscale_material, 0,
+                                                    { input_texture->id, i, 1 });
 
                             // set G_Pass
                             app->rendergraph.addRenderPass(render_pass_label);
@@ -988,13 +979,6 @@ struct App {
                         R_Material* bloom_upscale_material = Component_GetMaterial(
                           pass->sg_pass.bloom_upsample_material_id);
 
-                        // R_Shader* bloom_upscale_shader = Component_GetShader(
-                        //   bloom_upscale_material->pso.sg_shader_id);
-                        // R_ScreenPassPipeline upscale_pipeline =
-                        // R_GetScreenPassPipeline(
-                        //   &app->gctx, output_texture->desc.format,
-                        //   bloom_upscale_shader->id);
-
                         // set the material uniforms that only need to be set once,
                         // not per mip level dispatch
                         R_Material::setSamplerBinding(
@@ -1012,14 +996,13 @@ struct App {
                             snprintf(upsample_pass_label, sizeof(upsample_pass_label),
                                      "bloom upsample to mip level %d", i);
 
-                            R_Material::setTextureViewBinding(
+                            R_Material::bindTexture(
                               &app->gctx, bloom_upscale_material, 0,
-                              first_upsample ? downsample_texture_views[i + 1] :
-                                               upsample_texture_views[i + 1]);
+                              { first_upsample ? input_texture->id : output_texture->id,
+                                i + 1, 1 });
 
-                            R_Material::setTextureViewBinding(
-                              &app->gctx, bloom_upscale_material, 2,
-                              downsample_texture_views[i]);
+                            R_Material::bindTexture(&app->gctx, bloom_upscale_material,
+                                                    2, { input_texture->id, i, 1 });
 
                             // set G_Pass
                             app->rendergraph.addRenderPass(upsample_pass_label);
@@ -1027,7 +1010,7 @@ struct App {
                               .renderPassColorTarget( // set color target to mip level i
                                                       // + 1
                                 upsample_texture_views[i],
-                                wgpuTextureGetFormat(render_texture->gpu_texture));
+                                wgpuTextureGetFormat(input_texture->gpu_texture));
                             ;
                             app->rendergraph.renderPassColorOp(
                               WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f }, WGPULoadOp_Clear,
@@ -1229,58 +1212,6 @@ struct App {
     }
 };
 
-static void _R_ScenePassCreateAndBindFrameBindgroup(GraphicsContext* gctx,
-                                                    R_Scene* scene, R_Camera* camera,
-                                                    R_RenderPipeline* render_pipeline,
-                                                    WGPURenderPassEncoder render_pass,
-                                                    u64 fc)
-{
-    // camera frame uniform buffer needs to already be updated
-    ASSERT(camera->frame_uniform_buffer_fc == fc);
-
-    R_Shader* shader = Component_GetShader(render_pipeline->pso.sg_state.sg_shader_id);
-
-    { // set frame uniforms
-        WGPUBindGroupEntry frame_group_entries[3] = {};
-        int entry_count = 1; // min 1 because we always have frame_uniforms for now
-
-        WGPUBindGroupEntry* frame_group_entry = &frame_group_entries[0];
-        frame_group_entry->binding            = 0;
-        frame_group_entry->buffer             = camera->frame_uniform_buffer.buf;
-        frame_group_entry->size               = camera->frame_uniform_buffer.size;
-
-        if (shader->includes.lit) {
-            WGPUBindGroupEntry* lighting_entry = &frame_group_entries[entry_count++];
-            lighting_entry->binding            = 1;
-            lighting_entry->buffer             = scene->light_info_buffer.buf;
-            lighting_entry->size               = MAX(scene->light_info_buffer.size, 1);
-        }
-
-        if (shader->includes.uses_env_map) {
-            R_Texture* envmap = Component_GetTexture(scene->sg_scene_desc.env_map_id);
-            ASSERT(envmap && envmap->gpu_texture_view)
-            WGPUBindGroupEntry* envmap_entry = &frame_group_entries[entry_count++];
-            envmap_entry->binding            = 2;
-            envmap_entry->textureView        = envmap->gpu_texture_view;
-        }
-
-        // create bind group
-        WGPUBindGroupDescriptor frameGroupDesc;
-        frameGroupDesc = {};
-        frameGroupDesc.layout
-          = R_RenderPipeline::getBindGroupLayout(render_pipeline, PER_FRAME_GROUP);
-        frameGroupDesc.entries    = frame_group_entries;
-        frameGroupDesc.entryCount = entry_count;
-
-        // layout:auto requires a bind group per pipeline
-        WGPUBindGroup frame_bind_group
-          = wgpuDeviceCreateBindGroup(gctx->device, &frameGroupDesc);
-        wgpuRenderPassEncoderSetBindGroup(render_pass, PER_FRAME_GROUP,
-                                          frame_bind_group, 0, NULL);
-        WGPU_RELEASE_RESOURCE(BindGroup, frame_bind_group);
-    }
-}
-
 struct SceneDrawCall {
     SG_ID shader_id;
     SG_ID material_id;
@@ -1391,9 +1322,9 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
                 if (shader->includes.uses_env_map) {
                     R_Texture* envmap
                       = Component_GetTexture(scene->sg_scene_desc.env_map_id);
-                    ASSERT(envmap && envmap->gpu_texture_view)
+                    ASSERT(envmap && envmap->gpu_texture)
                     app->rendergraph.bindTexture(d, PER_FRAME_GROUP, 2,
-                                                 envmap->gpu_texture_view);
+                                                 { envmap->gpu_texture, 0, 1 });
                 }
             }
 
@@ -1455,235 +1386,16 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
             if (skybox_shader->includes.uses_env_map) {
                 R_Texture* envmap
                   = Component_GetTexture(scene->sg_scene_desc.env_map_id);
-                ASSERT(envmap && envmap->gpu_texture_view)
+                ASSERT(envmap && envmap->gpu_texture)
 
                 app->rendergraph.bindTexture(d, PER_FRAME_GROUP, 2,
-                                             envmap->gpu_texture_view);
+                                             { envmap->gpu_texture, 0, 1 });
             }
         }
 
         R_Material::createBindGroupEntries(skybox_material, PER_MATERIAL_GROUP,
                                            &app->rendergraph, d, &app->gctx);
     }
-}
-
-static void _R_RenderSceneOld(App* app, R_Scene* scene, R_Camera* camera,
-                              WGPURenderPassEncoder render_pass, int msaa_sample_count)
-{
-    // Update all transforms
-    R_Transform::rebuildMatrices(scene, &app->frameArena);
-    // R_Transform::print(main_scene, 0);
-
-    // update lights
-    R_Scene::rebuildLightInfoBuffer(&app->gctx, scene);
-
-    // update camera
-    i32 width, height;
-    glfwGetWindowSize(app->window, &width, &height);
-    f32 aspect = (width > 0 && height > 0) ? (f32)width / (f32)height : 1.0f;
-
-    // write per-frame uniforms
-    f32 time                    = (f32)glfwGetTime();
-    FrameUniforms frameUniforms = {};
-    frameUniforms.projection    = R_Camera::projectionMatrix(camera, aspect);
-    frameUniforms.view          = R_Camera::viewMatrix(camera);
-
-    // remove translation component from view matrix
-    // so that skybox is always centered around camera
-    frameUniforms.projection_view_inverse_no_translation = glm::inverse(
-      frameUniforms.projection * glm::mat4(glm::mat3(frameUniforms.view)));
-
-    frameUniforms.camera_pos       = camera->_pos;
-    frameUniforms.time             = time;
-    frameUniforms.ambient_light    = scene->sg_scene_desc.ambient_light;
-    frameUniforms.num_lights       = R_Scene::numLights(scene);
-    frameUniforms.background_color = scene->sg_scene_desc.bg_color;
-
-    // update frame-level uniforms (storing on camera because same scene can be
-    // rendered from multiple camera angles) every camera belongs to a single scene,
-    // but a scene can have multiple cameras
-    bool frame_uniforms_recreated = GPU_Buffer::write(
-      &app->gctx, &camera->frame_uniform_buffer, WGPUBufferUsage_Uniform,
-      &frameUniforms, sizeof(frameUniforms));
-    camera->frame_uniform_buffer_fc = app->fc;
-    ASSERT(!frame_uniforms_recreated);
-    UNUSED_VAR(frame_uniforms_recreated);
-
-    // ==optimize== to prevent sparseness, delete render state entries / arena ids
-    // if we find SG_ID arenas are empty
-    // - impl only after render loop architecture has stabilized
-
-    // form draw call list and sort
-    static Arena draw_call_list{};
-    defer(Arena::clear(&draw_call_list));
-
-    size_t hashmap_idx_DONT_USE = 0;
-    GeometryToXforms* primitive = NULL;
-    int num_draw_calls          = 0;
-    while (
-      hashmap_iter(scene->geo_to_xform, &hashmap_idx_DONT_USE, (void**)&primitive)) {
-        // TODO remove the primitive from scene->geo_to_xform if it's empty
-        // do this in Scene::register/unreigster mesh
-        // at this point, ASSERT(count(primitive) > 0)
-        ASSERT(GeometryToXforms::count(primitive) > 0);
-
-        ++num_draw_calls;
-
-        // Get shader id from material
-        R_Material* material = Component_GetMaterial(primitive->key.mat_id);
-        ASSERT(material);
-
-        // add to draw call list
-        SceneDrawCall* draw_call = ARENA_PUSH_TYPE(&draw_call_list, SceneDrawCall);
-        draw_call->shader_id     = material->pso.sg_shader_id;
-        draw_call->material_id   = material->id;
-        draw_call->geo_id        = primitive->key.geo_id;
-
-        // ==optimize== upload xform arena buffers here
-        // currently being done by R_Scene::createPrimitiveBindGroup()
-    }
-
-    // now sort draw calls
-    if (num_draw_calls > 0)
-        qsort(draw_call_list.base, num_draw_calls, sizeof(SceneDrawCall),
-              [](const void* a, const void* b) -> int {
-                  SceneDrawCall* draw_call_a = (SceneDrawCall*)a;
-                  SceneDrawCall* draw_call_b = (SceneDrawCall*)b;
-                  // To test: set breakpoint here, run wip-examples/drawcall_sort.ck
-                  return memcmp(draw_call_a, draw_call_b, sizeof(SceneDrawCall));
-              });
-
-    // main render pass
-    R_ID last_pipeline_id  = 0;
-    SG_ID last_material_id = 0;
-    for (int draw_call_idx = 0; draw_call_idx < num_draw_calls; ++draw_call_idx) {
-        SceneDrawCall* draw_call
-          = ARENA_GET_TYPE(&draw_call_list, SceneDrawCall, draw_call_idx);
-
-        R_Material* material = Component_GetMaterial(draw_call->material_id);
-        R_Geometry* geo      = Component_GetGeometry(draw_call->geo_id);
-        ASSERT(material);
-        ASSERT(geo);
-        ASSERT(material->pso.sg_shader_id == draw_call->shader_id);
-
-        // get the pipeline for this draw call
-        R_PSO pso = { material->pso, msaa_sample_count };
-        R_RenderPipeline* render_pipeline
-          = Component_GetOrCreatePipeline(&app->gctx, &pso);
-        ASSERT(render_pipeline);
-
-        defer({
-            last_pipeline_id = render_pipeline->rid;
-            last_material_id = draw_call->material_id;
-        });
-
-        WGPURenderPipeline gpu_pipeline = render_pipeline->gpu_pipeline;
-        // new pipeline, set it and rebind frame bindgroup
-        bool new_pipeline = last_pipeline_id != render_pipeline->rid;
-        if (new_pipeline) {
-            wgpuRenderPassEncoderSetPipeline(render_pass, gpu_pipeline);
-            // bind per-frame bind group @group(0) (uniforms that are constant for the
-            // entire frame)
-            _R_ScenePassCreateAndBindFrameBindgroup(
-              &app->gctx, scene, camera, render_pipeline, render_pass, app->fc);
-        }
-
-        bool new_material = last_material_id != draw_call->material_id;
-        // assume it's impossible to have a new pipeline but the same material
-        if (new_pipeline) ASSERT(new_material);
-
-        // if we have a new material, need to rebuild bindgroup for new layout
-        if (new_material) {
-            WGPUBindGroup material_bindgroup
-              = R_Material::createBindGroup(material, &app->gctx,
-                                            R_RenderPipeline::getBindGroupLayout(
-                                              render_pipeline, PER_MATERIAL_GROUP));
-            wgpuRenderPassEncoderSetBindGroup(render_pass, PER_MATERIAL_GROUP,
-                                              material_bindgroup, 0, NULL);
-            WGPU_RELEASE_RESOURCE(BindGroup, material_bindgroup);
-        }
-
-        WGPUBindGroup per_draw_bind_group = R_Scene::createPrimitiveBindGroup(
-          &app->gctx, scene, material->id, geo->id,
-          R_RenderPipeline::getBindGroupLayout(render_pipeline, PER_DRAW_GROUP),
-          &app->frameArena);
-
-        // set model bind group
-        wgpuRenderPassEncoderSetBindGroup(render_pass, PER_DRAW_GROUP,
-                                          per_draw_bind_group, 0, NULL);
-        WGPU_RELEASE_RESOURCE(BindGroup, per_draw_bind_group);
-
-        // set vertex attributes
-        for (int location = 0; location < R_Geometry::vertexAttributeCount(geo);
-             location++) {
-            GPU_Buffer* gpu_buffer = &geo->gpu_vertex_buffers[location];
-            if (gpu_buffer->buf && gpu_buffer->size > 0) {
-                wgpuRenderPassEncoderSetVertexBuffer(
-                  render_pass, location, gpu_buffer->buf, 0, gpu_buffer->size);
-            }
-        }
-
-        // set pulled vertex buffers (programmable vertex pulling)
-        if (R_Geometry::usesVertexPulling(geo)) {
-            WGPUBindGroup pull_bind_group = R_Geometry::createPullBindGroup(
-              &app->gctx, geo,
-              R_RenderPipeline::getBindGroupLayout(render_pipeline, VERTEX_PULL_GROUP));
-            wgpuRenderPassEncoderSetBindGroup(render_pass, VERTEX_PULL_GROUP,
-                                              pull_bind_group, 0, NULL);
-            WGPU_RELEASE_RESOURCE(BindGroup, pull_bind_group);
-        }
-
-        // get instance count
-        int num_instances = R_Scene::numPrimitives(scene, material->id, geo->id);
-
-        // populate index buffer
-        int num_indices = (int)R_Geometry::indexCount(geo);
-        if (num_indices > 0) {
-            wgpuRenderPassEncoderSetIndexBuffer(render_pass, geo->gpu_index_buffer.buf,
-                                                WGPUIndexFormat_Uint32, 0,
-                                                geo->gpu_index_buffer.size);
-
-            wgpuRenderPassEncoderDrawIndexed(render_pass, num_indices, num_instances, 0,
-                                             0, 0);
-        } else {
-            // non-index draw
-            int num_vertices = (int)R_Geometry::vertexCount(geo);
-            int vertex_draw_count
-              = geo->vertex_count >= 0 ? geo->vertex_count : num_vertices;
-            if (vertex_draw_count > 0) {
-                wgpuRenderPassEncoderDraw(render_pass, vertex_draw_count, num_instances,
-                                          0, 0);
-            }
-        }
-    }
-
-    { // skybox pass
-        R_Material* skybox_material
-          = Component_GetMaterial(scene->sg_scene_desc.skybox_material_id);
-        if (!skybox_material) goto post_skybox_pass;
-
-        R_PSO skybox_pso = { skybox_material->pso, msaa_sample_count };
-        R_RenderPipeline* skybox_pipeline
-          = Component_GetOrCreatePipeline(&app->gctx, &skybox_pso);
-        if (!skybox_pipeline) goto post_skybox_pass;
-
-        wgpuRenderPassEncoderSetPipeline(render_pass, skybox_pipeline->gpu_pipeline);
-
-        // bind per-frame bind group @group(0)
-        _R_ScenePassCreateAndBindFrameBindgroup(&app->gctx, scene, camera,
-                                                skybox_pipeline, render_pass, app->fc);
-
-        WGPUBindGroup bind_group = R_Material::createBindGroup(
-          skybox_material, &app->gctx,
-          R_RenderPipeline::getBindGroupLayout(skybox_pipeline, PER_MATERIAL_GROUP));
-        wgpuRenderPassEncoderSetBindGroup(render_pass, PER_MATERIAL_GROUP, bind_group,
-                                          0, NULL);
-        WGPU_RELEASE_RESOURCE(BindGroup, bind_group);
-
-        wgpuRenderPassEncoderDraw(render_pass, 3, 1, 0, 0);
-    }
-post_skybox_pass:
-    return;
 }
 
 // pool of pending mapped buffers
@@ -2071,8 +1783,11 @@ static void _R_HandleCommand(App* app, SG_Command* command)
                                            u_ptr_size.size);
                 } break;
                 case SG_MATERIAL_UNIFORM_TEXTURE: {
-                    R_Material::setTextureBinding(&app->gctx, material, cmd->location,
-                                                  cmd->uniform.as.texture_id);
+                    // defaults to entire mip chain
+                    R_Texture* texture
+                      = Component_GetTexture(cmd->uniform.as.texture_id);
+                    R_Material::bindTexture(&app->gctx, material, cmd->location,
+                                            { texture->id, 0, texture->desc.mips });
                 } break;
                 case SG_MATERIAL_UNIFORM_SAMPLER: {
                     R_Material::setSamplerBinding(&app->gctx, material, cmd->location,
@@ -2085,8 +1800,9 @@ static void _R_HandleCommand(App* app, SG_Command* command)
                       &app->gctx, material, cmd->location, &buffer->gpu_buffer);
                 } break;
                 case SG_MATERIAL_STORAGE_TEXTURE: {
-                    R_Material::setStorageTextureBinding(
-                      &app->gctx, material, cmd->location, cmd->uniform.as.texture_id);
+                    // currently only support mip level 0
+                    R_Material::bindTexture(&app->gctx, material, cmd->location,
+                                            { cmd->uniform.as.texture_id, 0, 1 });
                 } break;
                 default: ASSERT(false);
             } // end uniform type switch
@@ -2120,7 +1836,7 @@ static void _R_HandleCommand(App* app, SG_Command* command)
         // text
         case SG_COMMAND_TEXT_REBUILD: {
             SG_Command_TextRebuild* cmd = (SG_Command_TextRebuild*)command;
-            Component_CreateText(&app->gctx, app->FTLibrary, cmd);
+            Component_CreateText(&app->gctx, app->FTLibrary, cmd, app->default_font);
         } break;
         case SG_COMMAND_TEXT_DEFAULT_FONT: {
             SG_Command_TextDefaultFont* cmd = (SG_Command_TextDefaultFont*)command;
@@ -2250,8 +1966,6 @@ static void _R_HandleCommand(App* app, SG_Command* command)
               cmd->dst_location, dst_texture->gpu_texture);
             WGPUExtent3D copy_size
               = { (u32)cmd->width, (u32)cmd->height, (u32)cmd->depth };
-
-            dst_texture->generation++;
 
             // TODO: have command encoder be created at START of frame, while processing
             // all the render commands then can reuse in main render pass, don't need to

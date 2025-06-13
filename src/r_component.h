@@ -51,12 +51,10 @@
 // scenegraph data structures
 // =============================================================================
 
-struct Vertices;
 struct R_Material;
 struct R_Scene;
 struct R_Font;
 struct hashmap;
-struct R_RenderPipeline;
 struct G_DrawCall;
 struct G_Graph;
 
@@ -182,11 +180,6 @@ struct R_Geometry : public R_Component {
     static u32 vertexCount(R_Geometry* geo);
     static u32 vertexAttributeCount(R_Geometry* geo);
 
-    static void buildFromVertices(GraphicsContext* gctx, R_Geometry* geo,
-                                  Vertices* vertices);
-
-    static void setVertexAttribute(GraphicsContext* gctx, R_Geometry* geo, u32 location,
-                                   u32 num_components, f32* data, u32 data_count);
     static void setVertexAttribute(GraphicsContext* gctx, R_Geometry* geo, u32 location,
                                    u32 num_components_per_attrib, void* data,
                                    size_t size);
@@ -195,8 +188,6 @@ struct R_Geometry : public R_Component {
     // TODO move vertexPulling reflection check into state of ck ShaderDesc
     static bool usesVertexPulling(R_Geometry* geo);
 
-    static WGPUBindGroup createPullBindGroup(GraphicsContext* gctx, R_Geometry* geo,
-                                             WGPUBindGroupLayout layout);
     static void addPullBindGroupEntries(R_Geometry* geo, G_Graph* graph, G_DrawCall* d);
 
     static void setPulledVertexAttribute(GraphicsContext* gctx, R_Geometry* geo,
@@ -212,17 +203,6 @@ struct R_Geometry : public R_Component {
 
 struct R_Texture : public R_Component {
     WGPUTexture gpu_texture;
-
-    // TODO maybe remove texture view
-    // eventually migrate to flat_map cached system
-    // where each R_Texture has a hashmap : TextureViewDesc --> TextureView
-    // and all R_Material have references to TextureViews which are owned by R_Texture.
-    // Updating the generation walks the flatmap and recreates all TextureViews
-    // for now sticking with awkward situation where some texture bindings create their
-    // own TextureViews, and texture_id uses this default gpu_texture_view
-    WGPUTextureView gpu_texture_view; // default view of entire gpu_texture + mip chain
-
-    u32 generation = 0;  // incremented every time texture is modified
     SG_TextureDesc desc; // TODO redundant with R_Texture.gpu_texture
 
     static int sizeBytes(R_Texture* texture);
@@ -231,19 +211,12 @@ struct R_Texture : public R_Component {
     {
         // free previous
         WGPU_RELEASE_RESOURCE(Texture, texture->gpu_texture);
-        WGPU_RELEASE_RESOURCE(TextureView, texture->gpu_texture_view);
-
-        // bump generation
-        texture->generation++;
 
         { // validation
             ASSERT(desc->mips >= 1
                    && desc->mips <= G_mipLevels(desc->width, desc->height));
             ASSERT(desc->width > 0 && desc->height > 0 && desc->depth > 0);
         }
-
-        // cubemap?
-        const bool is_cubemap = desc->depth == 6;
 
         // copy texture info (immutable)
         texture->desc = *desc;
@@ -263,27 +236,6 @@ struct R_Texture : public R_Component {
         texture->gpu_texture
           = wgpuDeviceCreateTexture(gctx->device, &wgpu_texture_desc);
         ASSERT(texture->gpu_texture);
-
-        // create default texture view for entire mip chain (And 1st array layer)
-        // cubemaps are handled differently
-        char texture_view_label[256] = {};
-        // snprintf(texture_view_label, sizeof(texture_view_label), "%s default view",
-        //          texture->name.c_str());
-        snprintf(texture_view_label, sizeof(texture_view_label), "%s default view",
-                 texture->name);
-        WGPUTextureViewDescriptor wgpu_texture_view_desc = {};
-        wgpu_texture_view_desc.label                     = texture_view_label;
-        wgpu_texture_view_desc.format                    = desc->format;
-        wgpu_texture_view_desc.dimension
-          = is_cubemap ? WGPUTextureViewDimension_Cube : WGPUTextureViewDimension_2D;
-        wgpu_texture_view_desc.baseMipLevel    = 0;
-        wgpu_texture_view_desc.mipLevelCount   = desc->mips;
-        wgpu_texture_view_desc.baseArrayLayer  = 0;
-        wgpu_texture_view_desc.arrayLayerCount = desc->depth;
-
-        texture->gpu_texture_view
-          = wgpuTextureCreateView(texture->gpu_texture, &wgpu_texture_view_desc);
-        ASSERT(texture->gpu_texture_view);
     }
 
     // resizes texture and updates generation, clears any previous data
@@ -337,8 +289,6 @@ struct R_Texture : public R_Component {
                                   (u32)write_desc->depth };
             wgpuQueueWriteTexture(gctx->queue, &destination, data, data_size_bytes,
                                   &source, &size);
-
-            // TODO profile
             // wgpuQueueSubmit(gctx->queue, 0, NULL); // schedule transfer immediately
         }
     }
@@ -353,9 +303,6 @@ struct R_Texture : public R_Component {
                             bool flip_y);
 };
 
-void Material_batchUpdatePipelines(GraphicsContext* gctx, FT_Library ft_lib,
-                                   R_Font* default_font);
-
 // =============================================================================
 // R_Shader
 // =============================================================================
@@ -368,16 +315,11 @@ struct R_Shader : public R_Component {
     WGPUShaderModule compute_shader_module;
     SG_ShaderIncludes includes;
 
-    // track all pipeline built from this shader for garbage collection
-    R_ID pipeline_ids[4];
-
     static void init(GraphicsContext* gctx, R_Shader* shader, const char* vertex_string,
                      const char* vertex_filepath, const char* fragment_string,
                      const char* fragment_filepath, WGPUVertexFormat* vertex_layout,
                      int vertex_layout_count, const char* compute_string,
                      const char* compute_filepath, SG_ShaderIncludes* includes);
-
-    static void addPipeline(R_Shader* shader, R_ID pipeline_id);
 
     static void free(R_Shader* shader);
 };
@@ -391,25 +333,25 @@ enum R_BindType : u32 {
     R_BIND_EMPTY = 0, // empty binding
     R_BIND_UNIFORM,
     R_BIND_SAMPLER,
-    R_BIND_TEXTURE_ID,   // for scenegraph textures
-    R_BIND_TEXTURE_VIEW, // default textures (e.g. white pixel)
+    R_BIND_TEXTURE,
+    // R_BIND_TEXTURE_VIEW, // default textures (e.g. white pixel)
     R_BIND_STORAGE,
-    R_BIND_STORAGE_EXTERNAL,   // pointer to external storage buffer (ref)
-    R_BIND_STORAGE_TEXTURE_ID, // for scenegraph textures
+    R_BIND_STORAGE_EXTERNAL, // pointer to external storage buffer (ref)
+    // R_BIND_STORAGE_TEXTURE_ID, // for scenegraph textures
+};
+
+struct R_TextureBinding {
+    SG_ID texture_id;
+    int base_mip_level;
+    int mip_level_count;
 };
 
 // TODO can we move R_Binding into .cpp
 struct R_Binding {
     R_BindType type;
-    size_t size;    // size of data in bytes for UNIFORM and STORAGE types
-    u64 generation; // currently only used for textures, track generation so we know
-                    // when to rebuild BindGroup
-                    // eventually can use to track GPU_Buffer generation
-                    // TODO: with new dynamic render refactor, can remove generation
-                    // tracking (we now rebuild bindgroups every frame)
+    size_t size; // size of data in bytes for UNIFORM and STORAGE types
     union {
-        SG_ID textureID;
-        WGPUTextureView textureView;
+        R_TextureBinding texture;
         SamplerConfig samplerConfig;
         GPU_Buffer storage_buffer;
         GPU_Buffer* storage_external; // ptr here might be dangerous...
@@ -432,33 +374,17 @@ struct MaterialTextureView {
 
 struct R_Material : public R_Component {
     SG_MaterialPipelineState pso;
-
-    // b32 bind_group_layout_stale; // set if modified by chuck user, need to rebuild
-    // bind
-    //                              // group layout
-    // R_ID pipelineID; // renderpipeline this material belongs to
-
     // bindgroup state (uniforms, storage buffers, textures, samplers)
     R_Binding bindings[CHUGL_MATERIAL_MAX_BINDINGS];
-    // ==optimize== use R_UniformBuffer, add stale flag and batch uniform upload
     WGPUBuffer uniform_buffer;
-    // GPU_Buffer uniform_buffer; // maps 1:1 with uniform location, initializesd in
-    //                            // Component_MaterialCreate
-
-    // after updating to webgpu v22.1.0.5, bind_group_layout is now part of bind_group,
-    // so we cache here in order to check if we need to rebuild the bindgroup (e.g. when
-    // changing a material PSO property such as Topology. Same for Geometry bindgroups)
-    // WGPUBindGroupLayout bind_group_layout; // render pipeline layout at @group(1)
+    // ==optimize== after implementing wgsl reflection layout generator, can cache
+    // bindgroup on material?
 
     // bind group fns --------------------------------------------
 
     // pushes bind group entries to bind_group arena
     static void createBindGroupEntries(R_Material* mat, int group, G_Graph* graph,
                                        G_DrawCall* drawcall, GraphicsContext* gctx);
-
-    // TODO deprecate
-    static WGPUBindGroup createBindGroup(R_Material* mat, GraphicsContext* gctx,
-                                         WGPUBindGroupLayout layout);
 
     static void setBinding(GraphicsContext* gctx, R_Material* mat, u32 location,
                            R_BindType type, void* data, size_t bytes);
@@ -469,15 +395,12 @@ struct R_Material : public R_Component {
     }
     static void setSamplerBinding(GraphicsContext* gctx, R_Material* mat, u32 location,
                                   SG_Sampler sampler);
-    static void setTextureBinding(GraphicsContext* gctx, R_Material* mat, u32 location,
-                                  SG_ID texture_id);
-    static void setTextureViewBinding(GraphicsContext* gctx, R_Material* mat,
-                                      u32 location, WGPUTextureView view);
+
     static void setExternalStorageBinding(GraphicsContext* gctx, R_Material* mat,
                                           u32 location, GPU_Buffer* buffer);
 
-    static void setStorageTextureBinding(GraphicsContext* gctx, R_Material* mat,
-                                         u32 location, SG_ID texture_id);
+    static void bindTexture(GraphicsContext* gctx, R_Material* mat, u32 location,
+                            R_TextureBinding bind_desc);
 
     static void removeBinding(R_Material* mat, u32 location)
     {
@@ -581,43 +504,6 @@ struct R_Scene : R_Transform {
                                                   WGPUBindGroupLayout layout,
                                                   Arena* frame_arena);
     static int numPrimitives(R_Scene* scene, SG_ID material_id, SG_ID geo_id);
-};
-
-// =============================================================================
-// R_RenderPipeline
-// =============================================================================
-
-struct R_PSO {
-    SG_MaterialPipelineState sg_state; // state from chugl scenegraph
-    int msaa_sample_count;
-};
-
-struct R_RenderPipeline /* NOT backed by SG_Component */ {
-    R_ID rid;
-    WGPURenderPipeline gpu_pipeline;
-    R_PSO pso;
-
-    char name[64];
-
-    // cache the bind group layouts because apparently
-    // wgpuRenderPipelineGetBindGroupLayout freaking leaks...
-    WGPUBindGroupLayout _bind_group_layouts[4];
-    // lazily evaluate bind group layouts
-    static WGPUBindGroupLayout getBindGroupLayout(R_RenderPipeline* pipeline,
-                                                  u32 index);
-
-    /*
-    possible optimizations:
-    - keep material IDs with nonzero #primitive contiguous
-      so we don't waste time iterating over empty materials
-    */
-
-    // static void init(GraphicsContext* gctx, R_RenderPipeline* pipeline,
-    //                  const SG_MaterialPipelineState* config, ptrdiff_t offset);
-    static void init(GraphicsContext* gctx, R_RenderPipeline* pipeline,
-                     const R_PSO* config);
-
-    static void free(R_RenderPipeline* pipeline);
 };
 
 // =============================================================================
@@ -814,15 +700,6 @@ struct R_Pass : public R_Component {
     }
 };
 
-struct R_ScreenPassPipeline {
-    WGPUTextureFormat format;
-    SG_ID shader_id;
-    WGPURenderPipeline gpu_pipeline;
-    WGPUBindGroupLayout frame_group_layout;
-};
-R_ScreenPassPipeline R_GetScreenPassPipeline(GraphicsContext* gctx,
-                                             WGPUTextureFormat format, SG_ID shader_id);
-
 // =============================================================================
 // R_Buffer
 // =============================================================================
@@ -964,8 +841,9 @@ R_Transform* Component_CreateTransform(SG_Command_CreateXform* cmd);
 
 R_Transform* Component_CreateMesh(SG_ID mesh_id, SG_ID geo_id, SG_ID mat_id);
 R_Camera* Component_CreateCamera(GraphicsContext* gctx, SG_Command_CameraCreate* cmd);
+
 R_Text* Component_CreateText(GraphicsContext* gctx, FT_Library ft,
-                             SG_Command_TextRebuild* cmd);
+                             SG_Command_TextRebuild* cmd, R_Font* default_font);
 
 R_Scene* Component_CreateScene(GraphicsContext* gctx, SG_ID scene_id,
                                SG_SceneDesc* sg_scene_desc);
@@ -1009,22 +887,9 @@ R_Light* Component_GetLight(SG_ID id);
 R_Video* Component_GetVideo(SG_ID id);
 R_Webcam* Component_GetWebcam(SG_ID id);
 
-// lazily created on-demand because of many possible shader variations
-R_RenderPipeline* Component_GetOrCreatePipeline(GraphicsContext* gctx, R_PSO* pso);
-
-// this version doesn't actually create the pipeline, just returns the existing one
-R_RenderPipeline* Component_GetPipeline(R_ID rid);
-
-// component iterators
-// bool hashmap_scan(struct hashmap *map, bool (*iter)(const void *item, void
-// *udata), void *udata);
-
 // be careful to not delete components while iterating
 // returns false upon reachign end of material arena
 bool Component_MaterialIter(size_t* i, R_Material** material);
-// bool Component_RenderPipelineIter(size_t* i, R_RenderPipeline** renderPipeline);
-int Component_RenderPipelineCount();
-
 bool Component_VideoIter(size_t* i, R_Video** video);
 bool Component_WebcamIter(size_t* i, R_Webcam** webcam);
 
@@ -1152,11 +1017,61 @@ struct G_CacheRenderPipeline {
     }
 };
 
+struct G_CacheBindGroupEntryBuffer {
+    WGPUBuffer buffer;
+    u32 offset;
+    u32 size;
+};
+
+struct G_CacheTextureViewDesc {
+    WGPUTexture texture; // NOT refouncted here. instead refcounted by chuck + R_Texture
+    int base_mip_level;
+    int mip_level_count;
+};
+
+struct G_CacheTextureView {
+    G_CacheTextureViewDesc key;
+    struct {
+        WGPUTextureView view;
+        int refcount;
+    } val;
+
+    static u64 hash(const void* item, uint64_t seed0, uint64_t seed1)
+    {
+        G_CacheTextureView* entry = (G_CacheTextureView*)item;
+        ASSERT(sizeof(entry->key) == sizeof(G_CacheTextureViewDesc));
+        return hashmap_xxhash3(&entry->key, sizeof(entry->key), seed0, seed1);
+    }
+
+    static int compare(const void* a, const void* b, void* udata)
+    {
+        G_CacheTextureView* ga = (G_CacheTextureView*)a;
+        G_CacheTextureView* gb = (G_CacheTextureView*)b;
+        return memcmp(&ga->key, &gb->key, sizeof(ga->key));
+    }
+};
+
+enum G_CacheBindGroupEntryType : u8 {
+    G_CacheBindGroupEntryType_None = 0,
+    G_CacheBindGroupEntryType_Buffer,
+    G_CacheBindGroupEntryType_Sampler,
+    G_CacheBindGroupEntryType_TextureView,
+};
+
+struct G_CacheBindGroupEntry {
+    u8 binding;
+    G_CacheBindGroupEntryType type;
+    union {
+        G_CacheBindGroupEntryBuffer buffer;
+        WGPUSampler sampler;
+        G_CacheTextureViewDesc texture_view_desc;
+    } as;
+};
+
 struct G_CacheBindGroupKey {
     WGPUBindGroupLayout layout;
     int bg_entry_count;
-    WGPUBindGroupEntry
-      bg_entry_list[CHUGL_MATERIAL_MAX_BINDINGS]; // TODO get this size down
+    G_CacheBindGroupEntry bg_entry_list[CHUGL_MATERIAL_MAX_BINDINGS];
 };
 
 struct G_CacheBindGroupVal {
@@ -1172,13 +1087,10 @@ struct G_CacheBindGroup {
     {
         // ==optimize== cache the hash
         G_CacheBindGroupKey* key = (G_CacheBindGroupKey*)item;
-        // const size_t base_len    = offsetof(G_CacheBindGroupKey, bg_entry_list);
-
-        return hashmap_xxhash3(key, sizeof(*key), seed0, seed1);
-
-        // return hashmap_xxhash3(
-        //   key, base_len + key->bg_entry_count * sizeof(key->bg_entry_list[0]), seed0,
-        //   seed1);
+        const size_t base_len    = offsetof(G_CacheBindGroupKey, bg_entry_list);
+        return hashmap_xxhash3(
+          key, base_len + key->bg_entry_count * sizeof(key->bg_entry_list[0]), seed0,
+          seed1);
     }
 
     static int compare(const void* a, const void* b, void* udata)
@@ -1186,12 +1098,6 @@ struct G_CacheBindGroup {
         G_CacheBindGroupKey* ga = (G_CacheBindGroupKey*)a;
         G_CacheBindGroupKey* gb = (G_CacheBindGroupKey*)b;
         return memcmp(ga, gb, sizeof(*ga));
-    }
-
-    static void free(G_CacheBindGroup* bg)
-    {
-        ASSERT(bg->val.frames_till_expired <= 0);
-        WGPU_RELEASE_RESOURCE(BindGroup, bg->val.bg);
     }
 };
 
@@ -1206,6 +1112,7 @@ struct G_Cache {
     hashmap* render_pipeline_map;
     hashmap* compute_pipeline_map;
     hashmap* bindgroup_map;
+    hashmap* texture_view_map;
 
     Arena deletion_queue;
 
@@ -1221,6 +1128,10 @@ struct G_Cache {
 
         bindgroup_map = hashmap_new_simple(
           sizeof(G_CacheBindGroup), G_CacheBindGroup::hash, G_CacheBindGroup::compare);
+
+        texture_view_map
+          = hashmap_new_simple(sizeof(G_CacheTextureView), G_CacheTextureView::hash,
+                               G_CacheTextureView::compare);
     }
 
     void free()
@@ -1398,7 +1309,46 @@ struct G_Cache {
         return result;
     }
 
-    WGPUBindGroup bindGroup(WGPUDevice device, WGPUBindGroupEntry* bg_entry_list,
+    WGPUTextureView _createTextureViewForBindgroup(G_CacheTextureViewDesc desc)
+    {
+        // check if present in cache
+        G_CacheTextureView* cache_view
+          = (G_CacheTextureView*)hashmap_get(texture_view_map, &desc);
+
+        if (cache_view == NULL) {
+            log_trace(
+              "Cache miss [TextureView], creating new from Texture[%p] mips[%d:%d]",
+              (void*)desc.texture, desc.base_mip_level,
+              desc.base_mip_level + desc.mip_level_count - 1);
+
+            u32 depth       = wgpuTextureGetDepthOrArrayLayers(desc.texture);
+            bool is_cubemap = (depth == 6);
+            WGPUTextureViewDescriptor view_desc = {};
+            // view_desc.label                     = mip_label; // TODO
+            view_desc.format          = wgpuTextureGetFormat(desc.texture);
+            view_desc.dimension       = is_cubemap ? WGPUTextureViewDimension_Cube :
+                                                     WGPUTextureViewDimension_2D;
+            view_desc.baseMipLevel    = desc.base_mip_level;
+            view_desc.mipLevelCount   = desc.mip_level_count;
+            view_desc.baseArrayLayer  = 0;
+            view_desc.arrayLayerCount = depth;
+
+            G_CacheTextureView item = {};
+            item.key                = desc;
+            item.val.view           = wgpuTextureCreateView(desc.texture, &view_desc);
+            ASSERT(item.val.view);
+            const void* replaced = hashmap_set(texture_view_map, &item);
+            ASSERT(!replaced);
+
+            cache_view = (G_CacheTextureView*)hashmap_get(texture_view_map, &desc);
+            ASSERT(cache_view);
+        }
+
+        ++cache_view->val.refcount;
+        return cache_view->val.view;
+    }
+
+    WGPUBindGroup bindGroup(WGPUDevice device, G_CacheBindGroupEntry* bg_entry_list,
                             int bg_entry_count, WGPUBindGroupLayout layout,
 
                             // debug info
@@ -1417,15 +1367,41 @@ struct G_Cache {
         if (result == NULL) {
             log_trace("Cache miss [BindGroup] @group(%d) creating new for layout %p",
                       group, layout);
+            static WGPUBindGroupEntry wgpu_bg_entry_list[CHUGL_MATERIAL_MAX_BINDINGS]
+              = {};
 #if 0
             if (cache_pipeline) cache_pipeline->key.print();
             G_Util::printBindGroupEntryList(bg_entry_list, bg_entry_count);
 #endif
 
+            // convert bg_list to wgpu_bg_list
+            ZERO_ARRAY(wgpu_bg_entry_list);
+            for (int i = 0; i < bg_entry_count; i++) {
+                wgpu_bg_entry_list[i].binding = bg_entry_list[i].binding;
+                switch (bg_entry_list[i].type) {
+                    case G_CacheBindGroupEntryType_Buffer: {
+                        wgpu_bg_entry_list[i].buffer
+                          = bg_entry_list[i].as.buffer.buffer;
+                        wgpu_bg_entry_list[i].offset
+                          = bg_entry_list[i].as.buffer.offset;
+                        wgpu_bg_entry_list[i].size = bg_entry_list[i].as.buffer.size;
+                    } break;
+                    case G_CacheBindGroupEntryType_Sampler: {
+                        wgpu_bg_entry_list[i].sampler = bg_entry_list[i].as.sampler;
+                    } break;
+                    case G_CacheBindGroupEntryType_TextureView: {
+                        wgpu_bg_entry_list[i].textureView
+                          = _createTextureViewForBindgroup(
+                            bg_entry_list[i].as.texture_view_desc);
+                    } break;
+                    default: UNREACHABLE;
+                }
+            }
+
             WGPUBindGroupDescriptor desc = {};
             desc.layout                  = layout;
             desc.entryCount              = bg_entry_count;
-            desc.entries                 = bg_entry_list;
+            desc.entries                 = wgpu_bg_entry_list;
 
             item.val.bg                  = wgpuDeviceCreateBindGroup(device, &desc);
             item.val.frames_till_expired = CHUGL_CACHE_BINDGROUP_FRAMES_TILL_EXPIRED;
@@ -1447,7 +1423,7 @@ struct G_Cache {
         ASSERT(deletion_queue.curr == 0);
 
         // TODO: loop over all pipelines, and if associated R_Shader is destroyed,
-        // free the pipeline, WGPU_RELEASE the cached bindgroup layouts
+        // free the pipeline and WGPU_RELEASE the cached bindgroup layouts
 
         // Actually, for compute pipelines, the graphics thread GC can explicitly
         // tell the rendergraph to release the compute pipeline and bind group layout!
@@ -1467,9 +1443,31 @@ struct G_Cache {
         for (int i = 0; i < num_bg_to_delete; i++) {
             G_CacheBindGroup* bg_del
               = ARENA_GET_TYPE(&deletion_queue, G_CacheBindGroup, i);
-            hashmap_delete(bindgroup_map, bg_del);
+            ASSERT(bg_del->val.frames_till_expired <= 0);
+            WGPU_RELEASE_RESOURCE(BindGroup, bg_del->val.bg);
+
+            const void* deleted = hashmap_delete(bindgroup_map, bg_del);
+            ASSERT(deleted);
             log_trace("deleting expired bindgroup %p", (void*)bg_del->val.bg);
-            G_CacheBindGroup::free(bg_del);
+
+            // deref all textureview bg entries
+            for (int bg_entry_idx = 0; bg_entry_idx < bg_del->key.bg_entry_count;
+                 ++bg_entry_idx) {
+                G_CacheBindGroupEntry* entry = bg_del->key.bg_entry_list + bg_entry_idx;
+                if (entry->type == G_CacheBindGroupEntryType_TextureView) {
+                    // deref texview
+                    G_CacheTextureView* view = (G_CacheTextureView*)hashmap_get(
+                      texture_view_map, &entry->as.texture_view_desc);
+                    ASSERT(view);
+                    --view->val.refcount;
+                    if (view->val.refcount == 0) {
+                        log_trace("Cache deleting expired texture view");
+                        WGPU_RELEASE_RESOURCE(TextureView, view->val.view);
+                        const void* deleted = hashmap_delete(texture_view_map, view);
+                        ASSERT(deleted);
+                    }
+                }
+            }
 
             // G_Util::printBindGroupEntryList(bg_del->key.bg_entry_list,
             //                                 bg_del->key.bg_entry_count);
@@ -1638,7 +1636,7 @@ struct G_DrawCallList {
                 if (num_bindings > 0) {
                     WGPUBindGroup bg = cache->bindGroup(
                       device,
-                      ARENA_GET_TYPE(bind_group_list + bg_idx, WGPUBindGroupEntry,
+                      ARENA_GET_TYPE(bind_group_list + bg_idx, G_CacheBindGroupEntry,
                                      start),
                       num_bindings, cached_pipeline->val.bindGroupLayout(bg_idx),
                       bg_idx);
@@ -1680,7 +1678,6 @@ enum G_PassType : u8 {
     G_PassType_None = 0,
     G_PassType_Render,
     G_PassType_Compute,
-    G_PassType_Bloom, // hard-coded in for now
     G_PassType_Count,
 };
 
@@ -1739,7 +1736,7 @@ struct G_Pass {
 struct G_Graph {
     G_Cache cache;
 
-    Arena bind_group_entry_list[CHUGL_MAX_BINDGROUPS]; // type WGPUBindGroupEntry
+    Arena bind_group_entry_list[CHUGL_MAX_BINDGROUPS]; // type G_CacheBindGroupEntry
 
     // drawcall pool
     Arena drawcall_pool;
@@ -1819,7 +1816,7 @@ struct G_Graph {
 
         for (int i = 0; i < CHUGL_MAX_BINDGROUPS; i++) {
             draw->bg_list[i].start
-              = ARENA_LENGTH(bind_group_entry_list + i, WGPUBindGroupEntry);
+              = ARENA_LENGTH(bind_group_entry_list + i, G_CacheBindGroupEntry);
         }
 
         current_draw = draw;
@@ -1833,15 +1830,14 @@ struct G_Graph {
     }
 
     void bindBuffer(G_DrawCall* d, int group, int binding, WGPUBuffer buffer,
-                    uint64_t offset, uint64_t size)
+                    u32 offset, u32 size)
     {
         ASSERT(d == current_draw);
-        WGPUBindGroupEntry* entry
-          = ARENA_PUSH_ZERO_TYPE(bind_group_entry_list + group, WGPUBindGroupEntry);
-        entry->binding = binding;
-        entry->buffer  = buffer;
-        entry->offset  = offset;
-        entry->size    = size;
+        G_CacheBindGroupEntry* entry
+          = ARENA_PUSH_ZERO_TYPE(bind_group_entry_list + group, G_CacheBindGroupEntry);
+        entry->type      = G_CacheBindGroupEntryType_Buffer;
+        entry->binding   = binding;
+        entry->as.buffer = { buffer, offset, size };
 
         ++d->bg_list[group].count;
     }
@@ -1849,35 +1845,35 @@ struct G_Graph {
     void bindSampler(G_DrawCall* d, int group, int binding, WGPUSampler sampler)
     {
         ASSERT(d == current_draw);
-        WGPUBindGroupEntry* entry
-          = ARENA_PUSH_ZERO_TYPE(bind_group_entry_list + group, WGPUBindGroupEntry);
-        entry->binding = binding;
-        entry->sampler = sampler;
+        G_CacheBindGroupEntry* entry
+          = ARENA_PUSH_ZERO_TYPE(bind_group_entry_list + group, G_CacheBindGroupEntry);
+        entry->type       = G_CacheBindGroupEntryType_Sampler;
+        entry->binding    = binding;
+        entry->as.sampler = sampler;
 
         ++d->bg_list[group].count;
     }
 
-    void bindTexture(G_DrawCall* d, int group, int binding, WGPUTextureView view)
+    void bindTexture(G_DrawCall* d, int group, int binding, G_CacheTextureViewDesc desc)
     {
         ASSERT(d == current_draw);
-        WGPUBindGroupEntry* entry
-          = ARENA_PUSH_ZERO_TYPE(bind_group_entry_list + group, WGPUBindGroupEntry);
-        entry->binding     = binding;
-        entry->textureView = view;
+        G_CacheBindGroupEntry* entry
+          = ARENA_PUSH_ZERO_TYPE(bind_group_entry_list + group, G_CacheBindGroupEntry);
+        entry->type                 = G_CacheBindGroupEntryType_TextureView;
+        entry->binding              = binding;
+        entry->as.texture_view_desc = desc;
 
         ++d->bg_list[group].count;
     }
 
-    void computePassBindBuffer(int binding, WGPUBuffer buffer, uint64_t offset,
-                               uint64_t size)
+    void computePassBindBuffer(int binding, WGPUBuffer buffer, u32 offset, u32 size)
     {
         ASSERT(pass_list[pass_count - 1].type == G_PassType_Compute);
-        WGPUBindGroupEntry* entry
-          = ARENA_PUSH_ZERO_TYPE(bind_group_entry_list, WGPUBindGroupEntry);
-        entry->binding = binding;
-        entry->buffer  = buffer;
-        entry->offset  = offset;
-        entry->size    = size;
+        G_CacheBindGroupEntry* entry
+          = ARENA_PUSH_ZERO_TYPE(bind_group_entry_list, G_CacheBindGroupEntry);
+        entry->type      = G_CacheBindGroupEntryType_Buffer;
+        entry->binding   = binding;
+        entry->as.buffer = { buffer, offset, size };
 
         ++pass_list[pass_count - 1].cp.bg_count;
     }
@@ -1885,21 +1881,24 @@ struct G_Graph {
     void computePassBindSampler(int binding, WGPUSampler sampler)
     {
         ASSERT(pass_list[pass_count - 1].type == G_PassType_Compute);
-        WGPUBindGroupEntry* entry
-          = ARENA_PUSH_ZERO_TYPE(bind_group_entry_list, WGPUBindGroupEntry);
-        entry->binding = binding;
-        entry->sampler = sampler;
+        G_CacheBindGroupEntry* entry
+          = ARENA_PUSH_ZERO_TYPE(bind_group_entry_list, G_CacheBindGroupEntry);
+        entry->type       = G_CacheBindGroupEntryType_Sampler;
+        entry->binding    = binding;
+        entry->as.sampler = sampler;
 
         ++pass_list[pass_count - 1].cp.bg_count;
     }
 
-    void computePassBindTexture(int binding, WGPUTextureView view)
+    void computePassBindTexture(int binding, G_CacheTextureViewDesc view)
     {
         ASSERT(pass_list[pass_count - 1].type == G_PassType_Compute);
-        WGPUBindGroupEntry* entry
-          = ARENA_PUSH_ZERO_TYPE(bind_group_entry_list, WGPUBindGroupEntry);
-        entry->binding     = binding;
-        entry->textureView = view;
+        G_CacheBindGroupEntry* entry
+          = ARENA_PUSH_ZERO_TYPE(bind_group_entry_list, G_CacheBindGroupEntry);
+        entry->type                 = G_CacheBindGroupEntryType_TextureView;
+        entry->binding              = binding;
+        entry->as.texture_view_desc = view;
+
         ++pass_list[pass_count - 1].cp.bg_count;
     }
 
@@ -1917,7 +1916,7 @@ struct G_Graph {
               x,
               y,
               z,
-              (u32)ARENA_LENGTH(&bind_group_entry_list[0], WGPUBindGroupEntry),
+              (u32)ARENA_LENGTH(&bind_group_entry_list[0], G_CacheBindGroupEntry),
               0 };
     }
 
@@ -2012,7 +2011,7 @@ struct G_Graph {
                     const int compute_pass_binding_location = 0;
                     WGPUBindGroup bg                        = cache.bindGroup(
                       device,
-                      ARENA_GET_TYPE(bind_group_entry_list, WGPUBindGroupEntry,
+                      ARENA_GET_TYPE(bind_group_entry_list, G_CacheBindGroupEntry,
                                                             pass->cp.bg_start),
                       pass->cp.bg_count, cp.val.bind_group_layout,
                       compute_pass_binding_location);
@@ -2026,9 +2025,6 @@ struct G_Graph {
                     // cleanup
                     wgpuComputePassEncoderEnd(compute_pass);
                     WGPU_RELEASE_RESOURCE(ComputePassEncoder, compute_pass);
-                } break;
-                case G_PassType_Bloom: {
-
                 } break;
                 default: UNREACHABLE
             }

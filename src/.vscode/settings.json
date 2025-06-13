@@ -130,6 +130,7 @@
     "sr_webcam_internal.h": "c",
     "*.tcc": "cpp",
     "numeric": "cpp",
-    "typeindex": "cpp"
+    "typeindex": "cpp",
+    "__availability": "cpp"
   }
 }
