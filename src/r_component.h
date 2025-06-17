@@ -1612,8 +1612,6 @@ struct G_DrawCallList {
             if (d->instance_count == 0) log_warn("drawcall instance count of 0");
             if (draw_indexed && d->index_count == 0)
                 log_warn("drawcall index count of 0");
-            if (!draw_indexed && d->vertex_count == 0)
-                log_warn("drawcall vertex count of 0");
 #endif
 
             G_CacheRenderPipeline* cached_pipeline = cache->renderPipeline(
@@ -1666,7 +1664,7 @@ struct G_DrawCallList {
                   d->index_buffer_offset, d->index_buffer_size);
                 wgpuRenderPassEncoderDrawIndexed(pass_encoder, d->index_count,
                                                  d->instance_count, 0, 0, 0);
-            } else {
+            } else if (d->vertex_count > 0) {
                 wgpuRenderPassEncoderDraw(pass_encoder, d->vertex_count,
                                           d->instance_count, 0, 0);
             }

@@ -1,5 +1,4 @@
 TODO
-- fix gtext crash on empty string
 - screen resize bug, maybe will be fixed after we correctly impl render targets
 - re-impl shader freeing gc
 - impl transparency
@@ -19,8 +18,12 @@ TODO
   - want to prevent memory leak from say CHydra building new shaders every frame
 - check if imgui has multi-window support now for webgpu backend
 - add anti aliasing back
+- https://gist.github.com/bkaradzic/2e39896bc7d8c34e042b
+  - change all instances of #include <cstdio> to #include <stdio.h> etc. (don't use the c++ wrapper, use the c runtime)
+  - port geometry builders to use par_shapes
 
 - add dt to FrameUniforms
+  - actually can we add everything that shadertoy adds?
 - add gamma and per-channel gamma to OutputPass (so u can replicate the Matrix color curve)
 - create defines.h, put compilation constants like MATERIAL_MAX_BINDINGS there
 - add inverse normal matrix to PER_DRAW instanced draw uniforms
@@ -58,6 +61,7 @@ Long-Term
 - skeletal animation
   - see obsidian note
   - study raylib gltf importer and animator
+  - watch j.blow devlog implementing animation!
 - study jdh retro games from scratch (minecraft, doom), impl as chugl examples?
 - for PBR, IBL
   - see webgpu-typescript-starter notes.txt
@@ -88,3 +92,7 @@ Long-Term
   - https://www.dgp.toronto.edu/public_user/stam/reality/Research/pdf/GDC03.pdf
   - https://www.shadertoy.com/view/4tGfDW
     - based on https://inria.hal.science/inria-00596050/document published 2011
+- computed gotos on command queue flush switch statement
+  - https://wren.io/performance.html
+    - says saves 5-10% on wren bytecode switch
+  - https://eli.thegreenplace.net/2012/07/12/computed-goto-for-efficient-dispatch-tables/
