@@ -96,3 +96,38 @@ Long-Term
   - https://wren.io/performance.html
     - says saves 5-10% on wren bytecode switch
   - https://eli.thegreenplace.net/2012/07/12/computed-goto-for-efficient-dispatch-tables/
+
+
+=== Srgb format madness ===
+Insightful blog post: https://medium.com/@tomforsyth/the-srgb-learning-curve-773b7f68cf7a
+Leaving this as is for now because there are more important issues.
+
+Problem:
+- 3D pipelines need to be gamma aware, do lighting calculations in linear space, and then map back to srgb
+  - in this case, scenepass outputs a linear space rgba16 color target
+- 2D pipelines w/o lighting however are all in gamma-space, and if you enter a color like @(.3, .4, .5) you want it to show up as that exactly
+  - colors are entered in srgb, and stay in that space, never going to linear.
+  - in this case, scenepass should outputs srgb into an rgba8 buffer 
+- FlatMaterial can be used in both 3D and 2D context, so how do we know whether to convert to linear space or not?
+  - Depends on format of backbuffer textureview, on whether or not bloom/tonemapping is being applied...
+
+Options
+- force backbuffer to be linear / non-srgb, and add gamma correction to OutputPass (which should really be called Tonemap)
+- add srgb/non-srgb option to texture.loadimage()
+  - if it's loaded as srgb, we *dont* need to do the srgb-linear conversion upon sampling in shader
+  - but then this complicates things because users need to manually and correctly load the right type of texture
+    - but if AssLoader is good enough, maybe they won't ever need to do this...
+- add option to create an srgb/linear texture view of the backbuffer
+
+I think the move for now is to manually apply gamma curve in post-process, and default to a non-srgb backbuffer.
+- the rendergraph for a 3D game with a 2D menu would look something like
+  - root --> 3dScene --> bloom --> tonemap --> backbuffer
+  - root --> 2dscene --> backbuffer
+  - in both graphs, the backbuffer is non-srgb, and the tonemap pass applies its own gamma correction
+- can revisit the texture loading format stuff when I implement the gltf loader
+  - if it's simple 2D no lighting, we stay in gamma space and load the texture as RGBA8unorm
+  - if we have lighting / tonemap / gamma correction, either
+    - load texture as RGBA8Unorm-SRGB. the hardware will convert to linear when we sample in shader
+    - OR
+    - load as RGBA8Unorm, but convert manually in our shader code from srgb -> linear, so that when we apply the tonemap pass it goes back to srgb
+  

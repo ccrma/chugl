@@ -235,7 +235,7 @@ struct App;
 static void _R_HandleCommand(App* app, SG_Command* command);
 
 static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
-                           int msaa_sample_count, G_DrawCallListID dc_list);
+                           G_DrawCallListID dc_list);
 
 static void _R_glfwErrorCallback(int error, const char* description)
 {
@@ -339,7 +339,7 @@ struct App {
                            CHUGL_Window_Floating() ? GLFW_TRUE : GLFW_FALSE);
 
             app->window = glfwCreateWindow((int)window_size.x, (int)window_size.y,
-                                           "ChuGL", NULL, NULL);
+                                           "ChuGL " CHUGL_VERSION_STRING, NULL, NULL);
 
             // TODO: set window user pointer to CHUGL_App
 
@@ -700,14 +700,11 @@ struct App {
         // slowly integrating graph...
         while (pass) {
             switch (pass->sg_pass.pass_type) {
-                case SG_PassType_Render: {
+                case SG_PassType_Render: break;
+                case SG_PassType_Scene: {
                     // get the target scene
                     R_Scene* scene = Component_GetScene(pass->sg_pass.scene_id);
-                    if (!scene) {
-                        log_warn("No scene set for RenderPass[%d] %s", pass->id,
-                                 pass->name);
-                        break;
-                    }
+                    if (!scene) break;
 
                     // defaults to scene main camera
                     R_Camera* camera
@@ -715,56 +712,25 @@ struct App {
                           Component_GetCamera(pass->sg_pass.camera_id) :
                           Component_GetCamera(scene->sg_scene_desc.main_camera_id);
                     ASSERT(camera->scene_id == scene->id);
+
                     // defaults to swapchain current view
-                    // TODO: maybe don't need WindowTexture, let null texture
-                    // default to window tex? but that would only work in renderpass
-                    // context...
                     R_Texture* r_tex
-                      = Component_GetTexture(pass->sg_pass.resolve_target_id);
-
-                    // no render texture bound, skip this pass
-                    if (!r_tex) break;
-
-                    // auto-resize framebuffer color target if resolution not set
-                    if (pass->sg_pass.render_pass_resolve_target_width == 0
-                        || pass->sg_pass.render_pass_resolve_target_height == 0) {
-                        R_Texture::resize(&app->gctx, r_tex, app->window_fb_width,
-                                          app->window_fb_height);
-                    } else {
-                        // resize to specified resolution
-                        R_Texture::resize(
-                          &app->gctx, r_tex,
-                          pass->sg_pass.render_pass_resolve_target_width,
-                          pass->sg_pass.render_pass_resolve_target_height);
-                    }
-
-                    // descriptor for view at mip 0
-                    // ==optimize== cache the textureview rather than recreating every
-                    // frame
-                    WGPUTextureFormat color_attachment_format = r_tex->desc.format;
-                    WGPUTextureView render_attachment_view
-                      = G_createTextureViewAtMipLevel(r_tex->gpu_texture, 0,
-                                                      "renderpass target view");
-                    defer(WGPU_RELEASE_RESOURCE(TextureView, render_attachment_view));
-
-                    ASSERT(color_attachment_format
-                           == wgpuTextureGetFormat(r_tex->gpu_texture));
-                    ASSERT(scene && render_attachment_view && camera);
+                      = Component_GetTexture(pass->sg_pass.color_target_id);
+                    WGPUTexture color_target
+                      = r_tex ? r_tex->gpu_texture : app->gctx.surface_texture.texture;
+                    ASSERT(scene && color_target && camera);
 
                     {
-                        R_Pass::updateRenderPassDesc(
-                          &app->gctx, pass, r_tex->desc.width, r_tex->desc.height,
-                          pass->sg_pass.render_pass_msaa_sample_count,
-                          render_attachment_view, color_attachment_format,
-                          scene->sg_scene_desc.bg_color);
-
-                        const WGPUTextureFormat depth_texture_format
-                          = WGPUTextureFormat_Depth24PlusStencil8;
+                        R_Pass::updateScenePass(pass, color_target, app->gctx.device);
 
                         // set G_Pass
                         app->rendergraph.addRenderPass("Scene Pass");
-                        app->rendergraph.renderPassColorTarget(render_attachment_view,
-                                                               color_attachment_format);
+                        if (r_tex) {
+                            app->rendergraph.renderPassColorTarget(color_target, 0);
+                        } else {
+                            app->rendergraph.renderPassColorTarget(
+                              app->gctx.backbufferView, app->gctx.surface_format);
+                        }
                         app->rendergraph.renderPassColorOp(
                           WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f },
                           pass->sg_pass.color_target_clear_on_load ? WGPULoadOp_Clear :
@@ -772,50 +738,31 @@ struct App {
                           WGPUStoreOp_Store);
 
                         // TODO store depth texture somewhere else...
-                        app->rendergraph.renderPassDepthTarget(
-                          pass->framebuffer.depth_view, depth_texture_format);
+                        app->rendergraph.renderPassDepthTarget(pass->depth_texture);
 
                         G_DrawCallListID dc_list
                           = app->rendergraph.renderPassAddDrawCallList();
-                        _R_RenderScene(app, scene, camera,
-                                       pass->sg_pass.render_pass_msaa_sample_count,
-                                       dc_list);
+                        _R_RenderScene(app, scene, camera, dc_list);
                     }
                 } break;
                 case SG_PassType_Screen: { // aka OutputPass
-                    // by default we render to the swapchain backbuffer
-                    bool user_supplied_render_texture       = false;
-                    WGPUTextureFormat screen_texture_format = app->gctx.surface_format;
-                    WGPUTextureView screen_texture_view     = app->gctx.backbufferView;
-                    defer({
-                        if (user_supplied_render_texture) {
-                            WGPU_RELEASE_RESOURCE(TextureView, screen_texture_view);
-                        }
-                    });
-
-                    // but if check user supplied a render texture, render to that
-                    // instead
+                    // if user supplied a render texture, render to that instead
+                    // otherwise default to backbuffer
                     R_Texture* r_tex
-                      = Component_GetTexture(pass->sg_pass.screen_texture_id);
-                    if (r_tex) {
-                        user_supplied_render_texture = true;
-                        // TODO gate behind auto_resize flag
-                        R_Texture::resize(&app->gctx, r_tex, app->window_fb_width,
-                                          app->window_fb_height);
-                        // TODO rebuild
-                        screen_texture_view = G_createTextureViewAtMipLevel(
-                          r_tex->gpu_texture, 0, "screen pass color target view");
-                        screen_texture_format = r_tex->desc.format;
-                    }
-
-                    R_Pass::updateScreenPassDesc(&app->gctx, pass, screen_texture_view);
+                      = Component_GetTexture(pass->sg_pass.color_target_id);
 
                     // set G_Pass
                     app->rendergraph.addRenderPass("Output Pass");
-                    app->rendergraph.renderPassColorTarget(screen_texture_view,
-                                                           screen_texture_format);
+                    if (r_tex) {
+                        app->rendergraph.renderPassColorTarget(r_tex->gpu_texture, 0);
+                    } else {
+                        app->rendergraph.renderPassColorTarget(
+                          app->gctx.backbufferView, app->gctx.surface_format);
+                    }
                     app->rendergraph.renderPassColorOp(
-                      WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f }, WGPULoadOp_Clear,
+                      WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f },
+                      pass->sg_pass.color_target_clear_on_load ? WGPULoadOp_Clear :
+                                                                 WGPULoadOp_Load,
                       WGPUStoreOp_Store);
                     G_DrawCallListID dc_list
                       = app->rendergraph.renderPassAddDrawCallList();
@@ -900,27 +847,6 @@ struct App {
                     ASSERT(bloom_mip_levels <= input_texture->desc.mips);
                     if (bloom_mip_levels == 0) break;
 
-                    // create texture views for downsample chain at all mip levels
-                    WGPUTextureView downsample_texture_views[16] = {};
-                    for (int i = 0; i < bloom_mip_levels; i++) {
-                        downsample_texture_views[i] = G_createTextureViewAtMipLevel(
-                          input_texture->gpu_texture, i,
-                          "bloom downsample texture view");
-                    }
-                    defer(WGPU_RELEASE_RESOURCE_ARRAY(
-                      TextureView, downsample_texture_views,
-                      ARRAY_LENGTH(downsample_texture_views)));
-
-                    // create texture views for upscale chain at all mip levels
-                    WGPUTextureView upsample_texture_views[16] = {};
-                    for (int i = 0; i < bloom_mip_levels - 1; i++) {
-                        upsample_texture_views[i] = G_createTextureViewAtMipLevel(
-                          output_texture->gpu_texture, i, "bloom upscale texture view");
-                    }
-                    defer(WGPU_RELEASE_RESOURCE_ARRAY(
-                      TextureView, upsample_texture_views,
-                      ARRAY_LENGTH(upsample_texture_views)));
-
                     { // downscale
                         R_Material* bloom_downscale_material = Component_GetMaterial(
                           pass->sg_pass.bloom_downsample_material_id);
@@ -949,9 +875,7 @@ struct App {
                             app->rendergraph
                               .renderPassColorTarget( // set color target to mip level i
                                                       // + 1
-                                downsample_texture_views[i + 1],
-                                wgpuTextureGetFormat(output_texture->gpu_texture));
-                            ;
+                                input_texture->gpu_texture, i + 1);
                             app->rendergraph.renderPassColorOp(
                               WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f }, WGPULoadOp_Clear,
                               WGPUStoreOp_Store);
@@ -1008,10 +932,7 @@ struct App {
                             app->rendergraph.addRenderPass(upsample_pass_label);
                             app->rendergraph
                               .renderPassColorTarget( // set color target to mip level i
-                                                      // + 1
-                                upsample_texture_views[i],
-                                wgpuTextureGetFormat(input_texture->gpu_texture));
-                            ;
+                                output_texture->gpu_texture, i);
                             app->rendergraph.renderPassColorOp(
                               WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f }, WGPULoadOp_Clear,
                               WGPUStoreOp_Store);
@@ -1076,11 +997,9 @@ struct App {
 
     static void _calculateFPS(GLFWwindow* window, bool print_to_title)
     {
-#define WINDOW_TITLE_MAX_LENGTH 256
-
         static f64 lastTime{ glfwGetTime() };
         static u64 frameCount{};
-        static char title[WINDOW_TITLE_MAX_LENGTH]{};
+        static char title[256]{};
 
         // Measure speed
         f64 currentTime = glfwGetTime();
@@ -1090,15 +1009,14 @@ struct App {
             f64 fps = frameCount / delta;
             CHUGL_Window_fps(fps);
             if (print_to_title) {
-                snprintf(title, WINDOW_TITLE_MAX_LENGTH, "ChuGL-WebGPU [FPS: %.2f]",
-                         fps);
+                snprintf(title, sizeof(title),
+                         "ChuGL " CHUGL_VERSION_STRING " FPS: %.2f", fps);
                 glfwSetWindowTitle(window, title);
             }
 
             frameCount = 0;
             lastTime   = currentTime;
         }
-#undef WINDOW_TITLE_MAX_LENGTH
     }
 
     static void _closeCallback(GLFWwindow* window)
@@ -1220,7 +1138,7 @@ struct SceneDrawCall {
 
 // move this into R_Scene, call build drawcall struct?
 static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
-                           int msaa_sample_count, G_DrawCallListID dc_list)
+                           G_DrawCallListID dc_list)
 {
     scene->update(&app->gctx, app->fc, &app->frameArena);
     ASSERT(scene->last_fc_updated == app->fc);

@@ -57,9 +57,6 @@
 #include <sokol/sokol_time.h>
 // clang-format on
 
-// ChuGL version string
-#define CHUGL_VERSION_STRING "0.2.5 (alpha)"
-
 static f64 ckdt_sec      = 0;
 static f64 system_dt_sec = 0;
 static App chugl_app     = {};
@@ -310,11 +307,12 @@ static void chugl_GraphicsShredPerformNextFrameUpdate(Chuck_VM_Shred* SHRED)
         if (gg_config.auto_update_scenegraph) {
             SG_Pass* pass = SG_GetPass(gg_config.root_pass_id);
             while (pass) {
-                if (pass->pass_type == SG_PassType_Render) {
+                if (pass->pass_type == SG_PassType_Scene) {
                     SG_Scene* scene = SG_GetScene(pass->scene_id);
-                    ASSERT(scene != NULL);
-                    autoUpdateScenegraph(&audio_frame_arena, scene, g_chuglVM,
-                                         g_chuglAPI, ggen_update_vt_offset);
+                    if (scene) {
+                        autoUpdateScenegraph(&audio_frame_arena, scene, g_chuglVM,
+                                             g_chuglAPI, ggen_update_vt_offset);
+                    }
                 }
                 pass = SG_GetPass(pass->next_pass_id);
             }
@@ -827,14 +825,13 @@ CK_DLL_QUERY(ChuGL)
         gg_config.mainCamera = scene->desc.main_camera_id;
 
         // passRoot()
-        gg_config.root_pass_id = ulib_pass_createPass(SG_PassType_Root);
-        SG_Pass* root_pass     = SG_GetPass(gg_config.root_pass_id);
+        SG_Pass* root_pass     = ulib_pass_create(SG_PassType_Root, NULL, true, NULL);
+        gg_config.root_pass_id = root_pass->id;
 
         // renderPass for main scene
-        gg_config.default_render_pass_id = ulib_pass_createPass(SG_PassType_Render);
-        SG_Pass* render_pass             = SG_GetPass(gg_config.default_render_pass_id);
-        render_pass->scene_id            = gg_config.mainScene;
-        CQ_PushCommand_PassUpdate(render_pass);
+        SG_Pass* render_pass = ulib_pass_create(SG_PassType_Scene, NULL, false, NULL);
+        gg_config.default_render_pass_id = render_pass->id;
+        SG_Pass::scene(render_pass, scene);
 
         // connect root to renderPass
         SG_Pass::connect(root_pass, render_pass);
@@ -842,11 +839,12 @@ CK_DLL_QUERY(ChuGL)
         // set default render texture as output of render pass
         SG_Texture* render_texture
           = SG_GetTexture(g_builtin_textures.default_render_texture_id);
-        SG_Pass::resolveTarget(render_pass, render_texture);
+        SG_Pass::colorTarget(render_pass, render_texture);
 
         // output pass
-        Chuck_Object* output_pass_ckobj = chugin_createCkObj("OutputPass", true);
-        SG_Pass* output_pass            = ulib_pass_createOutputPass(output_pass_ckobj);
+        Chuck_Object* output_pass_ckobj = chugin_createCkObj("OutputPass", false);
+        SG_Pass* output_pass
+          = ulib_pass_create_output_pass(NULL, output_pass_ckobj, false, NULL);
         gg_config.default_output_pass_id = output_pass->id;
 
         // connect renderPass to outputPass

@@ -27,7 +27,6 @@
 -----------------------------------------------------------------------------*/
 #pragma once
 
-#include "chugl_defines.h"
 #include "core/macros.h"
 #include "core/memory.h"
 
@@ -78,11 +77,10 @@ struct GraphicsContext {
     WGPUQueue queue;
     WGPUSurface surface;
     WGPUSurfaceTexture surface_texture;
-    WGPUTextureFormat surface_preferred_format;
     WGPUTextureFormat surface_format;
 
     // Per frame resources --------
-    WGPUTextureView backbufferView;
+    WGPUTextureView backbufferView; // still need this for imgui
     WGPUCommandEncoder commandEncoder;
 
     // Window --------
@@ -332,14 +330,6 @@ WGPUShaderModule G_createShaderModule(GraphicsContext* gctx, const char* code,
                                       const char* label);
 
 WGPUBlendState G_createBlendState(bool enableBlend);
-
-struct DepthStencilTextureResult {
-    WGPUTexture tex;
-    WGPUTextureView view;
-};
-DepthStencilTextureResult G_createDepthStencilTexture(GraphicsContext* gctx,
-                                                      u32 sample_count, u32 width,
-                                                      u32 height);
 
 u32 G_mipLevels(int width, int height);
 u32 G_mipLevelsLimit(u32 w, u32 h, u32 downscale_limit);

@@ -279,7 +279,6 @@ bool GraphicsContext::init(GraphicsContext* context, GLFWwindow* window)
     if (!instance) return false;
     log_trace("WebGPU instance created");
 
-    // context->surface = glfwGetWGPUSurface(instance, window);
     context->surface = glfwCreateWindowWGPUSurface(instance, window);
     if (!context->surface) return false;
     // context->window = window;
@@ -381,7 +380,6 @@ bool GraphicsContext::init(GraphicsContext* context, GLFWwindow* window)
         wgpuSurfaceGetCapabilities(context->surface, adapter, &surface_capabilities);
         ASSERT(surface_capabilities.formatCount > 0);
         WGPUTextureFormat preferred_format = surface_capabilities.formats[0];
-        context->surface_preferred_format  = preferred_format;
         switch (preferred_format) {
             case WGPUTextureFormat_BGRA8Unorm: {
                 context->surface_format = WGPUTextureFormat_BGRA8UnormSrgb;
@@ -396,12 +394,14 @@ bool GraphicsContext::init(GraphicsContext* context, GLFWwindow* window)
             } break;
             // fail otherwise
             default: {
-                log_error("Unsupported swap chain format: %d", preferred_format);
+                log_error("Unsupported swap chain format: %s",
+                          G_Util::textureFormatToString(preferred_format));
                 ASSERT(false);
                 return false;
             } break;
         }
-        log_debug("Preferred swap chain format: %d", context->surface_format);
+        log_debug("Preferred swap chain format: %s",
+                  G_Util::textureFormatToString(context->surface_format));
     }
 
     int framebuffer_width = 1, framebuffer_height = 1;
@@ -471,8 +471,13 @@ void GraphicsContext::presentFrame(GraphicsContext* ctx)
 #ifndef __EMSCRIPTEN__
     wgpuSurfacePresent(ctx->surface);
 #endif
-    // free surface texture (because wgpuSurfaceGetCurrentTexture leaks)
+
+    // free surface texture
+    // #ifndef WEBGPU_BACKEND_WGPU
+    // We no longer need the texture, only its view
+    // (NB: with wgpu-native, surface textures must not be manually released)
     WGPU_RELEASE_RESOURCE(Texture, ctx->surface_texture.texture);
+    // #endif // WEBGPU_BACKEND_WGPU
 
     WGPU_RELEASE_RESOURCE(CommandBuffer, command);
 
@@ -680,41 +685,6 @@ WGPUMultisampleState G_createMultisampleState(u8 sample_count)
     ms.mask                   = 0xFFFFFFFF;
     ms.alphaToCoverageEnabled = false;
     return ms;
-}
-
-DepthStencilTextureResult G_createDepthStencilTexture(GraphicsContext* gctx,
-                                                      u32 sample_count, u32 width,
-                                                      u32 height)
-{
-    // only support one format for now
-    WGPUTextureFormat depth_texture_format = WGPUTextureFormat_Depth24PlusStencil8;
-    // Depth texture
-    WGPUTextureDescriptor texture_desc = {};
-    texture_desc.usage                 = WGPUTextureUsage_RenderAttachment;
-    texture_desc.dimension             = WGPUTextureDimension_2D;
-    texture_desc.size                  = { width, height, 1 };
-    texture_desc.format                = depth_texture_format;
-    texture_desc.mipLevelCount         = 1;
-    texture_desc.sampleCount           = sample_count;
-
-    WGPUTexture depth_tex = wgpuDeviceCreateTexture(gctx->device, &texture_desc);
-    ASSERT(depth_tex);
-
-    // Create the view of the depth texture manipulated by the rasterizer
-    WGPUTextureViewDescriptor depthTextureViewDesc = {};
-    depthTextureViewDesc.format                    = depth_texture_format;
-    depthTextureViewDesc.dimension                 = WGPUTextureViewDimension_2D;
-    depthTextureViewDesc.baseMipLevel              = 0;
-    depthTextureViewDesc.mipLevelCount             = 1;
-    depthTextureViewDesc.baseArrayLayer            = 0;
-    depthTextureViewDesc.arrayLayerCount           = 1;
-    depthTextureViewDesc.aspect                    = WGPUTextureAspect_All;
-    WGPUTextureView depth_tex_view
-      = wgpuTextureCreateView(depth_tex, &depthTextureViewDesc);
-
-    ASSERT(depth_tex_view);
-
-    return { depth_tex, depth_tex_view };
 }
 
 WGPUShaderModule G_createShaderModule(GraphicsContext* gctx, const char* code,

@@ -761,12 +761,13 @@ struct SG_Text : public SG_Mesh {
 // ============================================================================
 
 enum SG_PassType : u8 {
-    SG_PassType_None = 0,
-    SG_PassType_Root, // special start of pass chain. reserved for GG.rootPass();
+    SG_PassType_Root = 0, // special start of pass chain. reserved for GG.rootPass();
     SG_PassType_Render,
-    SG_PassType_Compute,
+    SG_PassType_Scene,
     SG_PassType_Screen,
+    SG_PassType_Compute,
     SG_PassType_Bloom, // hacking in bloom for now
+    SG_PassType_Count,
 };
 
 struct SG_Pass : public SG_Component {
@@ -774,24 +775,21 @@ struct SG_Pass : public SG_Component {
     SG_PassType pass_type;
 
     // RenderPass params
+    bool color_target_clear_on_load = true;
+    SG_ID color_target_id;
+
+    // RenderPass params
     SG_ID scene_id;
     SG_ID camera_id;
-    SG_ID resolve_target_id;
-    int render_pass_resolve_target_width  = 0;
-    int render_pass_resolve_target_height = 0;
-    int render_pass_msaa_sample_count     = 1; // TODO remove msaa resolves
-    bool color_target_clear_on_load       = true;
 
     // ScreenPass params
-    SG_ID screen_texture_id;  // color attachment output
     SG_ID screen_material_id; // created implicitly, material.pos.shader_id =
-                              // screen_shader_id
-    SG_ID screen_shader_id;
+                              // screen_shader_id.
+                              // backed by ckobj. DELETE in SG_Pass dtor.
 
     // ComputePass params
-    // SG_ID compute_shader_id; // get compute shader from material
     SG_ID compute_material_id; // created implicitly, material.pos.shader_id =
-                               // compute_shader_id
+                               // compute_shader_id DELETE in SG_Pass dtor.
     struct {
         u32 x, y, z;
     } compute_workgroup;
@@ -812,17 +810,16 @@ struct SG_Pass : public SG_Component {
     static void disconnect(SG_Pass* this_pass, SG_Pass* next_pass);
 
     // renderpass methods
+    static void colorTarget(SG_Pass* pass, SG_Texture* tex);
+
+    // scenepass methods
     static void scene(SG_Pass* pass, SG_Scene* scene);
     static void camera(SG_Pass* pass, SG_Camera* cam);
-    static void resolveTarget(SG_Pass* pass, SG_Texture* tex);
 
     // screenpass methods
-    static void screenShader(SG_Pass* pass, SG_Material* material, SG_Shader* shader);
-    static void screenTexture(SG_Pass* pass, SG_Texture* texture);
+    static void screenMaterial(SG_Pass* pass, SG_Material* mat);
 
     // computepass methods
-    // static void computeShader(SG_Pass* pass, SG_Material* material, SG_Shader*
-    // shader);
 
     // bloom pass methods
     static void bloomInputRenderTexture(SG_Pass* pass, SG_Texture* tex);

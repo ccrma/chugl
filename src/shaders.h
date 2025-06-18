@@ -240,23 +240,10 @@ static std::unordered_map<std::string, std::string> shader_table = {
         fn vs_main(@builtin(vertex_index) vertexIndex : u32) -> VertexOutput {
             var output : VertexOutput;
 
-            // outUV = vec2((gl_VertexIndex << 1) & 2, gl_VertexIndex & 2);
-            // gl_Position = vec4(outUV * 2.0f + -1.0f, 0.0f, 1.0f);
-
+            // a triangle which covers the screen
             output.v_uv = vec2f(f32((vertexIndex << 1u) & 2u), f32(vertexIndex & 2u));
             output.position = vec4f(output.v_uv * 2.0 - 1.0, 0.0, 1.0);
-            
-            // triangle which covers the screen
-            // if (vertexIndex == 0u) {
-            //     output.position = vec4f(-1.0, -1.0, 0.0, 1.0);
-            //     output.v_uv = vec2f(0.0, 0.0);
-            // } else if (vertexIndex == 1u) {
-            //     output.position = vec4f(3.0, -1.0, 0.0, 1.0);
-            //     output.v_uv = vec2f(2.0, 0.0);
-            // } else {
-            //     output.position = vec4f(-1.0, 3.0, 0.0, 1.0);
-            //     output.v_uv = vec2f(0.0, 2.0);
-            // }
+
             // flip y (webgpu render textures are flipped)
             output.v_uv.y = 1.0 - output.v_uv.y;
             return output;

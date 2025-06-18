@@ -415,7 +415,7 @@ Chuck_Object* ulib_texture_ckobj_from_sampler(SG_Sampler sampler, bool add_ref,
                                               Chuck_VM_Shred* shred);
 
 // impl in ulib_material.cpp
-void chugl_materialSetShader(SG_Material* material, SG_Shader* shader);
+void ulib_material_set_shader(SG_Material* material, SG_Shader* shader);
 SG_Material* ulib_material_create(SG_MaterialType type, Chuck_VM_Shred* shred);
 void ulib_material_cq_update_all_uniforms(SG_Material* material);
 

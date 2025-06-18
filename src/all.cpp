@@ -30,6 +30,7 @@
 
 // clang-format off
 
+#include "chugl_defines.h"
 #include "graphics.cpp"
 #include "geometry.cpp"
 #include "sync.cpp"

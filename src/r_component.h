@@ -27,7 +27,6 @@
 -----------------------------------------------------------------------------*/
 #pragma once
 
-#include "chugl_defines.h"
 #include "graphics.h"
 #include "sg_command.h"
 #include "sg_component.h"
@@ -586,7 +585,7 @@ struct Framebuffer {
 
             // recreate depth target
             Framebuffer::createAttachment(
-              gctx, WGPUTextureFormat_Depth24PlusStencil8, WGPUTextureUsage_None, width,
+              gctx, WGPUTextureFormat_Depth32Float, WGPUTextureUsage_None, width,
               height, sample_count, &fb->depth_tex, &fb->depth_view);
 
             // TODO create resolve
@@ -597,106 +596,57 @@ struct Framebuffer {
 struct R_Pass : public R_Component {
     SG_Pass sg_pass;
 
-    // RenderPass params
-    WGPURenderPassColorAttachment color_attachments[1];
-    WGPURenderPassDepthStencilAttachment depth_stencil_attachment;
-    WGPURenderPassDescriptor render_pass_desc;
-    // RenderPass framebuffer
-    Framebuffer framebuffer;
+    // ScenePass --------------------
+    WGPUTexture depth_texture;
 
-    // ScreenPass params (no depth buffer necessary)
-    WGPURenderPassColorAttachment screen_color_attachments[1];
-    WGPURenderPassDescriptor screen_pass_desc;
-
-    static void updateScreenPassDesc(GraphicsContext* gctx, R_Pass* pass,
-                                     WGPUTextureView color_attachment_view)
+    // updates the scenepass depth texture to match the color target
+    static void updateScenePass(R_Pass* pass, WGPUTexture color_target,
+                                WGPUDevice device)
     {
-        ASSERT(pass->sg_pass.pass_type == SG_PassType_Screen);
+        ASSERT(pass->sg_pass.pass_type = SG_PassType_Scene);
+        static char label[128] = {};
 
-        WGPURenderPassColorAttachment* ca = &pass->screen_color_attachments[0];
-        *ca                               = {};
-        ca->view                          = color_attachment_view;
-        ca->loadOp                        = WGPULoadOp_Clear;
-        ca->storeOp                       = WGPUStoreOp_Store;
-        ca->clearValue                    = WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f };
-        ca->depthSlice                    = WGPU_DEPTH_SLICE_UNDEFINED;
+        ASSERT(wgpuTextureGetDimension(color_target) == WGPUTextureDimension_2D);
+        ASSERT(wgpuTextureGetDepthOrArrayLayers(color_target) == 1);
+        ASSERT(wgpuTextureGetUsage(color_target) | WGPUTextureUsage_RenderAttachment);
 
-        pass->screen_pass_desc                        = {};
-        pass->screen_pass_desc.label                  = pass->sg_pass.name;
-        pass->screen_pass_desc.colorAttachmentCount   = 1;
-        pass->screen_pass_desc.colorAttachments       = pass->screen_color_attachments;
-        pass->screen_pass_desc.depthStencilAttachment = NULL;
-    }
+        u32 height = wgpuTextureGetHeight(color_target);
+        u32 width  = wgpuTextureGetWidth(color_target);
+        u32 samps  = wgpuTextureGetSampleCount(color_target);
 
-    // if window size has changed, lazily reconstruct depth/stencil and color
-    // targets.
-    // update DepthStencilAttachment and ColorAttachment params based on
-    // ChuGL RenderPass params.
-    // this should be called right before _R_RenderScene()
-    // for the given pass. R_Pass.sg_pass is assumed to be updated (memcopied in the
-    // updatePass Command), but not the gpu-specific parameters of R_Pass
-    static void updateRenderPassDesc(GraphicsContext* gctx, R_Pass* pass,
-                                     u32 color_target_width, u32 color_target_height,
-                                     int sample_count, WGPUTextureView resolve_view,
-                                     WGPUTextureFormat view_format,
-                                     glm::vec4 clear_color)
-    {
-        ASSERT(pass->sg_pass.pass_type == SG_PassType_Render);
+        // check if we need to rebuild depth texture
+        // clang-format off
+        bool rebuild = 
+            (
+                pass->depth_texture == NULL ||
+                wgpuTextureGetHeight(pass->depth_texture) != height ||
+                wgpuTextureGetWidth(pass->depth_texture) != width ||
+                wgpuTextureGetSampleCount(pass->depth_texture) != samps
+            );
+        // clang-format on
 
-        // handle resize
-        Framebuffer::rebuild(gctx, &pass->framebuffer, color_target_width,
-                             color_target_height, sample_count, view_format);
+        if (!rebuild) return;
 
-        // for now, we always set renderpass depth/stencil and color descriptors
-        // (even if they haven't changed) to simplify state management
-        { // depth
-            pass->depth_stencil_attachment.view = pass->framebuffer.depth_view;
-            // defaults for render pass depth/stencil attachment
-            // The initial value of the depth buffer, meaning "far"
-            pass->depth_stencil_attachment.depthClearValue = 1.0f;
-            pass->depth_stencil_attachment.depthLoadOp     = WGPULoadOp_Clear;
-            pass->depth_stencil_attachment.depthStoreOp    = WGPUStoreOp_Store;
-            // we could turn off writing to the depth buffer globally here
-            pass->depth_stencil_attachment.depthReadOnly = false;
+        log_trace("Rebuilding ScenePass[%d:%s] depth texture", pass->id,
+                  pass->sg_pass.name);
 
-            // Stencil setup, mandatory but unused
-            pass->depth_stencil_attachment.stencilClearValue = 0;
-            pass->depth_stencil_attachment.stencilLoadOp     = WGPULoadOp_Clear;
-            pass->depth_stencil_attachment.stencilStoreOp    = WGPUStoreOp_Store;
-            pass->depth_stencil_attachment.stencilReadOnly   = false;
-        }
+        WGPUExtent3D texture_extent = { width, height, 1 };
+        snprintf(label, sizeof(label), "Depth Texture for ScenePass[%d:%s]", pass->id,
+                 pass->sg_pass.name);
 
-        { // color
-            // defaults for render pass color attachment
-            WGPURenderPassColorAttachment* ca = &pass->color_attachments[0];
-            *ca                               = {};
+        // Create the texture
+        WGPUTextureDescriptor texture_desc = {};
+        texture_desc.label                 = label;
+        texture_desc.size                  = texture_extent;
+        texture_desc.mipLevelCount         = 1;
+        texture_desc.sampleCount           = samps;
+        texture_desc.dimension             = WGPUTextureDimension_2D;
+        texture_desc.format                = WGPUTextureFormat_Depth32Float;
+        texture_desc.usage                 = WGPUTextureUsage_RenderAttachment;
 
-            // view and resolve set in GraphicsContext::prepareFrame()
-            if (sample_count > 1) {
-                // if MSAA, need to set target and resolve separately
-                ca->view          = pass->framebuffer.color_view;
-                ca->resolveTarget = resolve_view;
-            } else {
-                // no MSAA, set color attachment to resolve target directly
-                ca->view          = resolve_view;
-                ca->resolveTarget = NULL;
-            }
-            ca->depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
-            ca->loadOp  = pass->sg_pass.color_target_clear_on_load ? WGPULoadOp_Clear :
-                                                                     WGPULoadOp_Load;
-            ca->storeOp = WGPUStoreOp_Store;
-            ca->clearValue
-              = WGPUColor{ clear_color.r, clear_color.g, clear_color.b, clear_color.a };
-        }
-
-        { // renderpass desc
-            pass->render_pass_desc                      = {};
-            pass->render_pass_desc.label                = pass->sg_pass.name;
-            pass->render_pass_desc.colorAttachmentCount = 1;
-            pass->render_pass_desc.colorAttachments     = pass->color_attachments;
-            pass->render_pass_desc.depthStencilAttachment
-              = &pass->depth_stencil_attachment;
-        }
+        WGPU_RELEASE_RESOURCE(Texture, pass->depth_texture);
+        pass->depth_texture = wgpuDeviceCreateTexture(device, &texture_desc);
+        ASSERT(pass->depth_texture);
     }
 };
 
@@ -1033,7 +983,7 @@ struct G_CacheTextureView {
     G_CacheTextureViewDesc key;
     struct {
         WGPUTextureView view;
-        int refcount;
+        int frames_till_expired = CHUGL_CACHE_TEXTURE_VIEW_FRAMES_TILL_EXPIRED;
     } val;
 
     static u64 hash(const void* item, uint64_t seed0, uint64_t seed1)
@@ -1108,6 +1058,25 @@ struct G_CacheRenderTargetDesc {
     u32 height;
 };
 
+struct G_CacheStats {
+    int render_pipeline_misses;
+    int compute_pipeline_misses;
+    int bindgroup_misses;
+    int texture_view_misses;
+
+    void log()
+    {
+        log_trace(
+          "\n"
+          "Render Pipeline Misses: %d\n"
+          "Compute Pipeline Misses: %d\n"
+          "Bindgroup Misses: %d\n"
+          "TextureView Misses: %d\n",
+          render_pipeline_misses, compute_pipeline_misses, bindgroup_misses,
+          texture_view_misses);
+    }
+};
+
 struct G_Cache {
     hashmap* render_pipeline_map;
     hashmap* compute_pipeline_map;
@@ -1115,6 +1084,10 @@ struct G_Cache {
     hashmap* texture_view_map;
 
     Arena deletion_queue;
+
+    // per-frame stats
+    G_CacheStats frame_stats;
+    G_CacheStats lifetime_stats;
 
     void init()
     {
@@ -1134,12 +1107,6 @@ struct G_Cache {
                                G_CacheTextureView::compare);
     }
 
-    void free()
-    {
-        // not implemented because there's only 1 G_Cache (in App)
-        // and we let OS do clean up when chugl exits
-    }
-
     G_CacheComputePipeline computePipeline(WGPUShaderModule module, WGPUDevice device,
                                            const char* label)
     {
@@ -1147,6 +1114,7 @@ struct G_Cache {
           = (G_CacheComputePipeline*)hashmap_get(compute_pipeline_map, &module);
 
         if (result == NULL) { // create new pipeline
+            ++frame_stats.compute_pipeline_misses;
             log_trace("Cache miss [ComputePipeline], creating new from %p", module);
 
             WGPUComputePipelineDescriptor desc = {};
@@ -1187,6 +1155,7 @@ struct G_Cache {
               = Component_GetShader(key.drawcall_pipeline_desc.sg_shader_id);
             ASSERT(shader);
 
+            ++frame_stats.render_pipeline_misses;
             log_trace("Cache miss [RenderPipeline], creating new from Shader[%d:%s]",
                       key.drawcall_pipeline_desc.sg_shader_id, shader->name);
 
@@ -1309,13 +1278,14 @@ struct G_Cache {
         return result;
     }
 
-    WGPUTextureView _createTextureViewForBindgroup(G_CacheTextureViewDesc desc)
+    WGPUTextureView textureView(G_CacheTextureViewDesc desc)
     {
         // check if present in cache
         G_CacheTextureView* cache_view
           = (G_CacheTextureView*)hashmap_get(texture_view_map, &desc);
 
         if (cache_view == NULL) {
+            ++frame_stats.texture_view_misses;
             log_trace(
               "Cache miss [TextureView], creating new from Texture[%p] mips[%d:%d]",
               (void*)desc.texture, desc.base_mip_level,
@@ -1344,7 +1314,8 @@ struct G_Cache {
             ASSERT(cache_view);
         }
 
-        ++cache_view->val.refcount;
+        cache_view->val.frames_till_expired
+          = CHUGL_CACHE_TEXTURE_VIEW_FRAMES_TILL_EXPIRED;
         return cache_view->val.view;
     }
 
@@ -1365,6 +1336,7 @@ struct G_Cache {
           = (G_CacheBindGroup*)hashmap_get(bindgroup_map, &item.key);
 
         if (result == NULL) {
+            ++frame_stats.bindgroup_misses;
             log_trace("Cache miss [BindGroup] @group(%d) creating new for layout %p",
                       group, layout);
             static WGPUBindGroupEntry wgpu_bg_entry_list[CHUGL_MATERIAL_MAX_BINDINGS]
@@ -1391,8 +1363,7 @@ struct G_Cache {
                     } break;
                     case G_CacheBindGroupEntryType_TextureView: {
                         wgpu_bg_entry_list[i].textureView
-                          = _createTextureViewForBindgroup(
-                            bg_entry_list[i].as.texture_view_desc);
+                          = textureView(bg_entry_list[i].as.texture_view_desc);
                     } break;
                     default: UNREACHABLE;
                 }
@@ -1420,8 +1391,6 @@ struct G_Cache {
 
     void update()
     {
-        ASSERT(deletion_queue.curr == 0);
-
         // TODO: loop over all pipelines, and if associated R_Shader is destroyed,
         // free the pipeline and WGPU_RELEASE the cached bindgroup layouts
 
@@ -1429,51 +1398,73 @@ struct G_Cache {
         // tell the rendergraph to release the compute pipeline and bind group layout!
 
         // loop over bindgroups. delete expired.
-        // intentionally NOT refcounting WGPU resources here under assumption that
-        // chuck-side refcounting will handle that for us
-        size_t bindgroup_map_idx_DONT_USE = 0;
-        G_CacheBindGroup* cache_bg        = NULL;
-        while (
-          hashmap_iter(bindgroup_map, &bindgroup_map_idx_DONT_USE, (void**)&cache_bg)) {
-            if (--cache_bg->val.frames_till_expired <= 0) {
-                *ARENA_PUSH_TYPE(&deletion_queue, G_CacheBindGroup) = *cache_bg;
-            }
-        }
-        int num_bg_to_delete = ARENA_LENGTH(&deletion_queue, G_CacheBindGroup);
-        for (int i = 0; i < num_bg_to_delete; i++) {
-            G_CacheBindGroup* bg_del
-              = ARENA_GET_TYPE(&deletion_queue, G_CacheBindGroup, i);
-            ASSERT(bg_del->val.frames_till_expired <= 0);
-            WGPU_RELEASE_RESOURCE(BindGroup, bg_del->val.bg);
+        // intentionally NOT refcounting non-texture-view WGPU resources here under
+        // assumption that chuck-side refcounting will handle that for us
+        {
+            Arena::clearZero(&deletion_queue);
 
-            const void* deleted = hashmap_delete(bindgroup_map, bg_del);
-            ASSERT(deleted);
-            log_trace("deleting expired bindgroup %p", (void*)bg_del->val.bg);
-
-            // deref all textureview bg entries
-            for (int bg_entry_idx = 0; bg_entry_idx < bg_del->key.bg_entry_count;
-                 ++bg_entry_idx) {
-                G_CacheBindGroupEntry* entry = bg_del->key.bg_entry_list + bg_entry_idx;
-                if (entry->type == G_CacheBindGroupEntryType_TextureView) {
-                    // deref texview
-                    G_CacheTextureView* view = (G_CacheTextureView*)hashmap_get(
-                      texture_view_map, &entry->as.texture_view_desc);
-                    ASSERT(view);
-                    --view->val.refcount;
-                    if (view->val.refcount == 0) {
-                        log_trace("Cache deleting expired texture view");
-                        WGPU_RELEASE_RESOURCE(TextureView, view->val.view);
-                        const void* deleted = hashmap_delete(texture_view_map, view);
-                        ASSERT(deleted);
-                    }
+            size_t bindgroup_map_idx_DONT_USE = 0;
+            G_CacheBindGroup* cache_bg        = NULL;
+            while (hashmap_iter(bindgroup_map, &bindgroup_map_idx_DONT_USE,
+                                (void**)&cache_bg)) {
+                if (--cache_bg->val.frames_till_expired <= 0) {
+                    *ARENA_PUSH_TYPE(&deletion_queue, G_CacheBindGroup) = *cache_bg;
                 }
             }
+            int num_bg_to_delete = ARENA_LENGTH(&deletion_queue, G_CacheBindGroup);
+            for (int i = 0; i < num_bg_to_delete; i++) {
+                G_CacheBindGroup* bg_del
+                  = ARENA_GET_TYPE(&deletion_queue, G_CacheBindGroup, i);
+                ASSERT(bg_del->val.frames_till_expired <= 0);
+                WGPU_RELEASE_RESOURCE(BindGroup, bg_del->val.bg);
 
-            // G_Util::printBindGroupEntryList(bg_del->key.bg_entry_list,
-            //                                 bg_del->key.bg_entry_count);
+                const void* deleted = hashmap_delete(bindgroup_map, bg_del);
+                ASSERT(deleted);
+                log_trace("deleting expired bindgroup %p", (void*)bg_del->val.bg);
+                // G_Util::printBindGroupEntryList(bg_del->key.bg_entry_list,
+                //                                 bg_del->key.bg_entry_count);
+            }
         }
-        Arena::clearZero(&deletion_queue);
-    };
+
+        { // release unused texture views
+            Arena::clearZero(&deletion_queue);
+
+            size_t texview_map_idx_DONT_USE = 0;
+            G_CacheTextureView* cache_tv    = NULL;
+            while (hashmap_iter(texture_view_map, &texview_map_idx_DONT_USE,
+                                (void**)&cache_tv)) {
+                if (--cache_tv->val.frames_till_expired <= 0) {
+                    *ARENA_PUSH_TYPE(&deletion_queue, G_CacheTextureViewDesc)
+                      = cache_tv->key;
+                }
+            }
+            int num_to_delete = ARENA_LENGTH(&deletion_queue, G_CacheTextureViewDesc);
+            for (int i = 0; i < num_to_delete; i++) {
+                G_CacheTextureViewDesc* tv_del
+                  = ARENA_GET_TYPE(&deletion_queue, G_CacheTextureViewDesc, i);
+
+                G_CacheTextureView* deleted
+                  = (G_CacheTextureView*)hashmap_delete(texture_view_map, tv_del);
+                ASSERT(deleted && deleted->val.frames_till_expired <= 0
+                       && deleted->val.view);
+
+                log_trace("deleting expired textureview %p", (void*)deleted->val.view);
+                WGPU_RELEASE_RESOURCE(TextureView, deleted->val.view);
+            }
+        }
+
+        // update stats
+        // improve: track resource deletions too
+        // log_trace("--Cache Lifetime Stats--");
+        // lifetime_stats.log();
+        // log_trace("--Cache Frame Stats--");
+        // frame_stats.log();
+        lifetime_stats.bindgroup_misses += frame_stats.bindgroup_misses;
+        lifetime_stats.compute_pipeline_misses += frame_stats.compute_pipeline_misses;
+        lifetime_stats.render_pipeline_misses += frame_stats.render_pipeline_misses;
+        lifetime_stats.texture_view_misses += frame_stats.texture_view_misses;
+        frame_stats = {};
+    }
 };
 
 enum G_RenderingLayer : u8 {
@@ -1700,12 +1691,16 @@ typedef int G_DrawCallListID;
 typedef int G_DrawCallID;
 
 struct G_RenderPassParams {
-    G_RenderTarget _color_target;
+
+    G_CacheTextureViewDesc color_target_view_desc;
+    G_RenderTarget color_target;
+    u32 color_target_is_external_view;
+
     WGPUColor clear_color;
     WGPULoadOp color_load_op;
     WGPUStoreOp color_store_op;
 
-    G_RenderTarget _depth_target;
+    G_CacheTextureViewDesc _depth_target;
 
     float viewport_x;
     float viewport_y;
@@ -1790,17 +1785,33 @@ struct G_Graph {
     {
         G_Pass* pass = pass_list + (pass_count - 1);
         ASSERT(pass->type == G_PassType_Render);
+
         WGPU_REFERENCE_RESOURCE(TextureView, view);
-        pass->rp._color_target = { view, format };
+        WGPU_RELEASE_RESOURCE(TextureView, pass->rp.color_target.texture_view);
+
+        pass->rp.color_target_is_external_view = true;
+        pass->rp.color_target.texture_view     = view;
+        pass->rp.color_target.view_format      = format;
     }
 
-    void renderPassDepthTarget(WGPUTextureView view, WGPUTextureFormat format)
+    void renderPassColorTarget(WGPUTexture tex, int mip_level)
     {
         G_Pass* pass = pass_list + (pass_count - 1);
         ASSERT(pass->type == G_PassType_Render);
-        ASSERT(G_Util::isDepthTextureFormat(format));
-        WGPU_REFERENCE_RESOURCE(TextureView, view);
-        pass->rp._depth_target = { view, format };
+
+        WGPU_RELEASE_RESOURCE(TextureView, pass->rp.color_target.texture_view);
+
+        pass->rp.color_target_is_external_view = false;
+        pass->rp.color_target_view_desc        = { tex, mip_level, 1 };
+    }
+
+    void renderPassDepthTarget(WGPUTexture tex)
+    {
+        G_Pass* pass = pass_list + (pass_count - 1);
+        ASSERT(pass->type == G_PassType_Render);
+        ASSERT(G_Util::isDepthTextureFormat(wgpuTextureGetFormat(tex)));
+        pass->rp._depth_target
+          = { tex, 0, 1 }; // assume depth textures don't have a mip chain
     }
 
     G_DrawCall*
@@ -1933,11 +1944,22 @@ struct G_Graph {
                     render_pass_desc.label                    = pass->name;
                     WGPURenderPassColorAttachment ca          = {};
                     WGPURenderPassDepthStencilAttachment ds   = {};
+                    WGPUTextureFormat color_format = WGPUTextureFormat_Undefined;
+                    WGPUTextureFormat depth_format = WGPUTextureFormat_Undefined;
 
                     bool has_color_target
-                      = (pass->rp._color_target.texture_view != NULL);
+                      = (pass->rp.color_target_is_external_view ?
+                           pass->rp.color_target.texture_view != NULL :
+                           pass->rp.color_target_view_desc.texture != NULL);
                     if (has_color_target) {
-                        ca.view       = pass->rp._color_target.texture_view;
+                        color_format = pass->rp.color_target_is_external_view ?
+                                         pass->rp.color_target.view_format :
+                                         wgpuTextureGetFormat(
+                                           pass->rp.color_target_view_desc.texture);
+
+                        ca.view       = pass->rp.color_target_is_external_view ?
+                                          pass->rp.color_target.texture_view :
+                                          cache.textureView(pass->rp.color_target_view_desc);
                         ca.loadOp     = pass->rp.color_load_op;
                         ca.storeOp    = pass->rp.color_store_op;
                         ca.clearValue = pass->rp.clear_color;
@@ -1947,11 +1969,12 @@ struct G_Graph {
                         render_pass_desc.colorAttachments     = &ca;
                     }
 
-                    bool has_depth_target
-                      = (pass->rp._depth_target.texture_view != NULL);
+                    bool has_depth_target = (pass->rp._depth_target.texture != NULL);
                     if (has_depth_target) {
-                        ds.view = pass->rp._depth_target.texture_view;
+                        depth_format
+                          = wgpuTextureGetFormat(pass->rp._depth_target.texture);
 
+                        ds.view = cache.textureView(pass->rp._depth_target);
                         // defaults for render pass depth/stencil attachment
                         // The initial value of the depth buffer, meaning "far"
                         ds.depthClearValue = 1.0f;
@@ -1985,17 +2008,13 @@ struct G_Graph {
                     ASSERT(pass->rp.drawcall_list_id >= 0
                            && pass->rp.drawcall_list_id < drawcall_list_count);
                     drawcall_list_pool[pass->rp.drawcall_list_id].execute(
-                      device, render_pass_encoder, pass->rp._color_target.view_format,
-                      pass->rp._depth_target.view_format, &cache, &drawcall_pool,
-                      bind_group_entry_list);
+                      device, render_pass_encoder, color_format, depth_format, &cache,
+                      &drawcall_pool, bind_group_entry_list);
                     wgpuRenderPassEncoderEnd(render_pass_encoder);
                     WGPU_RELEASE_RESOURCE(RenderPassEncoder, render_pass_encoder);
 
-                    // release render target texture views
                     WGPU_RELEASE_RESOURCE(TextureView,
-                                          pass->rp._color_target.texture_view);
-                    WGPU_RELEASE_RESOURCE(TextureView,
-                                          pass->rp._depth_target.texture_view);
+                                          pass->rp.color_target.texture_view);
                 } break;
                 case G_PassType_Compute: {
                     G_CacheComputePipeline cp

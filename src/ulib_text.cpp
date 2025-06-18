@@ -189,7 +189,7 @@ CK_DLL_CTOR(gtext_ctor)
     SG_Shader* gtext_shader = SG_GetShader(g_material_builtin_shaders.gtext_shader_id);
 
     // set shader
-    chugl_materialSetShader(material, gtext_shader);
+    ulib_material_set_shader(material, gtext_shader);
 
     // initialize default uniforms
     SG_Material::uniformVec4f(material, 2, glm::vec4(1.0f)); // color

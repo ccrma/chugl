@@ -35,7 +35,8 @@
 #define GET_PASS(ckobj) SG_GetPass(OBJ_MEMBER_UINT(ckobj, component_offset_id))
 
 // external API
-SG_ID ulib_pass_createPass(SG_PassType pass_type);
+SG_Pass* ulib_pass_create(SG_PassType pass_type, Chuck_Object* pass_ckobj, bool add_ref,
+                          Chuck_VM_Shred* shred);
 
 SG_Material* chugl_createInternalMaterial(SG_MaterialType material_type,
                                           SG_Shader* shader)
@@ -55,40 +56,36 @@ CK_DLL_MFUN(pass_get_next);
 CK_DLL_GFUN(pass_op_gruck);   // add pass
 CK_DLL_GFUN(pass_op_ungruck); // remove pass
 
-// RenderPass
-CK_DLL_CTOR(renderpass_ctor);
-CK_DLL_MFUN(renderpass_set_resolve_target);
-CK_DLL_MFUN(renderpass_get_resolve_target);
+// renderpass
+
+CK_DLL_MFUN(renderpass_set_color_target);
+CK_DLL_MFUN(renderpass_get_color_target);
 
 CK_DLL_MFUN(renderpass_set_color_target_clear_on_load);
 CK_DLL_MFUN(renderpass_get_color_target_clear_on_load);
 
-CK_DLL_MFUN(renderpass_set_resolve_target_resolution);
+// TODO add scissor and viewport
 
-CK_DLL_MFUN(renderpass_set_msaa_sample_count);
-CK_DLL_MFUN(renderpass_get_msaa_sample_count);
-
-CK_DLL_MFUN(renderpass_set_camera);
-CK_DLL_MFUN(renderpass_get_camera);
-
-CK_DLL_MFUN(renderpass_set_scene);
-CK_DLL_MFUN(renderpass_get_scene);
+// ScenePass
+CK_DLL_MFUN(scenepass_set_camera);
+CK_DLL_MFUN(scenepass_get_camera);
+CK_DLL_MFUN(scenepass_set_scene);
+CK_DLL_MFUN(scenepass_get_scene);
 
 // TODO get_resolve_target
 // TODO set/get camera and scene
 // - enforce camera is part of scene
-// TODO add RenderPassColorAttachment.loadOp / storeOp / clearValue (clearValue in
-// GScene)
 // TODO add set/get HDR?
 // TODO add set/get MSAA sample count?
 // TODO scissor + viewport (after ScreenPass, not sure if we apply scissor/viewport to
 // RenderPass or screenpass...)
 
 // ScenePass
-CK_DLL_CTOR(screenpass_ctor);
 CK_DLL_CTOR(screenpass_ctor_with_params);
-CK_DLL_MFUN(screenpass_set_target);
+
+CK_DLL_MFUN(screenpass_get_material);
 CK_DLL_MFUN(screenpass_set_shader);
+
 // TODO get_target
 
 // OutputPass : ScreenPass
@@ -104,7 +101,6 @@ CK_DLL_MFUN(outputpass_get_sampler);
 CK_DLL_MFUN(outputpass_set_sampler);
 
 // ComputePass
-CK_DLL_CTOR(computepass_ctor); // don't send creation CQ Command until shader is set
 CK_DLL_MFUN(computepass_set_shader);
 CK_DLL_MFUN(computepass_set_uniform_float);
 CK_DLL_MFUN(computepass_set_uniform_float2);
@@ -117,7 +113,6 @@ CK_DLL_MFUN(computepass_set_uniform_int);
 CK_DLL_MFUN(computepass_set_workgroup);
 
 // BloomPass
-CK_DLL_CTOR(bloompass_ctor); // don't send creation CQ Command until shader is set
 CK_DLL_MFUN(bloompass_set_input_render_texture);
 CK_DLL_MFUN(bloompass_get_output_render_texture);
 CK_DLL_MFUN(bloompass_set_internal_blend);
@@ -151,8 +146,10 @@ const char* ulib_pass_classname(SG_PassType pass_type)
     switch (pass_type) {
         case SG_PassType_Root: return SG_CKNames[SG_COMPONENT_PASS];
         case SG_PassType_Render: return "RenderPass";
-        case SG_PassType_Compute: return "ComputePass";
+        case SG_PassType_Scene: return "ScenePass";
         case SG_PassType_Screen: return "ScreenPass";
+        case SG_PassType_Compute: return "ComputePass";
+        case SG_PassType_Bloom: return "BloomPass";
         default: ASSERT(false);
     }
     return NULL;
@@ -180,26 +177,19 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
 
     // RenderPass --------------------------------------------------------------
     {
-
         BEGIN_CLASS(ulib_pass_classname(SG_PassType_Render),
                     SG_CKNames[SG_COMPONENT_PASS]);
         DOC_CLASS(
-          " Render pass for drawing a GScene. If RenderPass.scene() is not set, will "
-          "default to the main scene, GG.scene()"
-          " If RenderPass.colorOutput() is not set, will default to the screen. "
-          " If RenderPass.camera() is not set, will default to the scene's main "
-          "camera: "
-          "GG.scene().camera()");
+          "Base class containing shared methods for ScenePass and ScreenPass. "
+          "Don't instantiate this directly.");
 
-        CTOR(renderpass_ctor);
-
-        MFUN(renderpass_set_resolve_target, "void", "colorOutput");
+        MFUN(renderpass_set_color_target, "void", "colorOutput");
         ARG(SG_CKNames[SG_COMPONENT_TEXTURE], "color_texture");
-        DOC_FUNC("Set the target texture to draw the scene to.");
+        DOC_FUNC("Set the target texture to render to.");
 
-        MFUN(renderpass_get_resolve_target, SG_CKNames[SG_COMPONENT_TEXTURE],
+        MFUN(renderpass_get_color_target, SG_CKNames[SG_COMPONENT_TEXTURE],
              "colorOutput");
-        DOC_FUNC("Get the target texture to draw the scene to.");
+        DOC_FUNC("Get the target texture to render to.");
 
         MFUN(renderpass_set_color_target_clear_on_load, "void", "autoClearColor");
         ARG("int", "clear");
@@ -210,40 +200,37 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
         MFUN(renderpass_get_color_target_clear_on_load, "int", "autoClearColor");
         DOC_FUNC("Get whether the framebuffer's color target is cleared each frame");
 
-        MFUN(renderpass_set_resolve_target_resolution, "void", "resolution");
-        ARG("int", "width");
-        ARG("int", "height");
+        END_CLASS();
+    }
+
+    { // ScenePass --------------------------------------------------------------
+        BEGIN_CLASS(ulib_pass_classname(SG_PassType_Scene),
+                    ulib_pass_classname(SG_PassType_Render));
+        DOC_CLASS(
+          "Pass to render a GScene."
+          "If ScenePass.camera() is not set, will default to the scene's main "
+          "camera.");
+
+        MFUN(scenepass_set_scene, "void", "scene");
+        ARG(SG_CKNames[SG_COMPONENT_SCENE], "scene");
         DOC_FUNC(
-          "Set the resolution of the output framebuffer. Default 0x0. If either "
-          "dimension is set to 0, will auto-resize to the window size.");
+          "Set the scene to render. If not set, will default to the main scene, "
+          "GG.scene()");
 
-        MFUN(renderpass_set_msaa_sample_count, "void", "msaa");
-        ARG("int", "sample_count");
-        DOC_FUNC("Set the MSAA sample count for the render pass (default 4)");
+        MFUN(scenepass_get_scene, SG_CKNames[SG_COMPONENT_SCENE], "scene");
+        DOC_FUNC("Get the scene this pass is rendering");
 
-        MFUN(renderpass_get_msaa_sample_count, "int", "msaa");
-        DOC_FUNC("Get the MSAA sample count for the render pass");
-
-        MFUN(renderpass_set_camera, "void", "camera");
+        MFUN(scenepass_set_camera, "void", "camera");
         ARG(SG_CKNames[SG_COMPONENT_CAMERA], "camera");
         DOC_FUNC(
           "Set the camera to use for rendering the scene. Defaults to the main camera "
           "of the target scene. You can call .camera(null) to use the "
           "scene's main camera.");
 
-        MFUN(renderpass_get_camera, SG_CKNames[SG_COMPONENT_CAMERA], "camera");
+        MFUN(scenepass_get_camera, SG_CKNames[SG_COMPONENT_CAMERA], "camera");
         DOC_FUNC(
           "Get the camera used for rendering the scene. If not set, will default to "
           "the scene's main camera");
-
-        MFUN(renderpass_set_scene, "void", "scene");
-        ARG(SG_CKNames[SG_COMPONENT_SCENE], "scene");
-        DOC_FUNC(
-          "Set the scene to render. If not set, will default to the main scene, "
-          "GG.scene()");
-
-        MFUN(renderpass_get_scene, SG_CKNames[SG_COMPONENT_SCENE], "scene");
-        DOC_FUNC("Get the scene this pass is rendering");
 
         END_CLASS();
     }
@@ -251,19 +238,18 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
     // ScreenPass ----------------------------------------------------------------
     {
         BEGIN_CLASS(ulib_pass_classname(SG_PassType_Screen),
-                    SG_CKNames[SG_COMPONENT_PASS]);
+                    ulib_pass_classname(SG_PassType_Render));
         DOC_CLASS(
           "Screen pass for applying screen shaders and visual effects to the entire "
-          "screen");
-
-        CTOR(screenpass_ctor);
+          "screen ");
 
         CTOR(screenpass_ctor_with_params);
         ARG(SG_CKNames[SG_COMPONENT_SHADER], "screen_shader");
 
-        MFUN(screenpass_set_target, "void", "colorOutput");
-        ARG(SG_CKNames[SG_COMPONENT_TEXTURE], "texture");
-        DOC_FUNC("Set the color attachment output texture of this screen pass");
+        MFUN(screenpass_get_material, SG_CKNames[SG_COMPONENT_MATERIAL], "material");
+        DOC_FUNC(
+          "Get the internal material of this pass. Use the material to bind uniforms "
+          "to the screen shader");
 
         MFUN(screenpass_set_shader, "void", "shader");
         ARG(SG_CKNames[SG_COMPONENT_SHADER], "shader");
@@ -277,11 +263,10 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
 
     // OutputPass ----------------------------------------------------------------
     {
-        BEGIN_CLASS("OutputPass", SG_CKNames[SG_COMPONENT_PASS]);
+        BEGIN_CLASS("OutputPass", ulib_pass_classname(SG_PassType_Screen));
         DOC_FUNC(
           "Default ChuGL output pass; place at end of render graph. Applies "
-          "tonemapping and gamma correction to the final image and outputs to the "
-          "window");
+          "tonemapping and gamma correction to the input texture");
 
         static t_CKUINT TONEMAP_NONE      = 0;
         static t_CKUINT TONEMAP_LINEAR    = 1;
@@ -342,8 +327,6 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
           "all Compute Pass bindings must be bound under @group(0), NOT @group(1)");
         ADD_EX("rendergraph/boids_compute.ck");
 
-        CTOR(computepass_ctor);
-
         MFUN(computepass_set_shader, "void", "shader");
         ARG(SG_CKNames[SG_COMPONENT_SHADER], "shader");
         DOC_FUNC("Set the compute shader to run");
@@ -389,88 +372,139 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
           "dimensions of the compute pass dispatch");
 
         END_CLASS();
+    }
 
-        { // BloomPass
-            BEGIN_CLASS("BloomPass", SG_CKNames[SG_COMPONENT_PASS]);
-            DOC_FUNC("Bloom pass for applying bloom to a render texture");
-            ADD_EX("deep/soundbulb.ck");
-            ADD_EX("rendergraph/bloom.ck");
+    { // BloomPass
+        BEGIN_CLASS(ulib_pass_classname(SG_PassType_Bloom),
+                    SG_CKNames[SG_COMPONENT_PASS]);
+        DOC_FUNC("Bloom pass for applying bloom to a render texture");
+        ADD_EX("deep/soundbulb.ck");
+        ADD_EX("rendergraph/bloom.ck");
 
-            CTOR(bloompass_ctor);
+        MFUN(bloompass_set_input_render_texture, "void", "input");
+        ARG(SG_CKNames[SG_COMPONENT_TEXTURE], "bloom_texture");
+        DOC_FUNC("Set the render texture to apply bloom to");
 
-            MFUN(bloompass_set_input_render_texture, "void", "input");
-            ARG(SG_CKNames[SG_COMPONENT_TEXTURE], "bloom_texture");
-            DOC_FUNC("Set the render texture to apply bloom to");
+        MFUN(bloompass_get_output_render_texture, SG_CKNames[SG_COMPONENT_TEXTURE],
+             "colorOutput");
+        DOC_FUNC("Get the render texture that the bloom pass writes to");
 
-            MFUN(bloompass_get_output_render_texture, SG_CKNames[SG_COMPONENT_TEXTURE],
-                 "colorOutput");
-            DOC_FUNC("Get the render texture that the bloom pass writes to");
+        MFUN(bloompass_set_internal_blend, "void", "radius");
+        ARG("float", "blend_factor");
+        DOC_FUNC(
+          "Set the blend factor between mip levels of the bloom texture during "
+          "upsample");
 
-            MFUN(bloompass_set_internal_blend, "void", "radius");
-            ARG("float", "blend_factor");
-            DOC_FUNC(
-              "Set the blend factor between mip levels of the bloom texture during "
-              "upsample");
+        MFUN(bloompass_set_final_blend, "void", "intensity");
+        ARG("float", "blend_factor");
+        DOC_FUNC(
+          "Set the blend factor between the bloom texture and the original image");
 
-            MFUN(bloompass_set_final_blend, "void", "intensity");
-            ARG("float", "blend_factor");
-            DOC_FUNC(
-              "Set the blend factor between the bloom texture and the original image");
+        MFUN(bloompass_get_internal_blend, "float", "radius");
+        DOC_FUNC("Get the blend factor between mip levels of the bloom texture");
 
-            MFUN(bloompass_get_internal_blend, "float", "radius");
-            DOC_FUNC("Get the blend factor between mip levels of the bloom texture");
+        MFUN(bloompass_get_final_blend, "float", "intensity");
+        DOC_FUNC(
+          "Get the blend factor between the bloom texture and the original image");
 
-            MFUN(bloompass_get_final_blend, "float", "intensity");
-            DOC_FUNC(
-              "Get the blend factor between the bloom texture and the original image");
+        MFUN(bloompass_set_num_levels, "void", "levels");
+        ARG("int", "num_levels");
+        DOC_FUNC(
+          "Number of blur passes to apply to the bloom texture. "
+          "Clamped between 0 and 16.");
 
-            MFUN(bloompass_set_num_levels, "void", "levels");
-            ARG("int", "num_levels");
-            DOC_FUNC(
-              "Number of blur passes to apply to the bloom texture. "
-              "Clamped between 0 and 16.");
+        MFUN(bloompass_get_num_levels, "int", "levels");
+        DOC_FUNC("Get the number of blur passes applied to the bloom texture.");
 
-            MFUN(bloompass_get_num_levels, "int", "levels");
-            DOC_FUNC("Get the number of blur passes applied to the bloom texture.");
+        MFUN(bloompass_set_threshold, "void", "threshold");
+        ARG("float", "threshold");
+        DOC_FUNC(
+          "Set the threshold for the bloom pass (colors with all rgb values below "
+          "threshold are not bloomed)");
 
-            MFUN(bloompass_set_threshold, "void", "threshold");
-            ARG("float", "threshold");
-            DOC_FUNC(
-              "Set the threshold for the bloom pass (colors with all rgb values below "
-              "threshold are not bloomed)");
+        MFUN(bloompass_get_threshold, "float", "threshold");
+        DOC_FUNC("Get the threshold for the bloom pass");
 
-            MFUN(bloompass_get_threshold, "float", "threshold");
-            DOC_FUNC("Get the threshold for the bloom pass");
-
-            END_CLASS();
-        }
+        END_CLASS();
     }
 }
 
-SG_ID ulib_pass_createPass(SG_PassType pass_type)
+SG_Pass* ulib_pass_create(SG_PassType pass_type, Chuck_Object* pass_ckobj, bool add_ref,
+                          Chuck_VM_Shred* shred)
 {
-    CK_DL_API API            = g_chuglAPI;
-    Chuck_Object* pass_ckobj = chugin_createCkObj(ulib_pass_classname(pass_type), true);
+    CK_DL_API API = g_chuglAPI;
+    if (pass_ckobj == NULL)
+        pass_ckobj = chugin_createCkObj(ulib_pass_classname(pass_type), add_ref, shred);
 
     SG_Pass* pass = SG_CreatePass(pass_ckobj, pass_type);
     ASSERT(pass->pass_type == pass_type);
-
+    ASSERT(pass->type == SG_COMPONENT_PASS);
     OBJ_MEMBER_UINT(pass_ckobj, component_offset_id) = pass->id;
 
-    CQ_PushCommand_PassUpdate(pass);
+    switch (pass->pass_type) {
+        case SG_PassType_Root:
+        case SG_PassType_Render:
+        case SG_PassType_Scene: {
+        } break;
+        case SG_PassType_Screen: {
+            SG_Material* mat = ulib_material_create(SG_MATERIAL_CUSTOM, shred);
+            SG_Pass::screenMaterial(pass, mat);
+        } break;
+        case SG_PassType_Compute: {
+            // the material is internal, ckobj=NULL so no need to refcount
+            SG_Material* mat = chugl_createInternalMaterial(SG_MATERIAL_COMPUTE, NULL);
+            pass->compute_material_id = mat->id;
+        } break;
+        case SG_PassType_Bloom: {
+            SG_Shader* bloom_downsample_shader = SG_GetShader(
+              g_material_builtin_shaders.bloom_downsample_screen_shader_id);
+            SG_Shader* bloom_upsample_shader = SG_GetShader(
+              g_material_builtin_shaders.bloom_upsample_screen_shader_id);
 
-    return pass->id;
+            // create default output render texture, which is always resized to match
+            // input texture
+            SG_TextureDesc output_render_texture_desc = {};
+            output_render_texture_desc.usage = WGPUTextureUsage_RenderAttachment
+                                               | WGPUTextureUsage_TextureBinding
+                                               | WGPUTextureUsage_StorageBinding;
+            output_render_texture_desc.format = WGPUTextureFormat_RGBA16Float;
+            SG_Texture* output_render_texture
+              = SG_CreateTexture(&output_render_texture_desc, NULL, shred, false);
+
+            SG_Material* bloom_downsample_mat = chugl_createInternalMaterial(
+              SG_MATERIAL_COMPUTE, bloom_downsample_shader);
+            SG_Material* bloom_upsample_mat = chugl_createInternalMaterial(
+              SG_MATERIAL_COMPUTE, bloom_upsample_shader);
+
+            // initialize uniforms for downsample mat
+            SG_Material::uniformFloat(bloom_downsample_mat, 2, 0.0); // threshold
+            CQ_PushCommand_MaterialSetUniform(bloom_downsample_mat, 2);
+
+            // initialize uniforms for upsample mat
+            SG_Material::uniformFloat(bloom_upsample_mat, 4, 0.85); // internal blend
+            CQ_PushCommand_MaterialSetUniform(bloom_upsample_mat, 4);
+            SG_Material::uniformFloat(bloom_upsample_mat, 5, 0.2); // final blend
+            CQ_PushCommand_MaterialSetUniform(bloom_upsample_mat, 5);
+
+            // update pass
+            pass->bloom_downsample_material_id = bloom_downsample_mat->id;
+            pass->bloom_upsample_material_id   = bloom_upsample_mat->id;
+            SG_Pass::bloomOutputRenderTexture(pass, output_render_texture);
+        } break;
+        default: UNREACHABLE
+    }
+
+    CQ_PushCommand_PassUpdate(pass);
+    return pass;
 }
 
 CK_DLL_CTOR(pass_ctor)
 {
-    // don't allow instantiation of abstract base class
-    if (chugin_typeEquals(SELF, SG_CKNames[SG_COMPONENT_PASS])) {
-        CK_THROW(
-          "InvalidClassInstantiation",
-          "GPass is an abstract base class, do not instantiate directly. Use one of "
-          "the children classes e.g. RenderPass / ComputePass / ScreenPass instead",
-          SHRED);
+    for (u8 pass_type = SG_PassType_Root; pass_type < SG_PassType_Count; pass_type++) {
+        if (chugin_typeEquals(SELF, ulib_pass_classname((SG_PassType)pass_type))) {
+            ulib_pass_create((SG_PassType)pass_type, SELF, false, SHRED);
+            break;
+        }
     }
 }
 
@@ -488,23 +522,20 @@ CK_DLL_GFUN(pass_op_gruck)
     Chuck_Object* lhs = GET_NEXT_OBJECT(ARGS);
     Chuck_Object* rhs = GET_NEXT_OBJECT(ARGS);
 
-    if (!lhs || !rhs) {
-        std::string errMsg = std::string("in gruck operator: ")
-                             + (lhs ? "LHS" : "[null]") + " --> "
-                             + (rhs ? "RHS" : "[null]");
-        // nullptr exception
-        API->vm->throw_exception("NullPointerException", errMsg.c_str(), SHRED);
+    if (!lhs) {
+        log_warn("Cannot connect [null] --> GPass");
         return;
     }
 
     // get internal representation
+    ASSERT(lhs);
     SG_Pass* lhs_pass = SG_GetPass(OBJ_MEMBER_UINT(lhs, component_offset_id));
-    SG_Pass* rhs_pass = SG_GetPass(OBJ_MEMBER_UINT(rhs, component_offset_id));
+    SG_Pass* rhs_pass
+      = rhs ? SG_GetPass(OBJ_MEMBER_UINT(rhs, component_offset_id)) : NULL;
 
     if (!SG_Pass::connect(lhs_pass, rhs_pass)) {
-        CK_LOG(CK_LOG_WARNING,
-               "warning GPass --> GPass failed! Cannot connect NULL passes, cannot "
-               "form cycles in the GPass chain");
+        log_warn(
+          "warning GPass --> GPass failed! Cannot form cycles in the GPass chain");
     }
 
     // command
@@ -537,36 +568,24 @@ CK_DLL_GFUN(pass_op_ungruck)
 // RenderPass
 // ============================================================================
 
-CK_DLL_CTOR(renderpass_ctor)
-{
-    SG_Pass* pass = SG_CreatePass(SELF, SG_PassType_Render);
-    ASSERT(pass->type == SG_COMPONENT_PASS);
-    ASSERT(pass->pass_type == SG_PassType_Render);
-    OBJ_MEMBER_UINT(SELF, component_offset_id) = pass->id;
-
-    CQ_PushCommand_PassUpdate(pass);
-}
-
-CK_DLL_MFUN(renderpass_set_resolve_target)
+CK_DLL_MFUN(renderpass_set_color_target)
 {
     SG_Pass* pass = GET_PASS(SELF);
-    ASSERT(pass->pass_type == SG_PassType_Render);
 
     Chuck_Object* target = GET_NEXT_OBJECT(ARGS);
     SG_Texture* texture
       = target ? SG_GetTexture(OBJ_MEMBER_UINT(target, component_offset_id)) : NULL;
-    SG_Pass::resolveTarget(pass, texture);
+    SG_Pass::colorTarget(pass, texture);
 
     // command TODO
     CQ_PushCommand_PassUpdate(pass);
 }
 
-CK_DLL_MFUN(renderpass_get_resolve_target)
+CK_DLL_MFUN(renderpass_get_color_target)
 {
     SG_Pass* pass = GET_PASS(SELF);
-    ASSERT(pass->pass_type == SG_PassType_Render);
 
-    SG_Texture* texture = SG_GetTexture(pass->resolve_target_id);
+    SG_Texture* texture = SG_GetTexture(pass->color_target_id);
     RETURN->v_object    = texture ? texture->ckobj : NULL;
 }
 
@@ -582,31 +601,14 @@ CK_DLL_MFUN(renderpass_get_color_target_clear_on_load)
     RETURN->v_int = GET_PASS(SELF)->color_target_clear_on_load;
 }
 
-CK_DLL_MFUN(renderpass_set_resolve_target_resolution)
-{
-    SG_Pass* pass                           = GET_PASS(SELF);
-    pass->render_pass_resolve_target_width  = GET_NEXT_INT(ARGS);
-    pass->render_pass_resolve_target_height = GET_NEXT_INT(ARGS);
+// ============================================================================
+// ScenePass
+// ============================================================================
 
-    CQ_PushCommand_PassUpdate(pass);
-}
-
-CK_DLL_MFUN(renderpass_set_msaa_sample_count)
-{
-    SG_Pass* pass                       = GET_PASS(SELF);
-    pass->render_pass_msaa_sample_count = GET_NEXT_INT(ARGS);
-    CQ_PushCommand_PassUpdate(pass);
-}
-
-CK_DLL_MFUN(renderpass_get_msaa_sample_count)
-{
-    RETURN->v_int = GET_PASS(SELF)->render_pass_msaa_sample_count;
-}
-
-CK_DLL_MFUN(renderpass_set_camera)
+CK_DLL_MFUN(scenepass_set_camera)
 {
     SG_Pass* pass = GET_PASS(SELF);
-    ASSERT(pass->pass_type == SG_PassType_Render);
+    ASSERT(pass->pass_type == SG_PassType_Scene);
     Chuck_Object* camera = GET_NEXT_OBJECT(ARGS);
 
     SG_Scene* scene = SG_GetScene(pass->scene_id);
@@ -619,10 +621,10 @@ CK_DLL_MFUN(renderpass_set_camera)
     CQ_PushCommand_PassUpdate(pass);
 }
 
-CK_DLL_MFUN(renderpass_get_camera)
+CK_DLL_MFUN(scenepass_get_camera)
 {
     SG_Pass* pass = GET_PASS(SELF);
-    ASSERT(pass->pass_type == SG_PassType_Render);
+    ASSERT(pass->pass_type == SG_PassType_Scene);
 
     SG_Scene* scene = SG_GetScene(pass->scene_id);
     // default to scene's main camera if `null` is passed
@@ -632,10 +634,10 @@ CK_DLL_MFUN(renderpass_get_camera)
     RETURN->v_object = sg_camera ? sg_camera->ckobj : NULL;
 }
 
-CK_DLL_MFUN(renderpass_set_scene)
+CK_DLL_MFUN(scenepass_set_scene)
 {
     SG_Pass* pass = GET_PASS(SELF);
-    ASSERT(pass->pass_type == SG_PassType_Render);
+    ASSERT(pass->pass_type == SG_PassType_Scene);
     Chuck_Object* scene = GET_NEXT_OBJECT(ARGS);
 
     SG_Scene* sg_scene
@@ -645,10 +647,10 @@ CK_DLL_MFUN(renderpass_set_scene)
     CQ_PushCommand_PassUpdate(pass);
 }
 
-CK_DLL_MFUN(renderpass_get_scene)
+CK_DLL_MFUN(scenepass_get_scene)
 {
     SG_Pass* pass = GET_PASS(SELF);
-    ASSERT(pass->pass_type == SG_PassType_Render);
+    ASSERT(pass->pass_type == SG_PassType_Scene);
 
     SG_Scene* sg_scene = SG_GetScene(pass->scene_id);
     RETURN->v_object   = sg_scene ? sg_scene->ckobj : NULL;
@@ -658,18 +660,9 @@ CK_DLL_MFUN(renderpass_get_scene)
 // ScreenPass
 // ============================================================================
 
-CK_DLL_CTOR(screenpass_ctor)
-{
-    SG_Pass* pass = SG_CreatePass(SELF, SG_PassType_Screen);
-    ASSERT(pass->type == SG_COMPONENT_PASS);
-    ASSERT(pass->pass_type == SG_PassType_Screen);
-    OBJ_MEMBER_UINT(SELF, component_offset_id) = pass->id;
-
-    CQ_PushCommand_PassUpdate(pass);
-}
-
 CK_DLL_CTOR(screenpass_ctor_with_params)
 {
+    UNREACHABLE;
     // get the arguments
     Chuck_Object* screen_shader = GET_NEXT_OBJECT(ARGS);
     SG_Shader* shader
@@ -678,39 +671,38 @@ CK_DLL_CTOR(screenpass_ctor_with_params)
           NULL;
 
     SG_Pass* pass = SG_CreatePass(SELF, SG_PassType_Screen);
+    ASSERT(pass->type == SG_COMPONENT_PASS);
+    ASSERT(pass->pass_type == SG_PassType_Screen);
     OBJ_MEMBER_UINT(SELF, component_offset_id) = pass->id;
 
-    SG_Material* mat = chugl_createInternalMaterial(SG_MATERIAL_CUSTOM, shader);
+    SG_Material* mat = ulib_material_create(SG_MATERIAL_CUSTOM, SHRED);
+    SG_Pass::screenMaterial(pass, mat);
 
-    SG_Pass::screenShader(pass, mat, shader);
+    ulib_material_set_shader(mat, shader);
 
     CQ_PushCommand_PassUpdate(pass);
 }
 
-CK_DLL_MFUN(screenpass_set_target)
+CK_DLL_MFUN(screenpass_get_material)
 {
-    SG_Pass* pass = GET_PASS(SELF);
-    ASSERT(pass->pass_type == SG_PassType_Screen);
-    SG_Texture* target
-      = SG_GetTexture(OBJ_MEMBER_UINT(GET_NEXT_OBJECT(ARGS), component_offset_id));
-
-    SG_Pass::screenTexture(pass, target);
-
-    CQ_PushCommand_PassUpdate(pass);
+    SG_Pass* pass    = GET_PASS(SELF);
+    RETURN->v_object = SG_GetMaterial(pass->screen_material_id)->ckobj;
 }
 
 CK_DLL_MFUN(screenpass_set_shader)
 {
     SG_Pass* pass = GET_PASS(SELF);
     ASSERT(pass->pass_type == SG_PassType_Screen);
+
+    Chuck_Object* shader_obj = GET_NEXT_OBJECT(ARGS);
     SG_Shader* shader
-      = SG_GetShader(OBJ_MEMBER_UINT(GET_NEXT_OBJECT(ARGS), component_offset_id));
+      = shader_obj ? SG_GetShader(OBJ_MEMBER_UINT(shader_obj, component_offset_id)) :
+                     NULL;
 
-    // for now we don't really care about destroying the previous mat...
-    // ==optimize== free the previous material
-    SG_Material* mat = chugl_createInternalMaterial(SG_MATERIAL_CUSTOM, shader);
+    SG_Material* mat = SG_GetMaterial(pass->screen_material_id);
+    ASSERT(mat);
 
-    SG_Pass::screenShader(pass, mat, shader);
+    ulib_material_set_shader(mat, shader);
 
     CQ_PushCommand_PassUpdate(pass);
 }
@@ -719,50 +711,37 @@ CK_DLL_MFUN(screenpass_set_shader)
 // OutputPass
 // ============================================================================
 
-SG_Pass* ulib_pass_createOutputPass(Chuck_Object* ckobj)
+SG_Pass* ulib_pass_create_output_pass(SG_Pass* pass, Chuck_Object* ckobj, bool add_ref,
+                                      Chuck_VM_Shred* shred)
 {
-    CK_DL_API API = g_chuglAPI;
-
-    SG_Pass* pass = SG_CreatePass(ckobj, SG_PassType_Screen);
-    ASSERT(pass->type == SG_COMPONENT_PASS);
-    ASSERT(pass->pass_type == SG_PassType_Screen);
-    OBJ_MEMBER_UINT(ckobj, component_offset_id) = pass->id;
+    if (pass == NULL)
+        pass = ulib_pass_create(SG_PassType_Screen, ckobj, add_ref, shred);
+    SG_Material* mat = SG_GetMaterial(pass->screen_material_id);
 
     SG_Shader* output_pass_shader
       = SG_GetShader(g_material_builtin_shaders.output_pass_shader_id);
 
-    SG_Material* mat
-      = chugl_createInternalMaterial(SG_MATERIAL_CUSTOM, output_pass_shader);
+    ulib_material_set_shader(mat, output_pass_shader);
 
     // set output_pass uniforms
     SG_Material::setTexture(mat, 0, SG_GetTexture(g_builtin_textures.white_pixel_id));
-    CQ_PushCommand_MaterialSetUniform(mat, 0);
-
     SG_Material::setSampler(mat, 1, SG_SAMPLER_DEFAULT); // sampler
-    CQ_PushCommand_MaterialSetUniform(mat, 1);
-
     // locking gamma to 1.0 (no gamma correction)
     // because we enforce swapchain output view to be srgb, which applies gamma for us.
     SG_Material::uniformFloat(mat, 2, 1.0); // gamma
-    CQ_PushCommand_MaterialSetUniform(mat, 2);
-
     SG_Material::uniformFloat(mat, 3, 1.0); // exposure
-    CQ_PushCommand_MaterialSetUniform(mat, 3);
-
     // SG_Material::uniformInt(mat, 4, 4); // TONEMAP_ACES
     SG_Material::uniformInt(mat, 4, 5); // TONEMAP_UNCHARTED
-    CQ_PushCommand_MaterialSetUniform(mat, 4);
-
-    // push pass through CQ
-    SG_Pass::screenShader(pass, mat, output_pass_shader);
-    CQ_PushCommand_PassUpdate(pass);
+    ulib_material_cq_update_all_uniforms(mat);
 
     return pass;
 }
 
 CK_DLL_CTOR(outputpass_ctor)
 {
-    ulib_pass_createOutputPass(SELF);
+    SG_Pass* pass = GET_PASS(SELF);
+    ASSERT(pass);
+    ulib_pass_create_output_pass(pass, SELF, false, SHRED);
 }
 
 CK_DLL_MFUN(outputpass_set_input_texture)
@@ -864,27 +843,13 @@ CK_DLL_MFUN(outputpass_set_sampler)
 // ComputePass
 // ============================================================================
 
-CK_DLL_CTOR(computepass_ctor)
-{
-    SG_Pass* pass = SG_CreatePass(SELF, SG_PassType_Compute);
-    ASSERT(pass->type == SG_COMPONENT_PASS);
-    ASSERT(pass->pass_type == SG_PassType_Compute);
-    OBJ_MEMBER_UINT(SELF, component_offset_id) = pass->id;
-
-    // the material is internal, ckobj=NULL so no need to refcount
-    SG_Material* mat          = chugl_createInternalMaterial(SG_MATERIAL_COMPUTE, NULL);
-    pass->compute_material_id = mat->id;
-
-    CQ_PushCommand_PassUpdate(pass);
-}
-
 CK_DLL_MFUN(computepass_set_shader)
 {
     SG_Pass* pass = GET_PASS(SELF);
     SG_Shader* shader
       = SG_GetShader(OBJ_MEMBER_UINT(GET_NEXT_OBJECT(ARGS), component_offset_id));
     SG_Material* mat = SG_GetMaterial(pass->compute_material_id);
-    chugl_materialSetShader(mat, shader);
+    ulib_material_set_shader(mat, shader);
 }
 
 CK_DLL_MFUN(computepass_set_uniform_float)
@@ -1028,48 +993,6 @@ CK_DLL_MFUN(computepass_set_uniform_int)
 // ============================================================================
 // BloomPass
 // ============================================================================
-
-CK_DLL_CTOR(bloompass_ctor)
-{
-    SG_Pass* pass                              = SG_CreatePass(SELF, SG_PassType_Bloom);
-    OBJ_MEMBER_UINT(SELF, component_offset_id) = pass->id;
-
-    SG_Shader* bloom_downsample_shader
-      = SG_GetShader(g_material_builtin_shaders.bloom_downsample_screen_shader_id);
-    SG_Shader* bloom_upsample_shader
-      = SG_GetShader(g_material_builtin_shaders.bloom_upsample_screen_shader_id);
-
-    // create default output render texture
-    SG_TextureDesc output_render_texture_desc = {};
-    output_render_texture_desc.usage          = WGPUTextureUsage_RenderAttachment
-                                       | WGPUTextureUsage_TextureBinding
-                                       | WGPUTextureUsage_StorageBinding;
-    output_render_texture_desc.format = WGPUTextureFormat_RGBA16Float;
-    SG_Texture* output_render_texture
-      = SG_CreateTexture(&output_render_texture_desc, NULL, SHRED, false);
-
-    SG_Material* bloom_downsample_mat
-      = chugl_createInternalMaterial(SG_MATERIAL_COMPUTE, bloom_downsample_shader);
-    SG_Material* bloom_upsample_mat
-      = chugl_createInternalMaterial(SG_MATERIAL_COMPUTE, bloom_upsample_shader);
-
-    // initialize uniforms for downsample mat
-    SG_Material::uniformFloat(bloom_downsample_mat, 2, 0.0); // threshold
-    CQ_PushCommand_MaterialSetUniform(bloom_downsample_mat, 2);
-
-    // initialize uniforms for upsample mat
-    SG_Material::uniformFloat(bloom_upsample_mat, 4, 0.85); // internal blend
-    CQ_PushCommand_MaterialSetUniform(bloom_upsample_mat, 4);
-    SG_Material::uniformFloat(bloom_upsample_mat, 5, 0.2); // final blend
-    CQ_PushCommand_MaterialSetUniform(bloom_upsample_mat, 5);
-
-    // update pass
-    pass->bloom_downsample_material_id = bloom_downsample_mat->id;
-    pass->bloom_upsample_material_id   = bloom_upsample_mat->id;
-    SG_Pass::bloomOutputRenderTexture(pass, output_render_texture);
-
-    CQ_PushCommand_PassUpdate(pass);
-}
 
 CK_DLL_MFUN(bloompass_set_input_render_texture)
 {

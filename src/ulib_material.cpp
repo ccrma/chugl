@@ -1159,7 +1159,7 @@ CK_DLL_CTOR(material_ctor_with_shader)
 
     CQ_PushCommand_MaterialCreate(material);
 
-    chugl_materialSetShader(material, shader);
+    ulib_material_set_shader(material, shader);
 }
 
 CK_DLL_MFUN(material_get_shader)
@@ -1169,7 +1169,7 @@ CK_DLL_MFUN(material_get_shader)
     RETURN->v_object      = shader ? shader->ckobj : NULL;
 }
 
-void chugl_materialSetShader(SG_Material* material, SG_Shader* shader)
+void ulib_material_set_shader(SG_Material* material, SG_Shader* shader)
 {
     SG_Material::shader(material, shader);
     CQ_PushCommand_MaterialUpdatePSO(material);
@@ -1180,7 +1180,7 @@ CK_DLL_MFUN(material_set_shader)
     Chuck_Object* shader  = GET_NEXT_OBJECT(ARGS);
     SG_Material* material = GET_MATERIAL(SELF);
 
-    chugl_materialSetShader(material, GET_SHADER(shader));
+    ulib_material_set_shader(material, GET_SHADER(shader));
 }
 
 CK_DLL_MFUN(material_get_cullmode)
@@ -1616,7 +1616,7 @@ static void ulib_material_init_uniforms_and_pso(SG_Material* material)
               = SG_GetShader(g_material_builtin_shaders.lines2d_shader_id);
             ASSERT(lines2d_shader);
 
-            chugl_materialSetShader(material, lines2d_shader);
+            ulib_material_set_shader(material, lines2d_shader);
 
             // set pso
             material->pso.primitive_topology = WGPUPrimitiveTopology_TriangleStrip;
@@ -1625,7 +1625,7 @@ static void ulib_material_init_uniforms_and_pso(SG_Material* material)
         case SG_MATERIAL_FLAT: {
             SG_Shader* flat_shader
               = SG_GetShader(g_material_builtin_shaders.flat_shader_id);
-            chugl_materialSetShader(material, flat_shader);
+            ulib_material_set_shader(material, flat_shader);
 
             // set uniform
             SG_Material::uniformVec4f(material, 0, glm::vec4(1.0f));
@@ -1643,7 +1643,7 @@ static void ulib_material_init_uniforms_and_pso(SG_Material* material)
             SG_Shader* shader = SG_GetShader(g_material_builtin_shaders.uv_shader_id);
             ASSERT(shader);
 
-            chugl_materialSetShader(material, shader);
+            ulib_material_set_shader(material, shader);
         } break;
         case SG_MATERIAL_NORMAL: {
             // init shader
@@ -1651,7 +1651,7 @@ static void ulib_material_init_uniforms_and_pso(SG_Material* material)
               = SG_GetShader(g_material_builtin_shaders.normal_shader_id);
             ASSERT(shader);
 
-            chugl_materialSetShader(material, shader);
+            ulib_material_set_shader(material, shader);
 
             SG_Material::uniformInt(material, 0, 1); // use_worldspace_normals
             CQ_PushCommand_MaterialSetUniform(material, 0);
@@ -1662,7 +1662,7 @@ static void ulib_material_init_uniforms_and_pso(SG_Material* material)
               = SG_GetShader(g_material_builtin_shaders.wireframe_shader_id);
             ASSERT(shader);
 
-            chugl_materialSetShader(material, shader);
+            ulib_material_set_shader(material, shader);
 
             SG_Material::uniformFloat(material, 0, 2.0); // default thickness
             CQ_PushCommand_MaterialSetUniform(material, 0);
@@ -1676,7 +1676,7 @@ static void ulib_material_init_uniforms_and_pso(SG_Material* material)
         case SG_MATERIAL_PHONG: {
             SG_Shader* shader
               = SG_GetShader(g_material_builtin_shaders.phong_shader_id);
-            chugl_materialSetShader(material, shader);
+            ulib_material_set_shader(material, shader);
 
             // init uniforms
             {
@@ -1712,7 +1712,7 @@ static void ulib_material_init_uniforms_and_pso(SG_Material* material)
             SG_Shader* shader = SG_GetShader(g_material_builtin_shaders.pbr_shader_id);
             ASSERT(shader);
 
-            chugl_materialSetShader(material, shader);
+            ulib_material_set_shader(material, shader);
 
             // init uniforms
             {
@@ -1749,7 +1749,7 @@ static void ulib_material_init_uniforms_and_pso(SG_Material* material)
               = SG_GetShader(g_material_builtin_shaders.skybox_shader_id);
             ASSERT(shader);
 
-            chugl_materialSetShader(material, shader);
+            ulib_material_set_shader(material, shader);
 
             // init uniforms
             SG_Material::setSampler(material, 0,

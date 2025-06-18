@@ -321,8 +321,6 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
         static t_CKINT texture_format_rgba16float = WGPUTextureFormat_RGBA16Float;
         static t_CKINT texture_format_rgba32float = WGPUTextureFormat_RGBA32Float;
         static t_CKINT texture_format_r32float    = WGPUTextureFormat_R32Float;
-        // static t_CKINT texture_format_depth24plusstencil8
-        //   = WGPUTextureFormat_Depth24PlusStencil8;
         SVAR("int", "Format_RGBA8Unorm", &texture_format_rgba8unorm);
         SVAR("int", "Format_RGBA16Float", &texture_format_rgba16float); // not
         // supported currently
@@ -608,6 +606,11 @@ void ulib_texture_createDefaults(CK_DL_API API)
                                     | WGPUTextureUsage_TextureBinding
                                     | WGPUTextureUsage_StorageBinding;
         render_texture_desc.format = WGPUTextureFormat_RGBA16Float;
+
+        // nocheckin
+        render_texture_desc.width  = 1920;
+        render_texture_desc.height = 1080;
+
         // set global
         g_builtin_textures.default_render_texture_id
           = SG_CreateTexture(&render_texture_desc, NULL, NULL, true)->id;
@@ -921,7 +924,6 @@ static const char* ulib_texture_wgpuTextureFormatToString(WGPUTextureFormat form
         case WGPUTextureFormat_RGBA16Float: return "RGBA16Float";
         case WGPUTextureFormat_RGBA32Float: return "RGBA32Float";
         case WGPUTextureFormat_R32Float: return "R32Float";
-        case WGPUTextureFormat_Depth24PlusStencil8: return "Depth24PlusStencil8";
         default: {
             ASSERT(false); // unknown
             return "";

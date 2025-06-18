@@ -1811,7 +1811,7 @@ CK_DLL_CTOR(gpoints_ctor)
     { // init material data
 
         SG_Shader* shader = SG_GetShader(g_material_builtin_shaders.points_shader_id);
-        chugl_materialSetShader(material, shader);
+        ulib_material_set_shader(material, shader);
 
         SG_Material::uniformVec4f(material, 0, glm::vec4(1.0f)); // global point color
         SG_Material::uniformFloat(material, 1, .05f);            // global point size

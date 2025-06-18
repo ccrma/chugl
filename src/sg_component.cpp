@@ -1597,7 +1597,7 @@ void SG_Material::shader(SG_Material* mat, SG_Shader* shader)
 
 bool SG_Pass::isConnected(SG_Pass* pass_a, SG_Pass* pass_b)
 {
-    while (pass_a) {
+    while (pass_a && pass_b) {
         if (pass_a == pass_b) return true;
         pass_a = SG_GetPass(pass_a->next_pass_id);
     }
@@ -1607,13 +1607,13 @@ bool SG_Pass::isConnected(SG_Pass* pass_a, SG_Pass* pass_b)
 
 bool SG_Pass::connect(SG_Pass* this_pass, SG_Pass* next_pass)
 {
-    if (!this_pass || !next_pass) return false;
-    if (this_pass->next_pass_id == next_pass->id) return true;
+    if (!this_pass) return false;
     if (isConnected(next_pass, this_pass)) return false;
 
     SG_AddRef(next_pass);
     SG_DecrementRef(this_pass->next_pass_id);
-    this_pass->next_pass_id = next_pass->id;
+    this_pass->next_pass_id = next_pass ? next_pass->id : 0;
+
     return true;
 }
 
@@ -1640,28 +1640,19 @@ void SG_Pass::camera(SG_Pass* pass, SG_Camera* cam)
     pass->camera_id = cam ? cam->id : 0;
 }
 
-void SG_Pass::resolveTarget(SG_Pass* pass, SG_Texture* tex)
+void SG_Pass::screenMaterial(SG_Pass* pass, SG_Material* mat)
+{
+    ASSERT(pass->pass_type == SG_PassType_Screen);
+    SG_AddRef(mat);
+    SG_DecrementRef(pass->screen_material_id);
+    pass->screen_material_id = mat->id;
+}
+
+void SG_Pass::colorTarget(SG_Pass* pass, SG_Texture* tex)
 {
     SG_AddRef(tex);
-    SG_DecrementRef(pass->resolve_target_id);
-    pass->resolve_target_id = tex ? tex->id : 0;
-}
-
-void SG_Pass::screenShader(SG_Pass* pass, SG_Material* material, SG_Shader* shader)
-{
-    SG_AddRef(shader);
-    SG_DecrementRef(pass->screen_shader_id);
-    pass->screen_shader_id = shader ? shader->id : 0;
-
-    // the material is internal, ckobj=NULL so no need to refcount
-    pass->screen_material_id = material ? material->id : 0;
-}
-
-void SG_Pass::screenTexture(SG_Pass* pass, SG_Texture* texture)
-{
-    SG_AddRef(texture);
-    SG_DecrementRef(pass->screen_texture_id);
-    pass->screen_texture_id = texture ? texture->id : 0;
+    SG_DecrementRef(pass->color_target_id);
+    pass->color_target_id = tex ? tex->id : 0;
 }
 
 void SG_Pass::bloomOutputRenderTexture(SG_Pass* pass, SG_Texture* tex)
