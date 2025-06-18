@@ -243,6 +243,17 @@ static std::unordered_map<std::string, std::string> shader_table = {
             // a triangle which covers the screen
             output.v_uv = vec2f(f32((vertexIndex << 1u) & 2u), f32(vertexIndex & 2u));
             output.position = vec4f(output.v_uv * 2.0 - 1.0, 0.0, 1.0);
+            
+            // if (vertexIndex == 0u) {
+            //     output.position = vec4f(-1.0, -1.0, 0.0, 1.0);
+            //     output.v_uv = vec2f(0.0, 0.0);
+            // } else if (vertexIndex == 1u) {
+            //     output.position = vec4f(3.0, -1.0, 0.0, 1.0);
+            //     output.v_uv = vec2f(2.0, 0.0);
+            // } else {
+            //     output.position = vec4f(-1.0, 3.0, 0.0, 1.0);
+            //     output.v_uv = vec2f(0.0, 2.0);
+            // }
 
             // flip y (webgpu render textures are flipped)
             output.v_uv.y = 1.0 - output.v_uv.y;
@@ -1285,9 +1296,7 @@ const char* output_pass_shader_string = R"glsl(
         case 3: { // cineon
             let x: vec3<f32> = max(vec3<f32>(0.), color - 0.004);
             color = x * (6.2 * x + 0.5) / (x * (6.2 * x + 1.7) + 0.06);
-            // color = pow(color, vec3<f32>(u_Gamma));
-            color = pow(color, vec3<f32>(2.2));  // invert gamma correction (assumes final output to srgb texture)
-            // Note: will need to change this if we want to output to linear texture and do gamma correction ourselves
+            color = pow(color, vec3<f32>(u_Gamma)); // invert gamma correction (assumes final output to srgb texture)
         } 
         case 4: { // aces
             var ACES_INPUT_MAT: mat3x3<f32> = mat3_from_rows(vec3<f32>(0.59719, 0.35458, 0.04823), vec3<f32>(0.076, 0.90834, 0.01566), vec3<f32>(0.0284, 0.13383, 0.83777));
@@ -1309,15 +1318,10 @@ const char* output_pass_shader_string = R"glsl(
         }
 
         // gamma correction
-        // 9/3/2024: assuming swapchain texture is always in srgb format so we DON'T gamma correct,
-        // let the final canvas/backbuffer gamma correct for us
         color = pow(color, vec3<f32>(1. / u_Gamma));
-
 
         return vec4<f32>(color, 1.0); // how does alpha work?
         // return vec4<f32>(color, clamp(hdrColor.a, 0.0, 1.0));
-
-        // return textureSample(texture, texture_sampler, in.v_uv); // passthrough
     } 
 
 

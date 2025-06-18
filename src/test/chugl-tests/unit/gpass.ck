@@ -24,3 +24,6 @@ T.assert(!rpass.autoClearColor(), "auto clear color is false");
 
 T.assert(GG.renderPass().next() == GG.hudPass(), "default render pass next is hud pass");
 T.assert(GG.hudPass().next() == GG.outputPass(), "default hud pass next is output pass");
+
+OutputPass opass;
+T.assert(T.feq(opass.gamma(), 2.2), "default gamma 2.2");

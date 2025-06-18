@@ -374,35 +374,28 @@ bool GraphicsContext::init(GraphicsContext* context, GLFWwindow* window)
     if (!context->queue) return false;
 
     // determine swapchain format
-    // note: we always pick the -srgb version of whatever is preferred
+    // note: we try to always pick an 8unorm format
     {
         WGPUSurfaceCapabilities surface_capabilities;
         wgpuSurfaceGetCapabilities(context->surface, adapter, &surface_capabilities);
-        ASSERT(surface_capabilities.formatCount > 0);
-        WGPUTextureFormat preferred_format = surface_capabilities.formats[0];
-        switch (preferred_format) {
-            case WGPUTextureFormat_BGRA8Unorm: {
-                context->surface_format = WGPUTextureFormat_BGRA8UnormSrgb;
-            } break;
-            case WGPUTextureFormat_RGBA8Unorm: {
-                context->surface_format = WGPUTextureFormat_RGBA8UnormSrgb;
-            } break;
-            // srgb formats do nothing
-            case WGPUTextureFormat_BGRA8UnormSrgb:
-            case WGPUTextureFormat_RGBA8UnormSrgb: {
-                context->surface_format = preferred_format;
-            } break;
-            // fail otherwise
-            default: {
-                log_error("Unsupported swap chain format: %s",
-                          G_Util::textureFormatToString(preferred_format));
-                ASSERT(false);
-                return false;
-            } break;
+        context->surface_format = WGPUTextureFormat_Undefined;
+        for (int i = 0; i < surface_capabilities.formatCount; i++) {
+            WGPUTextureFormat format = surface_capabilities.formats[i];
+            if (format == WGPUTextureFormat_BGRA8Unorm
+                || format == WGPUTextureFormat_RGBA8Unorm) {
+                context->surface_format = format;
+                break;
+            }
         }
-        log_debug("Preferred swap chain format: %s",
-                  G_Util::textureFormatToString(context->surface_format));
+        // error handle if we didn't find a unorm non-srgb format
+        if (context->surface_format == WGPUTextureFormat_Undefined) {
+            log_fatal("Surface does not accept any supported texture formats.");
+            ASSERT(false);
+            return false;
+        }
     }
+    log_info("Surface texture format: %s",
+             G_Util::textureFormatToString(context->surface_format));
 
     int framebuffer_width = 1, framebuffer_height = 1;
     glfwGetFramebufferSize(window, &framebuffer_width, &framebuffer_height);

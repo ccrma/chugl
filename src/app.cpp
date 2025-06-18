@@ -746,6 +746,11 @@ struct App {
                     }
                 } break;
                 case SG_PassType_Screen: { // aka OutputPass
+                    R_Material* material
+                      = Component_GetMaterial(pass->sg_pass.screen_material_id);
+                    bool missing_screen_shader = (material->pso.sg_shader_id == 0);
+                    if (missing_screen_shader) break;
+
                     // if user supplied a render texture, render to that instead
                     // otherwise default to backbuffer
                     R_Texture* r_tex
@@ -766,9 +771,6 @@ struct App {
                       WGPUStoreOp_Store);
                     G_DrawCallListID dc_list
                       = app->rendergraph.renderPassAddDrawCallList();
-
-                    R_Material* material
-                      = Component_GetMaterial(pass->sg_pass.screen_material_id);
 
                     const int screen_pass_binding_location = 0;
                     // create draw call

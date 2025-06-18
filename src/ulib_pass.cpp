@@ -191,13 +191,13 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
              "colorOutput");
         DOC_FUNC("Get the target texture to render to.");
 
-        MFUN(renderpass_set_color_target_clear_on_load, "void", "autoClearColor");
+        MFUN(renderpass_set_color_target_clear_on_load, "void", "clear");
         ARG("int", "clear");
         DOC_FUNC(
           "Set whether the framebuffer's color target should be cleared each "
           "frame. Default true.");
 
-        MFUN(renderpass_get_color_target_clear_on_load, "int", "autoClearColor");
+        MFUN(renderpass_get_color_target_clear_on_load, "int", "clear");
         DOC_FUNC("Get whether the framebuffer's color target is cleared each frame");
 
         END_CLASS();
@@ -296,11 +296,15 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
         MFUN(outputpass_get_tonemap, "int", "tonemap");
         DOC_FUNC("Get the tonemapping algorithm applied to the input texture");
 
-        // Note: removing gamma correction, swapchain output view is already srgb
-        // MFUN(outputpass_set_gamma, "void", "gamma");
-        // ARG("float", "gamma");
+        MFUN(outputpass_set_gamma, "void", "gamma");
+        ARG("float", "gamma");
+        DOC_FUNC(
+          "Set the value used for gamma correction at the end of the output pass. "
+          "Defaults to 2.2, which approximates the srgb curve for most modern "
+          "displays");
 
-        // MFUN(outputpass_get_gamma, "float", "gamma");
+        MFUN(outputpass_get_gamma, "float", "gamma");
+        DOC_FUNC("Get the value used for gamma correction. Defaults to 2.2");
 
         MFUN(outputpass_set_exposure, "void", "exposure");
         ARG("float", "exposure");
@@ -726,10 +730,8 @@ SG_Pass* ulib_pass_create_output_pass(SG_Pass* pass, Chuck_Object* ckobj, bool a
     // set output_pass uniforms
     SG_Material::setTexture(mat, 0, SG_GetTexture(g_builtin_textures.white_pixel_id));
     SG_Material::setSampler(mat, 1, SG_SAMPLER_DEFAULT); // sampler
-    // locking gamma to 1.0 (no gamma correction)
-    // because we enforce swapchain output view to be srgb, which applies gamma for us.
-    SG_Material::uniformFloat(mat, 2, 1.0); // gamma
-    SG_Material::uniformFloat(mat, 3, 1.0); // exposure
+    SG_Material::uniformFloat(mat, 2, 2.2);              // gamma
+    SG_Material::uniformFloat(mat, 3, 1.0);              // exposure
     // SG_Material::uniformInt(mat, 4, 4); // TONEMAP_ACES
     SG_Material::uniformInt(mat, 4, 5); // TONEMAP_UNCHARTED
     ulib_material_cq_update_all_uniforms(mat);
