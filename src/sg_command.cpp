@@ -208,6 +208,13 @@ void CQ_PushCommand_SetFixedTimestep(int fps)
     END_COMMAND();
 }
 
+void CQ_PushCommand_SetChuckVMInfo(int srate)
+{
+    BEGIN_COMMAND(SG_Command_SetChuckVMInfo, SG_COMMAND_SET_CHUCK_VM_INFO);
+    command->srate = srate;
+    END_COMMAND();
+}
+
 void CQ_PushCommand_WindowClose()
 {
     BEGIN_COMMAND(SG_Command_WindowClose, SG_COMMAND_WINDOW_CLOSE);

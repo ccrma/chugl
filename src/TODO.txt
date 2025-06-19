@@ -31,8 +31,16 @@ TODO
 - add shader debug info to release build (perhaps as an option in ShaderDef struct field)
 - group all the commands of the frame together, submit all at once at end of RenderGraph 
 
+- ==optimize== for G_DrawCall sortkey, use the material AND shader index into arrays,
+store 16 bits each (assumes we won't ever have more than 16k live materials and shaders),
+lets us sort by shaders as well to minimize pipeline switches 
+
 
 - there is a slow leak somewhere (500kb / min)
+  - first: update to newer version of wgpu that fixes texture view leak
+    - https://github.com/gfx-rs/wgpu/releases/tag/wgpu-v23.0.1
+    - hopefully this fixes
+    - what's the point of Rust if it still leaks...
   - check if this happens with just chuck (no chugl gg.nextFrame())
   - check if happens with just empty gameloop
   - check if happens with just an event being fired every frame, but no chugl

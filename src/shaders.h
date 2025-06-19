@@ -56,13 +56,19 @@ struct FrameUniforms {
     glm::mat4x4 view;                                   // at byte offset 64
     glm::mat4x4 projection_view_inverse_no_translation; // at byte offset 128
     glm::vec3 camera_pos;                               // at byte offset 192
-    float time;                                         // at byte offset 204
-    // TODO move ambient light to lighting uniforms
+    float _pad0;
     glm::vec3 ambient_light;    // at byte offset 208
     int32_t num_lights;         // at byte offset 220
     glm::vec4 background_color; // at byte offset 224
 
-    float _pad[176]; // padding to reach webgpu minimum buffer size requirement
+    glm::ivec3 resolution;  // at byte offset 240
+    float time;             // at byte offset 252
+    float delta_time;       // at byte offset 256
+    int32_t frame_count;    // at byte offset 260
+    glm::vec2 mouse;        // at byte offset 264
+    glm::ivec2 mouse_click; // at byte offset 272
+    float sample_rate;      // at byte offset 280
+    float _pad1;
 };
 
 struct LightUniforms {
@@ -108,15 +114,25 @@ static std::unordered_map<std::string, std::string> shader_table = {
         R"glsl(
 
         struct FrameUniforms {
+            // scene params (only set in ScenePass, otherwise 0)
             projection: mat4x4f,
             view: mat4x4f,
             projection_view_inverse_no_translation: mat4x4f,
             camera_pos: vec3f,
-            time: f32,
             ambient_light: vec3f,
             num_lights: i32,
             background_color: vec4f,
+
+            // general params (include in all passes except ComputePass)
+            resolution: vec3i,      // window viewport resolution 
+            time: f32,              // time in seconds since the graphics window was opened
+            delta_time: f32,        // time since last frame (in seconds)
+            frame_count: i32,       // frames since window was opened
+            mouse: vec2f,           // normalized mouse coords (range 0-1, (0,0) is bottom left)
+            mouse_click: vec2i,     // mouse click state
+            sample_rate: f32        // chuck VM sound sample rate (e.g. 44100)
         };
+                
 
         @group(0) @binding(0) var<uniform> u_frame: FrameUniforms;
 
@@ -1239,6 +1255,7 @@ const char* default_postprocess_shader_string = R"glsl(
 
 
 const char* output_pass_shader_string = R"glsl(
+    #include FRAME_UNIFORMS
     #include SCREEN_PASS_VERTEX_SHADER
 
     const TONEMAP_NONE = 0;
@@ -1248,11 +1265,11 @@ const char* output_pass_shader_string = R"glsl(
     const TONEMAP_ACES = 4;
     const TONEMAP_UNCHARTED = 5;
 
-    @group(0) @binding(0) var texture: texture_2d<f32>;
-    @group(0) @binding(1) var texture_sampler: sampler;
-    @group(0) @binding(2) var<uniform> u_Gamma: f32;
-    @group(0) @binding(3) var<uniform> u_Exposure: f32;
-    @group(0) @binding(4) var<uniform> u_Tonemap: i32;
+    @group(1) @binding(0) var texture: texture_2d<f32>;
+    @group(1) @binding(1) var texture_sampler: sampler;
+    @group(1) @binding(2) var<uniform> u_Gamma: f32;
+    @group(1) @binding(3) var<uniform> u_Exposure: f32;
+    @group(1) @binding(4) var<uniform> u_Tonemap: i32;
 
     // Helpers ==================================================================
     fn Uncharted2Tonemap(x: vec3<f32>) -> vec3<f32> {
@@ -1281,6 +1298,7 @@ const char* output_pass_shader_string = R"glsl(
     // main =====================================================================
     @fragment 
     fn fs_main(in : VertexOutput) -> @location(0) vec4f {
+        let UNUSED = u_frame;
         let hdrColor: vec4<f32> = textureSample(texture, texture_sampler, in.v_uv);
         var color: vec3<f32> = hdrColor.rgb;
         if (u_Tonemap != TONEMAP_NONE) {
@@ -1915,24 +1933,40 @@ const char* b2_solid_polygon_shader_string = R"glsl(
 
 std::string Shaders_genSource(const char* src)
 {
+    size_t include_len = strlen("#include ");
     std::string source(src);
-    size_t pos = source.find("#include");
-    while (pos != std::string::npos) {
-        size_t start            = source.find_first_of(' ', pos);
-        size_t end              = source.find_first_of('\n', start + 1);
-        std::string includeName = source.substr(start + 1, end - start - 1);
-        // strip \r
-        includeName.erase(std::remove(includeName.begin(), includeName.end(), '\r'),
-                          includeName.end());
-        // strip \n
-        includeName.erase(std::remove(includeName.begin(), includeName.end(), '\n'),
-                          includeName.end());
-        // strip ;
-        includeName.erase(std::remove(includeName.begin(), includeName.end(), ';'),
-                          includeName.end());
-        std::string includeSource = shader_table[includeName];
-        source.replace(pos, end - pos + 1, includeSource);
-        pos = source.find("#include");
+
+    size_t pos = 0;
+    while (pos <= source.size() - include_len) {
+        switch (source[pos]) {
+            case '/': {
+                ++pos;
+                if (source[pos] == '/') {
+                    // consume line comment
+                    pos = source.find('\n', pos);
+                } else if (source[pos] == '*') {
+                    // consume block comment
+                    pos = source.find("*/", pos);
+                }
+            } break;
+            case '#': {
+                if (strncmp(source.c_str() + pos, "#include ", include_len) == 0) {
+                    size_t start = source.find_first_not_of(WHITESPACE_CHARS ";",
+                                                            pos + include_len);
+                    size_t end   = source.find_first_of(WHITESPACE_CHARS ";", start);
+
+                    std::string include_name = source.substr(start, end - start);
+                    if (shader_table.count(include_name)) {
+                        source.replace(pos, end - pos, shader_table[include_name]);
+                    } else {
+                        pos = end;
+                    }
+                } else {
+                    ++pos;
+                }
+            } break;
+            default: ++pos;
+        }
     }
 
     return source;

@@ -167,9 +167,8 @@ static void on_device_error(WGPUErrorType type, char const* message,
                             void* /* pUserData */)
 {
     log_error("Uncaptured device error: type %d (%s)", type, message);
-#ifdef CHUGL_DEBUG
-    exit(EXIT_FAILURE);
-#endif
+    exit(EXIT_FAILURE); // intentionally crash here, even in release mode, so we can see
+                        // shader compilation errors
 };
 
 #ifdef WGPU_OLD_VERSION
@@ -358,7 +357,7 @@ bool GraphicsContext::init(GraphicsContext* context, GLFWwindow* window)
     log_trace("device created");
 
     { // set debug callbacks
-#if defined(CHUGL_DEBUG) && defined(WEBGPU_BACKEND_WGPU)
+#if defined(WEBGPU_BACKEND_WGPU)
         wgpuSetLogLevel(WGPULogLevel_Warn);
         wgpuSetLogCallback(
           [](WGPULogLevel level, char const* message, void* /* userdata */) {
@@ -680,6 +679,13 @@ WGPUMultisampleState G_createMultisampleState(u8 sample_count)
     return ms;
 }
 
+static void G_ShaderCompilationCallback(WGPUCompilationInfoRequestStatus status,
+                                        WGPUCompilationInfo const* compilationInfo,
+                                        void* userdata)
+{
+    return;
+}
+
 WGPUShaderModule G_createShaderModule(GraphicsContext* gctx, const char* code,
                                       const char* label)
 {
@@ -696,9 +702,7 @@ WGPUShaderModule G_createShaderModule(GraphicsContext* gctx, const char* code,
 
     // NOT IMPLEMENTED IN CURRENT VERSION OF WGPU
     // #ifdef CHUGL_DEBUG
-    //     wgpuShaderModuleGetCompilationInfo(module,
-    //     _G_compilationInfoCallback,
-    //                                        NULL);
+    // wgpuShaderModuleGetCompilationInfo(module, G_ShaderCompilationCallback, NULL);
     // #endif
 
     return module;

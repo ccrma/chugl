@@ -74,6 +74,7 @@ enum SG_CommandType : u32 {
 
     // chugl config
     SG_COMMAND_SET_FIXED_TIMESTEP,
+    SG_COMMAND_SET_CHUCK_VM_INFO,
 
     // window
     SG_COMMAND_WINDOW_CLOSE,
@@ -189,6 +190,10 @@ struct SG_Command {
 
 struct SG_Command_SetFixedTimestep : public SG_Command {
     int fps;
+};
+
+struct SG_Command_SetChuckVMInfo : public SG_Command {
+    int srate;
 };
 
 // Window Commands --------------------------------------------------------

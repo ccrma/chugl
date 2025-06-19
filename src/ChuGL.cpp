@@ -827,11 +827,13 @@ CK_DLL_QUERY(ChuGL)
         // passRoot()
         SG_Pass* root_pass     = ulib_pass_create(SG_PassType_Root, NULL, true, NULL);
         gg_config.root_pass_id = root_pass->id;
+        ulib_component_set_name(root_pass, "ChuGL RootPass");
 
         // renderPass for main scene
         SG_Pass* render_pass = ulib_pass_create(SG_PassType_Scene, NULL, false, NULL);
         gg_config.default_render_pass_id = render_pass->id;
         SG_Pass::scene(render_pass, scene);
+        ulib_component_set_name(render_pass, "ChuGL Default ScenePass");
 
         // connect root to renderPass
         SG_Pass::connect(root_pass, render_pass);
@@ -846,6 +848,7 @@ CK_DLL_QUERY(ChuGL)
         SG_Pass* output_pass
           = ulib_pass_create_output_pass(NULL, output_pass_ckobj, false, NULL);
         gg_config.default_output_pass_id = output_pass->id;
+        ulib_component_set_name(output_pass, "ChuGL Default OutputPass");
 
         // connect renderPass to outputPass
         SG_Pass::connect(render_pass, output_pass);
@@ -864,6 +867,7 @@ CK_DLL_QUERY(ChuGL)
     { // default config
         // default to 60fps
         CQ_PushCommand_SetFixedTimestep(gg_config.fixed_timestep_fps);
+        CQ_PushCommand_SetChuckVMInfo(g_chuglAPI->vm->srate(g_chuglVM));
     }
 
     // wasn't that a breeze?

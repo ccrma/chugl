@@ -234,7 +234,7 @@ struct App;
 
 static void _R_HandleCommand(App* app, SG_Command* command);
 
-static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
+static void _R_RenderScene(App* app, R_Scene* scene, R_Pass* pass, R_Camera* camera,
                            G_DrawCallListID dc_list);
 
 static void _R_glfwErrorCallback(int error, const char* description)
@@ -250,10 +250,13 @@ struct App {
     GraphicsContext gctx; // pass as pointer?
     int window_fb_width;
     int window_fb_height;
+    int window_width;
+    int window_height;
 
     // Chuck Context
     Chuck_VM* ckvm;
     CK_DL_API ckapi;
+    int ck_srate;
 
     // frame metrics
     u64 fc;
@@ -264,6 +267,10 @@ struct App {
     // timer for fixed timestep
     nanotime_step_data stepper;
     int stepper_fps = 60; // default to 60fps
+
+    // mouse state
+    double mouse_x = 0, mouse_y = 0;
+    bool mouse_left = 0, mouse_right = 0;
 
     // imgui
     bool imgui_disabled = false;
@@ -280,8 +287,6 @@ struct App {
 
     // render graph
     SG_ID root_pass_id;
-    hashmap*
-      frame_uniforms_map; // map from <pipeline_id, camera_id, scene_id> to bindgroup
     G_Graph rendergraph;
 
     // ============================================================================
@@ -693,24 +698,31 @@ struct App {
             }
         }
 
+        // get fresh window info
+        f32 aspect = (app->window_fb_width > 0 && app->window_fb_height > 0) ?
+                       (f32)app->window_fb_width / (f32)app->window_fb_height :
+                       1.0f;
+
         // begin walking render graph
         R_Pass* root_pass = Component_GetPass(app->root_pass_id);
         R_Pass* pass      = Component_GetPass(root_pass->sg_pass.next_pass_id);
 
-        // slowly integrating graph...
         while (pass) {
+            FrameUniforms frameUniforms = {};
+            R_Scene* scene              = NULL;
+            R_Camera* camera            = NULL;
+
             switch (pass->sg_pass.pass_type) {
                 case SG_PassType_Render: break;
                 case SG_PassType_Scene: {
                     // get the target scene
-                    R_Scene* scene = Component_GetScene(pass->sg_pass.scene_id);
+                    scene = Component_GetScene(pass->sg_pass.scene_id);
                     if (!scene) break;
 
                     // defaults to scene main camera
-                    R_Camera* camera
-                      = pass->sg_pass.camera_id != 0 ?
-                          Component_GetCamera(pass->sg_pass.camera_id) :
-                          Component_GetCamera(scene->sg_scene_desc.main_camera_id);
+                    camera = pass->sg_pass.camera_id != 0 ?
+                               Component_GetCamera(pass->sg_pass.camera_id) :
+                               Component_GetCamera(scene->sg_scene_desc.main_camera_id);
                     ASSERT(camera->scene_id == scene->id);
 
                     // defaults to swapchain current view
@@ -742,13 +754,15 @@ struct App {
 
                         G_DrawCallListID dc_list
                           = app->rendergraph.renderPassAddDrawCallList();
-                        _R_RenderScene(app, scene, camera, dc_list);
+                        _R_RenderScene(app, scene, pass, camera, dc_list);
                     }
                 } break;
-                case SG_PassType_Screen: { // aka OutputPass
+                case SG_PassType_Screen: {
                     R_Material* material
                       = Component_GetMaterial(pass->sg_pass.screen_material_id);
-                    bool missing_screen_shader = (material->pso.sg_shader_id == 0);
+                    R_Shader* screen_shader
+                      = Component_GetShader(material->pso.sg_shader_id);
+                    bool missing_screen_shader = (screen_shader == NULL);
                     if (missing_screen_shader) break;
 
                     // if user supplied a render texture, render to that instead
@@ -757,7 +771,7 @@ struct App {
                       = Component_GetTexture(pass->sg_pass.color_target_id);
 
                     // set G_Pass
-                    app->rendergraph.addRenderPass("Output Pass");
+                    app->rendergraph.addRenderPass(pass->sg_pass.name);
                     if (r_tex) {
                         app->rendergraph.renderPassColorTarget(r_tex->gpu_texture, 0);
                     } else {
@@ -772,12 +786,14 @@ struct App {
                     G_DrawCallListID dc_list
                       = app->rendergraph.renderPassAddDrawCallList();
 
-                    const int screen_pass_binding_location = 0;
+                    const int screen_pass_binding_location = 1;
                     // create draw call
                     if (material) {
                         G_DrawCall* d = app->rendergraph.addDraw(dc_list);
-                        d->sort_key   = G_SortKey::create(false, G_RenderingLayer_World,
-                                                          material->id, 0, 1);
+                        R_Pass::bindFrameUniforms(pass, d, &app->rendergraph,
+                                                  screen_shader, NULL);
+                        d->sort_key = G_SortKey::create(false, G_RenderingLayer_World,
+                                                        material->id, 0, 1);
                         d->vertex_count   = 3;
                         d->instance_count = 1;
                         R_Material::createBindGroupEntries(
@@ -963,6 +979,38 @@ struct App {
                 default: ASSERT(false);
             }
 
+            { // write per-frame uniforms
+
+                if (camera) { // camera uniforms
+                    frameUniforms.projection
+                      = R_Camera::projectionMatrix(camera, aspect);
+                    frameUniforms.view = R_Camera::viewMatrix(camera);
+                    frameUniforms.projection_view_inverse_no_translation
+                      = glm::inverse(frameUniforms.projection
+                                     * glm::mat4(glm::mat3(frameUniforms.view)));
+                    frameUniforms.camera_pos = camera->_pos;
+                }
+                if (scene) { // scene uniforms
+                    frameUniforms.ambient_light    = scene->sg_scene_desc.ambient_light;
+                    frameUniforms.num_lights       = R_Scene::numLights(scene);
+                    frameUniforms.background_color = scene->sg_scene_desc.bg_color;
+                }
+
+                frameUniforms.time       = app->lastTime;
+                frameUniforms.delta_time = app->dt;
+                frameUniforms.resolution
+                  = glm::ivec3(app->window_fb_width, app->window_fb_height, 1);
+                frameUniforms.frame_count = app->fc;
+                frameUniforms.sample_rate = app->ck_srate;
+                frameUniforms.mouse
+                  = glm::vec2(app->mouse_x / app->window_width,
+                              1.0 - app->mouse_y / app->window_height);
+                frameUniforms.mouse_click
+                  = glm::ivec2(app->mouse_left ? 1 : 0, app->mouse_right ? 1 : 0);
+                wgpuQueueWriteBuffer(app->gctx.queue, pass->frame_uniform_buffer, 0,
+                                     &frameUniforms, sizeof(frameUniforms));
+            }
+
             pass = Component_GetPass(pass->sg_pass.next_pass_id);
         }
 
@@ -1080,9 +1128,8 @@ struct App {
         GraphicsContext::resize(&app->gctx, width, height);
 
         // update size stats
-        int window_width, window_height;
-        glfwGetWindowSize(window, &window_width, &window_height);
-        CHUGL_Window_Size(window_width, window_height, width, height);
+        glfwGetWindowSize(window, &app->window_width, &app->window_height);
+        CHUGL_Window_Size(app->window_width, app->window_height, width, height);
         // broadcast to chuck
         Event_Broadcast(CHUGL_EventType::WINDOW_RESIZE, app->ckapi, app->ckvm);
     }
@@ -1101,9 +1148,11 @@ struct App {
         // update chugl state
         switch (button) {
             case GLFW_MOUSE_BUTTON_LEFT:
+                app->mouse_left = (action == GLFW_PRESS);
                 CHUGL_Mouse_LeftButton(action == GLFW_PRESS);
                 break;
             case GLFW_MOUSE_BUTTON_RIGHT:
+                app->mouse_right = (action == GLFW_PRESS);
                 CHUGL_Mouse_RightButton(action == GLFW_PRESS);
                 break;
         }
@@ -1127,6 +1176,8 @@ struct App {
 
         App* app = (App*)glfwGetWindowUserPointer(window);
         UNUSED_VAR(app);
+        app->mouse_x = xpos;
+        app->mouse_y = ypos;
 
         CHUGL_Mouse_Position(xpos, ypos);
     }
@@ -1139,43 +1190,11 @@ struct SceneDrawCall {
 };
 
 // move this into R_Scene, call build drawcall struct?
-static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
+static void _R_RenderScene(App* app, R_Scene* scene, R_Pass* pass, R_Camera* camera,
                            G_DrawCallListID dc_list)
 {
     scene->update(&app->gctx, app->fc, &app->frameArena);
     ASSERT(scene->last_fc_updated == app->fc);
-
-    // update camera
-    i32 width, height;
-    glfwGetWindowSize(app->window, &width, &height);
-    f32 aspect = (width > 0 && height > 0) ? (f32)width / (f32)height : 1.0f;
-
-    // write per-frame uniforms
-    // TODO consider moving per-frame uniforms to R_Pass struct
-    f32 time                    = (f32)glfwGetTime();
-    FrameUniforms frameUniforms = {};
-    frameUniforms.projection    = R_Camera::projectionMatrix(camera, aspect);
-    frameUniforms.view          = R_Camera::viewMatrix(camera);
-    // remove translation component from view matrix
-    // so that skybox is always centered around camera
-    frameUniforms.projection_view_inverse_no_translation = glm::inverse(
-      frameUniforms.projection * glm::mat4(glm::mat3(frameUniforms.view)));
-
-    frameUniforms.camera_pos       = camera->_pos;
-    frameUniforms.time             = time;
-    frameUniforms.ambient_light    = scene->sg_scene_desc.ambient_light;
-    frameUniforms.num_lights       = R_Scene::numLights(scene);
-    frameUniforms.background_color = scene->sg_scene_desc.bg_color;
-
-    // update frame-level uniforms (storing on camera because same scene can be
-    // rendered from multiple camera angles) every camera belongs to a single scene,
-    // but a scene can have multiple cameras
-    bool frame_uniforms_recreated = GPU_Buffer::write(
-      &app->gctx, &camera->frame_uniform_buffer, WGPUBufferUsage_Uniform,
-      &frameUniforms, sizeof(frameUniforms));
-    camera->frame_uniform_buffer_fc = app->fc;
-    ASSERT(!frame_uniforms_recreated);
-    UNUSED_VAR(frame_uniforms_recreated);
 
     // form draw call list and sort
     size_t hashmap_idx_DONT_USE = 0;
@@ -1197,8 +1216,9 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
 
         // add to draw call list
         G_DrawCall* d = app->rendergraph.addDraw(dc_list);
-        float depth   = 0.0; // TODO calculate depth for transparent items
-        d->sort_key          // TODO add transparency here
+
+        float depth = 0.0; // TODO calculate depth for transparent items
+        d->sort_key        // TODO add transparency here
           = G_SortKey::create(false, G_RenderingLayer_World, material->id, depth,
                               camera->params.far_plane);
 
@@ -1227,26 +1247,8 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
         );
 
         { // set bindgroups
-            // camera frame uniform buffer needs to already be updated
-            ASSERT(camera->frame_uniform_buffer_fc == app->fc);
-
-            { // set frame uniforms
-                app->rendergraph.bindBuffer(d, PER_FRAME_GROUP, 0,
-                                            camera->frame_uniform_buffer.buf, 0,
-                                            camera->frame_uniform_buffer.size);
-                if (shader->includes.lit)
-                    app->rendergraph.bindBuffer(d, PER_FRAME_GROUP, 1,
-                                                scene->light_info_buffer.buf, 0,
-                                                MAX(scene->light_info_buffer.size, 1));
-
-                if (shader->includes.uses_env_map) {
-                    R_Texture* envmap
-                      = Component_GetTexture(scene->sg_scene_desc.env_map_id);
-                    ASSERT(envmap && envmap->gpu_texture)
-                    app->rendergraph.bindTexture(d, PER_FRAME_GROUP, 2,
-                                                 { envmap->gpu_texture, 0, 1 });
-                }
-            }
+            // set frame uniforms
+            R_Pass::bindFrameUniforms(pass, d, &app->rendergraph, shader, scene);
 
             // set material uniforms
             // ==optimize== can sort/cache material bindgroupentries per frame
@@ -1294,25 +1296,7 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Camera* camera,
 
         R_Shader* skybox_shader
           = Component_GetShader(skybox_material->pso.sg_shader_id);
-        { // bind @group(0) copied from earlier in function
-            app->rendergraph.bindBuffer(d, PER_FRAME_GROUP, 0,
-                                        camera->frame_uniform_buffer.buf, 0,
-                                        camera->frame_uniform_buffer.size);
-            if (skybox_shader->includes.lit)
-                app->rendergraph.bindBuffer(d, PER_FRAME_GROUP, 1,
-                                            scene->light_info_buffer.buf, 0,
-                                            MAX(scene->light_info_buffer.size, 1));
-
-            if (skybox_shader->includes.uses_env_map) {
-                R_Texture* envmap
-                  = Component_GetTexture(scene->sg_scene_desc.env_map_id);
-                ASSERT(envmap && envmap->gpu_texture)
-
-                app->rendergraph.bindTexture(d, PER_FRAME_GROUP, 2,
-                                             { envmap->gpu_texture, 0, 1 });
-            }
-        }
-
+        R_Pass::bindFrameUniforms(pass, d, &app->rendergraph, skybox_shader, scene);
         R_Material::createBindGroupEntries(skybox_material, PER_MATERIAL_GROUP,
                                            &app->rendergraph, d, &app->gctx);
     }
@@ -1363,6 +1347,10 @@ static void _R_HandleCommand(App* app, SG_Command* command)
                                    (u64)(NANOTIME_NSEC_PER_SEC / app->stepper_fps),
                                    nanotime_now_max(), nanotime_now, nanotime_sleep);
             }
+        } break;
+        case SG_COMMAND_SET_CHUCK_VM_INFO: {
+            SG_Command_SetChuckVMInfo* cmd = (SG_Command_SetChuckVMInfo*)command;
+            app->ck_srate                  = cmd->srate;
         } break;
         case SG_COMMAND_WINDOW_CLOSE: {
             glfwSetWindowShouldClose(app->window, GLFW_TRUE);
@@ -1769,7 +1757,7 @@ static void _R_HandleCommand(App* app, SG_Command* command)
         case SG_COMMAND_PASS_CREATE: {
             ASSERT(false);
             SG_Command_PassCreate* cmd = (SG_Command_PassCreate*)command;
-            Component_CreatePass(cmd->pass_id);
+            Component_CreatePass(cmd->pass_id, app->gctx.device);
             if (cmd->pass_type == SG_PassType_Root) {
                 app->root_pass_id = cmd->pass_id;
             }
@@ -1778,7 +1766,7 @@ static void _R_HandleCommand(App* app, SG_Command* command)
             SG_Command_PassUpdate* cmd = (SG_Command_PassUpdate*)command;
             R_Pass* pass               = Component_GetPass(cmd->pass.id);
 
-            if (!pass) pass = Component_CreatePass(cmd->pass.id);
+            if (!pass) pass = Component_CreatePass(cmd->pass.id, app->gctx.device);
 
             pass->sg_pass = cmd->pass; // copy
 

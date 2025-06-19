@@ -1488,17 +1488,8 @@ R_Camera* Component_CreateCamera(GraphicsContext* gctx, SG_Command_CameraCreate*
 
     R_Transform_init(cam, cmd->camera.id, SG_COMPONENT_CAMERA);
 
-    { // camera init
-        // copy camera params
-        cam->params = cmd->camera.params;
-
-        // initialize frame uniform buffer
-        // kept here because the camera xform is the only part that differs between
-        // RenderPasses
-        FrameUniforms frame_uniforms = {};
-        GPU_Buffer::write(gctx, &cam->frame_uniform_buffer, WGPUBufferUsage_Uniform,
-                          &frame_uniforms, sizeof(frame_uniforms));
-    }
+    // camera init
+    cam->params = cmd->camera.params;
 
     // store offset
     R_Location loc     = { cam->id, Arena::offsetOf(&cameraArena, cam), &cameraArena };
@@ -1723,7 +1714,7 @@ R_Texture* Component_CreateTexture(GraphicsContext* gctx, SG_Command_TextureCrea
     return tex;
 }
 
-R_Pass* Component_CreatePass(SG_ID pass_id)
+R_Pass* Component_CreatePass(SG_ID pass_id, WGPUDevice device)
 {
     Arena* arena = &passArena;
     R_Pass* pass = ARENA_PUSH_TYPE(arena, R_Pass);
@@ -1732,6 +1723,16 @@ R_Pass* Component_CreatePass(SG_ID pass_id)
     // SG_Component init
     pass->id   = pass_id;
     pass->type = SG_COMPONENT_PASS;
+
+    // init frame uniform buffer
+    char label[64];
+    snprintf(label, sizeof(label), "Pass[%d] Frame Uniform Buffer", pass_id);
+    WGPUBufferDescriptor desc  = {};
+    desc.label                 = label;
+    desc.usage                 = WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst;
+    desc.size                  = NEXT_MULT4(sizeof(FrameUniforms));
+    pass->frame_uniform_buffer = wgpuDeviceCreateBuffer(device, &desc);
+    ASSERT(pass->frame_uniform_buffer);
 
     // store offset
     R_Location loc     = { pass->id, Arena::offsetOf(arena, pass), arena };
@@ -2871,5 +2872,29 @@ void R_Font::prepareGlyphsForText(GraphicsContext* gctx, R_Font* font, const cha
         // not necessary, glyph+curve buffers are only ~200kb for ASCII chars
         // 3080 PCI has 32GB/s bandwidth, these buffers are nothing
         R_Font_uploadBuffers(gctx, font);
+    }
+}
+
+// ===================================
+// R_Pass
+// ===================================
+void R_Pass::bindFrameUniforms(R_Pass* pass, G_DrawCall* d, G_Graph* graph,
+                               R_Shader* shader, R_Scene* scene)
+{
+    // group(0) must be bound if group(1) is (no holes in bindgroups allowed)
+    // so for now we always bind the per-frame uniforms
+    graph->bindBuffer(d, PER_FRAME_GROUP, 0, pass->frame_uniform_buffer, 0,
+                      wgpuBufferGetSize(pass->frame_uniform_buffer));
+
+    if (scene) {
+        if (shader->includes.lit)
+            graph->bindBuffer(d, PER_FRAME_GROUP, 1, scene->light_info_buffer.buf, 0,
+                              MAX(scene->light_info_buffer.size, 1));
+
+        if (shader->includes.uses_env_map) {
+            R_Texture* envmap = Component_GetTexture(scene->sg_scene_desc.env_map_id);
+            ASSERT(envmap && envmap->gpu_texture)
+            graph->bindTexture(d, PER_FRAME_GROUP, 2, { envmap->gpu_texture, 0, 1 });
+        }
     }
 }

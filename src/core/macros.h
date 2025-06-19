@@ -44,6 +44,8 @@
 #define COPY_STRUCT(dst, src, type) (memcpy((dst), (src), sizeof(type)))
 #define COPY_STRING(dst, src) (snprintf(dst, sizeof(dst), "%s", src));
 
+#define WHITESPACE_CHARS " \t\n\r\f\v"
+
 // ============================================================================
 // defer
 // Note: calls at end of *scope* not function
@@ -125,5 +127,6 @@ typedef double f64;
 
 // next multiple of m, m must be power of 2
 #define NEXT_MULT(x, m) (((x) + (m) - 1) & ~((m) - 1))
+#define NEXT_MULT4(x) (((x) + 3) & ~(3)) // rounds up to multiple of 4
 
 #define ALIGN_NON_POW2(n, m) ((((n) + ((m) - 1)) / (m)) * (m))

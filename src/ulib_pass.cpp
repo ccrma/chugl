@@ -724,6 +724,7 @@ SG_Pass* ulib_pass_create_output_pass(SG_Pass* pass, Chuck_Object* ckobj, bool a
 
     SG_Shader* output_pass_shader
       = SG_GetShader(g_material_builtin_shaders.output_pass_shader_id);
+    ASSERT(output_pass_shader);
 
     ulib_material_set_shader(mat, output_pass_shader);
 

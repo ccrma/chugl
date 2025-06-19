@@ -415,10 +415,6 @@ struct R_Material : public R_Component {
 struct R_Camera : public R_Transform {
     SG_CameraParams params;
 
-    GPU_Buffer frame_uniform_buffer;
-    u64 frame_uniform_buffer_fc; // frame count of last update, used to make sure buffer
-                                 // is only updated once per frame
-
     static glm::mat4 projectionMatrix(R_Camera* camera, f32 aspect)
     {
         switch (camera->params.camera_type) {
@@ -595,9 +591,13 @@ struct Framebuffer {
 
 struct R_Pass : public R_Component {
     SG_Pass sg_pass;
+    WGPUBuffer frame_uniform_buffer; // RELEASE on destroy
 
     // ScenePass --------------------
     WGPUTexture depth_texture;
+
+    static void bindFrameUniforms(R_Pass* pass, G_DrawCall* d, G_Graph* graph,
+                                  R_Shader* shader, R_Scene* scene);
 
     // updates the scenepass depth texture to match the color target
     static void updateScenePass(R_Pass* pass, WGPUTexture color_target,
@@ -811,7 +811,7 @@ R_Material* Component_CreateMaterial(GraphicsContext* gctx,
 R_Texture* Component_CreateTexture();
 R_Texture* Component_CreateTexture(GraphicsContext* gctx,
                                    SG_Command_TextureCreate* cmd);
-R_Pass* Component_CreatePass(SG_ID pass_id);
+R_Pass* Component_CreatePass(SG_ID pass_id, WGPUDevice device);
 R_Buffer* Component_CreateBuffer(SG_ID id);
 R_Light* Component_CreateLight(SG_ID id, SG_LightDesc* desc);
 R_Video* Component_CreateVideo(GraphicsContext* gctx, SG_ID id, const char* filename,
@@ -1323,7 +1323,7 @@ struct G_Cache {
                             int bg_entry_count, WGPUBindGroupLayout layout,
 
                             // debug info
-                            int group)
+                            int group, const char* label)
     {
         G_CacheBindGroup item = {};
         ASSERT(bg_entry_count <= ARRAY_LENGTH(item.key.bg_entry_list));
@@ -1369,7 +1369,10 @@ struct G_Cache {
                 }
             }
 
+            static char bg_label[64] = {};
+            snprintf(bg_label, sizeof(bg_label), "%s @group(%d)", label, group);
             WGPUBindGroupDescriptor desc = {};
+            desc.label                   = bg_label;
             desc.layout                  = layout;
             desc.entryCount              = bg_entry_count;
             desc.entries                 = wgpu_bg_entry_list;
@@ -1576,7 +1579,7 @@ struct G_DrawCallList {
                  WGPURenderPassEncoder pass_encoder, // TODO this comes from rendergraph
                  WGPUTextureFormat color_target_format,
                  WGPUTextureFormat depth_target_format, G_Cache* cache,
-                 Arena* drawcall_pool, Arena bind_group_list[4])
+                 Arena* drawcall_pool, Arena bind_group_list[4], const char* pass_name)
     {
         G_DrawCall* start
           = ARENA_GET_TYPE(drawcall_pool, G_DrawCall, drawcall_start_idx);
@@ -1628,7 +1631,7 @@ struct G_DrawCallList {
                       ARENA_GET_TYPE(bind_group_list + bg_idx, G_CacheBindGroupEntry,
                                      start),
                       num_bindings, cached_pipeline->val.bindGroupLayout(bg_idx),
-                      bg_idx);
+                      bg_idx, pass_name);
                     ASSERT(bg);
                     wgpuRenderPassEncoderSetBindGroup(pass_encoder, bg_idx, bg, 0,
                                                       NULL);
@@ -1748,7 +1751,7 @@ struct G_Graph {
     }
 
     // renderpass methods ======================================
-    void addRenderPass(const char* name)
+    void addRenderPass(const char* pass_name)
     {
         if (pass_count == CHUGL_RENDERGRAPH_MAX_PASSES) {
             log_error("Reached max pass count %d", pass_count);
@@ -1756,7 +1759,7 @@ struct G_Graph {
         }
         G_Pass* pass = &pass_list[pass_count++];
         pass->type   = G_PassType_Render;
-        COPY_STRING(pass->name, name);
+        COPY_STRING(pass->name, pass_name);
     }
 
     G_DrawCallListID renderPassAddDrawCallList()
@@ -2009,7 +2012,7 @@ struct G_Graph {
                            && pass->rp.drawcall_list_id < drawcall_list_count);
                     drawcall_list_pool[pass->rp.drawcall_list_id].execute(
                       device, render_pass_encoder, color_format, depth_format, &cache,
-                      &drawcall_pool, bind_group_entry_list);
+                      &drawcall_pool, bind_group_entry_list, pass->name);
                     wgpuRenderPassEncoderEnd(render_pass_encoder);
                     WGPU_RELEASE_RESOURCE(RenderPassEncoder, render_pass_encoder);
 
@@ -2031,7 +2034,7 @@ struct G_Graph {
                       ARENA_GET_TYPE(bind_group_entry_list, G_CacheBindGroupEntry,
                                                             pass->cp.bg_start),
                       pass->cp.bg_count, cp.val.bind_group_layout,
-                      compute_pass_binding_location);
+                      compute_pass_binding_location, pass->name);
                     wgpuComputePassEncoderSetBindGroup(
                       compute_pass, compute_pass_binding_location, bg, 0, NULL);
 
