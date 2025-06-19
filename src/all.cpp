@@ -26,7 +26,7 @@
  SOFTWARE.
 -----------------------------------------------------------------------------*/
 #include <chuck/chugin.h>
-#include <cstdlib>
+#include <stdlib.h>
 
 // clang-format off
 

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <cstddef>
-#include <cstdint>
-#include <cstdio>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
 
 #ifndef _NDEBUG
 #include "debugbreak.h"

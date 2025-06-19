@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cstdlib>
-#include <cstring>
+#include <stdlib.h>
+#include <string.h>
 
 #include "log.h"
 #include "macros.h"
@@ -51,7 +51,7 @@ FileReadResult File_read(const char* filename, int is_text_file)
     ASSERT(filename);
     FileReadResult result = {};
     // zero out contents
-    result.size = 0;
+    result.size       = 0;
     result.data_owned = NULL;
 
     FILE* file = fopen(filename, "rb");
@@ -65,7 +65,7 @@ FileReadResult File_read(const char* filename, int is_text_file)
 
     result.data_owned = (u8*)malloc(result.size + (is_text_file == 0 ? 0 : 1));
     if (fread(result.data_owned, 1, result.size, file) != result.size) {
-    	log_error("Unable to read file '%s'\n", filename);
+        log_error("Unable to read file '%s'\n", filename);
         goto error;
     }
     fclose(file);
@@ -76,11 +76,16 @@ FileReadResult File_read(const char* filename, int is_text_file)
 
 error:
     // close file if needed
-    if (file) { fclose(file); }
+    if (file) {
+        fclose(file);
+    }
     // zero out return struct
     result.size = 0;
     // clean up memory
-    if (result.data_owned) { free(result.data_owned); result.data_owned = NULL; }
+    if (result.data_owned) {
+        free(result.data_owned);
+        result.data_owned = NULL;
+    }
 
     return result;
 }

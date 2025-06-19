@@ -1,5 +1,5 @@
-#include <cstdlib>
-#include <cstring>
+#include <stdlib.h>
+#include <string.h>
 
 #include "core/log.h"
 #include "core/memory.h"
