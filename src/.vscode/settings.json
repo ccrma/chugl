@@ -131,6 +131,7 @@
     "*.tcc": "cpp",
     "numeric": "cpp",
     "typeindex": "cpp",
-    "__availability": "cpp"
+    "__availability": "cpp",
+    "filesystem": "cpp"
   }
 }

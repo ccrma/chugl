@@ -648,8 +648,10 @@ static LoadImageResult R_Texture_LoadImage(const char* filepath,
 
 int R_Texture::sizeBytes(R_Texture* texture)
 {
-    return texture->desc.width * texture->desc.height * texture->desc.depth
-           * G_bytesPerTexel(texture->desc.format);
+    return wgpuTextureGetWidth(texture->gpu_texture)
+           * wgpuTextureGetHeight(texture->gpu_texture)
+           * wgpuTextureGetDepthOrArrayLayers(texture->gpu_texture)
+           * G_bytesPerTexel(wgpuTextureGetFormat(texture->gpu_texture));
 }
 
 void R_Texture::load(GraphicsContext* gctx, R_Texture* texture, const char* filepath,
@@ -682,7 +684,7 @@ void R_Texture::loadCubemap(GraphicsContext* gctx, R_Texture* texture,
     // cubemap validation
     ASSERT(texture->desc.depth == 6);
     ASSERT(texture->desc.format == WGPUTextureFormat_RGBA8Unorm);
-    ASSERT(texture->desc.mips == 1);
+    ASSERT(!texture->desc.gen_mips);
 
     const char* faces[6] = { right_face_path,  left_face_path, top_face_path,
                              bottom_face_path, back_face_path, front_face_path };
@@ -759,9 +761,13 @@ void R_Material::createBindGroupEntries(R_Material* mat, int group, G_Graph* gra
             case R_BIND_TEXTURE: {
                 R_Texture* r_texture
                   = Component_GetTexture(binding->as.texture.texture_id);
+
+                // hacky: clamp INT32_MAX to num_mips to signify we're creating a
+                // texture view of the entire chain
+                int num_mips = (int)wgpuTextureGetMipLevelCount(r_texture->gpu_texture);
                 G_CacheTextureViewDesc view_desc
                   = { r_texture->gpu_texture, binding->as.texture.base_mip_level,
-                      binding->as.texture.mip_level_count };
+                      MIN(num_mips, binding->as.texture.mip_level_count) };
 
                 drawcall ? graph->bindTexture(drawcall, group, i, view_desc) :
                            graph->computePassBindTexture(i, view_desc);
@@ -1693,7 +1699,8 @@ R_Material* Component_CreateMaterial(GraphicsContext* gctx,
     return mat;
 }
 
-R_Texture* Component_CreateTexture(GraphicsContext* gctx, SG_Command_TextureCreate* cmd)
+R_Texture* Component_CreateTexture(GraphicsContext* gctx, SG_Command_TextureCreate* cmd,
+                                   u32 framebuffer_width, u32 framebuffer_height)
 {
     R_Texture* tex = ARENA_PUSH_TYPE(&textureArena, R_Texture);
     *tex           = {};
@@ -1703,7 +1710,7 @@ R_Texture* Component_CreateTexture(GraphicsContext* gctx, SG_Command_TextureCrea
     tex->type = SG_COMPONENT_TEXTURE;
 
     // R_Texture init
-    R_Texture::init(gctx, tex, &cmd->desc);
+    R_Texture::init(gctx, tex, &cmd->desc, framebuffer_width, framebuffer_height);
 
     // store offset
     R_Location loc = { tex->id, Arena::offsetOf(&textureArena, tex), &textureArena };
@@ -1804,7 +1811,7 @@ static void R_Video_OnVideo(plm_t* player, plm_frame_t* frame, void* video_id)
         ASSERT(video_texture_rgba->desc.width == frame->width);
         ASSERT(video_texture_rgba->desc.height == frame->height);
         ASSERT(video_texture_rgba->desc.depth == 1);
-        ASSERT(video_texture_rgba->desc.mips == 1);
+        ASSERT(!video_texture_rgba->desc.gen_mips);
         ASSERT(video_texture_rgba->desc.format
                == WGPUTextureFormat_RGBA8Unorm); // TODO might need to go srgb
 

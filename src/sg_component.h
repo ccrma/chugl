@@ -154,15 +154,25 @@ WGPUTextureUsageFlags WGPUTextureUsage_All
     | WGPUTextureUsage_RenderAttachment | WGPUTextureUsage_TextureBinding
     | WGPUTextureUsage_StorageBinding;
 
+enum SG_TextureResizeMode : u8 {
+    SG_TextureResizeMode_Fixed = 0, // fixed width/height in pixels
+
+    SG_TextureResizeMode_Ratio, // rescale texture proportional to final framebuffer
+                                // dimensions
+};
+
 struct SG_TextureDesc {
     // for now default to ALL usage flags to simplify
-    WGPUTextureUsageFlags usage    = WGPUTextureUsage_All;
-    WGPUTextureDimension dimension = WGPUTextureDimension_2D;
-    WGPUTextureFormat format       = WGPUTextureFormat_RGBA8Unorm;
-    int width                      = 1;
-    int height                     = 1;
-    int depth                      = 1;
-    int mips                       = 0; // 0 means determine from dimensions
+    WGPUTextureUsageFlags usage      = WGPUTextureUsage_All;
+    WGPUTextureDimension dimension   = WGPUTextureDimension_2D;
+    WGPUTextureFormat format         = WGPUTextureFormat_RGBA8Unorm;
+    SG_TextureResizeMode resize_mode = SG_TextureResizeMode_Fixed;
+    f32 width_ratio                  = 1.0f;
+    f32 height_ratio                 = 1.0f;
+    int width                        = 1;
+    int height                       = 1;
+    int depth                        = 1;
+    b32 gen_mips                     = 1L;
 };
 
 struct SG_TextureWriteDesc {
@@ -775,10 +785,10 @@ struct SG_Pass : public SG_Component {
     SG_PassType pass_type;
 
     // RenderPass params
-    bool color_target_clear_on_load = true;
+    u32 color_target_clear_on_load = true;
     SG_ID color_target_id;
 
-    // RenderPass params
+    // ScenePass params
     SG_ID scene_id;
     SG_ID camera_id;
 

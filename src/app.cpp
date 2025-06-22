@@ -633,17 +633,6 @@ struct App {
         // end critical section
         // ====================
 
-        // now apply changes from the command queue chuck is NO Longer writing
-        // to this executes all commands on the command queue, performs actions
-        // from CK code essentially applying a diff to bring graphics state up
-        // to date with what is done in CK code
-
-        { // flush command queue
-            SG_Command* cmd = NULL;
-            while (CQ_ReadCommandQueueIter(&cmd)) _R_HandleCommand(app, cmd);
-            CQ_ReadCommandQueueClear();
-        }
-
         // handle window resize (special case b/c needs to happen before
         // GraphicsContext::prepareFrame, unlike the rest of glfwPollEvents())
         // Doing window resize AFTER surface is already prepared causes crash.
@@ -662,6 +651,16 @@ struct App {
 
                 _onFramebufferResize(app->window, width, height);
             }
+        }
+
+        // now apply changes from the command queue chuck is NO Longer writing
+        // to. This executes all commands on the command queue, performs actions
+        // from CK code essentially applying a diff to bring graphics state up
+        // to date with what is done in CK code
+        { // flush command queue
+            SG_Command* cmd = NULL;
+            while (CQ_ReadCommandQueueIter(&cmd)) _R_HandleCommand(app, cmd);
+            CQ_ReadCommandQueueClear();
         }
 
         // garbage collection! delete GPU-side data for any scenegraph objects
@@ -723,11 +722,21 @@ struct App {
                     camera = pass->sg_pass.camera_id != 0 ?
                                Component_GetCamera(pass->sg_pass.camera_id) :
                                Component_GetCamera(scene->sg_scene_desc.main_camera_id);
+                    if (!camera) {
+                        log_warn("ScenePass[%d:%s] of Scene[%d:%s] has no camera",
+                                 pass->id, pass->name, scene->id, scene->name);
+                        break;
+                    }
                     ASSERT(camera->scene_id == scene->id);
 
-                    // defaults to swapchain current view
                     R_Texture* r_tex
                       = Component_GetTexture(pass->sg_pass.color_target_id);
+
+                    // resize texture
+                    R_Texture::resize(r_tex, app->window_fb_width,
+                                      app->window_fb_height, app->gctx.device);
+
+                    // defaults to swapchain current view
                     WGPUTexture color_target
                       = r_tex ? r_tex->gpu_texture : app->gctx.surface_texture.texture;
                     ASSERT(scene && color_target && camera);
@@ -769,6 +778,9 @@ struct App {
                     // otherwise default to backbuffer
                     R_Texture* r_tex
                       = Component_GetTexture(pass->sg_pass.color_target_id);
+                    // resize texture
+                    R_Texture::resize(r_tex, app->window_fb_width,
+                                      app->window_fb_height, app->gctx.device);
 
                     // set G_Pass
                     app->rendergraph.addRenderPass(pass->sg_pass.name);
@@ -838,14 +850,22 @@ struct App {
                       pass->sg_pass.bloom_output_render_texture_id);
 
                     if (!input_texture || !output_texture) break;
+                    if (!input_texture->desc.gen_mips
+                        || !output_texture->desc.gen_mips) {
+                        log_warn(
+                          "BloomPass requires `.gen_mips` to be enabled on input and "
+                          "output textures. Bypassing.");
+                        break;
+                    }
 
                     // resize output texture
-                    R_Texture::resize(&app->gctx, output_texture,
-                                      input_texture->desc.width,
-                                      input_texture->desc.height);
 
-                    glm::uvec2 full_res_size = glm::uvec2(input_texture->desc.width,
-                                                          input_texture->desc.height);
+                    u32 input_width  = wgpuTextureGetWidth(input_texture->gpu_texture);
+                    u32 input_height = wgpuTextureGetHeight(input_texture->gpu_texture);
+                    R_Texture::resize(output_texture, input_width, input_height,
+                                      app->gctx.device);
+
+                    glm::uvec2 full_res_size = glm::uvec2(input_width, input_height);
                     ASSERT(sizeof(full_res_size) == 2 * sizeof(u32));
                     ASSERT(input_texture->desc.usage
                            & WGPUTextureUsage_RenderAttachment);
@@ -857,12 +877,11 @@ struct App {
                         SG_SAMPLER_FILTER_LINEAR,      SG_SAMPLER_FILTER_LINEAR,
                     };
 
-                    u32 bloom_mip_levels = G_mipLevelsLimit(
-                      input_texture->desc.width, input_texture->desc.height, 1);
+                    u32 bloom_mip_levels
+                      = G_mipLevelsLimit(input_width, input_height, 1);
                     bloom_mip_levels
                       = MIN(bloom_mip_levels, pass->sg_pass.bloom_num_blur_levels);
 
-                    ASSERT(bloom_mip_levels <= input_texture->desc.mips);
                     if (bloom_mip_levels == 0) break;
 
                     { // downscale
@@ -1694,8 +1713,14 @@ static void _R_HandleCommand(App* app, SG_Command* command)
                     // defaults to entire mip chain
                     R_Texture* texture
                       = Component_GetTexture(cmd->uniform.as.texture_id);
-                    R_Material::bindTexture(&app->gctx, material, cmd->location,
-                                            { texture->id, 0, texture->desc.mips });
+                    R_Material::bindTexture(
+                      &app->gctx, material, cmd->location,
+                      { texture->id, 0,
+                        INT32_MAX }); // using INT_MAX to mean the entire mip chain. In
+                                      // R_Material::createBindGroup... we clamp this to
+                                      // the actual #mips in the texture.
+                                      // hacky, can move to a proper enum flag in struct
+                                      // R_TextureBinding when its needed
                 } break;
                 case SG_MATERIAL_UNIFORM_SAMPLER: {
                     R_Material::setSamplerBinding(&app->gctx, material, cmd->location,
@@ -1825,7 +1850,8 @@ static void _R_HandleCommand(App* app, SG_Command* command)
         // textures ---------------------
         case SG_COMMAND_TEXTURE_CREATE: {
             SG_Command_TextureCreate* cmd = (SG_Command_TextureCreate*)command;
-            Component_CreateTexture(&app->gctx, cmd);
+            Component_CreateTexture(&app->gctx, cmd, app->window_fb_width,
+                                    app->window_fb_height);
         } break;
         case SG_COMMAND_TEXTURE_WRITE: {
             SG_Command_TextureWrite* cmd = (SG_Command_TextureWrite*)command;

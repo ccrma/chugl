@@ -1,5 +1,6 @@
 TODO
-- screen resize bug, maybe will be fixed after we correctly impl render targets
+- screenpass w/ constructor
+- chuck API for creating a dynamically resizing texture
 - re-impl shader freeing gc
 - impl transparency
   - test with skybox to make sure transparent is drawn after
@@ -16,6 +17,7 @@ TODO
 
 - add renderpass scissor rect and viewport
   - impl splitscreen multiplayer example
+- default GScene with a main camera?
 - add inverse normal matrix to PER_DRAW instanced draw uniforms
 - group all the commands of the frame together, submit all at once at end of RenderGraph 
 

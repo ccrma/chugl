@@ -50,7 +50,7 @@ static t_CKUINT texture_desc_height_offset    = 0;
 static t_CKUINT texture_desc_depth_offset     = 0;
 static t_CKUINT texture_desc_usage_offset     = 0;
 // static t_CKUINT texture_desc_samples_offset   = 0; // not exposing for now
-static t_CKUINT texture_desc_mips_offset = 0; // not exposing for now
+static t_CKUINT texture_desc_mips_offset = 0;
 CK_DLL_CTOR(texture_desc_ctor);
 
 // TextureWriteDesc -----------------------------------------------------------------
@@ -193,8 +193,11 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
           "Texture.Usage_* enum. Default is Texture.Usage_All, which enables all "
           "usages");
         // texture_desc_samples_offset   = MVAR("int", "samples");
+
         texture_desc_mips_offset = MVAR("int", "mips", false);
-        DOC_VAR("Number of mip levels. Default is 1");
+        DOC_VAR(
+          "0 for false, 1 for true. Set to true to generate a full mip-chain for this "
+          "texture. Default is true");
 
         END_CLASS();
     } // end TextureDesc
@@ -420,8 +423,8 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
 
         MFUN(texture_get_mips, "int", "mips");
         DOC_FUNC(
-          "Get the number of mip levels (immutable). Returns the number of mip levels "
-          "in the texture.");
+          "Get whether this textue has a full mip chain. Returns 1 for true, 0 for "
+          "false");
 
         MFUN(texture_read_to_cpu, "Event", "read");
         DOC_FUNC(
@@ -482,7 +485,7 @@ CK_DLL_CTOR(texture_desc_ctor)
     OBJ_MEMBER_INT(SELF, texture_desc_depth_offset)     = 1;
     OBJ_MEMBER_INT(SELF, texture_desc_usage_offset)     = WGPUTextureUsage_All;
     // OBJ_MEMBER_INT(SELF, texture_desc_samples_offset) = 1;
-    OBJ_MEMBER_INT(SELF, texture_desc_mips_offset) = 0;
+    OBJ_MEMBER_INT(SELF, texture_desc_mips_offset) = 1;
 }
 
 static SG_TextureDesc ulib_texture_textureDescFromCkobj(Chuck_Object* ckobj)
@@ -498,7 +501,7 @@ static SG_TextureDesc ulib_texture_textureDescFromCkobj(Chuck_Object* ckobj)
     desc.depth  = OBJ_MEMBER_INT(ckobj, texture_desc_depth_offset);
     desc.usage  = OBJ_MEMBER_INT(ckobj, texture_desc_usage_offset);
     // desc.samples        = OBJ_MEMBER_INT(ckobj, texture_desc_samples_offset);
-    desc.mips = OBJ_MEMBER_INT(ckobj, texture_desc_mips_offset);
+    desc.gen_mips = OBJ_MEMBER_INT(ckobj, texture_desc_mips_offset) ? true : false;
 
     // validation happens at final layer SG_CreateTexture
     return desc;
@@ -607,9 +610,10 @@ void ulib_texture_createDefaults(CK_DL_API API)
                                     | WGPUTextureUsage_StorageBinding;
         render_texture_desc.format = WGPUTextureFormat_RGBA16Float;
 
-        // nocheckin
-        render_texture_desc.width  = 1920;
-        render_texture_desc.height = 1080;
+        // make scale with window dimensions
+        render_texture_desc.resize_mode  = SG_TextureResizeMode_Ratio;
+        render_texture_desc.width_ratio  = 1.0f;
+        render_texture_desc.height_ratio = 1.0f;
 
         // set global
         g_builtin_textures.default_render_texture_id
@@ -645,8 +649,8 @@ void ulib_texture_createDefaults(CK_DL_API API)
 
     { // default cube map
         SG_TextureDesc cubemap_desc = {};
-        cubemap_desc.depth          = 6; // 6 faces
-        cubemap_desc.mips           = 1; // no mips for cubemap
+        cubemap_desc.depth          = 6;     // 6 faces
+        cubemap_desc.gen_mips       = false; // no mips for cubemap
 
         SG_Texture* tex = SG_CreateTexture(&cubemap_desc, NULL, NULL, true);
 
@@ -705,7 +709,7 @@ CK_DLL_MFUN(texture_get_usage)
 
 CK_DLL_MFUN(texture_get_mips)
 {
-    RETURN->v_int = GET_TEXTURE(SELF)->desc.mips;
+    RETURN->v_int = GET_TEXTURE(SELF)->desc.gen_mips;
 }
 
 static void ulib_texture_write(SG_Texture* tex, Chuck_ArrayFloat* ck_arr,
@@ -731,13 +735,17 @@ static void ulib_texture_write(SG_Texture* tex, Chuck_ArrayFloat* ck_arr,
             CK_THROW("TextureWriteOutOfBounds", err_msg, SHRED);
         }
 
-        // check mip level valid
-        if (desc->mip >= tex->desc.mips) {
-            snprintf(err_msg, sizeof(err_msg),
-                     "Invalid mip level. Texture has %d mips, but tried to "
-                     "write to mip level %d",
-                     tex->desc.mips, desc->mip);
-            CK_THROW("TextureWriteInvalidMip", err_msg, SHRED);
+        // check mip level valid (only checking for fixed size textures because how do
+        // we know the size of a resizable one?)
+        if (tex->desc.resize_mode == SG_TextureResizeMode_Fixed) {
+            int max_mips = G_mipLevels(tex->desc.width, tex->desc.height);
+            if (desc->mip >= max_mips) {
+                snprintf(err_msg, sizeof(err_msg),
+                         "Invalid mip level. Texture has %d mips, but tried to "
+                         "write to mip level %d",
+                         max_mips, desc->mip);
+                CK_THROW("TextureWriteInvalidMip", err_msg, SHRED);
+            }
         }
 
         // check ck_array
@@ -795,7 +803,7 @@ SG_Texture* ulib_texture_load(const char* filepath, SG_TextureLoadDesc* load_des
     desc.dimension      = WGPUTextureDimension_2D;
     desc.format         = WGPUTextureFormat_RGBA8Unorm;
     desc.usage          = WGPUTextureUsage_All;
-    desc.mips           = load_desc->gen_mips ? 0 : 1;
+    desc.gen_mips       = load_desc->gen_mips ? true : false;
 
     SG_Texture* tex = SG_CreateTexture(&desc, NULL, shred, false);
 
@@ -890,7 +898,7 @@ SG_Texture* ulib_texture_load_cubemap(const char* right_face, const char* left_f
     desc.dimension      = WGPUTextureDimension_2D;
     desc.format         = WGPUTextureFormat_RGBA8Unorm;
     desc.usage          = WGPUTextureUsage_All;
-    desc.mips           = 1;
+    desc.gen_mips       = false;
 
     SG_Texture* tex = SG_CreateTexture(&desc, NULL, shred, false);
 
@@ -938,28 +946,37 @@ static void ulib_texture_copyTextureToTexture(SG_Texture* dst, SG_Texture* src,
 {
     { // validation
         // make sure location is within bounds of texture
-        if (dst_loc.origin_x > dst->desc.width || dst_loc.origin_y > dst->desc.height
-            || dst_loc.origin_z > dst->desc.depth || dst_loc.mip >= dst->desc.mips) {
-            log_warn("Could not copy texture[%d] %s to texture[%d] %s", src->id,
-                     src->name, dst->id, dst->name);
-            log_warn(
-              " |- Reason: destination location [%d, %d, %d] mip %d is out of "
-              "bounds of texture with dimensions [%d, %d, %d] and %d mips",
-              dst_loc.origin_x, dst_loc.origin_y, dst_loc.origin_z, dst_loc.mip,
-              dst->desc.width, dst->desc.height, dst->desc.depth, dst->desc.mips);
-            return;
+        if (dst->desc.resize_mode == SG_TextureResizeMode_Fixed) {
+            int dst_mips = G_mipLevels(dst->desc.width, dst->desc.height);
+
+            if (dst_loc.origin_x > dst->desc.width
+                || dst_loc.origin_y > dst->desc.height
+                || dst_loc.origin_z > dst->desc.depth || dst_loc.mip >= dst_mips) {
+                log_warn("Could not copy texture[%d] %s to texture[%d] %s", src->id,
+                         src->name, dst->id, dst->name);
+                log_warn(
+                  " |- Reason: destination location [%d, %d, %d] mip %d is out of "
+                  "bounds of texture with dimensions [%d, %d, %d] and %d mips",
+                  dst_loc.origin_x, dst_loc.origin_y, dst_loc.origin_z, dst_loc.mip,
+                  dst->desc.width, dst->desc.height, dst->desc.depth, dst_mips);
+                return;
+            }
         }
 
-        if (src_loc.origin_x > src->desc.width || src_loc.origin_y > src->desc.height
-            || src_loc.origin_z > src->desc.depth || src_loc.mip >= src->desc.mips) {
-            log_warn("Could not copy texture[%d] %s to texture[%d] %s", src->id,
-                     src->name, dst->id, dst->name);
-            log_warn(
-              " |- Reason: source location [%d, %d, %d] mip %d is out of bounds "
-              "of texture with dimensions [%d, %d, %d] and %d mips",
-              src_loc.origin_x, src_loc.origin_y, src_loc.origin_z, src_loc.mip,
-              src->desc.width, src->desc.height, src->desc.depth, src->desc.mips);
-            return;
+        if (src->desc.resize_mode == SG_TextureResizeMode_Fixed) {
+            int src_mips = G_mipLevels(src->desc.width, src->desc.height);
+            if (src_loc.origin_x > src->desc.width
+                || src_loc.origin_y > src->desc.height
+                || src_loc.origin_z > src->desc.depth || src_loc.mip >= src_mips) {
+                log_warn("Could not copy texture[%d] %s to texture[%d] %s", src->id,
+                         src->name, dst->id, dst->name);
+                log_warn(
+                  " |- Reason: source location [%d, %d, %d] mip %d is out of bounds "
+                  "of texture with dimensions [%d, %d, %d] and %d mips",
+                  src_loc.origin_x, src_loc.origin_y, src_loc.origin_z, src_loc.mip,
+                  src->desc.width, src->desc.height, src->desc.depth, src_mips);
+                return;
+            }
         }
 
         // The two textures must be must either be the same format, or they must only

@@ -206,51 +206,90 @@ struct R_Texture : public R_Component {
 
     static int sizeBytes(R_Texture* texture);
 
-    static void init(GraphicsContext* gctx, R_Texture* texture, SG_TextureDesc* desc)
+    // validates that the WGPUTexture matches the sg_texturedesc
+    static void validate(R_Texture* t)
     {
-        // free previous
-        WGPU_RELEASE_RESOURCE(Texture, texture->gpu_texture);
+        ASSERT(wgpuTextureGetFormat(t->gpu_texture) == t->desc.format);
+        ASSERT(wgpuTextureGetDimension(t->gpu_texture) == t->desc.dimension);
+        ASSERT(wgpuTextureGetDepthOrArrayLayers(t->gpu_texture) == t->desc.depth);
+        if (t->desc.gen_mips) {
+            ASSERT(wgpuTextureGetMipLevelCount(t->gpu_texture)
+                   == G_mipLevels(wgpuTextureGetWidth(t->gpu_texture),
+                                  wgpuTextureGetHeight(t->gpu_texture)));
+        } else {
+            ASSERT(wgpuTextureGetMipLevelCount(t->gpu_texture) == 1);
+        }
+        ASSERT(wgpuTextureGetUsage(t->gpu_texture) == t->desc.usage);
 
+        if (t->desc.resize_mode == SG_TextureResizeMode_Fixed) {
+            ASSERT(wgpuTextureGetHeight(t->gpu_texture) == t->desc.height);
+            ASSERT(wgpuTextureGetWidth(t->gpu_texture) == t->desc.width);
+        }
+    }
+
+    static void init(GraphicsContext* gctx, R_Texture* texture, SG_TextureDesc* desc,
+                     u32 framebuffer_width, u32 framebuffer_height)
+    {
         { // validation
-            ASSERT(desc->mips >= 1
-                   && desc->mips <= G_mipLevels(desc->width, desc->height));
+            ASSERT(texture->gpu_texture == NULL);
             ASSERT(desc->width > 0 && desc->height > 0 && desc->depth > 0);
+            ASSERT(desc->width_ratio >= 0 && desc->height_ratio >= 0);
         }
 
         // copy texture info (immutable)
         texture->desc = *desc;
 
-        // init descriptor
-        WGPUTextureDescriptor wgpu_texture_desc = {};
-        // wgpu_texture_desc.label                 = texture->name.c_str();
-        wgpu_texture_desc.label     = texture->name;
-        wgpu_texture_desc.usage     = desc->usage;
-        wgpu_texture_desc.dimension = desc->dimension;
-        wgpu_texture_desc.size
-          = { (u32)desc->width, (u32)desc->height, (u32)desc->depth };
-        wgpu_texture_desc.format        = desc->format;
-        wgpu_texture_desc.mipLevelCount = desc->mips;
-        wgpu_texture_desc.sampleCount   = 1;
+        // determine dimensions
+        u32 width = 0, height = 0;
+        if (desc->resize_mode == SG_TextureResizeMode_Fixed) {
+            width  = desc->width;
+            height = desc->height;
+        } else if (desc->resize_mode == SG_TextureResizeMode_Ratio) {
+            width  = (u32)(desc->width_ratio * framebuffer_width);
+            height = (u32)(desc->height_ratio * framebuffer_height);
+        } else
+            UNREACHABLE;
 
-        texture->gpu_texture
-          = wgpuDeviceCreateTexture(gctx->device, &wgpu_texture_desc);
-        ASSERT(texture->gpu_texture);
+        R_Texture::resize(texture, width, height, gctx->device);
     }
 
     // resizes texture and updates generation, clears any previous data
     // used for auto-resizing framebuffer attachments
-    static void resize(GraphicsContext* gctx, R_Texture* r_tex, u32 width, u32 height)
+    static void resize(R_Texture* r_tex, u32 width, u32 height, WGPUDevice device)
     {
-        bool needs_resize = r_tex->desc.width != (int)width
-                            || r_tex->desc.height != (int)height
-                            || r_tex->gpu_texture == NULL;
+        if (r_tex == NULL) return;
+        bool initialized_and_fixed_ratio
+          = (r_tex->gpu_texture
+             && r_tex->desc.resize_mode == SG_TextureResizeMode_Fixed);
+        if (initialized_and_fixed_ratio) {
+            // fixed ratio textures are immutable
+            UNREACHABLE; // nocheckin
+            R_Texture::validate(r_tex);
+            return;
+        }
+
+        bool needs_resize = r_tex->gpu_texture == NULL
+                            || wgpuTextureGetWidth(r_tex->gpu_texture) != width
+                            || wgpuTextureGetHeight(r_tex->gpu_texture) != height;
 
         if (needs_resize) {
-            SG_TextureDesc desc = r_tex->desc;
-            desc.width          = width;
-            desc.height         = height;
-            desc.mips           = G_mipLevels(width, height);
-            R_Texture::init(gctx, r_tex, &desc);
+            // init descriptor
+            WGPUTextureDescriptor wgpu_texture_desc = {};
+            wgpu_texture_desc.label                 = r_tex->name;
+            wgpu_texture_desc.usage                 = r_tex->desc.usage;
+            wgpu_texture_desc.dimension             = r_tex->desc.dimension;
+            wgpu_texture_desc.size   = { width, height, (u32)r_tex->desc.depth };
+            wgpu_texture_desc.format = r_tex->desc.format;
+            wgpu_texture_desc.mipLevelCount
+              = r_tex->desc.gen_mips ? G_mipLevels(width, height) : 1;
+            wgpu_texture_desc.sampleCount = 1;
+
+            r_tex->gpu_texture = wgpuDeviceCreateTexture(device, &wgpu_texture_desc);
+            ASSERT(r_tex->gpu_texture);
+
+            // update sg_desc
+            r_tex->desc.width  = width;
+            r_tex->desc.height = height;
         }
     }
 
@@ -258,8 +297,7 @@ struct R_Texture : public R_Component {
                       SG_TextureWriteDesc* write_desc, void* data,
                       size_t data_size_bytes)
     {
-        // don't need to bump generation here, because we are not recreating the
-        // gpu_texture
+        R_Texture::validate(texture);
 
         ASSERT(texture->gpu_texture);
         ASSERT(wgpuTextureGetUsage(texture->gpu_texture) & WGPUTextureUsage_CopyDst);
@@ -505,90 +543,6 @@ struct R_Scene : R_Transform {
 // R_Pass
 // =============================================================================
 
-struct Framebuffer {
-    u32 width        = 0;
-    u32 height       = 0;
-    int sample_count = 0;
-
-    WGPUTexture depth_tex;
-    WGPUTextureView depth_view;
-    WGPUTexture color_tex;
-    WGPUTextureView color_view;
-
-    // nvm, resolve target comes from chugl texture
-    // WGPUTexture resolve_tex; // sample_count == 1
-    // WGPUTextureView resolve_view;
-
-    static void createAttachment(GraphicsContext* gctx, WGPUTextureFormat format,
-                                 WGPUTextureUsageFlags usage_flags, u32 width,
-                                 u32 height, int sample_count, WGPUTexture* out_tex,
-                                 WGPUTextureView* out_view)
-    {
-        WGPUExtent3D texture_extent = { width, height, 1 };
-
-        // Texture usage flags
-        usage_flags |= WGPUTextureUsage_RenderAttachment;
-
-        // Create the texture
-        WGPUTextureDescriptor texture_desc = {};
-        texture_desc.label                 = NULL;
-        texture_desc.size                  = texture_extent;
-        texture_desc.mipLevelCount         = 1;
-        texture_desc.sampleCount           = sample_count;
-        texture_desc.dimension             = WGPUTextureDimension_2D;
-        texture_desc.format                = format;
-        texture_desc.usage                 = usage_flags;
-
-        WGPU_RELEASE_RESOURCE(Texture, *out_tex);
-        *out_tex = wgpuDeviceCreateTexture(gctx->device, &texture_desc);
-        ASSERT(*out_tex);
-
-        // Create the texture view
-        WGPUTextureViewDescriptor texture_view_desc = {};
-        texture_view_desc.label                     = NULL;
-        texture_view_desc.dimension                 = WGPUTextureViewDimension_2D;
-        texture_view_desc.format                    = texture_desc.format;
-        texture_view_desc.baseMipLevel              = 0;
-        texture_view_desc.mipLevelCount             = 1;
-        texture_view_desc.baseArrayLayer            = 0;
-        texture_view_desc.arrayLayerCount           = 1;
-        texture_view_desc.aspect                    = WGPUTextureAspect_All;
-
-        WGPU_RELEASE_RESOURCE(TextureView, *out_view);
-        *out_view = wgpuTextureCreateView(*out_tex, &texture_view_desc);
-        ASSERT(*out_view);
-    }
-
-    // rebuilds framebuffer attachment textures
-    static void rebuild(GraphicsContext* gctx, Framebuffer* fb, u32 width, u32 height,
-                        int sample_count, WGPUTextureFormat color_format)
-    {
-        bool texture_resized      = (fb->width != width || fb->height != height);
-        bool sample_count_changed = fb->sample_count != sample_count;
-        // todo support change in resolve target SG_ID
-        if (texture_resized || sample_count_changed) {
-            log_debug("rebuilding framebuffer, %dx%d, %d samples", width, height,
-                      sample_count);
-            fb->width        = width;
-            fb->height       = height;
-            fb->sample_count = sample_count;
-
-            // recreate color target TODO get format and usage from sgid
-            // for now locking down to hdr
-            Framebuffer::createAttachment(
-              gctx, color_format, WGPUTextureUsage_TextureBinding, width, height,
-              sample_count, &fb->color_tex, &fb->color_view);
-
-            // recreate depth target
-            Framebuffer::createAttachment(
-              gctx, WGPUTextureFormat_Depth32Float, WGPUTextureUsage_None, width,
-              height, sample_count, &fb->depth_tex, &fb->depth_view);
-
-            // TODO create resolve
-        }
-    }
-};
-
 struct R_Pass : public R_Component {
     SG_Pass sg_pass;
     WGPUBuffer frame_uniform_buffer; // RELEASE on destroy
@@ -627,9 +581,6 @@ struct R_Pass : public R_Component {
 
         if (!rebuild) return;
 
-        log_trace("Rebuilding ScenePass[%d:%s] depth texture", pass->id,
-                  pass->sg_pass.name);
-
         WGPUExtent3D texture_extent = { width, height, 1 };
         snprintf(label, sizeof(label), "Depth Texture for ScenePass[%d:%s]", pass->id,
                  pass->sg_pass.name);
@@ -644,9 +595,16 @@ struct R_Pass : public R_Component {
         texture_desc.format                = WGPUTextureFormat_Depth32Float;
         texture_desc.usage                 = WGPUTextureUsage_RenderAttachment;
 
+        WGPUTexture new_depth_texture = wgpuDeviceCreateTexture(device, &texture_desc);
+        ASSERT(new_depth_texture != pass->depth_texture);
         WGPU_RELEASE_RESOURCE(Texture, pass->depth_texture);
-        pass->depth_texture = wgpuDeviceCreateTexture(device, &texture_desc);
+        pass->depth_texture = new_depth_texture;
         ASSERT(pass->depth_texture);
+
+        log_trace(
+          "Rebuilding ScenePass[%d:%s] depth texture, dims: %dx%d, address: %p",
+          pass->id, pass->sg_pass.name, wgpuTextureGetWidth(pass->depth_texture),
+          wgpuTextureGetHeight(pass->depth_texture), (void*)pass->depth_texture);
     }
 };
 
@@ -808,9 +766,8 @@ R_Shader* Component_CreateShader(GraphicsContext* gctx, SG_Command_ShaderCreate*
 R_Material* Component_CreateMaterial(GraphicsContext* gctx,
                                      SG_Command_MaterialCreate* cmd);
 
-R_Texture* Component_CreateTexture();
-R_Texture* Component_CreateTexture(GraphicsContext* gctx,
-                                   SG_Command_TextureCreate* cmd);
+R_Texture* Component_CreateTexture(GraphicsContext* gctx, SG_Command_TextureCreate* cmd,
+                                   u32 framebuffer_width, u32 framebuffer_height);
 R_Pass* Component_CreatePass(SG_ID pass_id, WGPUDevice device);
 R_Buffer* Component_CreateBuffer(SG_ID id);
 R_Light* Component_CreateLight(SG_ID id, SG_LightDesc* desc);
@@ -974,7 +931,8 @@ struct G_CacheBindGroupEntryBuffer {
 };
 
 struct G_CacheTextureViewDesc {
-    WGPUTexture texture; // NOT refouncted here. instead refcounted by chuck + R_Texture
+    WGPUTexture texture; // refcounted, ensures that WGPUTexture address is not reused
+                         // so long as its in the G_Cache
     int base_mip_level;
     int mip_level_count;
 };
@@ -982,7 +940,7 @@ struct G_CacheTextureViewDesc {
 struct G_CacheTextureView {
     G_CacheTextureViewDesc key;
     struct {
-        WGPUTextureView view;
+        WGPUTextureView view; // owned
         int frames_till_expired = CHUGL_CACHE_TEXTURE_VIEW_FRAMES_TILL_EXPIRED;
     } val;
 
@@ -1286,16 +1244,20 @@ struct G_Cache {
 
         if (cache_view == NULL) {
             ++frame_stats.texture_view_misses;
+
+            WGPUTexture texture = desc.texture;
+            WGPU_REFERENCE_RESOURCE(Texture, texture);
+
             log_trace(
               "Cache miss [TextureView], creating new from Texture[%p] mips[%d:%d]",
-              (void*)desc.texture, desc.base_mip_level,
+              (void*)texture, desc.base_mip_level,
               desc.base_mip_level + desc.mip_level_count - 1);
 
-            u32 depth       = wgpuTextureGetDepthOrArrayLayers(desc.texture);
+            u32 depth       = wgpuTextureGetDepthOrArrayLayers(texture);
             bool is_cubemap = (depth == 6);
             WGPUTextureViewDescriptor view_desc = {};
             // view_desc.label                     = mip_label; // TODO
-            view_desc.format          = wgpuTextureGetFormat(desc.texture);
+            view_desc.format          = wgpuTextureGetFormat(texture);
             view_desc.dimension       = is_cubemap ? WGPUTextureViewDimension_Cube :
                                                      WGPUTextureViewDimension_2D;
             view_desc.baseMipLevel    = desc.base_mip_level;
@@ -1305,7 +1267,7 @@ struct G_Cache {
 
             G_CacheTextureView item = {};
             item.key                = desc;
-            item.val.view           = wgpuTextureCreateView(desc.texture, &view_desc);
+            item.val.view           = wgpuTextureCreateView(texture, &view_desc);
             ASSERT(item.val.view);
             const void* replaced = hashmap_set(texture_view_map, &item);
             ASSERT(!replaced);
@@ -1453,6 +1415,7 @@ struct G_Cache {
 
                 log_trace("deleting expired textureview %p", (void*)deleted->val.view);
                 WGPU_RELEASE_RESOURCE(TextureView, deleted->val.view);
+                WGPU_RELEASE_RESOURCE(Texture, deleted->key.texture);
             }
         }
 
@@ -1695,8 +1658,10 @@ typedef int G_DrawCallID;
 
 struct G_RenderPassParams {
 
+    // union { (just dont wanna type it)
     G_CacheTextureViewDesc color_target_view_desc;
     G_RenderTarget color_target;
+    // }
     u32 color_target_is_external_view;
 
     WGPUColor clear_color;

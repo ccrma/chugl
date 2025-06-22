@@ -67,6 +67,7 @@ CK_DLL_MFUN(renderpass_get_color_target_clear_on_load);
 // TODO add scissor and viewport
 
 // ScenePass
+CK_DLL_CTOR(scenepass_ctor_with_scene);
 CK_DLL_MFUN(scenepass_set_camera);
 CK_DLL_MFUN(scenepass_get_camera);
 CK_DLL_MFUN(scenepass_set_scene);
@@ -123,11 +124,6 @@ CK_DLL_MFUN(bloompass_set_num_levels);
 CK_DLL_MFUN(bloompass_get_num_levels);
 CK_DLL_MFUN(bloompass_set_threshold);
 CK_DLL_MFUN(bloompass_get_threshold);
-
-// bloom pass params
-// SG_ID bloom_downscale_material_id;
-// SG_ID bloom_upscale_material_id;
-// SG_ID bloom_input_render_texture_id;
 
 /*
 ==optimize==
@@ -211,11 +207,13 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
           "If ScenePass.camera() is not set, will default to the scene's main "
           "camera.");
 
+        CTOR(scenepass_ctor_with_scene);
+        ARG(SG_CKNames[SG_COMPONENT_SCENE], "scene");
+        DOC_FUNC("Constructor that sets the scene to render.");
+
         MFUN(scenepass_set_scene, "void", "scene");
         ARG(SG_CKNames[SG_COMPONENT_SCENE], "scene");
-        DOC_FUNC(
-          "Set the scene to render. If not set, will default to the main scene, "
-          "GG.scene()");
+        DOC_FUNC("Set the scene to render.");
 
         MFUN(scenepass_get_scene, SG_CKNames[SG_COMPONENT_SCENE], "scene");
         DOC_FUNC("Get the scene this pass is rendering");
@@ -225,7 +223,7 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
         DOC_FUNC(
           "Set the camera to use for rendering the scene. Defaults to the main camera "
           "of the target scene. You can call .camera(null) to use the "
-          "scene's main camera.");
+          "scene's main camera. ");
 
         MFUN(scenepass_get_camera, SG_CKNames[SG_COMPONENT_CAMERA], "camera");
         DOC_FUNC(
@@ -471,7 +469,10 @@ SG_Pass* ulib_pass_create(SG_PassType pass_type, Chuck_Object* pass_ckobj, bool 
             output_render_texture_desc.usage = WGPUTextureUsage_RenderAttachment
                                                | WGPUTextureUsage_TextureBinding
                                                | WGPUTextureUsage_StorageBinding;
-            output_render_texture_desc.format = WGPUTextureFormat_RGBA16Float;
+            output_render_texture_desc.format       = WGPUTextureFormat_RGBA16Float;
+            output_render_texture_desc.resize_mode  = SG_TextureResizeMode_Ratio;
+            output_render_texture_desc.width_ratio  = 1.0f;
+            output_render_texture_desc.height_ratio = 1.0f;
             SG_Texture* output_render_texture
               = SG_CreateTexture(&output_render_texture_desc, NULL, shred, false);
 
@@ -609,18 +610,26 @@ CK_DLL_MFUN(renderpass_get_color_target_clear_on_load)
 // ScenePass
 // ============================================================================
 
+CK_DLL_CTOR(scenepass_ctor_with_scene)
+{
+    SG_Pass* pass = GET_PASS(SELF);
+    ASSERT(pass->pass_type == SG_PassType_Scene);
+    Chuck_Object* scene = GET_NEXT_OBJECT(ARGS);
+
+    SG_Scene* sg_scene
+      = scene ? SG_GetScene(OBJ_MEMBER_UINT(scene, component_offset_id)) : NULL;
+    SG_Pass::scene(pass, sg_scene);
+
+    CQ_PushCommand_PassUpdate(pass);
+}
+
 CK_DLL_MFUN(scenepass_set_camera)
 {
     SG_Pass* pass = GET_PASS(SELF);
     ASSERT(pass->pass_type == SG_PassType_Scene);
     Chuck_Object* camera = GET_NEXT_OBJECT(ARGS);
 
-    SG_Scene* scene = SG_GetScene(pass->scene_id);
-    // default to scene's main camera if `null` is passed
-    SG_Camera* sg_camera
-      = camera ? GET_CAMERA(camera) : SG_GetCamera(scene->desc.main_camera_id);
-
-    SG_Pass::camera(pass, sg_camera);
+    SG_Pass::camera(pass, camera ? GET_CAMERA(camera) : NULL);
 
     CQ_PushCommand_PassUpdate(pass);
 }
@@ -629,11 +638,14 @@ CK_DLL_MFUN(scenepass_get_camera)
 {
     SG_Pass* pass = GET_PASS(SELF);
     ASSERT(pass->pass_type == SG_PassType_Scene);
+    SG_Camera* sg_camera = NULL;
 
-    SG_Scene* scene = SG_GetScene(pass->scene_id);
-    // default to scene's main camera if `null` is passed
-    SG_Camera* sg_camera = pass->camera_id ? SG_GetCamera(pass->camera_id) :
-                                             SG_GetCamera(scene->desc.main_camera_id);
+    if (pass->camera_id) {
+        sg_camera = SG_GetCamera(pass->camera_id);
+    } else if (pass->scene_id) {
+        SG_Scene* scene = SG_GetScene(pass->scene_id);
+        sg_camera       = SG_GetCamera(scene->desc.main_camera_id);
+    }
 
     RETURN->v_object = sg_camera ? sg_camera->ckobj : NULL;
 }
@@ -666,7 +678,7 @@ CK_DLL_MFUN(scenepass_get_scene)
 
 CK_DLL_CTOR(screenpass_ctor_with_params)
 {
-    UNREACHABLE;
+    UNREACHABLE; // TODO azaday
     // get the arguments
     Chuck_Object* screen_shader = GET_NEXT_OBJECT(ARGS);
     SG_Shader* shader

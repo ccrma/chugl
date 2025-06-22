@@ -454,7 +454,7 @@ CK_DLL_CTOR(video_ctor_with_path)
     desc.dimension      = WGPUTextureDimension_2D;
     desc.format         = WGPUTextureFormat_RGBA8Unorm;
     desc.usage          = WGPUTextureUsage_All; // TODO: restrict usage?
-    desc.mips           = 1;                    // no mipmaps for video
+    desc.gen_mips       = false;                // no mipmaps for video
 
     video_texture_rgba = SG_CreateTexture(&desc, NULL, SHRED, true);
 
@@ -664,8 +664,9 @@ CK_DLL_MFUN(webcam_get_device_id)
 
 CK_DLL_MFUN(webcam_get_device_name)
 {
-    // return new string (no ref count needed; chuck VM function call mechanism will take it from here)
-    RETURN->v_string = chugin_createCkString(GET_WEBCAM(SELF)->device_name,false);
+    // return new string (no ref count needed; chuck VM function call mechanism will
+    // take it from here)
+    RETURN->v_string = chugin_createCkString(GET_WEBCAM(SELF)->device_name, false);
 }
 
 CK_DLL_MFUN(webcam_set_capture)

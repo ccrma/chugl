@@ -932,9 +932,6 @@ SG_Texture* SG_CreateTexture(SG_TextureDesc* desc, Chuck_Object* ckobj,
     tex->texture_data       = texture_read_data;
 
     { // validate texture desc
-#define ULIB_TEXTURE_NUM_MIP_LEVELS(width, height)                                     \
-    (floor((float)(log2(MAX(width, height)))) + 1)
-
         // clamp size values
         tex->desc.width  = MAX(tex->desc.width, 1);
         tex->desc.height = MAX(tex->desc.height, 1);
@@ -948,16 +945,7 @@ SG_Texture* SG_CreateTexture(SG_TextureDesc* desc, Chuck_Object* ckobj,
             tex->desc.usage = WGPUTextureUsage_All;
         }
 
-        // if mips <= 0, auto determine the max count
-        int max_mips = ULIB_TEXTURE_NUM_MIP_LEVELS(tex->desc.width, tex->desc.height);
-        if (tex->desc.mips <= 0) {
-            tex->desc.mips = max_mips;
-        } else {
-            // clamp to legal values
-            tex->desc.mips = MIN(tex->desc.mips, max_mips);
-        }
-
-#undef ULIB_TEXTURE_NUM_MIP_LEVELS
+        tex->desc.gen_mips = desc->gen_mips ? true : false;
     }
 
     // init SG_Component base class
@@ -1279,8 +1267,8 @@ SG_Webcam* SG_CreateWebcam(Chuck_Object* ckobj, Chuck_VM_Shred* shred, int devic
             desc.height         = vidH;
             desc.dimension      = WGPUTextureDimension_2D;
             desc.format         = WGPUTextureFormat_RGBA8Unorm;
-            desc.usage          = WGPUTextureUsage_All; // TODO: restrict usage?
-            desc.mips           = 1;                    // no mipmaps for video
+            desc.usage          = WGPUTextureUsage_All;
+            desc.gen_mips       = false; // no mipmaps for video
 
             webcam_texture     = SG_CreateTexture(&desc, NULL, shred, true);
             webcam->texture_id = webcam_texture->id;
