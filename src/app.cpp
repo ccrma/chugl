@@ -761,6 +761,34 @@ struct App {
                         // TODO store depth texture somewhere else...
                         app->rendergraph.renderPassDepthTarget(pass->depth_texture);
 
+                        // viewport and scissor
+                        u32 color_height = wgpuTextureGetHeight(color_target);
+                        u32 color_width  = wgpuTextureGetWidth(color_target);
+                        if (pass->sg_pass.viewport_normalized) {
+                            aspect = app->rendergraph.viewport(
+                              pass->sg_pass.viewport_x * color_width,
+                              pass->sg_pass.viewport_y * color_height,
+                              pass->sg_pass.viewport_w * color_width,
+                              pass->sg_pass.viewport_h * color_height, color_target);
+                        } else {
+                            aspect = app->rendergraph.viewport(
+                              pass->sg_pass.viewport_x, pass->sg_pass.viewport_y,
+                              pass->sg_pass.viewport_w, pass->sg_pass.viewport_h,
+                              color_target);
+                        }
+                        if (pass->sg_pass.scissor_normalized) {
+                            app->rendergraph.scissor(
+                              pass->sg_pass.scissor_x * color_width,
+                              pass->sg_pass.scissor_y * color_height,
+                              pass->sg_pass.scissor_w * color_width,
+                              pass->sg_pass.scissor_h * color_height, color_target);
+                        } else {
+                            app->rendergraph.scissor(
+                              pass->sg_pass.scissor_x, pass->sg_pass.scissor_y,
+                              pass->sg_pass.scissor_w, pass->sg_pass.scissor_h,
+                              color_target);
+                        }
+
                         G_DrawCallListID dc_list
                           = app->rendergraph.renderPassAddDrawCallList();
                         _R_RenderScene(app, scene, pass, camera, dc_list);
@@ -784,9 +812,12 @@ struct App {
 
                     // set G_Pass
                     app->rendergraph.addRenderPass(pass->sg_pass.name);
+                    WGPUTexture color_target = NULL;
                     if (r_tex) {
+                        color_target = r_tex->gpu_texture;
                         app->rendergraph.renderPassColorTarget(r_tex->gpu_texture, 0);
                     } else {
+                        color_target = app->gctx.surface_texture.texture;
                         app->rendergraph.renderPassColorTarget(
                           app->gctx.backbufferView, app->gctx.surface_format);
                     }
@@ -795,6 +826,35 @@ struct App {
                       pass->sg_pass.color_target_clear_on_load ? WGPULoadOp_Clear :
                                                                  WGPULoadOp_Load,
                       WGPUStoreOp_Store);
+
+                    // viewport and scissor
+                    u32 color_height = wgpuTextureGetHeight(color_target);
+                    u32 color_width  = wgpuTextureGetWidth(color_target);
+                    if (pass->sg_pass.viewport_normalized) {
+                        aspect = app->rendergraph.viewport(
+                          pass->sg_pass.viewport_x * color_width,
+                          pass->sg_pass.viewport_y * color_height,
+                          pass->sg_pass.viewport_w * color_width,
+                          pass->sg_pass.viewport_h * color_height, color_target);
+                    } else {
+                        aspect = app->rendergraph.viewport(
+                          pass->sg_pass.viewport_x, pass->sg_pass.viewport_y,
+                          pass->sg_pass.viewport_w, pass->sg_pass.viewport_h,
+                          color_target);
+                    }
+                    if (pass->sg_pass.scissor_normalized) {
+                        app->rendergraph.scissor(pass->sg_pass.scissor_x * color_width,
+                                                 pass->sg_pass.scissor_y * color_height,
+                                                 pass->sg_pass.scissor_w * color_width,
+                                                 pass->sg_pass.scissor_h * color_height,
+                                                 color_target);
+                    } else {
+                        app->rendergraph.scissor(pass->sg_pass.scissor_x,
+                                                 pass->sg_pass.scissor_y,
+                                                 pass->sg_pass.scissor_w,
+                                                 pass->sg_pass.scissor_h, color_target);
+                    }
+
                     G_DrawCallListID dc_list
                       = app->rendergraph.renderPassAddDrawCallList();
 

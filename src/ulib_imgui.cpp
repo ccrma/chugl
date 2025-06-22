@@ -938,6 +938,7 @@ CK_DLL_SFUN(ui_DragFloat3Ex);
 CK_DLL_SFUN(ui_DragFloat3Speed);
 CK_DLL_SFUN(ui_DragFloat4);
 CK_DLL_SFUN(ui_DragFloat4Ex);
+CK_DLL_SFUN(ui_DragFloat4Speed);
 CK_DLL_SFUN(ui_DragFloatRange2);
 CK_DLL_SFUN(ui_DragFloatRange2Ex);
 CK_DLL_SFUN(ui_DragInt);
@@ -1385,6 +1386,7 @@ CK_DLL_MFUN(ui_float_set_value);
 static t_CKUINT ui_float2_ptr_offset = 0;
 CK_DLL_CTOR(ui_float2_ctor);
 CK_DLL_CTOR(ui_float2_ctor_with_value);
+CK_DLL_CTOR(ui_float2_ctor_with_floats);
 CK_DLL_DTOR(ui_float2_dtor);
 CK_DLL_MFUN(ui_float2_get_value);
 CK_DLL_MFUN(ui_float2_set_value);
@@ -1393,6 +1395,7 @@ CK_DLL_MFUN(ui_float2_set_value);
 static t_CKUINT ui_float3_ptr_offset = 0;
 CK_DLL_CTOR(ui_float3_ctor);
 CK_DLL_CTOR(ui_float3_ctor_with_value);
+CK_DLL_CTOR(ui_float3_ctor_with_floats);
 CK_DLL_DTOR(ui_float3_dtor);
 CK_DLL_MFUN(ui_float3_get_value);
 CK_DLL_MFUN(ui_float3_set_value);
@@ -1401,6 +1404,7 @@ CK_DLL_MFUN(ui_float3_set_value);
 static t_CKUINT ui_float4_ptr_offset = 0;
 CK_DLL_CTOR(ui_float4_ctor);
 CK_DLL_CTOR(ui_float4_ctor_with_value);
+CK_DLL_CTOR(ui_float4_ctor_with_floats);
 CK_DLL_DTOR(ui_float4_dtor);
 CK_DLL_MFUN(ui_float4_get_value);
 CK_DLL_MFUN(ui_float4_set_value);
@@ -1726,6 +1730,10 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
     CTOR(ui_float2_ctor_with_value);
     ARG("vec2", "val");
 
+    CTOR(ui_float2_ctor_with_floats);
+    ARG("float", "x");
+    ARG("float", "y");
+
     DTOR(ui_float2_dtor);
     MFUN(ui_float2_get_value, "vec2", "val");
     MFUN(ui_float2_set_value, "vec2", "val");
@@ -1740,6 +1748,11 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
     CTOR(ui_float3_ctor_with_value);
     ARG("vec3", "val");
 
+    CTOR(ui_float3_ctor_with_floats);
+    ARG("float", "x");
+    ARG("float", "y");
+    ARG("float", "z");
+
     DTOR(ui_float3_dtor);
     MFUN(ui_float3_get_value, "vec3", "val");
     MFUN(ui_float3_set_value, "vec3", "val");
@@ -1753,6 +1766,12 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
 
     CTOR(ui_float4_ctor_with_value);
     ARG("vec4", "val");
+
+    CTOR(ui_float4_ctor_with_floats);
+    ARG("float", "x");
+    ARG("float", "y");
+    ARG("float", "z");
+    ARG("float", "w");
 
     DTOR(ui_float4_dtor);
     MFUN(ui_float4_get_value, "vec4", "val");
@@ -6230,6 +6249,14 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
           "Implied v_speed = 1.0f, v_min = 0.0f, v_max = 0.0f, format = "
           "\"%.3f\", flags = 0");
 
+        SFUN(ui_DragFloat4Speed, "int", "drag");
+        ARG("string", "label");
+        ARG("UI_Float4", "v");
+        ARG("float", "speed");
+        DOC_FUNC(
+          "Implied v_min = 0.0f, v_max = 0.0f, format = "
+          "\"%.3f\", flags = 0");
+
         SFUN(ui_DragFloat4Ex, "int", "drag");
         ARG("string", "label");
         ARG("UI_Float4", "v");
@@ -8050,6 +8077,14 @@ CK_DLL_CTOR(ui_float2_ctor_with_value)
     OBJ_MEMBER_UINT(SELF, ui_float2_ptr_offset) = (t_CKUINT)f;
 }
 
+CK_DLL_CTOR(ui_float2_ctor_with_floats)
+{
+    float x                                     = GET_NEXT_FLOAT(ARGS);
+    float y                                     = GET_NEXT_FLOAT(ARGS);
+    float* f                                    = new float[2]{ x, y };
+    OBJ_MEMBER_UINT(SELF, ui_float2_ptr_offset) = (t_CKUINT)f;
+}
+
 CK_DLL_DTOR(ui_float2_dtor)
 {
     float* f = (float*)OBJ_MEMBER_UINT(SELF, ui_float2_ptr_offset);
@@ -8084,6 +8119,15 @@ CK_DLL_CTOR(ui_float3_ctor_with_value)
 {
     t_CKVEC3 v = GET_NEXT_VEC3(ARGS);
     float* f   = new float[3]{ (float)v.x, (float)v.y, (float)v.z };
+    OBJ_MEMBER_UINT(SELF, ui_float3_ptr_offset) = (t_CKUINT)f;
+}
+
+CK_DLL_CTOR(ui_float3_ctor_with_floats)
+{
+    float x                                     = GET_NEXT_FLOAT(ARGS);
+    float y                                     = GET_NEXT_FLOAT(ARGS);
+    float z                                     = GET_NEXT_FLOAT(ARGS);
+    float* f                                    = new float[3]{ x, y, z };
     OBJ_MEMBER_UINT(SELF, ui_float3_ptr_offset) = (t_CKUINT)f;
 }
 
@@ -8122,6 +8166,16 @@ CK_DLL_CTOR(ui_float4_ctor_with_value)
 {
     t_CKVEC4 v = GET_NEXT_VEC4(ARGS);
     float* f   = new float[4]{ (float)v.x, (float)v.y, (float)v.z, (float)v.w };
+    OBJ_MEMBER_UINT(SELF, ui_float4_ptr_offset) = (t_CKUINT)f;
+}
+
+CK_DLL_CTOR(ui_float4_ctor_with_floats)
+{
+    float x                                     = GET_NEXT_FLOAT(ARGS);
+    float y                                     = GET_NEXT_FLOAT(ARGS);
+    float z                                     = GET_NEXT_FLOAT(ARGS);
+    float w                                     = GET_NEXT_FLOAT(ARGS);
+    float* f                                    = new float[4]{ x, y, z, w };
     OBJ_MEMBER_UINT(SELF, ui_float4_ptr_offset) = (t_CKUINT)f;
 }
 
@@ -10826,6 +10880,17 @@ CK_DLL_SFUN(ui_DragFloat4Ex)
 {
     if (!verifyInitialization(SHRED)) return;
     UI_DRAG_EX_IMPL_FLOAT(ImGui_DragFloat4Ex, float, ui_float4_ptr_offset);
+}
+
+CK_DLL_SFUN(ui_DragFloat4Speed)
+{
+    if (!verifyInitialization(SHRED)) return;
+    const char* label = API->object->str(GET_NEXT_STRING(ARGS));
+    Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
+    float* v          = (float*)OBJ_MEMBER_UINT(obj, ui_float4_ptr_offset);
+    float v_speed     = GET_NEXT_FLOAT(ARGS);
+    RETURN->v_int
+      = cimgui::ImGui_DragFloat4Ex(label, v, v_speed, 0.0f, 0.0f, "%.3f", 0);
 }
 
 CK_DLL_SFUN(ui_DragFloatRange2)

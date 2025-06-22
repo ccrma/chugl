@@ -463,9 +463,9 @@ CK_DLL_SFUN(chugl_get_root_pass)
     RETURN->v_object = SG_GetPass(gg_config.root_pass_id)->ckobj;
 }
 
-CK_DLL_SFUN(chugl_get_default_render_pass)
+CK_DLL_SFUN(chugl_get_default_scene_pass)
 {
-    RETURN->v_object = SG_GetPass(gg_config.default_render_pass_id)->ckobj;
+    RETURN->v_object = SG_GetPass(gg_config.default_scene_pass_id)->ckobj;
 }
 
 CK_DLL_SFUN(chugl_get_default_output_pass)
@@ -730,8 +730,11 @@ CK_DLL_QUERY(ChuGL)
         SFUN(chugl_get_root_pass, SG_CKNames[SG_COMPONENT_PASS], "rootPass");
         DOC_FUNC("Get the root pass of the current scene");
 
-        SFUN(chugl_get_default_render_pass, "RenderPass", "renderPass");
-        DOC_FUNC("Get the default render pass (renders the main scene");
+        SFUN(chugl_get_default_scene_pass, "ScenePass", "scenePass");
+        DOC_FUNC("Get the default render pass (renders the main scene)");
+
+        SFUN(chugl_get_default_scene_pass, "ScenePass", "renderPass");
+        DOC_FUNC("Identical to GG.scenePass(). Kept for backwards compat");
 
         SFUN(chugl_get_default_output_pass, "OutputPass", "outputPass");
         DOC_FUNC(
@@ -831,7 +834,7 @@ CK_DLL_QUERY(ChuGL)
 
         // renderPass for main scene
         SG_Pass* render_pass = ulib_pass_create(SG_PassType_Scene, NULL, false, NULL);
-        gg_config.default_render_pass_id = render_pass->id;
+        gg_config.default_scene_pass_id = render_pass->id;
         SG_Pass::scene(render_pass, scene);
         ulib_component_set_name(render_pass, "ChuGL Default ScenePass");
 

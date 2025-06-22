@@ -64,6 +64,16 @@ CK_DLL_MFUN(renderpass_get_color_target);
 CK_DLL_MFUN(renderpass_set_color_target_clear_on_load);
 CK_DLL_MFUN(renderpass_get_color_target_clear_on_load);
 
+CK_DLL_MFUN(renderpass_set_viewport_normalized);
+CK_DLL_MFUN(renderpass_set_viewport_normalized_vec4);
+CK_DLL_MFUN(renderpass_set_viewport);
+CK_DLL_MFUN(renderpass_set_viewport_vec4);
+
+CK_DLL_MFUN(renderpass_set_scissor_normalized);
+CK_DLL_MFUN(renderpass_set_scissor_normalized_vec4);
+CK_DLL_MFUN(renderpass_set_scissor);
+CK_DLL_MFUN(renderpass_set_scissor_vec4);
+
 // TODO add scissor and viewport
 
 // ScenePass
@@ -82,7 +92,7 @@ CK_DLL_MFUN(scenepass_get_scene);
 // RenderPass or screenpass...)
 
 // ScenePass
-CK_DLL_CTOR(screenpass_ctor_with_params);
+CK_DLL_CTOR(screenpass_ctor_with_shader);
 
 CK_DLL_MFUN(screenpass_get_material);
 CK_DLL_MFUN(screenpass_set_shader);
@@ -196,6 +206,86 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
         MFUN(renderpass_get_color_target_clear_on_load, "int", "clear");
         DOC_FUNC("Get whether the framebuffer's color target is cleared each frame");
 
+        MFUN(renderpass_set_viewport_normalized, "void", "viewportNormalized");
+        ARG("float", "x");
+        ARG("float", "y");
+        ARG("float", "w");
+        ARG("float", "h");
+        DOC_FUNC(
+          "Set the viewport this pass will render to, in normalized in coordinates. "
+          "x,y are the starting point. w,h are the width and height of the viewport. "
+          "All values are multiplied by the dimensions of the output render texture, "
+          "e.g. .viewportNormalized(.5, .5, .5, .5) will render to the bottom-right "
+          "quad of the texture");
+
+        MFUN(renderpass_set_viewport_normalized_vec4, "void", "viewportNormalized");
+        ARG("vec4", "v");
+        DOC_FUNC(
+          "Set the viewport this pass will render to, in normalized in coordinates. "
+          "x,y are the starting point. w,h are the width and height of the viewport. "
+          "All values are multiplied by the dimensions of the output render texture, "
+          "e.g. .viewportNormalized(.5, .5, .5, .5) will render to the bottom-right "
+          "quad of the texture");
+
+        MFUN(renderpass_set_viewport, "void", "viewport");
+        ARG("float", "x");
+        ARG("float", "y");
+        ARG("float", "w");
+        ARG("float", "h");
+        DOC_FUNC(
+          "Set the viewport this pass will render to, in pixels. "
+          "x,y are the starting point. w,h are the width and height of the viewport. "
+          "e.g. .viewport(500, 200, 100, 100) will render a 100x100 pixel region "
+          "starting at the pixel coordinates (500, 200)");
+
+        MFUN(renderpass_set_viewport_vec4, "void", "viewport");
+        ARG("vec4", "vp");
+        DOC_FUNC(
+          "Set the viewport this pass will render to, in pixels. "
+          "x,y are the starting point. w,h are the width and height of the viewport. "
+          "e.g. .viewport(500, 200, 100, 100) will render a 100x100 pixel region "
+          "starting at the pixel coordinates (500, 200)");
+
+        MFUN(renderpass_set_scissor_normalized, "void", "scissorNormalized");
+        ARG("float", "x");
+        ARG("float", "y");
+        ARG("float", "w");
+        ARG("float", "h");
+        DOC_FUNC(
+          "Sets the scissor rectangle used during the rasterization stage. After "
+          "transformation into viewport coordinates any fragments which fall outside "
+          "the scissor rectangle will be discarded."
+          "All values are multiplied by the dimensions of the output render texture, "
+          "e.g. .scissorNormalized(.5, .5, .5, .5) will cut out only the bottom-right "
+          "quad of the texture");
+
+        MFUN(renderpass_set_scissor_normalized_vec4, "void", "scissorNormalized");
+        ARG("vec4", "s");
+        DOC_FUNC(
+          "Sets the scissor rectangle used during the rasterization stage. After "
+          "transformation into viewport coordinates any fragments which fall outside "
+          "the scissor rectangle will be discarded."
+          "All values are multiplied by the dimensions of the output render texture, "
+          "e.g. .scissorNormalized(.5, .5, .5, .5) will cut out only the bottom-right "
+          "quad of the texture");
+
+        MFUN(renderpass_set_scissor, "void", "scissor");
+        ARG("float", "x");
+        ARG("float", "y");
+        ARG("float", "w");
+        ARG("float", "h");
+        DOC_FUNC(
+          "Sets the scissor rectangle (in pixels) used during the rasterization stage. "
+          "After transformation into viewport coordinates any fragments which fall "
+          "outside the scissor rectangle will be discarded.");
+
+        MFUN(renderpass_set_scissor_vec4, "void", "scissor");
+        ARG("vec4", "s");
+        DOC_FUNC(
+          "Sets the scissor rectangle (in pixels) used during the rasterization stage. "
+          "After transformation into viewport coordinates any fragments which fall "
+          "outside the scissor rectangle will be discarded.");
+
         END_CLASS();
     }
 
@@ -241,7 +331,7 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
           "Screen pass for applying screen shaders and visual effects to the entire "
           "screen ");
 
-        CTOR(screenpass_ctor_with_params);
+        CTOR(screenpass_ctor_with_shader);
         ARG(SG_CKNames[SG_COMPONENT_SHADER], "screen_shader");
 
         MFUN(screenpass_get_material, SG_CKNames[SG_COMPONENT_MATERIAL], "material");
@@ -606,6 +696,98 @@ CK_DLL_MFUN(renderpass_get_color_target_clear_on_load)
     RETURN->v_int = GET_PASS(SELF)->color_target_clear_on_load;
 }
 
+CK_DLL_MFUN(renderpass_set_viewport_normalized)
+{
+    SG_Pass* pass             = GET_PASS(SELF);
+    pass->viewport_normalized = true;
+    pass->viewport_x          = GET_NEXT_FLOAT(ARGS);
+    pass->viewport_y          = GET_NEXT_FLOAT(ARGS);
+    pass->viewport_w          = GET_NEXT_FLOAT(ARGS);
+    pass->viewport_h          = GET_NEXT_FLOAT(ARGS);
+    CQ_PushCommand_PassUpdate(pass);
+}
+
+CK_DLL_MFUN(renderpass_set_viewport_normalized_vec4)
+{
+    SG_Pass* pass             = GET_PASS(SELF);
+    t_CKVEC4 vp               = GET_NEXT_VEC4(ARGS);
+    pass->viewport_normalized = true;
+    pass->viewport_x          = vp.x;
+    pass->viewport_y          = vp.y;
+    pass->viewport_w          = vp.z;
+    pass->viewport_h          = vp.w;
+    CQ_PushCommand_PassUpdate(pass);
+}
+
+CK_DLL_MFUN(renderpass_set_viewport)
+{
+    SG_Pass* pass             = GET_PASS(SELF);
+    pass->viewport_normalized = false;
+    pass->viewport_x          = GET_NEXT_FLOAT(ARGS);
+    pass->viewport_y          = GET_NEXT_FLOAT(ARGS);
+    pass->viewport_w          = GET_NEXT_FLOAT(ARGS);
+    pass->viewport_h          = GET_NEXT_FLOAT(ARGS);
+    CQ_PushCommand_PassUpdate(pass);
+}
+
+CK_DLL_MFUN(renderpass_set_viewport_vec4)
+{
+    SG_Pass* pass             = GET_PASS(SELF);
+    t_CKVEC4 vp               = GET_NEXT_VEC4(ARGS);
+    pass->viewport_normalized = false;
+    pass->viewport_x          = vp.x;
+    pass->viewport_y          = vp.y;
+    pass->viewport_w          = vp.z;
+    pass->viewport_h          = vp.w;
+    CQ_PushCommand_PassUpdate(pass);
+}
+
+CK_DLL_MFUN(renderpass_set_scissor_normalized)
+{
+    SG_Pass* pass            = GET_PASS(SELF);
+    pass->scissor_normalized = true;
+    pass->scissor_x          = GET_NEXT_FLOAT(ARGS);
+    pass->scissor_y          = GET_NEXT_FLOAT(ARGS);
+    pass->scissor_w          = GET_NEXT_FLOAT(ARGS);
+    pass->scissor_h          = GET_NEXT_FLOAT(ARGS);
+    CQ_PushCommand_PassUpdate(pass);
+}
+
+CK_DLL_MFUN(renderpass_set_scissor_normalized_vec4)
+{
+    SG_Pass* pass            = GET_PASS(SELF);
+    t_CKVEC4 vp              = GET_NEXT_VEC4(ARGS);
+    pass->scissor_normalized = true;
+    pass->scissor_x          = vp.x;
+    pass->scissor_y          = vp.y;
+    pass->scissor_w          = vp.z;
+    pass->scissor_h          = vp.w;
+    CQ_PushCommand_PassUpdate(pass);
+}
+
+CK_DLL_MFUN(renderpass_set_scissor)
+{
+    SG_Pass* pass            = GET_PASS(SELF);
+    pass->scissor_normalized = false;
+    pass->scissor_x          = GET_NEXT_FLOAT(ARGS);
+    pass->scissor_y          = GET_NEXT_FLOAT(ARGS);
+    pass->scissor_w          = GET_NEXT_FLOAT(ARGS);
+    pass->scissor_h          = GET_NEXT_FLOAT(ARGS);
+    CQ_PushCommand_PassUpdate(pass);
+}
+
+CK_DLL_MFUN(renderpass_set_scissor_vec4)
+{
+    SG_Pass* pass            = GET_PASS(SELF);
+    t_CKVEC4 vp              = GET_NEXT_VEC4(ARGS);
+    pass->scissor_normalized = false;
+    pass->scissor_x          = vp.x;
+    pass->scissor_y          = vp.y;
+    pass->scissor_w          = vp.z;
+    pass->scissor_h          = vp.w;
+    CQ_PushCommand_PassUpdate(pass);
+}
+
 // ============================================================================
 // ScenePass
 // ============================================================================
@@ -676,27 +858,21 @@ CK_DLL_MFUN(scenepass_get_scene)
 // ScreenPass
 // ============================================================================
 
-CK_DLL_CTOR(screenpass_ctor_with_params)
+CK_DLL_CTOR(screenpass_ctor_with_shader)
 {
-    UNREACHABLE; // TODO azaday
     // get the arguments
     Chuck_Object* screen_shader = GET_NEXT_OBJECT(ARGS);
+    if (screen_shader == NULL) return;
+
     SG_Shader* shader
-      = screen_shader ?
-          SG_GetShader(OBJ_MEMBER_UINT(screen_shader, component_offset_id)) :
-          NULL;
+      = SG_GetShader(OBJ_MEMBER_UINT(screen_shader, component_offset_id));
+    ASSERT(shader);
+    SG_Pass* pass = GET_PASS(SELF);
+    ASSERT(pass && pass->pass_type == SG_PassType_Screen);
 
-    SG_Pass* pass = SG_CreatePass(SELF, SG_PassType_Screen);
-    ASSERT(pass->type == SG_COMPONENT_PASS);
-    ASSERT(pass->pass_type == SG_PassType_Screen);
-    OBJ_MEMBER_UINT(SELF, component_offset_id) = pass->id;
-
-    SG_Material* mat = ulib_material_create(SG_MATERIAL_CUSTOM, SHRED);
-    SG_Pass::screenMaterial(pass, mat);
-
-    ulib_material_set_shader(mat, shader);
-
-    CQ_PushCommand_PassUpdate(pass);
+    SG_Material* screen_material = SG_GetMaterial(pass->screen_material_id);
+    ASSERT(screen_material);
+    ulib_material_set_shader(screen_material, shader);
 }
 
 CK_DLL_MFUN(screenpass_get_material)

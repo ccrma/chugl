@@ -1674,7 +1674,13 @@ struct G_RenderPassParams {
     float viewport_y;
     float viewport_w;
     float viewport_h;
-    bool viewport_custom;
+    b32 viewport_custom;
+
+    float scissor_x;
+    float scissor_y;
+    float scissor_w;
+    float scissor_h;
+    b32 scissor_custom;
 
     G_DrawCallListID drawcall_list_id;
 };
@@ -1780,6 +1786,40 @@ struct G_Graph {
         ASSERT(G_Util::isDepthTextureFormat(wgpuTextureGetFormat(tex)));
         pass->rp._depth_target
           = { tex, 0, 1 }; // assume depth textures don't have a mip chain
+    }
+
+    // returns aspect of viewport
+    float viewport(float x, float y, float w, float h, WGPUTexture target)
+    {
+        G_Pass* pass = pass_list + (pass_count - 1);
+        ASSERT(pass->type == G_PassType_Render);
+
+        u32 max_w = wgpuTextureGetWidth(target);
+        u32 max_h = wgpuTextureGetHeight(target);
+
+        pass->rp.viewport_custom = true;
+
+        pass->rp.viewport_x = CLAMP(x, 0, max_w - 1);
+        pass->rp.viewport_y = CLAMP(y, 0, max_h - 1);
+        pass->rp.viewport_w = CLAMP(w, 1, max_w - pass->rp.viewport_x);
+        pass->rp.viewport_h = CLAMP(h, 1, max_h - pass->rp.viewport_y);
+
+        return pass->rp.viewport_w / pass->rp.viewport_h;
+    }
+
+    void scissor(float x, float y, float w, float h, WGPUTexture target)
+    {
+        G_Pass* pass = pass_list + (pass_count - 1);
+        ASSERT(pass->type == G_PassType_Render);
+
+        u32 max_w = wgpuTextureGetWidth(target);
+        u32 max_h = wgpuTextureGetHeight(target);
+
+        pass->rp.scissor_custom = true;
+        pass->rp.scissor_x      = CLAMP(x, 0, max_w - 1);
+        pass->rp.scissor_y      = CLAMP(y, 0, max_h - 1);
+        pass->rp.scissor_w      = CLAMP(w, 1, max_w - pass->rp.scissor_x);
+        pass->rp.scissor_h      = CLAMP(h, 1, max_h - pass->rp.scissor_y);
     }
 
     G_DrawCall*
@@ -1966,6 +2006,11 @@ struct G_Graph {
                     WGPURenderPassEncoder render_pass_encoder
                       = wgpuCommandEncoderBeginRenderPass(command_encoder,
                                                           &render_pass_desc);
+                    if (pass->rp.scissor_custom) {
+                        wgpuRenderPassEncoderSetScissorRect(
+                          render_pass_encoder, pass->rp.scissor_x, pass->rp.scissor_y,
+                          pass->rp.scissor_w, pass->rp.scissor_h);
+                    }
 
                     if (pass->rp.viewport_custom) {
                         wgpuRenderPassEncoderSetViewport(

@@ -788,6 +788,18 @@ struct SG_Pass : public SG_Component {
     u32 color_target_clear_on_load = true;
     SG_ID color_target_id;
 
+    b32 viewport_normalized = 1;
+    f32 viewport_x          = 0.0f;
+    f32 viewport_y          = 0.0f;
+    f32 viewport_w          = 1.0f;
+    f32 viewport_h          = 1.0f;
+
+    b32 scissor_normalized = 1;
+    f32 scissor_x          = 0.0f;
+    f32 scissor_y          = 0.0f;
+    f32 scissor_w          = 1.0f;
+    f32 scissor_h          = 1.0f;
+
     // ScenePass params
     SG_ID scene_id;
     SG_ID camera_id;

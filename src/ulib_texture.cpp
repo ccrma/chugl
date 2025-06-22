@@ -51,6 +51,10 @@ static t_CKUINT texture_desc_depth_offset     = 0;
 static t_CKUINT texture_desc_usage_offset     = 0;
 // static t_CKUINT texture_desc_samples_offset   = 0; // not exposing for now
 static t_CKUINT texture_desc_mips_offset = 0;
+
+static t_CKUINT texture_desc_resizable_offset    = 0;
+static t_CKUINT texture_desc_width_ratio_offset  = 0;
+static t_CKUINT texture_desc_height_ratio_offset = 0;
 CK_DLL_CTOR(texture_desc_ctor);
 
 // TextureWriteDesc -----------------------------------------------------------------
@@ -94,6 +98,9 @@ CK_DLL_MFUN(texture_get_height);
 CK_DLL_MFUN(texture_get_depth);
 CK_DLL_MFUN(texture_get_usage);
 CK_DLL_MFUN(texture_get_mips);
+CK_DLL_MFUN(texture_get_resizable);
+CK_DLL_MFUN(texture_get_width_ratio);
+CK_DLL_MFUN(texture_get_height_ratio);
 
 CK_DLL_MFUN(texture_write);
 CK_DLL_MFUN(texture_write_with_desc);
@@ -198,6 +205,18 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
         DOC_VAR(
           "0 for false, 1 for true. Set to true to generate a full mip-chain for this "
           "texture. Default is true");
+
+        texture_desc_resizable_offset = MVAR("int", "resizable", false);
+        DOC_VAR(
+          "0 for false, 1 for true. Set to true to tell the renderer to dynamically "
+          "resize this texture when used as a color target in a renderpass. If true, "
+          "the size will be determined from .widthRatio and .heightRatio times the "
+          "window dimensions");
+
+        texture_desc_width_ratio_offset = MVAR("float", "widthRatio", false);
+        DOC_VAR("See the notes for .resizable. Default 1.0");
+        texture_desc_height_ratio_offset = MVAR("float", "heightRatio", false);
+        DOC_VAR("See the notes for .resizable. Default 1.0");
 
         END_CLASS();
     } // end TextureDesc
@@ -426,6 +445,10 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
           "Get whether this textue has a full mip chain. Returns 1 for true, 0 for "
           "false");
 
+        MFUN(texture_get_resizable, "int", "resizable");
+        MFUN(texture_get_width_ratio, "float", "widthRatio");
+        MFUN(texture_get_height_ratio, "float", "heightRatio");
+
         MFUN(texture_read_to_cpu, "Event", "read");
         DOC_FUNC(
           "Initializes an async readback of texture data at mip level 0 from GPU to "
@@ -486,6 +509,10 @@ CK_DLL_CTOR(texture_desc_ctor)
     OBJ_MEMBER_INT(SELF, texture_desc_usage_offset)     = WGPUTextureUsage_All;
     // OBJ_MEMBER_INT(SELF, texture_desc_samples_offset) = 1;
     OBJ_MEMBER_INT(SELF, texture_desc_mips_offset) = 1;
+
+    OBJ_MEMBER_INT(SELF, texture_desc_resizable_offset)      = 0;
+    OBJ_MEMBER_FLOAT(SELF, texture_desc_width_ratio_offset)  = 1.0;
+    OBJ_MEMBER_FLOAT(SELF, texture_desc_height_ratio_offset) = 1.0;
 }
 
 static SG_TextureDesc ulib_texture_textureDescFromCkobj(Chuck_Object* ckobj)
@@ -502,6 +529,13 @@ static SG_TextureDesc ulib_texture_textureDescFromCkobj(Chuck_Object* ckobj)
     desc.usage  = OBJ_MEMBER_INT(ckobj, texture_desc_usage_offset);
     // desc.samples        = OBJ_MEMBER_INT(ckobj, texture_desc_samples_offset);
     desc.gen_mips = OBJ_MEMBER_INT(ckobj, texture_desc_mips_offset) ? true : false;
+
+    desc.resize_mode = OBJ_MEMBER_INT(ckobj, texture_desc_resizable_offset) ?
+                         SG_TextureResizeMode_Ratio :
+                         SG_TextureResizeMode_Fixed;
+    desc.width_ratio = MAX(0, OBJ_MEMBER_FLOAT(ckobj, texture_desc_width_ratio_offset));
+    desc.height_ratio
+      = MAX(0, OBJ_MEMBER_FLOAT(ckobj, texture_desc_height_ratio_offset));
 
     // validation happens at final layer SG_CreateTexture
     return desc;
@@ -710,6 +744,21 @@ CK_DLL_MFUN(texture_get_usage)
 CK_DLL_MFUN(texture_get_mips)
 {
     RETURN->v_int = GET_TEXTURE(SELF)->desc.gen_mips;
+}
+
+CK_DLL_MFUN(texture_get_resizable)
+{
+    RETURN->v_int = GET_TEXTURE(SELF)->desc.resize_mode;
+}
+
+CK_DLL_MFUN(texture_get_width_ratio)
+{
+    RETURN->v_int = GET_TEXTURE(SELF)->desc.width_ratio;
+}
+
+CK_DLL_MFUN(texture_get_height_ratio)
+{
+    RETURN->v_int = GET_TEXTURE(SELF)->desc.height_ratio;
 }
 
 static void ulib_texture_write(SG_Texture* tex, Chuck_ArrayFloat* ck_arr,

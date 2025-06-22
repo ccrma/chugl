@@ -1,6 +1,5 @@
 TODO
 - screenpass w/ constructor
-- chuck API for creating a dynamically resizing texture
 - re-impl shader freeing gc
 - impl transparency
   - test with skybox to make sure transparent is drawn after
@@ -24,6 +23,7 @@ TODO
 - ==optimize== for G_DrawCall sortkey, use the material AND shader index into arrays,
 store 16 bits each (assumes we won't ever have more than 16k live materials and shaders),
 lets us sort by shaders as well to minimize pipeline switches 
+  - also add checks so we don't reset a pipeline/bindgroup that was already set
 
 
 - there is a slow leak somewhere (500kb / min)
