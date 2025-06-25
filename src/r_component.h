@@ -263,7 +263,6 @@ struct R_Texture : public R_Component {
              && r_tex->desc.resize_mode == SG_TextureResizeMode_Fixed);
         if (initialized_and_fixed_ratio) {
             // fixed ratio textures are immutable
-            UNREACHABLE; // nocheckin
             R_Texture::validate(r_tex);
             return;
         }
@@ -504,16 +503,17 @@ struct R_Scene : R_Transform {
     GPU_Buffer light_info_buffer; // lighting storage buffer
     u64 last_fc_updated;          // frame count of last light update
 
-    void update(GraphicsContext* gctx, u64 frame_count, Arena* frame_arena)
+    static void update(R_Scene* scene, GraphicsContext* gctx, u64 frame_count,
+                       Arena* frame_arena)
     {
-        if (frame_count == last_fc_updated) return;
-        last_fc_updated = frame_count;
+        if (frame_count == scene->last_fc_updated) return;
+        scene->last_fc_updated = frame_count;
 
         // Update all transforms
-        R_Transform::rebuildMatrices(this, frame_arena);
+        R_Transform::rebuildMatrices(scene, frame_arena);
 
         // update lights
-        R_Scene::rebuildLightInfoBuffer(gctx, this);
+        R_Scene::rebuildLightInfoBuffer(gctx, scene);
     }
 
     static void initFromSG(GraphicsContext* gctx, R_Scene* r_scene, SG_ID scene_id,
@@ -532,10 +532,7 @@ struct R_Scene : R_Transform {
     static void registerMesh(R_Scene* scene, R_Transform* mesh);
     static void unregisterMesh(R_Scene* scene, R_Transform* mesh);
     static void markPrimitiveStale(R_Scene* scene, R_Transform* mesh);
-    static WGPUBindGroup createPrimitiveBindGroup(GraphicsContext* gctx, R_Scene* scene,
-                                                  SG_ID material_id, SG_ID geo_id,
-                                                  WGPUBindGroupLayout layout,
-                                                  Arena* frame_arena);
+
     static int numPrimitives(R_Scene* scene, SG_ID material_id, SG_ID geo_id);
 };
 
@@ -837,7 +834,7 @@ struct G_DrawCallPipelineDesc {
     SG_ID sg_shader_id;
     WGPUCullMode cull_mode;
     WGPUPrimitiveTopology primitive_topology;
-    u32 is_transparent; // TODO support other blend modes (subtrative, additive etc)
+    b32 is_transparent; // TODO support other blend modes (subtrative, additive etc)
 };
 
 struct G_CacheComputePipeline {
@@ -1191,8 +1188,8 @@ struct G_Cache {
             pipeline_desc.vertex.entryPoint  = VS_ENTRY_POINT;
 
             // TODO what happens if fragment shader is not defined?
-            WGPUBlendState blend_state = G_createBlendState(
-              key.drawcall_pipeline_desc.is_transparent); // TODO transparency
+            WGPUBlendState blend_state
+              = G_createBlendState(key.drawcall_pipeline_desc.is_transparent);
             WGPUColorTargetState colorTargetState = {};
             colorTargetState.format               = key.color_target_format;
             colorTargetState.blend                = &blend_state;
@@ -1205,8 +1202,8 @@ struct G_Cache {
 
             pipeline_desc.fragment = &fragmentState;
 
-            WGPUDepthStencilState depth_stencil_state
-              = G_createDepthStencilState(key.depth_target_format, true);
+            WGPUDepthStencilState depth_stencil_state = G_createDepthStencilState(
+              key.depth_target_format, !key.drawcall_pipeline_desc.is_transparent);
             pipeline_desc.depthStencil
               = key.depth_target_format ? &depth_stencil_state : NULL;
 
@@ -1443,11 +1440,12 @@ enum G_RenderingLayer : u8 {
     // system...
 };
 
+// clang-format off
 /* sort key bit flags
-opaque:         0LLLLLLL MMMMMMMM MMMMMMMM MMMMMMMM MMMMMMMM DDDDDDDD DDDDDDDD
-DDDDDDDD translucent: :  1LLLLLLL DDDDDDDD DDDDDDDD DDDDDDDD MMMMMMMM MMMMMMMM
-MMMMMMMM MMMMMMMM
+opaque:         0LLLLLLL MMMMMMMM MMMMMMMM MMMMMMMM MMMMMMMM DDDDDDDD DDDDDDDD DDDDDDDD 
+translucent: :  1LLLLLLL DDDDDDDD DDDDDDDD DDDDDDDD MMMMMMMM MMMMMMMM MMMMMMMM MMMMMMMM
 */
+// clang-format on
 // ==optimize== store 16 bit offset of Material AND Shader in resource pool
 // to minimize number of pipeline switches
 struct G_SortKey {
@@ -1553,7 +1551,16 @@ struct G_DrawCallList {
                       u64 sort_key_a = ((G_DrawCall*)a)->sort_key;
                       u64 sort_key_b = ((G_DrawCall*)b)->sort_key;
 
-                      return sort_key_a - sort_key_b; // sorts in ascending order
+                      if (sort_key_a > sort_key_b) {
+                          return 1;
+                      } else if (sort_key_a < sort_key_b) {
+                          return -1;
+                      } else {
+                          return 0;
+                      }
+
+                      // CANNOT do this because u64 subtraction returns a u64...duh
+                      //   return sort_key_b - sort_key_a; // sorts in ascending order
                   });
             sorted = true;
         }
@@ -1578,6 +1585,20 @@ struct G_DrawCallList {
                 depth_target_format,
               },
               device);
+
+            { // print drawcall
+              // printf("sort key: %llx\n", d->sort_key);
+              // for (int i = 0; i < ARRAY_LENGTH(d->bg_list); ++i) {
+              //     printf("@group(%d) start: %d count: %d\n", i,
+              //     d->bg_list[i].start,
+              //            d->bg_list[i].count);
+              // }
+              // printf(
+              //   "PipelineDesc:\n"
+              //   "   shader_id: %d\n"
+              //   "   is_transparent: %d\n",
+              //   d->_pipeline_desc.sg_shader_id, d->_pipeline_desc.is_transparent);
+            }
 
             // set pipeline
             wgpuRenderPassEncoderSetPipeline(pass_encoder,
@@ -1708,6 +1729,7 @@ struct G_Graph {
     // drawcall pool
     Arena drawcall_pool;
     G_DrawCall* current_draw;
+    G_DrawCall template_draw;
 
     G_DrawCallList drawcall_list_pool[CHUGL_RENDERGRAPH_MAX_PASSES];
     int drawcall_list_count;
@@ -1822,6 +1844,14 @@ struct G_Graph {
         pass->rp.scissor_h      = CLAMP(h, 1, max_h - pass->rp.scissor_y);
     }
 
+    // adds a drawcall, copying everything from template_draw
+    G_DrawCall* addTemplatedDraw(G_DrawCallListID dc_list)
+    {
+        G_DrawCall* d = addDraw(dc_list);
+        *d            = template_draw;
+        return d;
+    }
+
     G_DrawCall*
     addDraw(G_DrawCallListID dc_list) // adds a draw to the last drawcall list
     {
@@ -1838,6 +1868,20 @@ struct G_Graph {
 
         current_draw = draw;
         return draw;
+    }
+
+    G_DrawCall* templateDraw()
+    {
+        template_draw = {};
+
+        // init bindgroup starts
+        for (int i = 0; i < CHUGL_MAX_BINDGROUPS; i++) {
+            template_draw.bg_list[i].start
+              = ARENA_LENGTH(bind_group_entry_list + i, G_CacheBindGroupEntry);
+        }
+
+        current_draw = &template_draw;
+        return &template_draw;
     }
 
     void vertexBuffer(G_DrawCall* d, int slot, WGPUBuffer buffer, u64 offset, u64 size)

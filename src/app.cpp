@@ -1272,36 +1272,28 @@ struct SceneDrawCall {
 static void _R_RenderScene(App* app, R_Scene* scene, R_Pass* pass, R_Camera* camera,
                            G_DrawCallListID dc_list)
 {
-    scene->update(&app->gctx, app->fc, &app->frameArena);
+    R_Scene::update(scene, &app->gctx, app->fc, &app->frameArena);
     ASSERT(scene->last_fc_updated == app->fc);
 
     // form draw call list and sort
     size_t hashmap_idx_DONT_USE = 0;
     GeometryToXforms* primitive = NULL;
-    int num_draw_calls          = 0;
     while (
       hashmap_iter(scene->geo_to_xform, &hashmap_idx_DONT_USE, (void**)&primitive)) {
         int instance_count = GeometryToXforms::count(primitive);
         ASSERT(instance_count > 0);
 
-        ++num_draw_calls;
-
         // Get shader id from material
         R_Material* material = Component_GetMaterial(primitive->key.mat_id);
+        bool is_transparent  = material->pso.transparent;
         ASSERT(material);
         R_Geometry* geo  = Component_GetGeometry(primitive->key.geo_id);
         SG_ID shader_id  = material->pso.sg_shader_id;
         R_Shader* shader = Component_GetShader(shader_id);
 
         // add to draw call list
-        G_DrawCall* d = app->rendergraph.addDraw(dc_list);
-
-        float depth = 0.0; // TODO calculate depth for transparent items
-        d->sort_key        // TODO add transparency here
-          = G_SortKey::create(false, G_RenderingLayer_World, material->id, depth,
-                              camera->params.far_plane);
-
-        d->instance_count = instance_count;
+        G_DrawCall* d = is_transparent ? app->rendergraph.templateDraw() :
+                                         app->rendergraph.addDraw(dc_list);
 
         // populate index buffer
         d->index_count    = R_Geometry::indexCount(geo);
@@ -1321,9 +1313,7 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Pass* pass, R_Camera* cam
 
         // set pso
         d->pipelineDesc(shader_id, material->pso.cull_mode,
-                        material->pso.primitive_topology,
-                        false // TODO add blendmode / transparency here
-        );
+                        material->pso.primitive_topology, is_transparent);
 
         { // set bindgroups
             // set frame uniforms
@@ -1335,12 +1325,10 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Pass* pass, R_Camera* cam
             R_Material::createBindGroupEntries(material, PER_MATERIAL_GROUP,
                                                &app->rendergraph, d, &app->gctx);
 
-            // set @group(3) per-instance bindings (xform matrices)
+            // @group(3) bindings are set below, and are different for transparent vs
+            // opaque
             GeometryToXforms::updateStorageBuffer(&app->gctx, scene, primitive,
-                                                  &app->frameArena);
-            app->rendergraph.bindBuffer(d, PER_DRAW_GROUP, 0,
-                                        primitive->xform_storage_buffer.buf, 0,
-                                        primitive->xform_storage_buffer.size);
+                                                  &app->gctx.limits);
 
             // set @group(4) pulled-vertex attribs
             R_Geometry::addPullBindGroupEntries(geo, &app->rendergraph, d);
@@ -1353,6 +1341,62 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Pass* pass, R_Camera* cam
             if (gpu_buffer->buf && gpu_buffer->size > 0)
                 app->rendergraph.vertexBuffer(d, vertex_slot, gpu_buffer->buf, 0,
                                               gpu_buffer->size);
+        }
+
+        // drawcall fields that are different between opaque and transparent materials
+        if (material->pso.transparent) {
+            // NOTE: draw transparent materials individually, no instancing
+            d->instance_count = 1;
+
+            ASSERT(camera->_stale == R_Transform_STALE_NONE);
+            glm::vec3 cam_pos     = glm::vec3(camera->world[3]);
+            glm::vec3 cam_forward = camera->world * glm::vec4(0, 0, -1, 0);
+            cam_forward           = glm::normalize(cam_forward);
+
+            for (int instance_idx = 0; instance_idx < instance_count; ++instance_idx) {
+                G_DrawCall* td     = app->rendergraph.addTemplatedDraw(dc_list);
+                td->instance_count = 1;
+
+                DrawUniforms* draw_uniforms
+                  = GeometryToXforms::drawUniform(primitive, instance_idx);
+                glm::vec3 world_pos    = glm::vec3(draw_uniforms->model[3]);
+                float dist_from_camera = 0.0;
+                switch (camera->params.camera_type) {
+                    case SG_CameraType_PERPSECTIVE: {
+                        dist_from_camera = glm::distance(
+                          cam_pos,
+                          world_pos); // needs to be distance, not distance^2 so we can
+                                      // normalize against camera far plane
+                    } break;
+                    case SG_CameraType_ORTHOGRAPHIC: {
+                        dist_from_camera = glm::dot(cam_forward, world_pos);
+                    } break;
+                }
+
+                td->sort_key
+                  = G_SortKey::create(true, G_RenderingLayer_World, material->id,
+                                      dist_from_camera, camera->params.far_plane);
+
+                // set @group(2) per-draw bindings (xform matrices)
+                // note: must modify the template here because each draw requires a
+                // different storage buffer offset
+                td->bg_list[2].start = ARENA_LENGTH(
+                  app->rendergraph.bind_group_entry_list + 2, G_CacheBindGroupEntry);
+                app->rendergraph.bindBuffer(
+                  td, PER_DRAW_GROUP, 0, primitive->xform_storage_buffer.buf,
+                  instance_idx * primitive->push_size, sizeof(DrawUniforms));
+            }
+        } else {
+            d->instance_count = instance_count;
+            float dist_from_camera
+              = 0.0; // ==optimize== sort opaque geometry front-to-back
+            d->sort_key = G_SortKey::create(false, G_RenderingLayer_World, material->id,
+                                            dist_from_camera, camera->params.far_plane);
+
+            // set @group(3) per-draw bindings (xform matrices)
+            app->rendergraph.bindBuffer(d, PER_DRAW_GROUP, 0,
+                                        primitive->xform_storage_buffer.buf, 0,
+                                        primitive->xform_storage_buffer.size);
         }
     }
 

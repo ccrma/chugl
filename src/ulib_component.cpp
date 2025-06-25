@@ -151,8 +151,10 @@ CK_DLL_MFUN(ggen_get_pos_z);
 CK_DLL_MFUN(ggen_set_pos_z);
 
 CK_DLL_MFUN(ggen_set_pos);
+CK_DLL_MFUN(ggen_set_pos3_no_vec);
 CK_DLL_MFUN(ggen_get_pos);
 CK_DLL_MFUN(ggen_set_pos_vec2);
+CK_DLL_MFUN(ggen_set_pos2_no_vec2);
 
 CK_DLL_MFUN(ggen_get_pos_world);
 CK_DLL_MFUN(ggen_set_pos_world);
@@ -297,10 +299,21 @@ static void ulib_ggen_query(Chuck_DL_Query* QUERY)
         QUERY->add_arg(QUERY, "vec3", "pos");
         QUERY->doc_func(QUERY, "Set object position in local space");
 
+        MFUN(ggen_set_pos3_no_vec, SG_CKNames[SG_COMPONENT_TRANSFORM], "pos");
+        ARG("float", "x");
+        ARG("float", "y");
+        ARG("float", "z");
+        DOC_FUNC("Set object position in local space");
+
         QUERY->add_mfun(QUERY, ggen_set_pos_vec2, SG_CKNames[SG_COMPONENT_TRANSFORM],
                         "pos");
         QUERY->add_arg(QUERY, "vec2", "pos");
         QUERY->doc_func(QUERY, "Set object XY position in local space. Z is preserved");
+
+        MFUN(ggen_set_pos2_no_vec2, SG_CKNames[SG_COMPONENT_TRANSFORM], "pos");
+        ARG("float", "x");
+        ARG("float", "y");
+        DOC_FUNC("Set object XY position in local space. Z is preserved");
 
         // vec3 posWorld()
         QUERY->add_mfun(QUERY, ggen_get_pos_world, "vec3", "posWorld");
@@ -679,12 +692,33 @@ CK_DLL_MFUN(ggen_set_pos)
     CQ_PushCommand_SetPosition(xform);
 }
 
+CK_DLL_MFUN(ggen_set_pos3_no_vec)
+{
+    SG_Transform* xform = SG_GetTransform(OBJ_MEMBER_UINT(SELF, component_offset_id));
+    xform->pos.x        = GET_NEXT_FLOAT(ARGS);
+    xform->pos.y        = GET_NEXT_FLOAT(ARGS);
+    xform->pos.z        = GET_NEXT_FLOAT(ARGS);
+    RETURN->v_object    = SELF;
+
+    CQ_PushCommand_SetPosition(xform);
+}
+
 CK_DLL_MFUN(ggen_set_pos_vec2)
 {
     SG_Transform* xform = SG_GetTransform(OBJ_MEMBER_UINT(SELF, component_offset_id));
     t_CKVEC2 vec        = GET_NEXT_VEC2(ARGS);
     xform->pos.x        = vec.x;
     xform->pos.y        = vec.y;
+    RETURN->v_object    = SELF;
+
+    CQ_PushCommand_SetPosition(xform);
+}
+
+CK_DLL_MFUN(ggen_set_pos2_no_vec2)
+{
+    SG_Transform* xform = SG_GetTransform(OBJ_MEMBER_UINT(SELF, component_offset_id));
+    xform->pos.x        = GET_NEXT_FLOAT(ARGS);
+    xform->pos.y        = GET_NEXT_FLOAT(ARGS);
     RETURN->v_object    = SELF;
 
     CQ_PushCommand_SetPosition(xform);

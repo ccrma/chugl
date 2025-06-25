@@ -1,8 +1,13 @@
 TODO
-- screenpass w/ constructor
+- ScenePass.set(scene, camera) camera must be part of scene
+- finish split screen example
+- test shadertoy example in release mode, make sure we still get shader compilation errors
+  - is there a way to detect a compile error and switch to default magenta? otherwise just crash
 - re-impl shader freeing gc
-- impl transparency
-  - test with skybox to make sure transparent is drawn after
+- look into other blendmodes besides alpha blending
+  - see acerola blend modes video
+  - impl additive blending particle system example, see https://www.youtube.com/watch?v=ahOfNgvQ93Q&ab_channel=NeverEngineStudios
+    - also acerola particle system / compute shader video
 - impl screenPass properly and make a little chugl-shaderToy playground example
   - make actual chugl example.
   - use UI.text() as text editor field lol, or GText
@@ -10,12 +15,8 @@ TODO
   - want to prevent memory leak from say CHydra building new shaders every frame
 - check if imgui has multi-window support now for webgpu backend
 - add anti aliasing back
-- https://gist.github.com/bkaradzic/2e39896bc7d8c34e042b
-  - change all instances of #include <cstdio> to #include <stdio.h> etc. (don't use the c++ wrapper, use the c runtime)
-  - port geometry builders to use par_shapes
+- port geometry builders to use par_shapes
 
-- add renderpass scissor rect and viewport
-  - impl splitscreen multiplayer example
 - default GScene with a main camera?
 - add inverse normal matrix to PER_DRAW instanced draw uniforms
 - group all the commands of the frame together, submit all at once at end of RenderGraph 
@@ -52,7 +53,6 @@ lets us sort by shaders as well to minimize pipeline switches
         -  stb leak check
 
 Long-Term
-- read wgpu release notes, see about updating to new version and any useful features
 - C-port of webgpu-utils shader pipeline layout generator
 - study Raylib opengl batcher, can chugl make use of a batcher?
 - swap out glm for handmade math
@@ -81,6 +81,7 @@ Long-Term
 - Portals
 - GUI overlay
 - additive blending particle system
+  - https://www.youtube.com/watch?v=ahOfNgvQ93Q&ab_channel=NeverEngineStudios
 - shadertoy in chugl
 - pokemon cries!
 - fluid sim

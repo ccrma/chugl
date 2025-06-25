@@ -70,6 +70,8 @@ CK_DLL_MFUN(material_get_cullmode);
 CK_DLL_MFUN(material_set_cullmode);
 CK_DLL_MFUN(material_set_topology);
 CK_DLL_MFUN(material_get_topology);
+CK_DLL_MFUN(material_set_transparent);
+CK_DLL_MFUN(material_get_transparent);
 
 // material uniforms
 CK_DLL_MFUN(material_uniform_remove);
@@ -128,7 +130,9 @@ CK_DLL_MFUN(lines2d_material_set_loop);
 // flat material
 CK_DLL_CTOR(flat_material_ctor);
 CK_DLL_MFUN(flat_material_get_color);
+CK_DLL_MFUN(flat_material_get_alpha);
 CK_DLL_MFUN(flat_material_set_color);
+CK_DLL_MFUN(flat_material_set_color_rgba);
 CK_DLL_MFUN(flat_material_get_sampler);
 CK_DLL_MFUN(flat_material_set_sampler);
 CK_DLL_MFUN(flat_material_get_color_map);
@@ -492,6 +496,11 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
       "Material.Topology_LineList, Material.Topology_LineStrip, "
       "Material.Topology_TriangleList, or Material.Topology_TriangleStrip.");
 
+    MFUN(material_set_transparent, "void", "transparent");
+    ARG("int", "is_transparent");
+
+    MFUN(material_get_transparent, "int", "transparent");
+
     // uniforms
 
     // TODO
@@ -699,11 +708,18 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
 
         // color uniform
         MFUN(flat_material_get_color, "vec3", "color");
-        DOC_FUNC("Get the color of the material.");
+        DOC_FUNC("Get the rgba color of the material.");
+
+        MFUN(flat_material_get_alpha, "float", "alpha");
+        DOC_FUNC("Get the alpha-channel of the material's color");
 
         MFUN(flat_material_set_color, "void", "color");
         ARG("vec3", "color");
         DOC_FUNC("Set material color uniform as an rgb. Alpha set to 1.0.");
+
+        MFUN(flat_material_set_color_rgba, "void", "color");
+        ARG("vec4", "color");
+        DOC_FUNC("Set rgba the material color");
 
         MFUN(flat_material_get_sampler, "TextureSampler", "sampler");
         DOC_FUNC("Get the sampler of the material.");
@@ -1211,6 +1227,19 @@ CK_DLL_MFUN(material_get_topology)
 {
     SG_Material* material = GET_MATERIAL(SELF);
     RETURN->v_int         = (t_CKINT)material->pso.primitive_topology;
+}
+
+CK_DLL_MFUN(material_set_transparent)
+{
+    SG_Material* material     = GET_MATERIAL(SELF);
+    material->pso.transparent = GET_NEXT_INT(ARGS) ? 1 : 0;
+    CQ_PushCommand_MaterialUpdatePSO(material);
+}
+
+CK_DLL_MFUN(material_get_transparent)
+{
+    SG_Material* material = GET_MATERIAL(SELF);
+    RETURN->v_int         = material->pso.transparent;
 }
 
 CK_DLL_MFUN(material_uniform_active_locations)
@@ -1861,12 +1890,28 @@ CK_DLL_MFUN(flat_material_get_color)
     RETURN->v_vec3  = { color.r, color.g, color.b };
 }
 
+CK_DLL_MFUN(flat_material_get_alpha)
+{
+    glm::vec4 color = GET_MATERIAL(SELF)->uniforms[0].as.vec4f;
+    RETURN->v_float = color.a;
+}
+
 CK_DLL_MFUN(flat_material_set_color)
 {
     SG_Material* material = GET_MATERIAL(SELF);
     t_CKVEC3 color        = GET_NEXT_VEC3(ARGS);
 
     SG_Material::uniformVec4f(material, 0, glm::vec4(color.x, color.y, color.z, 1));
+    CQ_PushCommand_MaterialSetUniform(material, 0);
+}
+
+CK_DLL_MFUN(flat_material_set_color_rgba)
+{
+    SG_Material* material = GET_MATERIAL(SELF);
+    t_CKVEC4 color        = GET_NEXT_VEC4(ARGS);
+
+    SG_Material::uniformVec4f(material, 0,
+                              glm::vec4(color.x, color.y, color.z, color.w));
     CQ_PushCommand_MaterialSetUniform(material, 0);
 }
 

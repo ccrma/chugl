@@ -878,7 +878,9 @@ struct GeometryToXforms {
     GeometryToXformKey key;
     hashmap* xform_id_set; // xforms that are using this geometry
     GPU_Buffer xform_storage_buffer;
-    bool buffer_stale; // if true, need to update storage buffer
+    Arena draw_uniform_list; // array of DrawUniforms
+    size_t push_size;        // size in bytes per element of draw_uniform_list
+    b8 buffer_stale;         // if true, need to update storage buffer
 
     static int count(GeometryToXforms* g2x)
     {
@@ -925,17 +927,41 @@ struct GeometryToXforms {
     }
 
     static void updateStorageBuffer(GraphicsContext* gctx, R_Scene* scene,
-                                    GeometryToXforms* g2x, Arena* frame_arena)
+                                    GeometryToXforms* g2x, WGPULimits* limits)
     {
         // should be nonempty (if empty, should have already been deleted)
         ASSERT(hashmap_count(g2x->xform_id_set) > 0);
-        if (!g2x->buffer_stale) return;
+        R_Material* mat  = Component_GetMaterial(g2x->key.mat_id);
+        size_t push_size = mat->pso.transparent ?
+                             ALIGN_NON_POW2(sizeof(DrawUniforms),
+                                            limits->minStorageBufferOffsetAlignment) :
+                             sizeof(DrawUniforms);
 
-        // rebuild storage buffer
+        bool draw_uniform_padding_unchanged = (push_size == g2x->push_size);
+
+        if (draw_uniform_padding_unchanged && !g2x->buffer_stale) return;
         defer(g2x->buffer_stale = false);
+        defer(g2x->push_size = push_size);
+
+        // problem, if material is flipped from transparent --> not transparent,
+        // we actually need to mark this as stale and rebuild the buffer because
+        // now the padding between frameuniforms must be at
+        // limits.minStorageBufferOffsetAlignment (cannot instanced draw transparent
+        // materials, must draw 1 at a time)
+        /*
+        option 1: no more stale/not stale, just always populate a (dynamic) storage
+        buffer every frame with the per-draw uniform data.
+            - but then binding would be tricky, need to have another G_BindGroup type
+        for this StorageBuffer class, because StorageBuffer might have to resize,
+        invalidating the older bindgroups that pointed to a pre-resize WGPUBuffer
+
+        <<< WENT WITH THIS ONE >>>
+        option 2: store push size, check the intended push size based on mat
+        transparency. simplest for now.
+        */
 
         // build new array of matrices on CPU
-        u64 model_matrices_offset = frame_arena->curr;
+        Arena::clear(&g2x->draw_uniform_list);
 
         size_t hashmap_idx_DONT_USE = 0;
         SG_ID* xform_id             = NULL;
@@ -956,41 +982,23 @@ struct GeometryToXforms {
             ASSERT(xform->_stale == R_Transform_STALE_NONE);
 
             // add xform matrix to arena
-            DrawUniforms* draw_uniforms = ARENA_PUSH_TYPE(frame_arena, DrawUniforms);
-            draw_uniforms->model        = xform->world;
+            DrawUniforms* draw_uniforms
+              = (DrawUniforms*)Arena::push(&g2x->draw_uniform_list, push_size);
+            draw_uniforms->model = xform->world;
             // TODO add inv normal matrix here
             draw_uniforms->id = xform->id;
         }
 
-        u64 write_size = frame_arena->curr - model_matrices_offset;
+        u64 write_size = g2x->draw_uniform_list.curr;
         GPU_Buffer::write(gctx, &g2x->xform_storage_buffer, WGPUBufferUsage_Storage,
-                          Arena::get(frame_arena, model_matrices_offset), write_size);
-
-        // pop arena after copying data to GPU
-        Arena::pop(frame_arena, write_size);
-        ASSERT(model_matrices_offset == frame_arena->curr);
+                          g2x->draw_uniform_list.base, write_size);
     }
 
-    static WGPUBindGroup createBindGroup(GraphicsContext* gctx, R_Scene* scene,
-                                         GeometryToXforms* g2x,
-                                         WGPUBindGroupLayout layout, Arena* frame_arena)
+    static DrawUniforms* drawUniform(GeometryToXforms* g2x, int i)
     {
-        updateStorageBuffer(gctx, scene, g2x, frame_arena);
-
-        // recreate bindgroup
-        WGPUBindGroupEntry entry = {};
-        entry.binding            = 0;
-        entry.buffer             = g2x->xform_storage_buffer.buf;
-        entry.offset             = 0;
-        entry.size               = g2x->xform_storage_buffer.size;
-
-        WGPUBindGroupDescriptor desc = {};
-        desc.layout                  = layout;
-        desc.entryCount              = 1;
-        desc.entries                 = &entry;
-
-        // recreate bind group
-        return wgpuDeviceCreateBindGroup(gctx->device, &desc);
+        ASSERT(g2x->push_size);
+        ASSERT(i < GeometryToXforms::count(g2x));
+        return (DrawUniforms*)Arena::get(&g2x->draw_uniform_list, i * g2x->push_size);
     }
 };
 
@@ -1196,15 +1204,6 @@ void R_Scene::markPrimitiveStale(R_Scene* scene, R_Transform* mesh)
 {
     GeometryToXforms* g2x = R_Scene_getPrimitive(scene, mesh->_matID, mesh->_geoID);
     g2x->buffer_stale     = true;
-}
-
-WGPUBindGroup R_Scene::createPrimitiveBindGroup(GraphicsContext* gctx, R_Scene* scene,
-                                                SG_ID material_id, SG_ID geo_id,
-                                                WGPUBindGroupLayout layout,
-                                                Arena* frame_arena)
-{
-    GeometryToXforms* g2x = R_Scene_getPrimitive(scene, material_id, geo_id);
-    return GeometryToXforms::createBindGroup(gctx, scene, g2x, layout, frame_arena);
 }
 
 int R_Scene::numPrimitives(R_Scene* scene, SG_ID material_id, SG_ID geo_id)
