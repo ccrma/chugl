@@ -1,1 +1,1 @@
-texture mips:  1 
+texture has full mip chain?  0 

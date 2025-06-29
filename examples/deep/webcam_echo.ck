@@ -35,7 +35,7 @@ positionPlanes(2, 1);
 
 // initialize our texture "delay line" to buffer webcam frames
 TextureDesc desc;
-1 => desc.mips;
+false => desc.mips; // do NOT generate mips, otherwise will be invisible because we are only copying to mip level 0
 webcam.width() => desc.width;
 webcam.height() => desc.height;
 Texture echo_textures(desc)[30 * plane_mats.size()];

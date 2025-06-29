@@ -130,9 +130,10 @@ CK_DLL_MFUN(lines2d_material_set_loop);
 // flat material
 CK_DLL_CTOR(flat_material_ctor);
 CK_DLL_MFUN(flat_material_get_color);
-CK_DLL_MFUN(flat_material_get_alpha);
 CK_DLL_MFUN(flat_material_set_color);
 CK_DLL_MFUN(flat_material_set_color_rgba);
+CK_DLL_MFUN(flat_material_get_alpha);
+CK_DLL_MFUN(flat_material_set_alpha);
 CK_DLL_MFUN(flat_material_get_sampler);
 CK_DLL_MFUN(flat_material_set_sampler);
 CK_DLL_MFUN(flat_material_get_color_map);
@@ -165,6 +166,9 @@ CK_DLL_MFUN(phong_material_set_specular_color);
 
 CK_DLL_MFUN(phong_material_get_diffuse_color);
 CK_DLL_MFUN(phong_material_set_diffuse_color);
+
+CK_DLL_MFUN(phong_material_get_alpha);
+CK_DLL_MFUN(phong_material_set_alpha);
 
 CK_DLL_MFUN(phong_material_get_log_shininess);
 CK_DLL_MFUN(phong_material_set_log_shininess);
@@ -712,6 +716,10 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
 
         MFUN(flat_material_get_alpha, "float", "alpha");
         DOC_FUNC("Get the alpha-channel of the material's color");
+
+        MFUN(flat_material_set_alpha, "void", "alpha");
+        ARG("float", "alpha");
+        DOC_FUNC("Set the alpha-channel of the material's color");
 
         MFUN(flat_material_set_color, "void", "color");
         ARG("vec3", "color");
@@ -1896,6 +1904,13 @@ CK_DLL_MFUN(flat_material_get_alpha)
     RETURN->v_float = color.a;
 }
 
+CK_DLL_MFUN(flat_material_set_alpha)
+{
+    SG_Material* material            = GET_MATERIAL(SELF);
+    material->uniforms[0].as.vec4f.a = GET_NEXT_FLOAT(ARGS);
+    CQ_PushCommand_MaterialSetUniform(material, 0);
+}
+
 CK_DLL_MFUN(flat_material_set_color)
 {
     SG_Material* material = GET_MATERIAL(SELF);
@@ -2097,6 +2112,16 @@ CK_DLL_MFUN(phong_material_set_diffuse_color)
 {
     t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
     PhongParams::diffuse(GET_MATERIAL(SELF), glm::vec3(color.x, color.y, color.z));
+}
+
+CK_DLL_MFUN(phong_material_get_alpha)
+{
+    RETURN->v_float = PhongParams::diffuse(GET_MATERIAL(SELF))->a;
+}
+
+CK_DLL_MFUN(phong_material_set_alpha)
+{
+    PhongParams::alpha(GET_MATERIAL(SELF), GET_NEXT_FLOAT(ARGS));
 }
 
 CK_DLL_MFUN(phong_material_get_log_shininess)

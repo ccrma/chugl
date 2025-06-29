@@ -649,7 +649,7 @@ static const char* phong_shader_string = R"glsl(
 
         return vec4f(
             lighting, 
-            diffuseTex.a
+            diffuseTex.a * u_diffuse_color.a
         );
     }
 )glsl";

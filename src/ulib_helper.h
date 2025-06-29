@@ -465,6 +465,12 @@ struct PhongParams {
         return &mat->uniforms[1].as.vec4f;
     }
 
+    static void alpha(SG_Material* mat, float alpha)
+    {
+        mat->uniforms[1].as.vec4f.a = alpha;
+        CQ_PushCommand_MaterialSetUniform(mat, 1);
+    }
+
     static void shininess(SG_Material* mat, float shininess)
     {
         SG_Material::uniformFloat(mat, 2, shininess);
@@ -649,6 +655,13 @@ struct PhongParams {
         MFUN(prefix##_material_set_diffuse_color, "void", "color");                    \
         ARG("vec3", "diffuse");                                                        \
         DOC_FUNC("Set the diffuse color of the material.");                            \
+                                                                                       \
+        MFUN(prefix##_material_get_alpha, "float", "alpha");                           \
+        DOC_FUNC("Get the alpha channel of the diffuse color of the material.");       \
+                                                                                       \
+        MFUN(prefix##_material_set_alpha, "void", "alpha");                            \
+        ARG("float", "alpha");                                                         \
+        DOC_FUNC("Set the alpha channel of the diffuse color of the material.");       \
                                                                                        \
         MFUN(prefix##_material_get_log_shininess, "float", "shine");                   \
         DOC_FUNC("Get the log shininess exponent");                                    \

@@ -1,6 +1,7 @@
-GG.rootPass() --> ScenePass sp(GG.scene()) --> null;
+UVMaterial mat;
+PlaneGeometry geo;
 
-GSuzanne s --> GG.scene();
+GMesh mesh(geo, mat) --> GG.scene();
 
 while (1) {
     GG.nextFrame() => now;

@@ -16,4 +16,4 @@ Test: load a texture without mips, assert that the mip level is correctly 1.
 TextureLoadDesc tex_load_desc;
 false => tex_load_desc.gen_mips; 
 Texture.load(me.dir() + "./flower_petals.png", tex_load_desc) @=> Texture@ sprite_tex;
-<<< "texture mips: ", sprite_tex.mips() >>>; // should report 1
+<<< "texture has full mip chain? ", sprite_tex.mips() >>>; // should report 0 for no mip chain

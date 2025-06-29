@@ -1260,6 +1260,8 @@ CK_DLL_MFUN(gshape_phong_material_get_specular_color);
 CK_DLL_MFUN(gshape_phong_material_set_specular_color);
 CK_DLL_MFUN(gshape_phong_material_get_diffuse_color);
 CK_DLL_MFUN(gshape_phong_material_set_diffuse_color);
+CK_DLL_MFUN(gshape_phong_material_get_alpha);
+CK_DLL_MFUN(gshape_phong_material_set_alpha);
 CK_DLL_MFUN(gshape_phong_material_get_log_shininess);
 CK_DLL_MFUN(gshape_phong_material_set_log_shininess);
 CK_DLL_MFUN(gshape_phong_material_get_emission_color);
@@ -2019,6 +2021,16 @@ CK_DLL_MFUN(gshape_phong_material_set_diffuse_color)
 {
     t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
     PhongParams::diffuse(GET_MESH_MATERIAL(SELF), glm::vec3(color.x, color.y, color.z));
+}
+
+CK_DLL_MFUN(gshape_phong_material_get_alpha)
+{
+    RETURN->v_float = PhongParams::diffuse(GET_MESH_MATERIAL(SELF))->a;
+}
+
+CK_DLL_MFUN(gshape_phong_material_set_alpha)
+{
+    PhongParams::alpha(GET_MESH_MATERIAL(SELF), GET_NEXT_FLOAT(ARGS));
 }
 
 CK_DLL_MFUN(gshape_phong_material_get_log_shininess)

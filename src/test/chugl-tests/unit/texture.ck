@@ -5,7 +5,7 @@ T.assert(default_tex_desc.height == 1, "default texture desc height");
 T.assert(default_tex_desc.depth == 1, "default texture desc depth");
 T.assert(default_tex_desc.format == Texture.Format_RGBA8Unorm, "default texture desc format");
 T.assert(default_tex_desc.usage == Texture.Usage_All, "default texture desc usage");
-T.assert(default_tex_desc.mips == 0, "default texture desc mips = " + default_tex_desc.mips);
+T.assert(default_tex_desc.mips == 1, "default texture desc mips = " + default_tex_desc.mips);
 
 // default values =======================================
 Texture default_tex;
@@ -32,7 +32,7 @@ T.assert(tex.height() == 256, "texture height");
 T.assert(tex.depth() == 1, "texture depth");
 T.assert(tex.format() == Texture.Format_RGBA32Float, "texture format");
 T.assert(tex.usage() == Texture.Usage_StorageBinding | Texture.Usage_RenderAttachment, "texture usage");
-T.assert(tex.mips() == 9, "texture mips");
+T.assert(tex.mips() == 0, "texture mips");
 
 // TextureWriteDesc defaults ============================
 

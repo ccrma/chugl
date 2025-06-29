@@ -3,7 +3,7 @@
 TextureDesc desc;
 10 => desc.width;
 10 => desc.height;
-1 => desc.mips;
+false => desc.mips;
 
 Texture A(desc);
 

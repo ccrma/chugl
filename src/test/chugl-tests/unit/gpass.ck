@@ -18,12 +18,11 @@ T.assert(rpass.colorOutput() == target, "target is target");
 rpass.colorOutput(null);
 T.assert(rpass.colorOutput() == null, "target is null again");
 
-T.assert(rpass.autoClearColor(), "default auto clear color is true");
-rpass.autoClearColor(false);
-T.assert(!rpass.autoClearColor(), "auto clear color is false");
+T.assert(rpass.clear(), "default auto clear color is true");
+rpass.clear(false);
+T.assert(!rpass.clear(), "auto clear color is false");
 
-T.assert(GG.renderPass().next() == GG.hudPass(), "default render pass next is hud pass");
-T.assert(GG.hudPass().next() == GG.outputPass(), "default hud pass next is output pass");
+T.assert(GG.renderPass().next() == GG.outputPass(), "default render pass next is output pass");
 
 OutputPass opass;
 T.assert(T.feq(opass.gamma(), 2.2), "default gamma 2.2");

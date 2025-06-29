@@ -4,6 +4,9 @@ TODO
 - test shadertoy example in release mode, make sure we still get shader compilation errors
   - is there a way to detect a compile error and switch to default magenta? otherwise just crash
 - re-impl shader freeing gc
+- add vec4 alpha setters on other builtin materials
+  - add alpha channel to geo_and_mat.ck example for flat/phong/pbr
+  - ==BUG== fix crash on using UV material (happening because uv material doesn't use @group(1))
 - look into other blendmodes besides alpha blending
   - see acerola blend modes video
   - impl additive blending particle system example, see https://www.youtube.com/watch?v=ahOfNgvQ93Q&ab_channel=NeverEngineStudios
@@ -95,6 +98,7 @@ Long-Term
   - https://wren.io/performance.html
     - says saves 5-10% on wren bytecode switch
   - https://eli.thegreenplace.net/2012/07/12/computed-goto-for-efficient-dispatch-tables/
+- jellyfish
 
 
 === Srgb format madness ===

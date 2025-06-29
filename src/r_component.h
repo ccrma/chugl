@@ -1604,22 +1604,40 @@ struct G_DrawCallList {
             wgpuRenderPassEncoderSetPipeline(pass_encoder,
                                              cached_pipeline->val.pipeline);
 
-            // set bindgroups
-            int max_bg = ARRAY_LENGTH(d->bg_list);
-            for (int bg_idx = 0; bg_idx < max_bg; bg_idx++) {
+            /* Pipeline Layout / Bindgroup situation
+            wgpuRenderPipelineGetLayout() can only be called for group index up to the
+            max defined. e.g. if a shader defines @group(0) and @group(2), you can get
+            the layout for @group(1) but NOT @group(3). Doing so crashes.
+
+            If @group(0) and @group(2) are defined, you still must set an empty
+            wgpuBindGroup in the slot of @group(1). But you *cannot* set a bindgroup in
+            @group(3).
+
+            Solution until I make a shader parser / wgpuPipelineLayout library:
+                - guess the max defined @group of the pipeline by seeing the highest
+            @group that has nonzero num_bindings
+                - if less than that, always set the bindgroup, even if num_bindings = 0
+            */
+            int max_group_number = 0;
+            for (int bg_idx = ARRAY_LENGTH(d->bg_list) - 1; bg_idx >= 0; --bg_idx) {
+                if (d->bg_list[bg_idx].count > 0) {
+                    max_group_number = bg_idx;
+                    break;
+                }
+            }
+
+            // set frame, material, and draw bindgroups
+            for (int bg_idx = 0; bg_idx <= max_group_number; bg_idx++) {
                 int num_bindings = d->bg_list[bg_idx].count;
                 int start        = d->bg_list[bg_idx].start;
-                if (num_bindings > 0) {
-                    WGPUBindGroup bg = cache->bindGroup(
-                      device,
-                      ARENA_GET_TYPE(bind_group_list + bg_idx, G_CacheBindGroupEntry,
-                                     start),
-                      num_bindings, cached_pipeline->val.bindGroupLayout(bg_idx),
-                      bg_idx, pass_name);
-                    ASSERT(bg);
-                    wgpuRenderPassEncoderSetBindGroup(pass_encoder, bg_idx, bg, 0,
-                                                      NULL);
-                }
+                WGPUBindGroup bg = cache->bindGroup(
+                  device,
+                  ARENA_GET_TYPE(bind_group_list + bg_idx, G_CacheBindGroupEntry,
+                                 start),
+                  num_bindings, cached_pipeline->val.bindGroupLayout(bg_idx), bg_idx,
+                  pass_name);
+                ASSERT(bg);
+                wgpuRenderPassEncoderSetBindGroup(pass_encoder, bg_idx, bg, 0, NULL);
             }
 
             // set vertex buffer
