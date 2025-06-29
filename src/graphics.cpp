@@ -1192,7 +1192,7 @@ bool GPU_Buffer::resizeNoCopy(GraphicsContext* gctx, GPU_Buffer* gpu_buffer,
     desc.size                 = NEXT_MULT(new_capacity, 4);
 
     // release old buffer
-    WGPU_DESTROY_AND_RELEASE_BUFFER(gpu_buffer->buf);
+    WGPU_RELEASE_RESOURCE(Buffer, gpu_buffer->buf);
 
     // update buffer
     gpu_buffer->buf      = wgpuDeviceCreateBuffer(gctx->device, &desc);

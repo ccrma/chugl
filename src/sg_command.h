@@ -369,6 +369,7 @@ struct SG_Command_GeoSetIndices : public SG_Command {
 struct SG_Command_TextureCreate : public SG_Command {
     SG_ID sg_id;
     SG_TextureDesc desc;
+    char name[64];
 };
 
 struct SG_Command_TextureWrite : public SG_Command {

@@ -20,6 +20,15 @@ std::string File_dirname(const std::string& path)
     return path.substr(0, last_slash + 1);
 }
 
+const char* File_basename(const char* path)
+{
+    const char* name = strrchr(path, '/');
+    if (name == NULL) name = strrchr(path, '\\');
+
+    if (name == NULL) return path;
+    return name + 1;
+}
+
 int File_exists(const char* filename)
 {
     /* try to open file to read */

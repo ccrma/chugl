@@ -924,6 +924,7 @@ struct GeometryToXforms {
         GeometryToXforms* g2x = (GeometryToXforms*)item;
         GPU_Buffer::destroy(&g2x->xform_storage_buffer);
         hashmap_free(g2x->xform_id_set);
+        Arena::free(&g2x->draw_uniform_list);
     }
 
     static void updateStorageBuffer(GraphicsContext* gctx, R_Scene* scene,
@@ -988,6 +989,11 @@ struct GeometryToXforms {
             // TODO add inv normal matrix here
             draw_uniforms->id = xform->id;
         }
+
+        snprintf(g2x->xform_storage_buffer.label,
+                 sizeof(g2x->xform_storage_buffer.label),
+                 "Per-Draw Storage Buffer for Mat: %d, Geo: %d", g2x->key.mat_id,
+                 g2x->key.geo_id);
 
         u64 write_size = g2x->draw_uniform_list.curr;
         GPU_Buffer::write(gctx, &g2x->xform_storage_buffer, WGPUBufferUsage_Storage,
@@ -1173,9 +1179,6 @@ void R_Scene::registerMesh(R_Scene* scene, R_Transform* mesh)
     ASSERT(mesh->type == SG_COMPONENT_MESH);
     GeometryToXforms::addXform(R_Scene_getPrimitive(scene, mesh->_matID, mesh->_geoID),
                                mesh->id);
-
-    // MaterialToGeometry* m2g = R_Scene::getMaterialToGeometry(scene, mesh->_matID);
-    // MaterialToGeometry::addGeometry(m2g, mesh->_geoID);
 }
 
 void R_Scene::unregisterMesh(R_Scene* scene, R_Transform* mesh)
@@ -1707,6 +1710,7 @@ R_Texture* Component_CreateTexture(GraphicsContext* gctx, SG_Command_TextureCrea
     // R_Component init
     tex->id   = cmd->sg_id;
     tex->type = SG_COMPONENT_TEXTURE;
+    COPY_STRING(tex->name, cmd->name);
 
     // R_Texture init
     R_Texture::init(gctx, tex, &cmd->desc, framebuffer_width, framebuffer_height);

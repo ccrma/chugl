@@ -138,9 +138,10 @@ struct G_DynamicUniformBuffer { // for use with dynamic bg offsets
         // recreate GPU buffer if needed
         bool gpu_buffer_too_small = wgpuBufferGetSize(gpu_buffer) < cpu_buffer.curr;
         if (gpu_buffer == NULL || gpu_buffer_too_small) {
-            WGPU_DESTROY_AND_RELEASE_BUFFER(
-              gpu_buffer); // destroys GPU memory via destroy(), then driver-side CPU
-                           // memory via release()
+            WGPU_RELEASE_RESOURCE(
+              Buffer,
+              gpu_buffer); // destroys GPU memory via destroy(), then
+                           // driver-side CPU memory via release()
 
             WGPUBufferDescriptor desc = {};
             desc.size                 = cpu_buffer.cap;
@@ -162,6 +163,7 @@ struct GPU_Buffer {
     WGPUBufferUsageFlags usage;
     u64 capacity; // total size in bytes
     u64 size;     // current size in bytes
+    char label[64];
 
     // resizes buffer, does NOT copy old data
     // returns true if buffer was recreated
@@ -215,13 +217,14 @@ struct GPU_Buffer {
             ASSERT(new_capacity % 4 == 0);
 
             WGPUBufferDescriptor desc = {};
+            desc.label                = gpu_buffer->label;
             desc.usage                = usage_flags | WGPUBufferUsage_CopyDst;
             desc.size                 = new_capacity;
 
             WGPUBuffer new_buf = wgpuDeviceCreateBuffer(gctx->device, &desc);
 
             // release old buffer
-            WGPU_DESTROY_AND_RELEASE_BUFFER(gpu_buffer->buf);
+            WGPU_RELEASE_RESOURCE(Buffer, gpu_buffer->buf);
 
             // update buffer
             gpu_buffer->buf      = new_buf;
@@ -243,7 +246,7 @@ struct GPU_Buffer {
 
     static void destroy(GPU_Buffer* buffer)
     {
-        WGPU_DESTROY_AND_RELEASE_BUFFER(buffer->buf);
+        WGPU_RELEASE_RESOURCE(Buffer, buffer->buf);
     }
 };
 

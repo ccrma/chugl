@@ -289,6 +289,10 @@ struct R_Texture : public R_Component {
             // update sg_desc
             r_tex->desc.width  = width;
             r_tex->desc.height = height;
+
+            // log
+            log_trace("R_Texture[%d|%s] creating WGPUTexture(%p)", r_tex->id,
+                      r_tex->name, r_tex->gpu_texture);
         }
     }
 
@@ -971,6 +975,44 @@ struct G_CacheBindGroupEntry {
         WGPUSampler sampler;
         G_CacheTextureViewDesc texture_view_desc;
     } as;
+
+    void print()
+    {
+        printf("binding: %d\n", binding);
+        printf("type: %d\n", type);
+        switch (type) {
+            case G_CacheBindGroupEntryType_None: break;
+            case G_CacheBindGroupEntryType_Buffer: {
+                printf("buffer: %p | offset: %d | size: %d\n", (void*)as.buffer.buffer,
+                       as.buffer.offset, as.buffer.size);
+            } break;
+            case G_CacheBindGroupEntryType_Sampler: {
+                printf("sampler: %p\n", (void*)as.sampler);
+            } break;
+            case G_CacheBindGroupEntryType_TextureView: {
+                // WGPUTexture texture; // refcounted, ensures that WGPUTexture address
+                // is not reused
+                //                      // so long as its in the G_Cache
+                // int base_mip_level;
+                // int mip_level_count;
+                printf("texture: %p | base_mip: %d | mip_levels: %d\n",
+                       (void*)as.texture_view_desc.texture,
+                       as.texture_view_desc.base_mip_level,
+                       as.texture_view_desc.mip_level_count);
+
+            } break;
+        }
+    }
+
+    static void printList(G_CacheBindGroupEntry* bg_entry_list, int count)
+    {
+        printf("G_CacheBindGroupEntry List----------------\n");
+        for (int i = 0; i < count; i++) {
+            bg_entry_list[i].print();
+            printf("---\n");
+        }
+        printf("---------------------------------------------\n");
+    }
 };
 
 struct G_CacheBindGroupKey {
@@ -1245,11 +1287,6 @@ struct G_Cache {
             WGPUTexture texture = desc.texture;
             WGPU_REFERENCE_RESOURCE(Texture, texture);
 
-            log_trace(
-              "Cache miss [TextureView], creating new from Texture[%p] mips[%d:%d]",
-              (void*)texture, desc.base_mip_level,
-              desc.base_mip_level + desc.mip_level_count - 1);
-
             u32 depth       = wgpuTextureGetDepthOrArrayLayers(texture);
             bool is_cubemap = (depth == 6);
             WGPUTextureViewDescriptor view_desc = {};
@@ -1271,6 +1308,11 @@ struct G_Cache {
 
             cache_view = (G_CacheTextureView*)hashmap_get(texture_view_map, &desc);
             ASSERT(cache_view);
+
+            log_trace(
+              "Cache miss [TextureView: %p], creating new from Texture[%p] mips[%d:%d]",
+              (void*)item.val.view, (void*)texture, desc.base_mip_level,
+              desc.base_mip_level + desc.mip_level_count - 1);
         }
 
         cache_view->val.frames_till_expired
@@ -1288,6 +1330,23 @@ struct G_Cache {
         ASSERT(bg_entry_count <= ARRAY_LENGTH(item.key.bg_entry_list));
         item.key.layout         = layout;
         item.key.bg_entry_count = bg_entry_count;
+
+        // loop over all bg_entries to copy into lookup item and refcount & update
+        // frames_till_expired of any buffer or texture sources
+        for (int bg_idx = 0; bg_idx < bg_entry_count; ++bg_idx) {
+            G_CacheBindGroupEntry* bg = bg_entry_list + bg_idx;
+            switch (bg->type) {
+                case G_CacheBindGroupEntryType_None:
+                case G_CacheBindGroupEntryType_Buffer: // buffer is refcounted on
+                                                       // bindgroup creation
+                case G_CacheBindGroupEntryType_Sampler: break;
+                case G_CacheBindGroupEntryType_TextureView: {
+                    textureView(
+                      bg->as.texture_view_desc); // refreshes frames_till_expired
+                } break;
+                default: UNREACHABLE;
+            }
+        }
         memcpy(item.key.bg_entry_list, bg_entry_list,
                sizeof(*bg_entry_list) * bg_entry_count);
 
@@ -1300,9 +1359,9 @@ struct G_Cache {
                       group, layout);
             static WGPUBindGroupEntry wgpu_bg_entry_list[CHUGL_MATERIAL_MAX_BINDINGS]
               = {};
+
 #if 0
-            if (cache_pipeline) cache_pipeline->key.print();
-            G_Util::printBindGroupEntryList(bg_entry_list, bg_entry_count);
+            G_CacheBindGroupEntry::printList(bg_entry_list, bg_entry_count);
 #endif
 
             // convert bg_list to wgpu_bg_list
@@ -1316,6 +1375,8 @@ struct G_Cache {
                         wgpu_bg_entry_list[i].offset
                           = bg_entry_list[i].as.buffer.offset;
                         wgpu_bg_entry_list[i].size = bg_entry_list[i].as.buffer.size;
+                        WGPU_REFERENCE_RESOURCE(Buffer,
+                                                bg_entry_list[i].as.buffer.buffer);
                     } break;
                     case G_CacheBindGroupEntryType_Sampler: {
                         wgpu_bg_entry_list[i].sampler = bg_entry_list[i].as.sampler;
@@ -1333,8 +1394,9 @@ struct G_Cache {
             WGPUBindGroupDescriptor desc = {};
             desc.label                   = bg_label;
             desc.layout                  = layout;
-            desc.entryCount              = bg_entry_count;
-            desc.entries                 = wgpu_bg_entry_list;
+            WGPU_REFERENCE_RESOURCE(BindGroupLayout, layout);
+            desc.entryCount = bg_entry_count;
+            desc.entries    = wgpu_bg_entry_list;
 
             item.val.bg                  = wgpuDeviceCreateBindGroup(device, &desc);
             item.val.frames_till_expired = CHUGL_CACHE_BINDGROUP_FRAMES_TILL_EXPIRED;
@@ -1378,11 +1440,22 @@ struct G_Cache {
                 G_CacheBindGroup* bg_del
                   = ARENA_GET_TYPE(&deletion_queue, G_CacheBindGroup, i);
                 ASSERT(bg_del->val.frames_till_expired <= 0);
-                WGPU_RELEASE_RESOURCE(BindGroup, bg_del->val.bg);
 
+                // remove from hashmap
                 const void* deleted = hashmap_delete(bindgroup_map, bg_del);
                 ASSERT(deleted);
+
+                // deref resources in the key
+                WGPU_RELEASE_RESOURCE(BindGroupLayout, bg_del->key.layout);
+                for (int bg_idx = 0; bg_idx < bg_del->key.bg_entry_count; ++bg_idx) {
+                    G_CacheBindGroupEntry* bg = bg_del->key.bg_entry_list + bg_idx;
+                    if (bg->type == G_CacheBindGroupEntryType_Buffer) {
+                        WGPU_RELEASE_RESOURCE(Buffer, bg->as.buffer.buffer);
+                    }
+                }
+
                 log_trace("deleting expired bindgroup %p", (void*)bg_del->val.bg);
+                WGPU_RELEASE_RESOURCE(BindGroup, bg_del->val.bg);
                 // G_Util::printBindGroupEntryList(bg_del->key.bg_entry_list,
                 //                                 bg_del->key.bg_entry_count);
             }

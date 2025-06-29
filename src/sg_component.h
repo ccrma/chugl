@@ -926,7 +926,8 @@ SG_Transform* SG_CreateTransform(Chuck_Object* ckobj);
 SG_Scene* SG_CreateScene(Chuck_Object* ckobj);
 SG_Geometry* SG_CreateGeometry(Chuck_Object* ckobj);
 SG_Texture* SG_CreateTexture(SG_TextureDesc* desc, Chuck_Object* ckobj,
-                             Chuck_VM_Shred* shred, bool add_ref);
+                             Chuck_VM_Shred* shred, bool add_ref,
+                             const char* name = NULL);
 SG_Camera* SG_CreateCamera(Chuck_Object* ckobj, SG_CameraParams camera_params);
 SG_Text* SG_CreateText(Chuck_Object* ckobj);
 SG_Pass* SG_CreatePass(Chuck_Object* ckobj, SG_PassType pass_type);

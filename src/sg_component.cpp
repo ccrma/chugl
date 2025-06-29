@@ -903,7 +903,7 @@ SG_Geometry* SG_CreateGeometry(Chuck_Object* ckobj)
 }
 
 SG_Texture* SG_CreateTexture(SG_TextureDesc* desc, Chuck_Object* ckobj,
-                             Chuck_VM_Shred* shred, bool add_ref)
+                             Chuck_VM_Shred* shred, bool add_ref, const char* name)
 {
     CK_DL_API API = g_chuglAPI;
 
@@ -953,6 +953,7 @@ SG_Texture* SG_CreateTexture(SG_TextureDesc* desc, Chuck_Object* ckobj,
     tex->type                                        = SG_COMPONENT_TEXTURE;
     tex->ckobj                                       = texture_obj;
     OBJ_MEMBER_UINT(tex->ckobj, component_offset_id) = tex->id;
+    if (name) COPY_STRING(tex->name, name);
 
     // store in map
     SG_Location loc = { tex->id, offset, arena };

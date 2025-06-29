@@ -32,6 +32,7 @@
 
 #include "ulib_helper.h"
 
+#include "core/file.h"
 #include "core/log.h"
 
 #include <stb/stb_image.h>
@@ -629,7 +630,8 @@ void ulib_texture_createDefaults(CK_DL_API API)
 
     // white pixel
     {
-        SG_Texture* tex = SG_CreateTexture(&texture_binding_desc, NULL, NULL, true);
+        SG_Texture* tex
+          = SG_CreateTexture(&texture_binding_desc, NULL, NULL, true, "White Pixel");
         // upload pixel data
         CQ_PushCommand_TextureWrite(tex, &texture_write_desc,
                                     g_builtin_ckobjs.white_pixel_data, API);
@@ -650,12 +652,14 @@ void ulib_texture_createDefaults(CK_DL_API API)
         render_texture_desc.height_ratio = 1.0f;
 
         // set global
-        g_builtin_textures.default_render_texture_id
-          = SG_CreateTexture(&render_texture_desc, NULL, NULL, true)->id;
+        SG_Texture* render_tex = SG_CreateTexture(&render_texture_desc, NULL, NULL,
+                                                  true, "Default Render Texture");
+        g_builtin_textures.default_render_texture_id = render_tex->id;
     }
 
     { // black pixel
-        SG_Texture* tex = SG_CreateTexture(&texture_binding_desc, NULL, NULL, true);
+        SG_Texture* tex
+          = SG_CreateTexture(&texture_binding_desc, NULL, NULL, true, "Black Pixel");
         // upload pixel data
         CQ_PushCommand_TextureWrite(tex, &texture_write_desc,
                                     g_builtin_ckobjs.black_pixel_data, API);
@@ -664,7 +668,8 @@ void ulib_texture_createDefaults(CK_DL_API API)
     }
 
     { // magenta pixel
-        SG_Texture* tex = SG_CreateTexture(&texture_binding_desc, NULL, NULL, true);
+        SG_Texture* tex
+          = SG_CreateTexture(&texture_binding_desc, NULL, NULL, true, "Magenta Pixel");
         // upload pixel data
         CQ_PushCommand_TextureWrite(tex, &texture_write_desc,
                                     g_builtin_ckobjs.magenta_pixel_data, API);
@@ -673,7 +678,8 @@ void ulib_texture_createDefaults(CK_DL_API API)
     }
 
     { // default normal map
-        SG_Texture* tex = SG_CreateTexture(&texture_binding_desc, NULL, NULL, true);
+        SG_Texture* tex = SG_CreateTexture(&texture_binding_desc, NULL, NULL, true,
+                                           "Default Normal Map Pixel");
         // upload pixel data
         CQ_PushCommand_TextureWrite(tex, &texture_write_desc,
                                     g_builtin_ckobjs.normal_pixel_data, API);
@@ -686,7 +692,8 @@ void ulib_texture_createDefaults(CK_DL_API API)
         cubemap_desc.depth          = 6;     // 6 faces
         cubemap_desc.gen_mips       = false; // no mips for cubemap
 
-        SG_Texture* tex = SG_CreateTexture(&cubemap_desc, NULL, NULL, true);
+        SG_Texture* tex
+          = SG_CreateTexture(&cubemap_desc, NULL, NULL, true, "Default Cubemap");
 
         // upload pixel data
         SG_TextureWriteDesc cubemap_write_desc = {};
@@ -854,7 +861,8 @@ SG_Texture* ulib_texture_load(const char* filepath, SG_TextureLoadDesc* load_des
     desc.usage          = WGPUTextureUsage_All;
     desc.gen_mips       = load_desc->gen_mips ? true : false;
 
-    SG_Texture* tex = SG_CreateTexture(&desc, NULL, shred, false);
+    SG_Texture* tex
+      = SG_CreateTexture(&desc, NULL, shred, false, File_basename(filepath));
 
     CQ_PushCommand_TextureFromFile(tex, filepath, load_desc);
 

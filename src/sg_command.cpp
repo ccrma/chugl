@@ -571,6 +571,7 @@ void CQ_PushCommand_TextureCreate(SG_Texture* texture)
     BEGIN_COMMAND(SG_Command_TextureCreate, SG_COMMAND_TEXTURE_CREATE);
     command->sg_id = texture->id;
     command->desc  = texture->desc;
+    COPY_STRING(command->name, texture->name);
     END_COMMAND();
 }
 
