@@ -239,33 +239,25 @@ struct R_Texture : public R_Component {
         // copy texture info (immutable)
         texture->desc = *desc;
 
-        // determine dimensions
-        u32 width = 0, height = 0;
-        if (desc->resize_mode == SG_TextureResizeMode_Fixed) {
-            width  = desc->width;
-            height = desc->height;
-        } else if (desc->resize_mode == SG_TextureResizeMode_Ratio) {
-            width  = (u32)(desc->width_ratio * framebuffer_width);
-            height = (u32)(desc->height_ratio * framebuffer_height);
-        } else
-            UNREACHABLE;
-
-        R_Texture::resize(texture, width, height, gctx->device);
+        R_Texture::resize(texture, framebuffer_width, framebuffer_height, gctx->device);
     }
 
     // resizes texture and updates generation, clears any previous data
     // used for auto-resizing framebuffer attachments
-    static void resize(R_Texture* r_tex, u32 width, u32 height, WGPUDevice device)
+    static void resize(R_Texture* r_tex, u32 fb_width, u32 fb_height, WGPUDevice device)
     {
         if (r_tex == NULL) return;
-        bool initialized_and_fixed_ratio
-          = (r_tex->gpu_texture
-             && r_tex->desc.resize_mode == SG_TextureResizeMode_Fixed);
-        if (initialized_and_fixed_ratio) {
-            // fixed ratio textures are immutable
-            R_Texture::validate(r_tex);
-            return;
+
+        // determine dimensions
+        u32 width  = r_tex->desc.width;
+        u32 height = r_tex->desc.height;
+        if (r_tex->desc.resize_mode == SG_TextureResizeMode_Ratio) {
+            width  = (u32)(r_tex->desc.width_ratio * fb_width);
+            height = (u32)(r_tex->desc.height_ratio * fb_height);
         }
+        width     = MAX(width, 1);
+        height    = MAX(height, 1);
+        u32 depth = MAX(r_tex->desc.depth, 1);
 
         bool needs_resize = r_tex->gpu_texture == NULL
                             || wgpuTextureGetWidth(r_tex->gpu_texture) != width
@@ -277,12 +269,13 @@ struct R_Texture : public R_Component {
             wgpu_texture_desc.label                 = r_tex->name;
             wgpu_texture_desc.usage                 = r_tex->desc.usage;
             wgpu_texture_desc.dimension             = r_tex->desc.dimension;
-            wgpu_texture_desc.size   = { width, height, (u32)r_tex->desc.depth };
-            wgpu_texture_desc.format = r_tex->desc.format;
+            wgpu_texture_desc.size                  = { width, height, depth };
+            wgpu_texture_desc.format                = r_tex->desc.format;
             wgpu_texture_desc.mipLevelCount
               = r_tex->desc.gen_mips ? G_mipLevels(width, height) : 1;
             wgpu_texture_desc.sampleCount = 1;
 
+            WGPU_RELEASE_RESOURCE(Texture, r_tex->gpu_texture);
             r_tex->gpu_texture = wgpuDeviceCreateTexture(device, &wgpu_texture_desc);
             ASSERT(r_tex->gpu_texture);
 
@@ -293,6 +286,8 @@ struct R_Texture : public R_Component {
             // log
             log_trace("R_Texture[%d|%s] creating WGPUTexture(%p)", r_tex->id,
                       r_tex->name, r_tex->gpu_texture);
+
+            R_Texture::validate(r_tex);
         }
     }
 

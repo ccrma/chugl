@@ -61,12 +61,39 @@ null => desc.vertexLayout;
 Shader shader(desc);
 shader.name("screen shader");
 
-GG.rootPass() --> ScreenPass screen_pass(shader);
+// render graph
+GG.rootPass() --> ScreenPass screen_pass(shader) --> GG.outputPass();
+GG.outputPass().sampler(TextureSampler.nearest());
+updateColorTarget(@(1.0, 1.0), false);
+
+// create a resizeable texture
+fun void updateColorTarget(vec2 ratio, int fixed) {
+    TextureDesc texture_desc;
+    false => texture_desc.mips;
+    if (fixed) {
+        false => texture_desc.resizable;
+        ratio.x $ int => texture_desc.width;
+        ratio.y $ int => texture_desc.height;
+    } else {
+        true => texture_desc.resizable;
+        ratio.x => texture_desc.widthRatio;
+        ratio.y => texture_desc.heightRatio;
+    }
+
+    Texture color_target(texture_desc);
+
+    screen_pass.colorOutput(color_target);
+    GG.outputPass().input(screen_pass.colorOutput());
+}
+
 
 UI_Float4 viewport_normalized(0., 0., 1., 1.);
 UI_Float4 viewport_absolute(0., 0., 200., 200.);
 UI_Float4 scissor_normalized(0., 0., 1., 1.);
 UI_Float4 scissor_absolute(0., 0., 200., 200.);
+
+UI_Float2 resolution_ratio(1.0, 1.0);
+UI_Float2 resolution_fixed(1920, 1080);
 
 while (1) {
     GG.nextFrame() => now;
@@ -83,6 +110,14 @@ while (1) {
         }
         if (UI.drag("scissor (in pixels)", scissor_absolute)) {
             screen_pass.scissor(scissor_absolute.val());
+        }
+
+        if (UI.drag("resolution ratio", resolution_ratio, .01)) {
+            updateColorTarget(resolution_ratio.val(), false);
+        }
+
+        if (UI.drag("resolution fixed", resolution_fixed)) {
+            updateColorTarget(resolution_fixed.val(), true);
         }
     }
     UI.end();

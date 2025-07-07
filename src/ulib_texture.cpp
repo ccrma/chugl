@@ -41,6 +41,8 @@ void ulib_texture_createDefaults(CK_DL_API API);
 
 // TextureSampler ---------------------------------------------------------------------
 CK_DLL_CTOR(sampler_ctor);
+CK_DLL_SFUN(sampler_nearest);
+CK_DLL_SFUN(sampler_linear);
 
 // TextureDesc -----------------------------------------------------------------
 
@@ -165,6 +167,19 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
 
         // constructor
         QUERY->add_ctor(QUERY, sampler_ctor); // default constructor
+        DOC_FUNC(
+          "Constructor. Defaults to a sampler with nearest filtering and repeat "
+          "wrapping");
+
+        SFUN(sampler_nearest, "TextureSampler", "nearest");
+        DOC_FUNC(
+          "Helper for creating a TextureSampler with nearest filtering and repeat "
+          "wrapping");
+
+        SFUN(sampler_linear, "TextureSampler", "linear");
+        DOC_FUNC(
+          "Helper for creating a TextureSampler with linear filtering and repeat "
+          "wrapping");
 
         QUERY->end_class(QUERY); // Sampler
     }
@@ -476,7 +491,6 @@ Chuck_Object* ulib_texture_ckobj_from_sampler(SG_Sampler sampler, bool add_ref,
     CK_DL_API API = g_chuglAPI;
 
     Chuck_Object* ckobj = chugin_createCkObj("TextureSampler", add_ref, shred);
-
     OBJ_MEMBER_INT(ckobj, sampler_offset_wrapU)     = sampler.wrapU;
     OBJ_MEMBER_INT(ckobj, sampler_offset_wrapV)     = sampler.wrapV;
     OBJ_MEMBER_INT(ckobj, sampler_offset_wrapW)     = sampler.wrapW;
@@ -496,6 +510,32 @@ CK_DLL_CTOR(sampler_ctor)
     OBJ_MEMBER_INT(SELF, sampler_offset_filterMin) = SG_SAMPLER_FILTER_LINEAR;
     OBJ_MEMBER_INT(SELF, sampler_offset_filterMag) = SG_SAMPLER_FILTER_LINEAR;
     OBJ_MEMBER_INT(SELF, sampler_offset_filterMip) = SG_SAMPLER_FILTER_LINEAR;
+}
+
+CK_DLL_SFUN(sampler_nearest)
+{
+    Chuck_Object* ckobj = chugin_createCkObj("TextureSampler", false, SHRED);
+    OBJ_MEMBER_INT(ckobj, sampler_offset_wrapU)     = SG_SAMPLER_WRAP_REPEAT;
+    OBJ_MEMBER_INT(ckobj, sampler_offset_wrapV)     = SG_SAMPLER_WRAP_REPEAT;
+    OBJ_MEMBER_INT(ckobj, sampler_offset_wrapW)     = SG_SAMPLER_WRAP_REPEAT;
+    OBJ_MEMBER_INT(ckobj, sampler_offset_filterMin) = SG_SAMPLER_FILTER_NEAREST;
+    OBJ_MEMBER_INT(ckobj, sampler_offset_filterMag) = SG_SAMPLER_FILTER_NEAREST;
+    OBJ_MEMBER_INT(ckobj, sampler_offset_filterMip) = SG_SAMPLER_FILTER_NEAREST;
+
+    RETURN->v_object = ckobj;
+}
+
+CK_DLL_SFUN(sampler_linear)
+{
+    Chuck_Object* ckobj = chugin_createCkObj("TextureSampler", false, SHRED);
+    OBJ_MEMBER_INT(ckobj, sampler_offset_wrapU)     = SG_SAMPLER_WRAP_REPEAT;
+    OBJ_MEMBER_INT(ckobj, sampler_offset_wrapV)     = SG_SAMPLER_WRAP_REPEAT;
+    OBJ_MEMBER_INT(ckobj, sampler_offset_wrapW)     = SG_SAMPLER_WRAP_REPEAT;
+    OBJ_MEMBER_INT(ckobj, sampler_offset_filterMin) = SG_SAMPLER_FILTER_LINEAR;
+    OBJ_MEMBER_INT(ckobj, sampler_offset_filterMag) = SG_SAMPLER_FILTER_LINEAR;
+    OBJ_MEMBER_INT(ckobj, sampler_offset_filterMip) = SG_SAMPLER_FILTER_LINEAR;
+
+    RETURN->v_object = ckobj;
 }
 
 // TextureDesc ---------------------------------------------------------------------

@@ -60,13 +60,6 @@
         wgpu##Type##Destroy(Name);                                                     \
     }
 
-#define WGPU_DESTROY_AND_RELEASE_BUFFER(Name)                                          \
-    if (Name) {                                                                        \
-        wgpuBufferDestroy(Name);                                                       \
-        wgpuBufferRelease(Name);                                                       \
-        Name = NULL;                                                                   \
-    }
-
 // ============================================================================
 // Context
 // =========================================================================================

@@ -191,7 +191,9 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
 
         MFUN(renderpass_set_color_target, "void", "colorOutput");
         ARG(SG_CKNames[SG_COMPONENT_TEXTURE], "color_texture");
-        DOC_FUNC("Set the target texture to render to.");
+        DOC_FUNC(
+          "Set the target texture to render to. Setting to null will render to the "
+          "window");
 
         MFUN(renderpass_get_color_target, SG_CKNames[SG_COMPONENT_TEXTURE],
              "colorOutput");
@@ -385,14 +387,12 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
         DOC_FUNC("Get the tonemapping algorithm applied to the input texture");
 
         MFUN(outputpass_set_gamma, "void", "gamma");
-        ARG("float", "gamma");
+        ARG("int", "gamma");
         DOC_FUNC(
-          "Set the value used for gamma correction at the end of the output pass. "
-          "Defaults to 2.2, which approximates the srgb curve for most modern "
-          "displays");
+          "Get whether or not the pass is applying gamma correction. Default true");
 
-        MFUN(outputpass_get_gamma, "float", "gamma");
-        DOC_FUNC("Get the value used for gamma correction. Defaults to 2.2");
+        MFUN(outputpass_get_gamma, "int", "gamma");
+        DOC_FUNC("Set whether or not to apply gamma correction. Default true");
 
         MFUN(outputpass_set_exposure, "void", "exposure");
         ARG("float", "exposure");
@@ -977,12 +977,12 @@ CK_DLL_MFUN(outputpass_get_tonemap)
 CK_DLL_MFUN(outputpass_set_gamma)
 {
     SG_Pass* pass         = GET_PASS(SELF);
-    t_CKFLOAT gamma       = GET_NEXT_FLOAT(ARGS);
+    int gamma             = GET_NEXT_INT(ARGS) ? 1 : 0;
     SG_Material* material = SG_GetMaterial(pass->screen_material_id);
 
     // set uniform
     // TODO can use CODE(...) macro to replace 2 with OUTPUT_PASS_GAMMA_BINDING
-    SG_Material::uniformFloat(material, 2, gamma);
+    SG_Material::uniformInt(material, 2, gamma);
     CQ_PushCommand_MaterialSetUniform(material, 2);
 }
 
@@ -990,7 +990,7 @@ CK_DLL_MFUN(outputpass_get_gamma)
 {
     SG_Pass* pass         = GET_PASS(SELF);
     SG_Material* material = SG_GetMaterial(pass->screen_material_id);
-    RETURN->v_float       = material->uniforms[2].as.f;
+    RETURN->v_int         = material->uniforms[2].as.i;
 }
 
 CK_DLL_MFUN(outputpass_set_exposure)

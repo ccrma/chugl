@@ -1267,7 +1267,7 @@ const char* output_pass_shader_string = R"glsl(
 
     @group(1) @binding(0) var texture: texture_2d<f32>;
     @group(1) @binding(1) var texture_sampler: sampler;
-    @group(1) @binding(2) var<uniform> u_Gamma: f32;
+    @group(1) @binding(2) var<uniform> u_Gamma: i32;
     @group(1) @binding(3) var<uniform> u_Exposure: f32;
     @group(1) @binding(4) var<uniform> u_Tonemap: i32;
 
@@ -1295,6 +1295,18 @@ const char* output_pass_shader_string = R"glsl(
         return m;
     } 
 
+    // from https://medium.com/@tomforsyth/the-srgb-learning-curve-773b7f68cf7a
+    fn D3DX_FLOAT_to_SRGB(val: f32) -> f32
+    { 
+        var v = val;
+        if(v < 0.0031308) {
+            v *= 12.92;
+        } else {
+            v = 1.055 * pow(val, 1.0/2.4) - 0.055;
+        }
+        return v;
+    }
+
     // main =====================================================================
     @fragment 
     fn fs_main(in : VertexOutput) -> @location(0) vec4f {
@@ -1314,7 +1326,7 @@ const char* output_pass_shader_string = R"glsl(
         case 3: { // cineon
             let x: vec3<f32> = max(vec3<f32>(0.), color - 0.004);
             color = x * (6.2 * x + 0.5) / (x * (6.2 * x + 1.7) + 0.06);
-            color = pow(color, vec3<f32>(u_Gamma)); // invert gamma correction (assumes final output to srgb texture)
+            color = pow(color, vec3<f32>(2.2)); // invert gamma correction (assumes final output to srgb texture)
         } 
         case 4: { // aces
             var ACES_INPUT_MAT: mat3x3<f32> = mat3_from_rows(vec3<f32>(0.59719, 0.35458, 0.04823), vec3<f32>(0.076, 0.90834, 0.01566), vec3<f32>(0.0284, 0.13383, 0.83777));
@@ -1336,7 +1348,12 @@ const char* output_pass_shader_string = R"glsl(
         }
 
         // gamma correction
-        color = pow(color, vec3<f32>(1. / u_Gamma));
+        // color = pow(color, vec3<f32>(1. / u_Gamma));
+        if (bool(u_Gamma)) {
+            color.r = D3DX_FLOAT_to_SRGB(color.r);
+            color.g = D3DX_FLOAT_to_SRGB(color.g);
+            color.b = D3DX_FLOAT_to_SRGB(color.b);
+        }
 
         return vec4<f32>(color, 1.0); // how does alpha work?
         // return vec4<f32>(color, clamp(hdrColor.a, 0.0, 1.0));

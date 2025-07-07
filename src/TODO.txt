@@ -4,13 +4,6 @@ TODO
 - test shadertoy example in release mode, make sure we still get shader compilation errors
   - is there a way to detect a compile error and switch to default magenta? otherwise just crash
 - re-impl shader freeing gc
-- add vec4 alpha setters on other builtin materials
-  - add alpha channel to geo_and_mat.ck example for flat/phong/pbr
-  - ==BUG== fix crash on using UV material (happening because uv material doesn't use @group(1))
-- look into other blendmodes besides alpha blending
-  - see acerola blend modes video
-  - impl additive blending particle system example, see https://www.youtube.com/watch?v=ahOfNgvQ93Q&ab_channel=NeverEngineStudios
-    - also acerola particle system / compute shader video
 - impl screenPass properly and make a little chugl-shaderToy playground example
   - make actual chugl example.
   - use UI.text() as text editor field lol, or GText
@@ -19,6 +12,12 @@ TODO
 - check if imgui has multi-window support now for webgpu backend
 - add anti aliasing back
 - port geometry builders to use par_shapes
+- GLTF loader!!!! (after adding GC?)
+
+- look into other blendmodes besides alpha blending
+  - see acerola blend modes video
+  - impl additive blending particle system example, see https://www.youtube.com/watch?v=ahOfNgvQ93Q&ab_channel=NeverEngineStudios
+    - also acerola particle system / compute shader video
 
 - default GScene with a main camera?
 - add inverse normal matrix to PER_DRAW instanced draw uniforms
@@ -55,21 +54,27 @@ lets us sort by shaders as well to minimize pipeline switches
         -  eskil steenberg how I program C leak checker
         -  stb leak check
 
-Long-Term
+### Long-Term
 - C-port of webgpu-utils shader pipeline layout generator
 - study Raylib opengl batcher, can chugl make use of a batcher?
-- swap out glm for handmade math
 - skeletal animation
   - see obsidian note
   - study raylib gltf importer and animator
+    - added in last release v5.5 (see raylib release notes)
+      - GenoView and BVHView (developing two amazing tools to visualize and test animations)
   - watch j.blow devlog implementing animation!
 - study jdh retro games from scratch (minecraft, doom), impl as chugl examples?
+- Implement C preprocessor as separate project, add to chugl shader processor
 - for PBR, IBL
   - see webgpu-typescript-starter notes.txt
   - anything we can use from https://github.com/google/filament
 - add more builtin-shapes
   - see raylib 3d mesh generator
   - https://prideout.net/shapes
+- Swapping out for simpler libraries
+  - swap out glm for handmade math
+  - swap GLFW for https://github.com/ColleagueRiley/RGFW
+
 
 
 2d immediate mode vector graphics libraries to base g2d off of

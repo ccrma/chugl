@@ -44,7 +44,7 @@ UI_Float radius(bloom_pass.radius());
 ] @=> string builtin_tonemap_algorithms[];
 
 UI_Int tonemap(output_pass.tonemap());
-UI_Float gamma(output_pass.gamma());
+UI_Bool gamma(output_pass.gamma());
 UI_Int levels(bloom_pass.levels());
 UI_Float exposure(output_pass.exposure());
 UI_Float color_intensity(intensity);
@@ -88,7 +88,7 @@ while (true) {
             output_pass.exposure(exposure.val());
         }
 
-        if (UI.slider("gamma", gamma, 0.1, 4.0)) {
+        if (UI.checkbox("gamma", gamma)) {
             output_pass.gamma(gamma.val());
         }
     }

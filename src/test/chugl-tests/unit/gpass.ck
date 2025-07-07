@@ -25,4 +25,4 @@ T.assert(!rpass.clear(), "auto clear color is false");
 T.assert(GG.renderPass().next() == GG.outputPass(), "default render pass next is output pass");
 
 OutputPass opass;
-T.assert(T.feq(opass.gamma(), 2.2), "default gamma 2.2");
+T.assert(opass.gamma(), "default apply gamma correction");

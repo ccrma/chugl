@@ -737,23 +737,6 @@ G_MipSize G_mipLevelSize(int width, int height, u32 mip_level)
              MAX(1u, (u32)(glm::floor(float(height) / glm::pow(2.0, mip_level)))) };
 }
 
-WGPUTextureView G_createTextureViewAtMipLevel(WGPUTexture texture, u32 base_mip_level,
-                                              const char* label = "")
-{
-    char mip_label[256] = {};
-    snprintf(mip_label, 256, "%s mip level %u", label, base_mip_level);
-
-    WGPUTextureViewDescriptor view_desc = {};
-    view_desc.label                     = mip_label;
-    view_desc.format                    = wgpuTextureGetFormat(texture);
-    view_desc.dimension                 = WGPUTextureViewDimension_2D;
-    view_desc.baseMipLevel              = base_mip_level;
-    view_desc.mipLevelCount             = 1;
-    view_desc.arrayLayerCount           = 1;
-
-    return wgpuTextureCreateView(texture, &view_desc);
-}
-
 int G_componentsPerTexel(WGPUTextureFormat format)
 {
     switch (format) {

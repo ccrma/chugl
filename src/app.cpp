@@ -736,7 +736,7 @@ struct App {
                     R_Texture::resize(r_tex, app->window_fb_width,
                                       app->window_fb_height, app->gctx.device);
 
-                    // defaults to swapchain current view
+                    // defaults to swapchain current view if null
                     WGPUTexture color_target
                       = r_tex ? r_tex->gpu_texture : app->gctx.surface_texture.texture;
                     ASSERT(scene && color_target && camera);
