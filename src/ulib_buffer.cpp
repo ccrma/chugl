@@ -71,13 +71,14 @@ void ulib_buffer_query(Chuck_DL_Query* QUERY)
     //   "converted into 4-byte i32s. Will increase buffer size if needed. Will "
     //   "not decrease buffer size if data is smaller than buffer size.");
 
-    MFUN(storage_buffer_write_with_offset, "void", "write");
-    ARG("float[]", "data");
-    ARG("int", "offset_bytes");
-    DOC_FUNC(
-      "Writes data to the buffer at the specified offset in floatas. Floats from the "
-      "chuck array "
-      "are converted into 4-byte f32s. Fails if buffer size is too small.");
+    // this method needs to be reworked
+    // MFUN(storage_buffer_write_with_offset, "void", "write");
+    // ARG("float[]", "data");
+    // ARG("int", "offset_bytes"); // why a byte offset and not a multiple of 4?
+    // DOC_FUNC(
+    //   "Writes data to the buffer at the specified offset in bytes. Floats from the "
+    //   "chuck array are converted into 4-byte f32s. Fails if buffer size is too
+    //   small.");
 
     END_CLASS();
 }

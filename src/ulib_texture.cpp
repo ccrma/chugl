@@ -227,7 +227,8 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
           "0 for false, 1 for true. Set to true to tell the renderer to dynamically "
           "resize this texture when used as a color target in a renderpass. If true, "
           "the size will be determined from .widthRatio and .heightRatio times the "
-          "window dimensions");
+          "window dimensions. Only relevant to textures that are bound to a renderpass "
+          "color output");
 
         texture_desc_width_ratio_offset = MVAR("float", "widthRatio", false);
         DOC_VAR("See the notes for .resizable. Default 1.0");
@@ -462,8 +463,14 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
           "false");
 
         MFUN(texture_get_resizable, "int", "resizable");
+        DOC_FUNC(
+          "Get whether this texture is auto-resizing (see TextureDesc.resizable)");
+
         MFUN(texture_get_width_ratio, "float", "widthRatio");
+        DOC_FUNC("Get the width ratio of this texture (see TextureDesc.resizable)");
+
         MFUN(texture_get_height_ratio, "float", "heightRatio");
+        DOC_FUNC("Get the height ratio of this texture (see TextureDesc.resizable)");
 
         MFUN(texture_read_to_cpu, "Event", "read");
         DOC_FUNC(

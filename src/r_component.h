@@ -837,11 +837,13 @@ struct G_DrawCallPipelineDesc {
 };
 
 struct G_CacheComputePipeline {
-    WGPUShaderModule key;
+    WGPUShaderModule key; // TODO refcount
     struct {
         WGPUComputePipeline pipeline;
-        WGPUBindGroupLayout bind_group_layout; // currently compute pipelines are only
-                                               // allowed to use @group(0)
+        WGPUBindGroupLayout
+          bind_group_layout; // currently compute pipelines are only
+                             // allowed to use @group(0)
+                             // TODO remember to release the BGLayout too
     } val;
 
     static u64 hash(const void* item, uint64_t seed0, uint64_t seed1)

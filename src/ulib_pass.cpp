@@ -112,6 +112,7 @@ CK_DLL_MFUN(outputpass_get_sampler);
 CK_DLL_MFUN(outputpass_set_sampler);
 
 // ComputePass
+CK_DLL_CTOR(computepass_ctor_with_shader);
 CK_DLL_MFUN(computepass_set_shader);
 CK_DLL_MFUN(computepass_set_uniform_float);
 CK_DLL_MFUN(computepass_set_uniform_float2);
@@ -418,6 +419,10 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
           "Compute pass for running compute shaders. Note that unlike Materials, "
           "all Compute Pass bindings must be bound under @group(0), NOT @group(1)");
         ADD_EX("rendergraph/boids_compute.ck");
+
+        CTOR(computepass_ctor_with_shader);
+        ARG(SG_CKNames[SG_COMPONENT_SHADER], "shader");
+        DOC_FUNC("Create a compute pass with the given shader");
 
         MFUN(computepass_set_shader, "void", "shader");
         ARG(SG_CKNames[SG_COMPONENT_SHADER], "shader");
@@ -931,7 +936,7 @@ SG_Pass* ulib_pass_create_output_pass(SG_Pass* pass, Chuck_Object* ckobj, bool a
 CK_DLL_CTOR(outputpass_ctor)
 {
     SG_Pass* pass = GET_PASS(SELF);
-    ASSERT(pass);
+    ASSERT(pass && pass->pass_type == SG_PassType_Screen);
     ulib_pass_create_output_pass(pass, SELF, false, SHRED);
 }
 
@@ -1033,6 +1038,16 @@ CK_DLL_MFUN(outputpass_set_sampler)
 // ============================================================================
 // ComputePass
 // ============================================================================
+
+CK_DLL_CTOR(computepass_ctor_with_shader)
+{
+    SG_Pass* pass = GET_PASS(SELF);
+    ASSERT(pass && pass->pass_type == SG_PassType_Compute);
+    SG_Shader* shader
+      = SG_GetShader(OBJ_MEMBER_UINT(GET_NEXT_OBJECT(ARGS), component_offset_id));
+    SG_Material* mat = SG_GetMaterial(pass->compute_material_id);
+    ulib_material_set_shader(mat, shader);
+}
 
 CK_DLL_MFUN(computepass_set_shader)
 {
