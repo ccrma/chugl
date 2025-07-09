@@ -39,13 +39,24 @@ Caused by:
 
 ========== FEATURES ===============
 - Add UV zoom on screen shader
+- add slime color, maybe use trail value to lerp between different blends
 
 */
 
-200000 => int NUM_SLIMES;
+100000 => int NUM_SLIMES;
 1920 => int RESOLUTION_X;
 1080 => int RESOLUTION_Y;
 
+UI_Float diffusion_speed(1.0);
+UI_Float dissolve_factor(.95);
+
+UI_Float sensor_offset(8.0);
+UI_Int sensor_size(4);
+UI_Float sense_angle_deg(45);
+UI_Float speed_pixels(60);
+UI_Float turn_speed(16);
+UI_Int simulation_mode(0);
+UI_Bool pause;
 
 ShaderDesc compute_shader_desc;
 me.dir() + "./slime.compute" => compute_shader_desc.computePath;
@@ -55,6 +66,10 @@ ShaderDesc trail_shader_desc;
 "
 @group(0) @binding(0) var trail_texture_read: texture_2d<f32>;
 @group(0) @binding(1) var trail_texture_write: texture_storage_2d<rgba8unorm, write>;
+
+@group(0) @binding(2) var<uniform> dt: f32;
+@group(0) @binding(3) var<uniform> diffusion_speed: f32;
+@group(0) @binding(4) var<uniform> dissolve_factor: f32;
 
 @compute @workgroup_size(8, 8, 1)
 fn main(@builtin(global_invocation_id) id : vec3u) {
@@ -75,17 +90,16 @@ fn main(@builtin(global_invocation_id) id : vec3u) {
             }
         }
     }
-    var diffuse = sum / 9.0;
 
-    // TODO add diffusion speed + lerp
+    var diffuse = mix(original_value, sum / 9.0, diffusion_speed * dt);
 
     // dissolve 
-    let dissolve_factor = .9; // TODO scale by dt
-    var dissolved_value = diffuse * dissolve_factor;
+    if (dt > 0.0) {
+        diffuse *= dissolve_factor;
+    }
 
     // dump to texture
-    textureStore(trail_texture_write, id.xy, dissolved_value);
-    // textureStore(trail_texture_write, id.xy, original_value);
+    textureStore(trail_texture_write, id.xy, diffuse);
 }
 " => trail_shader_desc.computeCode;
 Shader trail_shader(trail_shader_desc);
@@ -93,27 +107,6 @@ Shader trail_shader(trail_shader_desc);
 
 " 
     #include FRAME_UNIFORMS
-    // struct FrameUniforms {
-    //     // scene params (only set in ScenePass, otherwise 0)
-    //     projection: mat4x4f,
-    //     view: mat4x4f,
-    //     projection_view_inverse_no_translation: mat4x4f,
-    //     camera_pos: vec3f,
-    //     ambient_light: vec3f,
-    //     num_lights: i32,
-    //     background_color: vec4f,
-
-    //     // general params (include in all passes except ComputePass)
-    //     resolution: vec3i,      // window viewport resolution 
-    //     time: f32,              // time in seconds since the graphics window was opened
-    //     delta_time: f32,        // time since last frame (in seconds)
-    //     frame_count: i32,       // frames since window was opened
-    //     mouse: vec2f,           // normalized mouse coords (range 0-1)
-    //     mouse_click: vec2i,     // mouse click state
-    //     sample_rate: f32        // chuck VM sound sample rate (e.g. 44100)
-    // };
-    // @group(0) @binding(0) var<uniform> u_frame: FrameUniforms;
-
     @group(1) @binding(0) var src: texture_2d<f32>;
     @group(1) @binding(1) var texture_sampler: sampler;
 
@@ -145,15 +138,12 @@ Shader trail_shader(trail_shader_desc);
         uv.y = 1.0 - uv.y;
 
         // no sampler for now
-        let t = textureSample(src, texture_sampler, in.v_uv);
         let col = textureLoad(src, vec2u(in.v_uv * vec2f(textureDimensions(src))), 0).rgb;
         return vec4f(
                 // col,
-                // in.v_uv, 0.0,
                 textureSampleLevel(src, texture_sampler, in.v_uv, 0.0).rgb,
                 1.0
         );
-        // return vec4f(rand2(in.v_uv));
     }
 " => string screen_shader;
 
@@ -165,26 +155,37 @@ null => desc.vertexLayout;
 Shader shader(desc);
 shader.name("screen shader");
 
+StorageBuffer slime_buffer;
+slime_buffer.size(4 * NUM_SLIMES);
 
 float slime_init[4 * NUM_SLIMES];
-for (int i; i < NUM_SLIMES; i++) {
-    // set position (xy)
-    .5 => slime_init[4*i + 0];
-    .5 => slime_init[4*i + 1];
-    // set heading (radians)
-    // (i * 1.0 / NUM_SLIMES) * Math.two_pi => slime_init[4*i + 2];
-    Math.random2f(0, Math.two_pi) => slime_init[4*i + 2];
 
-    // padding (Agents struct on GPU takes up 16 bytes)
-    0 => slime_init[4*i + 3];
+fun vec2 randomInCircle(float r) {
+    Math.random2f(0, Math.two_pi) => float theta;
+    return @(.5, .5) + Math.random2f(0, r) * @(Math.cos(theta), Math.sin(theta));
+}
+
+fun void initSlimeBuffer() {
+    for (int i; i < NUM_SLIMES; i++) {
+        // set position (xy)
+        // randomInCircle(.2) => vec2 pos;
+        // pos.x => slime_init[4*i + 0];
+        // pos.y => slime_init[4*i + 1];
+        0.5 => slime_init[4*i + 0];
+        0.5 => slime_init[4*i + 1];
+
+        // set heading (radians)
+        Math.random2f(0, Math.two_pi) => slime_init[4*i + 2];
+
+        // padding (Agents struct on GPU takes up 16 bytes)
+        0 => slime_init[4*i + 3];
+    }
+    slime_buffer.write(slime_init);
 }
 
 // render graph
 GG.rootPass() --> ComputePass compute_pass(agent_shader) --> ComputePass trail_pass(trail_shader) --> ScreenPass screen_pass(shader);
 
-StorageBuffer slime_buffer;
-slime_buffer.size(4 * NUM_SLIMES);
-slime_buffer.write(slime_init);
 
 TextureDesc trail_tex_desc;
 RESOLUTION_X => trail_tex_desc.width;
@@ -194,15 +195,39 @@ false => trail_tex_desc.mips;
 Texture trail_tex_a(trail_tex_desc); 
 Texture trail_tex_b(trail_tex_desc); 
 
+fun void swapBuffers() {
+    (GG.fc() % 2 == 0) => int swap;
+
+    swap ? trail_tex_a : trail_tex_b @=> Texture read_tex;
+    swap ? trail_tex_b : trail_tex_a @=> Texture write_tex;
+
+    compute_pass.texture(1, read_tex); // read
+    compute_pass.storageTexture(2, write_tex); // write
+
+    trail_pass.texture(0, write_tex); // read
+    trail_pass.storageTexture(1, read_tex); // write
+
+    screen_pass.material().texture(0, read_tex);
+}
+
+fun void setUniforms(float dt) {
+    compute_pass.uniformFloat(3, dt);
+    compute_pass.uniformFloat(4, sensor_offset.val());
+    compute_pass.uniformInt(5, sensor_size.val());
+    compute_pass.uniformFloat(6, sense_angle_deg.val());
+    compute_pass.uniformFloat(7, speed_pixels.val());
+    compute_pass.uniformFloat(8, turn_speed.val());
+    compute_pass.uniformInt(9, simulation_mode.val());
+
+    trail_pass.uniformFloat(2, dt);
+    trail_pass.uniformFloat(3, diffusion_speed.val());
+    trail_pass.uniformFloat(4, dissolve_factor.val());
+}
+
+initSlimeBuffer();
+swapBuffers();
+setUniforms(0);
 compute_pass.storageBuffer(0, slime_buffer);
-compute_pass.texture(1, trail_tex_a); // read
-compute_pass.storageTexture(2, trail_tex_b); // write
-compute_pass.uniformFloat(3, GG.dt());
-
-trail_pass.texture(0, trail_tex_b); // read
-trail_pass.storageTexture(1, trail_tex_a); // write
-
-screen_pass.material().texture(0, trail_tex_a);
 screen_pass.material().sampler(1, TextureSampler.linear());
 
 compute_pass.workgroup((NUM_SLIMES / 64) + 1, 1, 1);
@@ -211,24 +236,26 @@ trail_pass.workgroup((RESOLUTION_X / 8) + 1, (RESOLUTION_Y / 8) + 1, 1);
 while (1) {
     GG.nextFrame() => now;
 
-    compute_pass.texture(1, trail_tex_b);
-    compute_pass.storageTexture(2, trail_tex_a);
-    compute_pass.uniformFloat(3, GG.dt());
+    if (UI.begin("")) {
 
-    trail_pass.texture(0, trail_tex_a);
-    trail_pass.storageTexture(1, trail_tex_b);
+        UI.slider("trail diffusion speed", diffusion_speed, 0.0, 20.0);
+        UI.slider("trail dissolve rate", dissolve_factor, 0.0, 1.0);
+        
+        UI.slider("slime sensor distance (pixels)", sensor_offset, 0.0, 20.0);
+        UI.slider("slime sensor size (pixels)", sensor_size, 0, 8);
+        UI.slider("slime sensor angle (degrees)", sense_angle_deg, 0, 90);
+        UI.slider("slime speed", speed_pixels, 0, 120);
+        UI.slider("slime turn speed", turn_speed, 0, 32);
+        UI.listBox("simulation mode", simulation_mode, ["Default", "Weighted PDF"]);
 
-    screen_pass.material().texture(0, trail_tex_b);
+        UI.checkbox("pause", pause);
 
-    GG.nextFrame() => now; // swap buffers and textures -------------
+        if (UI.button("restart simulation")) {
+            initSlimeBuffer();
+        }
+    }
+    UI.end();
 
-    compute_pass.texture(1, trail_tex_a);
-    compute_pass.storageTexture(2, trail_tex_b);
-    compute_pass.uniformFloat(3, GG.dt());
-
-    trail_pass.texture(0, trail_tex_b);
-    trail_pass.storageTexture(1, trail_tex_a);
-
-    screen_pass.material().texture(0, trail_tex_a);
-
+    swapBuffers();
+    setUniforms(pause.val() ? 0.0 : GG.dt());
 }
