@@ -187,6 +187,7 @@ CK_DLL_MFUN(ggen_rot_on_local_axis);
 CK_DLL_MFUN(ggen_rot_on_world_axis);
 
 CK_DLL_MFUN(ggen_lookat_vec3);
+CK_DLL_MFUN(ggen_lookat_vec3_with_up);
 CK_DLL_MFUN(ggen_lookat_dir);
 // CK_DLL_MFUN(ggen_rotate_by);  // no rotate by design because converting from
 // euler angles to quat is ambiguous
@@ -446,7 +447,19 @@ static void ulib_ggen_query(Chuck_DL_Query* QUERY)
         // GGen lookAt( vec3 )
         QUERY->add_mfun(QUERY, ggen_lookat_vec3, "GGen", "lookAt");
         QUERY->add_arg(QUERY, "vec3", "pos");
-        QUERY->doc_func(QUERY, "Look at the given position in world space");
+        QUERY->doc_func(
+          QUERY,
+          "Rotate this GGen to look at the given position in world space. Uses a "
+          "default UP vector of @(0,1,0). Be careful that the forward vector "
+          "(GGen.posWorld() - pos) and this up vector are not collinear");
+
+        MFUN(ggen_lookat_vec3_with_up, "GGen", "lookAt");
+        ARG("vec3", "pos");
+        ARG("vec3", "up");
+        DOC_FUNC(
+          "Rotate this GGen to look at the given position in world space."
+          "Be careful that the forward vector (GGen.posWorld() - pos) and this up "
+          "vector are not collinear");
 
         // Scale ===============================================================
 
@@ -946,6 +959,17 @@ CK_DLL_MFUN(ggen_lookat_vec3)
     SG_Transform* xform = SG_GetTransform(OBJ_MEMBER_UINT(SELF, component_offset_id));
     t_CKVEC3 vec        = GET_NEXT_VEC3(ARGS);
     SG_Transform::lookAt(xform, glm::vec3(vec.x, vec.y, vec.z));
+    RETURN->v_object = SELF;
+    CQ_PushCommand_SetRotation(xform);
+}
+
+CK_DLL_MFUN(ggen_lookat_vec3_with_up)
+{
+    SG_Transform* xform = SG_GetTransform(OBJ_MEMBER_UINT(SELF, component_offset_id));
+    t_CKVEC3 vec        = GET_NEXT_VEC3(ARGS);
+    t_CKVEC3 up         = GET_NEXT_VEC3(ARGS);
+    SG_Transform::lookAt(xform, glm::vec3(vec.x, vec.y, vec.z),
+                         glm::vec3(up.x, up.y, up.z));
     RETURN->v_object = SELF;
     CQ_PushCommand_SetRotation(xform);
 }

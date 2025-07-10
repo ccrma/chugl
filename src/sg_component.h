@@ -253,7 +253,7 @@ struct SG_Transform : public SG_Component {
     static void rotateX(SG_Transform* t, float deg);
     static void rotateY(SG_Transform* t, float deg);
     static void rotateZ(SG_Transform* t, float deg);
-    static void lookAt(SG_Transform* t, glm::vec3 pos);
+    static void lookAt(SG_Transform* t, glm::vec3 pos, glm::vec3 up);
 
     static glm::vec3 eulerRotationRadians(SG_Transform* t);
     static glm::mat4 modelMatrix(SG_Transform* t);
@@ -858,6 +858,7 @@ enum SG_LightType : u8 {
     SG_LightType_Directional,
     SG_LightType_Point,
     SG_LightType_Spot,
+    SG_LightType_Count,
 };
 
 struct SG_LightDesc {
@@ -866,14 +867,32 @@ struct SG_LightDesc {
     glm::vec3 color = glm::vec3(1.0f);
     float intensity = .7f;
 
-    // point
+    // point AND spot
     // formula: intensity = (1 - distance / radius)^falloff
-    float point_radius  = 10.0f;
-    float point_falloff = 2.0f; // 1.0 = linear, 2.0 = quadratic
+    float radius  = 10.0f;
+    float falloff = 2.0f; // 1.0 = linear, 2.0 = quadratic
+
+    // spot
+    float angle_min;
+    float angle_max     = 0.523599f; // 30 degrees
+    float angle_falloff = 2.0f;
 };
 
 struct SG_Light : public SG_Transform {
     SG_LightDesc desc;
+
+    static void lightType(SG_Light* light, SG_LightType type)
+    {
+        if (type < 0 || type >= SG_LightType_Count) {
+            log_warn(
+              "Cannot set invalid light type %d. Use one of GLight.Directional, "
+              "GLight.Point, or GLight.spot",
+              type);
+            return;
+        }
+
+        light->desc.type = type;
+    }
 };
 
 // ============================================================================

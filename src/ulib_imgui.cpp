@@ -962,6 +962,7 @@ CK_DLL_SFUN(ui_DragScalarNEx_CKFLOAT);
 CK_DLL_SFUN(ui_SliderFloat);
 CK_DLL_SFUN(ui_SliderFloatEx);
 CK_DLL_SFUN(ui_SliderAngle);
+CK_DLL_SFUN(ui_SliderAngleBounds);
 CK_DLL_SFUN(ui_SliderAngleEx);
 CK_DLL_SFUN(ui_SliderInt);
 CK_DLL_SFUN(ui_SliderIntEx);
@@ -6443,6 +6444,12 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
           "Implied v_degrees_min = -360.0f, v_degrees_max = +360.0f, format = "
           "\"%.0f deg\", flags = 0");
 
+        SFUN(ui_SliderAngleBounds, "int", "sliderAngle");
+        ARG("string", "label");
+        ARG("UI_Float", "v_rad");
+        ARG("float", "v_degrees_min");
+        ARG("float", "v_degrees_max");
+
         SFUN(ui_SliderAngleEx, "int", "sliderAngle");
         ARG("string", "label");
         ARG("UI_Float", "v_rad");
@@ -11173,6 +11180,20 @@ CK_DLL_SFUN(ui_SliderAngle)
     float* v          = (float*)OBJ_MEMBER_UINT(obj, ui_float_ptr_offset);
 
     RETURN->v_int = cimgui::ImGui_SliderAngle(label, v);
+}
+
+CK_DLL_SFUN(ui_SliderAngleBounds)
+{
+    if (!verifyInitialization(SHRED)) return;
+    const char* label = API->object->str(GET_NEXT_STRING(ARGS));
+
+    Chuck_Object* obj   = GET_NEXT_OBJECT(ARGS);
+    float* v            = (float*)OBJ_MEMBER_UINT(obj, ui_float_ptr_offset);
+    float v_degrees_min = GET_NEXT_FLOAT(ARGS);
+    float v_degrees_max = GET_NEXT_FLOAT(ARGS);
+
+    RETURN->v_int = cimgui::ImGui_SliderAngleEx(label, v, v_degrees_min, v_degrees_max,
+                                                "%.0f deg", 0);
 }
 
 CK_DLL_SFUN(ui_SliderAngleEx)

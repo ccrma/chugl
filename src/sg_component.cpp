@@ -209,12 +209,26 @@ void SG_Transform::rotateZ(SG_Transform* t, float deg)
 }
 
 // rotates object to point towards position, updates
-void SG_Transform::lookAt(SG_Transform* t, glm::vec3 pos)
+void SG_Transform::lookAt(SG_Transform* t, glm::vec3 pos, glm::vec3 up = VEC_UP)
 {
+    // first check colinearity
+    glm::vec3 eye     = SG_Transform::worldPosition(t);
+    glm::vec3 forward = glm::normalize(pos - eye);
+    up                = glm::normalize(up);
+    b32 collinear     = (glm::length2(glm::cross(up, forward)) < .00001);
+    if (collinear) {
+        log_warn(
+          "GGen.lookAt(@(%f, %f, %f), @(%f, %f, %f)) failed because the forward and up "
+          "vectors are collinear. Try GGen.lookAt(vec3 pos, vec3 up) with a different "
+          "up vector",
+          pos.x, pos.y, pos.z, up.x, up.y, up.z);
+        return;
+    }
+
     SG_Transform* parent = SG_GetTransform(t->parentID);
 
     glm::quat abs_rotation = glm::conjugate(
-      glm::toQuat(glm::lookAt(SG_Transform::worldPosition(t), pos, VEC_UP)));
+      glm::toQuat(glm::lookAt(SG_Transform::worldPosition(t), pos, up)));
     glm::quat local_rotation = abs_rotation;
 
     // convert into relative local rotation based on parent transforms

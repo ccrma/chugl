@@ -1138,30 +1138,35 @@ void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene)
         ASSERT(light);
         ASSERT(light->_stale == R_Transform_STALE_NONE);
         // get light transform data
-        glm::vec3 pos, sca;
-        glm::quat rot;
-        R_Transform::decomposeWorldMatrix(light->world, pos, rot, sca);
-        glm::vec3 forward
-          = glm::normalize(glm::rotate(rot, glm::vec3(0.0f, 0.0f, -1.0f)));
+        // glm::vec3 pos, sca;
+        // glm::quat rot;
+        // R_Transform::decomposeWorldMatrix(light->world, pos, rot, sca);
+        // glm::vec3 forward
+        //   = glm::normalize(glm::rotate(rot, glm::vec3(0.0f, 0.0f, -1.0f)));
 
         { // initialize uniform struct
             light_uniform->color      = light->desc.intensity * light->desc.color;
             light_uniform->light_type = (i32)light->desc.type;
-            light_uniform->position   = pos;
-            light_uniform->direction  = forward;
+            light_uniform->position   = light->world[3];
+            light_uniform->direction  = -glm::normalize(light->world[2]);
 
             switch (light->desc.type) {
                 case SG_LightType_None: break;
                 case SG_LightType_Directional: {
                 } break;
                 case SG_LightType_Point: {
-                    light_uniform->point_radius  = light->desc.point_radius;
-                    light_uniform->point_falloff = light->desc.point_falloff;
+                    light_uniform->point_and_spot_radius  = light->desc.radius;
+                    light_uniform->point_and_spot_falloff = light->desc.falloff;
+
                 } break;
-                default: {
-                    // not impl
-                    ASSERT(false);
+                case SG_LightType_Spot: {
+                    light_uniform->point_and_spot_radius  = light->desc.radius;
+                    light_uniform->point_and_spot_falloff = light->desc.falloff;
+                    light_uniform->spot_cos_angle_min     = cosf(light->desc.angle_min);
+                    light_uniform->spot_cos_angle_max     = cosf(light->desc.angle_max);
+                    light_uniform->spot_angular_falloff   = light->desc.angle_falloff;
                 } break;
+                default: ASSERT(false);
             }
         }
     }

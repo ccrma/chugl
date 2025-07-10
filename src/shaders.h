@@ -76,11 +76,12 @@ struct LightUniforms {
     int32_t light_type; // at byte offset 12
     glm::vec3 position; // at byte offset 16
     float _pad0;
-    glm::vec3 direction;  // at byte offset 32
-    float point_radius;   // at byte offset 44
-    float point_falloff;  // at byte offset 48
-    float spot_cos_angle; // at byte offset 52
-    float _pad1[2];
+    glm::vec3 direction;          // at byte offset 32
+    float point_and_spot_radius;  // at byte offset 44
+    float point_and_spot_falloff; // at byte offset 48
+    float spot_cos_angle_min;     // at byte offset 52
+    float spot_cos_angle_max;     // at byte offset 56
+    float spot_angular_falloff;
 };
 
 // struct DrawUniforms {
@@ -154,12 +155,14 @@ static std::unordered_map<std::string, std::string> shader_table = {
             position: vec3f,
             direction: vec3f, 
 
-            // point light
-            point_radius: f32,
-            point_falloff: f32,
+            // point AND spot light
+            point_and_spot_radius: f32,
+            point_and_spot_falloff: f32,
 
             // spot light
-            spot_cos_angle: f32,
+            spot_cos_angle_min: f32,
+            spot_cos_angle_max: f32,
+            spot_angular_falloff: f32,
         };
 
         @group(0) @binding(1) var<storage, read> u_lights: array<LightUniforms>;
@@ -552,7 +555,7 @@ static const char* phong_shader_string = R"glsl(
         }
         return srgbToLinear(textureSample(u_envmap, texture_sampler, normal * vec3f(1, 1, -1)).rgb);
     }
-    
+ 
     #include NORMAL_MAPPING_FUNCTIONS
 
 // main =====================================================================================
@@ -581,43 +584,53 @@ static const char* phong_shader_string = R"glsl(
         var lighting = vec3f(0.0); // accumulate lighting
         for (var i = 0; i < u_frame.num_lights; i++) {
             let light = u_lights[i];
-            var L : vec3f = vec3(0.0);
-            var radiance : vec3f = vec3(0.0);
+
+            // these need to be computed based on light type
+            var attenuation = 1.0;
+            var lightdir = vec3(0.0);
+
             switch (light.light_type) {
                 case 1: { // directional
-                    let lightDir = normalize(-light.direction);
-                    let halfwayDir = normalize(lightDir + viewDir);
-                    // diffuse shading
-                    let diffuse_factor : f32 = max(dot(normal, lightDir), 0.0);
-                    // specular shading
-                    let specular_factor : f32 = max(0.0, pow(max(dot(normal, halfwayDir), 0.0), u_shininess));
-                    let diffuse : vec3f = diffuse_factor * diffuse_color;
-                    let specular : vec3f = specular_factor * specular_color.rgb;
-                    // combine results
-                    lighting +=  (light.color * (diffuse+ specular));
+                    lightdir = normalize(-light.direction);
                 } 
                 case 2: { // point
-                    // calculate attenuation
-                    let dist = distance(in.v_worldpos, light.position);
-                    let attenuation = pow(
-                        clamp(1.0 - dist / light.point_radius, 0.0, 1.0), 
-                        light.point_falloff
+                    let l = light.position - in.v_worldpos;
+                    lightdir = normalize(l);
+
+                    let dist2 = dot(l, l); 
+                    let r2 = light.point_and_spot_radius * light.point_and_spot_radius;
+                    attenuation = pow(
+                        saturate(1.0 - dist2 / r2),
+                        light.point_and_spot_falloff
                     );
-                    let radiance : vec3f = light.color * attenuation;
+                }
+                case 3: { // spot
+                    let l = light.position - in.v_worldpos;
+                    let l_len = length(l);
+                    lightdir =  l / l_len;
 
-                    let lightDir = normalize(light.position - in.v_worldpos);
-                    let halfwayDir = normalize(lightDir + viewDir);
+                    // distance falloff
+                    let dist2 = dot(l, l); 
+                    let r2 = light.point_and_spot_radius * light.point_and_spot_radius;
+                    attenuation = pow(
+                        saturate(1.0 - dist2 / r2),
+                        light.point_and_spot_falloff
+                    );
 
-                    // diffuse 
-                    let diffuse_factor = max(dot(normal, lightDir), 0.0);
-                    // specular 
-                    let specular_factor = max(pow(max(dot(normal, halfwayDir), 0.0), u_shininess), 0.0);
-
-                    // combine results
-                    lighting += radiance * (diffuse_color * diffuse_factor + specular_color.rgb * specular_factor);
+                    // angular falloff
+                    let cos_theta = dot(-l, light.direction) / l_len;
+                    let t = saturate(
+                        (cos_theta - light.spot_cos_angle_min) / 
+                        (light.spot_cos_angle_max - light.spot_cos_angle_min)
+                    );
+                    attenuation *= pow((1.0 - t), light.spot_angular_falloff);
                 }
                 default: {} // no light
             } // end switch light type
+            let halfwaydir = normalize(lightdir + viewDir);
+            let diffuse_factor = saturate(dot(normal, lightdir));
+            let specular_factor = saturate(pow(saturate(dot(normal, halfwaydir)), u_shininess));
+            lighting += (light.color * attenuation) * (diffuse_color * diffuse_factor + specular_color.rgb * specular_factor);
         }  // end light loop
 
         // ambient light
@@ -983,8 +996,8 @@ static const char* pbr_shader_string = R"glsl(
                     L = normalize(light.position - in.v_worldpos);
                     let dist = distance(in.v_worldpos, light.position);
                     let attenuation = pow(
-                        clamp(1.0 - dist / light.point_radius, 0.0, 1.0), 
-                        light.point_falloff
+                        clamp(1.0 - dist / light.point_and_spot_radius, 0.0, 1.0), 
+                        light.point_and_spot_falloff
                     );
                     radiance = light.color * attenuation;
                 }

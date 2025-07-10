@@ -6,7 +6,7 @@
    http://chuck.cs.princeton.edu/chugl/
 
  MIT License
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -52,6 +52,18 @@ CK_DLL_MFUN(ulib_point_light_set_radius);
 CK_DLL_MFUN(ulib_point_light_get_falloff_exponent);
 CK_DLL_MFUN(ulib_point_light_set_falloff_exponent);
 
+CK_DLL_CTOR(ulib_spot_light_ctor);
+CK_DLL_MFUN(ulib_spot_light_get_falloff_exponent);
+CK_DLL_MFUN(ulib_spot_light_set_falloff_exponent);
+CK_DLL_MFUN(ulib_spot_light_get_radius);
+CK_DLL_MFUN(ulib_spot_light_set_radius);
+CK_DLL_MFUN(ulib_spot_light_get_angle_max);
+CK_DLL_MFUN(ulib_spot_light_set_angle_max);
+CK_DLL_MFUN(ulib_spot_light_get_angle_min);
+CK_DLL_MFUN(ulib_spot_light_set_angle_min);
+CK_DLL_MFUN(ulib_spot_light_get_angular_falloff);
+CK_DLL_MFUN(ulib_spot_light_set_angular_falloff);
+
 #define GET_LIGHT(ckobj) SG_GetLight(OBJ_MEMBER_UINT(ckobj, component_offset_id))
 
 SG_Light* ulib_light_create(Chuck_Object* ckobj, SG_LightType type)
@@ -59,8 +71,8 @@ SG_Light* ulib_light_create(Chuck_Object* ckobj, SG_LightType type)
     CK_DL_API API = g_chuglAPI;
 
     // execute change on audio thread side
-    SG_Light* light  = SG_CreateLight(ckobj);
-    light->desc.type = type;
+    SG_Light* light = SG_CreateLight(ckobj);
+    SG_Light::lightType(light, type);
     // save SG_ID
     OBJ_MEMBER_UINT(ckobj, component_offset_id) = light->id;
 
@@ -77,22 +89,32 @@ static void ulib_light_query(Chuck_DL_Query* QUERY)
 
     static t_CKINT light_type_directional = SG_LightType_Directional;
     static t_CKINT light_type_point       = SG_LightType_Point;
+    static t_CKINT light_type_spot        = SG_LightType_Spot;
     SVAR("int", "Directional", &light_type_directional);
     SVAR("int", "Point", &light_type_point);
+    SVAR("int", "Spot", &light_type_spot);
 
     // -------------------------
 
     CTOR(ulib_light_ctor);
+    DOC_FUNC("By default initializes a GDirLight");
 
     CTOR(ulib_light_ctor_with_type);
     ARG("int", "type");
+    DOC_FUNC(
+      "Initialize a specific light type (GLight.Directional, GLight.Point, "
+      "GLight.Spot). Prefer using the child classes instead, "
+      "GDirLight, GPointLight, etc.");
 
     MFUN(ulib_light_set_type, "void", "mode");
-    ARG("int", "mode");
-    DOC_FUNC("Set the light type. Use GLight.Directional or GLight.Point");
+    ARG("int", "type");
+    DOC_FUNC(
+      "Set the light type. Use GLight.Directional, GLight.Point, or GLight.Spot");
 
     MFUN(ulib_light_get_type, "int", "mode");
-    DOC_FUNC("Get the light type. Returns either GLight.Directional or GLight.Point.");
+    DOC_FUNC(
+      "Get the light type. Returns a light enum: GLight.Directional, GLight.Point, or "
+      "GLight.Spot");
 
     MFUN(ulib_light_set_color, "void", "color");
     ARG("vec3", "color");
@@ -146,11 +168,68 @@ static void ulib_light_query(Chuck_DL_Query* QUERY)
     // directional light ------------------------------------------------------
 
     BEGIN_CLASS("GDirLight", SG_CKNames[SG_COMPONENT_LIGHT]);
-    DOC_CLASS("Directional light component.");
+    DOC_CLASS("Directional light component. Rotate with the GGen rotation methods.");
 
     CTOR(ulib_dir_light_ctor);
 
     END_CLASS();
+
+    { // Spotlight
+        BEGIN_CLASS("GSpotLight", SG_CKNames[SG_COMPONENT_LIGHT]);
+        DOC_CLASS("Spotlight component. Rotate with the GGen rotation methods.");
+
+        CTOR(ulib_spot_light_ctor);
+
+        MFUN(ulib_spot_light_get_radius, "float", "radius");
+        DOC_FUNC("Get the light radius");
+
+        MFUN(ulib_spot_light_set_radius, "void", "radius");
+        ARG("float", "radius");
+        DOC_FUNC("Set the light radius. i.e. the max distance it will travel.");
+
+        MFUN(ulib_spot_light_get_falloff_exponent, "float", "falloff");
+        DOC_FUNC("Get the light falloff exponent");
+
+        MFUN(ulib_spot_light_set_falloff_exponent, "void", "falloff");
+        ARG("float", "falloff");
+        DOC_FUNC(
+          "Set the light falloff exponent, i.e. how quickly the light intensity "
+          "ramps down to 0 with distance. A value of 1.0 means linear, 2.0 means "
+          "quadratic. Default is 2.0");
+
+        MFUN(ulib_spot_light_get_angle_max, "float", "angleMax");
+        DOC_FUNC("Get the maximum angle (in degrees) of the spotlight");
+
+        MFUN(ulib_spot_light_set_angle_max, "void", "angleMax");
+        ARG("float", "degrees");
+        DOC_FUNC(
+          "Set the maximum angle (in degrees) of the spotlight. At this angle the "
+          "spotlights intensity will reach 0");
+
+        MFUN(ulib_spot_light_get_angle_min, "float", "angleMin");
+        DOC_FUNC(
+          "Get the angle (in degrees) of the spotlight at which attenuation will "
+          "begin.");
+
+        MFUN(ulib_spot_light_set_angle_min, "void", "angleMin");
+        ARG("float", "degrees");
+        DOC_FUNC(
+          "Set the angle (in degrees) of the spotlight at which attenuation will "
+          "begin. Should be less than angleMax");
+
+        MFUN(ulib_spot_light_get_angular_falloff, "float", "angularFalloff");
+        DOC_FUNC(
+          "Get the rate at which light intensity falls off from angleMin to angleMax. "
+          "Default 2.0");
+
+        MFUN(ulib_spot_light_set_angular_falloff, "void", "angularFalloff");
+        ARG("float", "exponent");
+        DOC_FUNC(
+          "Set the rate at which light intensity falls off from angleMin to angleMax. "
+          "Default 2.0");
+
+        END_CLASS();
+    }
 }
 
 CK_DLL_CTOR(ulib_light_ctor)
@@ -166,9 +245,10 @@ CK_DLL_CTOR(ulib_light_ctor_with_type)
 
 CK_DLL_MFUN(ulib_light_set_type)
 {
-    SG_Light* light  = GET_LIGHT(SELF);
-    t_CKINT type     = GET_NEXT_INT(ARGS);
-    light->desc.type = (SG_LightType)type;
+    SG_Light* light = GET_LIGHT(SELF);
+    t_CKINT type    = GET_NEXT_INT(ARGS);
+
+    SG_Light::lightType(light, (SG_LightType)type);
 
     CQ_PushCommand_LightUpdate(light);
 }
@@ -218,28 +298,28 @@ CK_DLL_CTOR(ulib_point_light_ctor)
 
 CK_DLL_MFUN(ulib_point_light_get_radius)
 {
-    RETURN->v_float = GET_LIGHT(SELF)->desc.point_radius;
+    RETURN->v_float = GET_LIGHT(SELF)->desc.radius;
 }
 
 CK_DLL_MFUN(ulib_point_light_set_radius)
 {
-    SG_Light* light          = GET_LIGHT(SELF);
-    t_CKFLOAT radius         = GET_NEXT_FLOAT(ARGS);
-    light->desc.point_radius = radius;
+    SG_Light* light    = GET_LIGHT(SELF);
+    t_CKFLOAT radius   = GET_NEXT_FLOAT(ARGS);
+    light->desc.radius = radius;
 
     CQ_PushCommand_LightUpdate(light);
 }
 
 CK_DLL_MFUN(ulib_point_light_get_falloff_exponent)
 {
-    RETURN->v_float = GET_LIGHT(SELF)->desc.point_falloff;
+    RETURN->v_float = GET_LIGHT(SELF)->desc.falloff;
 }
 
 CK_DLL_MFUN(ulib_point_light_set_falloff_exponent)
 {
-    SG_Light* light           = GET_LIGHT(SELF);
-    t_CKFLOAT falloff         = GET_NEXT_FLOAT(ARGS);
-    light->desc.point_falloff = falloff;
+    SG_Light* light     = GET_LIGHT(SELF);
+    t_CKFLOAT falloff   = GET_NEXT_FLOAT(ARGS);
+    light->desc.falloff = falloff;
 
     CQ_PushCommand_LightUpdate(light);
 }
@@ -247,4 +327,71 @@ CK_DLL_MFUN(ulib_point_light_set_falloff_exponent)
 CK_DLL_CTOR(ulib_dir_light_ctor)
 {
     ulib_light_create(SELF, SG_LightType_Directional);
+}
+
+// Spotlight =====================================================
+
+CK_DLL_CTOR(ulib_spot_light_ctor)
+{
+    ulib_light_create(SELF, SG_LightType_Spot);
+}
+
+CK_DLL_MFUN(ulib_spot_light_get_falloff_exponent)
+{
+    RETURN->v_float = GET_LIGHT(SELF)->desc.falloff;
+}
+
+CK_DLL_MFUN(ulib_spot_light_set_falloff_exponent)
+{
+    SG_Light* light     = GET_LIGHT(SELF);
+    light->desc.falloff = GET_NEXT_FLOAT(ARGS);
+    CQ_PushCommand_LightUpdate(light);
+}
+
+CK_DLL_MFUN(ulib_spot_light_get_radius)
+{
+    RETURN->v_float = GET_LIGHT(SELF)->desc.radius;
+}
+
+CK_DLL_MFUN(ulib_spot_light_set_radius)
+{
+    SG_Light* light    = GET_LIGHT(SELF);
+    light->desc.radius = GET_NEXT_FLOAT(ARGS);
+    CQ_PushCommand_LightUpdate(light);
+}
+
+CK_DLL_MFUN(ulib_spot_light_get_angle_max)
+{
+    RETURN->v_float = GET_LIGHT(SELF)->desc.angle_max;
+}
+
+CK_DLL_MFUN(ulib_spot_light_set_angle_max)
+{
+    SG_Light* light       = GET_LIGHT(SELF);
+    light->desc.angle_max = GET_NEXT_FLOAT(ARGS);
+    CQ_PushCommand_LightUpdate(light);
+}
+
+CK_DLL_MFUN(ulib_spot_light_get_angle_min)
+{
+    RETURN->v_float = GET_LIGHT(SELF)->desc.angle_min;
+}
+
+CK_DLL_MFUN(ulib_spot_light_set_angle_min)
+{
+    SG_Light* light       = GET_LIGHT(SELF);
+    light->desc.angle_min = GET_NEXT_FLOAT(ARGS);
+    CQ_PushCommand_LightUpdate(light);
+}
+
+CK_DLL_MFUN(ulib_spot_light_get_angular_falloff)
+{
+    RETURN->v_float = GET_LIGHT(SELF)->desc.angle_falloff;
+}
+
+CK_DLL_MFUN(ulib_spot_light_set_angular_falloff)
+{
+    SG_Light* light           = GET_LIGHT(SELF);
+    light->desc.angle_falloff = GET_NEXT_FLOAT(ARGS);
+    CQ_PushCommand_LightUpdate(light);
 }

@@ -356,17 +356,17 @@ bool GraphicsContext::init(GraphicsContext* context, GLFWwindow* window)
     if (!context->device) return false;
     log_trace("device created");
 
-    { // set debug callbacks
-#if defined(WEBGPU_BACKEND_WGPU)
-        wgpuSetLogLevel(WGPULogLevel_Warn);
-        wgpuSetLogCallback(
-          [](WGPULogLevel level, char const* message, void* /* userdata */) {
-              log_error("wgpu log [%d]: %s", level, message);
-          },
-          NULL);
+    {   // set debug callbacks
+        // #if defined(WEBGPU_BACKEND_WGPU)
+        //         wgpuSetLogLevel(WGPULogLevel_Warn);
+        //         wgpuSetLogCallback(
+        //           [](WGPULogLevel level, char const* message, void* /* userdata */) {
+        //               log_error("wgpu log [%d]: %s", level, message);
+        //           },
+        //           NULL);
 
-        log_trace("Using wgpu version %d", wgpuGetVersion());
-#endif
+        //         log_trace("Using wgpu version %d", wgpuGetVersion());
+        // #endif
     }
 
     context->queue = wgpuDeviceGetQueue(context->device);
