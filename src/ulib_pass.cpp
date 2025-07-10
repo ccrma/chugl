@@ -78,18 +78,12 @@ CK_DLL_MFUN(renderpass_set_scissor_vec4);
 
 // ScenePass
 CK_DLL_CTOR(scenepass_ctor_with_scene);
-CK_DLL_MFUN(scenepass_set_camera);
-CK_DLL_MFUN(scenepass_get_camera);
-CK_DLL_MFUN(scenepass_set_scene);
+CK_DLL_MFUN(scenepass_set_scene_and_camera);
 CK_DLL_MFUN(scenepass_get_scene);
+CK_DLL_MFUN(scenepass_get_camera);
 
-// TODO get_resolve_target
-// TODO set/get camera and scene
-// - enforce camera is part of scene
 // TODO add set/get HDR?
 // TODO add set/get MSAA sample count?
-// TODO scissor + viewport (after ScreenPass, not sure if we apply scissor/viewport to
-// RenderPass or screenpass...)
 
 // ScenePass
 CK_DLL_CTOR(screenpass_ctor_with_shader);
@@ -295,28 +289,24 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
     { // ScenePass --------------------------------------------------------------
         BEGIN_CLASS(ulib_pass_classname(SG_PassType_Scene),
                     ulib_pass_classname(SG_PassType_Render));
-        DOC_CLASS(
-          "Pass to render a GScene."
-          "If ScenePass.camera() is not set, will default to the scene's main "
-          "camera.");
+        DOC_CLASS("Pass to render a GScene from the perspective of a GCamera");
 
         CTOR(scenepass_ctor_with_scene);
         ARG(SG_CKNames[SG_COMPONENT_SCENE], "scene");
-        DOC_FUNC("Constructor that sets the scene to render.");
+        DOC_FUNC(
+          "Constructor that sets the scene to render. Will render from the scene's "
+          "main camera, scene.camera()");
 
-        MFUN(scenepass_set_scene, "void", "scene");
+        MFUN(scenepass_set_scene_and_camera, "void", "scene");
         ARG(SG_CKNames[SG_COMPONENT_SCENE], "scene");
-        DOC_FUNC("Set the scene to render.");
+        ARG(SG_CKNames[SG_COMPONENT_CAMERA], "camera");
+        DOC_FUNC(
+          "Set the scene and camera to render from. camera *must* be a part of the "
+          "scene. Can pass `null` as the camera arg to use the scene's main camera, "
+          "scene.camera()");
 
         MFUN(scenepass_get_scene, SG_CKNames[SG_COMPONENT_SCENE], "scene");
         DOC_FUNC("Get the scene this pass is rendering");
-
-        MFUN(scenepass_set_camera, "void", "camera");
-        ARG(SG_CKNames[SG_COMPONENT_CAMERA], "camera");
-        DOC_FUNC(
-          "Set the camera to use for rendering the scene. Defaults to the main camera "
-          "of the target scene. You can call .camera(null) to use the "
-          "scene's main camera. ");
 
         MFUN(scenepass_get_camera, SG_CKNames[SG_COMPONENT_CAMERA], "camera");
         DOC_FUNC(
@@ -810,17 +800,6 @@ CK_DLL_CTOR(scenepass_ctor_with_scene)
     CQ_PushCommand_PassUpdate(pass);
 }
 
-CK_DLL_MFUN(scenepass_set_camera)
-{
-    SG_Pass* pass = GET_PASS(SELF);
-    ASSERT(pass->pass_type == SG_PassType_Scene);
-    Chuck_Object* camera = GET_NEXT_OBJECT(ARGS);
-
-    SG_Pass::camera(pass, camera ? GET_CAMERA(camera) : NULL);
-
-    CQ_PushCommand_PassUpdate(pass);
-}
-
 CK_DLL_MFUN(scenepass_get_camera)
 {
     SG_Pass* pass = GET_PASS(SELF);
@@ -837,15 +816,27 @@ CK_DLL_MFUN(scenepass_get_camera)
     RETURN->v_object = sg_camera ? sg_camera->ckobj : NULL;
 }
 
-CK_DLL_MFUN(scenepass_set_scene)
+CK_DLL_MFUN(scenepass_set_scene_and_camera)
 {
     SG_Pass* pass = GET_PASS(SELF);
     ASSERT(pass->pass_type == SG_PassType_Scene);
-    Chuck_Object* scene = GET_NEXT_OBJECT(ARGS);
+    Chuck_Object* scene  = GET_NEXT_OBJECT(ARGS);
+    Chuck_Object* camera = GET_NEXT_OBJECT(ARGS);
 
     SG_Scene* sg_scene
       = scene ? SG_GetScene(OBJ_MEMBER_UINT(scene, component_offset_id)) : NULL;
+    SG_ID scene_id    = sg_scene ? sg_scene->id : 0;
+    SG_Camera* sg_cam = camera ? GET_CAMERA(camera) : NULL;
+
+    if (sg_cam && sg_cam->scene_id != scene_id) {
+        log_warn(
+          "ScenePass.scene(GScene, GCamera) failed: camera does not belong to scene. "
+          "Suggestion: connect with `camera --> scene;`");
+        return;
+    }
+
     SG_Pass::scene(pass, sg_scene);
+    SG_Pass::camera(pass, sg_cam);
 
     CQ_PushCommand_PassUpdate(pass);
 }

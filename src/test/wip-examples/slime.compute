@@ -64,14 +64,16 @@ fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) {
 
     if (simulation_mode == 0) {
         // original implementation
+        // relative to the forward weight, left and right can either be gt or less than forward,
+        // yielding 2 * 2 = 4 possible combinations:
         if (forward > left && forward > right) {
             // do nothing
         } else if (forward < left && forward < right) {
             // turn randomly
             rot += 2.0 * (random - 0.5) * turn_speed * dt;
-        } else if (right > left) {
+        } else if (right > left) { // right > forward > left
             rot -= random * turn_speed * dt;
-        } else if (left > right) {
+        } else if (left > right) { // right < foward < left
             rot += random * turn_speed * dt;
         }
     } else {

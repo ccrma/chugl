@@ -1,3 +1,6 @@
+// https://www.youtube.com/watch?v=X-iSQQgOd1A&ab_channel=SebastianLague
+// https://uwe-repository.worktribe.com/output/980579
+// https://cargocollective.com/sagejenson/physarum
 
 /*
 Problems:
@@ -25,6 +28,8 @@ Caused by:
     Invalid group index 0
 
 - StorageBuffer class is ass. need to rework. think of some cool examples that will force it to grow
+    - maybe watch acerolas procedural terrain generation video
+        - would be cool if we could bind storage buffer to vertex buffer of GMesh.geometry
 
 - binding empty storage buffer to ccompute shader throws a crash "invalid size" during bindgroup creation
     - guessing you cannot create a bindgroup from a bindgroup entry with size 0
@@ -35,15 +40,16 @@ Caused by:
 
 - setting computePath AND computeCode on ShaderDesc causes it to be intepreted as a fragment shader??????
 
+- why doesn't this support millions of particles? profile in metal GPU profiler
+    - setting particle count to 1Million starts at 60fps but slowly and constantly drops...wtf?
 
 
 ========== FEATURES ===============
 - Add UV zoom on screen shader
-- add slime color, maybe use trail value to lerp between different blends
 
 */
 
-100000 => int NUM_SLIMES;
+100000 => int NUM_SLIMES;  
 1920 => int RESOLUTION_X;
 1080 => int RESOLUTION_Y;
 
@@ -57,6 +63,9 @@ UI_Float speed_pixels(60);
 UI_Float turn_speed(16);
 UI_Int simulation_mode(0);
 UI_Bool pause;
+
+UI_Float3 base_color(0, 0, 0);
+UI_Float3 highlight_color(1.0, 1.0, 1.0);
 
 ShaderDesc compute_shader_desc;
 me.dir() + "./slime.compute" => compute_shader_desc.computePath;
@@ -109,6 +118,8 @@ Shader trail_shader(trail_shader_desc);
     #include FRAME_UNIFORMS
     @group(1) @binding(0) var src: texture_2d<f32>;
     @group(1) @binding(1) var texture_sampler: sampler;
+    @group(1) @binding(2) var<uniform> base_color: vec3f;
+    @group(1) @binding(3) var<uniform> highlight_color: vec3f;
 
     struct VertexOutput {
         @builtin(position) position : vec4<f32>,
@@ -137,11 +148,10 @@ Shader trail_shader(trail_shader_desc);
         var uv = in.position.xy / vec2f(u_frame.resolution.xy); // interesting. fragCoord doesn't change based on viewport
         uv.y = 1.0 - uv.y;
 
-        // no sampler for now
-        let col = textureLoad(src, vec2u(in.v_uv * vec2f(textureDimensions(src))), 0).rgb;
+        let trail_value = textureSampleLevel(src, texture_sampler, in.v_uv, 0.0).r;
+        let col = mix(base_color, highlight_color, trail_value);
         return vec4f(
-                // col,
-                textureSampleLevel(src, texture_sampler, in.v_uv, 0.0).rgb,
+                col,
                 1.0
         );
     }
@@ -184,7 +194,7 @@ fun void initSlimeBuffer() {
 }
 
 // render graph
-GG.rootPass() --> ComputePass compute_pass(agent_shader) --> ComputePass trail_pass(trail_shader) --> ScreenPass screen_pass(shader);
+GG.rootPass() --> ComputePass agent_pass(agent_shader) --> ComputePass trail_pass(trail_shader) --> ScreenPass screen_pass(shader);
 
 
 TextureDesc trail_tex_desc;
@@ -201,8 +211,8 @@ fun void swapBuffers() {
     swap ? trail_tex_a : trail_tex_b @=> Texture read_tex;
     swap ? trail_tex_b : trail_tex_a @=> Texture write_tex;
 
-    compute_pass.texture(1, read_tex); // read
-    compute_pass.storageTexture(2, write_tex); // write
+    agent_pass.texture(1, read_tex); // read
+    agent_pass.storageTexture(2, write_tex); // write
 
     trail_pass.texture(0, write_tex); // read
     trail_pass.storageTexture(1, read_tex); // write
@@ -211,33 +221,35 @@ fun void swapBuffers() {
 }
 
 fun void setUniforms(float dt) {
-    compute_pass.uniformFloat(3, dt);
-    compute_pass.uniformFloat(4, sensor_offset.val());
-    compute_pass.uniformInt(5, sensor_size.val());
-    compute_pass.uniformFloat(6, sense_angle_deg.val());
-    compute_pass.uniformFloat(7, speed_pixels.val());
-    compute_pass.uniformFloat(8, turn_speed.val());
-    compute_pass.uniformInt(9, simulation_mode.val());
+    agent_pass.uniformFloat(3, dt);
+    agent_pass.uniformFloat(4, sensor_offset.val());
+    agent_pass.uniformInt(5, sensor_size.val());
+    agent_pass.uniformFloat(6, sense_angle_deg.val());
+    agent_pass.uniformFloat(7, speed_pixels.val());
+    agent_pass.uniformFloat(8, turn_speed.val());
+    agent_pass.uniformInt(9, simulation_mode.val());
 
     trail_pass.uniformFloat(2, dt);
     trail_pass.uniformFloat(3, diffusion_speed.val());
     trail_pass.uniformFloat(4, dissolve_factor.val());
+
+    screen_pass.material().uniformFloat3(2, base_color.val());
+    screen_pass.material().uniformFloat3(3, highlight_color.val());
 }
 
 initSlimeBuffer();
 swapBuffers();
 setUniforms(0);
-compute_pass.storageBuffer(0, slime_buffer);
+agent_pass.storageBuffer(0, slime_buffer);
 screen_pass.material().sampler(1, TextureSampler.linear());
 
-compute_pass.workgroup((NUM_SLIMES / 64) + 1, 1, 1);
+agent_pass.workgroup((NUM_SLIMES / 64) + 1, 1, 1);
 trail_pass.workgroup((RESOLUTION_X / 8) + 1, (RESOLUTION_Y / 8) + 1, 1);
 
 while (1) {
     GG.nextFrame() => now;
 
     if (UI.begin("")) {
-
         UI.slider("trail diffusion speed", diffusion_speed, 0.0, 20.0);
         UI.slider("trail dissolve rate", dissolve_factor, 0.0, 1.0);
         
@@ -247,6 +259,9 @@ while (1) {
         UI.slider("slime speed", speed_pixels, 0, 120);
         UI.slider("slime turn speed", turn_speed, 0, 32);
         UI.listBox("simulation mode", simulation_mode, ["Default", "Weighted PDF"]);
+
+        UI.colorEdit("base color", base_color);
+        UI.colorEdit("highlight color", highlight_color);
 
         UI.checkbox("pause", pause);
 

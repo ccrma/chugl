@@ -996,7 +996,9 @@ CK_DLL_SFUN(ui_InputScalarNEx_CKFLOAT);
 
 // Widgets: Color Editor/Picker
 CK_DLL_SFUN(ui_ColorEdit3);
+CK_DLL_SFUN(ui_ColorEdit3_NoFlags);
 CK_DLL_SFUN(ui_ColorEdit4);
+CK_DLL_SFUN(ui_ColorEdit4_NoFlags);
 CK_DLL_SFUN(ui_ColorPicker3);
 CK_DLL_SFUN(ui_ColorPicker4);
 CK_DLL_SFUN(ui_ColorPicker4_no_ref_col);
@@ -6647,11 +6649,21 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
         ARG("int", "flags");
         DOC_FUNC("`flags` is an enum of type UI_ColorEditFlags");
 
+        SFUN(ui_ColorEdit3_NoFlags, "int", "colorEdit");
+        ARG("string", "label");
+        ARG("UI_Float3", "col");
+        DOC_FUNC("Default rgb color widget");
+
         SFUN(ui_ColorEdit4, "int", "colorEdit");
         ARG("string", "label");
         ARG("UI_Float4", "col");
         ARG("int", "flags");
         DOC_FUNC("`flags` is an enum of type UI_ColorEditFlags");
+
+        SFUN(ui_ColorEdit4_NoFlags, "int", "colorEdit");
+        ARG("string", "label");
+        ARG("UI_Float4", "col");
+        DOC_FUNC("Default rgba color widget");
 
         SFUN(ui_ColorPicker3, "int", "colorPicker");
         ARG("string", "label");
@@ -11657,6 +11669,16 @@ CK_DLL_SFUN(ui_ColorEdit3)
     RETURN->v_int = cimgui::ImGui_ColorEdit3(label, col, flags);
 }
 
+CK_DLL_SFUN(ui_ColorEdit3_NoFlags)
+{
+    if (!verifyInitialization(SHRED)) return;
+    const char* label = API->object->str(GET_NEXT_STRING(ARGS));
+    Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
+    float* col        = (float*)OBJ_MEMBER_UINT(obj, ui_float3_ptr_offset);
+
+    RETURN->v_int = cimgui::ImGui_ColorEdit3(label, col, 0);
+}
+
 CK_DLL_SFUN(ui_ColorEdit4)
 {
     if (!verifyInitialization(SHRED)) return;
@@ -11666,6 +11688,16 @@ CK_DLL_SFUN(ui_ColorEdit4)
     int flags         = GET_NEXT_INT(ARGS);
 
     RETURN->v_int = cimgui::ImGui_ColorEdit4(label, col, flags);
+}
+
+CK_DLL_SFUN(ui_ColorEdit4_NoFlags)
+{
+    if (!verifyInitialization(SHRED)) return;
+    const char* label = API->object->str(GET_NEXT_STRING(ARGS));
+    Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
+    float* col        = (float*)OBJ_MEMBER_UINT(obj, ui_float4_ptr_offset);
+
+    RETURN->v_int = cimgui::ImGui_ColorEdit4(label, col, 0);
 }
 
 CK_DLL_SFUN(ui_ColorPicker3)

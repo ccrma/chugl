@@ -1,5 +1,5 @@
 TODO
-- ScenePass.set(scene, camera) camera must be part of scene
+- finish polishing slimes example
 - finish split screen example
 - test shadertoy example in release mode, make sure we still get shader compilation errors
   - is there a way to detect a compile error and switch to default magenta? otherwise just crash
@@ -139,3 +139,15 @@ I think the move for now is to manually apply gamma curve in post-process, and d
     - OR
     - load as RGBA8Unorm, but convert manually in our shader code from srgb -> linear, so that when we apply the tonemap pass it goes back to srgb
   
+=== Lighting and Shadows ========================
+
+- remember to add and test inv normal matrix for correct shading on meshes with non-uniform scale
+- point light add cubic attenuation factor (r_max)
+
+Resources
+- webgpu samples shadows
+- tojidev webgpu cascaded shadow maps
+
+
+Later on:
+- 

@@ -786,7 +786,7 @@ struct SG_Pass : public SG_Component {
     SG_PassType pass_type;
 
     // RenderPass params
-    u32 color_target_clear_on_load = true;
+    b32 color_target_clear_on_load = 1;
     SG_ID color_target_id;
 
     b32 viewport_normalized = 1;
