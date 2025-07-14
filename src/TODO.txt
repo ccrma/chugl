@@ -13,6 +13,7 @@ TODO
 - add anti aliasing back
 - port geometry builders to use par_shapes
 - GLTF loader!!!! (after adding GC?)
+  - how does raylib do it? reference their pbr material system 
 
 - look into other blendmodes besides alpha blending
   - see acerola blend modes video
@@ -22,6 +23,8 @@ TODO
 - default GScene with a main camera?
 - add inverse normal matrix to PER_DRAW instanced draw uniforms
 - group all the commands of the frame together, submit all at once at end of RenderGraph 
+
+- add back MSAA to rendergraph API, see if that fixes the appearance of audio_donut.ck
 
 - ==optimize== for G_DrawCall sortkey, use the material AND shader index into arrays,
 store 16 bits each (assumes we won't ever have more than 16k live materials and shaders),
@@ -142,12 +145,51 @@ I think the move for now is to manually apply gamma curve in post-process, and d
 === Lighting and Shadows ========================
 
 - remember to add and test inv normal matrix for correct shading on meshes with non-uniform scale
-- point light add cubic attenuation factor (r_max)
+- add spotlight and new pointlight attenuation factor to PBRMaterial shader
+
+
+Ideas for multiple shadow casters
+- 2darray and cubearray *winner winner*
+- bindless XXXXX Not possible currently in webgpu (there is a proposal with deadline Dec 2026)
+- screenspace shadows (these only augment directional lights, involve raymarching a z pre-pass. Cannot substitute shadow mapping)
 
 Resources
 - webgpu samples shadows
 - tojidev webgpu cascaded shadow maps
 
+Note: depthBias cannot be set for point or line topologies. Do the shadow bias in the shader instead?
 
-Later on:
-- 
+SpotLight shadows
+- fov = 2 * theta_max
+- aspect = 1
+- use comparison sampler
+
+remember: need to be able to specify a shadowCaster *independent* of a light source
+  - maybe add light.disable?
+  - for now can just set intensity to 0
+
+babylon and THREE allow setting the shadowmap update frequency (so can decide to only render once for static geo)
+
+BabylonJS
+- need to create a shadow generator per light
+- have to explicitly mark which meshes are to cast shadows from 
+- have to explicitly mark when a mesh can receive shadows
+```javscript
+const shadowGenerator = new BABYLON.ShadowGenerator(1024, light);
+shadowGenerator.getShadowMap().renderList.push(torus);
+ground.receiveShadows = true;
+```
+
+Both Babylon and ThreeJS have on MESH
+- bool receiveShadow
+
+Things to test
+- transparent casts shadow correctly
+- alpha-cutout casts shadow correctly
+  - how do other game engines do this???????? do i really need to run the entire fragment shader, seems like a waste
+- changing scale on GLight doesn't mess up the shadow map
+- backfaces/billboards cast and receive shadow correctly (e.g. backside of a GPlane)
+- if mesh is out of light range, not affected by shadows
+
+be okay with sloppy first version!!!
+

@@ -502,8 +502,11 @@ struct R_Scene : R_Transform {
     GPU_Buffer light_info_buffer; // lighting storage buffer
     u64 last_fc_updated;          // frame count of last light update
 
+    // shadows
+    WGPUTexture spot_shadow_map_array;
+
     static void update(R_Scene* scene, GraphicsContext* gctx, u64 frame_count,
-                       Arena* frame_arena)
+                       Arena* frame_arena, G_Graph* graph)
     {
         if (frame_count == scene->last_fc_updated) return;
         scene->last_fc_updated = frame_count;
@@ -512,7 +515,7 @@ struct R_Scene : R_Transform {
         R_Transform::rebuildMatrices(scene, frame_arena);
 
         // update lights
-        R_Scene::rebuildLightInfoBuffer(gctx, scene);
+        R_Scene::rebuildLightInfoBuffer(gctx, scene, graph);
     }
 
     static void initFromSG(GraphicsContext* gctx, R_Scene* r_scene, SG_ID scene_id,
@@ -521,7 +524,8 @@ struct R_Scene : R_Transform {
     static void removeSubgraphFromRenderState(R_Scene* scene, R_Transform* xform);
     static void addSubgraphToRenderState(R_Scene* scene, R_Transform* xform);
 
-    static void rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene);
+    static void rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene,
+                                       G_Graph* graph);
 
     static i32 numLights(R_Scene* scene)
     {
@@ -931,8 +935,10 @@ struct G_CacheBindGroupEntryBuffer {
 struct G_CacheTextureViewDesc {
     WGPUTexture texture; // refcounted, ensures that WGPUTexture address is not reused
                          // so long as its in the G_Cache
-    int base_mip_level;
-    int mip_level_count;
+    int base_mip_level    = 0;
+    int mip_level_count   = 1;
+    int base_array_layer  = 0;
+    int array_layer_count = 1;
 };
 
 struct G_CacheTextureView {
@@ -1293,8 +1299,8 @@ struct G_Cache {
                                                      WGPUTextureViewDimension_2D;
             view_desc.baseMipLevel    = desc.base_mip_level;
             view_desc.mipLevelCount   = desc.mip_level_count;
-            view_desc.baseArrayLayer  = 0;
-            view_desc.arrayLayerCount = depth;
+            view_desc.baseArrayLayer  = desc.base_array_layer;
+            view_desc.arrayLayerCount = desc.array_layer_count;
 
             G_CacheTextureView item = {};
             item.key                = desc;
@@ -1886,16 +1892,23 @@ struct G_Graph {
         WGPU_RELEASE_RESOURCE(TextureView, pass->rp.color_target.texture_view);
 
         pass->rp.color_target_is_external_view = false;
-        pass->rp.color_target_view_desc        = { tex, mip_level, 1 };
+        pass->rp.color_target_view_desc        = { tex, mip_level, 1, 0, 1 };
     }
 
-    void renderPassDepthTarget(WGPUTexture tex)
+    void renderPassDepthTarget(WGPUTexture tex, int base_array_layer,
+                               int array_layer_count)
     {
         G_Pass* pass = pass_list + (pass_count - 1);
         ASSERT(pass->type == G_PassType_Render);
         ASSERT(G_Util::isDepthTextureFormat(wgpuTextureGetFormat(tex)));
         pass->rp._depth_target
-          = { tex, 0, 1 }; // assume depth textures don't have a mip chain
+          = { tex, 0, 1, // assume depth textures don't have a mip chain
+              base_array_layer, array_layer_count };
+    }
+
+    void renderPassDepthTarget(WGPUTexture tex)
+    {
+        renderPassDepthTarget(tex, 0, 1);
     }
 
     // returns aspect of viewport

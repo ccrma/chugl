@@ -706,6 +706,7 @@ struct App {
         R_Pass* root_pass = Component_GetPass(app->root_pass_id);
         R_Pass* pass      = Component_GetPass(root_pass->sg_pass.next_pass_id);
 
+        char string_buff[128] = {};
         while (pass) {
             FrameUniforms frameUniforms = {};
             R_Scene* scene              = NULL;
@@ -741,58 +742,67 @@ struct App {
                       = r_tex ? r_tex->gpu_texture : app->gctx.surface_texture.texture;
                     ASSERT(scene && color_target && camera);
 
-                    {
-                        R_Pass::updateScenePass(pass, color_target, app->gctx.device);
+                    R_Pass::updateScenePass(pass, color_target, app->gctx.device);
 
-                        // set G_Pass
-                        app->rendergraph.addRenderPass("Scene Pass");
-                        if (r_tex) {
-                            app->rendergraph.renderPassColorTarget(color_target, 0);
-                        } else {
-                            app->rendergraph.renderPassColorTarget(
-                              app->gctx.backbufferView, app->gctx.surface_format);
-                        }
-                        app->rendergraph.renderPassColorOp(
-                          WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f },
-                          pass->sg_pass.color_target_clear_on_load ? WGPULoadOp_Clear :
-                                                                     WGPULoadOp_Load,
-                          WGPUStoreOp_Store);
+                    R_Scene::update(scene, &app->gctx, app->fc, &app->frameArena,
+                                    &app->rendergraph);
+                    ASSERT(scene->last_fc_updated == app->fc);
 
-                        // TODO store depth texture somewhere else...
-                        app->rendergraph.renderPassDepthTarget(pass->depth_texture);
+                    // shadow pass --------------------------------------------
+                    snprintf(string_buff, sizeof(string_buff),
+                             "Scene Shadow Pass[%d] %s", pass->id, pass->name);
+                    // app->rendergraph.addRenderPass(string_buff);
+                    // app->rendergraph
+                    //   .renderPassDepthTarget()
 
-                        // viewport and scissor
-                        u32 color_height = wgpuTextureGetHeight(color_target);
-                        u32 color_width  = wgpuTextureGetWidth(color_target);
-                        if (pass->sg_pass.viewport_normalized) {
-                            aspect = app->rendergraph.viewport(
-                              pass->sg_pass.viewport_x * color_width,
-                              pass->sg_pass.viewport_y * color_height,
-                              pass->sg_pass.viewport_w * color_width,
-                              pass->sg_pass.viewport_h * color_height, color_target);
-                        } else {
-                            aspect = app->rendergraph.viewport(
-                              pass->sg_pass.viewport_x, pass->sg_pass.viewport_y,
-                              pass->sg_pass.viewport_w, pass->sg_pass.viewport_h,
-                              color_target);
-                        }
-                        if (pass->sg_pass.scissor_normalized) {
-                            app->rendergraph.scissor(
-                              pass->sg_pass.scissor_x * color_width,
-                              pass->sg_pass.scissor_y * color_height,
-                              pass->sg_pass.scissor_w * color_width,
-                              pass->sg_pass.scissor_h * color_height, color_target);
-                        } else {
-                            app->rendergraph.scissor(
-                              pass->sg_pass.scissor_x, pass->sg_pass.scissor_y,
-                              pass->sg_pass.scissor_w, pass->sg_pass.scissor_h,
-                              color_target);
-                        }
-
-                        G_DrawCallListID dc_list
-                          = app->rendergraph.renderPassAddDrawCallList();
-                        _R_RenderScene(app, scene, pass, camera, dc_list);
+                    // mesh pass ----------------------------------------------
+                    app->rendergraph.addRenderPass("Scene Pass");
+                    if (r_tex) {
+                        app->rendergraph.renderPassColorTarget(color_target, 0);
+                    } else {
+                        app->rendergraph.renderPassColorTarget(
+                          app->gctx.backbufferView, app->gctx.surface_format);
                     }
+                    app->rendergraph.renderPassColorOp(
+                      WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f },
+                      pass->sg_pass.color_target_clear_on_load ? WGPULoadOp_Clear :
+                                                                 WGPULoadOp_Load,
+                      WGPUStoreOp_Store);
+
+                    // TODO store depth texture somewhere else...
+                    app->rendergraph.renderPassDepthTarget(pass->depth_texture);
+
+                    // viewport and scissor
+                    u32 color_height = wgpuTextureGetHeight(color_target);
+                    u32 color_width  = wgpuTextureGetWidth(color_target);
+                    if (pass->sg_pass.viewport_normalized) {
+                        aspect = app->rendergraph.viewport(
+                          pass->sg_pass.viewport_x * color_width,
+                          pass->sg_pass.viewport_y * color_height,
+                          pass->sg_pass.viewport_w * color_width,
+                          pass->sg_pass.viewport_h * color_height, color_target);
+                    } else {
+                        aspect = app->rendergraph.viewport(
+                          pass->sg_pass.viewport_x, pass->sg_pass.viewport_y,
+                          pass->sg_pass.viewport_w, pass->sg_pass.viewport_h,
+                          color_target);
+                    }
+                    if (pass->sg_pass.scissor_normalized) {
+                        app->rendergraph.scissor(pass->sg_pass.scissor_x * color_width,
+                                                 pass->sg_pass.scissor_y * color_height,
+                                                 pass->sg_pass.scissor_w * color_width,
+                                                 pass->sg_pass.scissor_h * color_height,
+                                                 color_target);
+                    } else {
+                        app->rendergraph.scissor(pass->sg_pass.scissor_x,
+                                                 pass->sg_pass.scissor_y,
+                                                 pass->sg_pass.scissor_w,
+                                                 pass->sg_pass.scissor_h, color_target);
+                    }
+
+                    G_DrawCallListID dc_list
+                      = app->rendergraph.renderPassAddDrawCallList();
+                    _R_RenderScene(app, scene, pass, camera, dc_list);
                 } break;
                 case SG_PassType_Screen: {
                     R_Material* material
@@ -1272,9 +1282,6 @@ struct SceneDrawCall {
 static void _R_RenderScene(App* app, R_Scene* scene, R_Pass* pass, R_Camera* camera,
                            G_DrawCallListID dc_list)
 {
-    R_Scene::update(scene, &app->gctx, app->fc, &app->frameArena);
-    ASSERT(scene->last_fc_updated == app->fc);
-
     // form draw call list and sort
     size_t hashmap_idx_DONT_USE = 0;
     GeometryToXforms* primitive = NULL;

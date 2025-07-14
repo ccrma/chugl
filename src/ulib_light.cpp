@@ -180,12 +180,13 @@ static void ulib_light_query(Chuck_DL_Query* QUERY)
 
         CTOR(ulib_spot_light_ctor);
 
-        MFUN(ulib_spot_light_get_radius, "float", "radius");
-        DOC_FUNC("Get the light radius");
+        MFUN(ulib_spot_light_get_radius, "float", "range");
+        DOC_FUNC("Get the light range");
 
-        MFUN(ulib_spot_light_set_radius, "void", "radius");
-        ARG("float", "radius");
-        DOC_FUNC("Set the light radius. i.e. the max distance it will travel.");
+        MFUN(ulib_spot_light_set_radius, "void", "range");
+        ARG("float", "range");
+        DOC_FUNC(
+          "Set the light range. i.e. the distance at which intensity reaches 0.");
 
         MFUN(ulib_spot_light_get_falloff_exponent, "float", "falloff");
         DOC_FUNC("Get the light falloff exponent");

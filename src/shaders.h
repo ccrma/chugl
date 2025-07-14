@@ -1959,6 +1959,20 @@ const char* b2_solid_polygon_shader_string = R"glsl(
     }
 )glsl";
 
+static const char* shadow_vertex_string = R"glsl(
+
+@group(0) @binding(0) var<uniform> lightViewProjMatrix : mat4x4f;
+@group(1) @binding(0) var<uniform> modelMatrix : mat4x4f;
+
+@vertex
+fn main(
+@location(0) position: vec3f
+) -> @builtin(position) vec4f {
+    return lightViewProjMatrix * modelMatrix * vec4(position, 1.0);
+}
+
+)glsl";
+
 // clang-format on
 
 std::string Shaders_genSource(const char* src)

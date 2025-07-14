@@ -767,7 +767,7 @@ void R_Material::createBindGroupEntries(R_Material* mat, int group, G_Graph* gra
                 int num_mips = (int)wgpuTextureGetMipLevelCount(r_texture->gpu_texture);
                 G_CacheTextureViewDesc view_desc
                   = { r_texture->gpu_texture, binding->as.texture.base_mip_level,
-                      MIN(num_mips, binding->as.texture.mip_level_count) };
+                      MIN(num_mips, binding->as.texture.mip_level_count), 0, 1 };
 
                 drawcall ? graph->bindTexture(drawcall, group, i, view_desc) :
                            graph->computePassBindTexture(i, view_desc);
@@ -1113,11 +1113,18 @@ void R_Scene::addSubgraphToRenderState(R_Scene* scene, R_Transform* root)
     }
 }
 
-void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene)
+void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene,
+                                     G_Graph* graph)
 {
     static Arena light_info_arena{};
     ASSERT(light_info_arena.curr == 0);
     defer(Arena::clear(&light_info_arena));
+
+#if 0 // shadows
+    char string_buf[128]                             = {};
+    u8 shadow_map_write_indices[SG_LightType_Count]  = {};
+#endif
+    u8 shadow_map_counts_by_type[SG_LightType_Count] = {};
 
     // allocate cpu memory for light uniform data
     int num_lights = R_Scene::numLights(scene);
@@ -1137,12 +1144,9 @@ void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene)
         R_Light* light = Component_GetLight(*light_id);
         ASSERT(light);
         ASSERT(light->_stale == R_Transform_STALE_NONE);
-        // get light transform data
-        // glm::vec3 pos, sca;
-        // glm::quat rot;
-        // R_Transform::decomposeWorldMatrix(light->world, pos, rot, sca);
-        // glm::vec3 forward
-        //   = glm::normalize(glm::rotate(rot, glm::vec3(0.0f, 0.0f, -1.0f)));
+
+        ++shadow_map_counts_by_type[light->desc.type]; // TODO only increment if is
+                                                       // caster
 
         { // initialize uniform struct
             light_uniform->color      = light->desc.intensity * light->desc.color;
@@ -1171,9 +1175,144 @@ void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene)
         }
     }
 
-    // upload to gpu
+    // upload light uniforms to gpu
     GPU_Buffer::write(gctx, &scene->light_info_buffer, WGPUBufferUsage_Storage,
                       light_info_arena.base, light_info_arena.curr);
+
+#if 0 // shadows (paused)
+    // rebuild shadow map arrays if resized
+    for (int light_type = 0; light_type < SG_LightType_Count; ++light_type) {
+        if (light_type != SG_LightType_Spot) continue; // other types not impl
+        int curr_layers
+          = scene->spot_shadow_map_array ?
+              wgpuTextureGetDepthOrArrayLayers(scene->spot_shadow_map_array) :
+              0;
+        if (shadow_map_counts_by_type[light_type] <= curr_layers) continue;
+
+        snprintf(string_buf, sizeof(string_buf),
+                 "Spot shadowmap array for Scene[%d] %s", scene->id, scene->name);
+
+        WGPUTextureDescriptor shadowmap_desc = {};
+        shadowmap_desc.label                 = string_buf;
+        shadowmap_desc.usage
+          = WGPUTextureUsage_RenderAttachment | WGPUTextureUsage_TextureBinding;
+        shadowmap_desc.dimension = WGPUTextureDimension_2D;
+        shadowmap_desc.size
+          = { CHUGL_SPOT_SHADOWMAP_DEFAULT_DIM, CHUGL_SPOT_SHADOWMAP_DEFAULT_DIM,
+              shadow_map_counts_by_type[light_type] };
+        shadowmap_desc.format        = WGPUTextureFormat_Depth32Float;
+        shadowmap_desc.mipLevelCount = 1;
+        shadowmap_desc.sampleCount   = 1;
+
+        WGPU_RELEASE_RESOURCE(Texture, scene->spot_shadow_map_array);
+        scene->spot_shadow_map_array
+          = wgpuDeviceCreateTexture(gctx->device, &shadowmap_desc);
+    }
+
+    // shadowmap passes
+    hashmap_idx_DONT_USE = 0;
+    light_id             = NULL;
+    light_idx            = 0;
+    while (
+      hashmap_iter(scene->light_id_set, &hashmap_idx_DONT_USE, (void**)&light_id)) {
+        R_Light* light = Component_GetLight(*light_id);
+        int layer      = shadow_map_write_indices[light->desc.type]++;
+
+        switch (light->desc.type) {
+            case SG_LightType_Spot: {
+                snprintf(string_buf, sizeof(string_buf),
+                         "Shadow Pass for Scene[%d:%s] Light[%d:%s]", scene->id,
+                         scene->name, light->id, light->name);
+                graph->addRenderPass(string_buf);
+                graph->renderPassDepthTarget(scene->spot_shadow_map_array, layer, 1);
+                G_DrawCallListID dc_list = graph->renderPassAddDrawCallList();
+
+                // for now just render everything
+                // we don't care about transparency, instanced render just like opaque.
+                // ==optimize== switch to shader and material offset, rather than id to
+                // minimize pso switches
+                // TODO add light.shadowRegisterMesh(....)
+                size_t hashmap_idx_DONT_USE = 0;
+                GeometryToXforms* primitive = NULL;
+                while (hashmap_iter(scene->geo_to_xform, &hashmap_idx_DONT_USE,
+                                    (void**)&primitive)) {
+                    int instance_count = GeometryToXforms::count(primitive);
+                    if (instance_count == 0) continue;
+
+                    // below is mostly copied from _R_RenderScene(...)
+
+                    // Get shader id from material
+                    R_Material* material = Component_GetMaterial(primitive->key.mat_id);
+                    R_Geometry* geo      = Component_GetGeometry(primitive->key.geo_id);
+                    SG_ID shader_id      = material->pso.sg_shader_id;
+                    R_Shader* shader     = Component_GetShader(shader_id);
+
+                    // add to draw call list
+                    G_DrawCall* d = graph->addDraw(dc_list);
+
+                    // populate index buffer
+                    d->index_count    = R_Geometry::indexCount(geo);
+                    bool indexed_draw = (d->index_count > 0);
+                    if (indexed_draw) {
+                        d->index_buffer        = geo->gpu_index_buffer.buf;
+                        d->index_buffer_offset = 0;
+                        d->index_buffer_size   = geo->gpu_index_buffer.size;
+                    } else {
+                        // TODO come up with a better way to set a custom number of
+                        // vertices to draw having -1 actually mean ALL is confusing 2
+                        // different states.
+                        u32 vertex_count                = R_Geometry::vertexCount(geo);
+                        bool user_provided_vertex_count = geo->vertex_count >= 0;
+                        d->vertex_count                 = user_provided_vertex_count ?
+                                                            geo->vertex_count :
+                                                            vertex_count;
+                    }
+
+                    // set pso
+                    d->pipelineDesc(shader_id, material->pso.cull_mode,
+                                    material->pso.primitive_topology, false);
+
+                    { // set bindgroups
+
+                        // @group(3) bindings are set below, and are different for
+                        // transparent vs opaque
+                        GeometryToXforms::updateStorageBuffer(
+                          &app->gctx, scene, primitive, &app->gctx.limits);
+
+                        // set @group(4) pulled-vertex attribs
+                        R_Geometry::addPullBindGroupEntries(geo, &app->rendergraph, d);
+                    }
+
+                    // set vertex attributes
+                    for (int vertex_slot = 0;
+                         vertex_slot < ARRAY_LENGTH(geo->gpu_vertex_buffers);
+                         ++vertex_slot) {
+                        GPU_Buffer* gpu_buffer = &geo->gpu_vertex_buffers[vertex_slot];
+                        if (gpu_buffer->buf && gpu_buffer->size > 0)
+                            app->rendergraph.vertexBuffer(
+                              d, vertex_slot, gpu_buffer->buf, 0, gpu_buffer->size);
+                    }
+
+                    d->instance_count = instance_count;
+                    float dist_from_camera
+                      = 0.0; // ==optimize== sort opaque geometry front-to-back
+                    d->sort_key
+                      = G_SortKey::create(false, G_RenderingLayer_World, material->id,
+                                          dist_from_camera, camera->params.far_plane);
+
+                    // set @group(3) per-draw bindings (xform matrices)
+                    app->rendergraph.bindBuffer(d, PER_DRAW_GROUP, 0,
+                                                primitive->xform_storage_buffer.buf, 0,
+                                                primitive->xform_storage_buffer.size);
+                }
+            }
+        }
+    }
+    // validation
+    for (int i; i < ARRAY_LENGTH(shadow_map_write_indices); ++i) {
+        ASSERT(shadow_map_counts_by_type[i] == shadow_map_write_indices[i]);
+    }
+#endif
 }
 
 void R_Scene::registerMesh(R_Scene* scene, R_Transform* mesh)
@@ -2909,7 +3048,8 @@ void R_Pass::bindFrameUniforms(R_Pass* pass, G_DrawCall* d, G_Graph* graph,
         if (shader->includes.uses_env_map) {
             R_Texture* envmap = Component_GetTexture(scene->sg_scene_desc.env_map_id);
             ASSERT(envmap && envmap->gpu_texture)
-            graph->bindTexture(d, PER_FRAME_GROUP, 2, { envmap->gpu_texture, 0, 1 });
+            graph->bindTexture(d, PER_FRAME_GROUP, 2,
+                               { envmap->gpu_texture, 0, 1, 0, 6 });
         }
     }
 }

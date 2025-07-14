@@ -876,6 +876,9 @@ struct SG_LightDesc {
     float angle_min;
     float angle_max     = 0.523599f; // 30 degrees
     float angle_falloff = 2.0f;
+
+    struct {
+    } shadow;
 };
 
 struct SG_Light : public SG_Transform {
