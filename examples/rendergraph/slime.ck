@@ -11,7 +11,7 @@
 //-----------------------------------------------------------------------------
 
 // simulation parameters
-100000 => int NUM_SLIMES;  
+150000 => int NUM_SLIMES;  
 1920 => int RESOLUTION_X;
 1080 => int RESOLUTION_Y;
 

@@ -15,6 +15,7 @@
 - Add antialias method GText.antialias()
 - Add UI.knob(...) widgets
 - Bug fixes
+  - fix `GGen.lookAt(vec3 pos)` bug when up vector and forward vectors were collinear. Added `GGen.lookAt(vec3 pos, vec3 up)` which takes a custom up vector.
   - fix `GText.defaultFont()` not setting custom font path correctly
   - fix segfault caused by sending large amount of data to `UI.plotLines()`
   - setting `TextureLoadDesc.gen_mips` to false no longer erroneously generates a mip chain

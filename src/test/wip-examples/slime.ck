@@ -5,7 +5,6 @@
 /*
 Problems:
 
-- shader compilation error prints twice
 - shader compilation error does not show name of SG_Component (because we set shaderDesc in constructor, before setting .name)
 
 [ChuGL]: ERRORwgpu log [1]: Device::create_shader_module error:
@@ -43,19 +42,18 @@ Caused by:
 - why doesn't this support millions of particles? profile in metal GPU profiler
     - setting particle count to 1Million starts at 60fps but slowly and constantly drops...wtf?
 
-
-========== FEATURES ===============
-- Add UV zoom on screen shader
-
 */
 
-100000 => int NUM_SLIMES;  
+// simulation parameters
+150000 => int NUM_SLIMES;  
 1920 => int RESOLUTION_X;
 1080 => int RESOLUTION_Y;
 
+// dissolve shader params
 UI_Float diffusion_speed(1.0);
 UI_Float dissolve_factor(.95);
 
+// agent shader params
 UI_Float sensor_offset(8.0);
 UI_Int sensor_size(4);
 UI_Float sense_angle_deg(45);
@@ -64,6 +62,7 @@ UI_Float turn_speed(16);
 UI_Int simulation_mode(0);
 UI_Bool pause;
 
+// screen shader params
 UI_Float3 base_color(0, 0, 0);
 UI_Float3 highlight_color(1.0, 1.0, 1.0);
 
@@ -105,6 +104,9 @@ fn main(@builtin(global_invocation_id) id : vec3u) {
     // dissolve 
     if (dt > 0.0) {
         diffuse *= dissolve_factor;
+        if (diffuse.r < .0333) {
+            diffuse = vec4f(0.0); // remove ghost trails
+        }
     }
 
     // dump to texture
@@ -157,30 +159,21 @@ Shader trail_shader(trail_shader_desc);
     }
 " => string screen_shader;
 
-// TODO: improve shader construction, maybe with static factory methods
 ShaderDesc desc;
 screen_shader => desc.vertexCode => desc.fragmentCode;
-null => desc.vertexLayout;
+null => desc.vertexLayout; // screen shader does not take vertex data
 
 Shader shader(desc);
 shader.name("screen shader");
 
+// storage buffer to hold agent data
 StorageBuffer slime_buffer;
 slime_buffer.size(4 * NUM_SLIMES);
-
 float slime_init[4 * NUM_SLIMES];
-
-fun vec2 randomInCircle(float r) {
-    Math.random2f(0, Math.two_pi) => float theta;
-    return @(.5, .5) + Math.random2f(0, r) * @(Math.cos(theta), Math.sin(theta));
-}
 
 fun void initSlimeBuffer() {
     for (int i; i < NUM_SLIMES; i++) {
         // set position (xy)
-        // randomInCircle(.2) => vec2 pos;
-        // pos.x => slime_init[4*i + 0];
-        // pos.y => slime_init[4*i + 1];
         0.5 => slime_init[4*i + 0];
         0.5 => slime_init[4*i + 1];
 
@@ -196,7 +189,7 @@ fun void initSlimeBuffer() {
 // render graph
 GG.rootPass() --> ComputePass agent_pass(agent_shader) --> ComputePass trail_pass(trail_shader) --> ScreenPass screen_pass(shader);
 
-
+// textures to hold slime trail data
 TextureDesc trail_tex_desc;
 RESOLUTION_X => trail_tex_desc.width;
 RESOLUTION_Y => trail_tex_desc.height;
@@ -242,7 +235,6 @@ swapBuffers();
 setUniforms(0);
 agent_pass.storageBuffer(0, slime_buffer);
 screen_pass.material().sampler(1, TextureSampler.linear());
-
 agent_pass.workgroup((NUM_SLIMES / 64) + 1, 1, 1);
 trail_pass.workgroup((RESOLUTION_X / 8) + 1, (RESOLUTION_Y / 8) + 1, 1);
 
