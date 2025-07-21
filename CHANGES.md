@@ -29,3 +29,5 @@
 - New Examples
   - rendergraph/slime.ck
     - slime mold simulation using compute passes!
+  - deep/pokemon_cries.ck
+    - Gameboy APU emulator that synthesis all Gen I pokemon cries!
