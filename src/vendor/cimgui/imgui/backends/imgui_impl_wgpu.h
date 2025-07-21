@@ -46,9 +46,17 @@ struct ImGui_ImplWGPU_InitInfo {
 IMGUI_IMPL_API bool ImGui_ImplWGPU_Init(ImGui_ImplWGPU_InitInfo* init_info);
 IMGUI_IMPL_API void ImGui_ImplWGPU_Shutdown();
 IMGUI_IMPL_API void ImGui_ImplWGPU_NewFrame();
-IMGUI_IMPL_API void
-ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data,
-                              WGPURenderPassEncoder pass_encoder);
+
+
+typedef WGPUTextureView (*ImGui_ImplWGPU_GetTextureIdFunc)(ImTextureID id, void* user);
+// MODIFIED by AZADAY on July 18th, 2025 to accept custom callback for retrieving a
+// ChuGL texture from am ImTextureID
+IMGUI_IMPL_API void ImGui_ImplWGPU_RenderDrawData(
+    ImDrawData* draw_data, 
+    WGPURenderPassEncoder pass_encoder, 
+    ImGui_ImplWGPU_GetTextureIdFunc texture_id_func,
+    void* texture_id_data
+);
 
 // Use if you want to reset your rendering device without losing Dear ImGui
 // state.

@@ -598,8 +598,27 @@ struct LoadImageResult {
     i32 components; // 4 for rgba
 };
 
-static LoadImageResult R_Texture_LoadImage(const char* filepath,
-                                           WGPUTextureFormat load_format, bool flip_y)
+enum LoadImageType {
+    LoadImageType_File = 0,
+    LoadImageType_Raw,
+};
+
+struct LoadImageParams {
+    LoadImageType type;
+
+    // shared params
+    WGPUTextureFormat format;
+    bool flip_y;
+
+    // raw params
+    u8* buffer;
+    int buffer_len;
+
+    // file params
+    const char* filepath;
+};
+
+static LoadImageResult R_Texture_LoadImage(LoadImageParams p)
 {
     LoadImageResult result = {};
     // Force loading 3 channel images to 4 channel by stb becasue Dawn
@@ -608,22 +627,34 @@ static LoadImageResult R_Texture_LoadImage(const char* filepath,
     // https://github.com/gpuweb/gpuweb/issues/66#issuecomment-410021505
     i32 desired_comps = STBI_rgb_alpha; // force 4 channels
 
-    stbi_set_flip_vertically_on_load(flip_y);
+    stbi_set_flip_vertically_on_load(p.flip_y);
 
     // currently only support ldr (TODO add hdr f16 and f32)
-    ASSERT(load_format == WGPUTextureFormat_RGBA8Unorm);
+    ASSERT(p.format == WGPUTextureFormat_RGBA8Unorm);
 
-    result.pixel_data_OWNED = stbi_load(filepath,           //
-                                        &result.width,      //
-                                        &result.height,     //
-                                        &result.components, //
-                                        desired_comps       //
-    );
-    bool is_hdr             = false;
+    if (p.type == LoadImageType_File) {
+        result.pixel_data_OWNED = stbi_load(p.filepath,         //
+                                            &result.width,      //
+                                            &result.height,     //
+                                            &result.components, //
+                                            desired_comps       //
+        );
+    } else if (p.type == LoadImageType_Raw) {
+        // STBIDEF stbi_uc *stbi_load_from_memory   (stbi_uc           const *buffer,
+        // int len   , int *x, int *y, int *channels_in_file, int desired_channels);
+        result.pixel_data_OWNED = stbi_load_from_memory(p.buffer, p.buffer_len,
+                                                        &result.width,      //
+                                                        &result.height,     //
+                                                        &result.components, //
+                                                        desired_comps       //
+        );
+    } else {
+        UNREACHABLE;
+    }
+    bool is_hdr = false;
 
     // update byte size
     if (result.pixel_data_OWNED) {
-        ASSERT(load_format == WGPUTextureFormat_RGBA8Unorm);
         result.pixel_data_size = result.width * result.height * desired_comps;
     }
 
@@ -636,10 +667,11 @@ static LoadImageResult R_Texture_LoadImage(const char* filepath,
     //     );
 
     if (result.pixel_data_OWNED == NULL) {
-        log_error("Couldn't load '%s'\n. Reason: %s", filepath, stbi_failure_reason());
+        log_error("Couldn't load image from raw data\n. Reason: %s",
+                  stbi_failure_reason());
     } else {
-        log_info("Loaded %s image %s (%d, %d, %d / %d)\n", is_hdr ? "HDR" : "LDR",
-                 filepath, result.width, result.height, result.components,
+        log_info("Loaded %s image from raw data (%d, %d, %d / %d)\n",
+                 is_hdr ? "HDR" : "LDR", result.width, result.height, result.components,
                  desired_comps);
     }
 
@@ -657,8 +689,39 @@ int R_Texture::sizeBytes(R_Texture* texture)
 void R_Texture::load(GraphicsContext* gctx, R_Texture* texture, const char* filepath,
                      bool flip_vertically, bool gen_mips)
 {
-    LoadImageResult result
-      = R_Texture_LoadImage(filepath, texture->desc.format, flip_vertically);
+    LoadImageParams params = {};
+    params.type            = LoadImageType_File;
+    params.format          = texture->desc.format;
+    params.flip_y          = flip_vertically;
+    params.filepath        = filepath;
+    LoadImageResult result = R_Texture_LoadImage(params);
+    // free pixel data
+    defer(if (result.pixel_data_OWNED) stbi_image_free(result.pixel_data_OWNED););
+
+    SG_TextureWriteDesc write_desc = {};
+    write_desc.width               = result.width;
+    write_desc.height              = result.height;
+    R_Texture::write(gctx, texture, &write_desc, result.pixel_data_OWNED,
+                     result.width * result.height
+                       * G_bytesPerTexel(texture->desc.format));
+
+    if (gen_mips) {
+        // MipMapGenerator_generate(gctx, texture->gpu_texture, texture->name.c_str());
+        MipMapGenerator_generate(gctx, texture->gpu_texture, texture->name);
+    }
+}
+
+void R_Texture::load(GraphicsContext* gctx, R_Texture* texture, u8* buffer,
+                     int buffer_len, bool flip_vertically, bool gen_mips)
+{
+    LoadImageParams params = {};
+    params.type            = LoadImageType_Raw;
+    params.format          = texture->desc.format;
+    params.flip_y          = flip_vertically;
+    params.buffer          = buffer;
+    params.buffer_len      = buffer_len;
+    LoadImageResult result = R_Texture_LoadImage(params);
+
     // free pixel data
     defer(if (result.pixel_data_OWNED) stbi_image_free(result.pixel_data_OWNED););
 
@@ -689,9 +752,13 @@ void R_Texture::loadCubemap(GraphicsContext* gctx, R_Texture* texture,
     const char* faces[6] = { right_face_path,  left_face_path, top_face_path,
                              bottom_face_path, back_face_path, front_face_path };
 
+    LoadImageParams params = {};
+    params.type            = LoadImageType_File;
+    params.format          = texture->desc.format;
+    params.flip_y          = flip_y;
     for (int i = 0; i < 6; i++) {
-        LoadImageResult result
-          = R_Texture_LoadImage(faces[i], texture->desc.format, flip_y);
+        params.filepath        = faces[i];
+        LoadImageResult result = R_Texture_LoadImage(params);
         // free pixel data
         defer(if (result.pixel_data_OWNED) stbi_image_free(result.pixel_data_OWNED););
 

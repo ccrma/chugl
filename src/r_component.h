@@ -331,6 +331,9 @@ struct R_Texture : public R_Component {
     static void load(GraphicsContext* gctx, R_Texture* texture, const char* filepath,
                      bool flip_vertically, bool gen_mips);
 
+    static void load(GraphicsContext* gctx, R_Texture* texture, u8* buffer,
+                     int buffer_len, bool flip_vertically, bool gen_mips);
+
     static void loadCubemap(GraphicsContext* gctx, R_Texture* texture,
                             const char* right_face_path, const char* left_face_path,
                             const char* top_face_path, const char* bottom_face_path,
@@ -1078,6 +1081,8 @@ struct G_CacheStats {
 };
 
 struct G_Cache {
+    u32 initialized;
+
     hashmap* render_pipeline_map;
     hashmap* compute_pipeline_map;
     hashmap* bindgroup_map;
@@ -1091,6 +1096,7 @@ struct G_Cache {
 
     void init()
     {
+        initialized         = 0xDEADBEEF;
         render_pipeline_map = hashmap_new_simple(sizeof(G_CacheRenderPipeline),
                                                  G_CacheRenderPipeline::hash,
                                                  G_CacheRenderPipeline::compare);

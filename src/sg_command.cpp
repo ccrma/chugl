@@ -637,6 +637,21 @@ void CQ_PushCommand_TextureFromFile(SG_Texture* texture, const char* filepath,
     END_COMMAND();
 }
 
+void CQ_PushCommand_TextureFromRawData(SG_Texture* texture, u8* buffer, int buffer_len,
+                                       SG_TextureLoadDesc* desc)
+{
+    BEGIN_COMMAND_ADDITIONAL_MEMORY(SG_Command_TextureFromRawData,
+                                    SG_COMMAND_TEXTURE_FROM_RAW_DATA, buffer_len);
+    u8* buffer_copy = (u8*)memory;
+    memcpy(buffer_copy, buffer, buffer_len);
+    command->sg_id           = texture->id;
+    command->buffer_len      = buffer_len;
+    command->buffer_offset   = Arena::offsetOf(cq.write_q, buffer_copy);
+    command->flip_vertically = desc->flip_y ? 1 : 0;
+    command->gen_mips        = desc->gen_mips ? 1 : 0;
+    END_COMMAND();
+}
+
 void CQ_PushCommand_CubemapTextureFromFile(
   SG_Texture* texture, SG_TextureLoadDesc* desc, const char* right_face,
   const char* left_face, const char* top_face, const char* bottom_face,

@@ -891,25 +891,20 @@ CK_DLL_SFUN(ui_RadioButtonIntPtr);
 CK_DLL_SFUN(ui_ProgressBar);
 CK_DLL_SFUN(ui_Bullet);
 
-// Widgets: Images (TODO - figure out how to handle ImTextureID)
+// clang-format off
+// Widgets: Images 
 // - Read about ImTextureID here:
 // https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
-// - 'uv0' and 'uv1' are texture coordinates. Read about them from the same link
+// - 'uv0' and 'uv1' are texture coordinates. Read about them from the same link 
 // above.
 // - Note that Image() may add +2.0f to provided size if a border is visible,
-// ImageButton() adds style.FramePadding*2.0f to provided size. CIMGUI_API void
-// ImGui_Image(ImTextureID user_texture_id, ImVec2 image_size); // Implied uv0 =
-// ImVec2(0, 0), uv1 = ImVec2(1, 1), tint_col = ImVec4(1, 1, 1, 1), border_col =
-// ImVec4(0, 0, 0, 0) CIMGUI_API void ImGui_ImageEx(ImTextureID user_texture_id,
-// ImVec2 image_size, ImVec2 uv0 /* = ImVec2(0, 0) */, ImVec2 uv1 /* = ImVec2(1,
-// 1) */, ImVec4 tint_col /* = ImVec4(1, 1, 1, 1) */, ImVec4 border_col /* =
-// ImVec4(0, 0, 0, 0) */); CIMGUI_API bool ImGui_ImageButton(const char* str_id,
-// ImTextureID user_texture_id, ImVec2 image_size);  // Implied uv0 = ImVec2(0,
-// 0), uv1 = ImVec2(1, 1), bg_col = ImVec4(0, 0, 0, 0), tint_col = ImVec4(1, 1,
-// 1, 1) CIMGUI_API bool ImGui_ImageButtonEx(const char* str_id, ImTextureID
-// user_texture_id, ImVec2 image_size, ImVec2 uv0 /* = ImVec2(0, 0) */, ImVec2
-// uv1 /* = ImVec2(1, 1) */, ImVec4 bg_col /* = ImVec4(0, 0, 0, 0) */, ImVec4
-// tint_col /* = ImVec4(1, 1, 1, 1) */);
+// ImageButton() adds style.FramePadding*2.0f to provided size. 
+
+CK_DLL_SFUN(ui_Image);
+CK_DLL_SFUN(ui_ImageEx);
+CK_DLL_SFUN(ui_ImageButton);
+CK_DLL_SFUN(ui_ImageButtonEx);
+// clang-format on
 
 // Widgets: Combo Box (Dropdown)
 // - The BeginCombo()/EndCombo() api allows you to manage your contents and
@@ -6124,6 +6119,54 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
                         "advance cursor x position by GetTreeNodeToLabelSpacing(), "
                         "same distance that TreeNode() uses");
 
+        // Widgets: Image --------------------------------------------------------
+        SFUN(ui_Image, "void", "image");
+        ARG(SG_CKNames[SG_COMPONENT_TEXTURE], "texture");
+        ARG("vec2", "size");
+        DOC_FUNC("Render an image with the given dimensions");
+
+        SFUN(ui_ImageEx, "void", "image");
+        ARG(SG_CKNames[SG_COMPONENT_TEXTURE], "texture");
+        ARG("vec2", "size");
+        ARG("vec2", "uv0");
+        ARG("vec2", "uv1");
+        ARG("vec4", "tint_color");
+        ARG("vec4", "border_color");
+        DOC_FUNC(
+          "Render an image with the given dimensions, uv coordinates, and color "
+          "options. uv0 and uv1 are normalized texture coordinates where (0,0) refers "
+          "to the upper left and (1,1) the bottom right of the texture. E.g. setting "
+          "uv0 = (.5, .5) and uv=(1,1) will render only the bottom-right quadrant. "
+          "By default, tint_color = @(1,1,1,1) and border_color = @(0,0,0,0)"
+          "To learn more, visit "
+          "https://github.com/ocornut/imgui/wiki/"
+          "Image-Loading-and-Displaying-Examples");
+
+        SFUN(ui_ImageButton, "int", "imageButton");
+        ARG("string", "label");
+        ARG(SG_CKNames[SG_COMPONENT_TEXTURE], "texture");
+        ARG("vec2", "size");
+        DOC_FUNC("Render a clickable image button with the given dimensions");
+
+        SFUN(ui_ImageButtonEx, "int", "imageButton");
+        ARG("string", "label");
+        ARG(SG_CKNames[SG_COMPONENT_TEXTURE], "texture");
+        ARG("vec2", "size");
+        ARG("vec2", "uv0");
+        ARG("vec2", "uv1");
+        ARG("vec4", "tint_color");
+        ARG("vec4", "background_color");
+        DOC_FUNC(
+          "Render a clickable image button with the given dimensions, uv coordinates, "
+          "and color "
+          "options. uv0 and uv1 are normalized texture coordinates where (0,0) refers "
+          "to the upper left and (1,1) the bottom right of the texture. E.g. setting "
+          "uv0 = (.5, .5) and uv=(1,1) will render only the bottom-right quadrant. "
+          "By default, tint_color = @(1,1,1,1) and background_color = @(0,0,0,0)"
+          "To learn more, visit "
+          "https://github.com/ocornut/imgui/wiki/"
+          "Image-Loading-and-Displaying-Examples");
+
         // Widgets: Combo --------------------------------------------------------
 
         QUERY->add_sfun(QUERY, ui_BeginCombo, "int", "beginCombo");
@@ -9783,8 +9826,8 @@ CK_DLL_SFUN(ui_BeginChild)
     int child_flags    = GET_NEXT_INT(ARGS);
     int window_flags   = GET_NEXT_INT(ARGS);
 
-    cimgui::ImGui_BeginChild(str_id, { (float)size.x, (float)size.y }, child_flags,
-                             window_flags);
+    RETURN->v_int = cimgui::ImGui_BeginChild(str_id, { (float)size.x, (float)size.y },
+                                             child_flags, window_flags);
 }
 
 CK_DLL_SFUN(ui_EndChild)
@@ -10696,6 +10739,63 @@ CK_DLL_SFUN(ui_Bullet)
 {
     if (!verifyInitialization(SHRED)) return;
     cimgui::ImGui_Bullet();
+}
+
+// ============================================================================
+// Widgets: Image
+// ============================================================================
+CK_DLL_SFUN(ui_Image)
+{
+    if (!verifyInitialization(SHRED)) return;
+    ImTextureID id
+      = (ImTextureID)OBJ_MEMBER_UINT(GET_NEXT_OBJECT(ARGS), component_offset_id);
+    t_CKVEC2 size = GET_NEXT_VEC2(ARGS);
+    ImGui::Image(id, { (float)size.x, (float)size.y });
+}
+
+CK_DLL_SFUN(ui_ImageEx)
+{
+    if (!verifyInitialization(SHRED)) return;
+    ImTextureID id
+      = (ImTextureID)OBJ_MEMBER_UINT(GET_NEXT_OBJECT(ARGS), component_offset_id);
+    t_CKVEC2 size   = GET_NEXT_VEC2(ARGS);
+    t_CKVEC2 uv0    = GET_NEXT_VEC2(ARGS);
+    t_CKVEC2 uv1    = GET_NEXT_VEC2(ARGS);
+    t_CKVEC4 tint   = GET_NEXT_VEC4(ARGS);
+    t_CKVEC4 border = GET_NEXT_VEC4(ARGS);
+    ImGui::Image(
+      id, { (float)size.x, (float)size.y }, { (float)uv0.x, (float)uv0.y },
+      { (float)uv1.x, (float)uv1.y },
+      { (float)tint.x, (float)tint.y, (float)tint.z, (float)tint.w },
+      { (float)border.x, (float)border.y, (float)border.z, (float)border.w });
+}
+
+CK_DLL_SFUN(ui_ImageButton)
+{
+    if (!verifyInitialization(SHRED)) return;
+    const char* label = API->object->str(GET_NEXT_STRING(ARGS));
+    ImTextureID id
+      = (ImTextureID)OBJ_MEMBER_UINT(GET_NEXT_OBJECT(ARGS), component_offset_id);
+    t_CKVEC2 size = GET_NEXT_VEC2(ARGS);
+    RETURN->v_int = ImGui::ImageButton(label, id, { (float)size.x, (float)size.y });
+}
+
+CK_DLL_SFUN(ui_ImageButtonEx)
+{
+    if (!verifyInitialization(SHRED)) return;
+    const char* label = API->object->str(GET_NEXT_STRING(ARGS));
+    ImTextureID id
+      = (ImTextureID)OBJ_MEMBER_UINT(GET_NEXT_OBJECT(ARGS), component_offset_id);
+    t_CKVEC2 size   = GET_NEXT_VEC2(ARGS);
+    t_CKVEC2 uv0    = GET_NEXT_VEC2(ARGS);
+    t_CKVEC2 uv1    = GET_NEXT_VEC2(ARGS);
+    t_CKVEC4 tint   = GET_NEXT_VEC4(ARGS);
+    t_CKVEC4 border = GET_NEXT_VEC4(ARGS);
+    RETURN->v_int   = ImGui::ImageButton(
+      label, id, { (float)size.x, (float)size.y }, { (float)uv0.x, (float)uv0.y },
+      { (float)uv1.x, (float)uv1.y },
+      { (float)border.x, (float)border.y, (float)border.z, (float)border.w },
+      { (float)tint.x, (float)tint.y, (float)tint.z, (float)tint.w });
 }
 
 // ============================================================================

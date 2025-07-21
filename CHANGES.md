@@ -14,14 +14,18 @@
 - Add alpha-blend transparency. See examples/basic/transparency.ck
 - Add antialias method GText.antialias()
 - Add UI.knob(...) widgets
+- Add `UI.image(...)` and `UI.imageButton(...)` methods, which allow adding ChuGL Textures to UI. 
 - Bug fixes
   - fix `GGen.lookAt(vec3 pos)` bug when up vector and forward vectors were collinear. Added `GGen.lookAt(vec3 pos, vec3 up)` which takes a custom up vector.
   - fix `GText.defaultFont()` not setting custom font path correctly
   - fix segfault caused by sending large amount of data to `UI.plotLines()`
   - setting `TextureLoadDesc.gen_mips` to false no longer erroneously generates a mip chain
+  - fix `UI.beginChild(...)` not properly returning a value
 - Under the Hood
   - Large architecture refactor to use a rendergraph + gpu resource cache + sorted drawcall structs to organize and dispatch GPU commands.
     - Inspired by [this blog](https://blog.mecheye.net/2023/09/how-to-write-a-renderer-for-modern-apis/) and the [noclip.website renderer](https://github.com/magcius/gfxrlz)
     - Caching GPU resources (namely BindGroups and TextureViews) significantly improves performance and increases the maximum number of draw calls that can be issued each frame
       - See here [TODO] for a performance analysis of the cost of recreating bindgroups every frame in WebGPU
-    - 
+- New Examples
+  - rendergraph/slime.ck
+    - slime mold simulation using compute passes!

@@ -15,6 +15,9 @@ TODO
 - GLTF loader!!!! (after adding GC?)
   - how does raylib do it? reference their pbr material system 
 
+UI
+- add nearest-neighbor filtering
+
 - look into other blendmodes besides alpha blending
   - see acerola blend modes video
   - impl additive blending particle system example, see https://www.youtube.com/watch?v=ahOfNgvQ93Q&ab_channel=NeverEngineStudios

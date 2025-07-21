@@ -114,6 +114,7 @@ CK_DLL_MFUN(texture_get_data);
 
 // loading images
 CK_DLL_SFUN(texture_load_2d_file);
+CK_DLL_SFUN(texture_load_2d_raw);
 CK_DLL_SFUN(texture_load_2d_file_with_params);
 CK_DLL_SFUN(texture_load_cubemap);
 
@@ -373,6 +374,16 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
         SFUN(texture_load_2d_file, SG_CKNames[SG_COMPONENT_TEXTURE], "load");
         ARG("string", "filepath");
         DOC_FUNC("Load a 2D texture from a file");
+
+        SFUN(texture_load_2d_raw, SG_CKNames[SG_COMPONENT_TEXTURE], "load");
+        ARG("int[]", "binary_data");
+        DOC_FUNC(
+          "Load a 2D texture from raw data. Assumes the texture is 8bits per channel, "
+          "RGBA8Unorm format. The raw data is passed as an array of chuck integers. "
+          "These integers are casted to be 32-bit, and then loaded from memory as a "
+          "raw byte buffer. This method is intended for including sprites in examples, "
+          "e.g. so that png data can be encoded directly in the chuck file. If trying "
+          "to write generated data to a texture, prefer using Texture.write(...)");
 
         SFUN(texture_load_2d_file_with_params, SG_CKNames[SG_COMPONENT_TEXTURE],
              "load");
@@ -916,6 +927,36 @@ SG_Texture* ulib_texture_load(const char* filepath, SG_TextureLoadDesc* load_des
     return tex;
 }
 
+SG_Texture* ulib_texture_load(unsigned char* buffer, int buffer_len,
+                              SG_TextureLoadDesc* load_desc, Chuck_VM_Shred* shred)
+{
+    int width, height, num_components;
+    if (!stbi_info_from_memory(buffer, buffer_len, &width, &height, &num_components)) {
+        log_warn("Could not load texture file from raw data");
+        log_warn(" |- Reason: %s", stbi_failure_reason());
+        log_warn(" |- Defaulting to magenta texture");
+
+        // on failure return magenta texture
+        return SG_GetTexture(g_builtin_textures.magenta_pixel_id);
+    } else {
+        log_trace("Preparing %dx%d texture from raw data", width, height);
+    }
+
+    SG_TextureDesc desc = {};
+    desc.width          = width;
+    desc.height         = height;
+    desc.dimension      = WGPUTextureDimension_2D;
+    desc.format         = WGPUTextureFormat_RGBA8Unorm;
+    desc.usage          = WGPUTextureUsage_All;
+    desc.gen_mips       = load_desc->gen_mips ? true : false;
+
+    SG_Texture* tex = SG_CreateTexture(&desc, NULL, shred, false, "Raw Data Texture");
+
+    CQ_PushCommand_TextureFromRawData(tex, buffer, buffer_len, load_desc);
+
+    return tex;
+}
+
 CK_DLL_MFUN(texture_read_to_cpu)
 {
     // the graphics thread won't be triggered until nextFrame() is called
@@ -944,6 +985,22 @@ CK_DLL_SFUN(texture_load_2d_file)
     SG_TextureLoadDesc load_desc = {};
     SG_Texture* tex
       = ulib_texture_load(API->object->str(GET_NEXT_STRING(ARGS)), &load_desc, SHRED);
+    RETURN->v_object = tex ? tex->ckobj : NULL;
+}
+
+CK_DLL_SFUN(texture_load_2d_raw)
+{
+    SG_TextureLoadDesc load_desc = {};
+
+    Chuck_ArrayInt* ck_arr = GET_NEXT_INT_ARRAY(ARGS);
+    t_CKINT ck_arr_len     = API->object->array_int_size(ck_arr);
+
+    u32* arena_data = ARENA_PUSH_COUNT(&audio_frame_arena, u32, ck_arr_len);
+    for (int i = 0; i < ck_arr_len; i++)
+        arena_data[i] = (u32)API->object->array_int_get_idx(ck_arr, i);
+
+    SG_Texture* tex
+      = ulib_texture_load((u8*)arena_data, ck_arr_len * 4, &load_desc, SHRED);
     RETURN->v_object = tex ? tex->ckobj : NULL;
 }
 

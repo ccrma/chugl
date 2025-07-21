@@ -158,6 +158,18 @@ void ImDrawDataSnapshot::SnapUsingSwap(ImDrawData* src, double current_time)
 
 static ImDrawDataSnapshot snapshot;
 
+static WGPUTextureView ImGui_ImplWGPU_GetTextureId(ImTextureID id, void* user)
+{
+    G_Cache* cache = (G_Cache*)user;
+    ASSERT(cache->initialized == 0XDEADBEEF);
+    R_Texture* tex = Component_GetTexture(*(SG_ID*)&id);
+    ASSERT(tex && tex->gpu_texture);
+
+    G_CacheTextureViewDesc desc = {};
+    desc.texture                = tex->gpu_texture;
+    return cache->textureView(desc);
+}
+
 struct TickStats {
     u64 fc    = 0;
     u64 min   = UINT64_MAX;
@@ -1125,7 +1137,9 @@ struct App {
             WGPURenderPassEncoder render_pass = wgpuCommandEncoderBeginRenderPass(
               app->gctx.commandEncoder, &imgui_render_pass_desc);
 
-            ImGui_ImplWGPU_RenderDrawData(&snapshot.DrawData, render_pass);
+            ImGui_ImplWGPU_RenderDrawData(&snapshot.DrawData, render_pass,
+                                          ImGui_ImplWGPU_GetTextureId,
+                                          (void*)&app->rendergraph.cache);
 
             wgpuRenderPassEncoderEnd(render_pass);
             wgpuRenderPassEncoderRelease(render_pass);
@@ -1978,6 +1992,14 @@ static void _R_HandleCommand(App* app, SG_Command* command)
               = (const char*)CQ_ReadCommandGetOffset(cmd->filepath_offset);
             R_Texture::load(&app->gctx, texture, path, cmd->flip_vertically,
                             cmd->gen_mips);
+        } break;
+        case SG_COMMAND_TEXTURE_FROM_RAW_DATA: {
+            SG_Command_TextureFromRawData* cmd
+              = (SG_Command_TextureFromRawData*)command;
+            R_Texture* texture = Component_GetTexture(cmd->sg_id);
+            u8* buffer         = (u8*)CQ_ReadCommandGetOffset(cmd->buffer_offset);
+            R_Texture::load(&app->gctx, texture, buffer, cmd->buffer_len,
+                            cmd->flip_vertically, cmd->gen_mips);
         } break;
         case SG_COMMAND_CUBEMAP_TEXTURE_FROM_FILE: {
             SG_Command_CubemapTextureFromFile* cmd

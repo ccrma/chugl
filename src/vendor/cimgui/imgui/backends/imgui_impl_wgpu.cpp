@@ -339,8 +339,12 @@ static void ImGui_ImplWGPU_SetupRenderState(ImDrawData* draw_data, WGPURenderPas
 
 // Render function
 // (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
-void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder pass_encoder)
-{
+IMGUI_IMPL_API void ImGui_ImplWGPU_RenderDrawData(
+    ImDrawData* draw_data, 
+    WGPURenderPassEncoder pass_encoder, 
+    ImGui_ImplWGPU_GetTextureIdFunc texture_id_func,
+    void* texture_id_data
+) {
     // Avoid rendering when minimized
     int fb_width = (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
     int fb_height = (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
@@ -455,7 +459,8 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
                 }
                 else
                 {
-                    WGPUBindGroup image_bind_group = ImGui_ImplWGPU_CreateImageBindGroup(bd->renderResources.ImageBindGroupLayout, (WGPUTextureView)tex_id);
+                    WGPUBindGroup image_bind_group = ImGui_ImplWGPU_CreateImageBindGroup(
+                        bd->renderResources.ImageBindGroupLayout, texture_id_func(tex_id, texture_id_data));
                     bd->renderResources.ImageBindGroups.SetVoidPtr(tex_id_hash, image_bind_group);
                     wgpuRenderPassEncoderSetBindGroup(pass_encoder, 1, image_bind_group, 0, nullptr);
                 }
@@ -538,9 +543,15 @@ static void ImGui_ImplWGPU_CreateFontsTexture()
         sampler_desc.minFilter = WGPUFilterMode_Linear;
         sampler_desc.magFilter = WGPUFilterMode_Linear;
         sampler_desc.mipmapFilter = WGPUMipmapFilterMode_Linear;
-        sampler_desc.addressModeU = WGPUAddressMode_Repeat;
-        sampler_desc.addressModeV = WGPUAddressMode_Repeat;
-        sampler_desc.addressModeW = WGPUAddressMode_Repeat;
+        // sampler_desc.minFilter = WGPUFilterMode_Nearest;
+        // sampler_desc.magFilter = WGPUFilterMode_Nearest;
+        // sampler_desc.mipmapFilter = WGPUMipmapFilterMode_Nearest;
+        // sampler_desc.addressModeU = WGPUAddressMode_Repeat;
+        // sampler_desc.addressModeV = WGPUAddressMode_Repeat;
+        // sampler_desc.addressModeW = WGPUAddressMode_Repeat;
+        sampler_desc.addressModeU = WGPUAddressMode_ClampToEdge;
+        sampler_desc.addressModeV = WGPUAddressMode_ClampToEdge;
+        sampler_desc.addressModeW = WGPUAddressMode_ClampToEdge;
         sampler_desc.maxAnisotropy = 1;
         bd->renderResources.Sampler = wgpuDeviceCreateSampler(bd->wgpuDevice, &sampler_desc);
     }

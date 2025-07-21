@@ -1,3 +1,5 @@
+@import "HashMap"
+
 HashMap hm;
 
 /*
