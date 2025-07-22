@@ -804,6 +804,7 @@ struct SG_Pass : public SG_Component {
     // ScenePass params
     SG_ID scene_id;
     SG_ID camera_id;
+    b32 scene_pass_msaa;
 
     // ScreenPass params
     SG_ID screen_material_id; // created implicitly, material.pos.shader_id =

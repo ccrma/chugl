@@ -82,8 +82,10 @@ CK_DLL_MFUN(scenepass_set_scene_and_camera);
 CK_DLL_MFUN(scenepass_get_scene);
 CK_DLL_MFUN(scenepass_get_camera);
 
+CK_DLL_MFUN(scenepass_get_msaa);
+CK_DLL_MFUN(scenepass_set_msaa);
+
 // TODO add set/get HDR?
-// TODO add set/get MSAA sample count?
 
 // ScenePass
 CK_DLL_CTOR(screenpass_ctor_with_shader);
@@ -312,6 +314,16 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
         DOC_FUNC(
           "Get the camera used for rendering the scene. If not set, will default to "
           "the scene's main camera");
+
+        MFUN(scenepass_get_msaa, "int", "msaa");
+        DOC_FUNC("Returns whether or not this scenepass has MSAA antialiasing enabled");
+
+        MFUN(scenepass_set_msaa, "void", "msaa");
+        ARG("int", "msaa");
+        DOC_FUNC(
+          "Set whether this scenepass should perform MSAA antialiasing. If true will "
+          "render the scene into a 4xMSAA texture and perform an MSAA resolve "
+          "into the texture set with ScenePass.colorOutput(). Default false.");
 
         END_CLASS();
     }
@@ -848,6 +860,23 @@ CK_DLL_MFUN(scenepass_get_scene)
 
     SG_Scene* sg_scene = SG_GetScene(pass->scene_id);
     RETURN->v_object   = sg_scene ? sg_scene->ckobj : NULL;
+}
+
+CK_DLL_MFUN(scenepass_get_msaa)
+{
+    SG_Pass* pass = GET_PASS(SELF);
+    ASSERT(pass->pass_type == SG_PassType_Scene);
+    RETURN->v_int = pass->scene_pass_msaa;
+}
+
+CK_DLL_MFUN(scenepass_set_msaa)
+{
+    SG_Pass* pass = GET_PASS(SELF);
+    ASSERT(pass->pass_type == SG_PassType_Scene);
+    int msaa              = GET_NEXT_INT(ARGS);
+    pass->scene_pass_msaa = msaa ? 1 : 0;
+
+    CQ_PushCommand_PassUpdate(pass);
 }
 
 // ============================================================================

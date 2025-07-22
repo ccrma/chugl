@@ -271,9 +271,9 @@ struct R_Texture : public R_Component {
             wgpu_texture_desc.dimension             = r_tex->desc.dimension;
             wgpu_texture_desc.size                  = { width, height, depth };
             wgpu_texture_desc.format                = r_tex->desc.format;
+            wgpu_texture_desc.sampleCount           = 1;
             wgpu_texture_desc.mipLevelCount
               = r_tex->desc.gen_mips ? G_mipLevels(width, height) : 1;
-            wgpu_texture_desc.sampleCount = 1;
 
             WGPU_RELEASE_RESOURCE(Texture, r_tex->gpu_texture);
             r_tex->gpu_texture = wgpuDeviceCreateTexture(device, &wgpu_texture_desc);
@@ -552,11 +552,13 @@ struct R_Pass : public R_Component {
 
     // ScenePass --------------------
     WGPUTexture depth_texture;
+    WGPUTexture msaa_color_target;
 
     static void bindFrameUniforms(R_Pass* pass, G_DrawCall* d, G_Graph* graph,
                                   R_Shader* shader, R_Scene* scene);
 
     // updates the scenepass depth texture to match the color target
+    // also rebuilds the msaa color target if msaa is enabled
     static void updateScenePass(R_Pass* pass, WGPUTexture color_target,
                                 WGPUDevice device)
     {
@@ -567,47 +569,82 @@ struct R_Pass : public R_Component {
         ASSERT(wgpuTextureGetDepthOrArrayLayers(color_target) == 1);
         ASSERT(wgpuTextureGetUsage(color_target) | WGPUTextureUsage_RenderAttachment);
 
-        u32 height = wgpuTextureGetHeight(color_target);
-        u32 width  = wgpuTextureGetWidth(color_target);
-        u32 samps  = wgpuTextureGetSampleCount(color_target);
+        u32 height               = wgpuTextureGetHeight(color_target);
+        u32 width                = wgpuTextureGetWidth(color_target);
+        u32 samps                = pass->sg_pass.scene_pass_msaa ? 4 : 1;
+        WGPUTextureFormat format = wgpuTextureGetFormat(color_target);
 
         // check if we need to rebuild depth texture
         // clang-format off
-        bool rebuild = 
+        bool rebuild_depth_texture = 
             (
                 pass->depth_texture == NULL ||
                 wgpuTextureGetHeight(pass->depth_texture) != height ||
                 wgpuTextureGetWidth(pass->depth_texture) != width ||
                 wgpuTextureGetSampleCount(pass->depth_texture) != samps
             );
+        
+        bool rebuild_msaa_texture = 
+            (
+                pass->sg_pass.scene_pass_msaa &&
+                (pass->msaa_color_target == NULL ||
+                wgpuTextureGetHeight(pass->msaa_color_target) != height ||
+                wgpuTextureGetWidth(pass->msaa_color_target) != width ||
+                wgpuTextureGetSampleCount(pass->msaa_color_target) != samps)
+            );
+
         // clang-format on
-
-        if (!rebuild) return;
-
-        WGPUExtent3D texture_extent = { width, height, 1 };
         snprintf(label, sizeof(label), "Depth Texture for ScenePass[%d:%s]", pass->id,
                  pass->sg_pass.name);
 
         // Create the texture
         WGPUTextureDescriptor texture_desc = {};
         texture_desc.label                 = label;
-        texture_desc.size                  = texture_extent;
+        texture_desc.size                  = { width, height, 1 };
         texture_desc.mipLevelCount         = 1;
         texture_desc.sampleCount           = samps;
         texture_desc.dimension             = WGPUTextureDimension_2D;
         texture_desc.format                = WGPUTextureFormat_Depth32Float;
         texture_desc.usage                 = WGPUTextureUsage_RenderAttachment;
 
-        WGPUTexture new_depth_texture = wgpuDeviceCreateTexture(device, &texture_desc);
-        ASSERT(new_depth_texture != pass->depth_texture);
-        WGPU_RELEASE_RESOURCE(Texture, pass->depth_texture);
-        pass->depth_texture = new_depth_texture;
-        ASSERT(pass->depth_texture);
+        if (rebuild_depth_texture) {
+            WGPUTexture new_depth_texture
+              = wgpuDeviceCreateTexture(device, &texture_desc);
+            ASSERT(new_depth_texture != pass->depth_texture);
+            WGPU_RELEASE_RESOURCE(Texture, pass->depth_texture);
+            pass->depth_texture = new_depth_texture;
+            ASSERT(pass->depth_texture);
 
-        log_trace(
-          "Rebuilding ScenePass[%d:%s] depth texture, dims: %dx%d, address: %p",
-          pass->id, pass->sg_pass.name, wgpuTextureGetWidth(pass->depth_texture),
-          wgpuTextureGetHeight(pass->depth_texture), (void*)pass->depth_texture);
+            log_trace(
+              "Rebuilding ScenePass[%d:%s] depth texture, dims: %dx%d, address: %p",
+              pass->id, pass->sg_pass.name, wgpuTextureGetWidth(pass->depth_texture),
+              wgpuTextureGetHeight(pass->depth_texture), (void*)pass->depth_texture);
+        }
+
+        if (rebuild_msaa_texture) {
+            snprintf(label, sizeof(label),
+                     "Multisampled Render Texture for ScenePass[%d:%s]", pass->id,
+                     pass->sg_pass.name);
+
+            // Create the texture
+            texture_desc.label  = label;
+            texture_desc.format = format;
+
+            WGPUTexture new_msaa_texture
+              = wgpuDeviceCreateTexture(device, &texture_desc);
+            WGPU_RELEASE_RESOURCE(Texture, pass->msaa_color_target);
+            pass->msaa_color_target = new_msaa_texture;
+            ASSERT(pass->msaa_color_target);
+
+            log_trace(
+              "Rebuilding ScenePass[%d:%s] %dxMultisampled texture, dims: %dx%d, "
+              "address: %p",
+              pass->id, pass->sg_pass.name,
+              wgpuTextureGetSampleCount(pass->msaa_color_target),
+              wgpuTextureGetWidth(pass->msaa_color_target),
+              wgpuTextureGetHeight(pass->msaa_color_target),
+              (void*)pass->msaa_color_target);
+        }
     }
 };
 
@@ -872,6 +909,7 @@ struct G_CacheRenderPipelineKey {
     G_DrawCallPipelineDesc drawcall_pipeline_desc;
     WGPUTextureFormat color_target_format;
     WGPUTextureFormat depth_target_format;
+    int color_target_sample_count;
 
     void print()
     {
@@ -882,13 +920,15 @@ struct G_CacheRenderPipelineKey {
           "Topology: %s\n"
           "Transparent: %s\n"
           "Color Format %s\n"
-          "Depth Format %s\n",
+          "Depth Format %s\n"
+          "Multisample Count: %d\n",
           shader->id, shader->name,
           G_Util::cullModeToString(drawcall_pipeline_desc.cull_mode),
           G_Util::topologyToString(drawcall_pipeline_desc.primitive_topology),
           drawcall_pipeline_desc.is_transparent ? "true" : "false",
           G_Util::textureFormatToString(color_target_format),
-          G_Util::textureFormatToString(depth_target_format));
+          G_Util::textureFormatToString(depth_target_format),
+          color_target_sample_count);
     }
 };
 
@@ -1239,8 +1279,9 @@ struct G_Cache {
             pipeline_desc.vertex.entryPoint  = VS_ENTRY_POINT;
 
             // TODO what happens if fragment shader is not defined?
-            WGPUBlendState blend_state
-              = G_createBlendState(key.drawcall_pipeline_desc.is_transparent);
+            // for backwards compat, we always enable alpha blending, even if pipeline
+            // is not transparent
+            WGPUBlendState blend_state            = G_createBlendState(true);
             WGPUColorTargetState colorTargetState = {};
             colorTargetState.format               = key.color_target_format;
             colorTargetState.blend                = &blend_state;
@@ -1258,7 +1299,8 @@ struct G_Cache {
             pipeline_desc.depthStencil
               = key.depth_target_format ? &depth_stencil_state : NULL;
 
-            pipeline_desc.multisample = G_createMultisampleState(1);
+            pipeline_desc.multisample
+              = G_createMultisampleState(key.color_target_sample_count);
 
             char pipeline_label[64] = {};
             snprintf(pipeline_label, sizeof(pipeline_label),
@@ -1621,8 +1663,9 @@ struct G_DrawCallList {
     void execute(WGPUDevice device,
                  WGPURenderPassEncoder pass_encoder, // TODO this comes from rendergraph
                  WGPUTextureFormat color_target_format,
-                 WGPUTextureFormat depth_target_format, G_Cache* cache,
-                 Arena* drawcall_pool, Arena bind_group_list[4], const char* pass_name)
+                 WGPUTextureFormat depth_target_format, int color_target_sample_count,
+                 G_Cache* cache, Arena* drawcall_pool, Arena bind_group_list[4],
+                 const char* pass_name)
     {
         G_DrawCall* start
           = ARENA_GET_TYPE(drawcall_pool, G_DrawCall, drawcall_start_idx);
@@ -1665,6 +1708,7 @@ struct G_DrawCallList {
                 d->_pipeline_desc,
                 color_target_format,
                 depth_target_format,
+                color_target_sample_count,
               },
               device);
 
@@ -1785,6 +1829,12 @@ struct G_RenderPassParams {
     // }
     u32 color_target_is_external_view;
 
+    int color_target_sample_count;
+
+    G_CacheTextureViewDesc resolve_target_view_desc;
+    G_RenderTarget resolve_target;
+    u32 resolve_target_is_external_view;
+
     WGPUColor clear_color;
     WGPULoadOp color_load_op;
     WGPUStoreOp color_store_op;
@@ -1888,6 +1938,10 @@ struct G_Graph {
         pass->rp.color_target_is_external_view = true;
         pass->rp.color_target.texture_view     = view;
         pass->rp.color_target.view_format      = format;
+
+        // currently this method is only used for setting the surface backbuffer
+        // so we assume sample count is always 1
+        pass->rp.color_target_sample_count = 1;
     }
 
     void renderPassColorTarget(WGPUTexture tex, int mip_level)
@@ -1899,6 +1953,27 @@ struct G_Graph {
 
         pass->rp.color_target_is_external_view = false;
         pass->rp.color_target_view_desc        = { tex, mip_level, 1, 0, 1 };
+        pass->rp.color_target_sample_count     = wgpuTextureGetSampleCount(tex);
+    }
+
+    void renderPassResolveTarget(WGPUTexture tex, int mip_level)
+    {
+        G_Pass* pass = pass_list + (pass_count - 1);
+        ASSERT(pass->type == G_PassType_Render);
+        pass->rp.resolve_target_view_desc = { tex, mip_level, 1, 0, 1 };
+    }
+
+    void renderPassResolveTarget(WGPUTextureView view, WGPUTextureFormat format)
+    {
+        G_Pass* pass = pass_list + (pass_count - 1);
+        ASSERT(pass->type == G_PassType_Render);
+
+        WGPU_REFERENCE_RESOURCE(TextureView, view);
+        WGPU_RELEASE_RESOURCE(TextureView, pass->rp.resolve_target.texture_view);
+
+        pass->rp.resolve_target_is_external_view = true;
+        pass->rp.resolve_target.texture_view     = view;
+        pass->rp.resolve_target.view_format      = format;
     }
 
     void renderPassDepthTarget(WGPUTexture tex, int base_array_layer,
@@ -2110,6 +2185,10 @@ struct G_Graph {
                       = (pass->rp.color_target_is_external_view ?
                            pass->rp.color_target.texture_view != NULL :
                            pass->rp.color_target_view_desc.texture != NULL);
+                    bool has_resolve_target
+                      = (pass->rp.resolve_target_is_external_view ?
+                           pass->rp.resolve_target.texture_view != NULL :
+                           pass->rp.resolve_target_view_desc.texture != NULL);
                     if (has_color_target) {
                         color_format = pass->rp.color_target_is_external_view ?
                                          pass->rp.color_target.view_format :
@@ -2123,6 +2202,12 @@ struct G_Graph {
                         ca.storeOp    = pass->rp.color_store_op;
                         ca.clearValue = pass->rp.clear_color;
                         ca.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
+                        if (has_resolve_target) {
+                            ca.resolveTarget
+                              = pass->rp.resolve_target_is_external_view ?
+                                  pass->rp.resolve_target.texture_view :
+                                  cache.textureView(pass->rp.resolve_target_view_desc);
+                        }
 
                         render_pass_desc.colorAttachmentCount = 1;
                         render_pass_desc.colorAttachments     = &ca;
@@ -2172,13 +2257,16 @@ struct G_Graph {
                     ASSERT(pass->rp.drawcall_list_id >= 0
                            && pass->rp.drawcall_list_id < drawcall_list_count);
                     drawcall_list_pool[pass->rp.drawcall_list_id].execute(
-                      device, render_pass_encoder, color_format, depth_format, &cache,
-                      &drawcall_pool, bind_group_entry_list, pass->name);
+                      device, render_pass_encoder, color_format, depth_format,
+                      pass->rp.color_target_sample_count, &cache, &drawcall_pool,
+                      bind_group_entry_list, pass->name);
                     wgpuRenderPassEncoderEnd(render_pass_encoder);
                     WGPU_RELEASE_RESOURCE(RenderPassEncoder, render_pass_encoder);
 
                     WGPU_RELEASE_RESOURCE(TextureView,
                                           pass->rp.color_target.texture_view);
+                    WGPU_RELEASE_RESOURCE(TextureView,
+                                          pass->rp.resolve_target.texture_view);
                 } break;
                 case G_PassType_Compute: {
                     G_CacheComputePipeline cp

@@ -838,6 +838,9 @@ CK_DLL_QUERY(ChuGL)
         SG_Pass::scene(render_pass, scene);
         ulib_component_set_name(render_pass, "ChuGL Default ScenePass");
 
+        // enable MSAA by default
+        render_pass->scene_pass_msaa = 1;
+
         // connect root to renderPass
         SG_Pass::connect(root_pass, render_pass);
 

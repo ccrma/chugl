@@ -752,9 +752,8 @@ struct App {
                     // defaults to swapchain current view if null
                     WGPUTexture color_target
                       = r_tex ? r_tex->gpu_texture : app->gctx.surface_texture.texture;
-                    ASSERT(scene && color_target && camera);
 
-                    R_Pass::updateScenePass(pass, color_target, app->gctx.device);
+                    ASSERT(scene && color_target && camera);
 
                     R_Scene::update(scene, &app->gctx, app->fc, &app->frameArena,
                                     &app->rendergraph);
@@ -768,13 +767,29 @@ struct App {
                     //   .renderPassDepthTarget()
 
                     // mesh pass ----------------------------------------------
-                    app->rendergraph.addRenderPass("Scene Pass");
-                    if (r_tex) {
-                        app->rendergraph.renderPassColorTarget(color_target, 0);
+                    R_Pass::updateScenePass(pass, color_target, app->gctx.device);
+                    snprintf(string_buff, sizeof(string_buff),
+                             "ScenePass[%d:%s] for Scene[%d:%s]", pass->id,
+                             pass->sg_pass.name, scene->id, scene->name);
+                    app->rendergraph.addRenderPass(string_buff);
+                    if (pass->sg_pass.scene_pass_msaa) {
+                        app->rendergraph.renderPassColorTarget(pass->msaa_color_target,
+                                                               0);
+                        if (r_tex) {
+                            app->rendergraph.renderPassResolveTarget(color_target, 0);
+                        } else {
+                            app->rendergraph.renderPassResolveTarget(
+                              app->gctx.backbufferView, app->gctx.surface_format);
+                        }
                     } else {
-                        app->rendergraph.renderPassColorTarget(
-                          app->gctx.backbufferView, app->gctx.surface_format);
+                        if (r_tex) {
+                            app->rendergraph.renderPassColorTarget(color_target, 0);
+                        } else {
+                            app->rendergraph.renderPassColorTarget(
+                              app->gctx.backbufferView, app->gctx.surface_format);
+                        }
                     }
+
                     app->rendergraph.renderPassColorOp(
                       WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f },
                       pass->sg_pass.color_target_clear_on_load ? WGPULoadOp_Clear :
@@ -828,13 +843,16 @@ struct App {
                     // otherwise default to backbuffer
                     R_Texture* r_tex
                       = Component_GetTexture(pass->sg_pass.color_target_id);
+
                     // resize texture
                     R_Texture::resize(r_tex, app->window_fb_width,
                                       app->window_fb_height, app->gctx.device);
 
+                    WGPUTexture color_target = NULL;
+
                     // set G_Pass
                     app->rendergraph.addRenderPass(pass->sg_pass.name);
-                    WGPUTexture color_target = NULL;
+                    // defaults to swapchain current view if null
                     if (r_tex) {
                         color_target = r_tex->gpu_texture;
                         app->rendergraph.renderPassColorTarget(r_tex->gpu_texture, 0);
@@ -843,6 +861,7 @@ struct App {
                         app->rendergraph.renderPassColorTarget(
                           app->gctx.backbufferView, app->gctx.surface_format);
                     }
+
                     app->rendergraph.renderPassColorOp(
                       WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f },
                       pass->sg_pass.color_target_clear_on_load ? WGPULoadOp_Clear :

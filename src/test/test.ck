@@ -1,4 +1,5 @@
 GG.rootPass() --> ScenePass sp(GG.scene());
+false => sp.msaa;
 
 FlatMaterial mat;
 PlaneGeometry geo;
@@ -10,6 +11,17 @@ mat.colorMap(sprite_tex);
 
 GMesh mesh(geo, mat) --> GG.scene();
 
+// GG.camera().posZ(1);
+
 while (1) {
     GG.nextFrame() => now;
 }
+
+// alternate way ================================
+
+// ScenePass sp;
+// rp.msaa(true);
+// internally track another 4xMSAA texture that will will resolve to colorOutput
+
+
+

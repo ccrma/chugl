@@ -1,4 +1,5 @@
 GSuzanne suz --> GG.scene();
+true => GG.scenePass().msaa;
 
 UI_Float4 viewport_normalized(0., 0., 1., 1.);
 UI_Float4 viewport_absolute(0., 0., 200., 200.);
