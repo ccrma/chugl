@@ -1187,22 +1187,18 @@ void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene,
     ASSERT(light_info_arena.curr == 0);
     defer(Arena::clear(&light_info_arena));
 
-#if 0 // shadows
-    char string_buf[128]                             = {};
-    u8 shadow_map_write_indices[SG_LightType_Count]  = {};
-#endif
+    char string_buf[128] = {};
+    // u8 shadow_map_write_indices[SG_LightType_Count]  = {};
     u8 shadow_map_counts_by_type[SG_LightType_Count] = {};
 
     // allocate cpu memory for light uniform data
     int num_lights = R_Scene::numLights(scene);
-    UNUSED_VAR(num_lights);
     LightUniforms* light_uniforms
-      = ARENA_PUSH_COUNT(&light_info_arena, LightUniforms, R_Scene::numLights(scene));
+      = ARENA_PUSH_COUNT(&light_info_arena, LightUniforms, num_lights);
 
     size_t hashmap_idx_DONT_USE = 0;
     SG_ID* light_id             = NULL;
     int light_idx               = 0;
-
     while (
       hashmap_iter(scene->light_id_set, &hashmap_idx_DONT_USE, (void**)&light_id)) {
         LightUniforms* light_uniform = &light_uniforms[light_idx++];
@@ -1246,7 +1242,6 @@ void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene,
     GPU_Buffer::write(gctx, &scene->light_info_buffer, WGPUBufferUsage_Storage,
                       light_info_arena.base, light_info_arena.curr);
 
-#if 0 // shadows (paused)
     // rebuild shadow map arrays if resized
     for (int light_type = 0; light_type < SG_LightType_Count; ++light_type) {
         if (light_type != SG_LightType_Spot) continue; // other types not impl
@@ -1258,13 +1253,12 @@ void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene,
 
         snprintf(string_buf, sizeof(string_buf),
                  "Spot shadowmap array for Scene[%d] %s", scene->id, scene->name);
-
         WGPUTextureDescriptor shadowmap_desc = {};
         shadowmap_desc.label                 = string_buf;
         shadowmap_desc.usage
           = WGPUTextureUsage_RenderAttachment | WGPUTextureUsage_TextureBinding;
         shadowmap_desc.dimension = WGPUTextureDimension_2D;
-        shadowmap_desc.size
+        shadowmap_desc.size // TODO: setting for shadowmap resolution
           = { CHUGL_SPOT_SHADOWMAP_DEFAULT_DIM, CHUGL_SPOT_SHADOWMAP_DEFAULT_DIM,
               shadow_map_counts_by_type[light_type] };
         shadowmap_desc.format        = WGPUTextureFormat_Depth32Float;
@@ -1276,6 +1270,7 @@ void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene,
           = wgpuDeviceCreateTexture(gctx->device, &shadowmap_desc);
     }
 
+#if 0 // shadows (paused)
     // shadowmap passes
     hashmap_idx_DONT_USE = 0;
     light_id             = NULL;

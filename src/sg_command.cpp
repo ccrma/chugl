@@ -622,6 +622,27 @@ void CQ_PushCommand_TextureWrite(SG_Texture* texture, SG_TextureWriteDesc* desc,
 #undef CQ_TEXTURE_WRITE
 }
 
+void CQ_PushCommand_TextureWriteExternalPtr(SG_Texture* texture,
+                                            SG_TextureWriteDesc* desc, void* data)
+{
+    // calculate the necessary size in bytes from data (assume data length has already
+    // been validated)
+    int write_region_num_texels = desc->width * desc->height * desc->depth;
+    int bytes_per_texel         = SG_Texture_byteSizePerTexel(texture->desc.format);
+    int write_size_bytes        = write_region_num_texels * bytes_per_texel;
+
+    BEGIN_COMMAND_ADDITIONAL_MEMORY(SG_Command_TextureWrite, SG_COMMAND_TEXTURE_WRITE,
+                                    write_size_bytes);
+
+    command->sg_id           = texture->id;
+    command->write_desc      = *desc;
+    command->data_size_bytes = write_size_bytes;
+    command->data_offset     = Arena::offsetOf(cq.write_q, memory);
+
+    memcpy(memory, data, write_size_bytes);
+    END_COMMAND();
+}
+
 void CQ_PushCommand_TextureFromFile(SG_Texture* texture, const char* filepath,
                                     SG_TextureLoadDesc* desc)
 {

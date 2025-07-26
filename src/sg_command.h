@@ -671,6 +671,8 @@ void CQ_PushCommand_GeometrySetIndicesCount(SG_Geometry* geo, int count);
 void CQ_PushCommand_TextureCreate(SG_Texture* texture);
 void CQ_PushCommand_TextureWrite(SG_Texture* texture, SG_TextureWriteDesc* desc,
                                  Chuck_ArrayFloat* ck_array, CK_DL_API API);
+void CQ_PushCommand_TextureWriteExternalPtr(SG_Texture* texture,
+                                            SG_TextureWriteDesc* desc, void* data);
 
 void CQ_PushCommand_TextureFromFile(SG_Texture* texture, const char* filepath,
                                     SG_TextureLoadDesc* desc);

@@ -107,6 +107,7 @@ CK_DLL_MFUN(texture_get_height_ratio);
 
 CK_DLL_MFUN(texture_write);
 CK_DLL_MFUN(texture_write_with_desc);
+CK_DLL_MFUN(texture_write_external_ptr);
 
 // read texture to CPU
 CK_DLL_MFUN(texture_read_to_cpu);
@@ -439,6 +440,15 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
         DOC_FUNC(
           "Write pixel data to an arbitrary texture region. The input float data is "
           "automatically converted based on the texture format");
+
+        MFUN(texture_write_external_ptr, "void", "write");
+        ARG("int", "ptr");
+        DOC_FUNC(
+          "Write pixel data to this texture by casting `ptr` to a byte pointer and "
+          "reading directly from memory. DANGEROUS. This is a hacky way to get "
+          "generated texture data from another chugin. Assumes `ptr` actually points "
+          "to a buffer of data large enough and in the correct format for this "
+          "texture");
 
         MFUN(texture_get_format, "int", "format");
         DOC_FUNC(
@@ -896,6 +906,23 @@ CK_DLL_MFUN(texture_write_with_desc)
       = ulib_texture_textureWriteDescFromCkobj(GET_NEXT_OBJECT(ARGS));
 
     ulib_texture_write(tex, ck_arr, &desc, SHRED);
+}
+
+CK_DLL_MFUN(texture_write_external_ptr)
+{
+    SG_Texture* tex          = GET_TEXTURE(SELF);
+    SG_TextureWriteDesc desc = {};
+    desc.width               = tex->desc.width;
+    desc.height              = tex->desc.height;
+    desc.depth               = tex->desc.depth;
+
+    void* external_ptr = (void*)GET_NEXT_INT(ARGS);
+
+#ifdef CHUGL_DEBUG
+    // hexDump("texture write external ptr", external_ptr, 32);
+#endif
+
+    CQ_PushCommand_TextureWriteExternalPtr(tex, &desc, external_ptr);
 }
 
 SG_Texture* ulib_texture_load(const char* filepath, SG_TextureLoadDesc* load_desc,
