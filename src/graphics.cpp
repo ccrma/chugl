@@ -718,13 +718,6 @@ WGPUMultisampleState G_createMultisampleState(u8 sample_count)
     return ms;
 }
 
-static void G_ShaderCompilationCallback(WGPUCompilationInfoRequestStatus status,
-                                        WGPUCompilationInfo const* compilationInfo,
-                                        void* userdata)
-{
-    return;
-}
-
 WGPUShaderModule G_createShaderModule(GraphicsContext* gctx, const char* code,
                                       const char* label)
 {

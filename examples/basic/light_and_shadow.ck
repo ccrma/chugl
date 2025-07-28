@@ -96,6 +96,7 @@ UI_Float dirlight_bias(scene.light().shadowBias());
 while (1) {
     GG.nextFrame() => now;
 
+    UI.setNextWindowBgAlpha(0.00);
     if (UI.begin("Light and Shadow Example")) {
 
         if (UI.sliderAngle("direction light angle", dirlight_rot)) dirlight_rot.val() => scene.light().rotX;

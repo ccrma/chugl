@@ -94,28 +94,28 @@ namespace ImGuiKnobs {
                 angle_sin = sinf(angle);
             }
 
-            void draw_dot(float size, float radius, float angle, color_set color, bool filled, int segments) {
+            void draw_dot(float size, float radius_, float angle_, color_set color, bool filled, int segments) {
                 auto dot_size = size * this->radius;
-                auto dot_radius = radius * this->radius;
+                auto dot_radius = radius_ * this->radius;
 
                 ImGui::GetWindowDrawList()->AddCircleFilled(
-                        {center[0] + cosf(angle) * dot_radius,
-                         center[1] + sinf(angle) * dot_radius},
+                        {center[0] + cosf(angle_) * dot_radius,
+                         center[1] + sinf(angle_) * dot_radius},
                         dot_size,
                         is_active ? color.active : (is_hovered ? color.hovered : color.base),
                         segments);
             }
 
-            void draw_tick(float start, float end, float width, float angle, color_set color) {
+            void draw_tick(float start, float end, float width, float angle_, color_set color) {
                 auto tick_start = start * radius;
                 auto tick_end = end * radius;
-                auto angle_cos = cosf(angle);
-                auto angle_sin = sinf(angle);
+                auto angle_cos_ = cosf(angle_);
+                auto angle_sin_ = sinf(angle_);
 
                 ImGui::GetWindowDrawList()->AddLine(
-                        {center[0] + angle_cos * tick_end, center[1] + angle_sin * tick_end},
-                        {center[0] + angle_cos * tick_start,
-                         center[1] + angle_sin * tick_start},
+                        {center[0] + angle_cos_ * tick_end, center[1] + angle_sin_ * tick_end},
+                        {center[0] + angle_cos_ * tick_start,
+                         center[1] + angle_sin_ * tick_start},
                         is_active ? color.active : (is_hovered ? color.hovered : color.base),
                         width * radius);
             }
@@ -129,8 +129,8 @@ namespace ImGuiKnobs {
                         is_active ? color.active : (is_hovered ? color.hovered : color.base));
             }
 
-            void draw_arc(float radius, float size, float start_angle, float end_angle, color_set color) {
-                auto track_radius = radius * this->radius;
+            void draw_arc(float radius_, float size, float start_angle, float end_angle, color_set color) {
+                auto track_radius = radius_ * this->radius;
                 auto track_size = size * this->radius * 0.5f + 0.0001f;
 
                 detail::draw_arc(center, track_radius, start_angle, end_angle, track_size, is_active ? color.active : (is_hovered ? color.hovered : color.base));

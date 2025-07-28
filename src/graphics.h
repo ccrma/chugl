@@ -108,13 +108,13 @@ struct G_DynamicGPUBuffer { // for use with dynamic bg offsets
 
     // TODO: does this need an id?
 
-    void init(WGPULimits* limits, WGPUBufferUsage usage)
+    void init(WGPULimits* limits, WGPUBufferUsage u)
     {
-        ASSERT(usage == WGPUBufferUsage_Uniform || usage == WGPUBufferUsage_Storage);
-        this->usage = usage;
-        if (usage == WGPUBufferUsage_Uniform) {
+        ASSERT(u == WGPUBufferUsage_Uniform || u == WGPUBufferUsage_Storage);
+        this->usage = u;
+        if (u == WGPUBufferUsage_Uniform) {
             GPU_OFFSET_ALIGNMENT_BYTES = limits->minUniformBufferOffsetAlignment;
-        } else if (usage == WGPUBufferUsage_Storage) {
+        } else if (u == WGPUBufferUsage_Storage) {
             GPU_OFFSET_ALIGNMENT_BYTES = limits->minStorageBufferOffsetAlignment;
         }
 

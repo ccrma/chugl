@@ -1027,14 +1027,14 @@ struct G_CacheTextureViewDesc {
     int base_array_layer                    = 0;
     int array_layer_count                   = 1;
 
-    void print()
+    static void print(G_CacheTextureViewDesc* tv)
     {
         printf(
           "Texture: %p\n dimension: %d\n base_mip_level: %d\n mip_level_count: %d\n "
           "base_array_layer: %d\n array_layer_count %d\n",
-          (void*)texture, view_dimension, base_mip_level, mip_level_count,
-          base_array_layer, array_layer_count);
-        hexDump("Dump", this, sizeof(*this));
+          (void*)tv->texture, tv->view_dimension, tv->base_mip_level,
+          tv->mip_level_count, tv->base_array_layer, tv->array_layer_count);
+        hexDump("Dump", tv, sizeof(*tv));
     }
 };
 
@@ -1045,9 +1045,9 @@ struct G_CacheTextureView {
         int frames_till_expired = CHUGL_CACHE_TEXTURE_VIEW_FRAMES_TILL_EXPIRED;
     } val;
 
-    void print()
+    static void print(G_CacheTextureView* tv)
     {
-        key.print();
+        G_CacheTextureViewDesc::print(&tv->key);
     }
 
     static u64 hash(const void* item, uint64_t seed0, uint64_t seed1)
@@ -1081,18 +1081,19 @@ struct G_CacheBindGroupEntry {
         G_CacheTextureViewDesc texture_view_desc;
     } as;
 
-    void print()
+    static void print(G_CacheBindGroupEntry* bge)
     {
-        printf("binding: %d\n", binding);
-        printf("type: %d\n", type);
-        switch (type) {
+        printf("binding: %d\n", bge->binding);
+        printf("type: %d\n", bge->type);
+        switch (bge->type) {
             case G_CacheBindGroupEntryType_None: break;
             case G_CacheBindGroupEntryType_Buffer: {
-                printf("buffer: %p | offset: %d | size: %d\n", (void*)as.buffer.buffer,
-                       as.buffer.offset, as.buffer.size);
+                printf("buffer: %p | offset: %d | size: %d\n",
+                       (void*)bge->as.buffer.buffer, bge->as.buffer.offset,
+                       bge->as.buffer.size);
             } break;
             case G_CacheBindGroupEntryType_Sampler: {
-                printf("sampler: %p\n", (void*)as.sampler);
+                printf("sampler: %p\n", (void*)bge->as.sampler);
             } break;
             case G_CacheBindGroupEntryType_TextureView: {
                 // WGPUTexture texture; // refcounted, ensures that WGPUTexture address
@@ -1101,9 +1102,9 @@ struct G_CacheBindGroupEntry {
                 // int base_mip_level;
                 // int mip_level_count;
                 printf("texture: %p | base_mip: %d | mip_levels: %d\n",
-                       (void*)as.texture_view_desc.texture,
-                       as.texture_view_desc.base_mip_level,
-                       as.texture_view_desc.mip_level_count);
+                       (void*)bge->as.texture_view_desc.texture,
+                       bge->as.texture_view_desc.base_mip_level,
+                       bge->as.texture_view_desc.mip_level_count);
 
             } break;
         }
@@ -1113,7 +1114,7 @@ struct G_CacheBindGroupEntry {
     {
         printf("G_CacheBindGroupEntry List----------------\n");
         for (int i = 0; i < count; i++) {
-            bg_entry_list[i].print();
+            G_CacheBindGroupEntry::print(bg_entry_list + i);
             printf("---\n");
         }
         printf("---------------------------------------------\n");
@@ -1486,10 +1487,16 @@ struct G_Cache {
                             // debug info
                             int group, const char* label)
     {
-        G_CacheBindGroup item = {};
-        ASSERT(bg_entry_count <= ARRAY_LENGTH(item.key.bg_entry_list));
-        item.key.layout         = layout;
-        item.key.bg_entry_count = bg_entry_count;
+        // MSVC doesn't know how to initialize an array of unions, throws error c2280
+        // "attempting to reference a deleted function". super lame. So we manually
+        // allocate on the stack and initialize ourselves.
+        u8 item_buff[sizeof(G_CacheBindGroup)] = {};
+        G_CacheBindGroup* item                 = (G_CacheBindGroup*)item_buff;
+        item->val.frames_till_expired = CHUGL_CACHE_BINDGROUP_FRAMES_TILL_EXPIRED;
+
+        ASSERT(bg_entry_count <= ARRAY_LENGTH(item->key.bg_entry_list));
+        item->key.layout         = layout;
+        item->key.bg_entry_count = bg_entry_count;
 
         // loop over all bg_entries to copy into lookup item and refcount & update
         // frames_till_expired of any buffer or texture sources
@@ -1507,11 +1514,11 @@ struct G_Cache {
                 default: UNREACHABLE;
             }
         }
-        memcpy(item.key.bg_entry_list, bg_entry_list,
+        memcpy(item->key.bg_entry_list, bg_entry_list,
                sizeof(*bg_entry_list) * bg_entry_count);
 
         G_CacheBindGroup* result
-          = (G_CacheBindGroup*)hashmap_get(bindgroup_map, &item.key);
+          = (G_CacheBindGroup*)hashmap_get(bindgroup_map, &item->key);
 
         if (result == NULL) {
             ++frame_stats.bindgroup_misses;
@@ -1558,14 +1565,14 @@ struct G_Cache {
             desc.entryCount = bg_entry_count;
             desc.entries    = wgpu_bg_entry_list;
 
-            item.val.bg                  = wgpuDeviceCreateBindGroup(device, &desc);
-            item.val.frames_till_expired = CHUGL_CACHE_BINDGROUP_FRAMES_TILL_EXPIRED;
-            log_trace("created bind group %p", (void*)item.val.bg);
+            item->val.bg                  = wgpuDeviceCreateBindGroup(device, &desc);
+            item->val.frames_till_expired = CHUGL_CACHE_BINDGROUP_FRAMES_TILL_EXPIRED;
+            log_trace("created bind group %p", (void*)item->val.bg);
 
-            const void* replaced = hashmap_set(bindgroup_map, &item);
+            const void* replaced = hashmap_set(bindgroup_map, item);
             ASSERT(!replaced);
 
-            return item.val.bg;
+            return item->val.bg;
         }
 
         // reset lifetime counter

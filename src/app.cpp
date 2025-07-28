@@ -540,9 +540,6 @@ struct App {
 
         // free memory
         Arena::free(&app->frameArena);
-
-        // zero all fields
-        *app = {};
     }
 
     // ============================================================================

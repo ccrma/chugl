@@ -172,7 +172,7 @@ void log_log(int level, const char* file, int line, const char* fmt, ...)
 
 void hexDump(const char* desc, const void* addr, const int len)
 {
-    const static int perLine = 16;
+#define perLine 16
 
     int i;
     unsigned char buff[perLine + 1];
@@ -231,4 +231,5 @@ void hexDump(const char* desc, const void* addr, const int len)
     // And print the final ASCII buffer.
 
     printf("  %s\n", buff);
+    #undef perLine
 }
