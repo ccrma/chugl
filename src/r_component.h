@@ -27,6 +27,7 @@
 -----------------------------------------------------------------------------*/
 #pragma once
 
+#include "chugl_defines.h"
 #include "graphics.h"
 #include "sg_command.h"
 #include "sg_component.h"
@@ -103,6 +104,7 @@ struct R_Transform : public R_Component {
 
     // world matrix (cached)
     glm::mat4 world;
+    glm::mat4 normal; // aka inverse transpose M^(-1T)
     glm::mat4 local;
 
     SG_ID parentID;
@@ -114,6 +116,7 @@ struct R_Transform : public R_Component {
     // (maybe middle ground is to use a union { R_Mesh, R_Camera, R_Light })
     SG_ID _geoID;
     SG_ID _matID;
+    b32 receives_shadows;
 
     SG_ID scene_id; // the scene this transform belongs to
 
@@ -495,26 +498,31 @@ struct R_Camera : public R_Transform {
 struct R_Light : public R_Transform {
     SG_LightDesc desc;
 
-    hashmap* shadow_render_id_set; // set of all Mesh SGIDs that cast a shadow
-    // G_DynamicGPUBuffer draw_group_storage_buf; // @group(2) draw params
-    WGPUBuffer draw_storage_buffer; // @group(2) draw params
-    WGPUBuffer frame_uniform_buffer;
+    hashmap* shadow_render_id_set;   // set of all Mesh SGIDs that cast a shadow
+    WGPUBuffer draw_storage_buffer;  // @group(2) draw params
+    WGPUBuffer frame_uniform_buffer; // @group(0) frame uniforms
 
-    void shadowAddMesh(SG_ID* mesh_list, int mesh_count)
+    void shadowAddMesh(SG_ID* mesh_list, int mesh_count, bool add)
     {
-        for (int i = 0; i < mesh_count; ++i) {
-            hashmap_set(shadow_render_id_set, mesh_list + i);
+        if (add) {
+            for (int i = 0; i < mesh_count; ++i)
+                hashmap_set(shadow_render_id_set, mesh_list + i);
+        } else {
+            for (int i = 0; i < mesh_count; ++i)
+                hashmap_delete(shadow_render_id_set, mesh_list + i);
         }
     }
 
-    glm::mat4x4 projection()
+    glm::mat4x4 projection(bool offset_depth)
     {
         switch (desc.type) {
             case SG_LightType_Spot: {
-                return glm::perspective(2.0f * desc.angle_max, // fov
-                                        1.0f,                  // aspect
-                                        .1f,                   // near ==api==
-                                        100.0f);               // far  ==api==
+                glm::mat4x4 proj = glm::perspective(2.0f * desc.angle_max, // fov
+                                                    1.0f,                  // aspect
+                                                    .1f,          // near ==api==
+                                                    desc.radius); // far  ==api==
+                if (offset_depth) proj[2][2] += (CHUGL_SHADOW_MAP_DEPTH_OFFSET);
+                return proj;
             } break;
             default: UNREACHABLE;
         }
@@ -909,7 +917,8 @@ struct G_DrawCallPipelineDesc {
     SG_ID sg_shader_id;
     WGPUCullMode cull_mode;
     WGPUPrimitiveTopology primitive_topology;
-    b32 is_transparent; // TODO support other blend modes (subtrative, additive etc)
+    b16 is_transparent; // TODO support other blend modes (subtrative, additive etc)
+    b16 is_shadow_pass; // if true will create a pipeline with depthbias*
 };
 
 struct G_CacheComputePipeline {
@@ -1355,6 +1364,22 @@ struct G_Cache {
 
             WGPUDepthStencilState depth_stencil_state = G_createDepthStencilState(
               key.depth_target_format, !key.drawcall_pipeline_desc.is_transparent);
+
+            bool is_triangle_topology
+              = (key.drawcall_pipeline_desc.primitive_topology
+                   == WGPUPrimitiveTopology_TriangleList
+                 || key.drawcall_pipeline_desc.primitive_topology
+                      == WGPUPrimitiveTopology_TriangleStrip);
+            // from WebGPU spec:
+            // depthBias, depthBiasSlopeScale, and depthBiasClamp have no effect on
+            // "point-list", "line-list", and "line-strip" primitives, and must be 0.
+            if (key.drawcall_pipeline_desc.is_shadow_pass && is_triangle_topology) {
+                // from E.Lengyel Vol2 Rendering pg 193-4
+                // polygon offset to remove shadow acne
+                depth_stencil_state.depthBiasSlopeScale = 3;
+                depth_stencil_state.depthBiasClamp      = (1.0f / 128.0f);
+            }
+
             pipeline_desc.depthStencil
               = key.depth_target_format ? &depth_stencil_state : NULL;
 
@@ -1721,8 +1746,11 @@ struct G_DrawCall {
 
     G_DrawCallPipelineDesc _pipeline_desc;
 
+    // if is_shadow_pass = true, will create a pipeline with depthBias* params in
+    // WGPUDepthStencilState
     void pipelineDesc(SG_ID sg_shader_id, WGPUCullMode cull_mode,
-                      WGPUPrimitiveTopology primitive_topology, bool is_transparent)
+                      WGPUPrimitiveTopology primitive_topology, bool is_transparent,
+                      bool is_shadow_pass = false)
     {
         _pipeline_desc                    = {};
         _pipeline_desc.sg_shader_id       = sg_shader_id;
@@ -1732,6 +1760,7 @@ struct G_DrawCall {
         // doing this to avoid a horrible bug where setting a bool directly
         // didn't zero out all the padded memory
         _pipeline_desc.is_transparent = is_transparent ? 1UL : 0UL;
+        _pipeline_desc.is_shadow_pass = is_shadow_pass ? 1UL : 0UL;
     }
 };
 

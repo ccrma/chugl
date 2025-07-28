@@ -654,6 +654,7 @@ struct SG_Mesh : SG_Transform {
     // refcounting
     SG_ID _geo_id;
     SG_ID _mat_id;
+    b32 receives_shadows;
 
     static void setGeometry(SG_Mesh* mesh, SG_Geometry* geo);
     static void setMaterial(SG_Mesh* mesh, SG_Material* mat);
@@ -880,7 +881,19 @@ struct SG_LightDesc {
     float angle_max     = 0.523599f; // 30 degrees
     float angle_falloff = 2.0f;
 
+    // shadow
     b32 generates_shadows;
+    float bias = .0001f;
+
+    // dirlight shadow
+    struct {
+        float left   = -80.0f;
+        float right  = 80.0f;
+        float bottom = -80.0f;
+        float top    = 80.0f;
+        float near   = -200.0f;
+        float far    = 300.0f;
+    } dirlight_shadow_bounds;
 };
 
 struct SG_Light : public SG_Transform {

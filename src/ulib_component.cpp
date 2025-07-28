@@ -227,6 +227,11 @@ CK_DLL_MFUN(ggen_detach_parent);
 CK_DLL_MFUN(ggen_detach_children);
 CK_DLL_MFUN(ggen_detach_all);
 
+// shadow API
+CK_DLL_MFUN(gmesh_get_shadowed);
+CK_DLL_MFUN(gmesh_set_shadowed);
+CK_DLL_MFUN(ggen_set_shadowed_all_children);
+
 static void ulib_ggen_query(Chuck_DL_Query* QUERY)
 {
     { // GGen
@@ -569,6 +574,13 @@ static void ulib_ggen_query(Chuck_DL_Query* QUERY)
         DOC_FUNC(
           "Detach this GGen from its parent and all children. children are NOT "
           "reparented");
+
+        MFUN(ggen_set_shadowed_all_children, "void", "shadowed");
+        ARG("int", "receive_shadows");
+        ARG("int", "apply_to_subgraph");
+        DOC_FUNC(
+          "Set whether this GGen and all children can receive shadows. See "
+          "GMesh.shadowed(int) for more details on how this flag works");
 
         QUERY->end_class(QUERY); // GGen
     }
@@ -1357,6 +1369,18 @@ static void ulib_mesh_query(Chuck_DL_Query* QUERY)
     ARG(SG_CKNames[SG_COMPONENT_MATERIAL], "material");
     DOC_FUNC("Set the geometry and material of this GMesh");
 
+    // shadow API
+    MFUN(gmesh_get_shadowed, "int", "shadowed");
+    DOC_FUNC("Return whether this mesh can receive shadows.");
+
+    MFUN(gmesh_set_shadowed, "void", "shadowed");
+    ARG("int", "receives_shadow");
+    DOC_FUNC(
+      "Set whether this mesh can receive shadows. Note: setting this flag alone "
+      "will not cause the mesh to be shadowed. This will only pass a flag to the "
+      "shader of mesh.material(), and it is up to the shader to apply shadowing "
+      "effects. To set an entire subgraph, see GGen.shadowed(int, int)");
+
     // abstract class, no destructor or constructor
     QUERY->end_class(QUERY);
 
@@ -1707,6 +1731,45 @@ CK_DLL_MFUN(gmesh_set_mat_and_geo)
     SG_Mesh::setGeometry(mesh, geo);
     SG_Mesh::setMaterial(mesh, mat);
     CQ_PushCommand_MeshUpdate(mesh);
+}
+
+CK_DLL_MFUN(gmesh_get_shadowed)
+{
+    SG_Mesh* mesh = GET_MESH(SELF);
+    RETURN->v_int = mesh->receives_shadows;
+}
+
+CK_DLL_MFUN(gmesh_set_shadowed)
+{
+    SG_Mesh* mesh = GET_MESH(SELF);
+    CQ_PushCommand_MeshSetShadowed(mesh, GET_NEXT_OBJECT(ARGS) ? 1 : 0);
+}
+
+CK_DLL_MFUN(ggen_set_shadowed_all_children)
+{
+    SG_Transform* xform = SG_GetTransform(OBJ_MEMBER_UINT(SELF, component_offset_id));
+    b32 shadowed        = GET_NEXT_INT(ARGS) ? 1 : 0;
+    b32 add_children    = GET_NEXT_INT(ARGS) ? 1 : 0;
+
+    if (xform->type == SG_COMPONENT_MESH) {
+        CQ_PushCommand_MeshSetShadowed(xform, shadowed);
+    }
+
+    if (add_children) { // BFS add all children
+        u64 curr = audio_frame_arena.curr;
+        memcpy(Arena::push(&audio_frame_arena, xform->childrenIDs.curr),
+               xform->childrenIDs.base, xform->childrenIDs.curr);
+
+        while (curr != audio_frame_arena.curr) {
+            xform = SG_GetTransform(*(SG_ID*)Arena::get(&audio_frame_arena, curr));
+            ASSERT(xform);
+            CQ_PushCommand_MeshSetShadowed(xform, shadowed);
+            curr += sizeof(SG_ID);
+
+            memcpy(Arena::push(&audio_frame_arena, xform->childrenIDs.curr),
+                   xform->childrenIDs.base, xform->childrenIDs.curr);
+        }
+    }
 }
 
 // GLines2D ===============================================================

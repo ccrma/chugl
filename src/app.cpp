@@ -2211,7 +2211,15 @@ static void _R_HandleCommand(App* app, SG_Command* command)
             R_Light* light                = Component_GetLight(cmd->light_id);
             light->shadowAddMesh(
               (SG_ID*)CQ_ReadCommandGetOffset(cmd->mesh_id_list_offset),
-              cmd->mesh_id_list_len);
+              cmd->mesh_id_list_len, cmd->add);
+        } break;
+        case SG_COMMAND_MESH_SET_SHADOWED: {
+            SG_Command_MeshSetShadowed* cmd = (SG_Command_MeshSetShadowed*)command;
+            R_Transform* mesh               = Component_GetMesh(cmd->mesh_id);
+            if (mesh->receives_shadows != cmd->shadowed) {
+                mesh->receives_shadows = cmd->shadowed;
+                R_Scene::markPrimitiveStale(Component_GetScene(mesh->scene_id), mesh);
+            }
         } break;
         case SG_COMMAND_VIDEO_UPDATE: {
             SG_Command_VideoUpdate* cmd = (SG_Command_VideoUpdate*)command;

@@ -387,7 +387,8 @@ static void _Transform_RebuildDescendants(R_Scene* scene, R_Transform* xform,
         xform->local = R_Transform::localMatrix(xform);
 
     // always rebuild world mat
-    xform->world = (*parentWorld) * xform->local;
+    xform->world  = (*parentWorld) * xform->local;
+    xform->normal = glm::transpose(glm::inverse(xform->world));
 
     // set fresh
     xform->_stale = R_Transform_STALE_NONE;
@@ -1018,7 +1019,7 @@ struct GeometryToXforms {
         defer(g2x->buffer_stale = false);
         defer(g2x->push_size = push_size);
 
-        // problem, if material is flipped from transparent --> not transparent,
+        // if material is flipped from transparent --> not transparent,
         // we actually need to mark this as stale and rebuild the buffer because
         // now the padding between frameuniforms must be at
         // limits.minStorageBufferOffsetAlignment (cannot instanced draw transparent
@@ -1059,9 +1060,8 @@ struct GeometryToXforms {
             // add xform matrix to arena
             DrawUniforms* draw_uniforms
               = (DrawUniforms*)Arena::push(&g2x->draw_uniform_list, push_size);
-            draw_uniforms->model = xform->world;
-            // TODO add inv normal matrix here
-            draw_uniforms->id = xform->id;
+            *draw_uniforms
+              = { xform->world, xform->normal, xform->id, xform->receives_shadows, {} };
         }
 
         snprintf(g2x->xform_storage_buffer.label,
@@ -1194,6 +1194,9 @@ void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene,
     ASSERT(light_info_arena.curr == 0);
     defer(Arena::clear(&light_info_arena));
 
+    int shadow_generators_count                 = 0;
+    int shadow_generators_total_renderlist_size = 0;
+
     char string_buf[128] = {};
     u32 shadow_map_write_indices[SG_LightType_Count]
       = {}; // which array layer of the shadowmap Texture2D array to write to
@@ -1224,11 +1227,15 @@ void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene,
 
             if (light->desc.generates_shadows) {
                 light_uniform->proj_view
-                  = light->projection() * R_Transform::viewMatrix(light);
+                  = light->projection(false) * R_Transform::viewMatrix(light);
                 light_uniform->generates_shadows = 1;
                 light_uniform->shadow_map_idx
                   = shadow_map_counts_by_type[light->desc.type];
+                light_uniform->bias = light->desc.bias;
                 ++shadow_map_counts_by_type[light->desc.type];
+                ++shadow_generators_count;
+                shadow_generators_total_renderlist_size
+                  += hashmap_count(light->shadow_render_id_set);
             }
 
             switch (light->desc.type) {
@@ -1263,7 +1270,10 @@ void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene,
           = scene->spot_shadow_map_array ?
               wgpuTextureGetDepthOrArrayLayers(scene->spot_shadow_map_array) :
               0;
-        if (shadow_map_counts_by_type[light_type] <= curr_layers) continue;
+
+        // add +1 to prevent crash from not binding anything
+        u32 min_layers = shadow_map_counts_by_type[light_type] + 1;
+        if (curr_layers >= min_layers) continue;
 
         snprintf(string_buf, sizeof(string_buf),
                  "Spot shadowmap array for Scene[%d] %s", scene->id, scene->name);
@@ -1274,7 +1284,7 @@ void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene,
         shadowmap_desc.dimension = WGPUTextureDimension_2D;
         shadowmap_desc.size // TODO ==api==: setting for shadowmap resolution
           = { CHUGL_SPOT_SHADOWMAP_DEFAULT_DIM, CHUGL_SPOT_SHADOWMAP_DEFAULT_DIM,
-              shadow_map_counts_by_type[light_type] };
+              min_layers };
         shadowmap_desc.format        = WGPUTextureFormat_Depth32Float;
         shadowmap_desc.mipLevelCount = 1;
         shadowmap_desc.sampleCount   = 1;
@@ -1314,8 +1324,9 @@ void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene,
         if (light->desc.type != SG_LightType_Spot) continue; // others not impl
 
         // update frame uniform buffer
-        light_frame_uniforms.projection = light->projection();
-        light_frame_uniforms.view       = R_Transform::viewMatrix(light);
+        light_frame_uniforms.projection = light->projection(
+          false); // try setting to true to remove self-shadowing artifacts
+        light_frame_uniforms.view = R_Transform::viewMatrix(light);
         light_frame_uniforms.projection_view_inverse_no_translation
           = glm::inverse(light_frame_uniforms.projection
                          * glm::mat4(glm::mat3(light_frame_uniforms.view)));
@@ -1356,15 +1367,6 @@ void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene,
           &gctx->frame_arena, shadow_renderlist_count * draw_uniform_size);
         u64 cpu_draw_uniform_offset
           = Arena::offsetOf(&gctx->frame_arena, cpu_draw_uniform_list);
-        // TODO PROBLEM
-        // doesn't writing to offset 0 of the light storage buffer
-        // for every shadowpass overwrite the previous shadow casters?
-        // if so: soln is we must use a G_DynamicBuffer and refactor
-        // G_Cache to take a DynamicBuffer desc that is resolved
-        // during execution.
-        // or just allocate memory upfront that's big enough for all hashmap render list
-        // in that case remember to WGPU_REFERENCE buffers in G_Cache
-        // id sizes... assign DynamicBuffer a negative RID?
         defer(
           wgpuQueueWriteBuffer(gctx->queue, light->draw_storage_buffer, 0,
                                Arena::get(&gctx->frame_arena, cpu_draw_uniform_offset),
@@ -1426,10 +1428,13 @@ void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene,
                 DrawUniforms* draw_uniform
                   = (DrawUniforms*)(cpu_draw_uniform_list
                                     + draw_uniform_idx * draw_uniform_size);
-                ++draw_uniform_idx;
-                *draw_uniform = { mesh->world, mesh->id, {} };
-                graph->bindBuffer(d, PER_DRAW_GROUP, 0, light->draw_storage_buffer, 0,
+                *draw_uniform
+                  = { mesh->world, mesh->normal, mesh->id, mesh->receives_shadows, {} };
+                graph->bindBuffer(d, PER_DRAW_GROUP, 0, light->draw_storage_buffer,
+                                  draw_uniform_idx * draw_uniform_size,
                                   draw_uniform_size);
+
+                ++draw_uniform_idx;
 
                 // @group(3) pulled vertex attribs
                 R_Geometry::addPullBindGroupEntries(geo, graph, d);
@@ -1441,7 +1446,8 @@ void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene,
             }
 
             { // set vertex info
-                d->instance_count = 1;
+                d->instance_count
+                  = 1; // shadow passes currently don't support instanced draws
 
                 // populate index buffer
                 d->index_count    = R_Geometry::indexCount(geo);
@@ -1475,7 +1481,7 @@ void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene,
             // ==optimize== create duplicate shader that only has vertex shader, no
             // fragment
             d->pipelineDesc(material->pso.sg_shader_id, material->pso.cull_mode,
-                            material->pso.primitive_topology, false);
+                            material->pso.primitive_topology, false, true);
         }
     }
 
@@ -1519,6 +1525,7 @@ void R_Scene::unregisterMesh(R_Scene* scene, R_Transform* mesh)
 
 void R_Scene::markPrimitiveStale(R_Scene* scene, R_Transform* mesh)
 {
+    if (!scene || !mesh) return;
     GeometryToXforms* g2x = R_Scene_getPrimitive(scene, mesh->_matID, mesh->_geoID);
     g2x->buffer_stale     = true;
 }
@@ -1998,6 +2005,10 @@ R_Material* Component_CreateMaterial(GraphicsContext* gctx,
                                        sizeof(SG_MaterialUniformData));
 
         // init uniform buffer
+        char label[128] = {};
+        snprintf(label, sizeof(label), "UniformBuffer for Material[%d:%s]", mat->id,
+                 mat->name);
+
         WGPUBufferDescriptor desc = {};
         desc.size                 = UNIFORM_OFFSET * ARRAY_LENGTH(mat->bindings);
         desc.usage                = WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst;

@@ -16,4 +16,10 @@
 
 #define CHUGL_COMPUTE_ENTRY_POINT "main"
 
+// shadow stuff
 #define CHUGL_SPOT_SHADOWMAP_DEFAULT_DIM 512
+
+// from E. Lengyel Foundations of Game Engine Development Volume II pg. 191
+#define CHUGL_SHADOW_MAP_DEPTH_OFFSET                                                  \
+    0.00000190734f // depth offset for light projection matrix to remove self-shadowing
+                   // artifact. delta = 2^-19

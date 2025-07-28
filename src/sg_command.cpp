@@ -1026,11 +1026,12 @@ void CQ_PushCommand_LightUpdate(SG_Light* light)
 }
 
 void CQ_PushCommand_ShadowAddMesh(SG_Light* light, SG_Transform* xform,
-                                  bool add_children)
+                                  bool add_children, bool add)
 {
     if (light == NULL || xform == NULL) return;
 
     BEGIN_COMMAND(SG_Command_ShadowAddMesh, SG_COMMAND_SHADOW_ADD_MESH);
+    command->add                        = add;
     command->light_id                   = light->id;
     command->mesh_id_list_offset        = cq.write_q->curr;
     *ARENA_PUSH_TYPE(cq.write_q, SG_ID) = xform->id;
@@ -1054,6 +1055,18 @@ void CQ_PushCommand_ShadowAddMesh(SG_Light* light, SG_Transform* xform,
     command->mesh_id_list_len
       = (cq.write_q->curr - command->mesh_id_list_offset) / sizeof(SG_ID);
 
+    END_COMMAND();
+}
+
+void CQ_PushCommand_MeshSetShadowed(SG_Transform* xform, bool shadowed)
+{
+    if (xform->type != SG_COMPONENT_MESH) return;
+    SG_Mesh* mesh          = (SG_Mesh*)xform;
+    mesh->receives_shadows = shadowed;
+
+    BEGIN_COMMAND(SG_Command_MeshSetShadowed, SG_COMMAND_MESH_SET_SHADOWED);
+    command->mesh_id  = mesh->id;
+    command->shadowed = mesh->receives_shadows;
     END_COMMAND();
 }
 

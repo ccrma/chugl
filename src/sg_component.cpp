@@ -1161,6 +1161,7 @@ SG_Mesh* SG_CreateMesh(Chuck_Object* ckobj, SG_Geometry* sg_geo, SG_Material* sg
     // init mesh
     SG_Mesh::setGeometry(mesh, sg_geo);
     SG_Mesh::setMaterial(mesh, sg_mat);
+    mesh->receives_shadows = 0;
 
     // store in map
     SG_Location loc = { mesh->id, offset, arena };

@@ -106,17 +106,16 @@ struct LightUniforms {
     glm::mat4x4 proj_view;     // at byte offset 64
     int32_t generates_shadows; // at byte offset 128
     int32_t shadow_map_idx;    // at byte offset 132
-    float _pad1[2];
+    float bias;
+    float _pad1[1];
 };
 
-// struct DrawUniforms {
-//     glm::mat4x4 modelMat; // at byte offset 0
-// };
-
 struct DrawUniforms {
-    glm::mat4x4 model; // at byte offset 0
-    int32_t id;        // at byte offset 128
-    float _pad0[3];
+    glm::mat4x4 model;       // at byte offset 0
+    glm::mat4x4 normal;      // at byte offset 64
+    int32_t id;              // at byte offset 128
+    int32_t receives_shadow; // at byte offset 132
+    float _pad0[2];
 };
 
 struct b2_DebugDraw_SolidPolygon {
@@ -193,6 +192,7 @@ static std::unordered_map<std::string, std::string> shader_table = {
             proj_view: mat4x4f,
             generates_shadows: i32,
             shadow_map_array_layer: i32,
+            bias: f32,
         };
 
         @group(0) @binding(1) var<storage, read> u_lights: array<LightUniforms>;
@@ -211,8 +211,9 @@ static std::unordered_map<std::string, std::string> shader_table = {
 
         struct DrawUniforms {
             model: mat4x4f,
-            id: u32,
-            // receives_shadow: i32, // TODO!!
+            normal: mat4x4f,
+            id: i32,
+            receives_shadow: i32,
         };
 
         @group(2) @binding(0) var<storage> u_draw_instances: array<DrawUniforms>;
@@ -243,6 +244,7 @@ static std::unordered_map<std::string, std::string> shader_table = {
             @location(0) v_worldpos : vec3f,
             @location(1) v_normal : vec3f,
             @location(2) v_uv : vec2f,
+            @location(3) @interpolate(flat) receives_shadow: i32,
         };
 
         )glsl"
@@ -267,11 +269,10 @@ static std::unordered_map<std::string, std::string> shader_table = {
             out.position = (u_frame.projection * u_frame.view) * worldpos;
             out.v_worldpos = worldpos.xyz;
 
-            // TODO: after wgsl adds matrix inverse, calculate normal matrix here
-            // out.v_normal = (transpose(inverse(u_frame.viewMat * u_Draw.model)) * vec4f(in.normal, 0.0)).xyz;
-            out.v_normal = (u_Draw.model * vec4f(in.normal, 0.0)).xyz;
+            out.v_normal = (u_Draw.normal * vec4f(in.normal, 0.0)).xyz;
 
             out.v_uv     = in.uv;
+            out.receives_shadow = u_Draw.receives_shadow;
 
             return out;
         }
@@ -453,9 +454,7 @@ fn vs_main(in : VertexInput) -> VertexOutput
     var u_Draw : DrawUniforms = u_draw_instances[in.instance];
 
     out.position = (u_frame.projection * u_frame.view) * u_Draw.model * vec4f(in.position, 1.0f);
-    // TODO: after wgsl adds matrix inverse, calculate normal matrix here
-    // out.v_normal = (transpose(inverse(u_frame.viewMat * u_Draw.model)) * vec4f(in.normal, 0.0)).xyz;
-    out.v_world_normal = (u_Draw.model * vec4f(in.normal, 0.0)).xyz;
+    out.v_world_normal = (u_Draw.normal * vec4f(in.normal, 0.0)).xyz;
     out.v_local_normal = in.normal;
 
     return out;
@@ -592,7 +591,7 @@ static const char* phong_shader_string = R"glsl(
  
     #include NORMAL_MAPPING_FUNCTIONS
 
-    fn calculateSpotShadow(worldpos: vec3f, layer: i32, proj_view: mat4x4f) -> f32 {
+    fn calculateSpotShadow(worldpos: vec3f, layer: i32, proj_view: mat4x4f, bias: f32) -> f32 {
         let shadow_coord = proj_view * vec4f(worldpos, 1.0);
         var p = shadow_coord.xyz / shadow_coord.w;
         // Y is flipped because texture coords are Y-down.
@@ -613,7 +612,7 @@ static const char* phong_shader_string = R"glsl(
                     spot_shadow_map_array, shadow_sampler,
                     p.xy + offset, // coords
                     layer, // array layer
-                    p.z - 0.007 // shadowBias
+                    p.z - bias // shadowBias
                 );
             }
         }
@@ -689,9 +688,9 @@ static const char* phong_shader_string = R"glsl(
                     );
                     attenuation *= pow((1.0 - t), light.spot_angular_falloff);
 
-                    let receives_shadow = true;
-                    if (receives_shadow && bool(light.generates_shadows)) { // shadowing (TODO gate behind receives_shadow)
-                        attenuation *= calculateSpotShadow(in.v_worldpos, light.shadow_map_array_layer, light.proj_view);
+                    if (bool(in.receives_shadow) && bool(light.generates_shadows)) { // shadowing (TODO gate behind receives_shadow)
+                    // if (bool(light.generates_shadows)) { // shadowing (TODO gate behind receives_shadow)
+                        attenuation *= calculateSpotShadow(in.v_worldpos, light.shadow_map_array_layer, light.proj_view, light.bias);
                     }
                 }
                 default: {} // no light
