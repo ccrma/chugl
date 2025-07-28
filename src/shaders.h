@@ -537,6 +537,7 @@ static const char* phong_shader_string = R"glsl(
 
     @group(0) @binding(3) var shadow_sampler: sampler_comparison;
     @group(0) @binding(4) var spot_shadow_map_array: texture_depth_2d_array;
+    @group(0) @binding(5) var dir_shadow_map_array: texture_depth_2d_array;
 
     @group(1) @binding(0) var<uniform> u_specular_color : vec3f;
     @group(1) @binding(1) var<uniform> u_diffuse_color : vec4f;
@@ -621,6 +622,36 @@ static const char* phong_shader_string = R"glsl(
         return visibility;
     }
 
+    fn calculateDirShadow(worldpos: vec3f, layer: i32, proj_view: mat4x4f, bias: f32) -> f32 {
+        let shadow_coord = proj_view * vec4f(worldpos, 1.0);
+        var p = shadow_coord.xyz / shadow_coord.w;
+        // Y is flipped because texture coords are Y-down.
+        p = vec3(
+            p.xy * vec2(0.5, -0.5) + vec2(0.5),
+            p.z
+        );
+
+        // Percentage-closer filtering. Sample texels in the region
+        // to smooth the result.
+        var visibility = 0.0;
+        let oneOverShadowDepthTextureSize = 1.0 / f32(textureDimensions(dir_shadow_map_array).x);
+        for (var y = -1; y <= 1; y++) {
+            for (var x = -1; x <= 1; x++) {
+                let offset = vec2<f32>(vec2(x, y)) * oneOverShadowDepthTextureSize;
+
+                visibility += textureSampleCompare(
+                    dir_shadow_map_array, shadow_sampler,
+                    p.xy + offset, // coords
+                    layer, // array layer
+                    p.z - bias // shadowBias
+                );
+            }
+        }
+        visibility /= 9.0;
+
+        return visibility;
+    }
+
 // main =====================================================================================
     @fragment 
     fn fs_main(
@@ -655,6 +686,10 @@ static const char* phong_shader_string = R"glsl(
             switch (light.light_type) {
                 case 1: { // directional
                     lightdir = normalize(-light.direction);
+
+                    if (bool(in.receives_shadow) && bool(light.generates_shadows)) { 
+                        attenuation *= calculateDirShadow(in.v_worldpos, light.shadow_map_array_layer, light.proj_view, light.bias);
+                    }
                 } 
                 case 2: { // point
                     let l = light.position - in.v_worldpos;
@@ -688,8 +723,7 @@ static const char* phong_shader_string = R"glsl(
                     );
                     attenuation *= pow((1.0 - t), light.spot_angular_falloff);
 
-                    if (bool(in.receives_shadow) && bool(light.generates_shadows)) { // shadowing (TODO gate behind receives_shadow)
-                    // if (bool(light.generates_shadows)) { // shadowing (TODO gate behind receives_shadow)
+                    if (bool(in.receives_shadow) && bool(light.generates_shadows)) { 
                         attenuation *= calculateSpotShadow(in.v_worldpos, light.shadow_map_array_layer, light.proj_view, light.bias);
                     }
                 }

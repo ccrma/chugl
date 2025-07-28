@@ -502,16 +502,7 @@ struct R_Light : public R_Transform {
     WGPUBuffer draw_storage_buffer;  // @group(2) draw params
     WGPUBuffer frame_uniform_buffer; // @group(0) frame uniforms
 
-    void shadowAddMesh(SG_ID* mesh_list, int mesh_count, bool add)
-    {
-        if (add) {
-            for (int i = 0; i < mesh_count; ++i)
-                hashmap_set(shadow_render_id_set, mesh_list + i);
-        } else {
-            for (int i = 0; i < mesh_count; ++i)
-                hashmap_delete(shadow_render_id_set, mesh_list + i);
-        }
-    }
+    void shadowAddMesh(SG_ID* mesh_list, int mesh_count, bool add);
 
     glm::mat4x4 projection(bool offset_depth)
     {
@@ -523,6 +514,14 @@ struct R_Light : public R_Transform {
                                                     desc.radius); // far  ==api==
                 if (offset_depth) proj[2][2] += (CHUGL_SHADOW_MAP_DEPTH_OFFSET);
                 return proj;
+            } break;
+            case SG_LightType_Directional: {
+                return glm::ortho(-desc.dirlight_shadow_bounds.size * .5f,
+                                  desc.dirlight_shadow_bounds.size * .5f,
+                                  -desc.dirlight_shadow_bounds.size * .5f,
+                                  desc.dirlight_shadow_bounds.size * .5f,
+                                  -desc.dirlight_shadow_bounds.depth * .5f,
+                                  desc.dirlight_shadow_bounds.depth * .5f);
             } break;
             default: UNREACHABLE;
         }
@@ -544,6 +543,9 @@ struct R_Scene : R_Transform {
     // shadows
     WGPUTexture spot_shadow_map_array;       // depth
     WGPUTexture spot_shadow_color_map_array; // color
+
+    WGPUTexture dir_shadow_map_array;       // depth
+    WGPUTexture dir_shadow_color_map_array; // color
 
     static void update(R_Scene* scene, GraphicsContext* gctx, u64 frame_count,
                        Arena* frame_arena, G_Graph* graph,

@@ -434,6 +434,10 @@ bool GraphicsContext::init(GraphicsContext* context, GLFWwindow* window)
           = WGPUTextureUsage_RenderAttachment | WGPUTextureUsage_TextureBinding;
         context->sentinel_spotlight_depth_2d_array
           = wgpuDeviceCreateTexture(context->device, &desc);
+
+        desc.label = "Sentinel Dirlight Depth2DArray";
+        context->sentinel_dirlight_depth_2d_array
+          = wgpuDeviceCreateTexture(context->device, &desc);
     }
 
     return true;

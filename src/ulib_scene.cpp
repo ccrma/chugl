@@ -74,8 +74,7 @@ SG_Scene* ulib_scene_create(Chuck_Object* ckobj, bool skybox, bool orthographic)
     SG_Scene::setEnvMap(scene, SG_GetTexture(g_builtin_textures.default_cubemap_id));
 
     // default directional light
-    Chuck_Object* dir_light_ckobj
-      = chugin_createCkObj(SG_CKNames[SG_COMPONENT_LIGHT], true);
+    Chuck_Object* dir_light_ckobj = chugin_createCkObj("GDirLight", false);
     SG_Light* dir_light = ulib_light_create(dir_light_ckobj, SG_LightType_Directional);
     CQ_PushCommand_AddChild(scene, dir_light);
     // angle light down slightly
@@ -84,7 +83,7 @@ SG_Scene* ulib_scene_create(Chuck_Object* ckobj, bool skybox, bool orthographic)
 
     // default camera
     SG_Camera* default_camera
-      = ulib_camera_create(chugin_createCkObj(SG_CKNames[SG_COMPONENT_CAMERA], true));
+      = ulib_camera_create(chugin_createCkObj(SG_CKNames[SG_COMPONENT_CAMERA], false));
     CQ_PushCommand_AddChild(scene, default_camera);
     SG_Scene::setMainCamera(scene, default_camera);
     gg_config.mainCamera = default_camera->id;

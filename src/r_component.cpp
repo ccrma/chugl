@@ -1265,43 +1265,78 @@ void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene,
 
     // rebuild shadow map arrays if resized
     for (int light_type = 0; light_type < SG_LightType_Count; ++light_type) {
-        if (light_type != SG_LightType_Spot) continue; // other types not impl
-        int curr_layers
-          = scene->spot_shadow_map_array ?
-              wgpuTextureGetDepthOrArrayLayers(scene->spot_shadow_map_array) :
-              0;
+        if (light_type != SG_LightType_Spot && light_type != SG_LightType_Directional)
+            continue; // other types not impl
+
+        int curr_layers = 0;
+        if (light_type == SG_LightType_Spot) {
+            curr_layers
+              = scene->spot_shadow_map_array ?
+                  wgpuTextureGetDepthOrArrayLayers(scene->spot_shadow_map_array) :
+                  0;
+        } else if (light_type == SG_LightType_Directional) {
+            curr_layers
+              = scene->dir_shadow_map_array ?
+                  wgpuTextureGetDepthOrArrayLayers(scene->dir_shadow_map_array) :
+                  0;
+        }
 
         // add +1 to prevent crash from not binding anything
         u32 min_layers = shadow_map_counts_by_type[light_type] + 1;
         if (curr_layers >= min_layers) continue;
 
-        snprintf(string_buf, sizeof(string_buf),
-                 "Spot shadowmap array for Scene[%d] %s", scene->id, scene->name);
         WGPUTextureDescriptor shadowmap_desc = {};
-        shadowmap_desc.label                 = string_buf;
         shadowmap_desc.usage
           = WGPUTextureUsage_RenderAttachment | WGPUTextureUsage_TextureBinding;
-        shadowmap_desc.dimension = WGPUTextureDimension_2D;
-        shadowmap_desc.size // TODO ==api==: setting for shadowmap resolution
-          = { CHUGL_SPOT_SHADOWMAP_DEFAULT_DIM, CHUGL_SPOT_SHADOWMAP_DEFAULT_DIM,
-              min_layers };
+        shadowmap_desc.dimension     = WGPUTextureDimension_2D;
         shadowmap_desc.format        = WGPUTextureFormat_Depth32Float;
         shadowmap_desc.mipLevelCount = 1;
         shadowmap_desc.sampleCount   = 1;
 
-        WGPU_RELEASE_RESOURCE(Texture, scene->spot_shadow_map_array);
-        scene->spot_shadow_map_array
-          = wgpuDeviceCreateTexture(gctx->device, &shadowmap_desc);
+        if (light_type == SG_LightType_Spot) {
+            shadowmap_desc.size // TODO ==api==: setting for shadowmap resolution
+              = { CHUGL_SPOT_SHADOWMAP_DEFAULT_DIM, CHUGL_SPOT_SHADOWMAP_DEFAULT_DIM,
+                  min_layers };
+            snprintf(string_buf, sizeof(string_buf),
+                     "Spot shadowmap array for Scene[%d] %s", scene->id, scene->name);
+            shadowmap_desc.label = string_buf;
 
-        // create color target
-        snprintf(string_buf, sizeof(string_buf),
-                 "Spot ShadowPass Color Target array for Scene[%d] %s", scene->id,
-                 scene->name);
-        shadowmap_desc.format = WGPUTextureFormat_RGBA8Unorm;
+            WGPU_RELEASE_RESOURCE(Texture, scene->spot_shadow_map_array);
+            scene->spot_shadow_map_array
+              = wgpuDeviceCreateTexture(gctx->device, &shadowmap_desc);
 
-        WGPU_RELEASE_RESOURCE(Texture, scene->spot_shadow_color_map_array);
-        scene->spot_shadow_color_map_array
-          = wgpuDeviceCreateTexture(gctx->device, &shadowmap_desc);
+            // create color target
+            snprintf(string_buf, sizeof(string_buf),
+                     "Spot ShadowPass Color Target array for Scene[%d] %s", scene->id,
+                     scene->name);
+            shadowmap_desc.format = WGPUTextureFormat_RGBA8Unorm;
+
+            WGPU_RELEASE_RESOURCE(Texture, scene->spot_shadow_color_map_array);
+            scene->spot_shadow_color_map_array
+              = wgpuDeviceCreateTexture(gctx->device, &shadowmap_desc);
+        } else if (light_type == SG_LightType_Directional) {
+            shadowmap_desc.size // TODO ==api==: setting for shadowmap resolution
+              = { CHUGL_DIR_SHADOWMAP_DEFAULT_DIM, CHUGL_DIR_SHADOWMAP_DEFAULT_DIM,
+                  min_layers };
+            snprintf(string_buf, sizeof(string_buf),
+                     "Directional shadowmap array for Scene[%d] %s", scene->id,
+                     scene->name);
+            shadowmap_desc.label = string_buf;
+
+            WGPU_RELEASE_RESOURCE(Texture, scene->dir_shadow_map_array);
+            scene->dir_shadow_map_array
+              = wgpuDeviceCreateTexture(gctx->device, &shadowmap_desc);
+
+            // create color target
+            snprintf(string_buf, sizeof(string_buf),
+                     "Directional ShadowPass Color Target array for Scene[%d] %s",
+                     scene->id, scene->name);
+            shadowmap_desc.format = WGPUTextureFormat_RGBA8Unorm;
+
+            WGPU_RELEASE_RESOURCE(Texture, scene->dir_shadow_color_map_array);
+            scene->dir_shadow_color_map_array
+              = wgpuDeviceCreateTexture(gctx->device, &shadowmap_desc);
+        }
     }
 
     // prepare frame uniforms
@@ -1320,13 +1355,14 @@ void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene,
         R_Light* light = Component_GetLight(*light_id);
         ASSERT(light->scene_id == scene->id);
         int layer = shadow_map_write_indices[light->desc.type]++;
-        ASSERT(layer == light_uniform->shadow_map_idx);      // should match
-        if (light->desc.type != SG_LightType_Spot) continue; // others not impl
+        ASSERT(layer == light_uniform->shadow_map_idx); // should match
+        if (light->desc.type != SG_LightType_Spot
+            && light->desc.type != SG_LightType_Directional)
+            continue; // others not impl
 
         // update frame uniform buffer
-        light_frame_uniforms.projection = light->projection(
-          false); // try setting to true to remove self-shadowing artifacts
-        light_frame_uniforms.view = R_Transform::viewMatrix(light);
+        light_frame_uniforms.projection = light->projection(false);
+        light_frame_uniforms.view       = R_Transform::viewMatrix(light);
         light_frame_uniforms.projection_view_inverse_no_translation
           = glm::inverse(light_frame_uniforms.projection
                          * glm::mat4(glm::mat3(light_frame_uniforms.view)));
@@ -1377,9 +1413,16 @@ void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene,
                  "Shadow Pass for Scene[%d:%s] Light[%d:%s]", scene->id, scene->name,
                  light->id, light->name);
         graph->addRenderPass(string_buf);
-        graph->renderPassDepthTarget(scene->spot_shadow_map_array, layer, 1);
 
-        graph->renderPassColorTarget(scene->spot_shadow_color_map_array, 0, layer);
+        if (light->desc.type == SG_LightType_Spot) {
+            graph->renderPassDepthTarget(scene->spot_shadow_map_array, layer, 1);
+            graph->renderPassColorTarget(scene->spot_shadow_color_map_array, 0, layer);
+        } else if (light->desc.type == SG_LightType_Directional) {
+            graph->renderPassDepthTarget(scene->dir_shadow_map_array, layer, 1);
+            graph->renderPassColorTarget(scene->dir_shadow_color_map_array, 0, layer);
+        } else {
+            UNREACHABLE;
+        }
 
         // TODO: test with WGPUStoreOp_Discard see if it still writes to depth tex
         graph->renderPassColorOp(WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f }, WGPULoadOp_Clear,
@@ -3254,18 +3297,33 @@ void R_BindFrameUniforms(WGPUBuffer frame_uniform_buffer, GraphicsContext* gctx,
             WGPUTexture spot_shadow_map_array
               = is_shadow_pass ? gctx->sentinel_spotlight_depth_2d_array :
                                  scene->spot_shadow_map_array;
+            WGPUTexture dir_shadow_map_array
+              = is_shadow_pass ? gctx->sentinel_dirlight_depth_2d_array :
+                                 scene->dir_shadow_map_array;
             graph->bindTexture(
-              d, 0, 4,
+              d, PER_FRAME_GROUP, 4,
               { spot_shadow_map_array, WGPUTextureViewDimension_2DArray, 0, 1, 0,
                 (int)wgpuTextureGetDepthOrArrayLayers(spot_shadow_map_array) });
 
-            // WGPUTexture texture; // refcounted, ensures that WGPUTexture address is
-            // not reused
-            //                      // so long as its in the G_Cache
-            // int base_mip_level    = 0;
-            // int mip_level_count   = 1;
-            // int base_array_layer  = 0;
-            // int array_layer_count = 1;
+            graph->bindTexture(
+              d, PER_FRAME_GROUP, 5,
+              { dir_shadow_map_array, WGPUTextureViewDimension_2DArray, 0, 1, 0,
+                (int)wgpuTextureGetDepthOrArrayLayers(dir_shadow_map_array) });
         }
+    }
+}
+
+void R_Light::shadowAddMesh(SG_ID* mesh_list, int mesh_count, bool add)
+{
+    if (add) {
+        for (int i = 0; i < mesh_count; ++i) {
+            R_Transform* x = Component_GetXform(mesh_list[i]);
+            if (x->type == SG_COMPONENT_MESH) {
+                hashmap_set(shadow_render_id_set, mesh_list + i);
+            }
+        }
+    } else {
+        for (int i = 0; i < mesh_count; ++i)
+            hashmap_delete(shadow_render_id_set, mesh_list + i);
     }
 }

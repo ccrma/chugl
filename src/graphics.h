@@ -86,6 +86,7 @@ struct GraphicsContext {
     // Default resources ---------
     WGPUSampler shadow_comparison_sampler;
     WGPUTexture sentinel_spotlight_depth_2d_array;
+    WGPUTexture sentinel_dirlight_depth_2d_array;
 
     // Methods --------
     static bool init(GraphicsContext* context, GLFWwindow* window);

@@ -55,6 +55,8 @@ CK_DLL_MFUN(ulib_light_shadow_bias_get);
 // ---------------------shadows
 
 CK_DLL_CTOR(ulib_dir_light_ctor);
+CK_DLL_MFUN(ulib_dir_light_shadow_size_set);
+CK_DLL_MFUN(ulib_dir_light_shadow_size_get);
 
 CK_DLL_CTOR(ulib_point_light_ctor);
 CK_DLL_MFUN(ulib_point_light_get_radius);
@@ -215,6 +217,24 @@ static void ulib_light_query(Chuck_DL_Query* QUERY)
 
     CTOR(ulib_dir_light_ctor);
 
+    MFUN(ulib_dir_light_shadow_size_set, "void", "shadowBounds");
+    ARG("float", "size");
+    ARG("float", "depth");
+    DOC_FUNC(
+      "Sets the size and depth of the orthographic projection used during shadow "
+      "mapping. "
+      "Larger values of `size` increase the amount of area covered by this directional "
+      "light, but decrease overall shadow resolution. Ideally you want the size to be "
+      "the minimal amount that still covers all necessary geometry in the scene. "
+      "`depth` "
+      "is used to near and far clipping planes. near = -depth/2, far = depth/2");
+
+    MFUN(ulib_dir_light_shadow_size_get, "vec3", "shadowBounds");
+    DOC_FUNC(
+      "Returns the dimensions of the orthographic view frustrum used during shadow "
+      "mapping. .x and .y are the width/height, .z is the depth. During rendering, "
+      "the near plane is -z/2, and the far plane is z/2");
+
     END_CLASS();
 
     { // Spotlight
@@ -345,7 +365,7 @@ CK_DLL_MFUN(ulib_light_generates_shadow_set)
 {
     SG_Light* light = GET_LIGHT(SELF);
 
-    if (light->type == SG_LightType_Point) {
+    if (light->desc.type == SG_LightType_Point) {
         log_warn("PointLight Shadows are not implemented.");
         return;
     }
@@ -420,6 +440,24 @@ CK_DLL_MFUN(ulib_point_light_set_falloff_exponent)
 CK_DLL_CTOR(ulib_dir_light_ctor)
 {
     ulib_light_create(SELF, SG_LightType_Directional);
+}
+
+CK_DLL_MFUN(ulib_dir_light_shadow_size_set)
+{
+    SG_Light* light                          = GET_LIGHT(SELF);
+    light->desc.dirlight_shadow_bounds.size  = GET_NEXT_FLOAT(ARGS);
+    light->desc.dirlight_shadow_bounds.depth = GET_NEXT_FLOAT(ARGS);
+    CQ_PushCommand_LightUpdate(light);
+}
+
+CK_DLL_MFUN(ulib_dir_light_shadow_size_get)
+{
+    SG_Light* light = GET_LIGHT(SELF);
+    RETURN->v_vec3  = {
+        light->desc.dirlight_shadow_bounds.size,
+        light->desc.dirlight_shadow_bounds.size,
+        light->desc.dirlight_shadow_bounds.depth,
+    };
 }
 
 // Spotlight =====================================================

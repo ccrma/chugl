@@ -887,12 +887,8 @@ struct SG_LightDesc {
 
     // dirlight shadow
     struct {
-        float left   = -80.0f;
-        float right  = 80.0f;
-        float bottom = -80.0f;
-        float top    = 80.0f;
-        float near   = -200.0f;
-        float far    = 300.0f;
+        float size  = 20.0f;
+        float depth = 500.0f; // far - near
     } dirlight_shadow_bounds;
 };
 

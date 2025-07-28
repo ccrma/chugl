@@ -18,6 +18,7 @@
 
 // shadow stuff
 #define CHUGL_SPOT_SHADOWMAP_DEFAULT_DIM 512
+#define CHUGL_DIR_SHADOWMAP_DEFAULT_DIM 1024
 
 // from E. Lengyel Foundations of Game Engine Development Volume II pg. 191
 #define CHUGL_SHADOW_MAP_DEPTH_OFFSET                                                  \
