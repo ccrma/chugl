@@ -60,6 +60,10 @@
 #define GET_NEXT_VEC4_ARRAY(ptr) (*((Chuck_ArrayVec4**&)ptr)++)
 #define GET_NEXT_OBJECT_ARRAY(ptr) (*((Chuck_ArrayInt**&)ptr)++)
 
+#define GET_XFORM(ckobj) SG_GetTransform(OBJ_MEMBER_UINT(ckobj, component_offset_id));
+#define GET_MESH(ckobj) SG_GetMesh(OBJ_MEMBER_UINT(ckobj, component_offset_id))
+#define GET_MESH_MATERIAL(ckobj) SG_GetMaterial(GET_MESH(ckobj)->_mat_id)
+#define GET_MESH_GEOMETRY(ckobj) SG_GetGeometry(GET_MESH(ckobj)->_geo_id)
 #define GET_CAMERA(ckobj) SG_GetCamera(OBJ_MEMBER_UINT(ckobj, component_offset_id))
 #define GET_TEXTURE(ckobj) SG_GetTexture(OBJ_MEMBER_UINT(ckobj, component_offset_id))
 

@@ -139,6 +139,21 @@ struct R_Transform : public R_Component {
     // updates all local/world matrices in the scenegraph
     static void rebuildMatrices(R_Scene* root, Arena* arena);
 
+    static glm::mat4 viewMatrix(R_Transform* xform)
+    {
+        // TODO does having non-uniform scale mess this up?
+        ASSERT(xform->_stale == R_Transform_STALE_NONE);
+        return glm::inverse(xform->world);
+
+        // accounts for scale
+        // return glm::inverse(modelMatrix(entity));
+
+        // optimized version for camera only (doesn't take scale into account)
+        // glm::mat4 invT = glm::translate(MAT_IDENTITY, -cam->_pos);
+        // glm::mat4 invR = glm::toMat4(glm::conjugate(cam->_rot));
+        // return invR * invT;
+    }
+
     // Scenegraph relationships ----------------------------------------------
     // returns if ancestor is somewhere in the parent chain of descendent,
     // including descendent itself
@@ -471,19 +486,6 @@ struct R_Camera : public R_Transform {
             default: ASSERT(false); return glm::mat4(1.0f);
         }
     }
-
-    static glm::mat4 viewMatrix(R_Camera* cam)
-    {
-        ASSERT(cam->_stale == R_Transform_STALE_NONE);
-        return glm::inverse(cam->world);
-        // accounts for scale
-        // return glm::inverse(modelMatrix(entity));
-
-        // optimized version for camera only (doesn't take scale into account)
-        // glm::mat4 invT = glm::translate(MAT_IDENTITY, -cam->_pos);
-        // glm::mat4 invR = glm::toMat4(glm::conjugate(cam->_rot));
-        // return invR * invT;
-    }
 };
 
 // =============================================================================
@@ -492,6 +494,32 @@ struct R_Camera : public R_Transform {
 
 struct R_Light : public R_Transform {
     SG_LightDesc desc;
+
+    hashmap* shadow_render_id_set; // set of all Mesh SGIDs that cast a shadow
+    // G_DynamicGPUBuffer draw_group_storage_buf; // @group(2) draw params
+    WGPUBuffer draw_storage_buffer; // @group(2) draw params
+    WGPUBuffer frame_uniform_buffer;
+
+    void shadowAddMesh(SG_ID* mesh_list, int mesh_count)
+    {
+        for (int i = 0; i < mesh_count; ++i) {
+            hashmap_set(shadow_render_id_set, mesh_list + i);
+        }
+    }
+
+    glm::mat4x4 projection()
+    {
+        switch (desc.type) {
+            case SG_LightType_Spot: {
+                return glm::perspective(2.0f * desc.angle_max, // fov
+                                        1.0f,                  // aspect
+                                        .1f,                   // near ==api==
+                                        100.0f);               // far  ==api==
+            } break;
+            default: UNREACHABLE;
+        }
+        return glm::mat4(1.0);
+    }
 };
 
 // =============================================================================
@@ -506,10 +534,12 @@ struct R_Scene : R_Transform {
     u64 last_fc_updated;          // frame count of last light update
 
     // shadows
-    WGPUTexture spot_shadow_map_array;
+    WGPUTexture spot_shadow_map_array;       // depth
+    WGPUTexture spot_shadow_color_map_array; // color
 
     static void update(R_Scene* scene, GraphicsContext* gctx, u64 frame_count,
-                       Arena* frame_arena, G_Graph* graph)
+                       Arena* frame_arena, G_Graph* graph,
+                       FrameUniforms* frame_uniforms)
     {
         if (frame_count == scene->last_fc_updated) return;
         scene->last_fc_updated = frame_count;
@@ -518,7 +548,7 @@ struct R_Scene : R_Transform {
         R_Transform::rebuildMatrices(scene, frame_arena);
 
         // update lights
-        R_Scene::rebuildLightInfoBuffer(gctx, scene, graph);
+        R_Scene::rebuildLightInfoBuffer(gctx, scene, graph, frame_uniforms);
     }
 
     static void initFromSG(GraphicsContext* gctx, R_Scene* r_scene, SG_ID scene_id,
@@ -528,7 +558,7 @@ struct R_Scene : R_Transform {
     static void addSubgraphToRenderState(R_Scene* scene, R_Transform* xform);
 
     static void rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene,
-                                       G_Graph* graph);
+                                       G_Graph* graph, FrameUniforms* frame_uniforms);
 
     static i32 numLights(R_Scene* scene)
     {
@@ -546,6 +576,10 @@ struct R_Scene : R_Transform {
 // R_Pass
 // =============================================================================
 
+void R_BindFrameUniforms(WGPUBuffer frame_uniform_buffer, GraphicsContext* gctx,
+                         G_DrawCall* d, G_Graph* graph, R_Shader* shader,
+                         R_Scene* scene, bool is_shadow_pass = false);
+
 struct R_Pass : public R_Component {
     SG_Pass sg_pass;
     WGPUBuffer frame_uniform_buffer; // RELEASE on destroy
@@ -553,9 +587,6 @@ struct R_Pass : public R_Component {
     // ScenePass --------------------
     WGPUTexture depth_texture;
     WGPUTexture msaa_color_target;
-
-    static void bindFrameUniforms(R_Pass* pass, G_DrawCall* d, G_Graph* graph,
-                                  R_Shader* shader, R_Scene* scene);
 
     // updates the scenepass depth texture to match the color target
     // also rebuilds the msaa color target if msaa is enabled
@@ -810,7 +841,8 @@ R_Texture* Component_CreateTexture(GraphicsContext* gctx, SG_Command_TextureCrea
                                    u32 framebuffer_width, u32 framebuffer_height);
 R_Pass* Component_CreatePass(SG_ID pass_id, WGPUDevice device);
 R_Buffer* Component_CreateBuffer(SG_ID id);
-R_Light* Component_CreateLight(SG_ID id, SG_LightDesc* desc);
+R_Light* Component_CreateLight(SG_ID id, SG_LightDesc* desc, WGPUDevice device,
+                               WGPULimits* limits);
 R_Video* Component_CreateVideo(GraphicsContext* gctx, SG_ID id, const char* filename,
                                SG_ID rgba_texture_id);
 R_Webcam* Component_CreateWebcam(SG_Command_WebcamCreate* cmd);
@@ -978,10 +1010,21 @@ struct G_CacheBindGroupEntryBuffer {
 struct G_CacheTextureViewDesc {
     WGPUTexture texture; // refcounted, ensures that WGPUTexture address is not reused
                          // so long as its in the G_Cache
-    int base_mip_level    = 0;
-    int mip_level_count   = 1;
-    int base_array_layer  = 0;
-    int array_layer_count = 1;
+    WGPUTextureViewDimension view_dimension = WGPUTextureViewDimension_2D;
+    int base_mip_level                      = 0;
+    int mip_level_count                     = 1;
+    int base_array_layer                    = 0;
+    int array_layer_count                   = 1;
+
+    void print()
+    {
+        printf(
+          "Texture: %p\n dimension: %d\n base_mip_level: %d\n mip_level_count: %d\n "
+          "base_array_layer: %d\n array_layer_count %d\n",
+          (void*)texture, view_dimension, base_mip_level, mip_level_count,
+          base_array_layer, array_layer_count);
+        hexDump("Dump", this, sizeof(*this));
+    }
 };
 
 struct G_CacheTextureView {
@@ -990,6 +1033,11 @@ struct G_CacheTextureView {
         WGPUTextureView view; // owned
         int frames_till_expired = CHUGL_CACHE_TEXTURE_VIEW_FRAMES_TILL_EXPIRED;
     } val;
+
+    void print()
+    {
+        key.print();
+    }
 
     static u64 hash(const void* item, uint64_t seed0, uint64_t seed1)
     {
@@ -1281,26 +1329,37 @@ struct G_Cache {
             // TODO what happens if fragment shader is not defined?
             // for backwards compat, we always enable alpha blending, even if pipeline
             // is not transparent
+
+            if (key.color_target_sample_count == 0) {
+                int i = 0;
+                UNUSED_VAR(i);
+            }
+
             WGPUBlendState blend_state            = G_createBlendState(true);
             WGPUColorTargetState colorTargetState = {};
-            colorTargetState.format               = key.color_target_format;
-            colorTargetState.blend                = &blend_state;
-            colorTargetState.writeMask            = WGPUColorWriteMask_All;
             WGPUFragmentState fragmentState       = {};
-            fragmentState.module                  = shader->fragment_shader_module;
-            fragmentState.entryPoint              = FS_ENTRY_POINT;
-            fragmentState.targetCount             = 1; // fix 1 color target for now
-            fragmentState.targets                 = &colorTargetState;
+            bool has_color_target
+              = (key.color_target_format != WGPUTextureFormat_Undefined);
+            if (has_color_target) {
+                colorTargetState.format    = key.color_target_format;
+                colorTargetState.blend     = &blend_state;
+                colorTargetState.writeMask = WGPUColorWriteMask_All;
 
-            pipeline_desc.fragment = &fragmentState;
+                fragmentState.module      = shader->fragment_shader_module;
+                fragmentState.entryPoint  = FS_ENTRY_POINT;
+                fragmentState.targetCount = 1; // fix 1 color target for now
+                fragmentState.targets     = &colorTargetState;
+
+                pipeline_desc.fragment = &fragmentState;
+            }
 
             WGPUDepthStencilState depth_stencil_state = G_createDepthStencilState(
               key.depth_target_format, !key.drawcall_pipeline_desc.is_transparent);
             pipeline_desc.depthStencil
               = key.depth_target_format ? &depth_stencil_state : NULL;
 
-            pipeline_desc.multisample
-              = G_createMultisampleState(key.color_target_sample_count);
+            pipeline_desc.multisample = G_createMultisampleState(
+              key.color_target_sample_count ? key.color_target_sample_count : 1);
 
             char pipeline_label[64] = {};
             snprintf(pipeline_label, sizeof(pipeline_label),
@@ -1338,32 +1397,55 @@ struct G_Cache {
             WGPUTexture texture = desc.texture;
             WGPU_REFERENCE_RESOURCE(Texture, texture);
 
-            u32 depth       = wgpuTextureGetDepthOrArrayLayers(texture);
-            bool is_cubemap = (depth == 6);
             WGPUTextureViewDescriptor view_desc = {};
             // view_desc.label                     = mip_label; // TODO
             view_desc.format          = wgpuTextureGetFormat(texture);
-            view_desc.dimension       = is_cubemap ? WGPUTextureViewDimension_Cube :
-                                                     WGPUTextureViewDimension_2D;
+            view_desc.dimension       = desc.view_dimension;
             view_desc.baseMipLevel    = desc.base_mip_level;
             view_desc.mipLevelCount   = desc.mip_level_count;
             view_desc.baseArrayLayer  = desc.base_array_layer;
             view_desc.arrayLayerCount = desc.array_layer_count;
 
             G_CacheTextureView item = {};
-            item.key                = desc;
-            item.val.view           = wgpuTextureCreateView(texture, &view_desc);
+            COPY_STRUCT(&item.key, &desc);
+
+            // WTF cpp this copy doesn't even work.............
+            // item.key = desc;
+
+            item.val.view = wgpuTextureCreateView(texture, &view_desc);
             ASSERT(item.val.view);
             const void* replaced = hashmap_set(texture_view_map, &item);
             ASSERT(!replaced);
-
-            cache_view = (G_CacheTextureView*)hashmap_get(texture_view_map, &desc);
-            ASSERT(cache_view);
+            ASSERT(memcmp(&item, &desc, sizeof(desc)) == 0);
 
             log_trace(
               "Cache miss [TextureView: %p], creating new from Texture[%p] mips[%d:%d]",
               (void*)item.val.view, (void*)texture, desc.base_mip_level,
               desc.base_mip_level + desc.mip_level_count - 1);
+
+            cache_view = (G_CacheTextureView*)hashmap_get(texture_view_map, &desc);
+
+#if 0
+            if (!cache_view) {
+                printf("cache miss for: \n");
+                item.print();
+                printf("desc\n");
+                desc.print();
+                printf("----------------------------\n");
+
+                size_t bindgroup_map_idx_DONT_USE = 0;
+                G_CacheTextureView* tv            = NULL;
+                while (hashmap_iter(texture_view_map, &bindgroup_map_idx_DONT_USE,
+                                    (void**)&tv)) {
+                    tv->print();
+                    printf("comparison with item: %d\n",
+                           memcmp(tv, &item, sizeof(tv->key)));
+                    printf("comparison with desc: %d\n",
+                           memcmp(tv, &desc, sizeof(desc)));
+                }
+            }
+#endif
+            // ASSERT(cache_view);
         }
 
         cache_view->val.frames_till_expired
@@ -1944,7 +2026,7 @@ struct G_Graph {
         pass->rp.color_target_sample_count = 1;
     }
 
-    void renderPassColorTarget(WGPUTexture tex, int mip_level)
+    void renderPassColorTarget(WGPUTexture tex, int mip_level, int array_layer = 0)
     {
         G_Pass* pass = pass_list + (pass_count - 1);
         ASSERT(pass->type == G_PassType_Render);
@@ -1952,15 +2034,17 @@ struct G_Graph {
         WGPU_RELEASE_RESOURCE(TextureView, pass->rp.color_target.texture_view);
 
         pass->rp.color_target_is_external_view = false;
-        pass->rp.color_target_view_desc        = { tex, mip_level, 1, 0, 1 };
-        pass->rp.color_target_sample_count     = wgpuTextureGetSampleCount(tex);
+        pass->rp.color_target_view_desc
+          = { tex, WGPUTextureViewDimension_2D, mip_level, 1, array_layer, 1 };
+        pass->rp.color_target_sample_count = wgpuTextureGetSampleCount(tex);
     }
 
     void renderPassResolveTarget(WGPUTexture tex, int mip_level)
     {
         G_Pass* pass = pass_list + (pass_count - 1);
         ASSERT(pass->type == G_PassType_Render);
-        pass->rp.resolve_target_view_desc = { tex, mip_level, 1, 0, 1 };
+        pass->rp.resolve_target_view_desc
+          = { tex, WGPUTextureViewDimension_2D, mip_level, 1, 0, 1 };
     }
 
     void renderPassResolveTarget(WGPUTextureView view, WGPUTextureFormat format)
@@ -1982,9 +2066,12 @@ struct G_Graph {
         G_Pass* pass = pass_list + (pass_count - 1);
         ASSERT(pass->type == G_PassType_Render);
         ASSERT(G_Util::isDepthTextureFormat(wgpuTextureGetFormat(tex)));
-        pass->rp._depth_target
-          = { tex, 0, 1, // assume depth textures don't have a mip chain
-              base_array_layer, array_layer_count };
+        pass->rp._depth_target = { tex,
+                                   WGPUTextureViewDimension_2D,
+                                   0,
+                                   1, // assume depth textures don't have a mip chain
+                                   base_array_layer,
+                                   array_layer_count };
     }
 
     void renderPassDepthTarget(WGPUTexture tex)

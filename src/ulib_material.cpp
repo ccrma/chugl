@@ -2650,6 +2650,7 @@ void chugl_initDefaultMaterials()
         phong_shader_desc.vertex_layout_count   = ARRAY_LENGTH(standard_vertex_layout);
         phong_shader_desc.includes.lit          = true;
         phong_shader_desc.includes.uses_env_map = true;
+        phong_shader_desc.includes.shadows      = true;
         g_material_builtin_shaders.phong_shader_id
           = chugl_createShader(&phong_shader_desc, "Phong");
     }

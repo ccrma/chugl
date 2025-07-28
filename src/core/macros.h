@@ -41,7 +41,8 @@
 #define UNUSED_FUNCTION(x) ((void)(x))
 #define ARRAY_LENGTH(array) (sizeof(array) / sizeof((array)[0]))
 #define ZERO_ARRAY(array) (memset((array), 0, sizeof(array)))
-#define COPY_STRUCT(dst, src, type) (memcpy((dst), (src), sizeof(type)))
+#define COPY_STRUCT_TYPE(dst, src, type) (memcpy((dst), (src), sizeof(type)))
+#define COPY_STRUCT(dst, src) (memcpy((dst), (src), sizeof(*src)))
 #define COPY_STRING(dst, src) (snprintf(dst, sizeof(dst), "%s", src));
 
 #define WHITESPACE_CHARS " \t\n\r\f\v"
@@ -126,7 +127,8 @@ typedef double f64;
 #define NEXT_POW2(x) (1 << (u32)ceil(log2(x)));
 
 // next multiple of m, m must be power of 2
-#define NEXT_MULT(x, m) (((x) + (m) - 1) & ~((m) - 1))
 #define NEXT_MULT4(x) (((x) + 3) & ~(3)) // rounds up to multiple of 4
+#define NEXT_MULT_POW2(x, m) (((x) + (m) - 1) & ~((m) - 1))
 
 #define ALIGN_NON_POW2(n, m) ((((n) + ((m) - 1)) / (m)) * (m))
+#define NEXT_MULT(n, m) ((((n) + ((m) - 1)) / (m)) * (m))

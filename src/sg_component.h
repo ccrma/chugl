@@ -59,6 +59,7 @@ struct SG_Material;
 
 // chugl will only ever use positive SG_IDs
 // but making signed to allow renderer to use negative IDs for internal impl
+// also needs to be a signed int for the compareSGIDs comparison function to work
 typedef i32 SG_ID;
 
 // (enum, ckname)
@@ -409,6 +410,7 @@ struct SG_Geometry : SG_Component {
 struct SG_ShaderIncludes {
     bool lit;          // if true, renderer will pass lighting storage buffer
     bool uses_env_map; // if true, renderer will pass env map texture
+    bool shadows;      // if true, renderer will pass shadow params
 };
 
 struct SG_Shader : SG_Component {
@@ -878,8 +880,7 @@ struct SG_LightDesc {
     float angle_max     = 0.523599f; // 30 degrees
     float angle_falloff = 2.0f;
 
-    struct {
-    } shadow;
+    b32 generates_shadows;
 };
 
 struct SG_Light : public SG_Transform {

@@ -719,10 +719,24 @@ struct App {
         R_Pass* pass      = Component_GetPass(root_pass->sg_pass.next_pass_id);
 
         char string_buff[128] = {};
+
+        // populate the parts of frameUniforms that are consistent across all passes in
+        // a frame
+        FrameUniforms frameUniforms = {};
+        frameUniforms.time          = app->lastTime;
+        frameUniforms.delta_time    = app->dt;
+        frameUniforms.resolution
+          = glm::ivec3(app->window_fb_width, app->window_fb_height, 1);
+        frameUniforms.frame_count = app->fc;
+        frameUniforms.sample_rate = app->ck_srate;
+        frameUniforms.mouse       = glm::vec2(app->mouse_x / app->window_width,
+                                              1.0 - app->mouse_y / app->window_height);
+        frameUniforms.mouse_click
+          = glm::ivec2(app->mouse_left ? 1 : 0, app->mouse_right ? 1 : 0);
+
         while (pass) {
-            FrameUniforms frameUniforms = {};
-            R_Scene* scene              = NULL;
-            R_Camera* camera            = NULL;
+            R_Scene* scene   = NULL;
+            R_Camera* camera = NULL;
 
             switch (pass->sg_pass.pass_type) {
                 case SG_PassType_Render: break;
@@ -756,7 +770,7 @@ struct App {
                     ASSERT(scene && color_target && camera);
 
                     R_Scene::update(scene, &app->gctx, app->fc, &app->frameArena,
-                                    &app->rendergraph);
+                                    &app->rendergraph, &frameUniforms);
                     ASSERT(scene->last_fc_updated == app->fc);
 
                     // shadow pass --------------------------------------------
@@ -903,8 +917,8 @@ struct App {
                     // create draw call
                     if (material) {
                         G_DrawCall* d = app->rendergraph.addDraw(dc_list);
-                        R_Pass::bindFrameUniforms(pass, d, &app->rendergraph,
-                                                  screen_shader, NULL);
+                        R_BindFrameUniforms(pass->frame_uniform_buffer, &app->gctx, d,
+                                            &app->rendergraph, screen_shader, NULL);
                         d->sort_key = G_SortKey::create(false, G_RenderingLayer_World,
                                                         material->id, 0, 1);
                         d->vertex_count   = 3;
@@ -1100,8 +1114,7 @@ struct App {
             }
 
             { // write per-frame uniforms
-
-                if (camera) { // camera uniforms
+                if (camera) {
                     frameUniforms.projection
                       = R_Camera::projectionMatrix(camera, aspect);
                     frameUniforms.view = R_Camera::viewMatrix(camera);
@@ -1109,24 +1122,17 @@ struct App {
                       = glm::inverse(frameUniforms.projection
                                      * glm::mat4(glm::mat3(frameUniforms.view)));
                     frameUniforms.camera_pos = camera->_pos;
+                } else {
+                    FrameUniforms_ZeroCameraFields(&frameUniforms);
                 }
-                if (scene) { // scene uniforms
+
+                if (scene) {
                     frameUniforms.ambient_light    = scene->sg_scene_desc.ambient_light;
                     frameUniforms.num_lights       = R_Scene::numLights(scene);
                     frameUniforms.background_color = scene->sg_scene_desc.bg_color;
+                } else {
+                    FrameUniforms_ZeroLightingFields(&frameUniforms);
                 }
-
-                frameUniforms.time       = app->lastTime;
-                frameUniforms.delta_time = app->dt;
-                frameUniforms.resolution
-                  = glm::ivec3(app->window_fb_width, app->window_fb_height, 1);
-                frameUniforms.frame_count = app->fc;
-                frameUniforms.sample_rate = app->ck_srate;
-                frameUniforms.mouse
-                  = glm::vec2(app->mouse_x / app->window_width,
-                              1.0 - app->mouse_y / app->window_height);
-                frameUniforms.mouse_click
-                  = glm::ivec2(app->mouse_left ? 1 : 0, app->mouse_right ? 1 : 0);
                 wgpuQueueWriteBuffer(app->gctx.queue, pass->frame_uniform_buffer, 0,
                                      &frameUniforms, sizeof(frameUniforms));
             }
@@ -1357,7 +1363,8 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Pass* pass, R_Camera* cam
 
         { // set bindgroups
             // set frame uniforms
-            R_Pass::bindFrameUniforms(pass, d, &app->rendergraph, shader, scene);
+            R_BindFrameUniforms(pass->frame_uniform_buffer, &app->gctx, d,
+                                &app->rendergraph, shader, scene);
 
             // set material uniforms
             // ==optimize== can sort/cache material bindgroupentries per frame
@@ -1459,7 +1466,8 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Pass* pass, R_Camera* cam
 
         R_Shader* skybox_shader
           = Component_GetShader(skybox_material->pso.sg_shader_id);
-        R_Pass::bindFrameUniforms(pass, d, &app->rendergraph, skybox_shader, scene);
+        R_BindFrameUniforms(pass->frame_uniform_buffer, &app->gctx, d,
+                            &app->rendergraph, skybox_shader, scene);
         R_Material::createBindGroupEntries(skybox_material, PER_MATERIAL_GROUP,
                                            &app->rendergraph, d, &app->gctx);
     }
@@ -2082,7 +2090,7 @@ static void _R_HandleCommand(App* app, SG_Command* command)
             WGPUBufferDescriptor bufferDesc = {};
             bufferDesc.label                = label;
             bufferDesc.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_MapRead;
-            bufferDesc.size  = NEXT_MULT(R_Texture::sizeBytes(tex), 4);
+            bufferDesc.size  = NEXT_MULT4(R_Texture::sizeBytes(tex));
             WGPUBuffer mapped_buffer
               = wgpuDeviceCreateBuffer(app->gctx.device, &bufferDesc);
 
@@ -2193,8 +2201,17 @@ static void _R_HandleCommand(App* app, SG_Command* command)
         case SG_COMMAND_LIGHT_UPDATE: {
             SG_Command_LightUpdate* cmd = (SG_Command_LightUpdate*)command;
             R_Light* light              = Component_GetLight(cmd->light_id);
-            if (!light) light = Component_CreateLight(cmd->light_id, &cmd->desc);
+            if (!light)
+                light = Component_CreateLight(cmd->light_id, &cmd->desc,
+                                              app->gctx.device, &app->gctx.limits);
             light->desc = cmd->desc; // copy light properties
+        } break;
+        case SG_COMMAND_SHADOW_ADD_MESH: {
+            SG_Command_ShadowAddMesh* cmd = (SG_Command_ShadowAddMesh*)command;
+            R_Light* light                = Component_GetLight(cmd->light_id);
+            light->shadowAddMesh(
+              (SG_ID*)CQ_ReadCommandGetOffset(cmd->mesh_id_list_offset),
+              cmd->mesh_id_list_len);
         } break;
         case SG_COMMAND_VIDEO_UPDATE: {
             SG_Command_VideoUpdate* cmd = (SG_Command_VideoUpdate*)command;

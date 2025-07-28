@@ -1212,10 +1212,6 @@ CK_DLL_MFUN(ggen_get_scene)
 // GMesh and friends
 // ===============================================================
 
-#define GET_MESH(ckobj) SG_GetMesh(OBJ_MEMBER_UINT(ckobj, component_offset_id))
-#define GET_MESH_MATERIAL(ckobj) SG_GetMaterial(GET_MESH(ckobj)->_mat_id)
-#define GET_MESH_GEOMETRY(ckobj) SG_GetGeometry(GET_MESH(ckobj)->_geo_id)
-
 CK_DLL_CTOR(gmesh_ctor);
 CK_DLL_CTOR(gmesh_ctor_params);
 

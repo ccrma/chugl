@@ -251,6 +251,9 @@ static const char* GraphicsContext_AdapterTypeToString(WGPUAdapterType type)
 
 bool GraphicsContext::init(GraphicsContext* context, GLFWwindow* window)
 {
+    Arena::init(&context->frame_arena,
+                1); // init to 1 byte to test resize doesn't crash
+
     log_trace("initializing WebGPU context");
     ASSERT(context->device == NULL);
 
@@ -356,14 +359,14 @@ bool GraphicsContext::init(GraphicsContext* context, GLFWwindow* window)
     if (!context->device) return false;
     log_trace("device created");
 
-    {   // set debug callbacks
-        // #if defined(WEBGPU_BACKEND_WGPU)
-        //         wgpuSetLogLevel(WGPULogLevel_Warn);
-        //         wgpuSetLogCallback(
-        //           [](WGPULogLevel level, char const* message, void* /* userdata */) {
-        //               log_error("wgpu log [%d]: %s", level, message);
-        //           },
-        //           NULL);
+    { // set debug callbacks
+      // #if defined(WEBGPU_BACKEND_WGPU)
+      //         wgpuSetLogLevel(WGPULogLevel_Warn);
+      //         wgpuSetLogCallback(
+      //           [](WGPULogLevel level, char const* message, void* /* userdata */) {
+      //               log_error("wgpu log [%d]: %s", level, message);
+      //           },
+      //           NULL);
 
         //         log_trace("Using wgpu version %d", wgpuGetVersion());
         // #endif
@@ -403,6 +406,35 @@ bool GraphicsContext::init(GraphicsContext* context, GLFWwindow* window)
 
     // init mip map generator
     MipMapGenerator_init(context);
+
+    { // create default resources
+        WGPUSamplerDescriptor samplerDesc = {};
+        samplerDesc.label                 = "Default Comparison Sampler";
+        samplerDesc.addressModeU          = WGPUAddressMode_ClampToEdge;
+        samplerDesc.addressModeV          = WGPUAddressMode_ClampToEdge;
+        samplerDesc.addressModeW          = WGPUAddressMode_ClampToEdge;
+        samplerDesc.minFilter             = WGPUFilterMode_Nearest;
+        samplerDesc.magFilter             = WGPUFilterMode_Linear;
+        samplerDesc.mipmapFilter          = WGPUMipmapFilterMode_Nearest;
+        samplerDesc.compare               = WGPUCompareFunction_Less;
+        samplerDesc.lodMinClamp           = 0.0f;
+        samplerDesc.lodMaxClamp           = 1.0f;
+        samplerDesc.maxAnisotropy         = 1;
+        context->shadow_comparison_sampler
+          = wgpuDeviceCreateSampler(context->device, &samplerDesc);
+
+        WGPUTextureDescriptor desc = {};
+        desc.label                 = "Sentinel Spotlight Depth2DArray";
+        desc.size                  = { 1, 1, context->limits.maxTextureArrayLayers };
+        desc.mipLevelCount         = 1;
+        desc.sampleCount           = 1;
+        desc.dimension             = WGPUTextureDimension_2D;
+        desc.format                = WGPUTextureFormat_Depth32Float;
+        desc.usage
+          = WGPUTextureUsage_RenderAttachment | WGPUTextureUsage_TextureBinding;
+        context->sentinel_spotlight_depth_2d_array
+          = wgpuDeviceCreateTexture(context->device, &desc);
+    }
 
     return true;
 }
@@ -472,6 +504,9 @@ void GraphicsContext::presentFrame(GraphicsContext* ctx)
     // #endif // WEBGPU_BACKEND_WGPU
 
     WGPU_RELEASE_RESOURCE(CommandBuffer, command);
+
+    // clear frame arena
+    Arena::clear(&ctx->frame_arena);
 
     // poll device
 #if defined(WEBGPU_BACKEND_WGPU)
@@ -1172,7 +1207,7 @@ bool GPU_Buffer::resizeNoCopy(GraphicsContext* gctx, GPU_Buffer* gpu_buffer,
     WGPUBufferDescriptor desc = {};
     desc.usage                = usage_flags | WGPUBufferUsage_CopyDst;
     u64 new_capacity          = MAX(gpu_buffer->capacity * 2, new_size);
-    desc.size                 = NEXT_MULT(new_capacity, 4);
+    desc.size                 = NEXT_MULT4(new_capacity);
 
     // release old buffer
     WGPU_RELEASE_RESOURCE(Buffer, gpu_buffer->buf);

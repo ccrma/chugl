@@ -1002,7 +1002,6 @@ SG_Camera* SG_CreateCamera(Chuck_Object* ckobj, SG_CameraParams cam_params)
     return cam;
 }
 
-// nocheckin: just use createmesh instead?
 SG_Text* SG_CreateText(Chuck_Object* ckobj)
 {
     Arena* arena  = &SG_TextArena;

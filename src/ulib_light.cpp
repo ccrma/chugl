@@ -44,6 +44,13 @@ CK_DLL_MFUN(ulib_light_get_color);
 CK_DLL_MFUN(ulib_light_set_intensity);
 CK_DLL_MFUN(ulib_light_get_intensity);
 
+// shadows---------------------
+CK_DLL_MFUN(ulib_light_generates_shadow_set);
+CK_DLL_MFUN(ulib_light_generates_shadow_get);
+CK_DLL_MFUN(ulib_light_shadow_add_mesh);
+
+// ---------------------shadows
+
 CK_DLL_CTOR(ulib_dir_light_ctor);
 
 CK_DLL_CTOR(ulib_point_light_ctor);
@@ -132,6 +139,15 @@ static void ulib_light_query(Chuck_DL_Query* QUERY)
     MFUN(ulib_light_get_intensity, "float", "intensity");
     DOC_FUNC("Get the light intensity.");
 
+    MFUN(ulib_light_generates_shadow_set, "void", "shadow");
+    ARG("int", "generate_shadows");
+
+    MFUN(ulib_light_generates_shadow_get, "int", "shadow");
+
+    MFUN(ulib_light_shadow_add_mesh, "void", "shadowAdd");
+    ARG(SG_CKNames[SG_COMPONENT_TRANSFORM], "mesh");
+    ARG("int", "add_children");
+
     END_CLASS();
 
     // TODO document
@@ -199,23 +215,23 @@ static void ulib_light_query(Chuck_DL_Query* QUERY)
           "quadratic. Default is 2.0");
 
         MFUN(ulib_spot_light_get_angle_max, "float", "angleMax");
-        DOC_FUNC("Get the maximum angle (in degrees) of the spotlight");
+        DOC_FUNC("Get the maximum angle (in radians) of the spotlight");
 
         MFUN(ulib_spot_light_set_angle_max, "void", "angleMax");
-        ARG("float", "degrees");
+        ARG("float", "radians");
         DOC_FUNC(
-          "Set the maximum angle (in degrees) of the spotlight. At this angle the "
+          "Set the maximum angle (in radians) of the spotlight. At this angle the "
           "spotlights intensity will reach 0");
 
         MFUN(ulib_spot_light_get_angle_min, "float", "angleMin");
         DOC_FUNC(
-          "Get the angle (in degrees) of the spotlight at which attenuation will "
+          "Get the angle (in radians) of the spotlight at which attenuation will "
           "begin.");
 
         MFUN(ulib_spot_light_set_angle_min, "void", "angleMin");
-        ARG("float", "degrees");
+        ARG("float", "radians");
         DOC_FUNC(
-          "Set the angle (in degrees) of the spotlight at which attenuation will "
+          "Set the angle (in radians) of the spotlight at which attenuation will "
           "begin. Should be less than angleMax");
 
         MFUN(ulib_spot_light_get_angular_falloff, "float", "angularFalloff");
@@ -290,6 +306,28 @@ CK_DLL_MFUN(ulib_light_get_intensity)
 {
     SG_Light* light = GET_LIGHT(SELF);
     RETURN->v_float = light->desc.intensity;
+}
+
+CK_DLL_MFUN(ulib_light_generates_shadow_get)
+{
+    SG_Light* light = GET_LIGHT(SELF);
+    RETURN->v_int   = light->desc.generates_shadows;
+}
+
+CK_DLL_MFUN(ulib_light_generates_shadow_set)
+{
+    SG_Light* light               = GET_LIGHT(SELF);
+    light->desc.generates_shadows = GET_NEXT_INT(ARGS) ? 1 : 0;
+    CQ_PushCommand_LightUpdate(light);
+}
+
+CK_DLL_MFUN(ulib_light_shadow_add_mesh)
+{
+    SG_Light* light     = GET_LIGHT(SELF);
+    SG_Transform* xform = GET_XFORM(GET_NEXT_OBJECT(ARGS));
+    bool add_children   = GET_NEXT_INT(ARGS);
+
+    CQ_PushCommand_ShadowAddMesh(light, xform, add_children);
 }
 
 CK_DLL_CTOR(ulib_point_light_ctor)

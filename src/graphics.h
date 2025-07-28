@@ -75,12 +75,17 @@ struct GraphicsContext {
     // Per frame resources --------
     WGPUTextureView backbufferView; // still need this for imgui
     WGPUCommandEncoder commandEncoder;
+    Arena frame_arena;
 
     // Window --------
     bool window_minimized;
 
     // Device limits --------
     WGPULimits limits;
+
+    // Default resources ---------
+    WGPUSampler shadow_comparison_sampler;
+    WGPUTexture sentinel_spotlight_depth_2d_array;
 
     // Methods --------
     static bool init(GraphicsContext* context, GLFWwindow* window);
@@ -94,28 +99,35 @@ struct GraphicsContext {
 // Buffers
 // =============================================================================
 
-struct G_DynamicUniformBuffer { // for use with dynamic bg offsets
+struct G_DynamicGPUBuffer { // for use with dynamic bg offsets
     Arena cpu_buffer;
     WGPUBuffer gpu_buffer;
     u32 GPU_OFFSET_ALIGNMENT_BYTES;
+    WGPUBufferUsage usage; // either storage or uniform
 
     // TODO: does this need an id?
 
-    void init(WGPULimits* limits)
+    void init(WGPULimits* limits, WGPUBufferUsage usage)
     {
-        GPU_OFFSET_ALIGNMENT_BYTES = limits->minUniformBufferOffsetAlignment;
+        ASSERT(usage == WGPUBufferUsage_Uniform || usage == WGPUBufferUsage_Storage);
+        this->usage = usage;
+        if (usage == WGPUBufferUsage_Uniform) {
+            GPU_OFFSET_ALIGNMENT_BYTES = limits->minUniformBufferOffsetAlignment;
+        } else if (usage == WGPUBufferUsage_Storage) {
+            GPU_OFFSET_ALIGNMENT_BYTES = limits->minStorageBufferOffsetAlignment;
+        }
 
         // init CPU buffer to size of max material bindings
         Arena::init(&this->cpu_buffer,
                     CHUGL_MATERIAL_MAX_BINDINGS * this->GPU_OFFSET_ALIGNMENT_BYTES);
     }
 
-    // @return: byte offset of the write position
     void write(void* data, int size_bytes)
     {
+        ASSERT(usage == WGPUBufferUsage_Uniform || usage == WGPUBufferUsage_Storage);
         ASSERT(cpu_buffer.curr % GPU_OFFSET_ALIGNMENT_BYTES == 0);
 
-        // align allocation size to uniform alignment
+        // align allocation size
         int aligned_size_bytes = ALIGN_NON_POW2(size_bytes, GPU_OFFSET_ALIGNMENT_BYTES);
         ASSERT(aligned_size_bytes % GPU_OFFSET_ALIGNMENT_BYTES == 0);
 
@@ -128,6 +140,8 @@ struct G_DynamicUniformBuffer { // for use with dynamic bg offsets
 
     void uploadAndReset(WGPUDevice device, WGPUQueue queue)
     {
+        ASSERT(usage == WGPUBufferUsage_Uniform || usage == WGPUBufferUsage_Storage);
+
         // recreate GPU buffer if needed
         bool gpu_buffer_too_small = wgpuBufferGetSize(gpu_buffer) < cpu_buffer.curr;
         if (gpu_buffer == NULL || gpu_buffer_too_small) {
@@ -138,8 +152,8 @@ struct G_DynamicUniformBuffer { // for use with dynamic bg offsets
 
             WGPUBufferDescriptor desc = {};
             desc.size                 = cpu_buffer.cap;
-            desc.usage = WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst;
-            gpu_buffer = wgpuDeviceCreateBuffer(device, &desc);
+            desc.usage                = usage | WGPUBufferUsage_CopyDst;
+            gpu_buffer                = wgpuDeviceCreateBuffer(device, &desc);
         }
 
         // copy CPU -> GPU
@@ -171,7 +185,7 @@ struct GPU_Buffer {
 
         WGPUBufferDescriptor desc = {};
         desc.usage                = usage_flags | WGPUBufferUsage_CopyDst;
-        desc.size                 = NEXT_MULT(new_capacity, 4);
+        desc.size                 = NEXT_MULT4(new_capacity);
 
         WGPUBuffer new_buf = wgpuDeviceCreateBuffer(gctx->device, &desc);
 
@@ -206,7 +220,7 @@ struct GPU_Buffer {
 
             // grow buffer
             u64 new_capacity = MAX(gpu_buffer->capacity * 2, size + offset);
-            new_capacity     = NEXT_MULT(new_capacity, 4); // align to 4 bytes
+            new_capacity     = NEXT_MULT4(new_capacity); // align to 4 bytes
             ASSERT(new_capacity % 4 == 0);
 
             WGPUBufferDescriptor desc = {};

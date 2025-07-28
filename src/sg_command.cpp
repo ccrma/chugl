@@ -1025,6 +1025,38 @@ void CQ_PushCommand_LightUpdate(SG_Light* light)
     END_COMMAND();
 }
 
+void CQ_PushCommand_ShadowAddMesh(SG_Light* light, SG_Transform* xform,
+                                  bool add_children)
+{
+    if (light == NULL || xform == NULL) return;
+
+    BEGIN_COMMAND(SG_Command_ShadowAddMesh, SG_COMMAND_SHADOW_ADD_MESH);
+    command->light_id                   = light->id;
+    command->mesh_id_list_offset        = cq.write_q->curr;
+    *ARENA_PUSH_TYPE(cq.write_q, SG_ID) = xform->id;
+
+    // ==optimize== when refactoring scenegraph to use linked list to connect children,
+    // only add the XForms which are actually GMeshs
+    if (add_children) { // BFS add all children
+        u64 curr = cq.write_q->curr;
+        memcpy(Arena::push(cq.write_q, xform->childrenIDs.curr),
+               xform->childrenIDs.base, xform->childrenIDs.curr);
+
+        while (curr != cq.write_q->curr) {
+            xform = SG_GetTransform(*(SG_ID*)Arena::get(cq.write_q, curr));
+            ASSERT(xform);
+            curr += sizeof(SG_ID);
+
+            memcpy(Arena::push(cq.write_q, xform->childrenIDs.curr),
+                   xform->childrenIDs.base, xform->childrenIDs.curr);
+        }
+    }
+    command->mesh_id_list_len
+      = (cq.write_q->curr - command->mesh_id_list_offset) / sizeof(SG_ID);
+
+    END_COMMAND();
+}
+
 void CQ_PushCommand_VideoUpdate(SG_Video* video)
 {
     const char* path = video->path_OWNED ? video->path_OWNED : "";

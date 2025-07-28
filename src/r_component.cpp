@@ -832,9 +832,16 @@ void R_Material::createBindGroupEntries(R_Material* mat, int group, G_Graph* gra
                 // hacky: clamp INT32_MAX to num_mips to signify we're creating a
                 // texture view of the entire chain
                 int num_mips = (int)wgpuTextureGetMipLevelCount(r_texture->gpu_texture);
+                bool is_cubemap
+                  = (wgpuTextureGetDepthOrArrayLayers(r_texture->gpu_texture) == 6);
                 G_CacheTextureViewDesc view_desc
-                  = { r_texture->gpu_texture, binding->as.texture.base_mip_level,
-                      MIN(num_mips, binding->as.texture.mip_level_count), 0, 1 };
+                  = { r_texture->gpu_texture,
+                      is_cubemap ? WGPUTextureViewDimension_Cube :
+                                   WGPUTextureViewDimension_2D,
+                      binding->as.texture.base_mip_level,
+                      MIN(num_mips, binding->as.texture.mip_level_count),
+                      0,
+                      1 };
 
                 drawcall ? graph->bindTexture(drawcall, group, i, view_desc) :
                            graph->computePassBindTexture(i, view_desc);
@@ -1181,15 +1188,16 @@ void R_Scene::addSubgraphToRenderState(R_Scene* scene, R_Transform* root)
 }
 
 void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene,
-                                     G_Graph* graph)
+                                     G_Graph* graph, FrameUniforms* frame_uniforms)
 {
     static Arena light_info_arena{};
     ASSERT(light_info_arena.curr == 0);
     defer(Arena::clear(&light_info_arena));
 
     char string_buf[128] = {};
-    // u8 shadow_map_write_indices[SG_LightType_Count]  = {};
-    u8 shadow_map_counts_by_type[SG_LightType_Count] = {};
+    u32 shadow_map_write_indices[SG_LightType_Count]
+      = {}; // which array layer of the shadowmap Texture2D array to write to
+    u32 shadow_map_counts_by_type[SG_LightType_Count] = {};
 
     // allocate cpu memory for light uniform data
     int num_lights = R_Scene::numLights(scene);
@@ -1208,14 +1216,20 @@ void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene,
         ASSERT(light);
         ASSERT(light->_stale == R_Transform_STALE_NONE);
 
-        ++shadow_map_counts_by_type[light->desc.type]; // TODO only increment if is
-                                                       // caster
-
         { // initialize uniform struct
             light_uniform->color      = light->desc.intensity * light->desc.color;
             light_uniform->light_type = (i32)light->desc.type;
             light_uniform->position   = light->world[3];
             light_uniform->direction  = -glm::normalize(light->world[2]);
+
+            if (light->desc.generates_shadows) {
+                light_uniform->proj_view
+                  = light->projection() * R_Transform::viewMatrix(light);
+                light_uniform->generates_shadows = 1;
+                light_uniform->shadow_map_idx
+                  = shadow_map_counts_by_type[light->desc.type];
+                ++shadow_map_counts_by_type[light->desc.type];
+            }
 
             switch (light->desc.type) {
                 case SG_LightType_None: break;
@@ -1258,7 +1272,7 @@ void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene,
         shadowmap_desc.usage
           = WGPUTextureUsage_RenderAttachment | WGPUTextureUsage_TextureBinding;
         shadowmap_desc.dimension = WGPUTextureDimension_2D;
-        shadowmap_desc.size // TODO: setting for shadowmap resolution
+        shadowmap_desc.size // TODO ==api==: setting for shadowmap resolution
           = { CHUGL_SPOT_SHADOWMAP_DEFAULT_DIM, CHUGL_SPOT_SHADOWMAP_DEFAULT_DIM,
               shadow_map_counts_by_type[light_type] };
         shadowmap_desc.format        = WGPUTextureFormat_Depth32Float;
@@ -1268,113 +1282,207 @@ void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene,
         WGPU_RELEASE_RESOURCE(Texture, scene->spot_shadow_map_array);
         scene->spot_shadow_map_array
           = wgpuDeviceCreateTexture(gctx->device, &shadowmap_desc);
+
+        // create color target
+        snprintf(string_buf, sizeof(string_buf),
+                 "Spot ShadowPass Color Target array for Scene[%d] %s", scene->id,
+                 scene->name);
+        shadowmap_desc.format = WGPUTextureFormat_RGBA8Unorm;
+
+        WGPU_RELEASE_RESOURCE(Texture, scene->spot_shadow_color_map_array);
+        scene->spot_shadow_color_map_array
+          = wgpuDeviceCreateTexture(gctx->device, &shadowmap_desc);
     }
 
-#if 0 // shadows (paused)
+    // prepare frame uniforms
+    FrameUniforms light_frame_uniforms = {};
+    COPY_STRUCT(&light_frame_uniforms, frame_uniforms);
+
     // shadowmap passes
     hashmap_idx_DONT_USE = 0;
     light_id             = NULL;
     light_idx            = 0;
     while (
       hashmap_iter(scene->light_id_set, &hashmap_idx_DONT_USE, (void**)&light_id)) {
+        LightUniforms* light_uniform = &light_uniforms[light_idx++];
+        if (!light_uniform->generates_shadows) continue;
+
         R_Light* light = Component_GetLight(*light_id);
-        int layer      = shadow_map_write_indices[light->desc.type]++;
+        ASSERT(light->scene_id == scene->id);
+        int layer = shadow_map_write_indices[light->desc.type]++;
+        ASSERT(layer == light_uniform->shadow_map_idx);      // should match
+        if (light->desc.type != SG_LightType_Spot) continue; // others not impl
 
-        switch (light->desc.type) {
-            case SG_LightType_Spot: {
-                snprintf(string_buf, sizeof(string_buf),
-                         "Shadow Pass for Scene[%d:%s] Light[%d:%s]", scene->id,
-                         scene->name, light->id, light->name);
-                graph->addRenderPass(string_buf);
-                graph->renderPassDepthTarget(scene->spot_shadow_map_array, layer, 1);
-                G_DrawCallListID dc_list = graph->renderPassAddDrawCallList();
+        // update frame uniform buffer
+        light_frame_uniforms.projection = light->projection();
+        light_frame_uniforms.view       = R_Transform::viewMatrix(light);
+        light_frame_uniforms.projection_view_inverse_no_translation
+          = glm::inverse(light_frame_uniforms.projection
+                         * glm::mat4(glm::mat3(light_frame_uniforms.view)));
+        light_frame_uniforms.camera_pos = light->_pos;
 
-                // for now just render everything
-                // we don't care about transparency, instanced render just like opaque.
-                // ==optimize== switch to shader and material offset, rather than id to
-                // minimize pso switches
-                // TODO add light.shadowRegisterMesh(....)
-                size_t hashmap_idx_DONT_USE = 0;
-                GeometryToXforms* primitive = NULL;
-                while (hashmap_iter(scene->geo_to_xform, &hashmap_idx_DONT_USE,
-                                    (void**)&primitive)) {
-                    int instance_count = GeometryToXforms::count(primitive);
-                    if (instance_count == 0) continue;
+        // 0 num lights to save compute and not recalculate shadows in a shadow pass
+        // ==api== in future can add mesh.depthMaterial() which bypasses frag shader or
+        // just does simple alpha test
+        light_frame_uniforms.num_lights = 0;
 
-                    // below is mostly copied from _R_RenderScene(...)
+        wgpuQueueWriteBuffer(gctx->queue, light->frame_uniform_buffer, 0,
+                             &light_frame_uniforms, sizeof(light_frame_uniforms));
 
-                    // Get shader id from material
-                    R_Material* material = Component_GetMaterial(primitive->key.mat_id);
-                    R_Geometry* geo      = Component_GetGeometry(primitive->key.geo_id);
-                    SG_ID shader_id      = material->pso.sg_shader_id;
-                    R_Shader* shader     = Component_GetShader(shader_id);
+        // resize the per-draw storage buffer
+        size_t shadow_renderlist_count = hashmap_count(light->shadow_render_id_set);
+        int draw_uniform_size          = NEXT_MULT(sizeof(DrawUniforms),
+                                                   gctx->limits.minStorageBufferOffsetAlignment);
+        if (light->draw_storage_buffer == NULL
+            || wgpuBufferGetSize(light->draw_storage_buffer)
+                 < shadow_renderlist_count * draw_uniform_size) {
 
-                    // add to draw call list
-                    G_DrawCall* d = graph->addDraw(dc_list);
+            snprintf(string_buf, sizeof(string_buf),
+                     "Shadow Pass DrawUniforms for Scene[%d:%s], Light[%d:%s]",
+                     scene->id, scene->name, light->id, light->name);
+            WGPUBufferDescriptor buff_desc = {};
+            buff_desc.label                = string_buf;
+            buff_desc.usage = WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst;
+            buff_desc.size  = shadow_renderlist_count * draw_uniform_size;
 
-                    // populate index buffer
-                    d->index_count    = R_Geometry::indexCount(geo);
-                    bool indexed_draw = (d->index_count > 0);
-                    if (indexed_draw) {
-                        d->index_buffer        = geo->gpu_index_buffer.buf;
-                        d->index_buffer_offset = 0;
-                        d->index_buffer_size   = geo->gpu_index_buffer.size;
-                    } else {
-                        // TODO come up with a better way to set a custom number of
-                        // vertices to draw having -1 actually mean ALL is confusing 2
-                        // different states.
-                        u32 vertex_count                = R_Geometry::vertexCount(geo);
-                        bool user_provided_vertex_count = geo->vertex_count >= 0;
-                        d->vertex_count                 = user_provided_vertex_count ?
-                                                            geo->vertex_count :
-                                                            vertex_count;
-                    }
+            WGPU_RELEASE_RESOURCE(Buffer, light->draw_storage_buffer);
+            light->draw_storage_buffer
+              = wgpuDeviceCreateBuffer(gctx->device, &buff_desc);
+            ASSERT(light->draw_storage_buffer);
+        }
 
-                    // set pso
-                    d->pipelineDesc(shader_id, material->pso.cull_mode,
-                                    material->pso.primitive_topology, false);
+        // write draw uniforms cpu --> gpu
+        u8* cpu_draw_uniform_list = (u8*)Arena::push(
+          &gctx->frame_arena, shadow_renderlist_count * draw_uniform_size);
+        u64 cpu_draw_uniform_offset
+          = Arena::offsetOf(&gctx->frame_arena, cpu_draw_uniform_list);
+        // TODO PROBLEM
+        // doesn't writing to offset 0 of the light storage buffer
+        // for every shadowpass overwrite the previous shadow casters?
+        // if so: soln is we must use a G_DynamicBuffer and refactor
+        // G_Cache to take a DynamicBuffer desc that is resolved
+        // during execution.
+        // or just allocate memory upfront that's big enough for all hashmap render list
+        // in that case remember to WGPU_REFERENCE buffers in G_Cache
+        // id sizes... assign DynamicBuffer a negative RID?
+        defer(
+          wgpuQueueWriteBuffer(gctx->queue, light->draw_storage_buffer, 0,
+                               Arena::get(&gctx->frame_arena, cpu_draw_uniform_offset),
+                               shadow_renderlist_count * draw_uniform_size););
 
-                    { // set bindgroups
+        // set up the renderpass
+        snprintf(string_buf, sizeof(string_buf),
+                 "Shadow Pass for Scene[%d:%s] Light[%d:%s]", scene->id, scene->name,
+                 light->id, light->name);
+        graph->addRenderPass(string_buf);
+        graph->renderPassDepthTarget(scene->spot_shadow_map_array, layer, 1);
 
-                        // @group(3) bindings are set below, and are different for
-                        // transparent vs opaque
-                        GeometryToXforms::updateStorageBuffer(
-                          &app->gctx, scene, primitive, &app->gctx.limits);
+        graph->renderPassColorTarget(scene->spot_shadow_color_map_array, 0, layer);
 
-                        // set @group(4) pulled-vertex attribs
-                        R_Geometry::addPullBindGroupEntries(geo, &app->rendergraph, d);
-                    }
+        // TODO: test with WGPUStoreOp_Discard see if it still writes to depth tex
+        graph->renderPassColorOp(WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f }, WGPULoadOp_Clear,
+                                 WGPUStoreOp_Store);
 
-                    // set vertex attributes
-                    for (int vertex_slot = 0;
-                         vertex_slot < ARRAY_LENGTH(geo->gpu_vertex_buffers);
-                         ++vertex_slot) {
-                        GPU_Buffer* gpu_buffer = &geo->gpu_vertex_buffers[vertex_slot];
-                        if (gpu_buffer->buf && gpu_buffer->size > 0)
-                            app->rendergraph.vertexBuffer(
-                              d, vertex_slot, gpu_buffer->buf, 0, gpu_buffer->size);
-                    }
+        G_DrawCallListID dc_list = graph->renderPassAddDrawCallList();
 
-                    d->instance_count = instance_count;
-                    float dist_from_camera
-                      = 0.0; // ==optimize== sort opaque geometry front-to-back
-                    d->sort_key
-                      = G_SortKey::create(false, G_RenderingLayer_World, material->id,
-                                          dist_from_camera, camera->params.far_plane);
+        size_t shadowmap_renderlist_idx_DONT_USE = 0;
+        SG_ID* mesh_id                           = NULL;
+        int draw_uniform_idx                     = 0;
+        // iterate over light's shadowcaster renderlist
+        while (hashmap_iter(light->shadow_render_id_set,
+                            &shadowmap_renderlist_idx_DONT_USE, (void**)&mesh_id)) {
+            R_Transform* mesh = Component_GetMesh(*mesh_id);
+            ASSERT(mesh->_stale == R_Transform_STALE_NONE);
 
-                    // set @group(3) per-draw bindings (xform matrices)
-                    app->rendergraph.bindBuffer(d, PER_DRAW_GROUP, 0,
-                                                primitive->xform_storage_buffer.buf, 0,
-                                                primitive->xform_storage_buffer.size);
+            // skip over the meshes that no longer belong to this scene
+            // ==optimize== remove these meshes from the ID set
+            bool mesh_belongs_to_scene = (mesh->scene_id == scene->id);
+            if (!mesh_belongs_to_scene) continue;
+
+            // below is mostly copied from _R_RenderScene(...)
+            R_Material* material = Component_GetMaterial(mesh->_matID);
+            R_Geometry* geo      = Component_GetGeometry(mesh->_geoID);
+            R_Shader* shader     = Component_GetShader(material->pso.sg_shader_id);
+            if (!material || !geo || !shader) continue; // incomplete mesh
+
+            // add to draw call list
+            G_DrawCall* d = graph->addDraw(dc_list);
+            float dist_from_camera
+              = 0.0; // ==optimize== sort opaque geometry front-to-back
+            d->sort_key = G_SortKey::create(false, G_RenderingLayer_World, material->id,
+                                            dist_from_camera, 1.0);
+
+            { // set bindgroup state
+                // @group(0)
+                R_BindFrameUniforms(light->frame_uniform_buffer, gctx, d, graph, shader,
+                                    scene, true);
+
+                // @group(1)
+                // ==optimize== only run fragment shader if alpha-test discard on
+                // material is true
+                R_Material::createBindGroupEntries(material, 1, graph, d, gctx);
+
+                // @group(2)
+                DrawUniforms* draw_uniform
+                  = (DrawUniforms*)(cpu_draw_uniform_list
+                                    + draw_uniform_idx * draw_uniform_size);
+                ++draw_uniform_idx;
+                *draw_uniform = { mesh->world, mesh->id, {} };
+                graph->bindBuffer(d, PER_DRAW_GROUP, 0, light->draw_storage_buffer, 0,
+                                  draw_uniform_size);
+
+                // @group(3) pulled vertex attribs
+                R_Geometry::addPullBindGroupEntries(geo, graph, d);
+
+                // ==optimize== after moving to dynamic bg offsets and sharing a single
+                // G_DynamicBuffer across all drawcalls for a frame, we will only need
+                // to upload the per-draw uniform data *once* per mesh, rather than once
+                // per mesh per pass that it appears in
+            }
+
+            { // set vertex info
+                d->instance_count = 1;
+
+                // populate index buffer
+                d->index_count    = R_Geometry::indexCount(geo);
+                bool indexed_draw = (d->index_count > 0);
+                if (indexed_draw) {
+                    d->index_buffer        = geo->gpu_index_buffer.buf;
+                    d->index_buffer_offset = 0;
+                    d->index_buffer_size   = geo->gpu_index_buffer.size;
+                } else {
+                    // TODO come up with a better way to set a custom number of
+                    // vertices to draw having -1 actually mean ALL is confusing 2
+                    // different states.
+                    u32 vertex_count                = R_Geometry::vertexCount(geo);
+                    bool user_provided_vertex_count = geo->vertex_count >= 0;
+                    d->vertex_count
+                      = user_provided_vertex_count ? geo->vertex_count : vertex_count;
+                }
+
+                // set vertex attributes
+                for (int vertex_slot = 0;
+                     vertex_slot < ARRAY_LENGTH(geo->gpu_vertex_buffers);
+                     ++vertex_slot) {
+                    GPU_Buffer* gpu_buffer = &geo->gpu_vertex_buffers[vertex_slot];
+                    if (gpu_buffer->buf && gpu_buffer->size > 0)
+                        graph->vertexBuffer(d, vertex_slot, gpu_buffer->buf, 0,
+                                            gpu_buffer->size);
                 }
             }
+
+            // set pso
+            // ==optimize== create duplicate shader that only has vertex shader, no
+            // fragment
+            d->pipelineDesc(material->pso.sg_shader_id, material->pso.cull_mode,
+                            material->pso.primitive_topology, false);
         }
     }
+
     // validation
-    for (int i; i < ARRAY_LENGTH(shadow_map_write_indices); ++i) {
+    for (int i = 0; i < ARRAY_LENGTH(shadow_map_write_indices); ++i) {
         ASSERT(shadow_map_counts_by_type[i] == shadow_map_write_indices[i]);
     }
-#endif
 }
 
 void R_Scene::registerMesh(R_Scene* scene, R_Transform* mesh)
@@ -1978,7 +2086,8 @@ R_Buffer* Component_CreateBuffer(SG_ID id)
     return buffer;
 }
 
-R_Light* Component_CreateLight(SG_ID id, SG_LightDesc* desc)
+R_Light* Component_CreateLight(SG_ID id, SG_LightDesc* desc, WGPUDevice device,
+                               WGPULimits* limits)
 {
     R_Light* light = ARENA_PUSH_ZERO_TYPE(&lightArena, R_Light);
 
@@ -1986,6 +2095,19 @@ R_Light* Component_CreateLight(SG_ID id, SG_LightDesc* desc)
 
     // light init
     light->desc = *desc;
+    light->shadow_render_id_set
+      = hashmap_new_simple(sizeof(SG_ID), hashSGID, compareSGIDs);
+    light->draw_storage_buffer = NULL;
+
+    // init frame uniform buffer
+    char label[64];
+    snprintf(label, sizeof(label), "Light[%d] Frame Uniform Buffer", id);
+    WGPUBufferDescriptor buffer_desc = {};
+    buffer_desc.label                = label;
+    buffer_desc.usage           = WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst;
+    buffer_desc.size            = NEXT_MULT4(sizeof(FrameUniforms));
+    light->frame_uniform_buffer = wgpuDeviceCreateBuffer(device, &buffer_desc);
+    ASSERT(light->frame_uniform_buffer);
 
     // store offset
     R_Location loc = { light->id, Arena::offsetOf(&lightArena, light), &lightArena };
@@ -3091,16 +3213,14 @@ void R_Font::prepareGlyphsForText(GraphicsContext* gctx, R_Font* font, const cha
     }
 }
 
-// ===================================
-// R_Pass
-// ===================================
-void R_Pass::bindFrameUniforms(R_Pass* pass, G_DrawCall* d, G_Graph* graph,
-                               R_Shader* shader, R_Scene* scene)
+void R_BindFrameUniforms(WGPUBuffer frame_uniform_buffer, GraphicsContext* gctx,
+                         G_DrawCall* d, G_Graph* graph, R_Shader* shader,
+                         R_Scene* scene, bool is_shadow_pass)
 {
     // group(0) must be bound if group(1) is (no holes in bindgroups allowed)
     // so for now we always bind the per-frame uniforms
-    graph->bindBuffer(d, PER_FRAME_GROUP, 0, pass->frame_uniform_buffer, 0,
-                      wgpuBufferGetSize(pass->frame_uniform_buffer));
+    graph->bindBuffer(d, PER_FRAME_GROUP, 0, frame_uniform_buffer, 0,
+                      sizeof(FrameUniforms));
 
     if (scene) {
         if (shader->includes.lit)
@@ -3110,8 +3230,31 @@ void R_Pass::bindFrameUniforms(R_Pass* pass, G_DrawCall* d, G_Graph* graph,
         if (shader->includes.uses_env_map) {
             R_Texture* envmap = Component_GetTexture(scene->sg_scene_desc.env_map_id);
             ASSERT(envmap && envmap->gpu_texture)
-            graph->bindTexture(d, PER_FRAME_GROUP, 2,
-                               { envmap->gpu_texture, 0, 1, 0, 6 });
+            graph->bindTexture(
+              d, PER_FRAME_GROUP, 2,
+              { envmap->gpu_texture, WGPUTextureViewDimension_Cube, 0, 1, 0, 6 });
+        }
+
+        if (shader->includes.shadows) {
+            graph->bindSampler(d, PER_FRAME_GROUP, 3, gctx->shadow_comparison_sampler);
+
+            // use sentinel shadow map in shadowpass because we cannot bind the
+            // actual shadow map as both depth target and render attachment
+            WGPUTexture spot_shadow_map_array
+              = is_shadow_pass ? gctx->sentinel_spotlight_depth_2d_array :
+                                 scene->spot_shadow_map_array;
+            graph->bindTexture(
+              d, 0, 4,
+              { spot_shadow_map_array, WGPUTextureViewDimension_2DArray, 0, 1, 0,
+                (int)wgpuTextureGetDepthOrArrayLayers(spot_shadow_map_array) });
+
+            // WGPUTexture texture; // refcounted, ensures that WGPUTexture address is
+            // not reused
+            //                      // so long as its in the G_Cache
+            // int base_mip_level    = 0;
+            // int mip_level_count   = 1;
+            // int base_array_layer  = 0;
+            // int array_layer_count = 1;
         }
     }
 }

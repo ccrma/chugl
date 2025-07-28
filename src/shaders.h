@@ -51,16 +51,21 @@ struct ShaderEntry {
 // #define STRINGIFY(s) #s
 // #define INTERPOLATE(var) STRINGIFY(${##var##})
 
+// TODO try removing num_lights and use arrayLength(&u_lights) instead
 struct FrameUniforms {
+    // camera
     glm::mat4x4 projection;                             // at byte offset 0
     glm::mat4x4 view;                                   // at byte offset 64
     glm::mat4x4 projection_view_inverse_no_translation; // at byte offset 128
     glm::vec3 camera_pos;                               // at byte offset 192
     float _pad0;
+
+    // lighting
     glm::vec3 ambient_light;    // at byte offset 208
     int32_t num_lights;         // at byte offset 220
     glm::vec4 background_color; // at byte offset 224
 
+    // general frame info
     glm::ivec3 resolution;  // at byte offset 240
     float time;             // at byte offset 252
     float delta_time;       // at byte offset 256
@@ -70,6 +75,21 @@ struct FrameUniforms {
     float sample_rate;      // at byte offset 280
     float _pad1;
 };
+
+void FrameUniforms_ZeroCameraFields(FrameUniforms* f)
+{
+    f->projection                             = {};
+    f->view                                   = {};
+    f->projection_view_inverse_no_translation = {};
+    f->camera_pos                             = {};
+}
+
+void FrameUniforms_ZeroLightingFields(FrameUniforms* f)
+{
+    f->ambient_light    = {};
+    f->num_lights       = 0;
+    f->background_color = {};
+}
 
 struct LightUniforms {
     glm::vec3 color;    // at byte offset 0
@@ -82,6 +102,11 @@ struct LightUniforms {
     float spot_cos_angle_min;     // at byte offset 52
     float spot_cos_angle_max;     // at byte offset 56
     float spot_angular_falloff;
+
+    glm::mat4x4 proj_view;     // at byte offset 64
+    int32_t generates_shadows; // at byte offset 128
+    int32_t shadow_map_idx;    // at byte offset 132
+    float _pad1[2];
 };
 
 // struct DrawUniforms {
@@ -163,6 +188,11 @@ static std::unordered_map<std::string, std::string> shader_table = {
             spot_cos_angle_min: f32,
             spot_cos_angle_max: f32,
             spot_angular_falloff: f32,
+
+            // shadow info
+            proj_view: mat4x4f,
+            generates_shadows: i32,
+            shadow_map_array_layer: i32,
         };
 
         @group(0) @binding(1) var<storage, read> u_lights: array<LightUniforms>;
@@ -181,7 +211,8 @@ static std::unordered_map<std::string, std::string> shader_table = {
 
         struct DrawUniforms {
             model: mat4x4f,
-            id: u32
+            id: u32,
+            // receives_shadow: i32, // TODO!!
         };
 
         @group(2) @binding(0) var<storage> u_draw_instances: array<DrawUniforms>;
@@ -505,6 +536,9 @@ static const char* phong_shader_string = R"glsl(
     #include STANDARD_VERTEX_OUTPUT
     #include STANDARD_VERTEX_SHADER
 
+    @group(0) @binding(3) var shadow_sampler: sampler_comparison;
+    @group(0) @binding(4) var spot_shadow_map_array: texture_depth_2d_array;
+
     @group(1) @binding(0) var<uniform> u_specular_color : vec3f;
     @group(1) @binding(1) var<uniform> u_diffuse_color : vec4f;
     @group(1) @binding(2) var<uniform> u_shininess : f32; // range from (0, 2^n). must be > 0. logarithmic scale.
@@ -557,6 +591,36 @@ static const char* phong_shader_string = R"glsl(
     }
  
     #include NORMAL_MAPPING_FUNCTIONS
+
+    fn calculateSpotShadow(worldpos: vec3f, layer: i32, proj_view: mat4x4f) -> f32 {
+        let shadow_coord = proj_view * vec4f(worldpos, 1.0);
+        var p = shadow_coord.xyz / shadow_coord.w;
+        // Y is flipped because texture coords are Y-down.
+        p = vec3(
+            p.xy * vec2(0.5, -0.5) + vec2(0.5),
+            p.z
+        );
+
+        // Percentage-closer filtering. Sample texels in the region
+        // to smooth the result.
+        var visibility = 0.0;
+        let oneOverShadowDepthTextureSize = 1.0 / f32(textureDimensions(spot_shadow_map_array).x);
+        for (var y = -1; y <= 1; y++) {
+            for (var x = -1; x <= 1; x++) {
+                let offset = vec2<f32>(vec2(x, y)) * oneOverShadowDepthTextureSize;
+
+                visibility += textureSampleCompare(
+                    spot_shadow_map_array, shadow_sampler,
+                    p.xy + offset, // coords
+                    layer, // array layer
+                    p.z - 0.007 // shadowBias
+                );
+            }
+        }
+        visibility /= 9.0;
+
+        return visibility;
+    }
 
 // main =====================================================================================
     @fragment 
@@ -624,6 +688,11 @@ static const char* phong_shader_string = R"glsl(
                         (light.spot_cos_angle_max - light.spot_cos_angle_min)
                     );
                     attenuation *= pow((1.0 - t), light.spot_angular_falloff);
+
+                    let receives_shadow = true;
+                    if (receives_shadow && bool(light.generates_shadows)) { // shadowing (TODO gate behind receives_shadow)
+                        attenuation *= calculateSpotShadow(in.v_worldpos, light.shadow_map_array_layer, light.proj_view);
+                    }
                 }
                 default: {} // no light
             } // end switch light type
@@ -632,9 +701,6 @@ static const char* phong_shader_string = R"glsl(
             let specular_factor = saturate(pow(saturate(dot(normal, halfwaydir)), u_shininess));
             lighting += (light.color * attenuation) * (diffuse_color * diffuse_factor + specular_color.rgb * specular_factor);
         }  // end light loop
-
-        // ambient light
-        lighting += u_frame.ambient_light * diffuse_color;
 
         // calculate envmap contribution
         if (u_envmap_blend != ENVMAP_BLEND_NONE) {
@@ -651,6 +717,9 @@ static const char* phong_shader_string = R"glsl(
                 lighting = mix(lighting, envMapContrib, u_envmap_intensity);
             }
         }
+
+        // ambient light
+        lighting += u_frame.ambient_light * diffuse_color;
 
         // emissive
         lighting += srgbToLinear(emissiveTex.rgb) * u_emission_color;

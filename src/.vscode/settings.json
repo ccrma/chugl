@@ -132,6 +132,7 @@
     "numeric": "cpp",
     "typeindex": "cpp",
     "__availability": "cpp",
-    "filesystem": "cpp"
+    "filesystem": "cpp",
+    "set": "cpp"
   }
 }

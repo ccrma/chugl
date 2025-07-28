@@ -1,5 +1,12 @@
 TODO
-- finish polishing slimes example
+- Shadow
+  - when going from castSHadow(true) to false, remember to clear that layer of the texture array
+    - or actually, just test with multiple light sources that toggling light.shadow(int) correctly disables shadow
+  - add GMesh.shadowed
+  - add basic ortho DirLight shadow
+    - nothing smart for now, just reasonable defaults on ortho extents and ability to set via DirLight API
+
+- bug: setting spotlight angle isn't converted from degrees to radians
 - finish split screen example
 - test shadertoy example in release mode, make sure we still get shader compilation errors
   - is there a way to detect a compile error and switch to default magenta? otherwise just crash
@@ -71,6 +78,9 @@ lets us sort by shaders as well to minimize pipeline switches
   - watch j.blow devlog implementing animation!
 - study jdh retro games from scratch (minecraft, doom), impl as chugl examples?
 - Implement C preprocessor as separate project, add to chugl shader processor
+  - simple: determine in @group(0) frame uniforms which @groups(x) are used, so that when binding frame uniforms we can ignore unused;
+    - this is a simpler than generaeting a WGPUPipelineLayout, it's just checking to see if a binding variable string name appears in
+    the body of a vertex or frag shader
 - for PBR, IBL
   - see webgpu-typescript-starter notes.txt
   - anything we can use from https://github.com/google/filament
@@ -147,7 +157,8 @@ I think the move for now is to manually apply gamma curve in post-process, and d
   
 === Lighting and Shadows ========================
 
-- remember to add and test inv normal matrix for correct shading on meshes with non-uniform scale
+- remember to add and test inv normal matrix for correct shading on meshes with non-uniform or negative scale
+  - see: https://www.scratchapixel.com/lessons/3d-basic-rendering/transforming-objects-using-matrices/using-4x4-matrices-transform-objects-3D.html
 - add spotlight and new pointlight attenuation factor to PBRMaterial shader
 
 

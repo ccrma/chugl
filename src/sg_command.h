@@ -163,6 +163,9 @@ enum SG_CommandType : u32 {
     // light
     SG_COMMAND_LIGHT_UPDATE,
 
+    // shadows
+    SG_COMMAND_SHADOW_ADD_MESH,
+
     // video
     SG_COMMAND_VIDEO_UPDATE,
     SG_COMMAND_VIDEO_SEEK,
@@ -543,6 +546,14 @@ struct SG_Command_LightUpdate : public SG_Command {
     SG_LightDesc desc;
 };
 
+// shadow commands -----------------------------------------------------
+
+struct SG_Command_ShadowAddMesh : public SG_Command {
+    SG_ID light_id;
+    int mesh_id_list_len;
+    ptrdiff_t mesh_id_list_offset;
+};
+
 // video commands -----------------------------------------------------
 struct SG_Command_VideoUpdate : public SG_Command {
     SG_ID video_id;
@@ -727,6 +738,10 @@ void CQ_PushCommand_BufferWrite(SG_Buffer* buffer, Chuck_ArrayFloat* data,
 
 // light
 void CQ_PushCommand_LightUpdate(SG_Light* light);
+
+// shadow
+void CQ_PushCommand_ShadowAddMesh(SG_Light* light, SG_Transform* xform,
+                                  bool add_children);
 
 // video
 void CQ_PushCommand_VideoUpdate(SG_Video* video);
