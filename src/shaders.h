@@ -735,6 +735,9 @@ static const char* phong_shader_string = R"glsl(
             lighting += (light.color * attenuation) * (diffuse_color * diffuse_factor + specular_color.rgb * specular_factor);
         }  // end light loop
 
+        // ambient light
+        lighting += u_frame.ambient_light * diffuse_color;
+
         // calculate envmap contribution
         if (u_envmap_blend != ENVMAP_BLEND_NONE) {
             let envMapContrib = envMapContribution(viewDir, normal);
@@ -750,9 +753,6 @@ static const char* phong_shader_string = R"glsl(
                 lighting = mix(lighting, envMapContrib, u_envmap_intensity);
             }
         }
-
-        // ambient light
-        lighting += u_frame.ambient_light * diffuse_color;
 
         // emissive
         lighting += srgbToLinear(emissiveTex.rgb) * u_emission_color;
