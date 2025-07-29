@@ -55,6 +55,7 @@ doc.addGroup(
         "GLight", 
         "GPointLight", 
         "GDirLight", 
+        "GSpotLight",
         "GCamera",
         "GOrbitCamera",
         "GFlyCamera",
@@ -137,6 +138,7 @@ doc.addGroup(
     [ 
         "GPass",
         "RenderPass",
+        "ScenePass",
         "ScreenPass",
         "OutputPass",
         "ComputePass",
@@ -294,4 +296,4 @@ doc.addGroup(
 doc.sort(true);
 
 // generate
-doc.outputToDir( ".", "ChuGL [alpha] API Reference (v0.2.0)" );
+doc.outputToDir( ".", "ChuGL [alpha] API Reference (v0.2.6)" );
