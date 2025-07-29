@@ -165,8 +165,8 @@ static WGPUTextureView ImGui_ImplWGPU_GetTextureId(ImTextureID id, void* user)
     R_Texture* tex = Component_GetTexture(*(SG_ID*)&id);
     ASSERT(tex && tex->gpu_texture);
 
-    G_CacheTextureViewDesc desc = {};
-    desc.texture                = tex->gpu_texture;
+    G_CacheTextureViewDesc desc = { 0 };
+    desc = { tex->gpu_texture, WGPUTextureViewDimension_2D, 0, 1, 0, 1 };
     return cache->textureView(desc);
 }
 

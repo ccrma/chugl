@@ -609,7 +609,7 @@ while (1) {
 
             UI.getContentRegionAvail() => vec2 size;
 
-            (size.x / 56) $ int => int num_cols;
+            (size.x / 60) $ int => int num_cols;
             (pokemon_list.size() / num_cols) + 1 => int num_rows;
 
             UI.pushStyleVar(UI_StyleVar.ItemSpacing, @(0,0));

@@ -1636,8 +1636,28 @@ struct G_Cache {
             while (hashmap_iter(texture_view_map, &texview_map_idx_DONT_USE,
                                 (void**)&cache_tv)) {
                 if (--cache_tv->val.frames_till_expired <= 0) {
-                    *ARENA_PUSH_TYPE(&deletion_queue, G_CacheTextureViewDesc)
-                      = cache_tv->key;
+                    
+                    // sanity check the WGPUTexture is still good (heuristic)
+#ifdef CHUGL_DEBUG
+                    u32 sc = wgpuTextureGetSampleCount(cache_tv->key.texture);
+                    ASSERT(sc == 1 || sc == 4); // webgpu only allows 4xMSAA
+#endif
+                    
+                    G_CacheTextureViewDesc* desc = ARENA_PUSH_TYPE(&deletion_queue, G_CacheTextureViewDesc);
+                    memcpy(desc, &cache_tv->key, sizeof(*desc));
+                    
+                    // on macos this * copy doesn't zero out struct padding, results in undefined behavior
+                    // *desc = cache_tv->key;
+                    
+                    // sanity check that bits+padding were copied correctly
+#ifdef CHUGL_DEBUG
+                    if (memcmp(desc, &cache_tv->key, sizeof(*desc)) != 0) {
+                        hexDump("copied G_CacheTextureViewDesc", desc, sizeof(*desc));
+                        hexDump("original G_CacheTextureViewDesc", &cache_tv->key, sizeof(cache_tv->key));
+                        printf("dimensions %dx%d\n", wgpuTextureGetWidth(cache_tv->key.texture),wgpuTextureGetHeight(cache_tv->key.texture));
+                        ASSERT(0);
+                    }
+#endif
                 }
             }
             int num_to_delete = ARENA_LENGTH(&deletion_queue, G_CacheTextureViewDesc);
