@@ -1,12 +1,8 @@
-- fix pokemon on mac
-- fix pokemon sprites being cut off
-
 TODO
 - Shadow
-  - add basic ortho DirLight shadow
-    - nothing smart for now, just reasonable defaults on ortho extents and ability to set via DirLight API
   - add shadowNearPlane to SpotLight
-  - test head-on with dirlight shadow, make sure no self-shadowing (if so re-add bias to light projection matrix)
+
+- add file drag drop into GWindow (see Raylib model viewer example)
 
 - finish split screen example
 - test shadertoy example in release mode, make sure we still get shader compilation errors
