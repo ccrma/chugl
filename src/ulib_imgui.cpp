@@ -5342,6 +5342,7 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
     { // UI ---------------------------------------------------------------------
         QUERY->begin_class(QUERY, "UI", "Object");
         ADD_EX("deep/ckfxr.ck");
+        ADD_EX("deep/pokemon_cries.ck");
 
         // ChuGL widgets
         SFUN(ui_scenegraph, "void", "scenegraph");

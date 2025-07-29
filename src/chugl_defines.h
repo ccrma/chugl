@@ -1,7 +1,7 @@
 #pragma once
 
 // ChuGL version string
-#define CHUGL_VERSION_STRING "0.2.5 (alpha)"
+#define CHUGL_VERSION_STRING "0.2.6 (alpha)"
 
 #define CHUGL_RENDERGRAPH_MAX_PASSES 32
 #define CHUGL_MATERIAL_MAX_BINDINGS 32 // @group(1) @binding(0 - 31)

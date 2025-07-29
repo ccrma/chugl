@@ -421,6 +421,7 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
           "Compute pass for running compute shaders. Note that unlike Materials, "
           "all Compute Pass bindings must be bound under @group(0), NOT @group(1)");
         ADD_EX("rendergraph/boids_compute.ck");
+        ADD_EX("rendergraph/slime.ck");
 
         CTOR(computepass_ctor_with_shader);
         ARG(SG_CKNames[SG_COMPONENT_SHADER], "shader");

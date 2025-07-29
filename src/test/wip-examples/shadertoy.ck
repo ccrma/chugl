@@ -52,7 +52,7 @@
         // return vec4f(col, 1.0);
     }
 " => string screen_shader;
-// screen_pass.clear(false);
+
 ShaderDesc desc;
 screen_shader => desc.vertexCode;
 screen_shader => desc.fragmentCode;

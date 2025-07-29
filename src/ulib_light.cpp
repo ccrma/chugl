@@ -98,6 +98,7 @@ static void ulib_light_query(Chuck_DL_Query* QUERY)
     DOC_CLASS("Base class for all light components.");
     ADD_EX("basic/light.ck");
     ADD_EX("basic/pbr.ck");
+    ADD_EX("deep/shadows.ck");
 
     static t_CKINT light_type_directional = SG_LightType_Directional;
     static t_CKINT light_type_point       = SG_LightType_Point;

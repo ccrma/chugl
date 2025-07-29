@@ -428,6 +428,7 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
       "Chugl material types. Represents uniforms/textures/buffers that are passed into "
       "a given shader");
     ADD_EX("basic/geo_and_mat.ck");
+    ADD_EX("basic/transparency.ck");
 
     CTOR(material_ctor);
 
