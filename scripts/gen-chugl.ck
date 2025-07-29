@@ -256,6 +256,7 @@ doc.addGroup(
     "GPU Buffer wrappers for ChuGL"
 );
 
+/*
 doc.addGroup(
     // class names
     [
@@ -291,6 +292,7 @@ doc.addGroup(
     // group description
     "Box2D physics engine"
 );
+*/
 
 // sort for now until order is preserved by CKDoc
 doc.sort(true);
