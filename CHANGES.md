@@ -10,7 +10,6 @@
   - `RenderPass` is now the base class of `ScenePass` (which renderas a GScene to a target texture, formerly this was called `RenderPass`) and `ScreenPass` (which renders a full-screen quad, useful for post processing effects)
   - Added new `RenderPass` methods `.clear()`, `.scissor()`, `.scissorNormalized()`, `.viewport()` and `.viewportNormalized()` 
   - Added `ScenePass.msaa(int)` which can be used to toggle MSAA antialiasing
-  - See example [TODO]
   - Add resolution, time, delta_time, frame_count, mouse state, and chuck VM sample rate info to shader #FRAME_UNIFORMS. Simplifies writing generative shaders in shadertoy-style.
 - UI improvements:
   - Add `UI.knob(...)` widgets
@@ -42,4 +41,3 @@
   - Large architecture refactor to use a rendergraph + gpu resource cache + sorted drawcall structs to organize and dispatch GPU commands.
     - Inspired by [this blog](https://blog.mecheye.net/2023/09/how-to-write-a-renderer-for-modern-apis/) and the [noclip.website renderer](https://github.com/magcius/gfxrlz)
     - Caching GPU resources (namely BindGroups and TextureViews) significantly improves performance and increases the maximum number of draw calls that can be issued each frame
-      - See here [TODO] for a performance analysis of the cost of recreating bindgroups every frame in WebGPU
