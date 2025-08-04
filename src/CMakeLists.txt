@@ -179,16 +179,14 @@ else()
         -Wno-unused-function
 
         -Wno-deprecated-declarations
-        -Wno-compound-token-split-by-macro
         -Wno-sign-compare
         -Wno-unused-but-set-variable
+        -Wno-unused-value
     )
 
     if (LINUX)
         target_compile_options(chugl_shared_properties INTERFACE
             # gcc ignores
-            -Wno-compound-token-split-by-macro
-            -Wno-unused-value
             -Wno-strict-aliasing
             -Wno-stringop-truncation
             -Wno-type-limits
@@ -198,9 +196,9 @@ else()
             -Wno-implicit-fallthrough
             -Wno-format-truncation
             -Wno-stringop-overflow
-        
-            # clang ignores
-            -Wno-implicit-const-int-float-conversion
+            -Wno-format
+            -Wno-class-memaccess
+            -Wno-strict-aliasing
         )
          
     
