@@ -128,6 +128,7 @@ typedef double f64;
 
 // next multiple of m, m must be power of 2
 #define NEXT_MULT4(x) (((x) + 3) & ~(3)) // rounds up to multiple of 4
+#define NEXT_MULT8(x) (((x) + 7) & ~(7)) // rounds up to multiple of 8
 #define NEXT_MULT_POW2(x, m) (((x) + (m) - 1) & ~((m) - 1))
 
 #define ALIGN_NON_POW2(n, m) ((((n) + ((m) - 1)) / (m)) * (m))

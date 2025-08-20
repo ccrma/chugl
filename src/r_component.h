@@ -1719,11 +1719,20 @@ struct G_SortKey {
     const static u32 DEPTH_MASK      = 0x00FFFFFF;
     const static u32 MAX_DEPTH       = 1000; // should be far plane of camera
 
+    static bool transparent(u64 sort_key)
+    {
+        return sort_key & TRANLUCENT_MASK;
+    }
+
     static u64 create(bool translucent, u8 layer, R_ID material_id, float depth,
                       float camera_far)
     {
         // validate
         ASSERT(layer <= LAYER_MASK);
+        u64 material_mask
+          = (u64)material_id; // necessary to avoid undefined behavior
+                              // when bitwise ORing a u64 with an i32=R_ID
+        ASSERT(memcmp(&material_mask, &material_id, sizeof(material_id)) == 0);
 
         u64 sort_key = 0;
         sort_key |= (u64)(layer & LAYER_MASK) << 56ULL;
@@ -1741,10 +1750,10 @@ struct G_SortKey {
         if (translucent) {
             sort_key |= TRANLUCENT_MASK;
             sort_key |= ((u64)depth_key << 32ULL);
-            sort_key |= material_id;
+            sort_key |= material_mask;
         } else {
             sort_key |= depth_key;
-            sort_key |= (material_id << 24);
+            sort_key |= (material_mask << 24);
         }
 
         return sort_key;
@@ -1845,6 +1854,9 @@ struct G_DrawCallList {
             if (d->instance_count == 0) log_warn("drawcall instance count of 0");
             if (draw_indexed && d->index_count == 0)
                 log_warn("drawcall index count of 0");
+            // sortkey should match pipeline desc
+            ASSERT(d->_pipeline_desc.is_transparent
+                   == G_SortKey::transparent(d->sort_key));
 #endif
 
             G_CacheRenderPipeline* cached_pipeline = cache->renderPipeline(
@@ -1856,19 +1868,19 @@ struct G_DrawCallList {
               },
               device);
 
-            { // print drawcall
-              // printf("sort key: %llx\n", d->sort_key);
-              // for (int i = 0; i < ARRAY_LENGTH(d->bg_list); ++i) {
-              //     printf("@group(%d) start: %d count: %d\n", i,
-              //     d->bg_list[i].start,
-              //            d->bg_list[i].count);
-              // }
-              // printf(
-              //   "PipelineDesc:\n"
-              //   "   shader_id: %d\n"
-              //   "   is_transparent: %d\n",
-              //   d->_pipeline_desc.sg_shader_id, d->_pipeline_desc.is_transparent);
-            }
+            // { // print drawcall
+            //     printf("sort key: %llx\n", d->sort_key);
+            //     for (int i = 0; i < ARRAY_LENGTH(d->bg_list); ++i) {
+            //         printf("@group(%d) start: %d count: %d\n", i,
+            //         d->bg_list[i].start,
+            //                d->bg_list[i].count);
+            //     }
+            //     printf(
+            //       "PipelineDesc:\n"
+            //       "   shader_id: %d\n"
+            //       "   is_transparent: %d\n",
+            //       d->_pipeline_desc.sg_shader_id, d->_pipeline_desc.is_transparent);
+            // }
 
             // set pipeline
             wgpuRenderPassEncoderSetPipeline(pass_encoder,

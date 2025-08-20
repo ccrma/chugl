@@ -127,7 +127,7 @@ static bool _CQ_ReadCommandQueueIterImpl(CQ& cq, SG_Command** command)
            && *command < (SG_Command*)Arena::top(cq.read_q));
 
     // at last element
-    if ((*command)->nextCommandOffset == cq.read_q->curr) {
+    if ((*command)->nextCommandOffset >= cq.read_q->curr) {
         *command = NULL;
         return false;
     }
@@ -180,25 +180,33 @@ void* CQ_ReadCommandGetOffset(u64 byte_offset, bool which = false)
 
 #define BEGIN_COMMAND(cmd_type, cmd_enum)                                              \
     spinlock::lock(&cq.write_q_lock);                                                  \
-    cmd_type* command = ARENA_PUSH_TYPE(cq.write_q, cmd_type);                         \
-    command->type     = cmd_enum;
+    int __pad = NEXT_MULT8(cq.write_q->curr) - cq.write_q->curr;                       \
+    cmd_type* command                                                                  \
+      = (cmd_type*)((char*)Arena::push(cq.write_q, sizeof(cmd_type) + __pad) + __pad); \
+    command->type = cmd_enum;
 
 #define BEGIN_COMMAND_ADDITIONAL_MEMORY(cmd_type, cmd_enum, additional_bytes)          \
     spinlock::lock(&cq.write_q_lock);                                                  \
+    int __pad = NEXT_MULT8(cq.write_q->curr) - cq.write_q->curr;                       \
     cmd_type* command                                                                  \
-      = (cmd_type*)Arena::push(cq.write_q, sizeof(cmd_type) + (additional_bytes));     \
+      = (cmd_type*)((char*)Arena::push(cq.write_q,                                     \
+                                       sizeof(cmd_type) + (additional_bytes) + __pad)  \
+                    + __pad);                                                          \
     void* memory  = (void*)(command + 1);                                              \
     command->type = cmd_enum;
 
 #define BEGIN_COMMAND_ADDITIONAL_MEMORY_ZERO(cmd_type, cmd_enum, additional_bytes)     \
     spinlock::lock(&cq.write_q_lock);                                                  \
+    int __pad = NEXT_MULT8(cq.write_q->curr) - cq.write_q->curr;                       \
     cmd_type* command                                                                  \
-      = (cmd_type*)Arena::pushZero(cq.write_q, sizeof(cmd_type) + (additional_bytes)); \
+      = (cmd_type*)((char*)Arena::pushZero(cq.write_q, sizeof(cmd_type)                \
+                                                         + (additional_bytes) + __pad) \
+                    + __pad);                                                          \
     void* memory  = (void*)(command + 1);                                              \
     command->type = cmd_enum;
 
 #define END_COMMAND()                                                                  \
-    command->nextCommandOffset = cq.write_q->curr;                                     \
+    command->nextCommandOffset = NEXT_MULT8(cq.write_q->curr);                         \
     spinlock::unlock(&cq.write_q_lock);
 
 void CQ_PushCommand_SetFixedTimestep(int fps)
@@ -375,18 +383,10 @@ void CQ_PushCommand_AddChild(SG_Transform* parent, SG_Transform* child)
     // execute change on audio thread side
     SG_Transform::addChild(parent, child);
 
-    spinlock::lock(&cq.write_q_lock);
-    {
-        // allocate memory
-        SG_Command_AddChild* command = ARENA_PUSH_TYPE(cq.write_q, SG_Command_AddChild);
-
-        // initialize memory
-        command->type              = SG_COMMAND_ADD_CHILD;
-        command->nextCommandOffset = cq.write_q->curr;
-        command->parent_id         = parent->id;
-        command->child_id          = child->id;
-    }
-    spinlock::unlock(&cq.write_q_lock);
+    BEGIN_COMMAND(SG_Command_AddChild, SG_COMMAND_ADD_CHILD);
+    command->parent_id = parent->id;
+    command->child_id  = child->id;
+    END_COMMAND();
 }
 
 void CQ_PushCommand_RemoveChild(SG_Transform* parent, SG_Transform* child)
@@ -396,19 +396,10 @@ void CQ_PushCommand_RemoveChild(SG_Transform* parent, SG_Transform* child)
     // execute change on audio thread side
     SG_Transform::removeChild(parent, child);
 
-    spinlock::lock(&cq.write_q_lock);
-    {
-        // allocate memory
-        SG_Command_RemoveChild* command
-          = ARENA_PUSH_TYPE(cq.write_q, SG_Command_RemoveChild);
-
-        // initialize memory
-        command->type              = SG_COMMAND_REMOVE_CHILD;
-        command->nextCommandOffset = cq.write_q->curr;
-        command->parent            = parent->id;
-        command->child             = child->id;
-    }
-    spinlock::unlock(&cq.write_q_lock);
+    BEGIN_COMMAND(SG_Command_RemoveChild, SG_COMMAND_REMOVE_CHILD);
+    command->parent = parent->id;
+    command->child  = child->id;
+    END_COMMAND();
 }
 
 void CQ_PushCommand_RemoveAllChildren(SG_Transform* parent)
@@ -420,52 +411,26 @@ void CQ_PushCommand_RemoveAllChildren(SG_Transform* parent)
 
 void CQ_PushCommand_SetPosition(SG_Transform* xform)
 {
-    spinlock::lock(&cq.write_q_lock);
-    {
-        // allocate memory
-        SG_Command_SetPosition* command
-          = ARENA_PUSH_TYPE(cq.write_q, SG_Command_SetPosition);
-
-        // initialize memory
-        command->type              = SG_COMMAND_SET_POSITION;
-        command->nextCommandOffset = cq.write_q->curr;
-        command->sg_id             = xform->id;
-        command->pos               = xform->pos;
-    }
-    spinlock::unlock(&cq.write_q_lock);
+    BEGIN_COMMAND(SG_Command_SetPosition, SG_COMMAND_SET_POSITION);
+    command->sg_id = xform->id;
+    command->pos   = xform->pos;
+    END_COMMAND();
 }
 
 void CQ_PushCommand_SetRotation(SG_Transform* xform)
 {
-    spinlock::lock(&cq.write_q_lock);
-    {
-        // allocate memory
-        SG_Command_SetRotation* command
-          = ARENA_PUSH_TYPE(cq.write_q, SG_Command_SetRotation);
-
-        // initialize memory
-        command->type              = SG_COMMAND_SET_ROTATATION;
-        command->nextCommandOffset = cq.write_q->curr;
-        command->sg_id             = xform->id;
-        command->rot               = xform->rot;
-    }
-    spinlock::unlock(&cq.write_q_lock);
+    BEGIN_COMMAND(SG_Command_SetRotation, SG_COMMAND_SET_ROTATATION);
+    command->sg_id = xform->id;
+    command->rot   = xform->rot;
+    END_COMMAND();
 }
 
 void CQ_PushCommand_SetScale(SG_Transform* xform)
 {
-    spinlock::lock(&cq.write_q_lock);
-    {
-        // allocate memory
-        SG_Command_SetScale* command = ARENA_PUSH_TYPE(cq.write_q, SG_Command_SetScale);
-
-        // initialize memory
-        command->type              = SG_COMMAND_SET_SCALE;
-        command->nextCommandOffset = cq.write_q->curr;
-        command->sg_id             = xform->id;
-        command->sca               = xform->sca;
-    }
-    spinlock::unlock(&cq.write_q_lock);
+    BEGIN_COMMAND(SG_Command_SetScale, SG_COMMAND_SET_SCALE);
+    command->sg_id = xform->id;
+    command->sca   = xform->sca;
+    END_COMMAND();
 }
 
 void CQ_PushCommand_SceneUpdate(SG_Scene* scene)
@@ -979,18 +944,9 @@ void CQ_PushCommand_PassDisconnect(SG_Pass* pass, SG_Pass* next_pass)
 
 void CQ_PushCommand_b2World_Set(b2_SimulateDesc desc)
 {
-    spinlock::lock(&cq.write_q_lock);
-    {
-        // allocate memory
-        SG_Command_b2World_Set* command
-          = ARENA_PUSH_TYPE(cq.write_q, SG_Command_b2World_Set);
-
-        // initialize memory
-        command->type              = SG_COMMAND_b2_WORLD_SET;
-        command->nextCommandOffset = cq.write_q->curr;
-        command->desc              = desc;
-    }
-    spinlock::unlock(&cq.write_q_lock);
+    BEGIN_COMMAND(SG_Command_b2World_Set, SG_COMMAND_b2_WORLD_SET);
+    command->desc = desc;
+    END_COMMAND();
 }
 
 void CQ_PushCommand_BufferUpdate(SG_Buffer* buffer)
