@@ -7,6 +7,7 @@
 //--------------------------------------------------------------------
 
 // Scene Setup =======================================================
+GG.rootPass() --> ScenePass sp(GG.scene()); // simple rendergraph, no OutputPass
 GOrbitCamera cam --> GG.scene();
 GG.scene().camera(cam);
 
@@ -46,6 +47,7 @@ UI_Float line_spacing(1.0);
 UI_Float text_scale(text.sca().x);
 UI_Bool text_rotate;
 UI_Float antialias(text.antialias());
+UI_Int characters(text.characters());
 
 // main loop
 while (true)
@@ -83,6 +85,10 @@ while (true)
 
         if (UI.slider("Antialias", antialias, 0, 50)) {
             text.antialias(antialias.val());
+        }
+
+        if (UI.inputInt("Characters", characters)) {
+            text.characters(characters.val());
         }
 
         UI.checkbox("Rotate Text", text_rotate);

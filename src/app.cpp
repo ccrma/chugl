@@ -1339,12 +1339,15 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Pass* pass, R_Camera* cam
                                          app->rendergraph.addDraw(dc_list);
 
         // populate index buffer
-        d->index_count    = R_Geometry::indexCount(geo);
-        bool indexed_draw = (d->index_count > 0);
+        bool indexed_draw = (R_Geometry::indexCount(geo) > 0);
         if (indexed_draw) {
-            d->index_buffer        = geo->gpu_index_buffer.buf;
-            d->index_buffer_offset = 0;
-            d->index_buffer_size   = geo->gpu_index_buffer.size;
+            bool user_provided_index_count = (geo->indices_count >= 0);
+            d->index_count                 = user_provided_index_count ?
+                                               MIN(R_Geometry::indexCount(geo), geo->indices_count) :
+                                               R_Geometry::indexCount(geo);
+            d->index_buffer                = geo->gpu_index_buffer.buf;
+            d->index_buffer_offset         = 0;
+            d->index_buffer_size           = geo->gpu_index_buffer.size;
         } else {
             // TODO come up with a better way to set a custom number of vertices to draw
             // having -1 actually mean ALL is confusing 2 different states.
@@ -1984,8 +1987,8 @@ static void _R_HandleCommand(App* app, SG_Command* command)
         case SG_COMMAND_GEO_SET_INDICES_COUNT: {
             SG_Command_GeometrySetIndicesCount* cmd
               = (SG_Command_GeometrySetIndicesCount*)command;
-            R_Geometry* geo   = Component_GetGeometry(cmd->sg_id);
-            geo->vertex_count = cmd->count;
+            R_Geometry* geo    = Component_GetGeometry(cmd->sg_id);
+            geo->indices_count = cmd->count;
         } break;
         case SG_COMMAND_GEO_SET_INDICES: {
             SG_Command_GeoSetIndices* cmd = (SG_Command_GeoSetIndices*)command;

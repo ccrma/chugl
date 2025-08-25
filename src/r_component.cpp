@@ -110,17 +110,17 @@ scenegraph will be skipped every frame!
 static SG_ID _componentIDCounter = 1; // reserve 0 for NULL
 
 // All R_IDs are negative to avoid conflict with positive SG_IDs
-static R_ID _R_IDCounter = -1; // reserve 0 for NULL.
+// static R_ID _R_IDCounter = -1; // reserve 0 for NULL.
 
 static SG_ID getNewComponentID()
 {
     return _componentIDCounter++;
 }
 
-static R_ID getNewRID()
-{
-    return _R_IDCounter--;
-}
+// static R_ID getNewRID()
+// {
+//     return _R_IDCounter--;
+// }
 
 // ============================================================================
 // Transform Component
@@ -1493,9 +1493,13 @@ void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene,
                   = 1; // shadow passes currently don't support instanced draws
 
                 // populate index buffer
-                d->index_count    = R_Geometry::indexCount(geo);
-                bool indexed_draw = (d->index_count > 0);
+                bool indexed_draw = (R_Geometry::indexCount(geo) > 0);
                 if (indexed_draw) {
+                    bool user_provided_index_count = (geo->indices_count >= 0);
+                    d->index_count
+                      = user_provided_index_count ?
+                          MIN(R_Geometry::indexCount(geo), geo->indices_count) :
+                          R_Geometry::indexCount(geo);
                     d->index_buffer        = geo->gpu_index_buffer.buf;
                     d->index_buffer_offset = 0;
                     d->index_buffer_size   = geo->gpu_index_buffer.size;
@@ -1887,19 +1891,9 @@ R_Text* Component_CreateText(GraphicsContext* gctx, FT_Library ft,
         ASSERT(mat);
 
         // init geometry
-        R_Geometry* geo = ARENA_PUSH_TYPE(&geoArena, R_Geometry);
-        {
-            *geo              = {};
-            geo->id           = getNewRID();
-            geo->type         = SG_COMPONENT_GEOMETRY;
-            geo->vertex_count = -1; // -1 means draw all vertices
-
-            // store offset
-            R_Location loc = { geo->id, Arena::offsetOf(&geoArena, geo), &geoArena };
-            const void* result = hashmap_set(r_locator, &loc);
-            ASSERT(result == NULL); // ensure id is unique
-            UNUSED_VAR(result);
-        }
+        R_Geometry* geo = Component_GetGeometry(cmd->geo_id);
+        ASSERT(geo);
+        ASSERT(geo->indices_count == -1);
 
         // init text
         text = ARENA_PUSH_ZERO_TYPE(&textArena,
@@ -1919,9 +1913,6 @@ R_Text* Component_CreateText(GraphicsContext* gctx, FT_Library ft,
             const void* result = hashmap_set(r_locator, &loc);
             ASSERT(result == NULL); // ensure id is unique
             UNUSED_VAR(result);
-
-            // make sure these are internal
-            ASSERT(text->_geoID < 0);
         }
     }
 
@@ -1980,9 +1971,10 @@ R_Geometry* Component_CreateGeometry(GraphicsContext* gctx, SG_ID geo_id)
 {
     R_Geometry* geo = ARENA_PUSH_ZERO_TYPE(&geoArena, R_Geometry);
 
-    geo->id           = geo_id;
-    geo->type         = SG_COMPONENT_GEOMETRY;
-    geo->vertex_count = -1; // -1 means draw all vertices
+    geo->id            = geo_id;
+    geo->type          = SG_COMPONENT_GEOMETRY;
+    geo->vertex_count  = -1; // -1 means draw all vertices
+    geo->indices_count = -1; // -1 means draw all vertices
 
     // for now not storing geo_type (cube, sphere, custom etc.)
     // we only store the GPU vertex data, and don't care about semantics

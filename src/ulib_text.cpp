@@ -64,6 +64,9 @@ CK_DLL_MFUN(gtext_get_antialias);
 CK_DLL_MFUN(gtext_set_alpha);
 CK_DLL_MFUN(gtext_get_alpha);
 
+CK_DLL_MFUN(gtext_set_max_characters);
+CK_DLL_MFUN(gtext_get_max_characters);
+
 void ulib_text_query(Chuck_DL_Query* QUERY)
 {
     BEGIN_CLASS("GText", SG_CKNames[SG_COMPONENT_TRANSFORM]);
@@ -157,6 +160,17 @@ void ulib_text_query(Chuck_DL_Query* QUERY)
     MFUN(gtext_get_alpha, "float", "alpha");
     DOC_FUNC("Get the alpha channel of the text color");
 
+    MFUN(gtext_set_max_characters, "void", "characters");
+    ARG("int", "max_characters");
+    DOC_FUNC(
+      "Set the number of characters to display for this text string. Useful for "
+      "gradually revealing a block of text, like RPG dialogue boxes");
+
+    MFUN(gtext_get_max_characters, "int", "characters");
+    DOC_FUNC(
+      "Get the number of characters to display for this text string. Defaults to "
+      "2^31-1");
+
     END_CLASS();
 }
 
@@ -177,13 +191,20 @@ CK_DLL_CTOR(gtext_ctor)
 
     // create gtext material
     Chuck_Object* material_ckobj
-      = chugin_createCkObj(SG_CKNames[SG_COMPONENT_MATERIAL], true);
+      = chugin_createCkObj(SG_CKNames[SG_COMPONENT_MATERIAL], false, SHRED);
     SG_Material* material = SG_CreateMaterial(material_ckobj, SG_MATERIAL_TEXT3D);
     OBJ_MEMBER_UINT(material_ckobj, component_offset_id) = material->id;
     CQ_PushCommand_MaterialCreate(material);
 
-    // assign material to text
+    Chuck_Object* geo_ckobj
+      = chugin_createCkObj(SG_CKNames[SG_COMPONENT_GEOMETRY], false, SHRED);
+    SG_Geometry* geo                                = SG_CreateGeometry(geo_ckobj);
+    OBJ_MEMBER_UINT(geo_ckobj, component_offset_id) = geo->id;
+    CQ_PushCommand_GeometryCreate(geo);
+
+    // assign to text mesh
     SG_Mesh::setMaterial(text, material);
+    SG_Mesh::setGeometry(text, geo);
 
     // get shader
     SG_Shader* gtext_shader = SG_GetShader(g_material_builtin_shaders.gtext_shader_id);
@@ -362,4 +383,19 @@ CK_DLL_MFUN(gtext_get_alpha)
     SG_Material* material = SG_GetMaterial(GET_TEXT(SELF)->_mat_id);
     glm::vec4 color       = material->uniforms[2].as.vec4f;
     RETURN->v_float       = color.a;
+}
+
+CK_DLL_MFUN(gtext_set_max_characters)
+{
+    t_CKINT count    = GET_NEXT_INT(ARGS) * 6;
+    count            = MAX(count, -1);
+    SG_Geometry* geo = SG_GetGeometry(GET_TEXT(SELF)->_geo_id);
+    geo->index_count = count;
+    CQ_PushCommand_GeometrySetIndicesCount(geo, count);
+}
+
+CK_DLL_MFUN(gtext_get_max_characters)
+{
+    int count     = SG_GetGeometry(GET_TEXT(SELF)->_geo_id)->index_count;
+    RETURN->v_int = count < 0 ? count : (count / 6);
 }

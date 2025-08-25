@@ -376,6 +376,9 @@ struct SG_Geometry : SG_Component {
     // buffers to hold pull data
     Arena vertex_pull_buffers[CHUGL_GEOMETRY_MAX_PULLED_VERTEX_BUFFERS];
 
+    int vertex_count = -1;
+    int index_count  = -1;
+
     static u32 vertexCount(SG_Geometry* geo);
     static u32 indexCount(SG_Geometry* geo);
 

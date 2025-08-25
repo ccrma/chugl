@@ -901,9 +901,11 @@ SG_Scene* SG_CreateScene(Chuck_Object* ckobj)
 
 SG_Geometry* SG_CreateGeometry(Chuck_Object* ckobj)
 {
-    Arena* arena     = &SG_GeoArena;
-    size_t offset    = arena->curr;
-    SG_Geometry* geo = ARENA_PUSH_ZERO_TYPE(arena, SG_Geometry);
+    Arena* arena      = &SG_GeoArena;
+    size_t offset     = arena->curr;
+    SG_Geometry* geo  = ARENA_PUSH_ZERO_TYPE(arena, SG_Geometry);
+    geo->vertex_count = -1;
+    geo->index_count  = -1;
 
     geo->id    = SG_GetNewComponentID();
     geo->type  = SG_COMPONENT_GEOMETRY;

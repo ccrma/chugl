@@ -62,6 +62,9 @@ CK_DLL_MFUN(geo_set_indices);
 CK_DLL_MFUN(geo_get_indices);
 
 CK_DLL_MFUN(geo_set_vertex_count);
+CK_DLL_MFUN(geo_get_vertex_count);
+CK_DLL_MFUN(geo_set_index_count);
+CK_DLL_MFUN(geo_get_index_count);
 
 CK_DLL_MFUN(geo_set_pulled_vertex_attribute);
 CK_DLL_MFUN(geo_set_pulled_vertex_attribute_vec2);
@@ -325,6 +328,20 @@ static void ulib_geometry_query(Chuck_DL_Query* QUERY)
       "Set the number of vertices to be drawn of this geometry by the renderer"
       "Default is -1, which means all vertices are drawn. Values will be clamped to "
       "the actual number of vertices in the geometry.");
+
+    MFUN(geo_get_vertex_count, "int", "vertexCount");
+    DOC_FUNC("Get the number of vertices to be drawn. Default is -1, which means all");
+
+    MFUN(geo_set_index_count, "void", "indexCount");
+    ARG("int", "count");
+    DOC_FUNC(
+      "If this geometry uses indexed drawing, i.e. Geometry.indices() is set, "
+      "set the number of indices to be drawn of this geometry by the renderer"
+      "Default is -1, which means all indices are drawn. Values will be clamped to "
+      "the actual number of indices in the geometry.");
+
+    MFUN(geo_get_index_count, "int", "indexCount");
+    DOC_FUNC("Get the number of indices to be drawn. Default is -1, which means all");
 
     END_CLASS();
 
@@ -1182,11 +1199,30 @@ CK_DLL_MFUN(geo_get_pulled_vertex_attribute_int)
 
 CK_DLL_MFUN(geo_set_vertex_count)
 {
-    t_CKINT count = GET_NEXT_INT(ARGS);
-
-    SG_Geometry* geo = SG_GetGeometry(OBJ_MEMBER_UINT(SELF, component_offset_id));
-
+    t_CKINT count     = GET_NEXT_INT(ARGS);
+    SG_Geometry* geo  = SG_GetGeometry(OBJ_MEMBER_UINT(SELF, component_offset_id));
+    geo->vertex_count = count;
     CQ_PushCommand_GeometrySetVertexCount(geo, count);
+}
+
+CK_DLL_MFUN(geo_get_vertex_count)
+{
+    RETURN->v_int
+      = SG_GetGeometry(OBJ_MEMBER_UINT(SELF, component_offset_id))->vertex_count;
+}
+
+CK_DLL_MFUN(geo_set_index_count)
+{
+    t_CKINT count    = GET_NEXT_INT(ARGS);
+    SG_Geometry* geo = SG_GetGeometry(OBJ_MEMBER_UINT(SELF, component_offset_id));
+    geo->index_count = count;
+    CQ_PushCommand_GeometrySetIndicesCount(geo, count);
+}
+
+CK_DLL_MFUN(geo_get_index_count)
+{
+    RETURN->v_int
+      = SG_GetGeometry(OBJ_MEMBER_UINT(SELF, component_offset_id))->index_count;
 }
 
 // Plane Geometry -----------------------------------------------------

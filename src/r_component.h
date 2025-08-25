@@ -1852,8 +1852,6 @@ struct G_DrawCallList {
 
 #ifdef CHUGL_DEBUG // drawcall validation
             if (d->instance_count == 0) log_warn("drawcall instance count of 0");
-            if (draw_indexed && d->index_count == 0)
-                log_warn("drawcall index count of 0");
             // sortkey should match pipeline desc
             ASSERT(d->_pipeline_desc.is_transparent
                    == G_SortKey::transparent(d->sort_key));
@@ -1940,8 +1938,9 @@ struct G_DrawCallList {
                 wgpuRenderPassEncoderSetIndexBuffer(
                   pass_encoder, d->index_buffer, WGPUIndexFormat_Uint32,
                   d->index_buffer_offset, d->index_buffer_size);
-                wgpuRenderPassEncoderDrawIndexed(pass_encoder, d->index_count,
-                                                 d->instance_count, 0, 0, 0);
+                wgpuRenderPassEncoderDrawIndexed(
+                  pass_encoder, MIN(d->index_count, d->index_buffer_size / 4),
+                  d->instance_count, 0, 0, 0);
             } else if (d->vertex_count > 0) {
                 wgpuRenderPassEncoderDraw(pass_encoder, d->vertex_count,
                                           d->instance_count, 0, 0);

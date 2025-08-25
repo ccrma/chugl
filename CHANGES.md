@@ -1,5 +1,10 @@
 # Changes
 
+## 0.2.7 (alpha)
+- add `Geometry.indexCount()` to control the number of indices drawn in an indexed draw
+- add `GText.characters(int)` to control the number of characters rendered on a GText
+- Bugfix: incorrect transparency sorting on scenes with a large number of materials
+
 ## 0.2.6 (alpha)
 
 - NEW: Transparency!! (alpha-blended and sorted back to front). See examples/basic/transparency.ck
