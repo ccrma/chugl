@@ -766,11 +766,20 @@ struct SG_Camera : SG_Transform {
 // gpu
 // ============================================================================
 
+enum SG_Text_AlignmentType : u32 {
+    SG_Text_AlignmentType_Left = 0,
+    SG_Text_AlignmentType_Center,
+    SG_Text_AlignmentType_Right,
+};
+
 struct SG_Text : public SG_Mesh {
     std::string font_path   = "";
     std::string text        = "";
     t_CKVEC2 control_points = { 0.5f, 0.5f };
     float vertical_spacing  = 1.0f;
+    float width;
+    SG_Text_AlignmentType alignment;
+    float size = 1.0f;
 };
 
 // ============================================================================

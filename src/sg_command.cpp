@@ -888,9 +888,11 @@ void CQ_PushCommand_TextRebuild(SG_Text* text)
     command->geo_id           = text->_geo_id;
     command->control_point    = { text->control_points.x, text->control_points.y };
     command->vertical_spacing = text->vertical_spacing;
-
-    char* text_copy = (char*)memory;
-    char* font_path = text_copy + text->text.length() + 1;
+    command->width            = text->width;
+    command->alignment        = text->alignment;
+    command->size             = text->size;
+    char* text_copy           = (char*)memory;
+    char* font_path           = text_copy + text->text.length() + 1;
 
     // copy strings
     strncpy(text_copy, text->text.c_str(), text->text.length());

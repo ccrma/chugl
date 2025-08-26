@@ -483,6 +483,9 @@ struct SG_Command_TextRebuild : public SG_Command {
     SG_ID geo_id;
     glm::vec2 control_point; // TODO do as material uniform
     float vertical_spacing;
+    float width;
+    SG_Text_AlignmentType alignment;
+    float size;
     ptrdiff_t font_path_str_offset;
     ptrdiff_t text_str_offset;
 };

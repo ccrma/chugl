@@ -67,6 +67,15 @@ CK_DLL_MFUN(gtext_get_alpha);
 CK_DLL_MFUN(gtext_set_max_characters);
 CK_DLL_MFUN(gtext_get_max_characters);
 
+CK_DLL_MFUN(gtext_set_width);
+CK_DLL_MFUN(gtext_get_width);
+
+CK_DLL_MFUN(gtext_set_align);
+CK_DLL_MFUN(gtext_get_align);
+
+CK_DLL_MFUN(gtext_set_size);
+CK_DLL_MFUN(gtext_get_size);
+
 void ulib_text_query(Chuck_DL_Query* QUERY)
 {
     BEGIN_CLASS("GText", SG_CKNames[SG_COMPONENT_TRANSFORM]);
@@ -120,13 +129,11 @@ void ulib_text_query(Chuck_DL_Query* QUERY)
     MFUN(gtext_set_control_points, "void", "controlPoints");
     ARG("vec2", "control_points");
     DOC_FUNC(
-      "Set control points for text. x = horizontal, y = verticalThe control point is a "
-      "ratio within the text's bounding box that determines where its origin isFor "
+      "Set control points for text. x = horizontal, y = vertical. The control point is "
+      "a ratio within the text's bounding box that determines where its origin is. For "
       "example, (0.5, 0.5) will place the origin at the center the text. (0.0, 0.0) "
-      "will "
-      "place the origin at the bottom-left of the text. (1.0, 1.0) will place the "
-      "origin at "
-      "the top-right of the text.");
+      "will place the origin at the bottom-left of the text. (1.0, 1.0) will place the "
+      "origin at the top-right of the text.");
 
     MFUN(gtext_get_control_points, "vec2", "controlPoints");
     DOC_FUNC(
@@ -170,6 +177,41 @@ void ulib_text_query(Chuck_DL_Query* QUERY)
     DOC_FUNC(
       "Get the number of characters to display for this text string. Defaults to "
       "2^31-1");
+
+    MFUN(gtext_set_width, "void", "width");
+    ARG("float", "width");
+    DOC_FUNC(
+      "Set the wrap width in absolute worldspace units of this text block. If a single "
+      "word exceeds this width, it will not be broken apart. Default 0.0, meaning no "
+      "text wrap");
+
+    MFUN(gtext_get_width, "float", "width");
+    DOC_FUNC(
+      "Get the wrap width in absolute worldspace units of this text block. Default "
+      "0.0, meaning no text wrap");
+
+    MFUN(gtext_set_align, "void", "align");
+    ARG("int", "alignment_mode");
+    DOC_FUNC(
+      "Set the alignment mode of the text. 0 for left, 1 for center, 2 for right. "
+      "Default 0 aka left. Only in effect if a wrap width is specified, i.e. "
+      "GText.width > 0");
+
+    MFUN(gtext_get_align, "int", "align");
+    DOC_FUNC(
+      "Get the alignment mode of the text. 0 for left, 1 for center, 2 for right. "
+      "Default 0 aka left. Only in effect if a wrap width is specified, i.e. "
+      "GText.width > 0");
+
+    MFUN(gtext_set_size, "void", "size");
+    ARG("float", "size");
+    DOC_FUNC(
+      "Set the font size scale. Default 1.0. Differs from setting GText.sca() in that "
+      "chaing GText.size() will restructure the text to fit within the wrapping "
+      "behaviour specified by GText.width() and GText.align()");
+
+    MFUN(gtext_get_size, "float", "size");
+    DOC_FUNC("Get the font size scale. Default 1.0");
 
     END_CLASS();
 }
@@ -398,4 +440,41 @@ CK_DLL_MFUN(gtext_get_max_characters)
 {
     int count     = SG_GetGeometry(GET_TEXT(SELF)->_geo_id)->index_count;
     RETURN->v_int = count < 0 ? count : (count / 6);
+}
+
+CK_DLL_MFUN(gtext_set_width)
+{
+    SG_Text* text = GET_TEXT(SELF);
+    text->width   = GET_NEXT_FLOAT(ARGS);
+
+    CQ_PushCommand_TextRebuild(text);
+}
+
+CK_DLL_MFUN(gtext_get_width)
+{
+    RETURN->v_float = GET_TEXT(SELF)->width;
+}
+
+CK_DLL_MFUN(gtext_set_align)
+{
+    SG_Text* text   = GET_TEXT(SELF);
+    text->alignment = (SG_Text_AlignmentType)GET_NEXT_INT(ARGS);
+    CQ_PushCommand_TextRebuild(text);
+}
+
+CK_DLL_MFUN(gtext_get_align)
+{
+    RETURN->v_int = GET_TEXT(SELF)->alignment;
+}
+
+CK_DLL_MFUN(gtext_set_size)
+{
+    SG_Text* text = GET_TEXT(SELF);
+    text->size    = GET_NEXT_FLOAT(ARGS);
+    CQ_PushCommand_TextRebuild(text);
+}
+
+CK_DLL_MFUN(gtext_get_size)
+{
+    RETURN->v_float = GET_TEXT(SELF)->size;
 }

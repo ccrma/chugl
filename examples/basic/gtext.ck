@@ -8,25 +8,28 @@
 
 // Scene Setup =======================================================
 GG.rootPass() --> ScenePass sp(GG.scene()); // simple rendergraph, no OutputPass
+
 GOrbitCamera cam --> GG.scene();
 GG.scene().camera(cam);
 
 GText text --> GG.scene();
-text.sca(.1);
-text.text("    PLANETFALL: INTERLOGIC Science Fiction
-    Copyright (c) 1983 by Infocom, Inc. All rights reserved.
-    PLANETFALL and INTERLOGIC are trademarks of Infocom, Inc.
-    Release 29 / Serial number 840118
+text.size(.1);
+text.text(
+"PLANETFALL: INTERLOGIC Science Fiction
+Copyright (c) 1983 by Infocom, Inc. All rights reserved.
+PLANETFALL and INTERLOGIC are trademarks of Infocom, Inc.
+Release 29 / Serial number 840118
 
-    ------------------------------------------------------------------------
+------
 
-    Another routine day of drugery aboard the Stellar Patrol Ship Feinstein.
-    This morning's assignment for a certain lowly Ensign Seventh Class:
-    scrubbing the filthy metal deck at the port end of Level Nine. With your
-    Patrol-issue self-contained multi-purpose all-weather scrub-brush you 
-    shine the floor with a diligence born of the knowledge that at any 
-    moment dreaded Ensign First CLass Blather, the bane of your shipboard
-    existence, could appear.");
+Another routine day of drugery aboard the Stellar Patrol Ship Feinstein.
+This morning's assignment for a certain lowly Ensign Seventh Class:
+scrubbing the filthy metal deck at the port end of Level Nine. With your
+Patrol-issue self-contained multi-purpose all-weather scrub-brush you
+shine the floor with a diligence born of the knowledge that at any
+moment dreaded Ensign First Class Blather, the bane of your shipboard
+existence, could appear."
+);
 
 UI_String text_input(text.text());
 
@@ -44,10 +47,27 @@ UI_Float4 text_color;
 [0.5, 0.5] @=> float control_points[];
 
 UI_Float line_spacing(1.0);
-UI_Float text_scale(text.sca().x);
+UI_Float text_size(text.size());
 UI_Bool text_rotate;
 UI_Float antialias(text.antialias());
 UI_Int characters(text.characters());
+UI_Float width(text.width());
+
+UI_Int alignment;
+[
+    "left",
+    "center",
+    "right"
+] @=> string alignments[];
+
+
+// background surface to show text alignment+wrapping
+FlatMaterial plane_mat;
+GMesh plane(new PlaneGeometry, plane_mat) --> GG.scene();
+plane_mat.color(Color.GRAY);
+plane.posZ(-.01);
+plane.scaY(100);
+plane.scaX(text.width());
 
 // main loop
 while (true)
@@ -79,8 +99,8 @@ while (true)
             text.spacing(line_spacing.val());
         }
 
-        if (UI.slider("Text Scale", text_scale, 0.01, 1.0)) {
-            text.sca(text_scale.val());
+        if (UI.slider("Size", text_size, 0.01, 2.0)) {
+            text.size(text_size.val());
         }
 
         if (UI.slider("Antialias", antialias, 0, 50)) {
@@ -89,6 +109,15 @@ while (true)
 
         if (UI.inputInt("Characters", characters)) {
             text.characters(characters.val());
+        }
+
+        if (UI.slider("Wrap Width", width, -2, 50)) {
+            plane.scaX(Math.max(0.0, width.val()));
+            text.width(width.val());
+        }
+
+        if (UI.listBox("Alignment", alignment, alignments, -1)) {
+            text.align(alignment.val());
         }
 
         UI.checkbox("Rotate Text", text_rotate);

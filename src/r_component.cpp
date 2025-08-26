@@ -1921,8 +1921,11 @@ R_Text* Component_CreateText(GraphicsContext* gctx, FT_Library ft,
       = std::string((const char*)CQ_ReadCommandGetOffset(cmd->text_str_offset));
     text->font_path
       = std::string((const char*)CQ_ReadCommandGetOffset(cmd->font_path_str_offset));
+    text->control_points   = cmd->control_point; // TODO remove
     text->vertical_spacing = cmd->vertical_spacing;
-    text->control_points   = cmd->control_point;
+    text->width            = cmd->width;
+    text->alignment        = cmd->alignment;
+    text->size             = cmd->size;
 
     R_Font* font = Component_GetFont(gctx, ft, text->font_path.c_str());
     if (!font) font = default_font;
@@ -2713,145 +2716,6 @@ FT_Face R_Font_loadFace(FT_Library library, const char* filename)
     return face;
 }
 
-void R_Font::rebuildVertexBuffers(R_Font* font, const char* mainText, float x, float y,
-                                  Arena* positions, Arena* uvs, Arena* glyph_indices,
-                                  Arena* indices, float verticalScale)
-{
-    float originalX = x;
-
-    FT_UInt previous = 0;
-    char* textIt     = (char*)mainText;
-    while (*textIt != '\0') {
-        uint32_t charcode = R_Font_decodeCharcode(&textIt);
-
-        if (charcode == '\r') continue;
-
-        if (charcode == '\n') {
-            x = originalX;
-            y -= verticalScale
-                 * ((float)font->face->height / (float)font->face->units_per_EM
-                    * font->worldSize);
-            continue;
-        }
-
-        auto glyphIt = font->glyphs.find(charcode);
-        Glyph& glyph
-          = (glyphIt == font->glyphs.end()) ? font->glyphs[0] : glyphIt->second;
-
-        if (previous != 0 && glyph.index != 0) {
-            FT_Vector kerning;
-            FT_Error error = FT_Get_Kerning(font->face, previous, glyph.index,
-                                            font->kerningMode, &kerning);
-            if (!error) {
-                x += (float)kerning.x / font->emSize * font->worldSize;
-            }
-        }
-
-        // Do not emit quad for empty glyphs (whitespace).
-        if (glyph.curveCount) {
-            FT_Pos d = (FT_Pos)(font->emSize * font->dilation);
-
-            float u0 = (float)(glyph.bearingX - d) / font->emSize;
-            float v0 = (float)(glyph.bearingY - glyph.height - d) / font->emSize;
-            float u1 = (float)(glyph.bearingX + glyph.width + d) / font->emSize;
-            float v1 = (float)(glyph.bearingY + d) / font->emSize;
-
-            float x0 = x + u0 * font->worldSize;
-            float y0 = y + v0 * font->worldSize;
-            float x1 = x + u1 * font->worldSize;
-            float y1 = y + v1 * font->worldSize;
-
-            u32 base                               = ARENA_LENGTH(positions, glm::vec2);
-            *ARENA_PUSH_TYPE(positions, glm::vec2) = glm::vec2(x0, y0);
-            *ARENA_PUSH_TYPE(positions, glm::vec2) = glm::vec2(x1, y0);
-            *ARENA_PUSH_TYPE(positions, glm::vec2) = glm::vec2(x1, y1);
-            *ARENA_PUSH_TYPE(positions, glm::vec2) = glm::vec2(x0, y1);
-
-            *ARENA_PUSH_TYPE(uvs, glm::vec2) = glm::vec2(u0, v0);
-            *ARENA_PUSH_TYPE(uvs, glm::vec2) = glm::vec2(u1, v0);
-            *ARENA_PUSH_TYPE(uvs, glm::vec2) = glm::vec2(u1, v1);
-            *ARENA_PUSH_TYPE(uvs, glm::vec2) = glm::vec2(u0, v1);
-
-            *ARENA_PUSH_TYPE(glyph_indices, u32) = glyph.bufferIndex;
-            *ARENA_PUSH_TYPE(glyph_indices, u32) = glyph.bufferIndex;
-            *ARENA_PUSH_TYPE(glyph_indices, u32) = glyph.bufferIndex;
-            *ARENA_PUSH_TYPE(glyph_indices, u32) = glyph.bufferIndex;
-
-            *ARENA_PUSH_TYPE(indices, u32) = base;
-            *ARENA_PUSH_TYPE(indices, u32) = base + 1;
-            *ARENA_PUSH_TYPE(indices, u32) = base + 2;
-            *ARENA_PUSH_TYPE(indices, u32) = base + 2;
-            *ARENA_PUSH_TYPE(indices, u32) = base + 3;
-            *ARENA_PUSH_TYPE(indices, u32) = base;
-        }
-
-        x += (float)glyph.advance / font->emSize * font->worldSize;
-        previous = glyph.index;
-    }
-}
-
-// ==optimize== consolidate with R_Font::rebuildBuffers
-// calculate vertices assuming control point 0,0, and determine BB at same time
-// after calculating bb, apply translation to vertices.
-BoundingBox R_Font::measure(float x, float y, const char* text, float verticalScale)
-{
-    BoundingBox bb = {};
-    bb.minX        = +std::numeric_limits<float>::infinity();
-    bb.minY        = +std::numeric_limits<float>::infinity();
-    bb.maxX        = -std::numeric_limits<float>::infinity();
-    bb.maxY        = -std::numeric_limits<float>::infinity();
-
-    float originalX = x;
-
-    FT_UInt previous = 0;
-    char* textIt     = (char*)text;
-    while (*textIt != '\0') {
-        uint32_t charcode = R_Font_decodeCharcode(&textIt);
-
-        if (charcode == '\r') continue;
-
-        if (charcode == '\n') {
-            x = originalX;
-            y -= verticalScale
-                 * ((float)face->height / (float)face->units_per_EM * worldSize);
-            continue;
-        }
-
-        auto glyphIt = glyphs.find(charcode);
-        Glyph& glyph = (glyphIt == glyphs.end()) ? glyphs[0] : glyphIt->second;
-
-        if (previous != 0 && glyph.index != 0) {
-            FT_Vector kerning;
-            FT_Error error
-              = FT_Get_Kerning(face, previous, glyph.index, kerningMode, &kerning);
-            if (!error) {
-                x += (float)kerning.x / emSize * worldSize;
-            }
-        }
-
-        // Note: Do not apply dilation here, we want to calculate exact bounds.
-        float u0 = (float)(glyph.bearingX) / emSize;
-        float v0 = (float)(glyph.bearingY - glyph.height) / emSize;
-        float u1 = (float)(glyph.bearingX + glyph.width) / emSize;
-        float v1 = (float)(glyph.bearingY) / emSize;
-
-        float x0 = x + u0 * worldSize;
-        float y0 = y + v0 * worldSize;
-        float x1 = x + u1 * worldSize;
-        float y1 = y + v1 * worldSize;
-
-        if (x0 < bb.minX) bb.minX = x0;
-        if (y0 < bb.minY) bb.minY = y0;
-        if (x1 > bb.maxX) bb.maxX = x1;
-        if (y1 > bb.maxY) bb.maxY = y1;
-
-        x += (float)glyph.advance / emSize * worldSize;
-        previous = glyph.index;
-    }
-
-    return bb;
-}
-
 // This function takes a single contour (defined by firstIndex and
 // lastIndex, both inclusive) from outline and converts it into individual
 // quadratic bezier curves, which are added to the curves vector.
@@ -3176,35 +3040,294 @@ bool R_Font::init(GraphicsContext* gctx, FT_Library library, R_Font* font,
     return true;
 }
 
+static bool R_Font_isWhiteSpace(char c)
+{
+    switch (c) {
+        case ' ':
+        case '\t': return true;
+        default: return false;
+    }
+}
+
 void R_Font::updateText(GraphicsContext* gctx, R_Font* font, R_Text* text)
 {
     static Arena positions;
     static Arena uvs;
     static Arena glyph_indices;
     static Arena indices;
+    static Arena line_offsets;
 
     // clear the buffers
     Arena::clear(&positions);
     Arena::clear(&uvs);
     Arena::clear(&glyph_indices);
     Arena::clear(&indices);
+    Arena::clear(&line_offsets);
 
     // generate new glyps for this font
     R_Font::prepareGlyphsForText(gctx, font, text->text.c_str());
-
-    // compute new bounding box
-    BoundingBox bb = font->measure(0, 0, text->text.c_str(), text->vertical_spacing);
 
     // update material bindgroup
     R_Material* mat = Component_GetMaterial(text->_matID);
     R_Material::setExternalStorageBinding(gctx, mat, 0, &font->glyph_buffer);
     R_Material::setExternalStorageBinding(gctx, mat, 1, &font->curve_buffer);
 
-    float cx = bb.minX + text->control_points.x * (bb.maxX - bb.minX);
-    float cy = bb.minY + text->control_points.y * (bb.maxY - bb.minY);
+    // get whitespace glyphs
+    auto space_glyph_it = font->glyphs.find(' ');
+    Glyph& space_glyph  = (space_glyph_it == font->glyphs.end()) ?
+                            font->glyphs[0] :
+                            space_glyph_it->second;
+    auto tab_glyph_it   = font->glyphs.find('\t');
+    Glyph& tab_glyph
+      = (tab_glyph_it == font->glyphs.end()) ? font->glyphs[0] : tab_glyph_it->second;
 
-    R_Font::rebuildVertexBuffers(font, text->text.c_str(), -cx, -cy, &positions, &uvs,
-                                 &glyph_indices, &indices, text->vertical_spacing);
+    // compute line offsets for alignment
+    bool align_text = (text->width > 0);
+    if (align_text) {
+        FT_UInt previous = 0;
+        char* text_start = (char*)text->text.c_str();
+        char* text_it    = text_start;
+
+        float line_width               = 0;
+        char* last_whitespace          = NULL;
+        float width_at_last_whitespace = 0;
+        while (*text_it) {
+            // calculate width of next charcode
+            u32 charcode = R_Font_decodeCharcode(&text_it);
+
+            if (charcode == '\r') continue;
+            if (charcode == '\n') {
+                if (line_width > text->width && last_whitespace) {
+                    ASSERT(R_Font_isWhiteSpace(*last_whitespace));
+                    char replaced_char = text->text[last_whitespace - text_start];
+                    text->text[last_whitespace - text_start] = '\n';
+                    *ARENA_PUSH_TYPE(&line_offsets, float)
+                      = text->width - width_at_last_whitespace;
+
+                    // update new linewidth after adding line break
+                    // alignment_repeat_1
+                    switch (replaced_char) {
+                        case ' ': {
+                            line_width -= ((float)space_glyph.advance / font->emSize)
+                                          * text->size;
+                        } break;
+                        case '\t': {
+                            line_width
+                              -= ((float)tab_glyph.advance / font->emSize) * text->size;
+                        } break;
+                        default: ASSERT(false);
+                    }
+
+                    *ARENA_PUSH_TYPE(&line_offsets, float)
+                      = text->width - (line_width - width_at_last_whitespace);
+                } else {
+                    *ARENA_PUSH_TYPE(&line_offsets, float) = text->width - line_width;
+                }
+                line_width               = 0;
+                last_whitespace          = NULL;
+                width_at_last_whitespace = 0;
+                continue;
+            }
+
+            // line break if too long
+            bool is_whitespace = (charcode == ' ' || charcode == '\t');
+            if (is_whitespace) {
+                if (line_width > text->width) {
+                    if (last_whitespace) {
+                        ASSERT(R_Font_isWhiteSpace(*last_whitespace));
+
+                        char replaced_char = text->text[last_whitespace - text_start];
+                        text->text[last_whitespace - text_start] = '\n';
+                        *ARENA_PUSH_TYPE(&line_offsets, float)
+                          = text->width - width_at_last_whitespace;
+
+                        // update new linewidth after adding line break
+                        // alignment_repeat_2
+                        line_width -= width_at_last_whitespace;
+                        switch (replaced_char) {
+                            case ' ': {
+                                line_width -= ((float)space_glyph.advance / font->emSize
+                                               * text->size);
+                            } break;
+                            case '\t': {
+                                line_width -= ((float)tab_glyph.advance / font->emSize
+                                               * text->size);
+                            } break;
+                            default: ASSERT(false);
+                        }
+
+                        last_whitespace          = text_it - 1;
+                        width_at_last_whitespace = line_width;
+                    } else {
+                        ASSERT(
+                          R_Font_isWhiteSpace(text->text[text_it - text_start - 1]));
+                        text->text[text_it - text_start - 1] = '\n';
+                        *ARENA_PUSH_TYPE(&line_offsets, float)
+                          = text->width - line_width;
+
+                        line_width               = 0;
+                        last_whitespace          = NULL;
+                        width_at_last_whitespace = 0;
+                    }
+                } else {
+                    last_whitespace = text_it - 1;
+                    ASSERT(R_Font_isWhiteSpace(*last_whitespace));
+                    width_at_last_whitespace = line_width;
+                }
+            }
+
+            // get glyph
+            auto glyphIt = font->glyphs.find(charcode);
+            Glyph& glyph
+              = (glyphIt == font->glyphs.end()) ? font->glyphs[0] : glyphIt->second;
+
+            if (previous != 0 && glyph.index != 0) {
+                FT_Vector kerning;
+                FT_Error error = FT_Get_Kerning(font->face, previous, glyph.index,
+                                                font->kerningMode, &kerning);
+                if (!error) {
+                    line_width += (float)kerning.x / font->emSize * text->size;
+                }
+            }
+            line_width += (float)glyph.advance / font->emSize * text->size;
+            previous = glyph.index;
+        }
+
+        // final line
+        if (line_width > text->width && last_whitespace) {
+            ASSERT(R_Font_isWhiteSpace(*last_whitespace));
+            char replaced_char = text->text[last_whitespace - text_start];
+            text->text[last_whitespace - text_start] = '\n';
+            *ARENA_PUSH_TYPE(&line_offsets, float)
+              = text->width - width_at_last_whitespace;
+
+            // update new linewidth after adding line break
+            // alignment_repeat_3
+            switch (replaced_char) {
+                case ' ': {
+                    line_width
+                      -= ((float)space_glyph.advance / font->emSize) * text->size;
+                } break;
+                case '\t': {
+                    line_width
+                      -= ((float)tab_glyph.advance / font->emSize) * text->size;
+                } break;
+                default: ASSERT(false);
+            }
+
+            *ARENA_PUSH_TYPE(&line_offsets, float)
+              = text->width - (line_width - width_at_last_whitespace);
+        } else {
+            *ARENA_PUSH_TYPE(&line_offsets, float) = text->width - line_width;
+        }
+    }
+
+    int line_offset_count = ARENA_LENGTH(&line_offsets, float);
+    int line_offset_idx   = 0;
+
+    // compute new bounding box
+    BoundingBox bb = {};
+    bb.minX        = +std::numeric_limits<float>::infinity();
+    bb.minY        = +std::numeric_limits<float>::infinity();
+    bb.maxX        = -std::numeric_limits<float>::infinity();
+    bb.maxY        = -std::numeric_limits<float>::infinity();
+    {
+        float x = 0;
+        if (align_text) {
+            float offset = *ARENA_GET_TYPE(&line_offsets, float, line_offset_idx);
+            switch (text->alignment) {
+                case SG_Text_AlignmentType_Left: break;
+                case SG_Text_AlignmentType_Center: x = offset / 2.0f; break;
+                case SG_Text_AlignmentType_Right: x = offset; break;
+                default: UNREACHABLE;
+            }
+            line_offset_idx++;
+        }
+        float y          = 0;
+        FT_UInt previous = 0;
+        char* textIt     = (char*)text->text.c_str();
+        while (*textIt != '\0') {
+            uint32_t charcode = R_Font_decodeCharcode(&textIt);
+
+            if (charcode == '\r') continue;
+            if (charcode == '\n') {
+                x = 0;
+                if (align_text) {
+                    float offset
+                      = *ARENA_GET_TYPE(&line_offsets, float, line_offset_idx);
+                    switch (text->alignment) {
+                        case SG_Text_AlignmentType_Left: break;
+                        case SG_Text_AlignmentType_Center: x = offset / 2.0f; break;
+                        case SG_Text_AlignmentType_Right: x = offset; break;
+                        default: UNREACHABLE;
+                    }
+                    line_offset_idx++;
+                }
+                y -= text->vertical_spacing * (float)font->face->height
+                     / (float)font->face->units_per_EM * text->size;
+                continue;
+            }
+
+            auto glyphIt = font->glyphs.find(charcode);
+            Glyph& glyph
+              = (glyphIt == font->glyphs.end()) ? font->glyphs[0] : glyphIt->second;
+
+            if (previous != 0 && glyph.index != 0) {
+                FT_Vector kerning;
+                FT_Error error = FT_Get_Kerning(font->face, previous, glyph.index,
+                                                font->kerningMode, &kerning);
+                if (!error) {
+                    x += (float)kerning.x / font->emSize * text->size;
+                }
+            }
+
+            // Note: Do not apply dilation here, we want to calculate exact bounds.
+            float u0 = (float)(glyph.bearingX) / font->emSize;
+            float v0 = (float)(glyph.bearingY - glyph.height) / font->emSize;
+            float u1 = (float)(glyph.bearingX + glyph.width) / font->emSize;
+            float v1 = (float)(glyph.bearingY) / font->emSize;
+
+            float x0 = x + u0 * text->size;
+            float y0 = y + v0 * text->size;
+            float x1 = x + u1 * text->size;
+            float y1 = y + v1 * text->size;
+
+            // update bb
+            if (x0 < bb.minX) bb.minX = x0;
+            if (y0 < bb.minY) bb.minY = y0;
+            if (x1 > bb.maxX) bb.maxX = x1;
+            if (y1 > bb.maxY) bb.maxY = y1;
+
+            if (glyph.curveCount) {
+                u32 base = ARENA_LENGTH(&positions, glm::vec2);
+                *ARENA_PUSH_TYPE(&positions, glm::vec2) = glm::vec2(x0, y0);
+                *ARENA_PUSH_TYPE(&positions, glm::vec2) = glm::vec2(x1, y0);
+                *ARENA_PUSH_TYPE(&positions, glm::vec2) = glm::vec2(x1, y1);
+                *ARENA_PUSH_TYPE(&positions, glm::vec2) = glm::vec2(x0, y1);
+
+                *ARENA_PUSH_TYPE(&uvs, glm::vec2) = glm::vec2(u0, v0);
+                *ARENA_PUSH_TYPE(&uvs, glm::vec2) = glm::vec2(u1, v0);
+                *ARENA_PUSH_TYPE(&uvs, glm::vec2) = glm::vec2(u1, v1);
+                *ARENA_PUSH_TYPE(&uvs, glm::vec2) = glm::vec2(u0, v1);
+
+                *ARENA_PUSH_TYPE(&glyph_indices, u32) = glyph.bufferIndex;
+                *ARENA_PUSH_TYPE(&glyph_indices, u32) = glyph.bufferIndex;
+                *ARENA_PUSH_TYPE(&glyph_indices, u32) = glyph.bufferIndex;
+                *ARENA_PUSH_TYPE(&glyph_indices, u32) = glyph.bufferIndex;
+
+                *ARENA_PUSH_TYPE(&indices, u32) = base;
+                *ARENA_PUSH_TYPE(&indices, u32) = base + 1;
+                *ARENA_PUSH_TYPE(&indices, u32) = base + 2;
+                *ARENA_PUSH_TYPE(&indices, u32) = base + 2;
+                *ARENA_PUSH_TYPE(&indices, u32) = base + 3;
+                *ARENA_PUSH_TYPE(&indices, u32) = base;
+            }
+
+            x += (float)glyph.advance / font->emSize * text->size;
+            previous = glyph.index;
+        }
+    }
+    ASSERT(line_offset_idx == line_offset_count);
 
     // write buffer data to geometry
     R_Geometry* geo = Component_GetGeometry(text->_geoID);
@@ -3216,8 +3339,11 @@ void R_Font::updateText(GraphicsContext* gctx, R_Font* font, R_Text* text)
 
     // set internal uniforms
     // recompute bb adjusted by control points
-    BoundingBox adjust_bb = { bb.minX - cx, bb.minY - cy, bb.maxX - cx, bb.maxY - cy };
-    R_Material::setUniformBinding(gctx, mat, 5, &adjust_bb, sizeof(adjust_bb));
+    // BoundingBox adjust_bb = { bb.minX - cx, bb.minY - cy, bb.maxX - cx, bb.maxY - cy
+    // }; R_Material::setUniformBinding(gctx, mat, 5, &adjust_bb, sizeof(adjust_bb));
+    R_Material::setUniformBinding(gctx, mat, 5, &bb, sizeof(bb));
+    R_Material::setUniformBinding(gctx, mat, 8, &text->control_points,
+                                  sizeof(text->control_points));
 
     // leq because whitespaces are skipped
     ASSERT(ARENA_LENGTH(&indices, u32) <= text->text.length() * 6);

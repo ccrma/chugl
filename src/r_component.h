@@ -733,6 +733,10 @@ struct R_Text : public R_Transform {
     std::string font_path;
     glm::vec2 control_points;
     float vertical_spacing;
+
+    float width; // max width in worldspace units, used for alignment
+    SG_Text_AlignmentType alignment;
+    float size = 1.0f;
 };
 
 struct R_Font {
@@ -781,16 +785,6 @@ struct R_Font {
 
     static void prepareGlyphsForText(GraphicsContext* gctx, R_Font* font,
                                      const char* text);
-
-    // given text and a starting model-space coordinate (x,y)
-    // reconstructs the vertex and index buffers for the text
-    // (used to batch draw a single GText object)
-    static void rebuildVertexBuffers(R_Font* font, const char* mainText, float x,
-                                     float y, Arena* positions, Arena* uvs,
-                                     Arena* glyph_indices, Arena* indices,
-                                     float verticalScale = 1.0f);
-
-    BoundingBox measure(float x, float y, const char* text, float verticalScale = 1.0f);
 };
 
 // =============================================================================

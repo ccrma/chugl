@@ -1200,6 +1200,7 @@ const char* gtext_shader_string = R"glsl(
     @group(1) @binding(5) var<uniform> bb : vec4f; // x = minx, y = miny, z = maxx, w = maxy
     @group(1) @binding(6) var texture_map: texture_2d<f32>;
     @group(1) @binding(7) var texture_sampler: sampler;
+    @group(1) @binding(8) var<uniform> cp : vec2f; // control points. (0.5, 0.5) means center
 
 
     struct VertexInput {
@@ -1221,13 +1222,17 @@ const char* gtext_shader_string = R"glsl(
     {
         var out : VertexOutput;
         var u_Draw : DrawUniforms = u_draw_instances[in.instance];
-        out.position = (u_frame.projection * u_frame.view) * u_Draw.model * vec4f(in.position, 0.0f, 1.0f);
-        out.v_uv     = in.uv;
-        out.v_buffer_index = in.glyph_index;
 
         let bb_w = bb.z - bb.x;
         let bb_h = bb.w - bb.y;
-        out.v_uv_textbox = (in.position - vec2f(bb.x, bb.y)) / vec2f(bb_w, bb_h);
+        let cx = bb.x + cp.x * bb_w;
+        let cy = bb.y + cp.y * bb_h;
+        let pos = in.position - vec2f(cx, cy);
+
+        out.position = (u_frame.projection * u_frame.view) * u_Draw.model * vec4f(pos, 0.0f, 1.0f);
+        out.v_uv     = in.uv;
+        out.v_buffer_index = in.glyph_index;
+        out.v_uv_textbox = (in.position - bb.xy) / vec2f(bb_w, bb_h);
 
         return out;
     }
