@@ -801,8 +801,14 @@ struct App {
                         }
                     }
 
+                    WGPUColor clear_color = {
+                        scene->sg_scene_desc.bg_color.r,
+                        scene->sg_scene_desc.bg_color.g,
+                        scene->sg_scene_desc.bg_color.b,
+                        scene->sg_scene_desc.bg_color.a,
+                    };
                     app->rendergraph.renderPassColorOp(
-                      WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f },
+                      clear_color,
                       pass->sg_pass.color_target_clear_on_load ? WGPULoadOp_Clear :
                                                                  WGPULoadOp_Load,
                       WGPUStoreOp_Store);

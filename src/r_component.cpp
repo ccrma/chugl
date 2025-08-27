@@ -1425,8 +1425,10 @@ void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene,
         }
 
         // TODO: test with WGPUStoreOp_Discard see if it still writes to depth tex
-        graph->renderPassColorOp(WGPUColor{ 0.0f, 0.0f, 0.0f, 1.0f }, WGPULoadOp_Clear,
-                                 WGPUStoreOp_Store);
+        WGPUColor clear_color
+          = { scene->sg_scene_desc.bg_color.r, scene->sg_scene_desc.bg_color.g,
+              scene->sg_scene_desc.bg_color.b, scene->sg_scene_desc.bg_color.a };
+        graph->renderPassColorOp(clear_color, WGPULoadOp_Clear, WGPUStoreOp_Store);
 
         G_DrawCallListID dc_list = graph->renderPassAddDrawCallList();
 

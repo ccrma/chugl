@@ -1350,7 +1350,8 @@ const char* gtext_shader_string = R"glsl(
         }
 
         alpha = clamp(alpha, 0.0, 1.0);
-        let result = u_Color * alpha;
+        // var result = u_Color * alpha; // uncomment for pre-multiplied alpha blending
+        var result = vec4f(u_Color.rgb, u_Color.a * alpha); // non-premultiplied alpha blending
         let sample = textureSample(texture_map, texture_sampler, in.v_uv_textbox);
 
         // alpha test
@@ -1359,7 +1360,6 @@ const char* gtext_shader_string = R"glsl(
         }
 
         return result * sample;
-        // return vec4f(in.v_uv_textbox, 0.0, 1.0);
     }
 )glsl";
 
