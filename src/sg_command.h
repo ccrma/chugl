@@ -481,7 +481,6 @@ struct SG_Command_TextRebuild : public SG_Command {
     SG_ID text_id; // lazily create text if not found
     SG_ID material_id;
     SG_ID geo_id;
-    glm::vec2 control_point; // TODO do as material uniform
     float vertical_spacing;
     float width;
     SG_Text_AlignmentType alignment;

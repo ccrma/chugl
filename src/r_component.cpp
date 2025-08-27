@@ -1921,7 +1921,6 @@ R_Text* Component_CreateText(GraphicsContext* gctx, FT_Library ft,
       = std::string((const char*)CQ_ReadCommandGetOffset(cmd->text_str_offset));
     text->font_path
       = std::string((const char*)CQ_ReadCommandGetOffset(cmd->font_path_str_offset));
-    text->control_points   = cmd->control_point; // TODO remove
     text->vertical_spacing = cmd->vertical_spacing;
     text->width            = cmd->width;
     text->alignment        = cmd->alignment;
@@ -3339,11 +3338,7 @@ void R_Font::updateText(GraphicsContext* gctx, R_Font* font, R_Text* text)
 
     // set internal uniforms
     // recompute bb adjusted by control points
-    // BoundingBox adjust_bb = { bb.minX - cx, bb.minY - cy, bb.maxX - cx, bb.maxY - cy
-    // }; R_Material::setUniformBinding(gctx, mat, 5, &adjust_bb, sizeof(adjust_bb));
     R_Material::setUniformBinding(gctx, mat, 5, &bb, sizeof(bb));
-    R_Material::setUniformBinding(gctx, mat, 8, &text->control_points,
-                                  sizeof(text->control_points));
 
     // leq because whitespaces are skipped
     ASSERT(ARENA_LENGTH(&indices, u32) <= text->text.length() * 6);

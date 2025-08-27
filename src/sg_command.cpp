@@ -886,7 +886,6 @@ void CQ_PushCommand_TextRebuild(SG_Text* text)
     command->text_id          = text->id;
     command->material_id      = text->_mat_id;
     command->geo_id           = text->_geo_id;
-    command->control_point    = { text->control_points.x, text->control_points.y };
     command->vertical_spacing = text->vertical_spacing;
     command->width            = text->width;
     command->alignment        = text->alignment;

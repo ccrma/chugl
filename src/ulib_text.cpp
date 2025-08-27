@@ -258,9 +258,11 @@ CK_DLL_CTOR(gtext_ctor)
     SG_Material::uniformVec4f(material, 2, glm::vec4(1.0f)); // color
     SG_Material::uniformFloat(material, 3, 1.0);             // antialiasing window
     SG_Material::uniformInt(material, 4, 1);                 // enable ssaa
+    SG_Material::uniformVec2f(material, 8, glm::vec2(0.5f, 0.5f)); // control point
     CQ_PushCommand_MaterialSetUniform(material, 2);
     CQ_PushCommand_MaterialSetUniform(material, 3);
     CQ_PushCommand_MaterialSetUniform(material, 4);
+    CQ_PushCommand_MaterialSetUniform(material, 8);
 
     SG_Texture* tex = SG_GetTexture(g_builtin_textures.white_pixel_id);
     SG_Material::setTexture(material, 6, tex);
@@ -355,10 +357,13 @@ CK_DLL_MFUN(gtext_get_vertical_spacing)
 
 CK_DLL_MFUN(gtext_set_control_points)
 {
-    SG_Text* text        = GET_TEXT(SELF);
-    text->control_points = GET_NEXT_VEC2(ARGS);
+    SG_Text* text         = GET_TEXT(SELF);
+    SG_Material* material = SG_GetMaterial(text->_mat_id);
+    text->control_points  = GET_NEXT_VEC2(ARGS);
 
-    CQ_PushCommand_TextRebuild(text);
+    SG_Material::uniformVec2f(
+      material, 8, glm::vec2(text->control_points.x, text->control_points.y));
+    CQ_PushCommand_MaterialSetUniform(material, 8);
 }
 
 CK_DLL_MFUN(gtext_get_control_points)
