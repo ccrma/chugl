@@ -3052,7 +3052,7 @@ static bool R_Font_isWhiteSpace(char c)
 
 void R_Font::updateText(GraphicsContext* gctx, R_Font* font, R_Text* text)
 {
-    UNUSED_FUNCTION(R_Font_isWhiteSpace);
+    R_Font_isWhiteSpace(0); // to compile in RELEASE
 
     static Arena positions;
     static Arena uvs;
