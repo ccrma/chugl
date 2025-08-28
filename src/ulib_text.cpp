@@ -236,6 +236,7 @@ CK_DLL_CTOR(gtext_ctor)
       = chugin_createCkObj(SG_CKNames[SG_COMPONENT_MATERIAL], false, SHRED);
     SG_Material* material = SG_CreateMaterial(material_ckobj, SG_MATERIAL_TEXT3D);
     OBJ_MEMBER_UINT(material_ckobj, component_offset_id) = material->id;
+    material->pso.transparent                            = true;
     CQ_PushCommand_MaterialCreate(material);
 
     Chuck_Object* geo_ckobj
