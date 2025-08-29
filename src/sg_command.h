@@ -182,6 +182,7 @@ enum SG_CommandType : u32 {
 
     // reading back gpu data
     SG_COMMAND_G2A_TEXTURE_READ,
+    SG_COMMAND_G2A_FILES_DROPPED,
 
     SG_COMMAND_COUNT
 };
@@ -610,6 +611,12 @@ struct SG_Command_G2A_TextureRead : public SG_Command {
     void* data_OWNED; // malloc on graphics thread, free on audio thread
     int size_bytes;   // size of data
     WGPUBufferMapAsyncStatus status;
+};
+
+struct SG_Command_G2A_FilesDropped : public SG_Command {
+    int count;             // number of paths
+    int size_bytes;        // total byte size of all paths (counting null terminator)
+    ptrdiff_t data_offset; // byte offset into command queue arena for paths
 };
 
 // ============================================================================

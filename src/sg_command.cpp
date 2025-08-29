@@ -1096,4 +1096,33 @@ void CQ_PushCommand_G2A_TextureRead(SG_ID id, void* data, int size_bytes,
     END_COMMAND();
 }
 
+void CQ_PushCommand_G2A_FilesDropped(int count, const char** paths)
+{
+    if (count == 0) return;
+
+    int size_bytes = 0;
+    for (int i = 0; i < count; i++) {
+        size_bytes += strlen(paths[i]) + 1;
+    }
+
+    BEGIN_COMMAND_ADDITIONAL_MEMORY(SG_Command_G2A_FilesDropped,
+                                    SG_COMMAND_G2A_FILES_DROPPED, size_bytes);
+    char* write_head     = (char*)memory;
+    command->count       = count;
+    command->size_bytes  = size_bytes;
+    command->data_offset = Arena::offsetOf(cq.write_q, memory);
+    for (int i = 0; i < count; i++) {
+        if (size_bytes <= 0) {
+            ASSERT(false);
+            break;
+        }
+
+        int n = strlcpy(write_head, paths[i], size_bytes) + 1;
+        write_head += n;
+        size_bytes -= n;
+    }
+    ASSERT(size_bytes == 0);
+    END_COMMAND();
+}
+
 #undef cq

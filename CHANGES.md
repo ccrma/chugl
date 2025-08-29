@@ -2,12 +2,15 @@
 
 ## 0.2.7 (alpha)
 - add `Geometry.indexCount()` to control the number of indices drawn in an indexed draw
+- add `GWindow.droppedFiles()` to handle drag+dropping files onto the window
 - New `GText` features
   - `GText.characters(int)` to control the number of characters rendered on a GText
   - `GText.width(int)` to set text wrap width
   - `GText.align(int)` to set left/center/right alignment
   - `GText.size(int)` to scale text size while respecting wrap and alignment
-- Bugfix: incorrect transparency sorting on scenes with a large number of materials
+- Bugfixes: 
+  - incorrect transparency sorting on scenes with a large number of materials
+  - scene background color not affecting clearcolor, causing semi-transparent objects (e.g. GText) to render incorrectly
 
 ## 0.2.6 (alpha)
 

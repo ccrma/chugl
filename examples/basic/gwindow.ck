@@ -17,9 +17,9 @@
 //   date: June 2024
 //--------------------------------------------------------------------
 
-// disable <esc> and close button; allows you to manually handle close
+// uncomment To disable <esc> and close button; allows you to manually handle close
 // events and perform any necessary cleanup, e.g. saving game state
-GWindow.closeable( false ); 
+// GWindow.closeable( false ); 
 
 // uncomment to set size limits
 // GWindow.sizeLimits(100, 100, 1920, 1080, @(16, 9));
@@ -30,9 +30,13 @@ GWindow.title("GWindow Demo");
 
 // window configuration (must be called BEFORE first GG.nextFrame())
 true => GWindow.transparent;
-true => GWindow.floating;
+// true => GWindow.floating;
 // false => GWindow.decorated;
 // false => GWindow.resizable;
+
+GText text --> GG.scene();
+text.size(.2);
+text.text("drag and drop files here!");
 
 fun void mouseListener() {
     while (true) {
@@ -105,8 +109,23 @@ true => int opaque;
 false => int floating;
 0 => int mouse_mode;
 
+GWindow.droppedFiles() @=> string files[];
 while (1) { 
     GG.nextFrame() => now;
+
+    // detect when files are dropped onto this window
+    if (GWindow.droppedFiles() != files) {
+        GWindow.droppedFiles() @=> files;
+        string newly_dropped_files;
+        for (auto filepath : files) {
+            // this way segfaults
+            // (filepath + "\n") +=> newly_dropped_files;
+            filepath +=> newly_dropped_files;
+            "\n" +=> newly_dropped_files;
+        }
+        text.text(newly_dropped_files);
+    }
+
     if (UI.isKeyPressed(UI_Key.Num1)) GWindow.fullscreen();
     if (UI.isKeyPressed(UI_Key.Num2)) {
         GWindow.windowed(800, 600);

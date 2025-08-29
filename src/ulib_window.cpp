@@ -119,6 +119,9 @@ CK_DLL_SFUN(gwindow_get_kb_all_with_arr);
 CK_DLL_SFUN(gwindow_get_kb_pressed_all_with_arr);
 CK_DLL_SFUN(gwindow_get_kb_released_all_with_arr);
 
+// drag+drop files
+CK_DLL_SFUN(gwindow_get_dropped_files);
+
 void ulib_window_query(Chuck_DL_Query* QUERY)
 {
     // BEGIN_CLASS("MonitorInfo", "Object");
@@ -704,6 +707,13 @@ void ulib_window_query(Chuck_DL_Query* QUERY)
       "Populates the array with all keys released on this frame. "
       "Each value will be a key enum, e.g. GWindow.Key_Space");
 
+    SFUN(gwindow_get_dropped_files, "string[]", "droppedFiles");
+    DOC_FUNC(
+      "Returns an array of the most recently drag+dropped filepaths onto the graphics "
+      "window. To detect when files are newly dropped, you can keep a reference to the "
+      "previous array returned by this function, and see if it changed on a subsequent "
+      "call. See examples/basic/gwindow.ck for how to use.");
+
     END_CLASS(); // GWindow
 }
 
@@ -1119,4 +1129,9 @@ CK_DLL_SFUN(gwindow_get_kb_released_all_with_arr)
     g_chuglAPI->object->array_int_clear(ck_arr);
     ulib_window_get_kb_released_all(ck_arr);
     RETURN->v_object = (Chuck_Object*)ck_arr;
+}
+
+CK_DLL_SFUN(gwindow_get_dropped_files)
+{
+    RETURN->v_object = (Chuck_Object*)g_dropped_files;
 }

@@ -229,6 +229,28 @@ static void FlushGraphicsToAudioCQ()
                 SG_Texture::updateTextureData(texture, cmd->data_OWNED,
                                               cmd->size_bytes);
             } break;
+            case SG_COMMAND_G2A_FILES_DROPPED: {
+                SG_Command_G2A_FilesDropped* cmd
+                  = (SG_Command_G2A_FilesDropped*)command;
+                char* paths = (char*)CQ_ReadCommandGetOffset(cmd->data_offset, true);
+                int bytes_copied = 0;
+
+                Chuck_ArrayInt* ck_string_arr
+                  = (Chuck_ArrayInt*)chugin_createCkObj("int[]", true);
+                for (int i = 0; i < cmd->count; i++) {
+                    int n = strlen(paths) + 1;
+                    g_chuglAPI->object->array_int_push_back(
+                      ck_string_arr, (t_CKINT)chugin_createCkString(paths, false));
+                    bytes_copied += n;
+                    paths += n;
+                }
+                ASSERT(bytes_copied == cmd->size_bytes);
+
+                // replace the previous dropped_files ckarray
+                if (g_dropped_files)
+                    g_chuglAPI->object->release((Chuck_Object*)g_dropped_files);
+                g_dropped_files = ck_string_arr;
+            } break;
             default: ASSERT(false)
         }
     }

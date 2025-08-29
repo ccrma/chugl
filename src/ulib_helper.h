@@ -111,6 +111,8 @@ f64 g_last_dt                   = 0.0;
 i64 g_frame_count               = 0;
 bool g_chugl_window_initialized = false; // set to true the on first GG.nextFrame()
 
+Chuck_ArrayInt* g_dropped_files = NULL;
+
 // cached chuck types
 static struct {
     Chuck_DL_Api::Type int_array;
