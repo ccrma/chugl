@@ -707,7 +707,7 @@ void ulib_window_query(Chuck_DL_Query* QUERY)
       "Populates the array with all keys released on this frame. "
       "Each value will be a key enum, e.g. GWindow.Key_Space");
 
-    SFUN(gwindow_get_dropped_files, "string[]", "droppedFiles");
+    SFUN(gwindow_get_dropped_files, "string[]", "files");
     DOC_FUNC(
       "Returns an array of the most recently drag+dropped filepaths onto the graphics "
       "window. To detect when files are newly dropped, you can keep a reference to the "

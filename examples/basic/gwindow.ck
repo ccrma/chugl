@@ -109,13 +109,13 @@ true => int opaque;
 false => int floating;
 0 => int mouse_mode;
 
-GWindow.droppedFiles() @=> string files[];
+GWindow.files() @=> string files[];
 while (1) { 
     GG.nextFrame() => now;
 
     // detect when files are dropped onto this window
-    if (GWindow.droppedFiles() != files) {
-        GWindow.droppedFiles() @=> files;
+    if (GWindow.files() != files) {
+        GWindow.files() @=> files;
         string newly_dropped_files;
         for (auto filepath : files) {
             // this way segfaults
