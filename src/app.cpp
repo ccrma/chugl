@@ -1385,7 +1385,7 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Pass* pass, R_Camera* cam
                 // draw having -1 actually mean ALL is confusing 2 different states.
                 d->vertex_count
                   = user_provided_vertex_count ?
-                      MIN(geo->vertex_count, R_Geometry::vertexCount(geo)) :
+                      geo->vertex_count :
                       R_Geometry::vertexCount(geo);
             }
         }
