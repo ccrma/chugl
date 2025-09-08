@@ -7,8 +7,8 @@
 #include "macros.h"
 
 struct FileReadResult {
-    u32 size;
-    u8* data_owned;
+    char* data_owned;
+    size_t size;
 };
 
 std::string File_dirname(const std::string& path)
@@ -57,11 +57,12 @@ int File_hasExtension(const char* filename, const char* extension)
 
 FileReadResult File_read(const char* filename, int is_text_file)
 {
-    ASSERT(filename);
     FileReadResult result = {};
     // zero out contents
     result.size       = 0;
     result.data_owned = NULL;
+
+    if (filename == NULL) return result;
 
     FILE* file = fopen(filename, "rb");
     if (file == NULL) {
@@ -72,9 +73,9 @@ FileReadResult File_read(const char* filename, int is_text_file)
     result.size = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    result.data_owned = (u8*)malloc(result.size + (is_text_file == 0 ? 0 : 1));
+    result.data_owned = (char*)malloc(result.size + (is_text_file == 0 ? 0 : 1));
     if (fread(result.data_owned, 1, result.size, file) != result.size) {
-        log_error("Unable to read file '%s'\n", filename);
+        log_error("Unable to read file '%s'", filename);
         goto error;
     }
     fclose(file);

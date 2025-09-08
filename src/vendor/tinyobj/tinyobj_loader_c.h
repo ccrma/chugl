@@ -1,4 +1,9 @@
 /*
+Modifications by AZADAY for use in ChuGL
+- add keyword "map_Bump" when parsing .mtl files for normal maps
+
+*/
+/*
    The MIT License (MIT)
 
    Copyright (c) 2016 - 2019 Syoyo Fujita and many contributors.
@@ -54,11 +59,12 @@ typedef struct {
   char *bump_texname;               /* map_bump, bump */
   char *displacement_texname;       /* disp */
   char *alpha_texname;              /* map_d */
+  // TODO add emissive textures
 } tinyobj_material_t;
 
 typedef struct {
   char *name; /* group name or object name. */
-  unsigned int face_offset;
+  unsigned int face_offset; // offset in #faces NOT vertices. again terrible design, forces you to walk the entire face_num_verts array to get your position. bullshit
   unsigned int length;
 } tinyobj_shape_t;
 
@@ -68,16 +74,16 @@ typedef struct {
   unsigned int num_vertices;
   unsigned int num_normals;
   unsigned int num_texcoords;
-  unsigned int num_faces;
-  unsigned int num_face_num_verts;
+  unsigned int num_faces; // number of vertices, NOT faces. terrible name
+  unsigned int num_face_num_verts; // number of faces
 
   int pad0;
 
   float *vertices;
   float *normals;
   float *texcoords;
-  tinyobj_vertex_index_t *faces;
-  int *face_num_verts;
+  tinyobj_vertex_index_t *faces; // list of vertices
+  int *face_num_verts; // stores vertex count per face. length is #faces
   int *material_ids;
 } tinyobj_attrib_t;
 
@@ -1047,7 +1053,8 @@ static int tinyobj_parse_and_index_mtl_file(tinyobj_material_t **materials_out,
     }
 
     /* bump texture */
-    if ((0 == strncmp(token, "map_bump", 8)) && IS_SPACE(token[8])) {
+    int is_bump = (0 == strncmp(token, "map_bump", 8)) || (0 == strncmp(token, "map_Bump", 8));
+    if (is_bump && IS_SPACE(token[8])) {
       token += 9;
       material.bump_texname = my_strdup(token, (size_t) (line_end - token));
       continue;

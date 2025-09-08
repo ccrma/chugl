@@ -31,7 +31,6 @@ for (1 => int i; i < geometries.size(); i++) {
 
 UVMaterial uv_material;
 NormalMaterial normal_material;
-WireframeMaterial wireframe_material;
 FlatMaterial flat_material;
 PhongMaterial phong_material;
 PBRMaterial pbr_material;
@@ -40,7 +39,6 @@ PBRMaterial pbr_material;
     null,
     uv_material,
     normal_material,
-    wireframe_material,
     flat_material,
     phong_material,
     pbr_material,
@@ -61,11 +59,7 @@ UI_Int material_topology_index(3); // default to triangle list
     "TriangleList",
     "TriangleStrip",
 ] @=> string material_topologies[];
-
-// Wireframe material params
-UI_Float wireframe_thickness(wireframe_material.thickness());
-UI_Float wireframe_alpha_cutoff(wireframe_material.alphaCutoff());
-UI_Float3 wireframe_color(wireframe_material.color());
+UI_Bool wireframe(false);
 
 // Normal material params
 UI_Bool normal_material_worldspace(normal_material.worldspaceNormals());
@@ -247,6 +241,9 @@ fun void ui() {
                     <<< "setting topology to", material_topology_index.val() >>>;
                     mesh.material().topology(material_topology_index.val());
                 }
+
+                UI.checkbox("wireframe", wireframe);
+                mesh.material().wireframe(wireframe.val());
             }
 
             if (mesh.material() == normal_material) {
@@ -254,22 +251,6 @@ fun void ui() {
 
                 if (UI.checkbox("worldspace normals", normal_material_worldspace)) {
                     normal_material.worldspaceNormals(normal_material_worldspace.val());
-                }
-            }
-
-            if (mesh.material() == wireframe_material) {
-                UI.separatorText("Wireframe Material Params");
-
-                if (UI.slider("thickness", wireframe_thickness, 0, 5)) {
-                    wireframe_thickness.val() => wireframe_material.thickness;
-                }
-
-                if (UI.slider("alpha cutoff", wireframe_alpha_cutoff, 0, 1)) {
-                    wireframe_alpha_cutoff.val() => wireframe_material.alphaCutoff;
-                }
-
-                if (UI.colorEdit("color", wireframe_color, 0)) {
-                    wireframe_color.val() => wireframe_material.color;
                 }
             }
 

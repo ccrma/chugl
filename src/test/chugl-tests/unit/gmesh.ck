@@ -42,3 +42,18 @@ T.assert(!shadow_mesh_a.shadowed() && !shadow_mesh_b.shadowed(), "GGen.shadowed(
 // while (true) {
 //     GG.nextFrame() => now;
 // }
+
+// =========================================
+// GModel
+// =========================================
+
+GModel default_model;
+
+T.assert(default_model.geometries.size() == 0, "GModel default geometries empty");
+T.assert(default_model.materials.size() == 0, "GModel default materials empty");
+T.assert(default_model.meshes.size() == 0, "GModel default meshes empty");
+T.assert(Type.of(default_model).parent().name() == "GGen", "GModel parent is GGen");
+
+T.assert(Machine.refcount(default_model.geometries) == 1, "GModel.geometries refcount");
+T.assert(Machine.refcount(default_model.materials) == 1, "GModel.materials refcount");
+T.assert(Machine.refcount(default_model.meshes) == 1, "GModel.meshes refcount");

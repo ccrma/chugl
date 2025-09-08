@@ -1,8 +1,19 @@
 TODO
+
+- Add sampler to the GShape #define!!!
+
+- change GText.width to GText.maxWidth
+
+- OBJ rework
+  - GModel(string path)
+  - see how raylib handles all the tinyobj_material properties in their shader
+  - remove dependency on rapidobj, port AssLoader backend to tinyobj
+- Improving compile times
+  - move small single-header libs out of implementations.cpp and just include them in unity build
+  - move larger vendor libs into implementations.cpp if possible
+
 - Shadow
   - add shadowNearPlane to SpotLight
-
-- add file drag drop into GWindow (see Raylib model viewer example)
 
 - finish split screen example
 - test shadertoy example in release mode, make sure we still get shader compilation errors

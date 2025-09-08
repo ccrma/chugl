@@ -30,7 +30,6 @@
 #include "suzanne_geo.cpp"
 #include <array> // ew
 #include <glm/gtc/epsilon.hpp>
-#include <mikktspace/mikktspace.h>
 #include <vector> // ew
 
 // #include <earcut/earcut.hpp>

@@ -72,6 +72,8 @@ CK_DLL_MFUN(material_set_topology);
 CK_DLL_MFUN(material_get_topology);
 CK_DLL_MFUN(material_set_transparent);
 CK_DLL_MFUN(material_get_transparent);
+CK_DLL_MFUN(material_set_wireframe);
+CK_DLL_MFUN(material_get_wireframe);
 
 // material uniforms
 CK_DLL_MFUN(material_uniform_remove);
@@ -503,8 +505,25 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
 
     MFUN(material_set_transparent, "void", "transparent");
     ARG("int", "is_transparent");
+    DOC_FUNC(
+      "Mark the material as transparent. Transparent materials will be rendered after "
+      "all opaque (i.e. non-transparent) objects in back-to-front order based on "
+      "their GMesh's distance from the camera, and colors will be alpha-blended "
+      "together. The renderer does *not* implement per-pixel sorting or OIT so you may "
+      "observe artifacts/incorrectness in 3D scenes");
 
     MFUN(material_get_transparent, "int", "transparent");
+    DOC_FUNC("Get whether this material is treated as transparent");
+
+    MFUN(material_set_wireframe, "void", "wireframe");
+    ARG("int", "wireframe");
+    DOC_FUNC(
+      "Mark whether this material should be rendered as a wireframe. Internally this "
+      "sets the Material.Topology to a LineList and will use a special wireframe "
+      "indices buffer for any geometry paired with this material");
+
+    MFUN(material_get_wireframe, "int", "wireframe");
+    DOC_FUNC("Get whether this material will be rendered as a wireframe.");
 
     // uniforms
 
@@ -804,6 +823,7 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
         BEGIN_CLASS(SG_MaterialTypeNames[SG_MATERIAL_WIREFRAME],
                     SG_CKNames[SG_COMPONENT_MATERIAL]);
         DOC_CLASS(
+          "DEPRECATED in ChuGL version 0.2.7. Use Material.wireframe(true) instead. "
           "View a mesh as wireframe. Uses barycentric coordinates to draw lines. "
           "WARNING: May not work with indexed geometry, rendering some or all faces "
           "incorrectly as solid. Known issues with SphereGeometry, CircleGeometry, "
@@ -1249,6 +1269,18 @@ CK_DLL_MFUN(material_get_transparent)
 {
     SG_Material* material = GET_MATERIAL(SELF);
     RETURN->v_int         = material->pso.transparent;
+}
+
+CK_DLL_MFUN(material_set_wireframe)
+{
+    SG_Material* material   = GET_MATERIAL(SELF);
+    material->pso.wireframe = GET_NEXT_INT(ARGS) ? 1 : 0;
+    CQ_PushCommand_MaterialUpdatePSO(material);
+}
+
+CK_DLL_MFUN(material_get_wireframe)
+{
+    RETURN->v_int = GET_MATERIAL(SELF)->pso.wireframe;
 }
 
 CK_DLL_MFUN(material_uniform_active_locations)

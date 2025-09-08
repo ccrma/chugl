@@ -185,11 +185,15 @@ struct R_Geometry : public R_Component {
     GPU_Buffer gpu_vertex_buffers[R_GEOMETRY_MAX_VERTEX_ATTRIBUTES]; // non-interleaved
     GPU_Buffer gpu_index_buffer;
     u8 vertex_attribute_num_components[R_GEOMETRY_MAX_VERTEX_ATTRIBUTES];
+    u32* index_buffer_MALLOC; // keep around for wireframe, remember to free in cleanup
 
     // storage buffers for vertex pulling
     GPU_Buffer pull_buffers[CHUGL_GEOMETRY_MAX_PULLED_VERTEX_BUFFERS];
     int vertex_count  = -1; // if set, overrides vertex count from vertices
     int indices_count = -1; // if set, overrides index count from indices
+
+    b32 gpu_wireframe_index_buffer_stale;
+    GPU_Buffer gpu_wireframe_index_buffer;
 
     static void init(R_Geometry* geo);
 
@@ -212,6 +216,9 @@ struct R_Geometry : public R_Component {
 
     static void setIndices(GraphicsContext* gctx, R_Geometry* geo, u32* indices,
                            u32 indices_count);
+
+    static u32 wireframeIndicesCount(R_Geometry* geo);
+    static void rebuildWireframe(R_Geometry* geo, GraphicsContext* gctx);
 };
 
 // =============================================================================

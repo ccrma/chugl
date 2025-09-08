@@ -31,7 +31,6 @@ set(
 set(
     VENDOR
     implementations.cpp
-    vendor/mikktspace/mikktspace.c
 
     # cimgui (no freetype )
     vendor/cimgui/cimgui.cpp

@@ -117,6 +117,7 @@ Chuck_ArrayInt* g_dropped_files = NULL;
 static struct {
     Chuck_DL_Api::Type int_array;
     Chuck_DL_Api::Type float_array;
+    Chuck_DL_Api::Type string_array;
     Chuck_DL_Api::Type vec2_array;
     Chuck_DL_Api::Type vec3_array;
     Chuck_DL_Api::Type vec4_array;

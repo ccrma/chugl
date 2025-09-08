@@ -235,8 +235,8 @@ static void FlushGraphicsToAudioCQ()
                 char* paths = (char*)CQ_ReadCommandGetOffset(cmd->data_offset, true);
                 int bytes_copied = 0;
 
-                Chuck_ArrayInt* ck_string_arr
-                  = (Chuck_ArrayInt*)chugin_createCkObj("int[]", true);
+                Chuck_ArrayInt* ck_string_arr = (Chuck_ArrayInt*)chugin_createCkObj(
+                  g_chuck_types.string_array, true);
                 for (int i = 0; i < cmd->count; i++) {
                     int n = strlen(paths) + 1;
                     g_chuglAPI->object->array_int_push_back(
@@ -247,8 +247,9 @@ static void FlushGraphicsToAudioCQ()
                 ASSERT(bytes_copied == cmd->size_bytes);
 
                 // replace the previous dropped_files ckarray
-                if (g_dropped_files)
+                if (g_dropped_files) {
                     g_chuglAPI->object->release((Chuck_Object*)g_dropped_files);
+                }
                 g_dropped_files = ck_string_arr;
             } break;
             default: ASSERT(false)
@@ -565,11 +566,12 @@ CK_DLL_QUERY(ChuGL)
     g_chuglAPI = QUERY->ck_api(QUERY);
 
     { // cache common chuck types
-        g_chuck_types.int_array   = g_chuglAPI->type->lookup(g_chuglVM, "int[]");
-        g_chuck_types.float_array = g_chuglAPI->type->lookup(g_chuglVM, "float[]");
-        g_chuck_types.vec2_array  = g_chuglAPI->type->lookup(g_chuglVM, "vec2[]");
-        g_chuck_types.vec3_array  = g_chuglAPI->type->lookup(g_chuglVM, "vec3[]");
-        g_chuck_types.vec4_array  = g_chuglAPI->type->lookup(g_chuglVM, "vec4[]");
+        g_chuck_types.int_array    = g_chuglAPI->type->lookup(g_chuglVM, "int[]");
+        g_chuck_types.float_array  = g_chuglAPI->type->lookup(g_chuglVM, "float[]");
+        g_chuck_types.string_array = g_chuglAPI->type->lookup(g_chuglVM, "string[]");
+        g_chuck_types.vec2_array   = g_chuglAPI->type->lookup(g_chuglVM, "vec2[]");
+        g_chuck_types.vec3_array   = g_chuglAPI->type->lookup(g_chuglVM, "vec3[]");
+        g_chuck_types.vec4_array   = g_chuglAPI->type->lookup(g_chuglVM, "vec4[]");
     }
 
     // audio frame arena
@@ -896,6 +898,10 @@ CK_DLL_QUERY(ChuGL)
         // default to 60fps
         CQ_PushCommand_SetFixedTimestep(gg_config.fixed_timestep_fps);
         CQ_PushCommand_SetChuckVMInfo(g_chuglAPI->vm->srate(g_chuglVM));
+
+        // default empty string array for dropped files
+        g_dropped_files
+          = (Chuck_ArrayInt*)chugin_createCkObj(g_chuck_types.string_array, true);
     }
 
     // wasn't that a breeze?

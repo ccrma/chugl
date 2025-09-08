@@ -78,6 +78,7 @@ typedef i32 SG_ID;
     X(SG_COMPONENT_PASS, "GPass")                                                      \
     X(SG_COMPONENT_BUFFER, "GBuffer")                                                  \
     X(SG_COMPONENT_LIGHT, "GLight")                                                    \
+    X(SG_COMPONENT_MODEL, "GModel")                                                    \
     X(SG_COMPONENT_VIDEO, "Video")                                                     \
     X(SG_COMPONENT_WEBCAM, "Webcam")
 
@@ -574,7 +575,8 @@ struct SG_MaterialPipelineState {
     SG_ID sg_shader_id;
     WGPUCullMode cull_mode                   = WGPUCullMode_None;
     WGPUPrimitiveTopology primitive_topology = WGPUPrimitiveTopology_TriangleList;
-    b32 transparent;
+    b16 transparent;
+    b16 wireframe;
 };
 
 struct SG_Material : SG_Component {

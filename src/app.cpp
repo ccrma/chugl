@@ -1351,27 +1351,50 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Pass* pass, R_Camera* cam
                                          app->rendergraph.addDraw(dc_list);
 
         // populate index buffer
-        bool indexed_draw = (R_Geometry::indexCount(geo) > 0);
-        if (indexed_draw) {
-            bool user_provided_index_count = (geo->indices_count >= 0);
-            d->index_count                 = user_provided_index_count ?
-                                               MIN(R_Geometry::indexCount(geo), geo->indices_count) :
-                                               R_Geometry::indexCount(geo);
-            d->index_buffer                = geo->gpu_index_buffer.buf;
-            d->index_buffer_offset         = 0;
-            d->index_buffer_size           = geo->gpu_index_buffer.size;
+        bool indexed_draw               = (R_Geometry::indexCount(geo) > 0);
+        bool user_provided_index_count  = (geo->indices_count >= 0);
+        bool user_provided_vertex_count = (geo->vertex_count >= 0);
+        if (material->pso.wireframe) {
+            R_Geometry::rebuildWireframe(geo, &app->gctx);
+            // wireframe is always an indexed draw
+            if (indexed_draw) {
+                d->index_count = user_provided_index_count ?
+                                   MIN(R_Geometry::wireframeIndicesCount(geo),
+                                       geo->indices_count * 2) :
+                                   R_Geometry::wireframeIndicesCount(geo);
+            } else {
+                d->index_count = user_provided_vertex_count ?
+                                   MIN(R_Geometry::wireframeIndicesCount(geo),
+                                       geo->vertex_count * 2) :
+                                   R_Geometry::wireframeIndicesCount(geo);
+            }
+            d->index_buffer        = geo->gpu_wireframe_index_buffer.buf;
+            d->index_buffer_offset = 0;
+            d->index_buffer_size   = geo->gpu_wireframe_index_buffer.size;
         } else {
-            // TODO come up with a better way to set a custom number of vertices to draw
-            // having -1 actually mean ALL is confusing 2 different states.
-            u32 vertex_count                = R_Geometry::vertexCount(geo);
-            bool user_provided_vertex_count = geo->vertex_count >= 0;
-            d->vertex_count
-              = user_provided_vertex_count ? geo->vertex_count : vertex_count;
+            if (indexed_draw) {
+                d->index_count
+                  = user_provided_index_count ?
+                      MIN(R_Geometry::indexCount(geo), geo->indices_count) :
+                      R_Geometry::indexCount(geo);
+                d->index_buffer        = geo->gpu_index_buffer.buf;
+                d->index_buffer_offset = 0;
+                d->index_buffer_size   = geo->gpu_index_buffer.size;
+            } else {
+                // TODO come up with a better way to set a custom number of vertices to
+                // draw having -1 actually mean ALL is confusing 2 different states.
+                d->vertex_count
+                  = user_provided_vertex_count ?
+                      MIN(geo->vertex_count, R_Geometry::vertexCount(geo)) :
+                      R_Geometry::vertexCount(geo);
+            }
         }
 
         // set pso
         d->pipelineDesc(shader_id, material->pso.cull_mode,
-                        material->pso.primitive_topology, is_transparent);
+                        material->pso.wireframe ? WGPUPrimitiveTopology_LineList :
+                                                  material->pso.primitive_topology,
+                        is_transparent);
 
         { // set bindgroups
             // set frame uniforms

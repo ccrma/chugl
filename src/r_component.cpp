@@ -523,6 +523,11 @@ u32 R_Geometry::indexCount(R_Geometry* geo)
     return geo->gpu_index_buffer.size / sizeof(u32);
 }
 
+u32 R_Geometry::wireframeIndicesCount(R_Geometry* geo)
+{
+    return geo->gpu_wireframe_index_buffer.size / sizeof(u32);
+}
+
 u32 R_Geometry::vertexCount(R_Geometry* geo)
 {
     if (geo->vertex_attribute_num_components[0] == 0) return 0;
@@ -550,14 +555,21 @@ void R_Geometry::setVertexAttribute(GraphicsContext* gctx, R_Geometry* geo,
     geo->vertex_attribute_num_components[location] = num_components_per_attrib;
     GPU_Buffer::write(gctx, &geo->gpu_vertex_buffers[location],
                       (WGPUBufferUsage_Vertex | WGPUBufferUsage_CopyDst), data, size);
+
+    if (location == SG_GEOMETRY_POSITION_ATTRIBUTE_LOCATION) {
+        geo->gpu_wireframe_index_buffer_stale = 1;
+    }
 }
 
 void R_Geometry::setIndices(GraphicsContext* gctx, R_Geometry* geo, u32* indices,
                             u32 indices_count)
 {
+    int size = indices_count * sizeof(*indices);
     GPU_Buffer::write(gctx, &geo->gpu_index_buffer,
-                      (WGPUBufferUsage_Index | WGPUBufferUsage_CopyDst), indices,
-                      indices_count * sizeof(*indices));
+                      (WGPUBufferUsage_Index | WGPUBufferUsage_CopyDst), indices, size);
+    geo->index_buffer_MALLOC = (u32*)realloc(geo->index_buffer_MALLOC, size);
+    memcpy(geo->index_buffer_MALLOC, indices, size);
+    geo->gpu_wireframe_index_buffer_stale = true;
 }
 
 bool R_Geometry::usesVertexPulling(R_Geometry* geo)
@@ -585,6 +597,46 @@ void R_Geometry::setPulledVertexAttribute(GraphicsContext* gctx, R_Geometry* geo
 {
     GPU_Buffer::write(gctx, &geo->pull_buffers[location], WGPUBufferUsage_Storage, data,
                       size_bytes);
+}
+
+void R_Geometry::rebuildWireframe(R_Geometry* geo, GraphicsContext* gctx)
+{
+    if (!geo->gpu_wireframe_index_buffer_stale) return;
+    geo->gpu_wireframe_index_buffer_stale = false;
+
+    u32 num_indices        = R_Geometry::indexCount(geo);
+    int wireframe_i        = 0;
+    u64 size_bytes         = 0;
+    u32* wireframe_indices = NULL;
+    if (num_indices > 0) {
+        wireframe_indices = ARENA_PUSH_COUNT(&gctx->frame_arena, u32, num_indices * 2);
+        size_bytes        = sizeof(u32) * num_indices * 2;
+        for (int i = 0; i < num_indices; i += 3) {
+            wireframe_indices[wireframe_i++] = geo->index_buffer_MALLOC[i];
+            wireframe_indices[wireframe_i++] = geo->index_buffer_MALLOC[i + 1];
+            wireframe_indices[wireframe_i++] = geo->index_buffer_MALLOC[i + 1];
+            wireframe_indices[wireframe_i++] = geo->index_buffer_MALLOC[i + 2];
+            wireframe_indices[wireframe_i++] = geo->index_buffer_MALLOC[i + 2];
+            wireframe_indices[wireframe_i++] = geo->index_buffer_MALLOC[i];
+        }
+        ASSERT(wireframe_i == num_indices * 2);
+    } else {
+        u32 num_vertices  = R_Geometry::vertexCount(geo);
+        wireframe_indices = ARENA_PUSH_COUNT(&gctx->frame_arena, u32, num_vertices * 2);
+        size_bytes        = sizeof(u32) * num_vertices * 2;
+        for (int i = 0; i < num_vertices; i += 3) {
+            wireframe_indices[wireframe_i++] = i;
+            wireframe_indices[wireframe_i++] = i + 1;
+            wireframe_indices[wireframe_i++] = i + 1;
+            wireframe_indices[wireframe_i++] = i + 2;
+            wireframe_indices[wireframe_i++] = i + 2;
+            wireframe_indices[wireframe_i++] = i;
+        }
+        ASSERT(wireframe_i == num_vertices * 2);
+    }
+    GPU_Buffer::write(gctx, &geo->gpu_wireframe_index_buffer,
+                      (WGPUBufferUsage_Index | WGPUBufferUsage_CopyDst),
+                      wireframe_indices, size_bytes);
 }
 
 // ============================================================================
