@@ -52,8 +52,14 @@ GModel default_model;
 T.assert(default_model.geometries.size() == 0, "GModel default geometries empty");
 T.assert(default_model.materials.size() == 0, "GModel default materials empty");
 T.assert(default_model.meshes.size() == 0, "GModel default meshes empty");
+T.assert(T.veq(default_model.min, @(0,0,0)), "GModel default bmin");
+T.assert(T.veq(default_model.max, @(0,0,0)), "GModel default bmax");
 T.assert(Type.of(default_model).parent().name() == "GGen", "GModel parent is GGen");
 
 T.assert(Machine.refcount(default_model.geometries) == 1, "GModel.geometries refcount");
 T.assert(Machine.refcount(default_model.materials) == 1, "GModel.materials refcount");
 T.assert(Machine.refcount(default_model.meshes) == 1, "GModel.meshes refcount");
+
+ModelLoadDesc default_model_load_desc;
+T.assert(default_model_load_desc.flipTextures == 0, "ModelLoadDesc default flip textures");
+T.assert(default_model_load_desc.combine == 0, "ModelLoadDesc default combine geometries");

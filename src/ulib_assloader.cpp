@@ -99,24 +99,23 @@ struct AssloaderMat2GeoItem {
     }
 };
 
-struct SG_Model {
-    /*
-    extends GGen
-    Geo[]
-    Mat[]
-    GMesh[]
-    vec3 bmin, bmax
-    */
-};
-
-// SG_Sampler offsets
+// GModel offsets
 // idea: store these as static ints on SG_Sampler struct?
 static t_CKUINT gmodel_offset_geo_array  = 0;
 static t_CKUINT gmodel_offset_mat_array  = 0;
 static t_CKUINT gmodel_offset_mesh_array = 0;
+static t_CKUINT gmodel_offset_bbox_min   = 0;
+static t_CKUINT gmodel_offset_bbox_max   = 0;
 
 CK_DLL_CTOR(gmodel_ctor);
 CK_DLL_CTOR(gmodel_ctor_with_fp);
+CK_DLL_CTOR(gmodel_ctor_with_fp_and_desc);
+
+// ModelLoadDesc offsets
+static t_CKUINT model_load_desc_offset_flip_texture_y = 0;
+static t_CKUINT model_load_desc_offset_combine_geos   = 0;
+
+CK_DLL_CTOR(model_load_desc_ctor);
 
 void ulib_assloader_query(Chuck_DL_Query* QUERY)
 {
@@ -139,6 +138,27 @@ void ulib_assloader_query(Chuck_DL_Query* QUERY)
         END_CLASS();
     }
 
+    { // ModelDesc --------------------------------------------------------------
+        BEGIN_CLASS("ModelLoadDesc", "Object");
+        DOC_CLASS("Options for model loading. Use in conjuntion with GModel");
+
+        model_load_desc_offset_combine_geos = MVAR("int", "combine", false);
+        DOC_VAR(
+          "Default false. If true, will combine model geometries where possible under "
+          "a single Mesh. This improves rendering efficiency at the cost of freedom to "
+          "move the individual parts of a model independently");
+
+        model_load_desc_offset_flip_texture_y = MVAR("int", "flipTextures", false);
+        DOC_VAR(
+          "Default false. If true, will flip all model textures along the y-axis. This "
+          "is a quick fix to account for differences in Y-axis convention across "
+          "different asset creation tools");
+
+        CTOR(model_load_desc_ctor);
+
+        END_CLASS();
+    }
+
     { // GModel --------------------------------------------------------------
         BEGIN_CLASS(SG_CKNames[SG_COMPONENT_MODEL], SG_CKNames[SG_COMPONENT_TRANSFORM]);
         DOC_CLASS("Class for loading models. Currently supports: OBJ");
@@ -153,6 +173,16 @@ void ulib_assloader_query(Chuck_DL_Query* QUERY)
         gmodel_offset_mesh_array = MVAR("GMesh[]", "meshes", true);
         DOC_VAR("TODO");
 
+        gmodel_offset_bbox_max = MVAR("vec3", "max", true);
+        DOC_VAR(
+          "Get the max position of this model's bounding box. NOT scale-adjusted, "
+          "multiply by GModel.scaWorld() to get scaled bounding box.");
+
+        gmodel_offset_bbox_min = MVAR("vec3", "min", true);
+        DOC_VAR(
+          "Get the min position of this model's bounding box. NOT scale-adjusted, "
+          "multiply by GModel.scaWorld() to get scaled bounding box.");
+
         CTOR(gmodel_ctor);
         DOC_FUNC(
           "Default constructor. Initializes an empty model which is functionally "
@@ -163,6 +193,13 @@ void ulib_assloader_query(Chuck_DL_Query* QUERY)
         DOC_FUNC(
           "Initializes an model from the given asset file. Currently supports .obj "
           "files");
+
+        CTOR(gmodel_ctor_with_fp_and_desc);
+        ARG("string", "filepath");
+        ARG("ModelLoadDesc", "options");
+        DOC_FUNC(
+          "Initializes an model from an asset file with the given model loading "
+          "options. Currently supports .obj files");
 
         END_CLASS();
     }
@@ -176,8 +213,17 @@ void ulib_assloader_query(Chuck_DL_Query* QUERY)
 // impl ============================================================================
 
 struct SG_AssetLoadDesc {
+    int combine_geos    = 0;
     int textures_flip_y = 0;
-    int combine_geos    = 1; // TODO implement option where we don't combine
+
+    static SG_AssetLoadDesc from(Chuck_Object* ckobj)
+    {
+        CK_DL_API API = g_chuglAPI;
+        return {
+            (int)OBJ_MEMBER_INT(ckobj, model_load_desc_offset_combine_geos),
+            (int)OBJ_MEMBER_INT(ckobj, model_load_desc_offset_flip_texture_y),
+        };
+    }
 };
 
 static Arena
@@ -221,6 +267,25 @@ static void ulib_assloader_tinyobj_filereader(void* ctx, const char* filename,
 static void ulib_assloader_tinyobj_load(const char* filepath, Chuck_VM_Shred* SHRED,
                                         SG_AssetLoadDesc desc, SG_Transform* gmodel)
 {
+    const char* extension = (File_getExtension(filepath));
+    bool is_obj = (strcmp(extension, "obj") == 0 || strcmp(extension, "Obj") == 0
+                   || strcmp(extension, "OBJ") == 0);
+    if (!is_obj) {
+        log_warn(
+          "Cannot load model from file '%s', only OBJ files with extension .obj are "
+          "supported",
+          filepath);
+        return;
+    }
+
+    CK_DL_API API = g_chuglAPI;
+    Chuck_ArrayInt* ck_geo_array
+      = OBJ_MEMBER_INT_ARRAY(gmodel->ckobj, gmodel_offset_geo_array);
+    Chuck_ArrayInt* ck_mat_array
+      = OBJ_MEMBER_INT_ARRAY(gmodel->ckobj, gmodel_offset_mat_array);
+    Chuck_ArrayInt* ck_mesh_array
+      = OBJ_MEMBER_INT_ARRAY(gmodel->ckobj, gmodel_offset_mesh_array);
+
     tinyobj_attrib_t attrib;
     tinyobj_shape_t* shapes = NULL;
     size_t num_shapes;
@@ -233,16 +298,14 @@ static void ulib_assloader_tinyobj_load(const char* filepath, Chuck_VM_Shred* SH
     if (ret != TINYOBJ_SUCCESS) {
         switch (ret) {
             case TINYOBJ_ERROR_EMPTY: {
-                log_warn("AssLoader error loading OBJ file '%s': empty file", filepath);
+                log_warn("Error loading OBJ file '%s': empty file", filepath);
             } break;
             case TINYOBJ_ERROR_INVALID_PARAMETER: {
-                log_warn("AssLoader error loading OBJ file '%s': invalid file",
-                         filepath);
+                log_warn("Error loading OBJ file '%s': invalid file", filepath);
             } break;
             case TINYOBJ_ERROR_FILE_OPERATION: {
-                log_warn(
-                  "AssLoader error loading OBJ file '%s': invalid file operation",
-                  filepath);
+                log_warn("Error loading OBJ file '%s': invalid file operation",
+                         filepath);
             } break;
             default: UNREACHABLE;
         }
@@ -259,29 +322,37 @@ static void ulib_assloader_tinyobj_load(const char* filepath, Chuck_VM_Shred* SH
     }
 
     // calculate how many Geometry and Material we need to create
-    SG_ID* sg_component_ids
+    SG_ID* sg_component_ids = NULL;
+    SG_ID* material_ids     = NULL;
+    SG_ID* geometry_ids     = NULL;
+    SG_ID* mesh_ids         = NULL;
+    sg_component_ids
       = ARENA_PUSH_ZERO_COUNT(&audio_frame_arena, SG_ID, (num_materials + 1) * 3);
-    SG_ID* geometry_ids
-      = sg_component_ids
-        + 1; // geometry_ids[-1] is the geo that corresponds to the default material
-    SG_ID* material_ids
-      = geometry_ids + num_materials + 1; // material_ids[-1] is the default material
-
-    SG_ID* mesh_ids
-      = material_ids + num_materials + 1; // mesh_ids[-1] is mesh from default material
+    material_ids
+      = sg_component_ids; // material_ids[num_materials] is the default material
+    geometry_ids
+      = material_ids + num_materials + 1; // geometry_ids[num_materials] is the geo that
+                                          // corresponds to the default material
+    mesh_ids = geometry_ids + num_materials
+               + 1; // mesh_ids[num_materials] is mesh from default material
 
     { // create materials
         for (size_t i = 0; i < num_materials; i++) {
             tinyobj_material_t* obj_material = materials + i;
 
             // create geometry for this material
-            SG_Geometry* geo = ulib_geometry_create(SG_GEOMETRY, SHRED);
-            geometry_ids[i]  = geo->id;
-            ulib_component_set_name(geo, obj_material->name);
+            if (desc.combine_geos) {
+                SG_Geometry* geo = ulib_geometry_create(SG_GEOMETRY, SHRED);
+                geometry_ids[i]  = geo->id;
+                ulib_component_set_name(geo, obj_material->name);
+            }
 
             // assumes material is phong (currently NOT supporting pbr extension)
             SG_Material* phong_material
               = ulib_material_create(SG_MATERIAL_PHONG, SHRED);
+
+            g_chuglAPI->object->array_int_push_back(ck_mat_array,
+                                                    (t_CKINT)phong_material->ckobj);
 
             // add to material id array
             material_ids[i] = phong_material->id;
@@ -351,14 +422,16 @@ static void ulib_assloader_tinyobj_load(const char* filepath, Chuck_VM_Shred* SH
         }
     }
 
-    float bmin[3];
-    float bmax[3];
-    bmin[0] = bmin[1] = bmin[2] = FLT_MAX;
-    bmax[0] = bmax[1] = bmax[2] = -FLT_MAX;
-    // TODO set bounding box
+    glm::vec3 bmin(FLT_MAX);
+    glm::vec3 bmax(-FLT_MAX);
 
     // clang-format off
     for (size_t shape_i = 0; shape_i < num_shapes; shape_i++) {
+        if (!desc.combine_geos) { // zero out so we can build new meshes/geos per mesh
+            memset(geometry_ids, 0, num_materials + 1);
+            memset(mesh_ids, 0, num_materials + 1);
+        }
+
         tinyobj_shape_t* obj_shape = shapes + shape_i;
         SG_Geometry* geo      = NULL;
         int prev_material_idx = -num_materials;
@@ -372,19 +445,29 @@ static void ulib_assloader_tinyobj_load(const char* filepath, Chuck_VM_Shred* SH
         for (size_t face_idx = obj_shape->face_offset;
              face_idx < obj_shape->face_offset + obj_shape->length; ++face_idx) {
 
-            { // get the correct  material and geometry
+            { // get the correct material and geometry
                 int material_idx = attrib.material_ids[face_idx];
                 if (material_idx < 0) uses_default_material = true;
                 if (material_idx != prev_material_idx) {
                     bool need_create_default_material
-                      = (material_idx < 0 && material_ids[-1] == 0);
+                      = (material_idx < 0 && material_ids[num_materials] == 0);
+                    if (material_idx < 0) material_idx = num_materials;
                     if (need_create_default_material) {
-                        material_idx = -1;
-                        ASSERT(geometry_ids[-1] == 0); // geo should not be made yet
-                        material_ids[-1]
-                          = ulib_material_create(SG_MATERIAL_PHONG, SHRED)->id;
-                        geometry_ids[-1] = ulib_geometry_create(SG_GEOMETRY, SHRED)->id;
+                        ASSERT(geometry_ids[num_materials] == 0); // geo should not be made yet
+                        SG_Material* default_material = ulib_material_create(SG_MATERIAL_PHONG, SHRED);
+                        material_ids[num_materials] = default_material->id;
+                        geometry_ids[num_materials] = ulib_geometry_create(SG_GEOMETRY, SHRED)->id;
+                        g_chuglAPI->object->array_int_push_back(ck_mat_array,
+                                                    (t_CKINT)default_material->ckobj);
                     }
+
+                    if (geometry_ids[material_idx] == 0) {
+                        ASSERT(!desc.combine_geos); // this should only happen when we are creating geos per shape
+                        geo = ulib_geometry_create(SG_GEOMETRY, SHRED);
+                        geometry_ids[material_idx] = geo->id;
+                        ulib_component_set_name(geo, obj_shape->name);
+                    }
+
                     ASSERT(material_ids[material_idx] && geometry_ids[material_idx]);
                     prev_material_idx = material_idx;
                     geo               = SG_GetGeometry(geometry_ids[material_idx]);
@@ -414,6 +497,9 @@ static void ulib_assloader_tinyobj_load(const char* filepath, Chuck_VM_Shred* SH
                 positions[face_vert_idx].x = attrib.vertices[3 * indices[face_vert_idx].v_idx + 0];
                 positions[face_vert_idx].y = attrib.vertices[3 * indices[face_vert_idx].v_idx + 1];
                 positions[face_vert_idx].z = attrib.vertices[3 * indices[face_vert_idx].v_idx + 2];
+
+                bmin = glm::min(bmin, positions[face_vert_idx]);
+                bmax = glm::max(bmax, positions[face_vert_idx]);
             }
 
             bool has_normal = (attrib.num_normals > 0 && indices[0].vn_idx >= 0 && indices[1].vn_idx >= 0
@@ -456,42 +542,41 @@ static void ulib_assloader_tinyobj_load(const char* filepath, Chuck_VM_Shred* SH
               "Warning, OBJ '%s' Mesh '%s' is missing vertex UV data. Defaulting to (0,0)",
               filepath, obj_shape->name);
         }
+
+        bool last_shape = (shape_i == num_shapes - 1);
+        if (!desc.combine_geos || last_shape) {
+            // create meshes and add to gmodel
+            for (int i = 0; i <= num_materials; i++) {
+                // check for default mat/geo
+                if (material_ids[i] == 0 || geometry_ids[i] == 0) continue;
+
+                SG_Geometry* geo = SG_GetGeometry(geometry_ids[i]);
+                SG_Material* mat = SG_GetMaterial(material_ids[i]);
+
+                // update
+                CQ_UpdateAllVertexAttributes(geo);
+
+                // create mesh
+                SG_Mesh* mesh
+                = ulib_mesh_create(NULL, geo, mat, SHRED);
+
+                // assign to parent
+                if (gmodel) {
+                    CQ_PushCommand_AddChild(gmodel, mesh);
+                } 
+                
+                // add to GModel
+                g_chuglAPI->object->array_int_push_back(ck_geo_array, (t_CKINT) geo->ckobj);
+                g_chuglAPI->object->array_int_push_back(ck_mesh_array, (t_CKINT) mesh->ckobj);
+            }
+        }
     } // foreach shape
 
-    // create meshes
-    // start from -1 to include default material/geo
-    CK_DL_API API = g_chuglAPI;
-    Chuck_ArrayInt* ck_geo_array = OBJ_MEMBER_INT_ARRAY(gmodel->ckobj, gmodel_offset_geo_array);
-    Chuck_ArrayInt* ck_mat_array = OBJ_MEMBER_INT_ARRAY(gmodel->ckobj, gmodel_offset_mat_array);
-    Chuck_ArrayInt* ck_mesh_array = OBJ_MEMBER_INT_ARRAY(gmodel->ckobj, gmodel_offset_mesh_array);
-    for (int i = -1; i < (i32)num_materials; i++) {
-        // check for default mat/geo
-        if (material_ids[i] == 0) {
-            ASSERT(geometry_ids[i] == 0)
-            continue;
-        }
-
-        SG_Geometry* geo = SG_GetGeometry(geometry_ids[i]);
-        SG_Material* mat = SG_GetMaterial(material_ids[i]);
-
-        // update
-        CQ_UpdateAllVertexAttributes(geo);
-
-        // create mesh
-        SG_Mesh* mesh
-          = ulib_mesh_create(NULL, geo, mat, SHRED);
-        mesh_ids[i] = mesh->id;
-
-        // assign to parent
-        if (gmodel) {
-            CQ_PushCommand_AddChild(gmodel, mesh);
-        } 
-        
-        // add to GModel
-        g_chuglAPI->object->array_int_push_back(ck_geo_array, (t_CKINT) geo->ckobj);
-        g_chuglAPI->object->array_int_push_back(ck_mat_array, (t_CKINT) mat->ckobj);
-        g_chuglAPI->object->array_int_push_back(ck_mesh_array, (t_CKINT) mesh->ckobj);
+    if (num_shapes > 0) {
+        OBJ_MEMBER_VEC3(gmodel->ckobj, gmodel_offset_bbox_max) = {bmax.x, bmax.y, bmax.z};
+        OBJ_MEMBER_VEC3(gmodel->ckobj, gmodel_offset_bbox_min) = {bmin.x, bmin.y, bmin.z};
     }
+
     // set model name
     ulib_component_set_name(gmodel, filepath);
 }
@@ -765,6 +850,8 @@ static SG_Transform* ulib_gmodel_create(Chuck_Object* ckobj, Chuck_VM_Shred* shr
       = chugin_createCkObj("Material[]", true, shred);
     OBJ_MEMBER_OBJECT(ckobj, gmodel_offset_mesh_array)
       = chugin_createCkObj("GMesh[]", true, shred);
+    OBJ_MEMBER_VEC3(ckobj, gmodel_offset_bbox_max) = { 0, 0, 0 };
+    OBJ_MEMBER_VEC3(ckobj, gmodel_offset_bbox_min) = { 0, 0, 0 };
 
     return model;
 }
@@ -785,4 +872,27 @@ CK_DLL_CTOR(gmodel_ctor_with_fp)
 
     SG_AssetLoadDesc desc = {};
     ulib_assloader_tinyobj_load(filepath, SHRED, desc, model);
+}
+
+CK_DLL_CTOR(gmodel_ctor_with_fp_and_desc)
+{
+    SG_Transform* model = ulib_gmodel_create(SELF, SHRED);
+
+    Chuck_String* ck_str = GET_NEXT_STRING(ARGS);
+    if (ck_str == NULL) return;
+    const char* filepath = API->object->str(ck_str);
+    if (filepath == NULL) return;
+
+    SG_AssetLoadDesc desc = SG_AssetLoadDesc::from(GET_NEXT_OBJECT(ARGS));
+    ulib_assloader_tinyobj_load(filepath, SHRED, desc, model);
+}
+
+// =============================
+// ModelLoadDesc
+// =============================
+
+CK_DLL_CTOR(model_load_desc_ctor)
+{
+    OBJ_MEMBER_INT(SELF, model_load_desc_offset_combine_geos)   = 0;
+    OBJ_MEMBER_INT(SELF, model_load_desc_offset_flip_texture_y) = 0;
 }

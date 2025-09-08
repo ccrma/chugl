@@ -1,6 +1,7 @@
 TODO
 
 - Add sampler to the GShape #define!!!
+- eventually remove rapidObj dep
 
 - change GText.width to GText.maxWidth
 

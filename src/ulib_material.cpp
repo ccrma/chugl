@@ -131,6 +131,7 @@ CK_DLL_MFUN(lines2d_material_set_loop);
 
 // flat material
 CK_DLL_CTOR(flat_material_ctor);
+CK_DLL_CTOR(flat_material_ctor_with_color_vec3);
 CK_DLL_MFUN(flat_material_get_color);
 CK_DLL_MFUN(flat_material_set_color);
 CK_DLL_MFUN(flat_material_set_color_rgba);
@@ -729,6 +730,9 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
         ADD_EX("deep/sprite_animation.ck");
 
         CTOR(flat_material_ctor);
+
+        CTOR(flat_material_ctor_with_color_vec3);
+        ARG("vec3", "color");
 
         // color uniform
         MFUN(flat_material_get_color, "vec3", "color");
@@ -1923,6 +1927,18 @@ CK_DLL_CTOR(flat_material_ctor)
     SG_Material* material   = GET_MATERIAL(SELF);
     material->material_type = SG_MATERIAL_FLAT;
     ulib_material_init_uniforms_and_pso(material);
+}
+
+CK_DLL_CTOR(flat_material_ctor_with_color_vec3)
+{
+    SG_Material* material   = GET_MATERIAL(SELF);
+    material->material_type = SG_MATERIAL_FLAT;
+    ulib_material_init_uniforms_and_pso(material);
+
+    t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
+
+    SG_Material::uniformVec4f(material, 0, glm::vec4(color.x, color.y, color.z, 1));
+    CQ_PushCommand_MaterialSetUniform(material, 0);
 }
 
 CK_DLL_MFUN(flat_material_get_color)
