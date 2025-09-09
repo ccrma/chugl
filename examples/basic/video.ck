@@ -70,9 +70,9 @@ UI_Float3 scale(video_mesh.sca());
 while (true) {
     GG.nextFrame() => now;
 
-    if (GWindow.keyDown(GWindow.Key_Left)) {
+    if (GWindow.keyDown(GWindow.KEY_LEFT)) {
         video.seek(video.timestamp() - 10::second);
-    } else if (GWindow.keyDown(GWindow.Key_Right)) {
+    } else if (GWindow.keyDown(GWindow.KEY_RIGHT)) {
         video.seek(video.timestamp() + 10::second);
     }
 

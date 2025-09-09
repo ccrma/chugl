@@ -174,22 +174,29 @@ static void ulib_geometry_query(Chuck_DL_Query* QUERY)
     SVAR("int", "ATTRIBUTE_MAX", &sg_geometry_max_attributes);
     DOC_VAR("Maximum number of vertex attributes.");
     SVAR("int", "AttributeLocation_Count", &sg_geometry_max_attributes);
-    DOC_VAR("(deprecated; use ATTRIBUTE_MAX instead) Maximum number of vertex attributes.");
+    DOC_VAR(
+      "(deprecated; use ATTRIBUTE_MAX instead) Maximum number of vertex attributes.");
 
     SVAR("int", "ATTRIBUTE_POSITION", &pos_attr_loc);
     DOC_VAR("Position attribute location used by builtin renderer");
     SVAR("int", "AttributeLocation_Position", &pos_attr_loc);
-    DOC_VAR("(deprecated; use ATTRIBUTE_POSITION instead) Position attribute location used by builtin renderer");
+    DOC_VAR(
+      "(deprecated; use ATTRIBUTE_POSITION instead) Position attribute location used "
+      "by builtin renderer");
 
     SVAR("int", "ATTRIBUTE_NORMAL", &norm_attr_loc);
     DOC_VAR("Normal attribute location used by builtin renderer");
     SVAR("int", "AttributeLocation_Normal", &norm_attr_loc);
-    DOC_VAR("(deprecated; use ATTRIBUTE_NORMAL instead) Normal attribute location used by builtin renderer");
+    DOC_VAR(
+      "(deprecated; use ATTRIBUTE_NORMAL instead) Normal attribute location used by "
+      "builtin renderer");
 
     SVAR("int", "ATTRIBUTE_UV", &uv_attr_loc);
     DOC_VAR("UV attribute location used by builtin renderer");
     SVAR("int", "AttributeLocation_UV", &uv_attr_loc);
-    DOC_VAR("(deprecated; use ATTRIBUTE_UV instead) UV attribute location used by builtin renderer");
+    DOC_VAR(
+      "(deprecated; use ATTRIBUTE_UV instead) UV attribute location used by builtin "
+      "renderer");
 
     // ctor
     CTOR(geo_ctor);
@@ -201,28 +208,28 @@ static void ulib_geometry_query(Chuck_DL_Query* QUERY)
     ARG("float[]", "attributeData");
     DOC_FUNC(
       "Set the vertex attribute data for a geometry. location must be between "
-      "0 and AttributeLocation_Max.");
+      "0 and ATTRIBUTE_MAX.");
 
     MFUN(geo_set_vertex_attribute_vec2, "void", "vertexAttribute");
     ARG("int", "location");
     ARG("vec2[]", "attributeData");
     DOC_FUNC(
       "Set the vertex attribute data for a geometry. location must be between "
-      "0 and AttributeLocation_Max. Assumes attribute has 2 float components");
+      "0 and ATTRIBUTE_MAX. Assumes attribute has 2 float components");
 
     MFUN(geo_set_vertex_attribute_vec3, "void", "vertexAttribute");
     ARG("int", "location");
     ARG("vec3[]", "attributeData");
     DOC_FUNC(
       "Set the vertex attribute data for a geometry. location must be between "
-      "0 and AttributeLocation_Max. Assumes attribute has 3 float components");
+      "0 and ATTRIBUTE_MAX. Assumes attribute has 3 float components");
 
     MFUN(geo_set_vertex_attribute_vec4, "void", "vertexAttribute");
     ARG("int", "location");
     ARG("vec4[]", "attributeData");
     DOC_FUNC(
       "Set the vertex attribute data for a geometry. location must be between "
-      "0 and AttributeLocation_Max. Assumes attribute has 4 float components");
+      "0 and ATTRIBUTE_MAX. Assumes attribute has 4 float components");
 
     MFUN(geo_set_vertex_attribute_int, "void", "vertexAttribute");
     ARG("int", "location");
@@ -230,7 +237,7 @@ static void ulib_geometry_query(Chuck_DL_Query* QUERY)
     ARG("int[]", "attributeData");
     DOC_FUNC(
       "Set the vertex attribute data for a geometry. location must be between "
-      "0 and Geometry.AttributeLocation_Count");
+      "0 and Geometry.ATTRIBUTE_MAX");
 
     MFUN(geo_set_positions, "void", "positions");
     ARG("vec3[]", "positions");

@@ -496,6 +496,41 @@ CK_DLL_SFUN(chugl_get_default_output_pass)
     RETURN->v_object = SG_GetPass(gg_config.default_output_pass_id)->ckobj;
 }
 
+CK_DLL_SFUN(chugl_get_default_bloom_pass)
+{
+    RETURN->v_object = SG_GetPass(gg_config.default_bloom_pass_id)->ckobj;
+}
+
+CK_DLL_SFUN(chugl_set_bloom)
+{
+    bool connect                 = GET_NEXT_INT(ARGS);
+    SG_Pass* default_scene_pass  = SG_GetPass(gg_config.default_scene_pass_id);
+    SG_Pass* default_output_pass = SG_GetPass(gg_config.default_output_pass_id);
+    SG_Pass* default_bloom_pass  = SG_GetPass(gg_config.default_bloom_pass_id);
+    SG_Material* material = SG_GetMaterial(default_output_pass->screen_material_id);
+    if (connect) {
+        SG_Pass::connect(default_scene_pass, default_bloom_pass);
+        SG_Pass::connect(default_bloom_pass, default_output_pass);
+
+        // connect scenePass output texture to bloomPass input
+        SG_Pass::bloomInputRenderTexture(
+          default_bloom_pass, SG_GetTexture(default_scene_pass->color_target_id));
+
+        // connect bloomPass output texture to outputPass input input
+        SG_Material::setTexture(
+          material, 0,
+          SG_GetTexture(default_bloom_pass->bloom_output_render_texture_id));
+    } else {
+        SG_Pass::connect(default_scene_pass, default_output_pass);
+        SG_Material::setTexture(material, 0,
+                                SG_GetTexture(default_scene_pass->color_target_id));
+    }
+    CQ_PushCommand_MaterialSetUniform(material, 0);
+    CQ_PushCommand_PassUpdate(default_scene_pass);
+    CQ_PushCommand_PassUpdate(default_output_pass);
+    CQ_PushCommand_PassUpdate(default_bloom_pass);
+}
+
 CK_DLL_SFUN(chugl_get_auto_update_scenegraph)
 {
     RETURN->v_int = gg_config.auto_update_scenegraph ? 1 : 0;
@@ -765,6 +800,26 @@ CK_DLL_QUERY(ChuGL)
           "Get the default output pass (renders the main scene to the screen, "
           "with default tonemapping and exposure settings");
 
+        SFUN(chugl_get_default_bloom_pass, "BloomPass", "bloomPass");
+        DOC_FUNC(
+          "Get the default bloom pass, which is *not* connected on initialization. To "
+          "connect, GG.bloom(true)");
+
+        SFUN(chugl_set_bloom, "void", "bloom");
+        ARG("int", "connect");
+        DOC_FUNC(
+          "This is a convenience method for doing 2 steps:"
+          "(1) Connecting the default bloom pass to the rendergraph such that it looks "
+          "like: "
+          "GG.rootPass() --> GG.scenePass() --> GG.bloomPass() --> GG.outputPass(); "
+          "And (2) connecting the input texture of the scenepass to the bloomPass, and "
+          "the output texture of the bloomPass to the outputPass."
+          "See examples/rendergraph/bloom.ck for how to set up via the rendergraph and "
+          "GPass API explicitly.");
+
+        // SFUN(chugl_get_bloom, "int", "bloom");
+        // DOC_FUNC("Get whether bloom has been added via GG.bloom(int)");
+
         SFUN(chugl_get_auto_update_scenegraph, "int", "autoUpdate");
         DOC_FUNC(
           "Returns true if GGen update() functions are automatically called "
@@ -883,6 +938,10 @@ CK_DLL_QUERY(ChuGL)
         // connect renderPass to outputPass
         SG_Pass::connect(render_pass, output_pass);
 
+        SG_Pass* bloom_pass = ulib_pass_create(SG_PassType_Bloom, NULL, true, NULL);
+        gg_config.default_bloom_pass_id = bloom_pass->id;
+        ulib_component_set_name(output_pass, "ChuGL Default BloomPass");
+
         // set render texture as input to output pass
         SG_Material* material = SG_GetMaterial(output_pass->screen_material_id);
         SG_Material::setTexture(material, 0, render_texture);
@@ -892,6 +951,7 @@ CK_DLL_QUERY(ChuGL)
         CQ_PushCommand_PassUpdate(root_pass);
         CQ_PushCommand_PassUpdate(render_pass);
         CQ_PushCommand_PassUpdate(output_pass);
+        CQ_PushCommand_PassUpdate(bloom_pass);
     }
 
     { // default config

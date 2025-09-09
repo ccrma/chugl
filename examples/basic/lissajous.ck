@@ -14,9 +14,9 @@
 // modify rendergraph
 // FYI default: GG.rootPass() --> GG.scenePass() --> GG.outputPass()
 // FYI modified: insert a BloomPass between scenePass and outputPass
-// GG.bloom( true );
+GG.bloom( true );
 // sets bloom intensity
-GG.bloomPass( true ).intensity(1.0);
+GG.bloomPass().intensity(1.0);
 
 // set up camera
 GG.camera().orthographic();
@@ -67,6 +67,7 @@ vec2 positions[WINDOW_SIZE];
 
 UI_Float freq_l(left_osc.freq());
 UI_Float freq_r(right_osc.freq());
+UI_Bool glow(true);
 while (true) {
     GG.nextFrame() => now;
 
@@ -91,7 +92,7 @@ while (true) {
             right_osc.phase(0);
         }
 
-        if (UI.button("Play oscilloscope music") || GWindow.keyDown(GWindow.Key_Space)) {
+        if (UI.button("Play oscilloscope music") || GWindow.keyDown(GWindow.KEY_SPACE)) {
             // disconnect the oscillators
             left_osc =< dac.chan(0);
             right_osc =< dac.chan(1);
@@ -103,6 +104,8 @@ while (true) {
                 buf => dac;
             }
         }
+
+        if (UI.checkbox("Glow", glow)) GG.bloom(glow.val());
     }
     UI.end();
 }

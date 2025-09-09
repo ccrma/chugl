@@ -170,51 +170,51 @@ while (true) {
     GG.nextFrame() => now;
 
     // meow animation
-    if (GWindow.keyDown(GWindow.Key_Space)) {
+    if (GWindow.keyDown(GWindow.KEY_SPACE)) {
         spork ~ meow();
     }
 
     // controls + animation state machine
     if (cat_state == cat_idle) {
         // idle --> walk right
-        if (GWindow.keyDown(GWindow.Key_Right)) {
+        if (GWindow.keyDown(GWindow.KEY_RIGHT)) {
             cat_walk @=> cat_state;
             1 => sprite.scaX;
         // idle --> walk left
-        } else if (GWindow.keyDown(GWindow.Key_Left)) {
+        } else if (GWindow.keyDown(GWindow.KEY_LEFT)) {
             cat_walk @=> cat_state;
             -1 => sprite.scaX;
         // idle --> laying
-        } else if (GWindow.keyDown(GWindow.Key_Down)) {
+        } else if (GWindow.keyDown(GWindow.KEY_DOWN)) {
             cat_laying @=> cat_state;
         }
     } else if (cat_state == cat_walk) {
         // walk --> laying
-        if (GWindow.keyDown(GWindow.Key_Down)) {
+        if (GWindow.keyDown(GWindow.KEY_DOWN)) {
             cat_laying @=> cat_state;
         }
 
         // changing directions
-        else if (GWindow.key(GWindow.Key_Right)) {
+        else if (GWindow.key(GWindow.KEY_RIGHT)) {
             1 => sprite.scaX;
             sprite.translateX(GG.dt());
-        } else if (GWindow.key(GWindow.Key_Left)) {
+        } else if (GWindow.key(GWindow.KEY_LEFT)) {
             -1 => sprite.scaX;
             sprite.translateX(-GG.dt());
         }
 
         // walk --> idle
-        else if (!GWindow.key(GWindow.Key_Right) && !GWindow.key(GWindow.Key_Left)) {
+        else if (!GWindow.key(GWindow.KEY_RIGHT) && !GWindow.key(GWindow.KEY_LEFT)) {
             cat_idle @=> cat_state;
         }
     } else if (cat_state == cat_laying) {
         // laying --> walk right
-        if (GWindow.keyDown(GWindow.Key_Right)) {
+        if (GWindow.keyDown(GWindow.KEY_RIGHT)) {
             cat_walk @=> cat_state;
             1 => sprite.scaX;
         }
         // laying --> walk left
-        else if (GWindow.keyDown(GWindow.Key_Left)) {
+        else if (GWindow.keyDown(GWindow.KEY_LEFT)) {
             cat_walk @=> cat_state;
             -1 => sprite.scaX;
         }

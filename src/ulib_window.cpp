@@ -29,6 +29,15 @@
 #include <GLFW/glfw3.h>
 #include <chuck/chugin.h>
 
+struct SG_Window {
+    float opacity   = 1.0;
+    int resizable   = 1;
+    int decorated   = 1;
+    int floating    = 0;
+    int transparent = 0;
+};
+static SG_Window g_window = {};
+
 // monitor (not implemented)
 CK_DLL_SFUN(gwindow_monitor_info);
 static t_CKINT monitor_info_width_offset            = 0;
@@ -82,7 +91,9 @@ CK_DLL_SFUN(gwindow_set_attrib_resizable);
 CK_DLL_SFUN(gwindow_set_attrib_decorated);
 CK_DLL_SFUN(gwindow_set_attrib_floating);
 CK_DLL_SFUN(gwindow_set_attrib_transparent);
-CK_DLL_SFUN(gwindow_opacity);
+
+CK_DLL_SFUN(gwindow_set_opacity);
+CK_DLL_SFUN(gwindow_get_opacity);
 
 // mouse
 CK_DLL_SFUN(gwindow_get_mouse_pos);
@@ -309,125 +320,366 @@ void ulib_window_query(Chuck_DL_Query* QUERY)
     static t_CKINT glfw_key_right_super   = GLFW_KEY_RIGHT_SUPER;
     static t_CKINT glfw_key_menu          = GLFW_KEY_MENU;
     SVAR("int", "Key_Space", &glfw_key_space);
+    DOC_VAR("Deprecated. Use KEY_SPACE");
     SVAR("int", "Key_Apostrophe", &glfw_key_apostrophe);
+    DOC_VAR("Deprecated. Use KEY_APOSTROPHE");
     SVAR("int", "Key_Comma", &glfw_key_comma);
+    DOC_VAR("Deprecated. Use KEY_COMMA");
     SVAR("int", "Key_Minus", &glfw_key_minus);
+    DOC_VAR("Deprecated. Use KEY_MINUS");
     SVAR("int", "Key_Period", &glfw_key_period);
+    DOC_VAR("Deprecated. Use KEY_PERIOD");
     SVAR("int", "Key_Slash", &glfw_key_slash);
+    DOC_VAR("Deprecated. Use KEY_SLASH");
     SVAR("int", "Key_0", &glfw_key_0);
+    DOC_VAR("Deprecated. Use KEY_0");
     SVAR("int", "Key_1", &glfw_key_1);
+    DOC_VAR("Deprecated. Use KEY_1");
     SVAR("int", "Key_2", &glfw_key_2);
+    DOC_VAR("Deprecated. Use KEY_2");
     SVAR("int", "Key_3", &glfw_key_3);
+    DOC_VAR("Deprecated. Use KEY_3");
     SVAR("int", "Key_4", &glfw_key_4);
+    DOC_VAR("Deprecated. Use KEY_4");
     SVAR("int", "Key_5", &glfw_key_5);
+    DOC_VAR("Deprecated. Use KEY_5");
     SVAR("int", "Key_6", &glfw_key_6);
+    DOC_VAR("Deprecated. Use KEY_6");
     SVAR("int", "Key_7", &glfw_key_7);
+    DOC_VAR("Deprecated. Use KEY_7");
     SVAR("int", "Key_8", &glfw_key_8);
+    DOC_VAR("Deprecated. Use KEY_8");
     SVAR("int", "Key_9", &glfw_key_9);
+    DOC_VAR("Deprecated. Use KEY_9");
     SVAR("int", "Key_Semicolon", &glfw_key_semicolon);
+    DOC_VAR("Deprecated. Use KEY_SEMICOLON");
     SVAR("int", "Key_Equal", &glfw_key_equal);
+    DOC_VAR("Deprecated. Use KEY_EQUAL");
     SVAR("int", "Key_A", &glfw_key_a);
+    DOC_VAR("Deprecated. Use KEY_A");
     SVAR("int", "Key_B", &glfw_key_b);
+    DOC_VAR("Deprecated. Use KEY_B");
     SVAR("int", "Key_C", &glfw_key_c);
+    DOC_VAR("Deprecated. Use KEY_C");
     SVAR("int", "Key_D", &glfw_key_d);
+    DOC_VAR("Deprecated. Use KEY_D");
     SVAR("int", "Key_E", &glfw_key_e);
+    DOC_VAR("Deprecated. Use KEY_E");
     SVAR("int", "Key_F", &glfw_key_f);
+    DOC_VAR("Deprecated. Use KEY_F");
     SVAR("int", "Key_G", &glfw_key_g);
+    DOC_VAR("Deprecated. Use KEY_G");
     SVAR("int", "Key_H", &glfw_key_h);
+    DOC_VAR("Deprecated. Use KEY_H");
     SVAR("int", "Key_I", &glfw_key_i);
+    DOC_VAR("Deprecated. Use KEY_I");
     SVAR("int", "Key_J", &glfw_key_j);
+    DOC_VAR("Deprecated. Use KEY_J");
     SVAR("int", "Key_K", &glfw_key_k);
+    DOC_VAR("Deprecated. Use KEY_K");
     SVAR("int", "Key_L", &glfw_key_l);
+    DOC_VAR("Deprecated. Use KEY_L");
     SVAR("int", "Key_M", &glfw_key_m);
+    DOC_VAR("Deprecated. Use KEY_M");
     SVAR("int", "Key_N", &glfw_key_n);
+    DOC_VAR("Deprecated. Use KEY_N");
     SVAR("int", "Key_O", &glfw_key_o);
+    DOC_VAR("Deprecated. Use KEY_O");
     SVAR("int", "Key_P", &glfw_key_p);
+    DOC_VAR("Deprecated. Use KEY_P");
     SVAR("int", "Key_Q", &glfw_key_q);
+    DOC_VAR("Deprecated. Use KEY_Q");
     SVAR("int", "Key_R", &glfw_key_r);
+    DOC_VAR("Deprecated. Use KEY_R");
     SVAR("int", "Key_S", &glfw_key_s);
+    DOC_VAR("Deprecated. Use KEY_S");
     SVAR("int", "Key_T", &glfw_key_t);
+    DOC_VAR("Deprecated. Use KEY_T");
     SVAR("int", "Key_U", &glfw_key_u);
+    DOC_VAR("Deprecated. Use KEY_U");
     SVAR("int", "Key_V", &glfw_key_v);
+    DOC_VAR("Deprecated. Use KEY_V");
     SVAR("int", "Key_W", &glfw_key_w);
+    DOC_VAR("Deprecated. Use KEY_W");
     SVAR("int", "Key_X", &glfw_key_x);
+    DOC_VAR("Deprecated. Use KEY_X");
     SVAR("int", "Key_Y", &glfw_key_y);
+    DOC_VAR("Deprecated. Use KEY_Y");
     SVAR("int", "Key_Z", &glfw_key_z);
+    DOC_VAR("Deprecated. Use KEY_Z");
     SVAR("int", "Key_LeftBracket", &glfw_key_left_bracket);
+    DOC_VAR("Deprecated. Use KEY_LEFTBRACKET");
     SVAR("int", "Key_Backslash", &glfw_key_backslash);
+    DOC_VAR("Deprecated. Use KEY_BACKSLASH");
     SVAR("int", "Key_RightBracket", &glfw_key_right_bracket);
+    DOC_VAR("Deprecated. Use KEY_RIGHTBRACKET");
     SVAR("int", "Key_GraveAccent", &glfw_key_grave_accent);
+    DOC_VAR("Deprecated. Use KEY_GRAVEACCENT");
     SVAR("int", "Key_World1", &glfw_key_world_1);
+    DOC_VAR("Deprecated. Use KEY_WORLD1");
     SVAR("int", "Key_World2", &glfw_key_world_2);
+    DOC_VAR("Deprecated. Use KEY_WORLD2");
     SVAR("int", "Key_Escape", &glfw_key_escape);
+    DOC_VAR("Deprecated. Use KEY_ESCAPE");
     SVAR("int", "Key_Enter", &glfw_key_enter);
+    DOC_VAR("Deprecated. Use KEY_ENTER");
     SVAR("int", "Key_Tab", &glfw_key_tab);
+    DOC_VAR("Deprecated. Use KEY_TAB");
     SVAR("int", "Key_Backspace", &glfw_key_backspace);
+    DOC_VAR("Deprecated. Use KEY_BACKSPACE");
     SVAR("int", "Key_Insert", &glfw_key_insert);
+    DOC_VAR("Deprecated. Use KEY_INSERT");
     SVAR("int", "Key_Delete", &glfw_key_delete);
+    DOC_VAR("Deprecated. Use KEY_DELETE");
     SVAR("int", "Key_Right", &glfw_key_right);
+    DOC_VAR("Deprecated. Use KEY_RIGHT");
     SVAR("int", "Key_Left", &glfw_key_left);
+    DOC_VAR("Deprecated. Use KEY_LEFT");
     SVAR("int", "Key_Down", &glfw_key_down);
+    DOC_VAR("Deprecated. Use KEY_DOWN");
     SVAR("int", "Key_Up", &glfw_key_up);
+    DOC_VAR("Deprecated. Use KEY_UP");
     SVAR("int", "Key_PageUp", &glfw_key_page_up);
+    DOC_VAR("Deprecated. Use KEY_PAGEUP");
     SVAR("int", "Key_PageDown", &glfw_key_page_down);
+    DOC_VAR("Deprecated. Use KEY_PAGEDOWN");
     SVAR("int", "Key_Home", &glfw_key_home);
+    DOC_VAR("Deprecated. Use KEY_HOME");
     SVAR("int", "Key_End", &glfw_key_end);
+    DOC_VAR("Deprecated. Use KEY_END");
     SVAR("int", "Key_CapsLock", &glfw_key_caps_lock);
+    DOC_VAR("Deprecated. Use KEY_CAPSLOCK");
     SVAR("int", "Key_ScrollLock", &glfw_key_scroll_lock);
+    DOC_VAR("Deprecated. Use KEY_SCROLLLOCK");
     SVAR("int", "Key_NumLock", &glfw_key_num_lock);
+    DOC_VAR("Deprecated. Use KEY_NUMLOCK");
     SVAR("int", "Key_PrintScreen", &glfw_key_print_screen);
+    DOC_VAR("Deprecated. Use KEY_PRINTSCREEN");
     SVAR("int", "Key_Pause", &glfw_key_pause);
+    DOC_VAR("Deprecated. Use KEY_PAUSE");
     SVAR("int", "Key_F1", &glfw_key_f1);
+    DOC_VAR("Deprecated. Use KEY_F1");
     SVAR("int", "Key_F2", &glfw_key_f2);
+    DOC_VAR("Deprecated. Use KEY_F2");
     SVAR("int", "Key_F3", &glfw_key_f3);
+    DOC_VAR("Deprecated. Use KEY_F3");
     SVAR("int", "Key_F4", &glfw_key_f4);
+    DOC_VAR("Deprecated. Use KEY_F4");
     SVAR("int", "Key_F5", &glfw_key_f5);
+    DOC_VAR("Deprecated. Use KEY_F5");
     SVAR("int", "Key_F6", &glfw_key_f6);
+    DOC_VAR("Deprecated. Use KEY_F6");
     SVAR("int", "Key_F7", &glfw_key_f7);
+    DOC_VAR("Deprecated. Use KEY_F7");
     SVAR("int", "Key_F8", &glfw_key_f8);
+    DOC_VAR("Deprecated. Use KEY_F8");
     SVAR("int", "Key_F9", &glfw_key_f9);
+    DOC_VAR("Deprecated. Use KEY_F9");
     SVAR("int", "Key_F10", &glfw_key_f10);
+    DOC_VAR("Deprecated. Use KEY_F10");
     SVAR("int", "Key_F11", &glfw_key_f11);
+    DOC_VAR("Deprecated. Use KEY_F11");
     SVAR("int", "Key_F12", &glfw_key_f12);
+    DOC_VAR("Deprecated. Use KEY_F12");
     SVAR("int", "Key_F13", &glfw_key_f13);
+    DOC_VAR("Deprecated. Use KEY_F13");
     SVAR("int", "Key_F14", &glfw_key_f14);
+    DOC_VAR("Deprecated. Use KEY_F14");
     SVAR("int", "Key_F15", &glfw_key_f15);
+    DOC_VAR("Deprecated. Use KEY_F15");
     SVAR("int", "Key_F16", &glfw_key_f16);
+    DOC_VAR("Deprecated. Use KEY_F16");
     SVAR("int", "Key_F17", &glfw_key_f17);
+    DOC_VAR("Deprecated. Use KEY_F17");
     SVAR("int", "Key_F18", &glfw_key_f18);
+    DOC_VAR("Deprecated. Use KEY_F18");
     SVAR("int", "Key_F19", &glfw_key_f19);
+    DOC_VAR("Deprecated. Use KEY_F19");
     SVAR("int", "Key_F20", &glfw_key_f20);
+    DOC_VAR("Deprecated. Use KEY_F20");
     SVAR("int", "Key_F21", &glfw_key_f21);
+    DOC_VAR("Deprecated. Use KEY_F21");
     SVAR("int", "Key_F22", &glfw_key_f22);
+    DOC_VAR("Deprecated. Use KEY_F22");
     SVAR("int", "Key_F23", &glfw_key_f23);
+    DOC_VAR("Deprecated. Use KEY_F23");
     SVAR("int", "Key_F24", &glfw_key_f24);
+    DOC_VAR("Deprecated. Use KEY_F24");
     SVAR("int", "Key_F25", &glfw_key_f25);
+    DOC_VAR("Deprecated. Use KEY_F25");
     SVAR("int", "Keypad_0", &glfw_key_kp_0);
+    DOC_VAR("Deprecated. Use KEYPAD_0");
     SVAR("int", "Keypad_1", &glfw_key_kp_1);
+    DOC_VAR("Deprecated. Use KEYPAD_1");
     SVAR("int", "Keypad_2", &glfw_key_kp_2);
+    DOC_VAR("Deprecated. Use KEYPAD_2");
     SVAR("int", "Keypad_3", &glfw_key_kp_3);
+    DOC_VAR("Deprecated. Use KEYPAD_3");
     SVAR("int", "Keypad_4", &glfw_key_kp_4);
+    DOC_VAR("Deprecated. Use KEYPAD_4");
     SVAR("int", "Keypad_5", &glfw_key_kp_5);
+    DOC_VAR("Deprecated. Use KEYPAD_5");
     SVAR("int", "Keypad_6", &glfw_key_kp_6);
+    DOC_VAR("Deprecated. Use KEYPAD_6");
     SVAR("int", "Keypad_7", &glfw_key_kp_7);
+    DOC_VAR("Deprecated. Use KEYPAD_7");
     SVAR("int", "Keypad_8", &glfw_key_kp_8);
+    DOC_VAR("Deprecated. Use KEYPAD_8");
     SVAR("int", "Keypad_9", &glfw_key_kp_9);
+    DOC_VAR("Deprecated. Use KEYPAD_9");
     SVAR("int", "Keypad_Decimal", &glfw_key_kp_decimal);
+    DOC_VAR("Deprecated. Use KEYPAD_DECIMAL");
     SVAR("int", "Keypad_Divide", &glfw_key_kp_divide);
+    DOC_VAR("Deprecated. Use KEYPAD_DIVIDE");
     SVAR("int", "Keypad_Multiply", &glfw_key_kp_multiply);
+    DOC_VAR("Deprecated. Use KEYPAD_MULTIPLY");
     SVAR("int", "Keypad_Subtract", &glfw_key_kp_subtract);
+    DOC_VAR("Deprecated. Use KEYPAD_SUBTRACT");
     SVAR("int", "Keypad_Add", &glfw_key_kp_add);
+    DOC_VAR("Deprecated. Use KEYPAD_ADD");
     SVAR("int", "Keypad_Enter", &glfw_key_kp_enter);
+    DOC_VAR("Deprecated. Use KEYPAD_ENTER");
     SVAR("int", "Keypad_Equal", &glfw_key_kp_equal);
+    DOC_VAR("Deprecated. Use KEYPAD_EQUAL");
     SVAR("int", "Key_LeftShift", &glfw_key_left_shift);
+    DOC_VAR("Deprecated. Use KEY_LEFTSHIFT");
     SVAR("int", "Key_LeftControl", &glfw_key_left_control);
+    DOC_VAR("Deprecated. Use KEY_LEFTCONTROL");
     SVAR("int", "Key_LeftAlt", &glfw_key_left_alt);
+    DOC_VAR("Deprecated. Use KEY_LEFTALT");
     SVAR("int", "Key_LeftSuper", &glfw_key_left_super);
+    DOC_VAR("Deprecated. Use KEY_LEFTSUPER");
     SVAR("int", "Key_RightShift", &glfw_key_right_shift);
+    DOC_VAR("Deprecated. Use KEY_RIGHTSHIFT");
     SVAR("int", "Key_RightControl", &glfw_key_right_control);
+    DOC_VAR("Deprecated. Use KEY_RIGHTCONTROL");
     SVAR("int", "Key_RightAlt", &glfw_key_right_alt);
+    DOC_VAR("Deprecated. Use KEY_RIGHTALT");
     SVAR("int", "Key_RightSuper", &glfw_key_right_super);
+    DOC_VAR("Deprecated. Use KEY_RIGHTSUPER");
     SVAR("int", "Key_Menu", &glfw_key_menu);
+    DOC_VAR("Deprecated. Use KEY_MENU");
+
+    SVAR("int", "KEY_SPACE", &glfw_key_space);
+    SVAR("int", "KEY_APOSTROPHE", &glfw_key_apostrophe);
+    SVAR("int", "KEY_COMMA", &glfw_key_comma);
+    SVAR("int", "KEY_MINUS", &glfw_key_minus);
+    SVAR("int", "KEY_PERIOD", &glfw_key_period);
+    SVAR("int", "KEY_SLASH", &glfw_key_slash);
+    SVAR("int", "KEY_0", &glfw_key_0);
+    SVAR("int", "KEY_1", &glfw_key_1);
+    SVAR("int", "KEY_2", &glfw_key_2);
+    SVAR("int", "KEY_3", &glfw_key_3);
+    SVAR("int", "KEY_4", &glfw_key_4);
+    SVAR("int", "KEY_5", &glfw_key_5);
+    SVAR("int", "KEY_6", &glfw_key_6);
+    SVAR("int", "KEY_7", &glfw_key_7);
+    SVAR("int", "KEY_8", &glfw_key_8);
+    SVAR("int", "KEY_9", &glfw_key_9);
+    SVAR("int", "KEY_SEMICOLON", &glfw_key_semicolon);
+    SVAR("int", "KEY_EQUAL", &glfw_key_equal);
+    SVAR("int", "KEY_A", &glfw_key_a);
+    SVAR("int", "KEY_B", &glfw_key_b);
+    SVAR("int", "KEY_C", &glfw_key_c);
+    SVAR("int", "KEY_D", &glfw_key_d);
+    SVAR("int", "KEY_E", &glfw_key_e);
+    SVAR("int", "KEY_F", &glfw_key_f);
+    SVAR("int", "KEY_G", &glfw_key_g);
+    SVAR("int", "KEY_H", &glfw_key_h);
+    SVAR("int", "KEY_I", &glfw_key_i);
+    SVAR("int", "KEY_J", &glfw_key_j);
+    SVAR("int", "KEY_K", &glfw_key_k);
+    SVAR("int", "KEY_L", &glfw_key_l);
+    SVAR("int", "KEY_M", &glfw_key_m);
+    SVAR("int", "KEY_N", &glfw_key_n);
+    SVAR("int", "KEY_O", &glfw_key_o);
+    SVAR("int", "KEY_P", &glfw_key_p);
+    SVAR("int", "KEY_Q", &glfw_key_q);
+    SVAR("int", "KEY_R", &glfw_key_r);
+    SVAR("int", "KEY_S", &glfw_key_s);
+    SVAR("int", "KEY_T", &glfw_key_t);
+    SVAR("int", "KEY_U", &glfw_key_u);
+    SVAR("int", "KEY_V", &glfw_key_v);
+    SVAR("int", "KEY_W", &glfw_key_w);
+    SVAR("int", "KEY_X", &glfw_key_x);
+    SVAR("int", "KEY_Y", &glfw_key_y);
+    SVAR("int", "KEY_Z", &glfw_key_z);
+    SVAR("int", "KEY_LEFTBRACKET", &glfw_key_left_bracket);
+    SVAR("int", "KEY_BACKSLASH", &glfw_key_backslash);
+    SVAR("int", "KEY_RIGHTBRACKET", &glfw_key_right_bracket);
+    SVAR("int", "KEY_GRAVEACCENT", &glfw_key_grave_accent);
+    SVAR("int", "KEY_WORLD1", &glfw_key_world_1);
+    SVAR("int", "KEY_WORLD2", &glfw_key_world_2);
+    SVAR("int", "KEY_ESCAPE", &glfw_key_escape);
+    SVAR("int", "KEY_ENTER", &glfw_key_enter);
+    SVAR("int", "KEY_TAB", &glfw_key_tab);
+    SVAR("int", "KEY_BACKSPACE", &glfw_key_backspace);
+    SVAR("int", "KEY_INSERT", &glfw_key_insert);
+    SVAR("int", "KEY_DELETE", &glfw_key_delete);
+    SVAR("int", "KEY_RIGHT", &glfw_key_right);
+    SVAR("int", "KEY_LEFT", &glfw_key_left);
+    SVAR("int", "KEY_DOWN", &glfw_key_down);
+    SVAR("int", "KEY_UP", &glfw_key_up);
+    SVAR("int", "KEY_PAGEUP", &glfw_key_page_up);
+    SVAR("int", "KEY_PAGEDOWN", &glfw_key_page_down);
+    SVAR("int", "KEY_HOME", &glfw_key_home);
+    SVAR("int", "KEY_END", &glfw_key_end);
+    SVAR("int", "KEY_CAPSLOCK", &glfw_key_caps_lock);
+    SVAR("int", "KEY_SCROLLLOCK", &glfw_key_scroll_lock);
+    SVAR("int", "KEY_NUMLOCK", &glfw_key_num_lock);
+    SVAR("int", "KEY_PRINTSCREEN", &glfw_key_print_screen);
+    SVAR("int", "KEY_PAUSE", &glfw_key_pause);
+    SVAR("int", "KEY_F1", &glfw_key_f1);
+    SVAR("int", "KEY_F2", &glfw_key_f2);
+    SVAR("int", "KEY_F3", &glfw_key_f3);
+    SVAR("int", "KEY_F4", &glfw_key_f4);
+    SVAR("int", "KEY_F5", &glfw_key_f5);
+    SVAR("int", "KEY_F6", &glfw_key_f6);
+    SVAR("int", "KEY_F7", &glfw_key_f7);
+    SVAR("int", "KEY_F8", &glfw_key_f8);
+    SVAR("int", "KEY_F9", &glfw_key_f9);
+    SVAR("int", "KEY_F10", &glfw_key_f10);
+    SVAR("int", "KEY_F11", &glfw_key_f11);
+    SVAR("int", "KEY_F12", &glfw_key_f12);
+    SVAR("int", "KEY_F13", &glfw_key_f13);
+    SVAR("int", "KEY_F14", &glfw_key_f14);
+    SVAR("int", "KEY_F15", &glfw_key_f15);
+    SVAR("int", "KEY_F16", &glfw_key_f16);
+    SVAR("int", "KEY_F17", &glfw_key_f17);
+    SVAR("int", "KEY_F18", &glfw_key_f18);
+    SVAR("int", "KEY_F19", &glfw_key_f19);
+    SVAR("int", "KEY_F20", &glfw_key_f20);
+    SVAR("int", "KEY_F21", &glfw_key_f21);
+    SVAR("int", "KEY_F22", &glfw_key_f22);
+    SVAR("int", "KEY_F23", &glfw_key_f23);
+    SVAR("int", "KEY_F24", &glfw_key_f24);
+    SVAR("int", "KEY_F25", &glfw_key_f25);
+    SVAR("int", "KEYPAD_0", &glfw_key_kp_0);
+    SVAR("int", "KEYPAD_1", &glfw_key_kp_1);
+    SVAR("int", "KEYPAD_2", &glfw_key_kp_2);
+    SVAR("int", "KEYPAD_3", &glfw_key_kp_3);
+    SVAR("int", "KEYPAD_4", &glfw_key_kp_4);
+    SVAR("int", "KEYPAD_5", &glfw_key_kp_5);
+    SVAR("int", "KEYPAD_6", &glfw_key_kp_6);
+    SVAR("int", "KEYPAD_7", &glfw_key_kp_7);
+    SVAR("int", "KEYPAD_8", &glfw_key_kp_8);
+    SVAR("int", "KEYPAD_9", &glfw_key_kp_9);
+    SVAR("int", "KEYPAD_DECIMAL", &glfw_key_kp_decimal);
+    SVAR("int", "KEYPAD_DIVIDE", &glfw_key_kp_divide);
+    SVAR("int", "KEYPAD_MULTIPLY", &glfw_key_kp_multiply);
+    SVAR("int", "KEYPAD_SUBTRACT", &glfw_key_kp_subtract);
+    SVAR("int", "KEYPAD_ADD", &glfw_key_kp_add);
+    SVAR("int", "KEYPAD_ENTER", &glfw_key_kp_enter);
+    SVAR("int", "KEYPAD_EQUAL", &glfw_key_kp_equal);
+    SVAR("int", "KEY_LEFTSHIFT", &glfw_key_left_shift);
+    SVAR("int", "KEY_LEFTCONTROL", &glfw_key_left_control);
+    SVAR("int", "KEY_LEFTALT", &glfw_key_left_alt);
+    SVAR("int", "KEY_LEFTSUPER", &glfw_key_left_super);
+    SVAR("int", "KEY_RIGHTSHIFT", &glfw_key_right_shift);
+    SVAR("int", "KEY_RIGHTCONTROL", &glfw_key_right_control);
+    SVAR("int", "KEY_RIGHTALT", &glfw_key_right_alt);
+    SVAR("int", "KEY_RIGHTSUPER", &glfw_key_right_super);
+    SVAR("int", "KEY_MENU", &glfw_key_menu);
 
     // callbacks ------------------------------------------------------
     SFUN(gwindow_close_event, CHUGL_EventTypeNames[WINDOW_CLOSE], "closeEvent");
@@ -534,8 +786,7 @@ void ulib_window_query(Chuck_DL_Query* QUERY)
     ARG("int", "decorated");
     DOC_FUNC(
       "Set whether the window has decorations such as a border, a close "
-      "widget, etc."
-      "Must call before GG.nextFrame(). Default is true.");
+      "widget, etc. Must call before GG.nextFrame(). Default is true.");
 
     SFUN(gwindow_set_attrib_floating, "void", "floating");
     ARG("int", "floating");
@@ -554,13 +805,17 @@ void ulib_window_query(Chuck_DL_Query* QUERY)
       "If platform supports it, you can change opacity via "
       "GWindow.opacity(float)");
 
-    SFUN(gwindow_opacity, "void", "opacity");
+    SFUN(gwindow_set_opacity, "void", "opacity");
     ARG("float", "opacity");
     DOC_FUNC(
       "Set the window opacity, 0.0 is fully transparent, 1.0 is fully opaque."
       "only works if GWindow.transparent() has been called before "
-      "GG.nextFrame()"
-      "AND the platform supports transparent framebuffers.");
+      "GG.nextFrame() AND the platform supports transparent framebuffers.");
+
+    SFUN(gwindow_get_opacity, "float", "opacity");
+    DOC_FUNC(
+      "Get the window opacity, default 1.0. "
+      "See GWindow.opacity(float) for more info on how window transparency works");
 
     // mouse ----------------------------------------------------------
     SFUN(gwindow_get_mouse_pos, "vec2", "mousePos");
@@ -570,15 +825,22 @@ void ulib_window_query(Chuck_DL_Query* QUERY)
     DOC_FUNC("Get the change in mouse position since the last call");
 
     SVAR("int", "MouseMode_Normal", &mouse_mode_normal);
+    DOC_VAR("Deprecated. Use MOUSE_NORMAL instead");
+    SVAR("int", "MouseMode_Hidden", &mouse_mode_hidden);
+    DOC_VAR("Deprecated. Use MOUSE_HIDDEN instead");
+    SVAR("int", "MouseMode_Disabled", &mouse_mode_disabled);
+    DOC_VAR("Deprecated. Use MOUSE_DISABLED instead");
+
+    SVAR("int", "MOUSE_NORMAL", &mouse_mode_normal);
     DOC_VAR(
       "Normal mouse mode, the cursor is visible and behaves normally. Set via "
       "GWindow.mouseMode()");
-    SVAR("int", "MouseMode_Hidden", &mouse_mode_hidden);
+    SVAR("int", "MOUSE_HIDDEN", &mouse_mode_hidden);
     DOC_VAR(
       "Hidden mouse mode, hides the cursor when it is focused and hovering "
       "over the window, but does not lock it to the window. Set via "
       "GWindow.mouseMode(). May not be supported on all platforms.");
-    SVAR("int", "MouseMode_Disabled", &mouse_mode_disabled);
+    SVAR("int", "MOUSE_DISABLED", &mouse_mode_disabled);
     DOC_VAR(
       "Disabled mouse mode, hides the cursor and locks it to the window, "
       "useful for first-person games. Set via GWindow.mouseMode()");
@@ -586,25 +848,15 @@ void ulib_window_query(Chuck_DL_Query* QUERY)
     SFUN(gwindow_set_mouse_mode, "void", "mouseMode");
     ARG("int", "mode");
     DOC_FUNC(
-      "Set the mouse mode. Possible values are: GWindow.MouseMode_Normal (0) , "
-      "GWindow.MouseMode_Disabled (1), and GWindow.MouseMode_Hidden (2)"
+      "Set the mouse mode. Possible values are: GWindow.MOUSE_NORMAL (0), "
+      "GWindow.MOUSE_HIDDEN (1) and GWindow.MOUSE_DISABLED (2). "
       "Normal mode is the default mode, the cursor is visible and behaves "
-      "normally."
-      "Disabled mode hides the cursor and locks it to the window, useful for "
-      "first-person games."
-      "Hidden mode hides the cursor when it is focused and hovering over the "
-      "window, but does not lock it to the window.");
+      "normally. Disabled mode hides the cursor and locks it to the window, useful for "
+      "first-person games. Hidden mode hides the cursor when it is focused and "
+      "hovering over the window, but does not lock it to the window.");
 
     SFUN(gwindow_get_mouse_mode, "int", "mouseMode");
-    DOC_FUNC(
-      "Get the current mouse mode. Possible values are: GWindow.MouseMode_Normal (0) , "
-      "GWindow.MouseMode_Disabled (1), and GWindow.MouseMode_Hidden (2)"
-      "Normal mode is the default mode, the cursor is visible and behaves "
-      "normally."
-      "Disabled mode hides the cursor and locks it to the window, useful for "
-      "first-person games."
-      "Hidden mode hides the cursor when it is focused and hovering over the "
-      "window, but does not lock it to the window.");
+    DOC_FUNC("Get the current mouse mode. Default GWindow.MOUSE_NORMAL.");
 
     SFUN(gwindow_get_mouse_scroll_dx, "float", "scrollX");
     DOC_FUNC("Get the horizontal scroll delta of the mouse wheel");
@@ -660,52 +912,52 @@ void ulib_window_query(Chuck_DL_Query* QUERY)
     ARG("int", "key");
     DOC_FUNC(
       "Get the whether the specified key is being held down. Use the GWindow key "
-      "constants for param `key`, e.g. GWindow.key(GWindow.Key_Space)");
+      "constants for param `key`, e.g. GWindow.key(GWindow.KEY_SPACE)");
 
     SFUN(gwindow_get_kb_pressed, "int", "keyDown");
     ARG("int", "key");
     DOC_FUNC(
       "Get the whether the specified key was pressed this frame. Use the GWindow key "
-      "constants for param `key`, e.g. GWindow.keyDown(GWindow.Key_Space)");
+      "constants for param `key`, e.g. GWindow.keyDown(GWindow.KEY_SPACE)");
 
     SFUN(gwindow_get_kb_released, "int", "keyUp");
     ARG("int", "key");
     DOC_FUNC(
       "Get the whether the specified key was released this frame. Use the GWindow key "
-      "constants for param `key`, e.g. GWindow.keyUp(GWindow.Key_Space)");
+      "constants for param `key`, e.g. GWindow.keyUp(GWindow.KEY_SPACE)");
 
     SFUN(gwindow_get_kb_all, "int[]", "keys");
     DOC_FUNC(
       "Returns an array with all keys held down on this frame. "
-      "Each value will be a key enum, e.g. GWindow.Key_Space");
+      "Each value will be a key enum, e.g. GWindow.KEY_SPACE");
 
     SFUN(gwindow_get_kb_pressed_all, "int[]", "keysDown");
     DOC_FUNC(
       "Returns an array with all keys pressed on this frame. "
-      "Each value will be a key enum, e.g. GWindow.Key_Space");
+      "Each value will be a key enum, e.g. GWindow.KEY_SPACE");
 
     SFUN(gwindow_get_kb_released_all, "int[]", "keysUp");
     DOC_FUNC(
       "Returns an array with all keys released on this frame. "
-      "Each value will be a key enum, e.g. GWindow.Key_Space");
+      "Each value will be a key enum, e.g. GWindow.KEY_SPACE");
 
     SFUN(gwindow_get_kb_all_with_arr, "void", "keys");
     ARG("int[]", "keys");
     DOC_FUNC(
       "Populates the array with all keys held down on this frame. "
-      "Each value will be a key enum, e.g. GWindow.Key_Space");
+      "Each value will be a key enum, e.g. GWindow.KEY_SPACE");
 
     SFUN(gwindow_get_kb_pressed_all_with_arr, "void", "keysDown");
     ARG("int[]", "keys");
     DOC_FUNC(
       "Populates the array with all keys pressed on this frame. "
-      "Each value will be a key enum, e.g. GWindow.Key_Space");
+      "Each value will be a key enum, e.g. GWindow.KEY_SPACE");
 
     SFUN(gwindow_get_kb_released_all_with_arr, "void", "keysUp");
     ARG("int[]", "keys");
     DOC_FUNC(
       "Populates the array with all keys released on this frame. "
-      "Each value will be a key enum, e.g. GWindow.Key_Space");
+      "Each value will be a key enum, e.g. GWindow.KEY_SPACE");
 
     SFUN(gwindow_get_dropped_files, "string[]", "files");
     DOC_FUNC(
@@ -906,9 +1158,15 @@ CK_DLL_SFUN(gwindow_set_attrib_transparent)
     CHUGL_Window_Transparent(GET_NEXT_INT(ARGS));
 }
 
-CK_DLL_SFUN(gwindow_opacity)
+CK_DLL_SFUN(gwindow_set_opacity)
 {
-    CQ_PushCommand_WindowOpacity(GET_NEXT_FLOAT(ARGS));
+    g_window.opacity = GET_NEXT_FLOAT(ARGS);
+    CQ_PushCommand_WindowOpacity(g_window.opacity);
+}
+
+CK_DLL_SFUN(gwindow_get_opacity)
+{
+    RETURN->v_float = g_window.opacity;
 }
 
 // ============================================================================

@@ -130,6 +130,7 @@ struct GG_Config {
     SG_ID root_pass_id;
     SG_ID default_scene_pass_id;
     SG_ID default_output_pass_id;
+    SG_ID default_bloom_pass_id;
 
     // options
     bool auto_update_scenegraph = true;

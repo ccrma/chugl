@@ -546,17 +546,17 @@ spork ~ switchColorMode();
 false => int fullscreen;
 fun void keyboardInput()
 {
-    if( GWindow.keyDown(GWindow.Key_1))
+    if( GWindow.keyDown(GWindow.KEY_1))
         0 => COLOR_MODE;
-    else if( GWindow.keyDown(GWindow.Key_2))
+    else if( GWindow.keyDown(GWindow.KEY_2))
         1 => COLOR_MODE;
-    else if( GWindow.keyDown(GWindow.Key_3))
+    else if( GWindow.keyDown(GWindow.KEY_3))
         2 => COLOR_MODE;
-    else if( GWindow.keyDown(GWindow.Key_4))
+    else if( GWindow.keyDown(GWindow.KEY_4))
         3 => COLOR_MODE;
-    else if( GWindow.keyDown(GWindow.Key_5))
+    else if( GWindow.keyDown(GWindow.KEY_5))
         4 => COLOR_MODE;
-    else if( GWindow.keyDown(GWindow.Key_Space)) {
+    else if( GWindow.keyDown(GWindow.KEY_SPACE)) {
         if (fullscreen) {
             false => fullscreen;
             GG.windowed();

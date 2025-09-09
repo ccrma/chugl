@@ -251,7 +251,7 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Pass* pass, R_Camera* cam
 
 static void _R_glfwErrorCallback(int error, const char* description)
 {
-    log_warn("GLFW Error[%i]: %s\n", error, description);
+    log_trace("GLFW Error[%i]: %s\n", error, description);
 }
 
 static int frame_buffer_width  = 0;
@@ -1383,10 +1383,9 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Pass* pass, R_Camera* cam
             } else {
                 // TODO come up with a better way to set a custom number of vertices to
                 // draw having -1 actually mean ALL is confusing 2 different states.
-                d->vertex_count
-                  = user_provided_vertex_count ?
-                      geo->vertex_count :
-                      R_Geometry::vertexCount(geo);
+                d->vertex_count = user_provided_vertex_count ?
+                                    geo->vertex_count :
+                                    R_Geometry::vertexCount(geo);
             }
         }
 

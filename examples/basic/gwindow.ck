@@ -39,7 +39,7 @@ GWindow.title(title);
 //       ChuGL window
 //--------------------------------------------------------------------
 // window transparency (default: false)
-true => int transparent => GWindow.transparent;
+true => GWindow.transparent;
 // whether window is permanently on top of everything (default: false)
 false => GWindow.floating;
 // whether window has top bar containing close/minimize/maximize (default: true)
@@ -48,9 +48,9 @@ true => GWindow.decorated;
 true => GWindow.resizable;
 
 // set mouse mode
-GWindow.mouseMode( GWindow.MouseMode_Normal );
-// GWindow.mouseMode( GWindow.MouseMode_Disabled );
-// GWindow.mouseMode( GWindow.MouseMode_Hidden );
+GWindow.mouseMode( GWindow.MOUSE_NORMAL );
+// GWindow.mouseMode( GWindow.MOUSE_DISABLED );
+// GWindow.mouseMode( GWindow.MOUSE_HIDDEN );
 
 // add a text object to scene
 GText text --> GG.scene();
@@ -94,9 +94,9 @@ fun void kbListener()
         // synchronize
         GG.nextFrame() => now;
         // how to text for a particular key (e.g., space bar)
-        if (GWindow.key(GWindow.Key_Space)) <<< "space key held" >>>;
-        if (GWindow.keyDown(GWindow.Key_Space)) <<< "space key pressed" >>>;
-        if (GWindow.keyUp(GWindow.Key_Space)) <<< "space key released" >>>;
+        if (GWindow.key(GWindow.KEY_SPACE)) <<< "space key held" >>>;
+        if (GWindow.keyDown(GWindow.KEY_SPACE)) <<< "space key pressed" >>>;
+        if (GWindow.keyUp(GWindow.KEY_SPACE)) <<< "space key released" >>>;
     }
 }
 // spork keyboard listener
@@ -183,12 +183,10 @@ while (true)
     }
     // '5' to toggle transparency
     if (UI.isKeyPressed(UI_Key.Num5)) {
-        if (!transparent) {
+        if (GWindow.opacity() > 0.5) {
             GWindow.opacity(0.4);
-            true => transparent;
         } else {
             GWindow.opacity(1.0);
-            false => transparent;
         }
     }
 }
