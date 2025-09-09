@@ -1,26 +1,27 @@
 //-----------------------------------------------------------------------------
 // name: video.ck
-// desc: Video playback example. Currently only supports the MPEG1 video and 
-// MP2 audio.
-// To run, download and place this music video in the same directory: 
-// https://ccrma.stanford.edu/~azaday/music/bjork-all-is-full-of-love.mpg
+// desc: video playback; currently only supports the MPEG1 video and 
+//       MP2 audio
+// to run, download and place this music video in the same directory: 
+//   https://ccrma.stanford.edu/~azaday/music/bjork-all-is-full-of-love.mpg
+//
+// find more mpeg samples here: https://filesamples.com/formats/mpeg
 //
 // authors: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
-//
-// Find more mpeg samples here: https://filesamples.com/formats/mpeg
-//
-// date: Fall 2024
+//    date: Fall 2024
 //-----------------------------------------------------------------------------
 
+// Video is a UGen!
 Video video(me.dir() + "./bjork-all-is-full-of-love.mpg") => dac; 
 
-<<< "VM Samplerate: ", 1::second / 1::samp >>>;
-<<< "Framerate: ", video.framerate() >>>;
-<<< "Samplerate: ", video.samplerate() >>>;
-<<< "Duration: ", video.duration() >>>;
-<<< "Loop: ", video.loop() >>>;
-<<< "Rate: ", video.rate() >>>;
+<<< "VM sample rate: ", 1::second / 1::samp >>>;
+<<< "framerate: ", video.framerate() >>>;
+<<< "samplerate: ", video.samplerate() >>>;
+<<< "duration: ", video.duration() >>>;
+<<< "loop: ", video.loop() >>>;
+<<< "rate: ", video.rate() >>>;
 
+// video texture
 video.texture() @=> Texture video_texture;
 (video.width() $ float) / video.height() => float video_aspect;
 
@@ -35,6 +36,7 @@ video.texture() @=> Texture video_texture;
     new KnotGeometry,
 ] @=> Geometry geometries[];
 
+// UI 
 UI_Int geometry_index;
 [
     "PlaneGeometry",

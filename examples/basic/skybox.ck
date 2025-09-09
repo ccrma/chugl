@@ -23,11 +23,11 @@ Texture.load(
 
 // apply the cubemap to the scene
 GG.scene().envMap(cubemap);
-GG.scene().backgroundColor(Color.WHITE); // IMPORTANT!!! Final color skybox *times* background color
+// IMPORTANT!!! Final color skybox *times* background color
+GG.scene().backgroundColor(Color.WHITE);
 
 // use orbit camera
-GOrbitCamera camera --> GG.scene();
-GG.scene().camera(camera);
+GOrbitCamera camera => GG.scene().camera;
 
 // connect suzanne to scene
 GSuzanne suzanne --> GG.scene();
@@ -47,16 +47,22 @@ suzanne.envmapBlend(PhongMaterial.EnvmapBlend_Multiply);
     "Mix",
 ] @=> string envmap_blend_modes[];
 
+// UI variables
 UI_Float3 background_color(GG.scene().backgroundColor());
 UI_Float envmap_intensity(suzanne.envmapIntensity());
 UI_Float refraction_ratio(suzanne.refractionRatio());
 UI_Int envmap_method_index(suzanne.envmapMethod());
 UI_Int envmap_blend_mode_index(suzanne.envmapBlend());
 
-while (true) {
+// render loop
+while (true)
+{
+    // synchronize
     GG.nextFrame() => now;
 
-    if (UI.begin("Skybox")) {
+    // begin UI
+    if (UI.begin("Skybox"))
+    {
         if (UI.colorEdit("Background Color", background_color, 0)) {
             GG.scene().backgroundColor(background_color.val());
         }
@@ -77,5 +83,6 @@ while (true) {
             suzanne.envmapBlend(envmap_blend_mode_index.val());
         }
     }
+    // end UI
     UI.end();
 }

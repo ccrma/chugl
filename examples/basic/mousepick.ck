@@ -5,39 +5,49 @@
 // author: Andrew Zhu Aday
 //   date: Fall 2024
 //--------------------------------------------------------------------
-FlatMaterial material;
+// geometry and material
 SphereGeometry sphere_geo;
+FlatMaterial material;
 
-GCamera camera;
-camera --> GGen dolly --> GG.scene();
-camera.pos(@(1, 2, 3)); 
-GG.scene().camera(camera);
-
-[
-    "perspective",
-    "orthographic",
-] @=> string camera_modes[];
+// text for UI
+[ "perspective", "orthographic" ] @=> string camera_modes[];
+// UI variable
 UI_Int camera_mode(0);
 
+// UI in its own render loop here
 fun void ui()
 {
-    while (true) {
+    while (true)
+    {
+        // synchronize
         GG.nextFrame() => now;
-        if (UI.listBox("Camera mode", camera_mode, camera_modes, -1)) {
+        
+        // list box
+        if (UI.listBox("camera mode", camera_mode, camera_modes, -1))
+        {
             if (camera_mode.val() == 0) {
-                camera.perspective();
+                GG.camera().perspective();
             } else {
-                camera.orthographic();
+                GG.camera().orthographic();
             }
         }
     }
 } spork ~ ui();
 
-while (true) {
+// render loop
+while (true)
+{
+    // synchronize
     GG.nextFrame() => now;
-    if (GWindow.mouseLeftDown()) {
+    
+    // mouse handling
+    if (GWindow.mouseLeftDown())
+    {
+        // add a new sphere to the scene
         GMesh sphere(sphere_geo, material) --> GG.scene();
+        // scale the sphere
         sphere.sca(.1);
-        sphere.pos(camera.screenCoordToWorldPos(GWindow.mousePos(), 10));
+        // position the sphere
+        sphere.pos(GG.camera().screenCoordToWorldPos(GWindow.mousePos(), 10));
     }
 }

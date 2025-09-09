@@ -8,51 +8,56 @@
 // date: Fall 2023
 //-----------------------------------------------------------------------------
 // scene setup
-GG.scene() @=> GScene scene;
 GGen sunSystem, earthSystem, moonSystem;
 GSphere sun, earth, moon;
 
-// camera
-GOrbitCamera cam --> scene;
-scene.camera(cam);
+// orbit camera
+GOrbitCamera cam => GG.scene().camera;
 
 // set to wireframe
 for( auto x : [ sun, earth, moon ] )
-    x.mat().topology( Material.Topology_LineList );
+    x.mat().wireframe(true);
 
-(sun.mat() $ PhongMaterial).color( 10 * @(1,1,.25) );
-(earth.mat() $ PhongMaterial).color( 10 * @(.25,.25,1) );
-(moon.mat() $ PhongMaterial).color( 10 * @(.5,.5,.5) );
+// up the ambient light
+GG.scene().ambient(@(.5,.5,.5));
 
+// color
+sun.color( Color.YELLOW );
+earth.color( (Color.SKYBLUE + Color.BLUE) / 2 );
+moon.color( Color.GRAY );
+
+// position
 earthSystem.pos(@(2.2, 0.0, 0.0));
 moonSystem.pos(@(.55, 0.0, 0.0));
 
+// scale
 sun.sca(@(2.0, 2.0, 2.0));
 earth.sca(@(0.4, 0.4, 0.4));
 moon.sca(@(0.12, 0.12, 0.12));
 
 // construct scenegraph
-moonSystem --> earthSystem --> sunSystem --> scene;
+moonSystem --> earthSystem --> sunSystem --> GG.scene();
+// add sun earth moon to respective systems
 sun --> sunSystem;
 earth --> earthSystem;
 moon --> moonSystem;
 
 // position camera
-cam.pos(@(0, 5, 7)); 
-cam.lookAt(@(0, 0, 0));
+cam.pos( @(0, 5, 7) ); 
+cam.lookAt( @(0, 0, 0) );
 
-while (true) {
+// render loop
+while (true)
+{
+    // render loop
 	GG.nextFrame() => now;
 
-	// get delta time
-	GG.dt() => float dt;
-
 	// rotate systems
-	sunSystem.rotateY(.5 * dt);
-	earthSystem.rotateY(.7 * dt);
+	sunSystem.rotateY(.5 * GG.dt());
+	earthSystem.rotateY(.7 * GG.dt());
 
 	// rotate planets
-	sun.rotateY(-1 * dt);
-	earth.rotateY(.4 * dt);
-	moon.rotateY(.9 * dt);
+	sun.rotateY(-1 * GG.dt());
+	earth.rotateY(.4 * GG.dt());
+	moon.rotateY(.9 * GG.dt());
 }

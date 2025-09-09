@@ -1,13 +1,13 @@
 //-----------------------------------------------------------------------------
 // name: texture_read.ck
-// desc: Example on how to read back texture data from the GPU to chuck
+// desc: how to read back texture data from the GPU to chuck
 //
 // authors: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
-//
-// date: Fall 2024
+//    date: Fall 2024
 //-----------------------------------------------------------------------------
 
-Webcam webcam;
+// ChuGL webcam
+Webcam webcam(0, 1024, 1024, 60);
 
 // create a texture to write the webcam data we're reading
 TextureDesc desc;

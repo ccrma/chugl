@@ -6,18 +6,20 @@
 //   date: Fall 2024
 //--------------------------------------------------------------------
 
-// use an orbit camera
-GOrbitCamera camera --> GG.scene(); // attach set camera to scene
-GG.scene().camera(camera); // set as main camera
+// use an orbit camera as main camera
+GOrbitCamera camera => GG.scene().camera;
+// scene ambient light
+GG.scene().ambient( @(.05,.05,.05) );
 
 // scenegraph setup
 7 => int NUM_ROWS;
+// material
 PBRMaterial material[NUM_ROWS][NUM_ROWS];
 FlatMaterial light_material;
-SphereGeometry geo;
 
-// monkey geometry
-SuzanneGeometry suzanne_geo;
+// geometry
+// SuzanneGeometry geo;
+SphereGeometry geo;
 
 // init pbr meshes
 for (int i; i < NUM_ROWS; i++) {
@@ -25,7 +27,9 @@ for (int i; i < NUM_ROWS; i++) {
         material[i][j].color(Color.RED); 
         material[i][j].metallic( (i $ float) / NUM_ROWS );
         material[i][j].roughness( Math.clampf((j $ float) / NUM_ROWS, 0.05, 1) );
+        // add mesh to scene
         GMesh mesh(geo, material[i][j]) --> GG.scene();
+        // position the new mesh
         mesh.pos(@(
             (j - NUM_ROWS / 2) * 1.5,
             (i - NUM_ROWS / 2) * 1.5,
@@ -34,7 +38,8 @@ for (int i; i < NUM_ROWS; i++) {
     }
 }
 
-GGen point_light_axis --> GG.scene();
+// rendering the light source locations
+GGen point_light_axis;
 GPointLight point_lights[1];
 GMesh point_light_meshes[0];
 point_light_meshes << new GMesh(geo, light_material);
@@ -43,6 +48,7 @@ point_lights[0].pos(@(.8, 0, 0));
 // connect mesh to light position
 point_light_meshes[0] --> point_lights[0] --> point_light_axis --> GG.scene();
 
+// UI variables
 UI_Int num_point_lights(point_lights.size());
 UI_Float dir_light_rotation;
 UI_Float3 bg_color(GG.scene().backgroundColor());
@@ -54,11 +60,17 @@ UI_Float dir_light_intensity(GG.scene().light().intensity());
 UI_Float3 color(material[0][0].color());
 UI_Float3 camera_target(camera.target());
 
-fun void ui() {
-    while (true) {
+// UI handler
+fun void ui()
+{
+    // render loop
+    while (true)
+    {
+        // synchronize
         GG.nextFrame() => now;
-        if (UI.begin("Lighting Example", null, 0)) {
-
+        // begin UI
+        if (UI.begin("Lighting Example", null, 0))
+        {
             if (UI.colorEdit("material color", color, 0)) {
                 for (int i; i < NUM_ROWS; i++) {
                     for (int j; j < NUM_ROWS; j++) {
@@ -117,17 +129,23 @@ fun void ui() {
                     ));
                 }
             }
-
+            
+            // camera target (point around which camera rotates)
             if (UI.drag("camera target", camera_target, 0.01, 0, 0, "%0.2f", 0)) {
                 camera_target.val() => camera.target;
             }
         }
+        
+        // end UI
         UI.end();
     }
 } spork ~ ui();
 
-// time loop
-while (true) {
+// render loop
+while (true)
+{
+    // synchronize
     GG.nextFrame() => now;
+    // rotate the light source(s)
     GG.dt() => point_light_axis.rotateY;
 }

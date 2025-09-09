@@ -6,16 +6,15 @@
 //  date: Fall 2023
 //--------------------------------------------------------------------
 
-// Scene setup ===================
-GG.scene().backgroundColor(@(0,0,0));
+// scene setup ===================
 GPoints points --> GG.scene();
+// set background color
+GG.scene().backgroundColor(@(0,0,0));
 
 // choose mouse mode
-GWindow.mouseMode( GWindow.MouseMode_Disabled );
-// set up camera
-GFlyCamera cam --> GG.scene();
-// select camera
-GG.scene().camera(cam);
+GWindow.mouseMode( GWindow.MOUSE_DISABLED );
+// set fly camera as main camera
+GFlyCamera cam => GG.scene().camera;
 // set camera position
 cam.posZ(10);
 
@@ -27,7 +26,7 @@ POINTS_PER_AXIS * POINTS_PER_AXIS * POINTS_PER_AXIS => int numPoints;
 vec3 pointPos[numPoints];
 vec3 pointColor[numPoints];
 
-// populate within a 10x10x10 cube
+// populate within a 100x100x100 cube
 for (int i; i < POINTS_PER_AXIS; i++) {
 for (int j; j < POINTS_PER_AXIS; j++) {
 for (int k; k < POINTS_PER_AXIS; k++) {
@@ -57,16 +56,21 @@ for (int k; k < POINTS_PER_AXIS; k++) {
     ) => pointColor[index];
 }}}
 
-points.positions(pointPos);  // set vertex position data
-points.colors(pointColor);   // set vertex color data
+// set vertex position data
+points.positions(pointPos);
+// set vertex color data
+points.colors(pointColor);
 
-// Game loop =====================
-while (true) { 
+// render loop
+while (true)
+{
+    // synchronize 
     GG.nextFrame() => now; 
 
-    // UI
-    if (UI.begin("Points")) {
-        UI.text("WASD to move");
-    }
+    // begin UI
+    if (UI.begin("Points"))
+    { UI.text("WASD to move"); }
+
+    // end UI
     UI.end();
 }

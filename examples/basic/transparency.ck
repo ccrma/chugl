@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
-// name: bloom.ck
-// desc: Transparent materials are sorted from back-to-front and drawn after
+// name: transparency.ck
+// desc: transparent materials are sorted from back-to-front and drawn after
 // all opaque, i.e. non-transparent materials in the scene. Distance is 
 // determined by distance to the plane of the camera, and as a result the 
 // render order may change as depending on the angle of the camera. For things
@@ -14,10 +14,9 @@
 //-----------------------------------------------------------------------------
 
 // Init camera
-GOrbitCamera orbit_cam --> GG.scene();
-GG.scene().camera(orbit_cam);
-orbit_cam.posZ(2);
-orbit_cam.viewSize(2);
+GOrbitCamera cam => GG.scene().camera;
+cam.posZ(2);
+cam.viewSize(2);
 
 // init materials
 FlatMaterial opaque_mat;
@@ -25,13 +24,14 @@ FlatMaterial red_mat, green_mat, blue_mat;
 red_mat.color(@(1, 0, 0, 0.5)); 
 green_mat.color(@(0, 1, 0, 0.5)); 
 blue_mat.color(@(0, 0, 1, 0.5));
-true => red_mat.transparent; // IMPORTANT!! explicitly mark materials as transparent
-true => green_mat.transparent;
-true => blue_mat.transparent;
-
+// IMPORTANT!! explicitly mark materials as transparent
+red_mat.transparent(true);
+green_mat.transparent(true);
+blue_mat.transparent(true);
+// geometry
 PlaneGeometry plane_geo;
 
-// Init meshes
+// init meshes
 GMesh opaque(plane_geo, opaque_mat) --> GG.scene();
 GMesh transparent_green(plane_geo, green_mat) --> GG.scene();
 GMesh transparent_blue(plane_geo, blue_mat) --> GG.scene();
@@ -42,11 +42,13 @@ for (int i; i < transparent_red_list.size(); ++i) {
     transparent_red_list[i].posZ(-i);
 }
 
+// position
 transparent_red.pos(-.1, -.1, -.2);
 transparent_green.pos(0, .1, -.4);
 transparent_blue.pos(.1, -.1, -.6);
 opaque.posZ(-.8);
 
+// UI variables
 UI_Float opaque_depth(opaque.posZ());
 UI_Float transparent_green_depth(transparent_green.posZ());
 UI_Float transparent_blue_depth(transparent_blue.posZ());
@@ -54,8 +56,12 @@ UI_Float transparent_red_depth(transparent_red.posZ());
 UI_Bool orthographic;
 UI_Bool red_is_transparent(red_mat.transparent());
 
-while (1) {
+// render loop
+while (1)
+{
+    // sychronize
     GG.nextFrame() => now;
+
     // UI for positioning objects
     if (UI.begin("transparency example")) {
         if (UI.slider("transparent red depth", transparent_red_depth, -1, 0))
@@ -71,12 +77,13 @@ while (1) {
             opaque_depth.val() => opaque.posZ;
         
         if (UI.checkbox("orthographic", orthographic)) {
-            if (orthographic.val()) orbit_cam.orthographic();
-            else orbit_cam.perspective();
+            if (orthographic.val()) cam.orthographic();
+            else cam.perspective();
         }
 
         if (UI.checkbox("red transparency", red_is_transparent))
             red_is_transparent.val() => red_mat.transparent;
     }
+    // end UI
     UI.end();
 }

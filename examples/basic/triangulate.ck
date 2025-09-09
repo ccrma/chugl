@@ -1,15 +1,14 @@
 //-----------------------------------------------------------------------------
 // name: triangulate.ck
-// desc: Simple example of how to use the PolygonGeometry class to triangulate 
-// an polygon with arbitrary holes.
+// desc: simple example of using PolygonGeometry class to triangulate 
+// an polygon with arbitrary holes
 //
 // authors: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
-//
-// date: Fall 2024
+//    date: Fall 2024
 //-----------------------------------------------------------------------------
 
-// Polygon Geometry can perform runtime triangulation via ear clipping
-// Useful for animating or rendering deformable shapes
+// PolygonGeometry can perform runtime triangulation via ear clipping
+// useful for animating or rendering deformable shapes
 PolygonGeometry poly_geo;
 
 // triangulate a hexagon with holes (you can call this at frame rate!)
@@ -41,4 +40,5 @@ poly_geo.build(
 // create a mesh with the geometry
 GMesh mesh(poly_geo, new PhongMaterial) --> GG.scene();
 
+// render loop
 while (true) { GG.nextFrame() => now; }
