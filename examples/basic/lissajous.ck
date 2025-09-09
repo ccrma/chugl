@@ -11,15 +11,17 @@
 //   date: Fall 2024
 //-----------------------------------------------------------------------------
 
-// set up bloom
-GG.renderPass() --> BloomPass bloom_pass --> GG.outputPass();
-bloom_pass.input(GG.renderPass().colorOutput());
-GG.outputPass().input(bloom_pass.colorOutput());
-bloom_pass.intensity(1.0);
+// modify rendergraph
+// FYI default: GG.rootPass() --> GG.scenePass() --> GG.outputPass()
+// FYI modified: insert a BloomPass between scenePass and outputPass
+// GG.bloom( true );
+// sets bloom intensity
+GG.bloomPass( true ).intensity(1.0);
 
 // set up camera
 GG.camera().orthographic();
 GG.camera().posZ(30.0);
+GG.camera().viewSize(4);
 
 // unit analyzer setup
 1024 => int WINDOW_SIZE;
@@ -49,6 +51,7 @@ fun void audio()
 // ugen setup
 SinOsc left_osc => dac.chan(0);
 SinOsc right_osc => dac.chan(1);
+261 => left_osc.freq; 326 => right_osc.freq;
 .1 => left_osc.gain => right_osc.gain;
 
 SndBuf2 buf => blackhole;

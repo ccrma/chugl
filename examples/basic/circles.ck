@@ -82,7 +82,7 @@ for( auto circ : circles )
     circ.init( N, RADIUS );
     // connect it
     circ --> GG.scene();
-    // randomize location in XY
+    // randomize location in XYZ
     @( Math.random2f(-1.5,1.5),
        Math.random2f(-1,1),
        Math.random2f(-1,1) ) => circ.pos;

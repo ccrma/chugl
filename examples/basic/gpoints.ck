@@ -1,131 +1,144 @@
 //-----------------------------------------------------------------------------
 // name: gpoints.ck
-// desc: stuff you can do with GPoints!
+// desc: stuff you can do with GPoints! (with UI for exploring options)
 // requires: ChuGL + chuck-1.5.3.0 or higher
 //
 // author: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
 //         Ge Wang (https://ccrma.stanford.edu/~ge/)
 // date: Fall 2023
 //-----------------------------------------------------------------------------
+// add GPoints GGen to scene
 GPoints points --> GG.scene();
 
-[@(-1, -1, 0), @(1, -1, 0), @(0, 1, 0)] @=> vec3 point_positions[];
-[Color.WHITE] @=> vec3 point_colors[];
-[1.0] @=> float point_sizes[];
+// array of vec3s
+[@(-1, -1, 0), @(1, -1, 0), @(0, 1, 0)] @=> vec3 positions[];
+// array of colors
+[Color.WHITE] @=> vec3 colors[];
+// array of point sizes
+[1.0] @=> float sizes[];
 
-UI_Float3 ui_point_positions[0];
-UI_Float3 ui_point_colors[0];
-UI_Float ui_point_sizes[0];
+UI_Float3 ui_positions[0];
+UI_Float3 ui_colors[0];
+UI_Float ui_sizes[0];
 
 // populate per-point attributes
-for (int i; i < point_positions.size(); ++i) {
-    ui_point_positions << new UI_Float3(point_positions[i]);
+for (int i; i < positions.size(); ++i) {
+    ui_positions << new UI_Float3(positions[i]);
 }
-for (int i; i < point_colors.size(); ++i) {
-    ui_point_colors << new UI_Float3(point_colors[i]);
+for (int i; i < colors.size(); ++i) {
+    ui_colors << new UI_Float3(colors[i]);
 }
-for (int i; i < point_sizes.size(); ++i) {
-    ui_point_sizes << new UI_Float(point_sizes[i]);
+for (int i; i < sizes.size(); ++i) {
+    ui_sizes << new UI_Float(sizes[i]);
 }
 
+// set positions
+points.positions(positions);
 
-points.positions(point_positions);
+// UI variables for point material params
+UI_Float ui_global_size(points.size());
+UI_Float3 ui_global_color(points.color());
 
-// UI variables for line material params
-UI_Float point_size(points.size());
-UI_Float3 point_color(points.color());
-
-while (true) {
+// render loop
+while (true)
+{
+    // synchronize
     GG.nextFrame() => now;
 
-    // UI
-    if (UI.begin("GPoints")) {
-        if (UI.slider("point size", point_size, 0.01, 1)) {
-            point_size.val() => points.size;
-        }
+    // begin UI
+    if (UI.begin("GPoints"))
+    {
+        if (UI.slider("point size", ui_global_size, 0.01, 1))
+        { ui_global_size.val() => points.size; }
+        if (UI.colorEdit("point color", ui_global_color, 0))
+        { ui_global_color.val() => points.color; }
 
-        if (UI.colorEdit("point color", point_color, 0)) {
-            point_color.val() => points.color;
-        }
-
+        // add separator
         UI.separatorText("point positions");
 
-        for (int i; i < point_positions.size(); i++) {
+        // UI to change positions of individual points
+        for (int i; i < positions.size(); i++)
+        {
+            // for selecting individual points
             UI.pushID(i);
-
-            if (UI.drag("##point_pos", ui_point_positions[i], .01)) {
-                ui_point_positions[i].val() => point_positions[i];
-                point_positions => points.positions;
+            // add draggable slider
+            if (UI.drag("##point_pos", ui_positions[i], .01)) {
+                ui_positions[i].val() => positions[i];
+                positions => points.positions;
             }
-
+            // (no line break)
             UI.sameLine();
+            // add "remove a point" button
             if (UI.button("Remove##point_pos")) {
-                point_positions.erase(i);
-                ui_point_positions.erase(i);
-                point_positions => points.positions;
+                positions.erase(i);
+                ui_positions.erase(i);
+                positions => points.positions;
             }
 
+            // pop ID stack
             UI.popID();
         }
 
         if (UI.button("Add Position")) {
-            point_positions << @(0,0, 0);
-            ui_point_positions << new UI_Float3;
-            point_positions => points.positions;
+            positions << @(0,0, 0);
+            ui_positions << new UI_Float3;
+            positions => points.positions;
         }
 
         UI.separatorText("point colors");
 
-        for (int i; i < point_colors.size(); i++) {
+        for (int i; i < colors.size(); i++) {
             UI.pushID(i);
 
-            if (UI.colorEdit("##point_color", ui_point_colors[i], 0)) {
-                ui_point_colors[i].val() => point_colors[i];
-                point_colors => points.colors;
+            if (UI.colorEdit("##point_color", ui_colors[i], 0)) {
+                ui_colors[i].val() => colors[i];
+                colors => points.colors;
             }
 
             UI.sameLine();
             if (UI.button("Remove##point_color")) {
-                point_colors.erase(i);
-                ui_point_colors.erase(i);
-                point_colors => points.colors;
+                colors.erase(i);
+                ui_colors.erase(i);
+                colors => points.colors;
             }
 
             UI.popID();
         }
 
         if (UI.button("Add Color")) {
-            point_colors << @(1, 1, 1);
-            ui_point_colors << new UI_Float3(@(1, 1, 1));
-            point_colors => points.colors;
+            colors << @(1, 1, 1);
+            ui_colors << new UI_Float3(@(1, 1, 1));
+            colors => points.colors;
         }
 
         UI.separatorText("point sizes");
 
-        for (int i; i < point_sizes.size(); i++) {
+        for (int i; i < sizes.size(); i++) {
             UI.pushID(i);
 
-            if (UI.slider("##point_sizes", ui_point_sizes[i], 0.01, 1.0)) {
-                ui_point_sizes[i].val() => point_sizes[i];
-                point_sizes => points.sizes;
+            if (UI.slider("##point_sizes", ui_sizes[i], 0.01, 1.0)) {
+                ui_sizes[i].val() => sizes[i];
+                sizes => points.sizes;
             }
 
             UI.sameLine();
 
             if (UI.button("Remove##point_size")) {
-                point_sizes.erase(i);
-                ui_point_sizes.erase(i);
-                point_sizes => points.sizes;
+                sizes.erase(i);
+                ui_sizes.erase(i);
+                sizes => points.sizes;
             }
 
             UI.popID();
         }
 
         if (UI.button("Add Size")) {
-            point_sizes << 1;
-            ui_point_sizes << new UI_Float(1);
-            point_sizes => points.sizes;
+            sizes << 1;
+            ui_sizes << new UI_Float(1);
+            sizes => points.sizes;
         }
     }
+    
+    // end UI
     UI.end();
 }

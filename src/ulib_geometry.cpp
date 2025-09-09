@@ -171,17 +171,25 @@ static void ulib_geometry_query(Chuck_DL_Query* QUERY)
     static t_CKINT norm_attr_loc{ SG_GEOMETRY_NORMAL_ATTRIBUTE_LOCATION };
     static t_CKINT uv_attr_loc{ SG_GEOMETRY_UV_ATTRIBUTE_LOCATION };
 
-    SVAR("int", "AttributeLocation_Count", &sg_geometry_max_attributes);
+    SVAR("int", "ATTRIBUTE_MAX", &sg_geometry_max_attributes);
     DOC_VAR("Maximum number of vertex attributes.");
+    SVAR("int", "AttributeLocation_Count", &sg_geometry_max_attributes);
+    DOC_VAR("(deprecated; use ATTRIBUTE_MAX instead) Maximum number of vertex attributes.");
 
-    SVAR("int", "AttributeLocation_Position", &pos_attr_loc);
+    SVAR("int", "ATTRIBUTE_POSITION", &pos_attr_loc);
     DOC_VAR("Position attribute location used by builtin renderer");
+    SVAR("int", "AttributeLocation_Position", &pos_attr_loc);
+    DOC_VAR("(deprecated; use ATTRIBUTE_POSITION instead) Position attribute location used by builtin renderer");
 
-    SVAR("int", "AttributeLocation_Normal", &norm_attr_loc);
+    SVAR("int", "ATTRIBUTE_NORMAL", &norm_attr_loc);
     DOC_VAR("Normal attribute location used by builtin renderer");
+    SVAR("int", "AttributeLocation_Normal", &norm_attr_loc);
+    DOC_VAR("(deprecated; use ATTRIBUTE_NORMAL instead) Normal attribute location used by builtin renderer");
 
-    SVAR("int", "AttributeLocation_UV", &uv_attr_loc);
+    SVAR("int", "ATTRIBUTE_UV", &uv_attr_loc);
     DOC_VAR("UV attribute location used by builtin renderer");
+    SVAR("int", "AttributeLocation_UV", &uv_attr_loc);
+    DOC_VAR("(deprecated; use ATTRIBUTE_UV instead) UV attribute location used by builtin renderer");
 
     // ctor
     CTOR(geo_ctor);

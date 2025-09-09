@@ -1,6 +1,7 @@
 //--------------------------------------------------------------------
 // name: glines.ck
-// desc: drawing lines with GLines
+// desc: drawing lines with GLines (with UI for exploring options)
+// requires: ChuGL + chuck-1.5.3.0 or higher
 // 
 // author: Andrew Zhu Aday
 //   date: Fall 2024
@@ -8,16 +9,23 @@
 // add GLines GGen to scene
 GLines lines --> GG.scene();
 
-[@(-0.5, -0.5), @(0.0, 0.0), @(0.5, -0.5)] @=> vec2 line_positions[];
-[Color.RED] @=> vec3 line_colors[];
+// array of vec2
+[ @(-0.5, -0.5),
+  @(0.0, 0.0),
+  @(0.5, -0.5)] @=> vec2 line_positions[];
+// array of colors
+[ Color.RED ] @=> vec3 line_colors[];
+// ChuGL UI values for comminication with widgets
 UI_Float2 ui_line_positions[0];
 UI_Float3 ui_line_colors[0];
 
 // populate line_positions and line_colors
 for (int i; i < line_positions.size(); ++i) {
+    // append
     ui_line_positions << new UI_Float2(line_positions[i]);
 }
 for (int i; i < line_colors.size(); ++i) {
+    // append
     ui_line_colors << new UI_Float3(line_colors[i]);
 }
 
@@ -29,10 +37,18 @@ line_colors => lines.colors;
 UI_Float line_width(lines.width());
 UI_Float3 line_color(lines.color());
 
-fun void ui() {
-    while (true) {
+// UI render/update function
+fun void updateUI()
+{
+    // this UI function contains its own render loop
+    while (true)
+    {
+        // graphics synch
         GG.nextFrame() => now;
-        if (UI.begin("Lines Example")) {
+
+        // begin UI
+        if (UI.begin("Lines Example"))
+        {
             if (UI.slider("line width", line_width, 0.01, 1)) {
                 line_width.val() => lines.width;
             }
@@ -100,8 +116,11 @@ fun void ui() {
                 line_colors => lines.colors;
             }
         }
+        
+        // end UI
         UI.end();
     }
-} spork ~ ui();
+} spork ~ updateUI();
 
+// main render loop
 while (true) { GG.nextFrame() => now; }

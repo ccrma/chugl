@@ -1,15 +1,18 @@
 //-----------------------------------------------------------------------------
 // name: geo_and_mat.ck
 // desc: UI-driven example for geometry + material
-// requires: ChuGL + chuck-1.5.3.0 or higher
+// NOTE: this is a useful example for exploring what you can do with the 
+//       built-in geometries and materials
+// requires: ChuGL + chuck-1.5.5.5 or higher
+//
+// author: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
 //-----------------------------------------------------------------------------
-// camera
-GOrbitCamera cam --> GG.scene();
-// select main camera
-GG.scene().camera( cam );
-// mesh
+// use orbit camera as main camera
+GG.scene().camera( new GOrbitCamera );
+// the mesh to render
 GMesh mesh --> GG.scene();
 
+// geometries
 [
     null,
     new PlaneGeometry,
@@ -23,6 +26,7 @@ GMesh mesh --> GG.scene();
     new PolygonGeometry,
 ] @=> Geometry geometries[];
 
+// create ChuGL UI integer for communication with picker widget
 UI_Int geometry_index;
 [ "None" ] @=> string builtin_geometries[];
 for (1 => int i; i < geometries.size(); i++) {
@@ -35,6 +39,7 @@ FlatMaterial flat_material;
 PhongMaterial phong_material;
 PBRMaterial pbr_material;
 
+// materials
 [
     null,
     uv_material,
@@ -44,13 +49,14 @@ PBRMaterial pbr_material;
     pbr_material,
 ] @=> Material materials[];
 
+// create ChuGL UI integer for communication with a picker widget
 UI_Int material_index;
 [ "None" ] @=> string builtin_materials[];
 for (1 => int i; i < materials.size(); i++) {
     builtin_materials << Type.of(materials[i]).name();
 }
 
-// Material params
+// material params
 UI_Int material_topology_index(3); // default to triangle list
 [
     "PointList",
@@ -61,7 +67,7 @@ UI_Int material_topology_index(3); // default to triangle list
 ] @=> string material_topologies[];
 UI_Bool wireframe(false);
 
-// Normal material params
+// create ChuGL UI params to map to material and geometry params
 UI_Bool normal_material_worldspace(normal_material.worldspaceNormals());
 
 // Phong material params
@@ -79,7 +85,7 @@ UI_Float pbr_roughness(pbr_material.roughness());
 UI_Float pbr_ao_factor(pbr_material.aoFactor());
 UI_Float pbr_normal_factor(pbr_material.normalFactor());
 
-// Plane geometry params
+// plane geometry params
 geometries[1] $ PlaneGeometry @=> PlaneGeometry@ plane_geo;
 UI_Float plane_width(plane_geo.width());
 UI_Float plane_height(plane_geo.height());
@@ -93,6 +99,8 @@ fun void buildPlane() {
         plane_height_segments.val()
     );
 }
+
+// suzanne geometry has no params
 
 // sphere geometry params
 geometries[3] $ SphereGeometry @=> SphereGeometry@ sphere_geo;
@@ -189,7 +197,7 @@ fun void buildCylinder() {
     );
 }
 
-// Knot geometry params
+// knot geometry params
 geometries[8] $ KnotGeometry @=> KnotGeometry@ knot_geo;
 UI_Float knot_radius(knot_geo.radius());
 UI_Float knot_tube(knot_geo.tube());
@@ -208,187 +216,179 @@ fun void buildKnot() {
     );
 }
 
+// ChuGL UI bool for toggling rotation
 UI_Bool rotate;
-fun void ui() {
-    while (true) {
-        GG.nextFrame() => now; 
-        UI.setNextWindowBgAlpha(0.00);
-        if (UI.begin("Geometry and Material Example")) {
 
-            UI.scenegraph(GG.scene());
-
-            UI.checkbox("rotate", rotate);
-
-            if (UI.listBox("builtin geometries", geometry_index, builtin_geometries)) {
-                mesh.geometry(geometries[geometry_index.val()]);
-            }
-
-            if (UI.listBox("builtin materials", material_index, builtin_materials)) {
-                mesh.material(materials[material_index.val()]);
-
-                // update material params
-                if (mesh.material() != null) {
-                    material_topology_index.val() => mesh.material().topology;
-                }
-            }
-
-            UI.separatorText("Base Material Params");
-
-            if (mesh.material() != null) {
-
-                // material topology
-                if (UI.listBox("topology", material_topology_index, material_topologies)) {
-                    <<< "setting topology to", material_topology_index.val() >>>;
-                    mesh.material().topology(material_topology_index.val());
-                }
-
-                UI.checkbox("wireframe", wireframe);
-                mesh.material().wireframe(wireframe.val());
-            }
-
-            if (mesh.material() == normal_material) {
-                UI.separatorText("Normal Material Params");
-
-                if (UI.checkbox("worldspace normals", normal_material_worldspace)) {
-                    normal_material.worldspaceNormals(normal_material_worldspace.val());
-                }
-            }
-
-            if (mesh.material() == phong_material) {
-                UI.separatorText("Phong Material Params");
-                if (UI.colorEdit("specular", phong_specular, 0)) {
-                    phong_specular.val() => phong_material.specular;
-                }
-
-                if (UI.colorEdit("diffuse", phong_diffuse, 0)) {
-                    phong_diffuse.val() => phong_material.color;
-                }
-
-                if (UI.slider("shine", phong_shine, 0, 10)) {
-                    phong_shine.val() => phong_material.shine;
-                }
-
-                if (UI.colorEdit("emission", phong_emission, 0)) {
-                    phong_emission.val() => phong_material.emission;
-                }
-
-                if (UI.slider("normal factor", phong_normal_factor, 0, 1)) {
-                    phong_normal_factor.val() => phong_material.normalFactor;
-                }
-
-                if (UI.slider("ao factor", phong_ao_factor, 0, 1)) {
-                    phong_ao_factor.val() => phong_material.aoFactor;
-                }
-            }
-
-            if (mesh.material() == pbr_material)
-            {
-                UI.separatorText("PBR Material Params");
-                if (UI.colorEdit("albedo", pbr_albedo, 0)) {
-                    pbr_albedo.val() => pbr_material.color;
-                }
-
-                if (UI.slider("metallic", pbr_metallic, 0, 1)) {
-                    pbr_metallic.val() => pbr_material.metallic;
-                }
-
-                if (UI.slider("roughness", pbr_roughness, 0, 1)) {
-                    pbr_roughness.val() => pbr_material.roughness;
-                }
-
-                if (UI.slider("ao factor", pbr_ao_factor, 0, 1)) {
-                    pbr_ao_factor.val() => pbr_material.aoFactor;
-                }
-
-                if (UI.slider("normal factor", pbr_normal_factor, 0, 1)) {
-                    pbr_normal_factor.val() => pbr_material.normalFactor;
-                }
-            }
-
-            UI.separatorText("Geometry Params");
-
-            // plane geometry params
-            if (mesh.geometry() == plane_geo) {
-                if (UI.slider("width", plane_width, 0.1, 10)) buildPlane();
-                if (UI.slider("height", plane_height, 0.1, 10)) buildPlane();
-                if (UI.slider("width segments", plane_width_segments, 1, 64)) buildPlane();
-                if (UI.slider("height segments", plane_height_segments, 1, 64)) buildPlane();
-            }
+// ChuGL UI update function
+// this can be either called repeatedly from any render loop 
+// OR can be modified to be its own render loop that can be sporked
+fun void updateUI()
+{
+    // make UI window transparent
+    UI.setNextWindowBgAlpha(0.00);
+    
+    // create a ChuGL UI pane
+    if (UI.begin("Geometry and Material Example"))
+    {
+        // add scene graph viewer
+        UI.scenegraph( GG.scene() );
+        
+        // add rotation checkbox
+        UI.checkbox("rotate", rotate);
+        
+        // draw list of geometries
+        if (UI.listBox("builtin geometries", geometry_index, builtin_geometries)) {
+            mesh.geometry(geometries[geometry_index.val()]);
+        }
+        
+        // draw list of materials
+        if (UI.listBox("builtin materials", material_index, builtin_materials)) {
+            mesh.material(materials[material_index.val()]);
             
-            // sphere geometry params
-            if (mesh.geometry() == sphere_geo) {
-                if (UI.slider("radius", sphere_radius, 0.1, 10)) buildSphere();
-                if (UI.slider("width segments", sphere_width, 3, 64)) buildSphere();
-                if (UI.slider("height segments", sphere_height, 2, 64)) buildSphere();
-                if (UI.slider("phi start", sphere_phi_start, 0, 2 * Math.PI)) buildSphere();
-                if (UI.slider("phi length", sphere_phi_length, 0, 2 * Math.PI)) buildSphere();
-                if (UI.slider("theta start", sphere_theta_start, 0, Math.PI)) buildSphere();
-                if (UI.slider("theta length", sphere_theta_length, 0, Math.PI)) buildSphere();
-            }
-
-            // box geometry params
-            if (mesh.geometry() == cube_geo) {
-                if (UI.slider("width", box_width, 0.1, 10)) buildBox();
-                if (UI.slider("height", box_height, 0.1, 10)) buildBox();
-                if (UI.slider("depth", box_depth, 0.1, 10)) buildBox();
-                if (UI.slider("width segments", box_width_segments, 1, 64)) buildBox();
-                if (UI.slider("height segments", box_height_segments, 1, 64)) buildBox();
-                if (UI.slider("depth segments", box_depth_segments, 1, 64)) buildBox();
-            }
-
-            // circle geometry params
-            if (mesh.geometry() == circle_geo) {
-                if (UI.slider("radius", circle_radius, 0.1, 10)) buildCircle();
-                if (UI.slider("segments", circle_segments, 1, 64)) buildCircle();
-                if (UI.slider("theta start", circle_theta_start, 0, 2 * Math.PI)) buildCircle();
-                if (UI.slider("theta length", circle_theta_length, 0, 2 * Math.PI)) buildCircle();
-            }
-
-            // torus geometry params
-            if (mesh.geometry() == torus_geo) {
-                if (UI.slider("radius", torus_radius, 0.1, 10)) buildTorus();
-                if (UI.slider("tube radius", torus_tube_radius, 0.1, 10)) buildTorus();
-                if (UI.slider("radial segments", torus_radial_segments, 3, 64)) buildTorus();
-                if (UI.slider("tubular segments", torus_tubular_segments, 3, 64)) buildTorus();
-                if (UI.slider("arc length", torus_arc_length, 0, 2 * Math.PI)) buildTorus();
-            }
-
-            // cylinder geometry params
-            if (mesh.geometry() == cylinder_geo) {
-                if (UI.slider("radius top", cylinder_radius_top, 0.1, 10)) buildCylinder();
-                if (UI.slider("radius bottom", cylinder_radius_bottom, 0.1, 10)) buildCylinder();
-                if (UI.slider("height", cylinder_height, 0.1, 10)) buildCylinder();
-                if (UI.slider("radial segments", cylinder_radial_segments, 3, 64)) buildCylinder();
-                if (UI.slider("height segments", cylinder_height_segments, 1, 64)) buildCylinder();
-                if (UI.checkbox("open ended", cylinder_open_ended)) buildCylinder();
-                if (UI.slider("theta start", cylinder_theta_start, 0, 2 * Math.PI)) buildCylinder();
-                if (UI.slider("theta length", cylinder_theta_length, 0, 2 * Math.PI)) buildCylinder();
-            }
-
-            // knot geometry params
-            if (mesh.geometry() == knot_geo) {
-                if (UI.slider("radius", knot_radius, 0.1, 10)) buildKnot();
-                if (UI.slider("tube", knot_tube, 0.1, 10)) buildKnot();
-                if (UI.slider("tubular segments", knot_tubular_segments, 3, 64)) buildKnot();
-                if (UI.slider("radial segments", knot_radial_segments, 3, 64)) buildKnot();
-                if (UI.slider("p", knot_p, 1, 20)) buildKnot();
-                if (UI.slider("q", knot_q, 1, 20)) buildKnot();
+            // update material params
+            if (mesh.material() != null) {
+                material_topology_index.val() => mesh.material().topology;
             }
         }
-        UI.end();
-    }
-}
-spork ~ ui();
+        
+        // add separator line
+        UI.separatorText("Base Material Params");
+        
+        // shared by all materials
+        if (mesh.material() != null) {            
+            // material topology
+            if (UI.listBox("topology", material_topology_index, material_topologies)) {
+                mesh.material().topology(material_topology_index.val());
+            }
 
-while (true) {
+            // add/draw checkbox for wireframe
+            UI.checkbox("wireframe", wireframe);
+            // set wireframe
+            mesh.material().wireframe(wireframe.val());
+        }
+        
+        // normal material param
+        if (mesh.material() == normal_material) {
+            UI.separatorText("Normal Material Params");
+            if (UI.checkbox("worldspace normals", normal_material_worldspace)) {
+                normal_material.worldspaceNormals(normal_material_worldspace.val());
+            }
+        }
+        
+        // Phong material params
+        if (mesh.material() == phong_material) {
+            UI.separatorText("Phong Material Params");
+            if (UI.colorEdit("specular", phong_specular, 0)) phong_specular.val() => phong_material.specular;
+            if (UI.colorEdit("diffuse", phong_diffuse, 0)) phong_diffuse.val() => phong_material.color;
+            if (UI.slider("shine", phong_shine, 0, 10)) phong_shine.val() => phong_material.shine;
+            if (UI.colorEdit("emission", phong_emission, 0)) phong_emission.val() => phong_material.emission;
+            if (UI.slider("normal factor", phong_normal_factor, 0, 1)) phong_normal_factor.val() => phong_material.normalFactor;
+            if (UI.slider("ao factor", phong_ao_factor, 0, 1)) phong_ao_factor.val() => phong_material.aoFactor;
+        }
+        
+        // PBR material params
+        if (mesh.material() == pbr_material)
+        {
+            UI.separatorText("PBR Material Params");
+            if (UI.colorEdit("albedo", pbr_albedo, 0)) pbr_albedo.val() => pbr_material.color;
+            if (UI.slider("metallic", pbr_metallic, 0, 1)) pbr_metallic.val() => pbr_material.metallic;
+            if (UI.slider("roughness", pbr_roughness, 0, 1)) pbr_roughness.val() => pbr_material.roughness;
+            if (UI.slider("ao factor", pbr_ao_factor, 0, 1)) pbr_ao_factor.val() => pbr_material.aoFactor;
+            if (UI.slider("normal factor", pbr_normal_factor, 0, 1)) pbr_normal_factor.val() => pbr_material.normalFactor;
+        }
+        
+        // draw separator line in UI
+        UI.separatorText("Geometry Params");
+        
+        // plane geometry params
+        if (mesh.geometry() == plane_geo) {
+            if (UI.slider("width", plane_width, 0.1, 10)) buildPlane();
+            if (UI.slider("height", plane_height, 0.1, 10)) buildPlane();
+            if (UI.slider("width segments", plane_width_segments, 1, 64)) buildPlane();
+            if (UI.slider("height segments", plane_height_segments, 1, 64)) buildPlane();
+        }
+        
+        // sphere geometry params
+        if (mesh.geometry() == sphere_geo) {
+            if (UI.slider("radius", sphere_radius, 0.1, 10)) buildSphere();
+            if (UI.slider("width segments", sphere_width, 3, 64)) buildSphere();
+            if (UI.slider("height segments", sphere_height, 2, 64)) buildSphere();
+            if (UI.slider("phi start", sphere_phi_start, 0, 2 * Math.PI)) buildSphere();
+            if (UI.slider("phi length", sphere_phi_length, 0, 2 * Math.PI)) buildSphere();
+            if (UI.slider("theta start", sphere_theta_start, 0, Math.PI)) buildSphere();
+            if (UI.slider("theta length", sphere_theta_length, 0, Math.PI)) buildSphere();
+        }
+        
+        // box geometry params
+        if (mesh.geometry() == cube_geo) {
+            if (UI.slider("width", box_width, 0.1, 10)) buildBox();
+            if (UI.slider("height", box_height, 0.1, 10)) buildBox();
+            if (UI.slider("depth", box_depth, 0.1, 10)) buildBox();
+            if (UI.slider("width segments", box_width_segments, 1, 64)) buildBox();
+            if (UI.slider("height segments", box_height_segments, 1, 64)) buildBox();
+            if (UI.slider("depth segments", box_depth_segments, 1, 64)) buildBox();
+        }
+        
+        // circle geometry params
+        if (mesh.geometry() == circle_geo) {
+            if (UI.slider("radius", circle_radius, 0.1, 10)) buildCircle();
+            if (UI.slider("segments", circle_segments, 1, 64)) buildCircle();
+            if (UI.slider("theta start", circle_theta_start, 0, 2 * Math.PI)) buildCircle();
+            if (UI.slider("theta length", circle_theta_length, 0, 2 * Math.PI)) buildCircle();
+        }
+        
+        // torus geometry params
+        if (mesh.geometry() == torus_geo) {
+            if (UI.slider("radius", torus_radius, 0.1, 10)) buildTorus();
+            if (UI.slider("tube radius", torus_tube_radius, 0.1, 10)) buildTorus();
+            if (UI.slider("radial segments", torus_radial_segments, 3, 64)) buildTorus();
+            if (UI.slider("tubular segments", torus_tubular_segments, 3, 64)) buildTorus();
+            if (UI.slider("arc length", torus_arc_length, 0, 2 * Math.PI)) buildTorus();
+        }
+        
+        // cylinder geometry params
+        if (mesh.geometry() == cylinder_geo) {
+            if (UI.slider("radius top", cylinder_radius_top, 0.1, 10)) buildCylinder();
+            if (UI.slider("radius bottom", cylinder_radius_bottom, 0.1, 10)) buildCylinder();
+            if (UI.slider("height", cylinder_height, 0.1, 10)) buildCylinder();
+            if (UI.slider("radial segments", cylinder_radial_segments, 3, 64)) buildCylinder();
+            if (UI.slider("height segments", cylinder_height_segments, 1, 64)) buildCylinder();
+            if (UI.checkbox("open ended", cylinder_open_ended)) buildCylinder();
+            if (UI.slider("theta start", cylinder_theta_start, 0, 2 * Math.PI)) buildCylinder();
+            if (UI.slider("theta length", cylinder_theta_length, 0, 2 * Math.PI)) buildCylinder();
+        }
+        
+        // knot geometry params
+        if (mesh.geometry() == knot_geo) {
+            if (UI.slider("radius", knot_radius, 0.1, 10)) buildKnot();
+            if (UI.slider("tube", knot_tube, 0.1, 10)) buildKnot();
+            if (UI.slider("tubular segments", knot_tubular_segments, 3, 64)) buildKnot();
+            if (UI.slider("radial segments", knot_radial_segments, 3, 64)) buildKnot();
+            if (UI.slider("p", knot_p, 1, 20)) buildKnot();
+            if (UI.slider("q", knot_q, 1, 20)) buildKnot();
+        }
+    }
+    
+    // this marks the end the UI window/pane
+    UI.end();
+}
+
+// main render loop
+while (true)
+{
+    // synchronize with graphics
     GG.nextFrame() => now;
+    
+    // update / draw ChuGL UI
+    updateUI();
+
+    // check UI and rotate if toggled
     if (rotate.val()) {
         GG.dt() * .3 => mesh.rotateY;
     }
 }
 
-// TODO
-/*
+/* IDEAS TO EXPLORE FROM HERE
 Add builtin textures to apply to materials
 Add builtin skybox + IBL lighting
 */

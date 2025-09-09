@@ -1,6 +1,7 @@
 //-----------------------------------------------------------------------------
 // name: custom_geo.ck
-// desc: creating custom meshes via passing vertex data directly in chuck
+// desc: creating custom meshes via passing vertex data directly
+//       (useful for creating procedural geometry or making your own asset importers)
 // requires: ChuGL + chuck-1.5.3.0 or higher
 //
 // author: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
@@ -8,14 +9,15 @@
 // date: Fall 2023
 //-----------------------------------------------------------------------------
 
-// Let's build a square out of 2 triangles!
+// let's build a square out of 2 triangles!
 
-// Construct the vertex data ==================================================
-Geometry customGeometry;
+// construct the vertex data ==================================================
+Geometry geo;
 
 // pass in 3D positions for each vertex
-customGeometry.vertexAttribute(
-    Geometry.AttributeLocation_Position,
+// alternate: use geo.positions(...)
+geo.vertexAttribute(
+    Geometry.ATTRIBUTE_POSITION,
     3,
     // vertex positions for a plane
     [
@@ -28,9 +30,10 @@ customGeometry.vertexAttribute(
 
 // pass in the normals (used in lighting calculations), make sure they
 // are normalized (i.e. have magnitude = 1)
-customGeometry.vertexAttribute(
+// alternate: use geo.normals(...)
+geo.vertexAttribute(
     // vertex normals for a plane ( all of them point out along +z axis )
-    Geometry.AttributeLocation_Normal,
+    Geometry.ATTRIBUTE_NORMAL,
     3,
     [
         0.0, 0, 1, 
@@ -42,9 +45,10 @@ customGeometry.vertexAttribute(
 
 // pass in the texture coordinates (used to map textures onto the mesh)
 // each field be clamped between 0 and 1
-customGeometry.vertexAttribute(
+// alternate: use geo.uvs(...)
+geo.vertexAttribute(
     // vertex uvs for a plane
-    Geometry.AttributeLocation_UV,
+    Geometry.ATTRIBUTE_UV,
     2,
     [
         0.0, 1, 
@@ -56,16 +60,17 @@ customGeometry.vertexAttribute(
 
 // pass in the indices. optional
 // if set, every 3 indices will be used to construct a triangle
-customGeometry.indices(
+geo.indices(
     [
         0, 2, 1, // bottom left triangle
         2, 3, 1, // top right triangle
     ]
 );
 
+
 // Scene setup ================================================================
-PBRMaterial mat;
-GMesh mesh(customGeometry, mat) --> GG.scene();
+GMesh mesh(geo, new PBRMaterial) --> GG.scene();
+
 
 // Game loop ==================================================================
 while (true) {

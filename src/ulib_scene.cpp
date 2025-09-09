@@ -205,22 +205,26 @@ CK_DLL_MFUN(gscene_set_main_camera)
     SG_Scene* scene      = SG_GetScene(OBJ_MEMBER_UINT(SELF, component_offset_id));
     Chuck_Object* ck_cam = GET_NEXT_OBJECT(ARGS);
 
-    SG_Camera* cam
+    SG_Camera * cam
       = ck_cam ? SG_GetCamera(OBJ_MEMBER_UINT(ck_cam, component_offset_id)) : NULL;
 
     if (cam && cam->id == scene->desc.main_camera_id) {
         RETURN->v_object = ck_cam;
         return;
     }
-
+    
     // check if camera is connected to scene
     if (cam && !SG_Transform::isAncestor(scene, cam)) {
-        CK_THROW("DisconnctedCamera",
-                 "A camera must be connected (grucked) to scene before it can be set "
-                 "as the main camera",
-                 SHRED);
+        // implicitly gruck camera to scene
+        CQ_PushCommand_AddChild(scene, cam);
+
+        // CK_THROW("DisconnctedCamera",
+        //          "A camera must be connected (grucked) to scene before it can be set "
+        //          "as the main camera",
+        //          SHRED);
     }
 
+    // set main camera
     SG_Scene::setMainCamera(scene, cam);
 
     // update gfx thread
