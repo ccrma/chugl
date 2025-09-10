@@ -13,7 +13,7 @@ Webcam webcam(0, 1024, 1024, 60);
 TextureDesc desc;
 webcam.width() => desc.width;
 webcam.height() => desc.height;
-1 => desc.mips;
+false => desc.mips;
 Texture write_texture(desc);
 
 // original webcam texture
@@ -31,6 +31,7 @@ fun void read() {
     while (true) {
         // issue a read from the GPU to the CPU
         webcam.texture().read() => now;
+
         // write the newly read data into the duplicate webcam texture
         write_texture.write(webcam.texture().data());
     }
