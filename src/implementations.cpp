@@ -44,3 +44,7 @@
 
 #define NANOTIME_IMPLEMENTATION
 #include <nanotime/nanotime.h>
+
+#include <tinyfiledialogs/tinyfiledialogs.c>
+
+#include <tinycthread/tinycthread.c>

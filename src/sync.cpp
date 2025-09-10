@@ -557,6 +557,8 @@ void Event_Broadcast(CHUGL_EventType type, CK_DL_API api, Chuck_VM* vm)
 
 void Event_Broadcast(Chuck_Event* ck_event)
 {
+    if (chuckEventQueue == NULL)
+        chuckEventQueue = g_chuglAPI->vm->create_event_buffer(g_chuglVM);
     g_chuglAPI->vm->queue_event(g_chuglVM, ck_event, 1, chuckEventQueue);
 }
 

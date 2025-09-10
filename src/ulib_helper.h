@@ -99,6 +99,8 @@
     if (obj) delete obj;                                                               \
     OBJ_MEMBER_UINT(SELF, data_offset) = 0;
 
+#define CKDOC_HIDDEN_STRING "(hidden)" // copied from chuck/src/ulib_doc.cpp
+
 // global main hook
 Chuck_DL_MainThreadHook* hook = NULL;
 bool hookActivated            = false;
@@ -110,6 +112,7 @@ Arena audio_frame_arena         = {};
 f64 g_last_dt                   = 0.0;
 i64 g_frame_count               = 0;
 bool g_chugl_window_initialized = false; // set to true the on first GG.nextFrame()
+char* g_chugl_working_dir       = NULL;
 
 Chuck_ArrayInt* g_dropped_files = NULL;
 

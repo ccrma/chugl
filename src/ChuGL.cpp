@@ -26,6 +26,8 @@
  SOFTWARE.
 -----------------------------------------------------------------------------*/
 
+#include <unistd.h>
+
 // clang-format off
 #include "all.cpp"
 #include "ulib_helper.h"
@@ -55,6 +57,9 @@
 
 // vendor
 #include <sokol/sokol_time.h>
+#include <tinyfiledialogs/tinyfiledialogs.h>
+#include <tinycthread/tinycthread.h>
+
 // clang-format on
 
 static f64 ckdt_sec      = 0;
@@ -121,6 +126,8 @@ CK_DLL_INFO(ChuGL)
 // ============================================================================
 // Query
 // ============================================================================
+
+void processAsyncFileDialogResults(); // forward decl
 
 static t_CKUINT chugl_next_frame_event_data_offset = 0;
 
@@ -351,6 +358,10 @@ static void chugl_GraphicsShredPerformNextFrameUpdate(Chuck_VM_Shred* SHRED)
 
         // Handle commands from graphics thread
         FlushGraphicsToAudioCQ();
+
+        // Handle async file dialog results
+        // disabling for now
+        // processAsyncFileDialogResults();
 
         // clear audio frame arena
         Arena::clear(&audio_frame_arena);
@@ -587,10 +598,164 @@ CK_DLL_SFUN(chugl_unregister_shred)
 }
 
 // ============================================================================
+// Native File Dialog
+// ============================================================================
+
+// using separate sync mechanism here instead of command queue because
+// we want FileDialog to work even if there is no graphics window and
+// GG.nextFrame() is never called
+
+static spinlock file_dialog_lock;
+static Arena file_dialog_results = {};
+
+enum FileDialogType {
+    FileDialog_Open = 0,
+};
+
+static t_CKINT open_file_event_file_array_offset = 0;
+
+struct FileDialogArgs {
+};
+
+struct FileDialogResult {
+    FileDialogType type;
+
+    // Open File Event
+    Chuck_Event* event;
+    char* files_MALLOC;
+    int allow_multiple_selects;
+    // eventually add filter patterns
+};
+
+void processAsyncFileDialogResults()
+{
+    CK_DL_API API = g_chuglAPI;
+    spinlock::lock(&file_dialog_lock);
+    int num_results = ARENA_LENGTH(&file_dialog_results, FileDialogResult);
+    for (int i = 0; i < num_results; ++i) {
+        FileDialogResult* result
+          = ARENA_GET_TYPE(&file_dialog_results, FileDialogResult, i);
+        switch (result->type) {
+            case FileDialog_Open: {
+                Chuck_ArrayInt* file_ck_arr = (Chuck_ArrayInt*)OBJ_MEMBER_OBJECT(
+                  (Chuck_Object*)result->event, open_file_event_file_array_offset);
+                // update string array
+                if (result->allow_multiple_selects) {
+                    char* start = result->files_MALLOC;
+                    char* delim = start;
+                    while (start) {
+                        delim = strchr(start, '|');
+                        if (delim) *delim = 0;
+                        g_chuglAPI->object->array_int_push_back(
+                          file_ck_arr, (t_CKINT)chugin_createCkString(start, false));
+                        start = delim;
+                        if (start) ++start;
+                    }
+                } else {
+                    g_chuglAPI->object->array_int_push_back(
+                      file_ck_arr,
+                      (t_CKINT)chugin_createCkString(result->files_MALLOC, false));
+                }
+                CK_SAFE_FREE(result->files_MALLOC);
+                // broadcast event
+                Event_Broadcast(result->event);
+            } break;
+            default: UNREACHABLE;
+        }
+    }
+    Arena::clear(&file_dialog_results);
+    spinlock::unlock(&file_dialog_lock);
+}
+
+/* This is the child thread function */
+int OpenFileDialogThread(void* arg)
+{
+    Chuck_Event* event = (Chuck_Event*)arg;
+
+    char* files_copy
+      = strdup(tinyfd_openFileDialog(NULL, g_chugl_working_dir, 0, NULL, NULL, 1));
+
+    spinlock::lock(&file_dialog_lock);
+    FileDialogResult* result
+      = ARENA_PUSH_ZERO_TYPE(&file_dialog_results, FileDialogResult);
+    result->type                   = FileDialog_Open;
+    result->event                  = event;
+    result->allow_multiple_selects = 1;
+    result->files_MALLOC           = files_copy;
+    spinlock::unlock(&file_dialog_lock);
+
+    /* in case of multiple files, the separator is | */
+    /* returns NULL on cancel */
+    return 0;
+}
+
+// #define thrd_error    0 /**< The requested operation failed */
+// #define thrd_success  1 /**< The requested operation succeeded */
+// #define thrd_timeout  2 /**< The time specified in the call was reached without
+// acquiring the requested resource */ #define thrd_busy     3 /**< The requested
+// operation failed because a tesource requested by a test and return function is
+// already in use */ #define thrd_nomem    4 /**< The requested operation failed because
+// it was unable to allocate memory */
+
+Chuck_Object* chugl_create_file_dialog_event(FileDialogType type, Chuck_VM_Shred* shred)
+{
+    Chuck_Object* event = NULL;
+    CK_DL_API API       = g_chuglAPI;
+
+    switch (type) {
+        case FileDialog_Open: {
+            event = chugin_createCkObj("OpenFileEvent", false, shred);
+            OBJ_MEMBER_OBJECT(event, open_file_event_file_array_offset)
+              = chugin_createCkObj(g_chuck_types.string_array, true);
+        } break;
+        default: UNREACHABLE;
+    }
+    return event;
+}
+
+CK_DLL_SFUN(chugl_open_file_dialog_async)
+{
+    Chuck_Object* event = chugl_create_file_dialog_event(FileDialog_Open, SHRED);
+    thrd_t t;
+    if (thrd_create(&t, OpenFileDialogThread, event) != thrd_success) {
+        // TODO error msg
+
+        // char* file       = tinyfd_openFileDialog(NULL, NULL, 0, NULL, NULL, 0);
+        // RETURN->v_object = (Chuck_Object*)chugin_createCkString(file, false);
+    }
+
+    RETURN->v_object = event;
+}
+
+CK_DLL_SFUN(chugl_open_file_dialog)
+{
+    // const char* title = API->object->str(GET_NEXT_STRING(ARGS));
+    // const char* default_path_or_file = API->object->str(GET_NEXT_STRING(ARGS));
+    // TODO add filter patterns
+
+    char* file       = tinyfd_openFileDialog(NULL, NULL, 0, NULL, NULL, 0);
+    RETURN->v_object = (Chuck_Object*)chugin_createCkString(file, false);
+
+    // char * tinyfd_openFileDialog(
+    // 	char const * aTitle, /* NULL or "" */
+    // 	char const * aDefaultPathAndOrFile, /* NULL or "" , ends with / to set only a
+    // directory */ 	int aNumOfFilterPatterns , /* 0 (2 in the following example) */
+    // char const * const * aFilterPatterns, /* NULL or char const *
+    // lFilterPatterns[2]={"*.png","*.jpg"}; */ 	char const *
+    // aSingleFilterDescription,
+    // /* NULL or "image files" */ 	int aAllowMultipleSelects ) ; /* 0 or 1 */
+    /* in case of multiple files, the separator is | */
+    /* returns NULL on cancel */
+}
+
+// ============================================================================
 // Chugin entry point
 // ============================================================================
 CK_DLL_QUERY(ChuGL)
 {
+    g_chugl_working_dir = getcwd(NULL, 0);
+    log_trace("Working Directory: %s\n", g_chugl_working_dir);
+
     // set log level
 #ifdef CHUGL_RELEASE
     log_set_level(LOG_WARN); // only log errors and fatal in release mode
@@ -715,6 +880,15 @@ CK_DLL_QUERY(ChuGL)
 #ifndef CHUGL_FAST_COMPILE
     ulib_assloader_query(QUERY);
 #endif
+
+    { // File Dialog
+        BEGIN_CLASS("OpenFileEvent", "Event");
+        DOC_CLASS("(hidden)");
+
+        open_file_event_file_array_offset = MVAR("string[]", "files", false);
+        DOC_VAR("String array containing the files the user selected to open");
+        END_CLASS(); // OpenFileEvent
+    } // File Dialog
 
     { // GG static functions
         QUERY->begin_class(QUERY, "GG", "Object");
@@ -884,6 +1058,12 @@ CK_DLL_QUERY(ChuGL)
           "a graphics shred. Do this if you want a shred to exit a GG.nextFrame() => "
           "now gameloop and move on to other tasks. Otherwise, the window will hang "
           "as it waits for this shred to call GG.nextFrame() again.");
+
+        SFUN(chugl_open_file_dialog, "string", "openFileDialog");
+        DOC_FUNC("(hidden)");
+
+        SFUN(chugl_open_file_dialog_async, "OpenFileEvent", "openFileDialogAsync");
+        DOC_FUNC("(hidden)");
 
         END_CLASS();
     } // GG

@@ -131,6 +131,9 @@
     "__availability": "cpp",
     "filesystem": "cpp",
     "set": "cpp",
-    "tinycthread.h": "c"
+    "tinycthread.h": "c",
+    "tinyfiledialogs.c": "cpp",
+    "strstream": "cpp",
+    "tinycthread.c": "cpp"
   }
 }
