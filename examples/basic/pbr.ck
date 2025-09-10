@@ -1,6 +1,7 @@
 //--------------------------------------------------------------------
 // name: pbr.ck
 // desc: physically-based rendering
+// requires: ChuGL + chuck-1.5.5.5 or higher
 // 
 // author: Andrew Zhu Aday
 //   date: Fall 2024

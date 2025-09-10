@@ -2,11 +2,13 @@
 // name: video.ck
 // desc: video playback; currently only supports the MPEG1 video and 
 //       MP2 audio
+// requires: ChuGL + chuck-1.5.5.5 or higher
 //
 // (DATA) download and place this music video in the same directory: 
-//   https://ccrma.stanford.edu/~azaday/music/bjork-all-is-full-of-love.mpg
+//   https://chuck.stanford.edu/chugl/examples/data/video/bjork.mpg
 //
-// find more mpeg samples here: https://filesamples.com/formats/mpeg
+// find more mpeg samples here:
+//   https://filesamples.com/formats/mpeg
 //
 // authors: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
 //    date: Fall 2024
@@ -16,7 +18,7 @@
 GG.fullscreen();
 
 // Video is a UGen
-Video video( me.dir() + "./bjork-all-is-full-of-love.mpg" ) => dac; 
+Video video( me.dir() + "bjork.mpg" ) => dac; 
 
 // print file infomation
 <<< "VM sample rate: ", 1::second / 1::samp >>>;

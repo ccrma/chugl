@@ -2,7 +2,7 @@
 // name: light.ck
 // desc: moving point lights (with UI control)
 //       (there is no prescribed limit on max # of lights)
-// requires: ChuGL + chuck-1.5.3.0 or higher
+// requires: ChuGL + chuck-1.5.5.5 or higher
 // 
 // author: Andrew Zhu Aday
 //   date: Fall 2024

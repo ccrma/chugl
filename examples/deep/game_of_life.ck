@@ -17,11 +17,9 @@ IDEA: wrap repeat, sample OFF the grid with scaling factor n*m for INFINITE conw
 - requires doing as screen shader or pass clip space full-screen quad through custom geo */
 //-----------------------------------------------------------------------------
 
-GCamera camera --> GG.scene();
-camera.orthographic();
-camera.viewSize(10.0 / 16);
-camera.posZ(1.0);
-camera => GG.scene().camera;
+GG.camera().orthographic();
+GG.camera().viewSize(10.0 / 16);
+GG.camera().posZ(1.0);
 
 // audio stuff -----------------------------------------
 // GWindow.fullscreen();
@@ -139,16 +137,20 @@ float texture_data[4 * WINDOW_SIZE * WINDOW_SIZE];
 conway_tex_b.write(texture_data); // initialize empty texture
 conway_tex_a.write(texture_data);
 
-fun void simulate() 
+// simulate game of life
+fun void simulate()
 {
     true => int flip;
     material.uniformInt(2, 0);
     material.texture(0, conway_tex_a);
     material.storageTexture(1, conway_tex_b);
 
+    // wait before start
     2::second => now;
 
-    while (true) {
+    // a render loop
+    while (true)
+    {
         // only step once per second
         now + .1::second => time later; 
         while (now < later) GG.nextFrame() => now;
@@ -167,13 +169,19 @@ fun void simulate()
             material.texture(0, conway_tex_a);
             material.storageTexture(1, conway_tex_b);
         }
-        1 - flip => flip;
+        !flip => flip;
     }
 }
 spork ~ simulate();
 
-while (true) {
+// (initialize) write new audio data to shader
+material.storageBuffer(3, samples);
+
+// render loop
+while (true)
+{
+    // synchronize
+    GG.nextFrame() => now;
     // write new audio data to shader
     material.storageBuffer(3, samples);
-    GG.nextFrame() => now;
 }

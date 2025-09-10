@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------------
 // name: orbits.ck
 // desc: solar system example demoing scenegraph + local vs global transforms
-// requires: ChuGL + chuck-1.5.1.5 or higher
+// requires: ChuGL + chuck-1.5.5.5 or higher
 //
 // author: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
 //         Ge Wang (https://ccrma.stanford.edu/~ge/)

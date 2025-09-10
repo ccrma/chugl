@@ -1,26 +1,28 @@
 /*-----------------------------------------------------------------------------
 name: pokemon_cries.ck
 desc: Synthesizes all Gen I Pokemon cries by emulating a subset of the Gameboy
-APU (audio processing unit). T subset comprises 2 pulse oscillators and 1
-LFSR (linear feedback shift register) which is used to produce pseudo-random
-white noise. Cries are in encoded in Gameboy bytecode.  
+  APU (audio processing unit). T subset comprises 2 pulse oscillators and 1
+  LFSR (linear feedback shift register) which is used to produce pseudo-random
+  white noise. Cries and bitmaps are encoded inline as chuck arrays (see below)
+  in Gameboy bytecode.
 
-To learn more, watch: https://www.youtube.com/watch?v=gDLpbFXnpeY
+  To learn more, watch:
+    https://www.youtube.com/watch?v=gDLpbFXnpeY
 
-improvements:
-- add interface to program your own cries!
-- add NN filtering option for imgui textures (defaults to trilinear so pokemon
-sprites are slightly blurry)
-- the Gameboy APU shares a clock the with its CPU and is therefore sampled at
-4Mhz!! In this emulator the pulse oscillators are sampled at the chuck VM
-audio rate, but the LFSR is sampled at 1Mhz (then downsampled to chuck's srate)
-to reduce aliasing artifacts. This is expensive, and you'll notice the frame
-rate dip whenever rendering pokemon that have longer cries.
+  improvements:
+  - add interface to program your own cries!
+  - add NN filtering option for imgui textures (defaults to trilinear so pokemon
+    sprites are slightly blurry)
+  - the Gameboy APU shares a clock the with its CPU and is therefore sampled at
+    4Mhz!! In this emulator the pulse oscillators are sampled at the chuck VM
+    audio rate, but the LFSR is sampled at 1Mhz (then downsampled to chuck's srate)
+    to reduce aliasing artifacts. This is expensive, and you'll notice the frame
+    rate dip whenever rendering pokemon that have longer cries.
     - instead of rendering all the audio upfront, render it sample-by-sample
-    in realtime. this should improve FPS and allow "performing" the APU like
-    an instrument 
+      in realtime. this should improve FPS and allow "performing" the APU like
+      an instrument 
     - tricky because you need to handle a dynamic instruction stream
-    and the LFSR is coupled with the pulse oscs in a weird way
+      and the LFSR is coupled with the pulse oscs in a weird way
 
 author: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
   date: July 2025
@@ -135,7 +137,7 @@ fun string toString(int code[], int osc_type) {
 
 Cry cry_list[0];
 fun void addCry(int p1[], int p2[], int n[]) {
-    <<< "addCry", cry_list.size() >>>;
+    // <<< "addCry", cry_list.size() >>>;
     Cry c;
     c.code_list << p1 << p2 << n;
     c.instructions << toString(p1, OscType_Pulse1) << toString(p2, OscType_Pulse2) << toString(n, OscType_Noise);

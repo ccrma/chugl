@@ -1,15 +1,17 @@
 //--------------------------------------------------------------------
 // name: ray_triangle_intersection.ck
-// desc: Ray-triangle intersection testing using mouse cursor
+// desc: ray-triangle intersection testing using mouse cursor
+// requires: ChuGL / chuck-1.5.5.5
 // 
 // author: Shenran Wang and Andrew Zhu Aday
 //   date: Fall 2024
 //--------------------------------------------------------------------
 
+// add plane to scene
 GPlane plane --> GG.scene();
 
-GOrbitCamera orbit_camera --> GG.scene();
-GG.scene().camera(orbit_camera);
+// add orbit camera
+GOrbitCamera cam => GG.scene().camera;
 
 // a plane is made up of two triangles:
 [
@@ -28,8 +30,8 @@ fun float dot(vec3 a, vec3 b) {
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
-// triangle intersection test
-// translated from https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
+// triangle intersection test; translated from:
+// https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
 fun int isect(
     vec3 ray_origin,
     vec3 ray_dir,
@@ -69,8 +71,10 @@ fun int isect(
         return false;
 }
 
-
-while (true) {
+// render loop
+while (true)
+{
+    // synchronize
     GG.nextFrame() => now;
 
     // rotate the plane
@@ -95,9 +99,7 @@ while (true) {
             plane.posLocalToWorld(triangles[4]), 
             plane.posLocalToWorld(triangles[5])
         )
-    ) {
-        plane.color(Color.RED);
-    } else {
-        plane.color(Color.WHITE);
-    }
+    )
+    { plane.color(Color.RED); }
+    else { plane.color(Color.WHITE); }
 }

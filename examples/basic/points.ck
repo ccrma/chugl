@@ -1,7 +1,8 @@
 //--------------------------------------------------------------------
 // name: points.ck
 // desc: 1,000,000 points with color; use WASD to move through
-// 
+// requires: ChuGL + chuck-1.5.5.5 or higher
+//
 // author: Andrew Zhu Aday
 //  date: Fall 2023
 //--------------------------------------------------------------------

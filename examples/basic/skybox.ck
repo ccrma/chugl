@@ -1,11 +1,12 @@
 //--------------------------------------------------------------------
 // name: skybox.ck
 // desc: skybox and environment mapping
+//
+// requires: ChuGL + chuck-1.5.5.5 or higher
 // 
-// To run, download the bridge cubemap from here:
-// https://ccrma.stanford.edu/~azaday/assets/bridge.zip
-// and place the unzipped "bridge" folder in the same directory as
-// this program
+// download: this example uses the bridge cubemap:
+//   https://chuck.stanford.edu/chugl/examples/data/textures/bridge.zip
+//   (place unzipped "bridge" folder in the same directory as this program)
 // 
 // author: Andrew Zhu Aday
 //   date: Fall 2024

@@ -7,16 +7,21 @@
 //   date: Fall 2024
 //-----------------------------------------------------------------------------
 
+// geometry
 SphereGeometry sphere_geo;
+// material
 FlatMaterial flat_material;
 
+// number of lengths
 40 => int NUM_LENGTHS;
 float lengths[NUM_LENGTHS];
 for (int i; i < NUM_LENGTHS; i++) {
     4.0 / NUM_LENGTHS => lengths[i];
 }
-vec3 points[lengths.size() + 1]; // N points
+// N points
+vec3 points[lengths.size() + 1];
 
+// joints
 GMesh joints[0];
 for (int i; i < points.size(); i++) {
     GMesh joint(sphere_geo, flat_material) --> GG.scene();
@@ -24,16 +29,12 @@ for (int i; i < points.size(); i++) {
     .1 => joint.sca;
 }
 
-// add camera to scene graph
-GCamera camera --> GG.scene();
-// set main camera
-GG.scene().camera(camera);
 // camera projection
-camera.orthographic();
-// position camera
-camera.posZ(5);
+GG.scene().camera().orthographic();
 
-fun void fabrik(vec3 start_target, vec3 end_target, vec3 points[], float lengths[]) {
+// FABRIK == forwards-and-backwards-reaching-inverse-kinematics
+fun void fabrik(vec3 start_target, vec3 end_target, vec3 points[], float lengths[])
+{
     0.01 => float TOLERANCE;
     10 => int MAX_ITERATIONS;
     0 => float total_length;
@@ -52,6 +53,8 @@ fun void fabrik(vec3 start_target, vec3 end_target, vec3 points[], float lengths
     }
 
     points.size() => int N;
+    
+    // iterate until convergence or max reached
     repeat (MAX_ITERATIONS) {
         if (Math.euclidean(points[points.size() - 1], end_target) < TOLERANCE) {
             return;
@@ -75,17 +78,19 @@ fun void fabrik(vec3 start_target, vec3 end_target, vec3 points[], float lengths
     }
 }
 
-fun void draw() {
-    camera.screenCoordToWorldPos(GWindow.mousePos(), 5) => vec3 end_target;
-    0 => end_target.z; // put on plane
+// game loop
+while (true)
+{
+    // synchronize
+    GG.nextFrame() => now;
+    // get mouse position
+    GG.scene().camera().screenCoordToWorldPos(GWindow.mousePos(), 5) => vec3 end_target;
+    // position on plane
+    0 => end_target.z;
+    // run IK solver
     fabrik(@(0, 0, 0), end_target, points, lengths);
-
+    // update point locations
     for (int i; i < points.size(); i++) {
         points[i] => joints[i].pos;
     }
-}
-
-while (true) {
-    GG.nextFrame() => now;
-    draw();
 }

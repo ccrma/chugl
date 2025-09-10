@@ -2,7 +2,7 @@
 // name: snowstorm.ck
 // desc: example demoing the use of point sprites, transparency, 
 //       and UI controls.
-// requires: ChuGL + chuck-1.5.2.5 or higher
+// requires: ChuGL + chuck-1.5.5.5 or higher
 //
 // author: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
 // source: inspired and adapted from the following three.js example
@@ -11,18 +11,18 @@
 //-----------------------------------------------------------------------------
 
 // setup scene ====================================================
-GG.scene() @=> GScene@ scene;
-GOrbitCamera cam --> scene;
-scene.camera(cam);
+GOrbitCamera cam => GG.scene().camera;
+// set clipping planes
 cam.clip(1.5, 1000);
+// position camera
 cam.posZ(16);
 
 // snow GGens
-GGen snowstorm --> scene;
+GGen snowstorm --> GG.scene();
 GPoints snowflakes[6];
 
 // setup textures ======================================
-Texture@ sprites[6];
+Texture @ sprites[6];
 for (int i; i < 6; i++) {
     Texture.load(me.dir() + "../data/textures/snowflake" + (i+1) + ".png") @=> sprites[i];
 }
@@ -65,7 +65,9 @@ UI_Float pointSize(snowflakes[0].size());
 UI_Float3 color(DEFAULT_COLOR);
 
 // render loop
-while (true) {
+while (true)
+{
+    // synchronize
     GG.nextFrame() => now;
 
     // snowflake update
@@ -74,23 +76,25 @@ while (true) {
         snowflakeRotRate * GG.dt() => snowflakes[i].rotateY;
     }
 
-    // UI
-    if (UI.begin("Snow Simulation Params")) {
-
+    // begin UI
+    if (UI.begin("Snow Simulation Params"))
+    {
+        // wind speed UI
         UI.slider("Wind Speed", rotationRate, 0.0, 1.0);
-
+        // color pickder
         if (UI.colorEdit("Snowflake Color", color, 0)) {
             color.val() => DEFAULT_COLOR;
             for (int i; i < snowflakes.size(); i++) {
                 color.val() => snowflakes[i].color;
             }
         }
-
+        // slider for snowflake size
         if (UI.slider("Snowflake Size", pointSize, 0.01, 0.15)) {
             for (int i; i < snowflakes.size(); i++) {
                 pointSize.val() => snowflakes[i].size;
             }
         }
     }
+    // end UI
     UI.end();
 }

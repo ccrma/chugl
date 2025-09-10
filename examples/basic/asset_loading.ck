@@ -10,9 +10,9 @@ AssLoader.loadObj( me.dir() + "../data/models/suzanne.obj" ) @=> GGen model;
 // connect model to scene
 model --> GG.scene();
 
-// download this asset and unzip into ../data/models/
-// https://chuck.stanford.edu/chugl/examples/data/models/
-// AssLoader.loadObj( me.dir() + "../data/models/backpack/backpack.obj" ) @=> GGen model2;
+// for a more extensive model, download this asset:
+//   https://chuck.stanford.edu/chugl/examples/data/models/backpack.zip
+// AssLoader.loadObj( me.dir() + "backpack/backpack.obj" ) @=> GGen model2;
 // connect model to scene
 // model2 --> GG.scene();
 

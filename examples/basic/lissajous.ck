@@ -1,6 +1,7 @@
 //-----------------------------------------------------------------------------
 // name: lissajous.ck
 // desc: Lissajous visualizer. Oscilloscope music player.
+// requires: ChuGL + chuck-1.5.5.5 or higher
 //
 // To play oscilloscope music, download the audio file at:
 // https://ccrma.stanford.edu/~azaday/music/khrang.wav

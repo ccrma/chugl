@@ -1,7 +1,9 @@
 //-----------------------------------------------------------------------------
 // name: sprite_animation.ck
 // desc: animate a cat with sprite sheet textures and a simple state machine
-// Requires downloading the examples/data/textures/Cat-1 directory.
+// 
+// this example requires downloading the following assets:
+//   ../data/textures/Cat-1/
 // 
 // author: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
 //   date: Fall 2024
@@ -92,12 +94,17 @@ SndBuf meow_buf => dac;
 cat_idle @=> SpriteAnimation cat_state; // initial state
 
 // animation loop ===============================================
-fun void animate(float frame_duration_secs) {
+fun void animate(float frame_duration_secs)
+{
     null @=> SpriteAnimation current_animation;
     0 => int current_frame;
-    0 => float time_since_last_frame; // accumulator to know when to flip animation frames
-
-    while (true) {
+    // accumulator to know when to flip animation frames
+    0 => float time_since_last_frame;
+    
+    // render loop
+    while (true)
+    {
+        // synchronize
         GG.nextFrame() => now;
 
         // animation transition
@@ -119,7 +126,6 @@ fun void animate(float frame_duration_secs) {
             sprite_material.offset(@(current_frame $ float / current_animation.frames, 0));
             0 => time_since_last_frame; // reset frame timer
         } 
-
         // play animation
         else if (time_since_last_frame >= frame_duration_secs) {
             // advance to next frame
@@ -166,7 +172,9 @@ fun void meow()
 }
 
 // main loop ===============================================
-while (true) {
+while (true)
+{
+    // synchronize
     GG.nextFrame() => now;
 
     // meow animation
@@ -227,8 +235,10 @@ while (true) {
         sprite.posWorld(GG.camera().NDCToWorldPos(pos_ndc));
     } 
 
+    // begin UI
     if (UI.begin("Sprite Animation")) {
         UI.textWrapped("Sprite animation example! Use arrow keys to move the cat. Press space to meow. Press down to lay down.");
     }
+    // end UI
     UI.end();
 }
