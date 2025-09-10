@@ -4,8 +4,7 @@
 //
 // To play oscilloscope music, download the audio file at:
 // https://ccrma.stanford.edu/~azaday/music/khrang.wav
-// and place in the same directory as this file.
-// Then press <space> or the "Play oscilloscope music" button.
+// and drag and drop it onto the graphics window!
 //
 // author: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
 //   date: Fall 2024
@@ -62,7 +61,6 @@ SinOsc right_osc => dac.chan(1);
 
 // for playback from file
 SndBuf2 buf => blackhole;
-me.dir() + "./khrang.wav" => buf.read;
 0 => buf.rate;
 .5 => buf.gain;
 
@@ -80,7 +78,9 @@ UI_Float freq_r(right_osc.freq());
 // UI variable for toggling glow
 UI_Bool glow(true);
 
-// rende rloop
+GWindow.files() @=> string files[];
+
+// render loop
 while (true)
 {
     // synchronize
@@ -98,9 +98,15 @@ while (true)
         if (UI.drag("Left Frequency", freq_l)) left_osc.freq(freq_l.val());
         if (UI.drag("Right Frequency", freq_r)) right_osc.freq(freq_r.val());
         if (UI.button("Sync phase")) { left_osc.phase(0); right_osc.phase(0); }
+        UI.text("Try drag+dropping a WAV file onto the screen!");
 
-        // play file
-        if (UI.button("Play oscilloscope music") || GWindow.keyDown(GWindow.KEY_SPACE)) {
+        // detect drag+drop files
+        if (GWindow.files() != files) {
+            GWindow.files() @=> files;
+
+            // load the WAV file
+            files[0] => buf.read;
+
             // disconnect the oscillators
             left_osc =< dac.chan(0);
             right_osc =< dac.chan(1);

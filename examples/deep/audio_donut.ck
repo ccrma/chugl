@@ -165,7 +165,7 @@ terrain_material.uniformInt(1, 0); // initialize playhead to 0
 terrain_material.uniformFloat3(2, Color.WHITE);
 terrain_material.uniformFloat2(3, @(1,1));
 terrain_material.uniformInt(4, true);
-terrain_material.topology(Material.Topology_LineList);
+terrain_material.topology(Material.TOPOLOGY_LINELIST);
 
 // create our terrain mesh
 PlaneGeometry plane_geo(

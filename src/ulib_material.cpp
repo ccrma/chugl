@@ -167,6 +167,9 @@ CK_DLL_CTOR(phong_material_ctor);
 CK_DLL_MFUN(phong_material_get_specular_color);
 CK_DLL_MFUN(phong_material_set_specular_color);
 
+CK_DLL_MFUN(phong_material_get_sampler);
+CK_DLL_MFUN(phong_material_set_sampler);
+
 CK_DLL_MFUN(phong_material_get_diffuse_color);
 CK_DLL_MFUN(phong_material_set_diffuse_color);
 
@@ -287,14 +290,33 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
     static t_CKINT format_int4      = WGPUVertexFormat_Sint32x4;
 
     SVAR("int", "Undefined", &format_undefined);
+    DOC_VAR("(hidden)");
     SVAR("int", "Float", &format_float);
+    DOC_VAR("(hidden)");
     SVAR("int", "Float2", &format_float2);
+    DOC_VAR("(hidden)");
     SVAR("int", "Float3", &format_float3);
+    DOC_VAR("(hidden)");
     SVAR("int", "Float4", &format_float4);
+    DOC_VAR("(hidden)");
     SVAR("int", "Int", &format_int);
+    DOC_VAR("(hidden)");
     SVAR("int", "Int2", &format_int2);
+    DOC_VAR("(hidden)");
     SVAR("int", "Int3", &format_int3);
+    DOC_VAR("(hidden)");
     SVAR("int", "Int4", &format_int4);
+    DOC_VAR("(hidden)");
+
+    SVAR("int", "UNDEFINED", &format_undefined);
+    SVAR("int", "FLOAT", &format_float);
+    SVAR("int", "FLOAT2", &format_float2);
+    SVAR("int", "FLOAT3", &format_float3);
+    SVAR("int", "FLOAT4", &format_float4);
+    SVAR("int", "INT", &format_int);
+    SVAR("int", "INT2", &format_int2);
+    SVAR("int", "INT3", &format_int3);
+    SVAR("int", "INT4", &format_int4);
 
     END_CLASS();
 
@@ -444,10 +466,17 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
     static t_CKINT cullmode_front = WGPUCullMode_Front;
     static t_CKINT cullmode_back  = WGPUCullMode_Back;
     SVAR("int", "Cull_None", &cullmode_none);
-    DOC_VAR("No culling.");
+    DOC_VAR("(hidden)");
     SVAR("int", "Cull_Front", &cullmode_front);
-    DOC_VAR("Cull front faces.");
+    DOC_VAR("(hidden)");
     SVAR("int", "Cull_Back", &cullmode_back);
+    DOC_VAR("(hidden)");
+
+    SVAR("int", "CULL_NONE", &cullmode_none);
+    DOC_VAR("No culling.");
+    SVAR("int", "CULL_FRONT", &cullmode_front);
+    DOC_VAR("Cull front faces.");
+    SVAR("int", "CULL_BACK", &cullmode_back);
     DOC_VAR("Cull back faces.");
 
     static t_CKINT topology_pointlist     = WGPUPrimitiveTopology_PointList;
@@ -456,16 +485,27 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
     static t_CKINT topology_trianglelist  = WGPUPrimitiveTopology_TriangleList;
     static t_CKINT topology_trianglestrip = WGPUPrimitiveTopology_TriangleStrip;
     SVAR("int", "Topology_PointList", &topology_pointlist);
-    DOC_VAR("Interpret each vertex as a point.");
+    DOC_VAR("(hidden)");
     SVAR("int", "Topology_LineList", &topology_linelist);
-    DOC_VAR("Interpret each pair of vertices as a line.");
+    DOC_VAR("(hidden)");
     SVAR("int", "Topology_LineStrip", &topology_linestrip);
+    DOC_VAR("(hidden)");
+    SVAR("int", "Topology_TriangleList", &topology_trianglelist);
+    DOC_VAR("(hidden)");
+    SVAR("int", "Topology_TriangleStrip", &topology_trianglestrip);
+    DOC_VAR("(hidden)");
+
+    SVAR("int", "TOPOLOGY_POINTLIST", &topology_pointlist);
+    DOC_VAR("Interpret each vertex as a point.");
+    SVAR("int", "TOPOLOGY_LINELIST", &topology_linelist);
+    DOC_VAR("Interpret each pair of vertices as a line.");
+    SVAR("int", "TOPOLOGY_LINESTRIP", &topology_linestrip);
     DOC_VAR(
       "Each vertex after the first defines a line primitive between it and the "
       "previous vertex.");
-    SVAR("int", "Topology_TriangleList", &topology_trianglelist);
+    SVAR("int", "TOPOLOGY_TRIANGLELIST", &topology_trianglelist);
     DOC_VAR("Interpret each triplet of vertices as a triangle.");
-    SVAR("int", "Topology_TriangleStrip", &topology_trianglestrip);
+    SVAR("int", "TOPOLOGY_TRIANGLESTRIP", &topology_trianglestrip);
     DOC_VAR(
       "Each vertex after the first two defines a triangle primitive between it and the "
       "previous two vertices.");
@@ -889,20 +929,38 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
         static t_CKUINT envmap_blend_multiply = SG_ENVMAP_BLEND_MULTIPLY;
         static t_CKUINT envmap_blend_mix      = SG_ENVMAP_BLEND_MIX;
 
+        // deprecated
         SVAR("int", "EnvmapMethod_None", &envmap_method_none);
-        DOC_VAR("No environment map sampling.");
+        DOC_VAR("(hidden)");
         SVAR("int", "EnvmapMethod_Reflection", &envmap_method_reflection);
-        DOC_VAR("Sample the environment map via reflection (like chrome or a mirror)");
+        DOC_VAR("(hidden)");
         SVAR("int", "EnvmapMethod_Refraction", &envmap_method_refraction);
+        DOC_VAR("(hidden)");
+
+        SVAR("int", "ENVMAP_NONE", &envmap_method_none);
+        DOC_VAR("No environment map sampling.");
+        SVAR("int", "ENVMAP_REFLECT", &envmap_method_reflection);
+        DOC_VAR("Sample the environment map via reflection (like chrome or a mirror)");
+        SVAR("int", "ENVMAP_REFRACT", &envmap_method_refraction);
         DOC_VAR("Sample the environment map via refraction (like glass or water)");
 
+        // deprecated
         SVAR("int", "EnvmapBlend_None", &envmap_blend_none);
-        DOC_VAR("No environment map blending.");
+        DOC_VAR("(hidden)");
         SVAR("int", "EnvmapBlend_Add", &envmap_blend_add);
-        DOC_VAR("Add the environment map color to the material color.");
+        DOC_VAR("(hidden)");
         SVAR("int", "EnvmapBlend_Multiply", &envmap_blend_multiply);
-        DOC_VAR("Multiply the environment map color with the material color.");
+        DOC_VAR("(hidden)");
         SVAR("int", "EnvmapBlend_Mix", &envmap_blend_mix);
+        DOC_VAR("(hidden)");
+
+        SVAR("int", "ENVMAP_BLEND_NONE", &envmap_blend_none);
+        DOC_VAR("No environment map blending.");
+        SVAR("int", "ENVMAP_BLEND_ADD", &envmap_blend_add);
+        DOC_VAR("Add the environment map color to the material color.");
+        SVAR("int", "ENVMAP_BLEND_MULTIPLY", &envmap_blend_multiply);
+        DOC_VAR("Multiply the environment map color with the material color.");
+        SVAR("int", "ENVMAP_BLEND_MIX", &envmap_blend_mix);
         DOC_VAR(
           "Linearly mix the environment map color with the material color. An "
           "intensity of 0.0 will show only the material color, 1.0 will show only the "
@@ -2149,6 +2207,18 @@ CK_DLL_MFUN(phong_material_set_specular_color)
 {
     t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
     PhongParams::specular(GET_MATERIAL(SELF), glm::vec3(color.x, color.y, color.z));
+}
+
+CK_DLL_MFUN(phong_material_get_sampler)
+{
+    RETURN->v_object = ulib_texture_ckobj_from_sampler(
+      PhongParams::sampler(GET_MATERIAL(SELF)), false, SHRED);
+}
+
+CK_DLL_MFUN(phong_material_set_sampler)
+{
+    PhongParams::sampler(GET_MATERIAL(SELF),
+                         SG_Sampler::fromCkObj(GET_NEXT_OBJECT(ARGS)));
 }
 
 CK_DLL_MFUN(phong_material_get_diffuse_color)

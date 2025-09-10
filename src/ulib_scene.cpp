@@ -42,6 +42,7 @@ CK_DLL_MFUN(gscene_set_main_camera);
 CK_DLL_MFUN(gscene_get_main_camera);
 
 CK_DLL_MFUN(gscene_set_ambient_light);
+CK_DLL_MFUN(gscene_set_ambient_light_float);
 CK_DLL_MFUN(gscene_get_ambient_light);
 
 CK_DLL_MFUN(gscene_get_default_light);
@@ -136,6 +137,10 @@ static void ulib_gscene_query(Chuck_DL_Query* QUERY)
       "Set the ambient lighting of the scene. Sets material visibility even when no "
       "light is present");
 
+    MFUN(gscene_set_ambient_light_float, "void", "ambient");
+    ARG("float", "c");
+    DOC_FUNC("Shorthand for setting the ambient lighting of the scene to @(c, c, c)");
+
     MFUN(gscene_get_ambient_light, "vec3", "ambient");
     DOC_FUNC("Get the ambient lighting value of the scene");
 
@@ -205,23 +210,22 @@ CK_DLL_MFUN(gscene_set_main_camera)
     SG_Scene* scene      = SG_GetScene(OBJ_MEMBER_UINT(SELF, component_offset_id));
     Chuck_Object* ck_cam = GET_NEXT_OBJECT(ARGS);
 
-    SG_Camera * cam
+    SG_Camera* cam
       = ck_cam ? SG_GetCamera(OBJ_MEMBER_UINT(ck_cam, component_offset_id)) : NULL;
 
     if (cam && cam->id == scene->desc.main_camera_id) {
         RETURN->v_object = ck_cam;
         return;
     }
-    
+
     // check if camera is connected to scene
     if (cam && !SG_Transform::isAncestor(scene, cam)) {
         // implicitly gruck camera to scene
         CQ_PushCommand_AddChild(scene, cam);
 
         // CK_THROW("DisconnctedCamera",
-        //          "A camera must be connected (grucked) to scene before it can be set "
-        //          "as the main camera",
-        //          SHRED);
+        //          "A camera must be connected (grucked) to scene before it can be set
+        //          " "as the main camera", SHRED);
     }
 
     // set main camera
@@ -245,6 +249,16 @@ CK_DLL_MFUN(gscene_set_ambient_light)
     t_CKVEC3 ambient = GET_NEXT_VEC3(ARGS);
 
     scene->desc.ambient_light = { ambient.x, ambient.y, ambient.z };
+
+    CQ_PushCommand_SceneUpdate(scene);
+}
+
+CK_DLL_MFUN(gscene_set_ambient_light_float)
+{
+    SG_Scene* scene = SG_GetScene(OBJ_MEMBER_UINT(SELF, component_offset_id));
+    float c         = GET_NEXT_FLOAT(ARGS);
+
+    scene->desc.ambient_light = { c, c, c };
 
     CQ_PushCommand_SceneUpdate(scene);
 }

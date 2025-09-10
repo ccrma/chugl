@@ -1,6 +1,5 @@
 TODO
 
-- Add sampler to the GShape #define!!!
 - eventually remove rapidObj dep
 - change GModel.materials to PhongMaterial?
 

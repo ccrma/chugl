@@ -32,7 +32,7 @@ GOrbitCamera camera => GG.scene().camera;
 // connect suzanne to scene
 GSuzanne suzanne --> GG.scene();
 // enable environment mapping on suzanne
-suzanne.envmapBlend(PhongMaterial.EnvmapBlend_Multiply);
+suzanne.envmapBlend(PhongMaterial.ENVMAP_BLEND_MULTIPLY);
 
 [
     "None",

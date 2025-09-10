@@ -660,6 +660,13 @@ struct PhongParams {
         ARG("vec3", "specular");                                                       \
         DOC_FUNC("Set the specular color of the material.");                           \
                                                                                        \
+        MFUN(prefix##_material_get_sampler, "TextureSampler", "sampler");              \
+        DOC_FUNC("Get the texture sampler.");                                          \
+                                                                                       \
+        MFUN(prefix##_material_set_sampler, "void", "sampler");                        \
+        ARG("TextureSampler", "sampler");                                              \
+        DOC_FUNC("Set the texture sampler.");                                          \
+                                                                                       \
         MFUN(prefix##_material_get_diffuse_color, "vec3", "color");                    \
         DOC_FUNC("Get the diffuse color of the material.");                            \
                                                                                        \

@@ -1290,6 +1290,8 @@ CK_DLL_CTOR(gsuzanne_ctor);
 // GShape phong material fns
 CK_DLL_MFUN(gshape_phong_material_get_specular_color);
 CK_DLL_MFUN(gshape_phong_material_set_specular_color);
+CK_DLL_MFUN(gshape_phong_material_get_sampler);
+CK_DLL_MFUN(gshape_phong_material_set_sampler);
 CK_DLL_MFUN(gshape_phong_material_get_diffuse_color);
 CK_DLL_MFUN(gshape_phong_material_set_diffuse_color);
 CK_DLL_MFUN(gshape_phong_material_get_alpha);
@@ -2092,6 +2094,18 @@ CK_DLL_MFUN(gshape_phong_material_set_specular_color)
     t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
     PhongParams::specular(GET_MESH_MATERIAL(SELF),
                           glm::vec3(color.x, color.y, color.z));
+}
+
+CK_DLL_MFUN(gshape_phong_material_get_sampler)
+{
+    RETURN->v_object = ulib_texture_ckobj_from_sampler(
+      PhongParams::sampler(GET_MESH_MATERIAL(SELF)), false, SHRED);
+}
+
+CK_DLL_MFUN(gshape_phong_material_set_sampler)
+{
+    PhongParams::sampler(GET_MESH_MATERIAL(SELF),
+                         SG_Sampler::fromCkObj(GET_NEXT_OBJECT(ARGS)));
 }
 
 CK_DLL_MFUN(gshape_phong_material_get_diffuse_color)
