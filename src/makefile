@@ -52,7 +52,8 @@ endif
 ifneq (,$(wildcard ~/.chuck/lib/ChuGL.chug))
 	rm -f ~/.chuck/lib/ChuGL.chug
 endif
-	@echo "[copying ChuGL.chug to local search path...]"
+	### @echo "[copying ChuGL.chug to local search path...]"
+	@echo "[copying ChuGL.chug to chuck system path...]"
 	sudo cp ChuGL.chug /usr/local/lib/chuck/
 	@echo "[probing chugins...]"
 	@chuck --color --chugin-probe 2>&1 >/dev/null | grep ChuGL.chug

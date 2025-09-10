@@ -98,7 +98,7 @@ while (true)
         if (UI.drag("Left Frequency", freq_l)) left_osc.freq(freq_l.val());
         if (UI.drag("Right Frequency", freq_r)) right_osc.freq(freq_r.val());
         if (UI.button("Sync phase")) { left_osc.phase(0); right_osc.phase(0); }
-        UI.text("Try drag+dropping a WAV file onto the screen!");
+        UI.text("Try drag+dropping a stereo WAV file onto the screen!");
 
         // detect drag+drop files
         if (GWindow.files() != files) {
