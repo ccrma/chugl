@@ -753,13 +753,13 @@ CK_DLL_SFUN(chugl_open_file_dialog)
 // ============================================================================
 CK_DLL_QUERY(ChuGL)
 {
-    g_chugl_working_dir = getcwd(NULL, 0);
-    log_trace("Working Directory: %s\n", g_chugl_working_dir);
-
     // set log level
 #ifdef CHUGL_RELEASE
     log_set_level(LOG_WARN); // only log errors and fatal in release mode
 #endif
+
+    g_chugl_working_dir = getcwd(NULL, 0);
+    log_trace("Working Directory: %s\n", g_chugl_working_dir);
 
     // remember
     g_chuglVM  = QUERY->ck_vm(QUERY);
