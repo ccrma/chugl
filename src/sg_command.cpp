@@ -698,9 +698,19 @@ void CQ_PushCommand_CopyTextureToTexture(SG_Texture* dst_texture,
 
 void CQ_PushCommand_CopyTextureToCPU(SG_Texture* texture)
 {
-    // TODO malloc memory for data
     BEGIN_COMMAND(SG_Command_CopyTextureToCPU, SG_COMMAND_COPY_TEXTURE_TO_CPU);
     command->id = texture->id;
+    END_COMMAND();
+}
+
+void CQ_PushCommand_SaveTexture(SG_Texture* texture, const char* fp)
+{
+    int size_bytes = strlen(fp);
+    BEGIN_COMMAND_ADDITIONAL_MEMORY_ZERO(SG_Command_SaveTexture,
+                                         SG_COMMAND_SAVE_TEXTURE, size_bytes + 1);
+    memcpy(memory, fp, size_bytes);
+    command->id              = texture->id;
+    command->filepath_offset = Arena::offsetOf(cq.write_q, memory);
     END_COMMAND();
 }
 

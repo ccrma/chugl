@@ -178,14 +178,14 @@ void ulib_text_query(Chuck_DL_Query* QUERY)
       "Get the number of characters to display for this text string. Defaults to "
       "2^31-1");
 
-    MFUN(gtext_set_width, "void", "width");
+    MFUN(gtext_set_width, "void", "maxWidth");
     ARG("float", "width");
     DOC_FUNC(
       "Set the wrap width in absolute worldspace units of this text block. If a single "
       "word exceeds this width, it will not be broken apart. Default 0.0, meaning no "
       "text wrap");
 
-    MFUN(gtext_get_width, "float", "width");
+    MFUN(gtext_get_width, "float", "maxWidth");
     DOC_FUNC(
       "Get the wrap width in absolute worldspace units of this text block. Default "
       "0.0, meaning no text wrap");

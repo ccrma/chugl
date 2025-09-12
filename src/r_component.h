@@ -364,6 +364,57 @@ struct R_Texture : public R_Component {
                             const char* top_face_path, const char* bottom_face_path,
                             const char* back_face_path, const char* front_face_path,
                             bool flip_y);
+
+    // creates and returns the mapped GPU buffer for holding the readback texture data
+    static WGPUBuffer read(GraphicsContext* gctx, R_Texture* tex)
+    {
+        // TODO string arena in graphics.h for building 1-time labels (use
+        // asprintf?)
+        char label[256] = {};
+        snprintf(label, sizeof(label) - 1, "Mapped Buffer for Texture[%d] %s", tex->id,
+                 tex->name);
+        WGPUBufferDescriptor bufferDesc = {};
+        bufferDesc.label                = label;
+        bufferDesc.usage         = WGPUBufferUsage_CopyDst | WGPUBufferUsage_MapRead;
+        bufferDesc.size          = NEXT_MULT4(R_Texture::sizeBytes(tex));
+        WGPUBuffer mapped_buffer = wgpuDeviceCreateBuffer(gctx->device, &bufferDesc);
+
+        { // gpu command
+            WGPUCommandEncoder cmd_encoder
+              = wgpuDeviceCreateCommandEncoder(gctx->device, NULL);
+
+            // currently only support copying entire texture at mip 0
+            WGPUImageCopyTexture copy_location = {};
+            copy_location.texture              = tex->gpu_texture;
+
+            // TODO share command encoder across entire CQ flush
+
+            // TODO allow specifying a certain region
+            // for now just copying the entire texture
+            WGPUImageCopyBuffer copy_buffer = {};
+            copy_buffer.buffer              = mapped_buffer;
+            copy_buffer.layout.bytesPerRow
+              = tex->desc.width * G_bytesPerTexel(tex->desc.format);
+            copy_buffer.layout.rowsPerImage = tex->desc.height;
+            WGPUExtent3D copy_size // size in texels
+              = { (u32)tex->desc.width, (u32)tex->desc.height, 1 };
+            // copy to mapped buffer
+            wgpuCommandEncoderCopyTextureToBuffer(cmd_encoder, &copy_location,
+                                                  &copy_buffer, &copy_size);
+
+            WGPUCommandBuffer command_buffer
+              = wgpuCommandEncoderFinish(cmd_encoder, NULL);
+            ASSERT(command_buffer != NULL);
+            WGPU_RELEASE_RESOURCE(CommandEncoder, cmd_encoder)
+
+            // Sumbit commmand buffer
+            wgpuQueueSubmit(gctx->queue, 1, &command_buffer);
+
+            WGPU_RELEASE_RESOURCE(CommandBuffer, command_buffer)
+        }
+
+        return mapped_buffer;
+    }
 };
 
 // =============================================================================

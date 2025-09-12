@@ -151,7 +151,7 @@ void ulib_assloader_query(Chuck_DL_Query* QUERY)
     { // GModel --------------------------------------------------------------
         BEGIN_CLASS(SG_CKNames[SG_COMPONENT_MODEL], SG_CKNames[SG_COMPONENT_TRANSFORM]);
         DOC_CLASS("Class for loading models. Currently supports: OBJ");
-        ADD_EX("basic/asset_loading.ck");
+        ADD_EX("basic/gmodel.ck");
 
         gmodel_offset_geo_array = MVAR("Geometry[]", "geometries", true);
         DOC_VAR("TODO");

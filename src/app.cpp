@@ -47,6 +47,9 @@ static_assert(sizeof(u32) == sizeof(b2WorldId), "b2WorldId != u32");
 #include <nanotime/nanotime.h>
 #include <sokol/sokol_time.h>
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb/stb_image_write.h>
+
 #ifdef __EMSCRIPTEN__
 #include <emscripten/html5.h>
 #endif
@@ -1525,6 +1528,7 @@ static BufferMapAsyncData* BufferMapAsyncData_Add(int* index)
         BufferMapAsyncData* data
           = ARENA_GET_TYPE(&buffer_map_async_data_arena, BufferMapAsyncData, i);
         if (!data->buffer) {
+            *data  = {}; // zero
             *index = i;
             return data;
         }
@@ -1538,6 +1542,55 @@ static BufferMapAsyncData* BufferMapAsyncData_Get(int index)
 {
     ASSERT(index < ARENA_LENGTH(&buffer_map_async_data_arena, BufferMapAsyncData));
     return ARENA_GET_TYPE(&buffer_map_async_data_arena, BufferMapAsyncData, index);
+}
+
+struct R_TextureWriteParams {
+    int async_buffer_idx;
+    char* filepath_MALLOC;
+};
+
+static void TextureSaveOnBufferMap(WGPUBufferMapAsyncStatus status,
+                                   void* udata_MALLOCED)
+{
+    R_TextureWriteParams* p = (R_TextureWriteParams*)udata_MALLOCED;
+    defer({
+        free(p->filepath_MALLOC);
+        free(p);
+    });
+
+    BufferMapAsyncData* data = BufferMapAsyncData_Get(p->async_buffer_idx);
+    R_Texture* tex           = Component_GetTexture(data->texture_id);
+    WGPUTextureFormat format = wgpuTextureGetFormat(tex->gpu_texture);
+
+    if (status != WGPUBufferMapAsyncStatus_Success) {
+        log_error("Unable to save Texture %s to file %s", tex->name,
+                  p->filepath_MALLOC);
+        return;
+    }
+
+    // Get a pointer to wherever the driver mapped the GPU memory to the RAM
+    u8* bufferData
+      = (u8*)wgpuBufferGetConstMappedRange(data->buffer, 0, data->size_bytes);
+    if (stbi_write_png(p->filepath_MALLOC,
+                       wgpuTextureGetWidth(tex->gpu_texture),  // w
+                       wgpuTextureGetHeight(tex->gpu_texture), // h
+                       G_componentsPerTexel(format),           // #components
+                       bufferData,                             // void*
+                       G_bytesPerTexel(format)
+                         * wgpuTextureGetWidth(tex->gpu_texture) // stride_bytes
+                       )
+        == 0) {
+        log_error("Unable to save Texture %s to file %s", tex->name,
+                  p->filepath_MALLOC);
+        perror(p->filepath_MALLOC);
+    }
+
+    // Then do not forget to unmap the memory
+    wgpuBufferUnmap(data->buffer);
+
+    // this also removes from buffer map async data arena
+    // by setting buffer to null
+    WGPU_RELEASE_RESOURCE(Buffer, data->buffer);
 }
 
 // TODO make sure switch statement is in correct order?
@@ -2114,53 +2167,7 @@ static void _R_HandleCommand(App* app, SG_Command* command)
         case SG_COMMAND_COPY_TEXTURE_TO_CPU: {
             SG_Command_CopyTextureToCPU* cmd = (SG_Command_CopyTextureToCPU*)command;
             R_Texture* tex                   = Component_GetTexture(cmd->id);
-            // Experimentation for the "Playing with buffer" chapter
-
-            // TODO string arena in graphics.h for building 1-time labels (use
-            // asprintf?)
-            char label[256] = {};
-            snprintf(label, sizeof(label) - 1, "Mapped Buffer for Texture[%d] %s",
-                     tex->id, tex->name);
-            WGPUBufferDescriptor bufferDesc = {};
-            bufferDesc.label                = label;
-            bufferDesc.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_MapRead;
-            bufferDesc.size  = NEXT_MULT4(R_Texture::sizeBytes(tex));
-            WGPUBuffer mapped_buffer
-              = wgpuDeviceCreateBuffer(app->gctx.device, &bufferDesc);
-
-            { // gpu command
-                WGPUCommandEncoder cmd_encoder
-                  = wgpuDeviceCreateCommandEncoder(app->gctx.device, NULL);
-
-                // currently only support copying entire texture at mip 0
-                WGPUImageCopyTexture copy_location = {};
-                copy_location.texture              = tex->gpu_texture;
-
-                // TODO share command encoder across entire CQ flush
-
-                // TODO allow specifying a certain region
-                // for now just copying the entire texture
-                WGPUImageCopyBuffer copy_buffer = {};
-                copy_buffer.buffer              = mapped_buffer;
-                copy_buffer.layout.bytesPerRow
-                  = tex->desc.width * G_bytesPerTexel(tex->desc.format);
-                copy_buffer.layout.rowsPerImage = tex->desc.height;
-                WGPUExtent3D copy_size // size in texels
-                  = { (u32)tex->desc.width, (u32)tex->desc.height, 1 };
-                // copy to mapped buffer
-                wgpuCommandEncoderCopyTextureToBuffer(cmd_encoder, &copy_location,
-                                                      &copy_buffer, &copy_size);
-
-                WGPUCommandBuffer command_buffer
-                  = wgpuCommandEncoderFinish(cmd_encoder, NULL);
-                ASSERT(command_buffer != NULL);
-                WGPU_RELEASE_RESOURCE(CommandEncoder, cmd_encoder)
-
-                // Sumbit commmand buffer
-                wgpuQueueSubmit(app->gctx.queue, 1, &command_buffer);
-
-                WGPU_RELEASE_RESOURCE(CommandBuffer, command_buffer)
-            }
+            WGPUBuffer mapped_buffer         = R_Texture::read(&app->gctx, tex);
 
             { // map buffer
                 auto onBufferMapped = [](WGPUBufferMapAsyncStatus status, void* udata) {
@@ -2206,10 +2213,34 @@ static void _R_HandleCommand(App* app, SG_Command* command)
                 data->texture_id         = tex->id;
                 data->size_bytes         = R_Texture::sizeBytes(tex);
 
-                wgpuBufferMapAsync(mapped_buffer, WGPUMapMode_Read, 0, bufferDesc.size,
-                                   onBufferMapped, (void*)(intptr_t)index);
+                wgpuBufferMapAsync(mapped_buffer, WGPUMapMode_Read, 0,
+                                   wgpuBufferGetSize(mapped_buffer), onBufferMapped,
+                                   (void*)(intptr_t)index);
             }
 
+        } break;
+        case SG_COMMAND_SAVE_TEXTURE: {
+            SG_Command_SaveTexture* cmd = (SG_Command_SaveTexture*)command;
+            R_Texture* tex              = Component_GetTexture(cmd->id);
+            WGPUBuffer mapped_buffer    = R_Texture::read(&app->gctx, tex);
+
+            { // map buffer
+                int index                = 0;
+                BufferMapAsyncData* data = BufferMapAsyncData_Add(&index);
+                data->buffer             = mapped_buffer;
+                data->texture_id         = tex->id;
+                data->size_bytes         = R_Texture::sizeBytes(tex);
+
+                R_TextureWriteParams* p
+                  = (R_TextureWriteParams*)malloc(sizeof(R_TextureWriteParams));
+                p->async_buffer_idx = index;
+                p->filepath_MALLOC
+                  = strdup((char*)CQ_ReadCommandGetOffset(cmd->filepath_offset));
+
+                wgpuBufferMapAsync(mapped_buffer, WGPUMapMode_Read, 0,
+                                   wgpuBufferGetSize(mapped_buffer),
+                                   TextureSaveOnBufferMap, p);
+            }
         } break;
         // buffers ----------------------
         case SG_COMMAND_BUFFER_UPDATE: {

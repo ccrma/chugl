@@ -62,7 +62,7 @@ UI_Float text_size(text.size());
 UI_Bool text_rotate;
 UI_Float antialias(text.antialias());
 UI_Int characters(text.characters());
-UI_Float width(text.width());
+UI_Float width(text.maxWidth());
 UI_Int alignment;
 [
     "left",
@@ -84,7 +84,7 @@ plane.posZ(-.01);
 // scale the plane
 plane.scaY(100);
 // scale to text width
-plane.scaX(text.width());
+plane.scaX(text.maxWidth());
 
 // main render loop
 while (true)
@@ -139,7 +139,7 @@ while (true)
         // setting this to > 0 enforces width-based alignment and enables the gray back pane
         if (UI.slider("Wrap Width", width, -2, 50)) {
             plane.scaX(Math.max(0.0, width.val()));
-            text.width(width.val());
+            text.maxWidth(width.val());
         }
         // list of box for selecting text alignment
         if (UI.listBox("Alignment", alignment, alignments, -1)) {

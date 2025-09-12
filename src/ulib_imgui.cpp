@@ -1348,6 +1348,7 @@ CK_DLL_MFUN(ui_int_set_value);
 // UI_Int2
 static t_CKUINT ui_int2_ptr_offset = 0;
 CK_DLL_CTOR(ui_int2_ctor);
+CK_DLL_CTOR(ui_int2_ctor_int_int);
 CK_DLL_DTOR(ui_int2_dtor);
 CK_DLL_MFUN(ui_int2_get_x);
 CK_DLL_MFUN(ui_int2_get_y);
@@ -1670,6 +1671,9 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
     BEGIN_CLASS("UI_Int2", "Object");
     ui_int2_ptr_offset = MVAR("int", "@ui_int2_ptr", false);
     CTOR(ui_int2_ctor);
+    CTOR(ui_int2_ctor_int_int);
+    ARG("int", "x");
+    ARG("int", "y");
     DTOR(ui_int2_dtor);
     MFUN(ui_int2_get_x, "int", "x");
     MFUN(ui_int2_get_y, "int", "y");
@@ -7974,6 +7978,14 @@ CK_DLL_MFUN(ui_int_set_value)
 CK_DLL_CTOR(ui_int2_ctor)
 {
     int* i                                    = new int[2]{ 0, 0 };
+    OBJ_MEMBER_UINT(SELF, ui_int2_ptr_offset) = (t_CKUINT)i;
+}
+
+CK_DLL_CTOR(ui_int2_ctor_int_int)
+{
+    int x                                     = GET_NEXT_INT(ARGS);
+    int y                                     = GET_NEXT_INT(ARGS);
+    int* i                                    = new int[2]{ x, y };
     OBJ_MEMBER_UINT(SELF, ui_int2_ptr_offset) = (t_CKUINT)i;
 }
 

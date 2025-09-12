@@ -1,9 +1,9 @@
 TODO
 
-- eventually remove rapidObj dep
 - change GModel.materials to PhongMaterial?
 
-- change GText.width to GText.maxWidth
+- leakcheck GModel obj loading
+- leakcheck texture write
 
 - OBJ rework
   - GModel(string path)
@@ -23,7 +23,6 @@ TODO
 - add pipeline/bindgroup gc for R_Shader
   - want to prevent memory leak from say CHydra building new shaders every frame
 - check if imgui has multi-window support now for webgpu backend
-- add anti aliasing back
 - port geometry builders to use par_shapes
 - GLTF loader!!!! (after adding GC?)
   - how does raylib do it? reference their pbr material system 

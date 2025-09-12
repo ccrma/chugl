@@ -123,6 +123,9 @@ CK_DLL_SFUN(texture_load_cubemap);
 CK_DLL_SFUN(texture_copy_texture_to_texture);
 CK_DLL_SFUN(texture_copy_texture_to_texture_with_desc);
 
+// saving to drive
+CK_DLL_MFUN(texture_save);
+
 static void ulib_texture_query(Chuck_DL_Query* QUERY)
 {
     { // Sampler (only passed by value)
@@ -135,11 +138,23 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
         static t_CKINT WRAP_CLAMP     = SG_SAMPLER_WRAP_CLAMP_TO_EDGE;
         static t_CKINT FILTER_NEAREST = SG_SAMPLER_FILTER_NEAREST;
         static t_CKINT FILTER_LINEAR  = SG_SAMPLER_FILTER_LINEAR;
+
         QUERY->add_svar(QUERY, "int", "Wrap_Repeat", true, &WRAP_REPEAT);
+        DOC_VAR("(hidden)");
         QUERY->add_svar(QUERY, "int", "Wrap_Mirror", true, &WRAP_MIRROR);
+        DOC_VAR("(hidden)");
         QUERY->add_svar(QUERY, "int", "Wrap_Clamp", true, &WRAP_CLAMP);
+        DOC_VAR("(hidden)");
         QUERY->add_svar(QUERY, "int", "Filter_Nearest", true, &FILTER_NEAREST);
+        DOC_VAR("(hidden)");
         QUERY->add_svar(QUERY, "int", "Filter_Linear", true, &FILTER_LINEAR);
+        DOC_VAR("(hidden)");
+
+        SVAR("int", "WRAP_REPEAT", &WRAP_REPEAT);
+        SVAR("int", "WRAP_MIRROR", &WRAP_MIRROR);
+        SVAR("int", "WRAP_CLAMP", &WRAP_CLAMP);
+        SVAR("int", "FILTER_NEAREST", &FILTER_NEAREST);
+        SVAR("int", "FILTER_LINEAR", &FILTER_LINEAR);
 
         // member vars
         sampler_offset_wrapU = QUERY->add_mvar(QUERY, "int", "wrapU", false);
@@ -504,6 +519,10 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
         DOC_FUNC(
           "Get the most recently read texture data. This function should be called "
           "after waiting on the Event object returned by `Texture.read()`");
+
+        MFUN(texture_save, "void", "save");
+        ARG("string", "fp");
+        DOC_FUNC("Saves the texture as a .png to the given filepath");
 
         END_CLASS();
     }
@@ -1005,6 +1024,13 @@ CK_DLL_MFUN(texture_get_data)
     }
 
     RETURN->v_object = (Chuck_Object*)tex->texture_data;
+}
+
+CK_DLL_MFUN(texture_save)
+{
+    SG_Texture* tex = GET_TEXTURE(SELF);
+    const char* fp  = API->object->str(GET_NEXT_STRING(ARGS));
+    CQ_PushCommand_SaveTexture(tex, fp);
 }
 
 CK_DLL_SFUN(texture_load_2d_file)

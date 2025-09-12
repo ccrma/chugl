@@ -181,6 +181,8 @@ else()
         -Wno-sign-compare
         -Wno-unused-but-set-variable
         -Wno-unused-value
+
+        -Wno-missing-field-initializers # for stb_image_write.h
     )
 
     if (LINUX)

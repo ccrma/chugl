@@ -155,6 +155,7 @@ enum SG_CommandType : u32 {
     SG_COMMAND_CUBEMAP_TEXTURE_FROM_FILE,
     SG_COMMAND_COPY_TEXTURE_TO_TEXTURE,
     SG_COMMAND_COPY_TEXTURE_TO_CPU,
+    SG_COMMAND_SAVE_TEXTURE,
 
     // buffer
     SG_COMMAND_BUFFER_UPDATE,
@@ -423,6 +424,12 @@ struct SG_Command_CopyTextureToTexture : public SG_Command {
 
 struct SG_Command_CopyTextureToCPU : public SG_Command {
     SG_ID id;
+};
+
+struct SG_Command_SaveTexture : public SG_Command {
+    SG_ID id;
+    ptrdiff_t filepath_offset;
+    // Format can add later...
 };
 
 // shader commands -----------------------------------------------------
@@ -716,6 +723,7 @@ void CQ_PushCommand_CopyTextureToTexture(SG_Texture* dst_texture,
                                          SG_TextureLocation* src_location, int width,
                                          int height, int depth);
 void CQ_PushCommand_CopyTextureToCPU(SG_Texture* texture);
+void CQ_PushCommand_SaveTexture(SG_Texture* texture, const char* fp);
 
 // shader
 void CQ_PushCommand_ShaderCreate(SG_Shader* shader);
