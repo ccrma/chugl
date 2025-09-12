@@ -10,15 +10,13 @@
 
 /*
 TODO:
-- drag + drop
-    - have GText/console error msg on
-        - invalid model type (only supports OBJ)
+- have GText/console error msg on
+    - invalid model type (only supports OBJ)
 - click to select bounding-box isection test
 - adjust camera position and/or model scale to fit model in screen
 - UI
     - sub-mesh explorer (include their names)
 - run other raylib model examples for ideas
-- modelLoadDesc option whether or not to consolidate geometries into a single drawcall
 
  Test
   - Rungholt 7M triangle scene(260 MB)
@@ -42,11 +40,9 @@ ground.material().wireframe(true);
 ground.rotX(.5 * Math.pi);
 
 // create a bounding box
-GMesh bbox(new CubeGeometry, new FlatMaterial);
+GMesh bbox(new CubeGeometry, new FlatMaterial) --> GG.scene();
 // set wireframe 
 bbox.material().wireframe(true);
-// 0 dimensions
-bbox.sca(0);
 
 // get the max component of a vec3
 fun float max(vec3 v) {
@@ -99,7 +95,7 @@ while( true )
             else ground.detach();
         }
         if (UI.checkbox("show bounding box", show_bounding_box)) {
-            if (show_bounding_box.val()) bbox --> model;
+            if (show_bounding_box.val()) bbox --> GG.scene();
             else bbox.detach();
         }
         if (UI.checkbox("show model wireframe", show_model_wireframe)) {
@@ -143,8 +139,8 @@ while( true )
         model.posX(-center.x).posZ(-center.z);
 
         // update bounding box
-        bbox.pos(center);
-        bbox.sca(model.max - model.min);
+        bbox.sca(scale * (model.max - model.min));
+        bbox.posY(bbox.scaY() * 0.5);
 
         // <<< "scale", scale >>>;
         // <<< "min: ", model.min, "max: ", model.max, "center: ", (0.5* (model.min + model.max))>>>;

@@ -39,21 +39,10 @@
 #define TINYOBJ_LOADER_C_IMPLEMENTATION
 #include <tinyobj/tinyobj_loader_c.h>
 
-#include <rapidobj/rapidobj.hpp>
-
 CK_DLL_SFUN(assloader_load_obj);
 CK_DLL_SFUN(assloader_load_obj_flip_y);
 
-#define RAPID_FLOAT3_TO_GLM_VEC3(f3) glm::vec3(f3[0], f3[1], f3[2])
-
-static void logRapidobjError(const rapidobj::Error& error, const char* filepath)
-{
-    log_warn("Could not load OBJ model \"%s\": %s", filepath,
-             error.code.message().c_str());
-    if (!error.line.empty()) {
-        log_warn("On line %d: \"%s\"", error.line_num, error.line.c_str());
-    }
-}
+#define FLOAT3_TO_GLM_VEC3(f3) glm::vec3(f3[0], f3[1], f3[2])
 
 // used to track geometries per material id during OBJ loading
 // currently unused
@@ -264,9 +253,27 @@ static void ulib_assloader_tinyobj_filereader(void* ctx, const char* filename,
     *len  = result.size;
 }
 
-static void ulib_assloader_tinyobj_load(const char* filepath, Chuck_VM_Shred* SHRED,
-                                        SG_AssetLoadDesc desc, SG_Transform* gmodel)
+struct ModelLoadObjResult {
+    Arena geo_ckobj_list; // list of Chuck_Object*
+    Arena mat_ckobj_list; // list of Chuck_Object*
+    Arena gmesh_id_list;  // list of SG_ID
+    glm::vec3 bmin;
+    glm::vec3 bmax;
+
+    static void free(ModelLoadObjResult* result)
+    {
+        Arena::free(&result->geo_ckobj_list);
+        Arena::free(&result->mat_ckobj_list);
+        Arena::free(&result->gmesh_id_list);
+    }
+};
+
+static ModelLoadObjResult ulib_assloader_tinyobj_load(const char* filepath,
+                                                      Chuck_VM_Shred* SHRED,
+                                                      SG_AssetLoadDesc desc)
 {
+    ModelLoadObjResult result = {};
+
     const char* extension = (File_getExtension(filepath));
     bool is_obj = (strcmp(extension, "obj") == 0 || strcmp(extension, "Obj") == 0
                    || strcmp(extension, "OBJ") == 0);
@@ -275,16 +282,8 @@ static void ulib_assloader_tinyobj_load(const char* filepath, Chuck_VM_Shred* SH
           "Cannot load model from file '%s', only OBJ files with extension .obj are "
           "supported",
           filepath);
-        return;
+        return result;
     }
-
-    CK_DL_API API = g_chuglAPI;
-    Chuck_ArrayInt* ck_geo_array
-      = OBJ_MEMBER_INT_ARRAY(gmodel->ckobj, gmodel_offset_geo_array);
-    Chuck_ArrayInt* ck_mat_array
-      = OBJ_MEMBER_INT_ARRAY(gmodel->ckobj, gmodel_offset_mat_array);
-    Chuck_ArrayInt* ck_mesh_array
-      = OBJ_MEMBER_INT_ARRAY(gmodel->ckobj, gmodel_offset_mesh_array);
 
     tinyobj_attrib_t attrib;
     tinyobj_shape_t* shapes = NULL;
@@ -309,7 +308,7 @@ static void ulib_assloader_tinyobj_load(const char* filepath, Chuck_VM_Shred* SH
             } break;
             default: UNREACHABLE;
         }
-        return;
+        return result;
     }
 
     // triangulation warning
@@ -351,8 +350,8 @@ static void ulib_assloader_tinyobj_load(const char* filepath, Chuck_VM_Shred* SH
             SG_Material* phong_material
               = ulib_material_create(SG_MATERIAL_PHONG, SHRED);
 
-            g_chuglAPI->object->array_int_push_back(ck_mat_array,
-                                                    (t_CKINT)phong_material->ckobj);
+            *ARENA_PUSH_TYPE(&result.mat_ckobj_list, Chuck_Object*)
+              = phong_material->ckobj;
 
             // add to material id array
             material_ids[i] = phong_material->id;
@@ -365,13 +364,13 @@ static void ulib_assloader_tinyobj_load(const char* filepath, Chuck_VM_Shred* SH
             // between diffuse color and ambient color)
             // TODO handle envmapping and ior and illumination model
             PhongParams::diffuse(phong_material,
-                                 RAPID_FLOAT3_TO_GLM_VEC3(obj_material->diffuse)
-                                   + RAPID_FLOAT3_TO_GLM_VEC3(obj_material->ambient));
+                                 FLOAT3_TO_GLM_VEC3(obj_material->diffuse)
+                                   + FLOAT3_TO_GLM_VEC3(obj_material->ambient));
             PhongParams::specular(phong_material,
-                                  RAPID_FLOAT3_TO_GLM_VEC3(obj_material->specular));
+                                  FLOAT3_TO_GLM_VEC3(obj_material->specular));
             PhongParams::shininess(phong_material, obj_material->shininess);
             PhongParams::emission(phong_material,
-                                  RAPID_FLOAT3_TO_GLM_VEC3(obj_material->emission));
+                                  FLOAT3_TO_GLM_VEC3(obj_material->emission));
 
             SG_TextureLoadDesc load_desc = {};
             load_desc.flip_y             = desc.textures_flip_y;
@@ -434,7 +433,7 @@ static void ulib_assloader_tinyobj_load(const char* filepath, Chuck_VM_Shred* SH
 
         tinyobj_shape_t* obj_shape = shapes + shape_i;
         SG_Geometry* geo      = NULL;
-        int prev_material_idx = -num_materials;
+        int prev_material_idx = num_materials + 1;
 
         // reset warning flags
         bool missing_uvs           = false;
@@ -447,31 +446,32 @@ static void ulib_assloader_tinyobj_load(const char* filepath, Chuck_VM_Shred* SH
 
             { // get the correct material and geometry
                 int material_idx = attrib.material_ids[face_idx];
-                if (material_idx < 0) uses_default_material = true;
+                if (material_idx < 0) {
+                  uses_default_material = true;
+                  material_idx = num_materials;
+                }
                 if (material_idx != prev_material_idx) {
-                    bool need_create_default_material
-                      = (material_idx < 0 && material_ids[num_materials] == 0);
-                    if (material_idx < 0) material_idx = num_materials;
-                    if (need_create_default_material) {
-                        ASSERT(geometry_ids[num_materials] == 0); // geo should not be made yet
+                    if (material_ids[material_idx] == 0) {
+                        ASSERT(geometry_ids[material_idx] == 0); // geo should not be made yet
                         SG_Material* default_material = ulib_material_create(SG_MATERIAL_PHONG, SHRED);
-                        material_ids[num_materials] = default_material->id;
-                        geometry_ids[num_materials] = ulib_geometry_create(SG_GEOMETRY, SHRED)->id;
-                        g_chuglAPI->object->array_int_push_back(ck_mat_array,
-                                                    (t_CKINT)default_material->ckobj);
+                        material_ids[material_idx] = default_material->id;
+                        *ARENA_PUSH_TYPE(&result.mat_ckobj_list, Chuck_Object*) = default_material->ckobj;
+                        ulib_component_set_name(default_material, "OBJ Default Material");
                     }
 
                     if (geometry_ids[material_idx] == 0) {
-                        ASSERT(!desc.combine_geos); // this should only happen when we are creating geos per shape
+                        ASSERT(!desc.combine_geos || material_idx == num_materials); // this should only happen when we are creating geos per shape
                         geo = ulib_geometry_create(SG_GEOMETRY, SHRED);
                         geometry_ids[material_idx] = geo->id;
                         ulib_component_set_name(geo, obj_shape->name);
+                        *ARENA_PUSH_TYPE(&result.geo_ckobj_list, Chuck_Object*) = geo->ckobj;
                     }
 
                     ASSERT(material_ids[material_idx] && geometry_ids[material_idx]);
                     prev_material_idx = material_idx;
                     geo               = SG_GetGeometry(geometry_ids[material_idx]);
                 }
+                ASSERT(geo);
             }
             
             // TODO only set geo name if we are *not* combining geos across shapes
@@ -559,280 +559,69 @@ static void ulib_assloader_tinyobj_load(const char* filepath, Chuck_VM_Shred* SH
                 // create mesh
                 SG_Mesh* mesh
                 = ulib_mesh_create(NULL, geo, mat, SHRED);
-
-                // assign to parent
-                if (gmodel) {
-                    CQ_PushCommand_AddChild(gmodel, mesh);
-                } 
+                ulib_component_set_name(mesh, geo->name);
                 
                 // add to GModel
-                g_chuglAPI->object->array_int_push_back(ck_geo_array, (t_CKINT) geo->ckobj);
-                g_chuglAPI->object->array_int_push_back(ck_mesh_array, (t_CKINT) mesh->ckobj);
+                *ARENA_PUSH_TYPE(&result.geo_ckobj_list, Chuck_Object*) = geo->ckobj;
+                *ARENA_PUSH_TYPE(&result.gmesh_id_list, SG_ID) = mesh->id;
             }
         }
     } // foreach shape
 
     if (num_shapes > 0) {
-        OBJ_MEMBER_VEC3(gmodel->ckobj, gmodel_offset_bbox_max) = {bmax.x, bmax.y, bmax.z};
-        OBJ_MEMBER_VEC3(gmodel->ckobj, gmodel_offset_bbox_min) = {bmin.x, bmin.y, bmin.z};
+        result.bmin = bmin;
+        result.bmax = bmax;
     }
 
-    // set model name
-    ulib_component_set_name(gmodel, filepath);
+    return result;
 }
 // clang-format on
 
-static SG_Transform* ulib_assloader_load_obj(const char* filepath,
-                                             Chuck_VM_Shred* SHRED,
-                                             SG_AssetLoadDesc desc)
+static Chuck_Object* ulib_assloader_load_obj(bool flip_y, const char* filepath,
+                                             Chuck_VM_Shred* SHRED)
 {
-    // for simplicity, does not support lines or points
-    // renders all models with Phong lighting (for pbr use gltf loader instead)
-    rapidobj::Result result = rapidobj::ParseFile(filepath);
+    SG_Transform* obj_root    = NULL;
+    SG_AssetLoadDesc desc     = {};
+    desc.textures_flip_y      = flip_y;
+    ModelLoadObjResult result = ulib_assloader_tinyobj_load(filepath, SHRED, desc);
+    defer(ModelLoadObjResult::free(
+      &result)); // TODO don't need to alloc, just keep return pointers to static arrays
 
-    if (result.error) {
-        logRapidobjError(result.error, filepath);
-        return ulib_ggen_create(NULL, SHRED); // on error return empty ggen
-    }
+    int num_meshes = ARENA_LENGTH(&result.gmesh_id_list, SG_ID);
 
-    rapidobj::Triangulate(result);
+    if (num_meshes == 0) {
+        obj_root = ulib_ggen_create(NULL, SHRED);
+    } else if (num_meshes == 1) {
+        obj_root = SG_GetMesh(*ARENA_GET_TYPE(&result.gmesh_id_list, SG_ID, 0));
+    } else {
+        obj_root = ulib_ggen_create(NULL, SHRED);
 
-    if (result.error) {
-        logRapidobjError(result.error, filepath);
-        return ulib_ggen_create(NULL, SHRED); // on error return empty ggen
-    }
-
-    // first create all unique materials
-    size_t num_materials = result.materials.size();
-    SG_ID* material_ids
-      = ARENA_PUSH_ZERO_COUNT(&audio_frame_arena, SG_ID, (num_materials + 1) * 2);
-    material_ids += 1; // so that material_ids[-1] is the default material
-
-    // then make a geometry for each material (for optimization purposes, we group
-    // all shapes vertices with the same material idx under the same material) this
-    // reduces a model like backpack.obj from 79 geometries and 1 material --> 1 geo
-    // and 1 material (1 draw call!)
-    SG_ID* geo_ids = material_ids + num_materials + 1;
-
-    // we need #meshes = #materials. if >1 mesh, create a parent ggen to contain all
-    SG_Transform* obj_shape_root = NULL;
-    // if multiple shapes, return under parent root
-    if (num_materials > 1) {
-        obj_shape_root = ulib_ggen_create(NULL, SHRED);
-    }
-
-    for (size_t i = 0; i < num_materials; i++) {
-        // create geometry for this material
-        SG_Geometry* geo = ulib_geometry_create(SG_GEOMETRY, SHRED);
-        geo_ids[i]       = geo->id;
-
-        const rapidobj::Material& obj_material = result.materials[i];
-
-        // assumes material is phong (currently NOT supporting pbr extension)
-        SG_Material* phong_material = ulib_material_create(SG_MATERIAL_PHONG, SHRED);
-
-        // add to material id array
-        material_ids[i] = phong_material->id;
-
-        // set name
-        ulib_component_set_name(phong_material, obj_material.name.c_str());
-
-        // set uniforms
-        // adding ambient + diffuse color (PhongMaterial doesn't differentiate
-        // between diffuse color and ambient color)
-        PhongParams::diffuse(phong_material,
-                             RAPID_FLOAT3_TO_GLM_VEC3(obj_material.diffuse)
-                               + RAPID_FLOAT3_TO_GLM_VEC3(obj_material.ambient));
-        PhongParams::specular(phong_material,
-                              RAPID_FLOAT3_TO_GLM_VEC3(obj_material.specular));
-        PhongParams::shininess(phong_material, obj_material.shininess);
-        PhongParams::emission(phong_material,
-                              RAPID_FLOAT3_TO_GLM_VEC3(obj_material.emission));
-
-        // TODO set textures
-        SG_TextureLoadDesc load_desc = {};
-        load_desc.flip_y             = desc.textures_flip_y;
-        load_desc.gen_mips           = true;
-        std::string directory        = File_dirname(filepath);
-
-        if (obj_material.diffuse_texname.size()) {
-            std::string tex_path = directory + obj_material.diffuse_texname;
-            SG_Texture* tex = ulib_texture_load(tex_path.c_str(), &load_desc, SHRED);
-            PhongParams::albedoTex(phong_material, tex);
-        }
-
-        if (obj_material.specular_texname.size()) {
-            std::string tex_path = directory + obj_material.specular_texname;
-            SG_Texture* tex = ulib_texture_load(tex_path.c_str(), &load_desc, SHRED);
-            PhongParams::specularTex(phong_material, tex);
-        }
-
-        if (obj_material.bump_texname.size()) {
-            std::string tex_path = directory + obj_material.bump_texname;
-            SG_Texture* tex = ulib_texture_load(tex_path.c_str(), &load_desc, SHRED);
-            PhongParams::normalTex(phong_material, tex);
-        }
-
-        if (obj_material.ambient_texname.size()) {
-            std::string tex_path = directory + obj_material.ambient_texname;
-            SG_Texture* tex = ulib_texture_load(tex_path.c_str(), &load_desc, SHRED);
-            PhongParams::aoTex(phong_material, tex);
-        }
-
-        if (obj_material.emissive_texname.size()) {
-            std::string tex_path = directory + obj_material.ambient_texname;
-            SG_Texture* tex = ulib_texture_load(tex_path.c_str(), &load_desc, SHRED);
-            PhongParams::emissiveTex(phong_material, tex);
+        for (int i = 0; i < num_meshes; ++i) {
+            SG_Mesh* mesh
+              = SG_GetMesh(*ARENA_GET_TYPE(&result.gmesh_id_list, SG_ID, i));
+            // child meshes
+            CQ_PushCommand_AddChild(obj_root, mesh);
         }
     }
 
-    // TODO set names
-    for (const rapidobj::Shape& shape : result.shapes) {
-        bool missing_normals  = false;
-        bool missing_uvs      = false;
-        int prev_material_idx = -100;
-        SG_Geometry* face_geo = NULL;
-        size_t num_vertices   = shape.mesh.indices.size();
+    // name
+    ASSERT(obj_root);
+    ulib_component_set_name(obj_root, File_basename(filepath));
 
-        // reset the mat --> geo map for each shape/mesh
-        ASSERT(hashmap_count(ulib_assloader_mat2geo_map) == 0);
-        defer(hashmap_clear(ulib_assloader_mat2geo_map, false));
-
-        ASSERT(num_vertices % 3 == 0);
-        ASSERT(shape.mesh.indices.size() / 3 == shape.mesh.material_ids.size());
-
-        if (!shape.lines.indices.empty()) {
-            log_warn("Obj Shape \"%s\" has polylines; unsupported; skipping",
-                     shape.name.c_str());
-        }
-        if (!shape.points.indices.empty()) {
-            log_warn("Obj Shape \"%s\" has points; unsupported; skipping",
-                     shape.name.c_str());
-        }
-
-        for (size_t i = 0; i < num_vertices; i++) {
-
-            // every face update material and geometry
-            if (i % 3 == 0) {
-                size_t face_idx  = i / 3; // 3 vertices per face
-                i32 material_idx = shape.mesh.material_ids[face_idx];
-                if (material_idx != prev_material_idx) {
-                    prev_material_idx = material_idx;
-                    if (material_ids[material_idx] == 0) {
-                        ASSERT(material_idx == -1)
-                        ASSERT(geo_ids[material_idx] == 0);
-                        // create default material
-                        material_ids[material_idx]
-                          = ulib_material_create(SG_MATERIAL_PHONG, SHRED)->id;
-                        geo_ids[material_idx]
-                          = ulib_geometry_create(SG_GEOMETRY, SHRED)->id;
-                    }
-
-                    face_geo = SG_GetGeometry(geo_ids[material_idx]);
-                }
-            }
-
-            rapidobj::Index index = shape.mesh.indices[i];
-
-            // get geometry buffers and allocate memory
-            glm::vec3* positions = ARENA_PUSH_ZERO_TYPE(
-              &face_geo->vertex_attribute_data[SG_GEOMETRY_POSITION_ATTRIBUTE_LOCATION],
-              glm::vec3);
-
-            glm::vec3* normals = ARENA_PUSH_ZERO_TYPE(
-              &face_geo->vertex_attribute_data[SG_GEOMETRY_NORMAL_ATTRIBUTE_LOCATION],
-              glm::vec3);
-
-            glm::vec2* texcoords = ARENA_PUSH_ZERO_TYPE(
-              &face_geo->vertex_attribute_data[SG_GEOMETRY_UV_ATTRIBUTE_LOCATION],
-              glm::vec2);
-
-            float* pos   = &result.attributes.positions[index.position_index * 3];
-            positions->x = pos[0];
-            positions->y = pos[1];
-            positions->z = pos[2];
-
-            // copy normals
-            if (index.normal_index < 0) {
-                missing_normals = true;
-            } else {
-                float* norm = &result.attributes.normals[index.normal_index * 3];
-                normals->x  = norm[0];
-                normals->y  = norm[1];
-                normals->z  = norm[2];
-            }
-
-            // copy uvs
-            if (index.texcoord_index < 0) {
-                missing_uvs = true;
-            } else {
-                float* uvs   = &result.attributes.texcoords[index.texcoord_index * 2];
-                texcoords->x = uvs[0];
-                texcoords->y = uvs[1];
-            }
-        }
-
-        if (missing_normals) {
-            log_error(
-              "Warning, OBJ mesh %s is missing normal data. Defaulting to (0,0,0)",
-              shape.name.c_str());
-        }
-        if (missing_uvs) {
-            log_error("Warning, OBJ mesh %s is missing uv data. Defaulting to (0,0)",
-                      shape.name.c_str());
-        }
-
-        // TODO eventually conslidate with `ulib_geometry_build()`
-    }
-
-    // start from -1 to include default material/geo
-    for (int i = -1; i < (i32)num_materials; i++) {
-        // check for default mat/geo
-        if (!material_ids[i]) {
-            ASSERT(!geo_ids[i])
-            continue;
-        }
-
-        SG_Geometry* geo = SG_GetGeometry(geo_ids[i]);
-
-        // update
-        CQ_UpdateAllVertexAttributes(geo);
-
-        // create mesh
-        SG_Mesh* mesh
-          = ulib_mesh_create(NULL, geo, SG_GetMaterial(material_ids[i]), SHRED);
-
-        // assign to parent
-        if (obj_shape_root) {
-            CQ_PushCommand_AddChild(obj_shape_root, mesh);
-        } else {
-            obj_shape_root = mesh;
-        }
-    }
-
-    return obj_shape_root;
+    return obj_root->ckobj;
 }
 
 CK_DLL_SFUN(assloader_load_obj)
 {
-    RETURN->v_object = NULL;
-
-    SG_AssetLoadDesc desc = {};
-    SG_Transform* obj_root
-      = ulib_assloader_load_obj(API->object->str(GET_NEXT_STRING(ARGS)), SHRED, desc);
-    RETURN->v_object = obj_root ? obj_root->ckobj : NULL;
+    RETURN->v_object
+      = ulib_assloader_load_obj(false, API->object->str(GET_NEXT_STRING(ARGS)), SHRED);
 }
 
 CK_DLL_SFUN(assloader_load_obj_flip_y)
 {
-    RETURN->v_object     = NULL;
     const char* filepath = API->object->str(GET_NEXT_STRING(ARGS));
     bool flip_y          = (bool)GET_NEXT_INT(ARGS);
-
-    SG_AssetLoadDesc desc  = {};
-    desc.textures_flip_y   = flip_y;
-    SG_Transform* obj_root = ulib_assloader_load_obj(filepath, SHRED, desc);
-    RETURN->v_object       = obj_root ? obj_root->ckobj : NULL;
+    RETURN->v_object     = ulib_assloader_load_obj(flip_y, filepath, SHRED);
 }
 
 // =============================
@@ -856,6 +645,53 @@ static SG_Transform* ulib_gmodel_create(Chuck_Object* ckobj, Chuck_VM_Shred* shr
     return model;
 }
 
+static void ulib_gmodel_load(SG_Transform* model, const char* filepath,
+                             ModelLoadObjResult result)
+{
+    CK_DL_API API = g_chuglAPI;
+
+    int mesh_count = ARENA_LENGTH(&result.gmesh_id_list, SG_ID);
+    int mat_count  = ARENA_LENGTH(&result.mat_ckobj_list, Chuck_Object*);
+    int geo_count  = ARENA_LENGTH(&result.geo_ckobj_list, Chuck_Object*);
+
+    Chuck_ArrayInt* ck_geo_array
+      = OBJ_MEMBER_INT_ARRAY(model->ckobj, gmodel_offset_geo_array);
+    Chuck_ArrayInt* ck_mat_array
+      = OBJ_MEMBER_INT_ARRAY(model->ckobj, gmodel_offset_mat_array);
+    Chuck_ArrayInt* ck_mesh_array
+      = OBJ_MEMBER_INT_ARRAY(model->ckobj, gmodel_offset_mesh_array);
+
+    // append components
+    for (int i = 0; i < mesh_count; i++) {
+        SG_Mesh* mesh = SG_GetMesh(*ARENA_GET_TYPE(&result.gmesh_id_list, SG_ID, i));
+        // child meshes
+        CQ_PushCommand_AddChild(model, mesh);
+        API->object->array_int_push_back(ck_mesh_array, (t_CKINT)mesh->ckobj);
+    }
+
+    for (int i = 0; i < mat_count; i++)
+        API->object->array_int_push_back(
+          ck_mat_array,
+          (t_CKINT)*ARENA_GET_TYPE(&result.mat_ckobj_list, Chuck_Object*, i));
+
+    for (int i = 0; i < geo_count; i++)
+        API->object->array_int_push_back(
+          ck_geo_array,
+          (t_CKINT)*ARENA_GET_TYPE(&result.geo_ckobj_list, Chuck_Object*, i));
+
+    // name
+    ulib_component_set_name(model, File_basename(filepath));
+
+    // set bounding box
+    OBJ_MEMBER_VEC3(model->ckobj, gmodel_offset_bbox_min)
+      = { result.bmin.x, result.bmin.y, result.bmin.z };
+    OBJ_MEMBER_VEC3(model->ckobj, gmodel_offset_bbox_max)
+      = { result.bmax.x, result.bmax.y, result.bmax.z };
+
+    // cleanup
+    ModelLoadObjResult::free(&result);
+}
+
 CK_DLL_CTOR(gmodel_ctor)
 {
     ulib_gmodel_create(SELF, SHRED);
@@ -871,7 +707,8 @@ CK_DLL_CTOR(gmodel_ctor_with_fp)
     if (filepath == NULL) return;
 
     SG_AssetLoadDesc desc = {};
-    ulib_assloader_tinyobj_load(filepath, SHRED, desc, model);
+    ulib_gmodel_load(model, filepath,
+                     ulib_assloader_tinyobj_load(filepath, SHRED, desc));
 }
 
 CK_DLL_CTOR(gmodel_ctor_with_fp_and_desc)
@@ -884,7 +721,9 @@ CK_DLL_CTOR(gmodel_ctor_with_fp_and_desc)
     if (filepath == NULL) return;
 
     SG_AssetLoadDesc desc = SG_AssetLoadDesc::from(GET_NEXT_OBJECT(ARGS));
-    ulib_assloader_tinyobj_load(filepath, SHRED, desc, model);
+
+    ulib_gmodel_load(model, filepath,
+                     ulib_assloader_tinyobj_load(filepath, SHRED, desc));
 }
 
 // =============================

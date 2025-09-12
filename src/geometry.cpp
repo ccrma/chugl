@@ -28,14 +28,14 @@
 #include "geometry.h"
 #include "core/memory.h"
 #include "suzanne_geo.cpp"
+
 #include <array> // ew
-#include <glm/gtc/epsilon.hpp>
+#include <float.h>
 #include <vector> // ew
 
-// #include <earcut/earcut.hpp>
-#include <rapidobj/rapidobj.hpp>
+#include <glm/gtc/epsilon.hpp>
 
-#include <cfloat> // FLT_MAX
+#include <earcut/earcut.hpp>
 
 // ============================================================================
 // Vertex

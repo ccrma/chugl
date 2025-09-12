@@ -4,6 +4,8 @@
 //       and rendering as a GGen
 //--------------------------------------------------------------------
 
+GOrbitCamera camera => GG.scene().camera;
+
 // using asset loader, load from file, returns a GGen as the root of a model graph
 AssLoader.loadObj( me.dir() + "../data/models/suzanne.obj" ) @=> GGen model;
 
