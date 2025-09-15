@@ -245,7 +245,7 @@ static void ulib_assloader_tinyobj_filereader(void* ctx, const char* filename,
 
     FileReadResult result = File_read(filename, true);
     if (result.data_owned == NULL) {
-        log_warn("Cannot open file '%s' while trying to load OBJ %s", filename,
+        log_warn("cannot open file '%s' while trying to load OBJ %s", filename,
                  obj_filename);
     }
 
@@ -279,7 +279,7 @@ static ModelLoadObjResult ulib_assloader_tinyobj_load(const char* filepath,
                    || strcmp(extension, "OBJ") == 0);
     if (!is_obj) {
         log_warn(
-          "Cannot load model from file '%s', only OBJ files with extension .obj are "
+          "cannot load model from file '%s', only OBJ files with extension .obj are "
           "supported",
           filepath);
         return result;
@@ -297,13 +297,13 @@ static ModelLoadObjResult ulib_assloader_tinyobj_load(const char* filepath,
     if (ret != TINYOBJ_SUCCESS) {
         switch (ret) {
             case TINYOBJ_ERROR_EMPTY: {
-                log_warn("Error loading OBJ file '%s': empty file", filepath);
+                log_warn("error loading OBJ file '%s': empty file", filepath);
             } break;
             case TINYOBJ_ERROR_INVALID_PARAMETER: {
-                log_warn("Error loading OBJ file '%s': invalid file", filepath);
+                log_warn("error loading OBJ file '%s': invalid file", filepath);
             } break;
             case TINYOBJ_ERROR_FILE_OPERATION: {
-                log_warn("Error loading OBJ file '%s': invalid file operation",
+                log_warn("error loading OBJ file '%s': invalid file operation",
                          filepath);
             } break;
             default: UNREACHABLE;
@@ -315,7 +315,7 @@ static ModelLoadObjResult ulib_assloader_tinyobj_load(const char* filepath,
     bool triangulated = (attrib.num_faces == attrib.num_face_num_verts * 3);
     if (!triangulated) {
         log_warn(
-          "Warning, OBJ '%s' is could not be triangulated. May render "
+          "OBJ '%s' is could not be triangulated. may render "
           "incorrectly.",
           filepath);
     }
@@ -529,17 +529,17 @@ static ModelLoadObjResult ulib_assloader_tinyobj_load(const char* filepath,
 
         if (uses_default_material) {
             log_warn(
-              "Warning, OBJ '%s' Mesh '%s' is missing one or more .mtl descriptions. Rendering with a default PhongMaterial",
+              "OBJ '%s' Mesh '%s' is missing one or more .mtl descriptions. rendering with a default PhongMaterial",
               filepath, obj_shape->name);
         }
         if (missing_normals) {
             log_warn(
-              "Warning, OBJ '%s' Mesh '%s' is missing vertex normal data. Calculating from vertex positions.",
+              "OBJ '%s' Mesh '%s' is missing vertex normal data. calculating from vertex positions.",
               filepath, obj_shape->name);
         }
         if (missing_uvs) {
             log_warn(
-              "Warning, OBJ '%s' Mesh '%s' is missing vertex UV data. Defaulting to (0,0)",
+              "OBJ '%s' Mesh '%s' is missing vertex UV data. defaulting to (0,0)",
               filepath, obj_shape->name);
         }
 

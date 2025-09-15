@@ -939,11 +939,24 @@ CK_DLL_QUERY(ChuGL)
         static t_CKUINT gg_log_level_error = LOG_ERROR;
         static t_CKUINT gg_log_level_fatal = LOG_FATAL;
         SVAR("int", "LogLevel_Trace", &gg_log_level_trace);
+        DOC_VAR("(hidden)");
         SVAR("int", "LogLevel_Debug", &gg_log_level_debug);
+        DOC_VAR("(hidden)");
         SVAR("int", "LogLevel_Info", &gg_log_level_info);
+        DOC_VAR("(hidden)");
         SVAR("int", "LogLevel_Warn", &gg_log_level_warn);
+        DOC_VAR("(hidden)");
         SVAR("int", "LogLevel_Error", &gg_log_level_error);
+        DOC_VAR("(hidden)");
         SVAR("int", "LogLevel_Fatal", &gg_log_level_fatal);
+        DOC_VAR("(hidden)");
+
+        SVAR("int", "LOGLEVEL_TRACE", &gg_log_level_trace);
+        SVAR("int", "LOGLEVEL_DEBUG", &gg_log_level_debug);
+        SVAR("int", "LOGLEVEL_INFO", &gg_log_level_info);
+        SVAR("int", "LOGLEVEL_WARN", &gg_log_level_warn);
+        SVAR("int", "LOGLEVEL_ERROR", &gg_log_level_error);
+        SVAR("int", "LOGLEVEL_FATAL", &gg_log_level_fatal);
 
         SFUN(chugl_set_log_level, "void", "logLevel");
         ARG("int", "level");
@@ -1096,6 +1109,7 @@ CK_DLL_QUERY(ChuGL)
         SFUN(chugl_open_file_dialog, "string", "openFileDialog");
         ARG("string", "default_path_or_file");
         DOC_FUNC(
+          "(hidden) "
           "Opens an open-file file dialog for the user to select a file. Returns "
           "null if the user cancels the dialog without selecting a file."
           "NOTE: this version of the method is *synchronous* and *blocking*, "
@@ -1119,6 +1133,7 @@ CK_DLL_QUERY(ChuGL)
         SFUN(chugl_save_file_dialog_ex, "string", "saveFileDialog");
         ARG("string", "default_path_or_file");
         DOC_FUNC(
+          "(hidden) "
           "Open a system save file dialog for the user to select a save path. Returns "
           "null if the user cancels the dialog without selecting a path."
           "NOTE: this version of the method is *synchronous* and *blocking*, "
@@ -1131,6 +1146,7 @@ CK_DLL_QUERY(ChuGL)
         SFUN(chugl_select_folder_dialog, "string", "selectFolderDialog");
         ARG("string", "default_path_or_file");
         DOC_FUNC(
+          "(hidden) "
           "Open a file dialog for the user to select a folder. Returns "
           "null if the user cancels the dialog without selecting a folder."
           "NOTE: this version of the method is *synchronous* and *blocking*, "

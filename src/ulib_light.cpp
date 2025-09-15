@@ -104,8 +104,15 @@ static void ulib_light_query(Chuck_DL_Query* QUERY)
     static t_CKINT light_type_point       = SG_LightType_Point;
     static t_CKINT light_type_spot        = SG_LightType_Spot;
     SVAR("int", "Directional", &light_type_directional);
+    DOC_VAR("(hidden)");
     SVAR("int", "Point", &light_type_point);
+    DOC_VAR("(hidden)");
     SVAR("int", "Spot", &light_type_spot);
+    DOC_VAR("(hidden)");
+
+    SVAR("int", "DIRECTIONAL", &light_type_directional);
+    SVAR("int", "POINT", &light_type_point);
+    SVAR("int", "SPOT", &light_type_spot);
 
     // -------------------------
 

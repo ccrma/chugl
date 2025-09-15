@@ -219,7 +219,7 @@ void SG_Transform::lookAt(SG_Transform* t, glm::vec3 pos, glm::vec3 up = VEC_UP)
     if (collinear) {
         log_warn(
           "GGen.lookAt(@(%f, %f, %f), @(%f, %f, %f)) failed because the forward and up "
-          "vectors are collinear. Try GGen.lookAt(vec3 pos, vec3 up) with a different "
+          "vectors are collinear. try GGen.lookAt(vec3 pos, vec3 up) with a different "
           "up vector",
           pos.x, pos.y, pos.z, up.x, up.y, up.z);
         return;
@@ -1249,7 +1249,7 @@ SG_Webcam* SG_CreateWebcam(Chuck_Object* ckobj, Chuck_VM_Shred* shred, int devic
         // bounds check (hardcoded to 8 webcams)
         if (device_id >= 8) {
             log_warn(
-              "Only webcam device ids 0-7 are supported. Defaulting to magenta "
+              "only webcam device ids 0-7 are supported. Defaulting to magenta "
               "texture");
             return webcam;
         }
@@ -1269,7 +1269,7 @@ SG_Webcam* SG_CreateWebcam(Chuck_Object* ckobj, Chuck_VM_Shred* shred, int devic
         */
 
         if (!webcam_open_success) {
-            log_warn("Could not open webcam device %d. Defaulting to magenta texture",
+            log_warn("could not open webcam device %d. defaulting to magenta texture",
                      device_id);
         } else { // successful
             // Get back video parameters.

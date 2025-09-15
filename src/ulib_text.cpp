@@ -325,7 +325,7 @@ CK_DLL_MFUN(gtext_set_font)
     SG_Text* text           = GET_TEXT(SELF);
     Chuck_String* ck_string = GET_NEXT_STRING(ARGS);
     if (!ck_string) {
-        log_warn("Setting GText.font(null) is not supported behavior");
+        log_warn("setting GText.font(null) is not supported behavior");
         return;
     }
 

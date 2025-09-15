@@ -368,11 +368,24 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
         static t_CKUINT TONEMAP_ACES      = 4;
         static t_CKUINT TONEMAP_UNCHARTED = 5;
         SVAR("int", "ToneMap_None", &TONEMAP_NONE);
+        DOC_VAR("(hidden)");
         SVAR("int", "ToneMap_Linear", &TONEMAP_LINEAR);
+        DOC_VAR("(hidden)");
         SVAR("int", "ToneMap_Reinhard", &TONEMAP_REINHARD);
+        DOC_VAR("(hidden)");
         SVAR("int", "ToneMap_Cineon", &TONEMAP_CINEON);
+        DOC_VAR("(hidden)");
         SVAR("int", "ToneMap_ACES", &TONEMAP_ACES);
+        DOC_VAR("(hidden)");
         SVAR("int", "ToneMap_Uncharted", &TONEMAP_UNCHARTED);
+        DOC_VAR("(hidden)");
+
+        SVAR("int", "TONEMAP_NONE", &TONEMAP_NONE);
+        SVAR("int", "TONEMAP_LINEAR", &TONEMAP_LINEAR);
+        SVAR("int", "TONEMAP_REINHARD", &TONEMAP_REINHARD);
+        SVAR("int", "TONEMAP_CINEON", &TONEMAP_CINEON);
+        SVAR("int", "TONEMAP_ACES", &TONEMAP_ACES);
+        SVAR("int", "TONEMAP_UNCHARTED", &TONEMAP_UNCHARTED);
 
         CTOR(outputpass_ctor);
 
@@ -626,7 +639,7 @@ CK_DLL_GFUN(pass_op_gruck)
     Chuck_Object* rhs = GET_NEXT_OBJECT(ARGS);
 
     if (!lhs) {
-        log_warn("Cannot connect [null] --> GPass");
+        log_warn("cannot connect [null] --> GPass");
         return;
     }
 
@@ -844,7 +857,7 @@ CK_DLL_MFUN(scenepass_set_scene_and_camera)
     if (sg_cam && sg_cam->scene_id != scene_id) {
         log_warn(
           "ScenePass.scene(GScene, GCamera) failed: camera does not belong to scene. "
-          "Suggestion: connect with `camera --> scene;`");
+          "suggestion: connect with `camera --> scene;`");
         return;
     }
 

@@ -1153,7 +1153,7 @@ CK_DLL_CTOR(shader_ctor)
         }
 
         if (!(format_is_valid_float || format_is_valid_int || format_is_undefined)) {
-            log_warn("Invalid VertexFormat %d given to ShaderDesc.vertexLayout ",
+            log_warn("invalid VertexFormat %d given to ShaderDesc.vertexLayout ",
                      format);
             log_warn(
               "  | Valid formats include VertexFormat.Float, VertexFormat.Int, "

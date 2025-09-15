@@ -976,7 +976,7 @@ struct App {
                         || !output_texture->desc.gen_mips) {
                         log_warn(
                           "BloomPass requires `.gen_mips` to be enabled on input and "
-                          "output textures. Bypassing.");
+                          "output textures. bypassing.");
                         break;
                     }
 

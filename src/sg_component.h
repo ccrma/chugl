@@ -913,7 +913,7 @@ struct SG_Light : public SG_Transform {
     {
         if (type >= SG_LightType_Count) {
             log_warn(
-              "Cannot set invalid light type %d. Use one of GLight.Directional, "
+              "cannot set invalid light type %d. use one of GLight.Directional, "
               "GLight.Point, or GLight.spot",
               type);
             return;

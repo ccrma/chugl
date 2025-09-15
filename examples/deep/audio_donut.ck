@@ -137,7 +137,7 @@ TextureDesc spectrum_texture_desc;
 WINDOW_SIZE => spectrum_texture_desc.width;
 WATERFALL_DEPTH => spectrum_texture_desc.height;
 // single channel float (to hold spectrum data)
-Texture.Format_R32Float => spectrum_texture_desc.format;
+Texture.FORMAT_R32FLOAT => spectrum_texture_desc.format;
 // no mipmaps
 1 => spectrum_texture_desc.mips;
 // create the texture

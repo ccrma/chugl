@@ -1889,7 +1889,7 @@ CK_DLL_MFUN(polygon_geo_build_with_holes)
     Chuck_ArrayInt* hole_lengths  = GET_NEXT_INT_ARRAY(ARGS);
 
     if (!main_polygon || !holes || !hole_lengths) {
-        log_warn("Passing null array to PolygonGeometry.build(...)");
+        log_warn("passing null array to PolygonGeometry.build(...)");
         return;
     }
 

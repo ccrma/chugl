@@ -370,7 +370,7 @@ static void ulib_video_on_audio(plm_t* mpeg, plm_samples_t* samples, void* user)
 CK_DLL_CTOR(video_ctor)
 {
     log_warn(
-      "Creating default empty Video object, you probably want to use the `Video(string "
+      "creating default empty Video object, you probably want to use the `Video(string "
       "path)` constructor instead");
 
     SG_Texture* video_texture_rgba = SG_GetTexture(g_builtin_textures.magenta_pixel_id);
@@ -399,7 +399,7 @@ CK_DLL_CTOR(video_ctor_with_path)
     {
         plm = plm_create_with_filename(path);
         if (!plm) {
-            log_warn("Could not open MPG video '%s'", path);
+            log_warn("could not open MPG video '%s'", path);
             log_warn(" |- Defaulting to magenta texture");
             return;
         }
@@ -407,7 +407,7 @@ CK_DLL_CTOR(video_ctor_with_path)
         // probe first 5MB of file for video or audio streams
         if (!plm_probe(plm, 5000 * 1024)) {
             plm_destroy(plm);
-            log_warn("No MPEG video or audio streams found in %s", path);
+            log_warn("no MPEG video or audio streams found in %s", path);
             plm = NULL;
             return;
         }
@@ -441,7 +441,7 @@ CK_DLL_CTOR(video_ctor_with_path)
         // warn if sample rate doesn't match
         if (plm_get_samplerate(plm) != API->vm->srate(VM)) {
             log_warn(
-              "Video %s: Audio stream samplerate for (%d) does not match VM samplerate "
+              "video %s: Audio stream samplerate for (%d) does not match VM samplerate "
               "(%d)",
               path, plm_get_samplerate(plm), API->vm->srate(VM));
         }
@@ -573,7 +573,7 @@ CK_DLL_MFUN(video_seek)
     int ret              = plm_seek_audio(video->plm, time_seconds, &out_seek_time);
 
     if (!ret) {
-        log_warn("Could not seek to target time %f in MPG video '%s'", time_seconds,
+        log_warn("could not seek to target time %f in MPG video '%s'", time_seconds,
                  video->path_OWNED);
         return;
     }
@@ -597,7 +597,7 @@ static void ulib_webcam_validate()
 #elif defined(__APPLE__)
 #elif defined(__EMSCRIPTEN__)
 #else /* anything else, this will need more care for non-Linux platforms */
-    log_warn("Webcam is not supported on this platform");
+    log_warn("webcam is not supported on this platform");
 #endif
 }
 

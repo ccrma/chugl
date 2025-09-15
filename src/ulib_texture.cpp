@@ -361,22 +361,36 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
         static t_CKINT texture_usage_render_attachment
           = WGPUTextureUsage_RenderAttachment;
         static t_CKINT texture_usage_all = WGPUTextureUsage_All;
+
         SVAR("int", "Usage_CopySrc", &texture_usage_copy_src);
+        DOC_VAR("(hidden)");
+        SVAR("int", "Usage_CopyDst", &texture_usage_copy_dst);
+        DOC_VAR("(hidden)");
+        SVAR("int", "Usage_TextureBinding", &texture_usage_texture_binding);
+        DOC_VAR("(hidden)");
+        SVAR("int", "Usage_StorageBinding", &texture_usage_storage_binding);
+        DOC_VAR("(hidden)");
+        SVAR("int", "Usage_RenderAttachment", &texture_usage_render_attachment);
+        DOC_VAR("(hidden)");
+        SVAR("int", "Usage_All", &texture_usage_all);
+        DOC_VAR("(hidden)");
+
+        SVAR("int", "USAGE_COPY_SRC", &texture_usage_copy_src);
         DOC_VAR(
           "Texture usage flag: can be used as a source for copy/write operations");
-        SVAR("int", "Usage_CopyDst", &texture_usage_copy_dst);
+        SVAR("int", "USAGE_COPY_DST", &texture_usage_copy_dst);
         DOC_VAR(
           "Texture usage flag: can be used destination for copy/write operations");
-        SVAR("int", "Usage_TextureBinding", &texture_usage_texture_binding);
+        SVAR("int", "USAGE_TEXTURE_BINDING", &texture_usage_texture_binding);
         DOC_VAR("Texture usage flag: texture can be bound to a shader");
-        SVAR("int", "Usage_StorageBinding", &texture_usage_storage_binding);
+        SVAR("int", "USAGE_STORAGE_BINDING", &texture_usage_storage_binding);
         DOC_VAR(
           "Texture usage flag: texture can be bound as a storage texture to a shader");
-        SVAR("int", "Usage_RenderAttachment", &texture_usage_render_attachment);
+        SVAR("int", "USAGE_RENDER_ATTACHMENT", &texture_usage_render_attachment);
         DOC_VAR(
           "Texture usage flag: texture can be used as a render attachment, i.e. "
           "written to by a render pass");
-        SVAR("int", "Usage_All", &texture_usage_all);
+        SVAR("int", "USAGE_ALL", &texture_usage_all);
         DOC_VAR("Texture usage flag: all usages enabled");
 
         // 1D textures currently unsupported
@@ -386,19 +400,27 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
         // static t_CKINT texture_dimension_3d = WGPUTextureDimension_3D;
         // SVAR("int", "Dimension_1D", &texture_dimension_1d);
         SVAR("int", "Dimension_2D", &texture_dimension_2d);
+        DOC_VAR("(hidden)");
         // SVAR("int", "Dimension_3D", &texture_dimension_3d);
+        SVAR("int", "DIMENSION_2D", &texture_dimension_2d);
 
         static t_CKINT texture_format_rgba8unorm  = WGPUTextureFormat_RGBA8Unorm;
         static t_CKINT texture_format_rgba16float = WGPUTextureFormat_RGBA16Float;
         static t_CKINT texture_format_rgba32float = WGPUTextureFormat_RGBA32Float;
         static t_CKINT texture_format_r32float    = WGPUTextureFormat_R32Float;
         SVAR("int", "Format_RGBA8Unorm", &texture_format_rgba8unorm);
-        SVAR("int", "Format_RGBA16Float", &texture_format_rgba16float); // not
-        // supported currently
+        DOC_VAR("(hidden)");
+        SVAR("int", "Format_RGBA16Float", &texture_format_rgba16float);
+        DOC_VAR("(hidden)");
         SVAR("int", "Format_RGBA32Float", &texture_format_rgba32float);
+        DOC_VAR("(hidden)");
         SVAR("int", "Format_R32Float", &texture_format_r32float);
-        // SVAR("int", "Format_Depth24PlusStencil8",
-        // &texture_format_depth24plusstencil8);
+        DOC_VAR("(hidden)");
+
+        SVAR("int", "FORMAT_RGBA8UNORM", &texture_format_rgba8unorm);
+        SVAR("int", "FORMAT_RGBA16FLOAT", &texture_format_rgba16float);
+        SVAR("int", "FORMAT_RGBA32FLOAT", &texture_format_rgba32float);
+        SVAR("int", "FORMAT_R32FLOAT", &texture_format_r32float);
 
         // sfun ------------------------------------------------------------------
 
@@ -890,8 +912,8 @@ static void ulib_texture_write(SG_Texture* tex, Chuck_ArrayFloat* ck_arr,
             || desc->offset_z + desc->depth > tex->desc.depth || desc->offset_x < 0
             || desc->offset_y < 0 || desc->offset_z < 0) {
             snprintf(err_msg, sizeof(err_msg),
-                     "Texture write region out of bounds. Texture dimensions [%d, %d, "
-                     "%d]. Write offsets [%d, %d, %d]. Write region size [%d, %d, %d]",
+                     "Texture write region out of bounds. texture dimensions [%d, %d, "
+                     "%d]. write offsets [%d, %d, %d]. write region size [%d, %d, %d]",
                      tex->desc.width, tex->desc.height, tex->desc.depth, desc->offset_x,
                      desc->offset_y, desc->offset_z, desc->width, desc->height,
                      desc->depth);
@@ -905,7 +927,7 @@ static void ulib_texture_write(SG_Texture* tex, Chuck_ArrayFloat* ck_arr,
             int max_mips = G_mipLevels(tex->desc.width, tex->desc.height);
             if (desc->mip >= max_mips) {
                 snprintf(err_msg, sizeof(err_msg),
-                         "Invalid mip level. Texture has %d mips, but tried to "
+                         "invalid mip level. texture has %d mips, but tried to "
                          "write to mip level %d",
                          max_mips, desc->mip);
                 log_warn("TextureWriteInvalidMip: %s", err_msg);
@@ -918,7 +940,7 @@ static void ulib_texture_write(SG_Texture* tex, Chuck_ArrayFloat* ck_arr,
         if (ck_arr_len < expected_len) {
             snprintf(
               err_msg, sizeof(err_msg),
-              "Incorrect number of components in pixel data. Expected %d, got %d",
+              "incorrect number of components in pixel data. Expected %d, got %d",
               expected_len, ck_arr_len);
             log_warn("TextureWriteInvalidPixelData: %s", err_msg);
             return;
@@ -972,7 +994,7 @@ SG_Texture* ulib_texture_load(const char* filepath, SG_TextureLoadDesc* load_des
 {
     int width, height, num_components;
     if (!stbi_info(filepath, &width, &height, &num_components)) {
-        log_warn("Could not load texture file '%s'", filepath);
+        log_warn("could not load texture file '%s'", filepath);
         log_warn(" |- Reason: %s", stbi_failure_reason());
         log_warn(" |- Defaulting to magenta texture");
 
@@ -1001,7 +1023,7 @@ SG_Texture* ulib_texture_load(unsigned char* buffer, int buffer_len,
 {
     int width, height, num_components;
     if (!stbi_info_from_memory(buffer, buffer_len, &width, &height, &num_components)) {
-        log_warn("Could not load texture file from raw data");
+        log_warn("could not load texture file from raw data");
         log_warn(" |- Reason: %s", stbi_failure_reason());
         log_warn(" |- Defaulting to magenta texture");
 
@@ -1042,7 +1064,7 @@ CK_DLL_MFUN(texture_get_data)
 
     if (API->object->array_float_size(tex->texture_data) == 0) {
         log_warn("Texture[id=%d, name=%s] data empty", tex->id, tex->name);
-        log_warn(" |- Did you mean to read the texture data from GPU first?");
+        log_warn(" |- did you mean to read the texture data from GPU first?");
         log_warn(" |- e.g. `tex.read() => now;`");
     }
 
@@ -1115,9 +1137,9 @@ SG_Texture* ulib_texture_load_cubemap(const char* right_face, const char* left_f
     for (int i = 0; i < 6; i++) {
         int width{}, height{};
         if (!stbi_info(filepaths[i], &width, &height, NULL)) {
-            log_warn("Could not load texture file '%s'", filepaths[i]);
-            log_warn(" |- Reason: %s", stbi_failure_reason());
-            log_warn(" |- Defaulting to magenta texture");
+            log_warn("could not load texture file '%s'", filepaths[i]);
+            log_warn(" |- reason: %s", stbi_failure_reason());
+            log_warn(" |- defaulting to magenta texture");
 
             // on failure return default cubemap
             return SG_GetTexture(g_builtin_textures.default_cubemap_id);
@@ -1129,7 +1151,7 @@ SG_Texture* ulib_texture_load_cubemap(const char* right_face, const char* left_f
         // check if all faces have same dimensions
         if (cubemap_width != width || cubemap_height != height) {
             log_warn(
-              "Cubemap faces have different dimensions %dx%d vs %dx%d on face %d",
+              "cubemap faces have different dimensions %dx%d vs %dx%d on face %d",
               cubemap_width, cubemap_height, width, height, i);
             log_warn(" |- Defaulting to magenta texture");
 
@@ -1199,7 +1221,7 @@ static void ulib_texture_copyTextureToTexture(SG_Texture* dst, SG_Texture* src,
             if (dst_loc.origin_x > dst->desc.width
                 || dst_loc.origin_y > dst->desc.height
                 || dst_loc.origin_z > dst->desc.depth || dst_loc.mip >= dst_mips) {
-                log_warn("Could not copy texture[%d] %s to texture[%d] %s", src->id,
+                log_warn("could not copy texture[%d] %s to texture[%d] %s", src->id,
                          src->name, dst->id, dst->name);
                 log_warn(
                   " |- Reason: destination location [%d, %d, %d] mip %d is out of "
@@ -1215,7 +1237,7 @@ static void ulib_texture_copyTextureToTexture(SG_Texture* dst, SG_Texture* src,
             if (src_loc.origin_x > src->desc.width
                 || src_loc.origin_y > src->desc.height
                 || src_loc.origin_z > src->desc.depth || src_loc.mip >= src_mips) {
-                log_warn("Could not copy texture[%d] %s to texture[%d] %s", src->id,
+                log_warn("could not copy texture[%d] %s to texture[%d] %s", src->id,
                          src->name, dst->id, dst->name);
                 log_warn(
                   " |- Reason: source location [%d, %d, %d] mip %d is out of bounds "
@@ -1235,7 +1257,7 @@ static void ulib_texture_copyTextureToTexture(SG_Texture* dst, SG_Texture* src,
             const char* src_format_str
               = ulib_texture_wgpuTextureFormatToString(src->desc.format);
 
-            log_warn("Could not copy texture[%d] %s to texture[%d] %s", src->id,
+            log_warn("could not copy texture[%d] %s to texture[%d] %s", src->id,
                      src->name, dst->id, dst->name);
             log_warn(" |- Reason: mismatched texture formats %s != %s", dst_format_str,
                      src_format_str);
@@ -1244,7 +1266,7 @@ static void ulib_texture_copyTextureToTexture(SG_Texture* dst, SG_Texture* src,
 
         // src.texture must have a usage of GPUTextureUsage.COPY_SRC
         if ((src->desc.usage & WGPUTextureUsage_CopySrc) == 0) {
-            log_warn("Could not copy texture[%d] %s to texture[%d] %s", src->id,
+            log_warn("could not copy texture[%d] %s to texture[%d] %s", src->id,
                      src->name, dst->id, dst->name);
             log_warn(
               " |- Reason: source texture[%d] does not have the Texture.Usage_CopySrc "
@@ -1255,7 +1277,7 @@ static void ulib_texture_copyTextureToTexture(SG_Texture* dst, SG_Texture* src,
 
         // dst.texture must have a usage of GPUTextureUsage.COPY_DST
         if ((dst->desc.usage & WGPUTextureUsage_CopyDst) == 0) {
-            log_warn("Could not copy texture[%d] %s to texture[%d] %s", src->id,
+            log_warn("could not copy texture[%d] %s to texture[%d] %s", src->id,
                      src->name, dst->id, dst->name);
             log_warn(
               " |- Reason: destination texture[%d] does not have the "
@@ -1268,7 +1290,7 @@ static void ulib_texture_copyTextureToTexture(SG_Texture* dst, SG_Texture* src,
         // check if dst is too small
         if (dst->desc.width < width || dst->desc.height < height
             || dst->desc.depth < depth) {
-            log_warn("Could not copy texture[%d] %s to texture[%d] %s", src->id,
+            log_warn("could not copy texture[%d] %s to texture[%d] %s", src->id,
                      src->name, dst->id, dst->name);
             log_warn(
               " |- Reason: destination texture is too small"
@@ -1290,7 +1312,7 @@ CK_DLL_SFUN(texture_copy_texture_to_texture)
     Chuck_Object* dst_ckobj = (GET_NEXT_OBJECT(ARGS));
     Chuck_Object* src_ckobj = (GET_NEXT_OBJECT(ARGS));
     if (!dst_ckobj || !src_ckobj) {
-        log_warn("Could not copy texture to texture");
+        log_warn("could not copy texture to texture");
         log_warn(" |- Reason: null texture objects");
         return;
     }
@@ -1321,7 +1343,7 @@ CK_DLL_SFUN(texture_copy_texture_to_texture_with_desc)
     t_CKINT copy_size_z = GET_NEXT_INT(ARGS);
 
     if (!dst_ckobj || !src_ckobj) {
-        log_warn("Could not copy texture to texture");
+        log_warn("could not copy texture to texture");
         log_warn(" |- Reason: null texture objects");
         return;
     }
