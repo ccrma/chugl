@@ -8,14 +8,18 @@
 //
 // ChuGL does *not* store a per-pixel transparency list or do any techniques 
 // for OIT.
+//
+// requires: ChuGL + chuck-1.5.5.5 or higher
 // 
 // author: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
 //   date: Summer 2025
 //-----------------------------------------------------------------------------
 
-// Init camera
+// set an orbit camera as the main camera
 GOrbitCamera cam => GG.scene().camera;
+// position the camera
 cam.posZ(2);
+// size the camera
 cam.viewSize(2);
 
 // init materials

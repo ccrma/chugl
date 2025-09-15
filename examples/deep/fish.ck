@@ -1,31 +1,36 @@
 //-----------------------------------------------------------------------------
 // name: fish.ck
-// desc: Procedural animation of a fish using Catmull-Rom splines, dynamic
-// polygon triangulation, and trail renderers.
+// desc: procedural animation of a fish using Catmull-Rom splines
+//       dynamic polygon triangulation, and trail renderers.
+// requires: ChuGL / chuck-1.5.5.5
 //
-// Inspired by this awesome video:
-// https://www.youtube.com/watch?v=qlfh_rv6khY&ab_channel=argonaut
+// inspired by this awesome video:
+//   https://www.youtube.com/watch?v=qlfh_rv6khY&ab_channel=argonaut
 //
-// authors: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
-//
-// date: Fall 2024
+// author: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
+//   date: Fall 2024
 //-----------------------------------------------------------------------------
 
-// Camera and Mouse settings
+// set orthographic projection
 GG.camera().orthographic();
-GWindow.mouseMode(GWindow.MouseMode_Disabled);
+// mouse mode
+GWindow.mouseMode(GWindow.MOUSE_DISABLED);
 
-// Using GLine as a trail renderer
+// using GLine as a trail renderer
 class TrailRenderer extends GGen
 {
+    // connect a GLine as child of this GGen
     GLines trail --> this;
-    trail.width(.01);
-    vec2 trail_positions[0]; // position history in *reverse* older. position 0 is oldest. position size() - 1 is newest
-    vec3 trail_colors[0];
 
+    trail.width(.01);
+    // position history in *reverse* older. position 0 is oldest. position size() - 1 is newest
+    vec2 trail_positions[0];
+    vec3 trail_colors[0];
     false => int initialized;
 
-    fun void init(int history, vec3 gradient_start_color, vec3 gradient_end_color) {
+    // init
+    fun void init(int history, vec3 gradient_start_color, vec3 gradient_end_color)
+    {
         trail_positions.size(history);
         trail_colors.size(history);
 
@@ -37,7 +42,9 @@ class TrailRenderer extends GGen
         trail.colors(trail_colors);
     }
 
-    fun void follow(vec2 world_pos) {
+    // follow
+    fun void follow(vec2 world_pos)
+    {
         if (!initialized) {
             true => initialized;
             for (int i; i < trail_positions.size(); i++)
@@ -57,7 +64,9 @@ class TrailRenderer extends GGen
 }
 
 // Catmull-Rom Spline (assumes `control_points` forms a loop)
-fun void catmullRomSpline(vec2 control_points[], int subdivisions_per_segment, vec2 line_positions[])
+fun void catmullRomSpline( vec2 control_points[],
+                           int subdivisions_per_segment,
+                           vec2 line_positions[] )
 {
     line_positions.clear();
 
@@ -92,7 +101,6 @@ fun void catmullRomSpline(vec2 control_points[], int subdivisions_per_segment, v
 }
 
 // helper math functions ========================================
-
 fun vec2 normalize(vec2 n)
 {
     return n / Math.hypot(n.x, n.y); // hypot is the magnitude
@@ -133,11 +141,11 @@ fun float angle(vec2 a, vec2 b) {
     (2 * (dot(a_perp, b) > 0)) - 1 => int ccw_side; // +1 if ccw, else -1
     return ccw_side * Math.acos(dot( normalize(a), normalize(b)));
 }
-
 // end helper math functions ========================================
 
 // fish body outline
 GLines fish_body_outline --> GG.scene();
+// width
 fish_body_outline.width(.02);
 
 // fish body segment diameters
@@ -174,7 +182,7 @@ FlatMaterial poly_mat;
 GMesh poly(poly_geo, poly_mat)  --> GG.scene();
 poly_mat.color(Color.RED);
 
-// Fish fins
+// fish fins
 FlatMaterial fin_material;
 CircleGeometry fin_geo;
 
@@ -224,11 +232,14 @@ for (int i; i < dorsal_trails.size(); i++) {
 }
 
 
-while (true) {
+// game loop
+while (true)
+{
+    // synchronize
     GG.nextFrame() => now;
-
+    // mouse input
     GG.camera().screenCoordToWorldPos(GWindow.mousePos(), 1.0) $ vec2 => vec2 mouse_pos;
-
+    // copy
     mouse_pos => spine[0];
 
     0 => float curvature;
@@ -285,6 +296,7 @@ while (true) {
     catmullRomSpline(outline, 16, line_positions);
     fish_body_outline.positions(line_positions);
 
+    // build geometry
     poly_geo.build(line_positions);
 
     // normalize curvature by # of segments

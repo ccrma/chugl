@@ -1,6 +1,7 @@
 //--------------------------------------------------------------------
 // name: gtext.ck
 // desc: drawing text with GText!
+// requires: ChuGL + chuck-1.5.5.5 or higher
 //
 // author: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
 //   date: Fall 2024

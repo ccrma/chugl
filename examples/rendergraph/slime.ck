@@ -9,6 +9,8 @@
 // https://uwe-repository.worktribe.com/output/980579
 // https://cargocollective.com/sagejenson/physarum
 //-----------------------------------------------------------------------------
+// full screen
+GWindow.fullscreen();
 
 // simulation parameters
 150000 => int NUM_SLIMES;  
@@ -22,7 +24,7 @@ UI_Float dissolve_factor(.95);
 // agent shader params
 UI_Float sensor_offset(8.0);
 UI_Int sensor_size(4);
-UI_Float sense_angle_deg(45);
+UI_Float sense_angle_deg(60);
 UI_Float speed_pixels(60);
 UI_Float turn_speed(16);
 UI_Int simulation_mode(0);
@@ -32,7 +34,9 @@ UI_Bool pause;
 UI_Float3 base_color(0, 0, 0);
 UI_Float3 highlight_color(1.0, 1.0, 1.0);
 
+// shader description
 ShaderDesc compute_shader_desc;
+// code
 "
 struct Agent {
     pos : vec2f,
@@ -143,8 +147,10 @@ fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) {
     textureStore(trail_texture_write, tex_coords, vec4f(1));
 }
 " => compute_shader_desc.computeCode;
+// create shader
 Shader agent_shader(compute_shader_desc);
 
+// shader description
 ShaderDesc trail_shader_desc;
 "
 @group(0) @binding(0) var trail_texture_read: texture_2d<f32>;
@@ -188,9 +194,10 @@ fn main(@builtin(global_invocation_id) id : vec3u) {
     textureStore(trail_texture_write, id.xy, diffuse);
 }
 " => trail_shader_desc.computeCode;
+// create shader
 Shader trail_shader(trail_shader_desc);
 
-
+// screen shader code
 " 
     #include FRAME_UNIFORMS
     @group(1) @binding(0) var src: texture_2d<f32>;
@@ -234,11 +241,13 @@ Shader trail_shader(trail_shader_desc);
     }
 " => string screen_shader;
 
+// shader description
 ShaderDesc desc;
 screen_shader => desc.vertexCode => desc.fragmentCode;
 null => desc.vertexLayout; // screen shader does not take vertex data
-
+// create shader
 Shader shader(desc);
+// name it
 shader.name("screen shader");
 
 // storage buffer to hold agent data
@@ -246,8 +255,11 @@ StorageBuffer slime_buffer;
 slime_buffer.size(4 * NUM_SLIMES);
 float slime_init[4 * NUM_SLIMES];
 
-fun void initSlimeBuffer() {
-    for (int i; i < NUM_SLIMES; i++) {
+// init slime buffer
+fun void initSlimeBuffer()
+{
+    for (int i; i < NUM_SLIMES; i++)
+    {
         // set position (xy)
         0.5 => slime_init[4*i + 0];
         0.5 => slime_init[4*i + 1];
@@ -262,7 +274,9 @@ fun void initSlimeBuffer() {
 }
 
 // render graph
-GG.rootPass() --> ComputePass agent_pass(agent_shader) --> ComputePass trail_pass(trail_shader) --> ScreenPass screen_pass(shader);
+GG.rootPass() --> ComputePass agent_pass(agent_shader)
+              --> ComputePass trail_pass(trail_shader)
+              --> ScreenPass screen_pass(shader);
 
 // textures to hold slime trail data
 TextureDesc trail_tex_desc;
@@ -270,10 +284,13 @@ RESOLUTION_X => trail_tex_desc.width;
 RESOLUTION_Y => trail_tex_desc.height;
 false => trail_tex_desc.mips;
 
+// textures
 Texture trail_tex_a(trail_tex_desc); 
 Texture trail_tex_b(trail_tex_desc); 
 
-fun void swapBuffers() {
+// swap buffer
+fun void swapBuffers()
+{
     (GG.fc() % 2 == 0) => int swap;
 
     swap ? trail_tex_a : trail_tex_b @=> Texture read_tex;
@@ -288,7 +305,9 @@ fun void swapBuffers() {
     screen_pass.material().texture(0, read_tex);
 }
 
-fun void setUniforms(float dt) {
+// set uniforms
+fun void setUniforms(float dt)
+{
     agent_pass.uniformFloat(3, dt);
     agent_pass.uniformFloat(4, sensor_offset.val());
     agent_pass.uniformInt(5, sensor_size.val());
@@ -305,18 +324,29 @@ fun void setUniforms(float dt) {
     screen_pass.material().uniformFloat3(3, highlight_color.val());
 }
 
+// init
 initSlimeBuffer();
+// swap
 swapBuffers();
+// set for dt=0
 setUniforms(0);
+// bind
 agent_pass.storageBuffer(0, slime_buffer);
+// texture sampler
 screen_pass.material().sampler(1, TextureSampler.linear());
-agent_pass.workgroup((NUM_SLIMES / 64) + 1, 1, 1);
+// size of compute shader workgroup; # of GPU threads to dispatch; each group 64x1x1
+agent_pass.workgroup((NUM_SLIMES / 64) + 1, 1, 1); 
+// size of compute shader workgroup; # of GPU threads to dispatch; each gropu 8x8x1
 trail_pass.workgroup((RESOLUTION_X / 8) + 1, (RESOLUTION_Y / 8) + 1, 1);
 
-while (1) {
+// render loop
+while (true)
+{
+    // synchronize
     GG.nextFrame() => now;
 
-    if (UI.begin("")) {
+    // begin UI
+    if (UI.begin("options")) {
         UI.slider("trail diffusion speed", diffusion_speed, 0.0, 20.0);
         UI.slider("trail dissolve rate", dissolve_factor, 0.0, 1.0);
         
@@ -331,13 +361,16 @@ while (1) {
         UI.colorEdit("highlight color", highlight_color);
 
         UI.checkbox("pause", pause);
-
+        // button for restart simulation
         if (UI.button("restart simulation")) {
             initSlimeBuffer();
         }
     }
+    // end UI
     UI.end();
 
+    // swap double buffering
     swapBuffers();
+    // update uniforms
     setUniforms(pause.val() ? 0.0 : GG.dt());
 }

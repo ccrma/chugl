@@ -1,4 +1,3 @@
-
 //-----------------------------------------------------------------------------
 // name: particles.ck
 // desc: sonifying a simple particle system
@@ -7,22 +6,27 @@
 //   date: Fall 2024
 //-----------------------------------------------------------------------------
 
-// scene setup
+// camera  setup
 GG.camera().orthographic();
+// scene background
 .1 * Color.DARKBLUE => GG.scene().backgroundColor;
 
-// particle system parameters
+// UI variables for particle system parameters
 UI_Float3 start_color(Color.SKYBLUE);
 UI_Float3 end_color(Color.DARKPURPLE);
 UI_Float lifetime(1.0);
 UI_Float3 background_color(GG.scene().backgroundColor());
 
+// geometry
 CircleGeometry particle_geo;
-
 // pitch bank
 [48, 53, 55, 60, 63, 67, 70, 72, 74] @=> int pitches[];
+// audio graph
 Gain main_gain(1) => dac;
-class Particle {
+
+// custom Particle class (graphics + audio)
+class Particle
+{
     // set up particle mesh
     FlatMaterial particle_mat;
     GMesh particle_mesh(particle_geo, particle_mat) --> GG.scene();
@@ -42,15 +46,23 @@ class Particle {
     1::second => env.releaseTime;
 }
 
+// size of particle pool
 256 => int PARTICLE_POOL_SIZE;
 Particle particles[PARTICLE_POOL_SIZE];
 
-class ParticleSystem {
+// particle system class
+class ParticleSystem
+{
+    // number of active particles
     0 => int num_active;
 
-    fun void update(float dt) {
+    // update
+    fun void update(float dt)
+    {
         // update particles
-        for (0 => int i; i < num_active; i++) {
+        for (0 => int i; i < num_active; i++)
+        {
+            // the current particle
             particles[i] @=> Particle p;
 
             // swap despawned particles to the end of the active list
@@ -82,7 +94,8 @@ class ParticleSystem {
         }
     }
 
-    fun void spawnParticle(vec3 pos) {
+    fun void spawnParticle(vec3 pos)
+    {
         if (num_active < PARTICLE_POOL_SIZE) {
             particles[num_active] @=> Particle p;
             
@@ -107,18 +120,25 @@ class ParticleSystem {
     }
 }
 
+// create a particle system
 ParticleSystem ps;
-while (true) {
+
+// game loop
+while (true)
+{
+    // synchronize
     GG.nextFrame() => now;
 
+    // check for mouse input
     if (GWindow.mouseLeft()) {
         // spawn a particle at the mouse position
         ps.spawnParticle(GG.camera().screenCoordToWorldPos(GWindow.mousePos(), 1.0));
     }
 
+    // update particle system
     ps.update(GG.dt());
 
-    // UI
+    // begin UI
     if (UI.begin("Particle System")) {
         if (UI.colorEdit("Background Color", background_color, 0)) {
             background_color.val() => GG.scene().backgroundColor;
@@ -127,5 +147,6 @@ while (true) {
         UI.colorEdit("End Color", end_color, 0);
         UI.slider("Lifetime", lifetime, 0.1, 5.0); 
     }
+    // end UI
     UI.end();
 }

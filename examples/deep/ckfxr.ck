@@ -54,9 +54,9 @@ fun void audioAnalyzerShred()
 } spork ~ audioAnalyzerShred();
 
 
-// Delay-based effects including flange, chorus, doubling
-// https://github.com/ccrma/music220a/blob/main/07-time-and-space/delay-based-efx/script.js
-// https://ccrma.stanford.edu/~dattorro/EffectDesignPart2.pdf
+// delay-based effects including flange, chorus, doubling
+//   https://github.com/ccrma/music220a/blob/main/07-time-and-space/delay-based-efx/script.js
+//   https://ccrma.stanford.edu/~dattorro/EffectDesignPart2.pdf
 class DelayFX extends Chugraph
 {
     // audio signal
