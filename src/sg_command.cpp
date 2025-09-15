@@ -1128,10 +1128,11 @@ void CQ_PushCommand_G2A_FilesDropped(int count, const char** paths)
             ASSERT(false);
             break;
         }
-
-        int n = strlcpy(write_head, paths[i], size_bytes) + 1;
-        write_head += n;
-        size_bytes -= n;
+        
+        int len = strlen(paths[i]);
+        strcpy(write_head, paths[i]);
+        write_head += (len + 1);
+        size_bytes -= (len + 1); 
     }
     ASSERT(size_bytes == 0);
     END_COMMAND();

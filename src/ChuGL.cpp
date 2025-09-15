@@ -26,8 +26,6 @@
  SOFTWARE.
 -----------------------------------------------------------------------------*/
 
-#include <unistd.h>
-
 // clang-format off
 #include "all.cpp"
 #include "ulib_helper.h"
@@ -680,8 +678,7 @@ int OpenFileDialogThread(void* arg)
 {
     Chuck_Event* event = (Chuck_Event*)arg;
 
-    char* files_copy
-      = strdup(tinyfd_openFileDialog(NULL, g_chugl_working_dir, 0, NULL, NULL, 1));
+    char* files_copy = strdup(tinyfd_openFileDialog(NULL, NULL, 0, NULL, NULL, 1));
 
     spinlock::lock(&file_dialog_lock);
     FileDialogResult* result
@@ -737,8 +734,12 @@ CK_DLL_SFUN(chugl_open_file_dialog_async)
 
 CK_DLL_SFUN(chugl_open_file_dialog)
 {
+    Chuck_String* ck_str_default_path = GET_NEXT_STRING(ARGS);
 
-    char* file = tinyfd_openFileDialog(NULL, NULL, 0, NULL, NULL, 0);
+    const char* default_path
+      = ck_str_default_path ? API->object->str(ck_str_default_path) : NULL;
+
+    char* file = tinyfd_openFileDialog(NULL, default_path, 0, NULL, NULL, 0);
     if (file) {
         RETURN->v_object = (Chuck_Object*)chugin_createCkString(file, false);
     } else {
@@ -756,17 +757,6 @@ CK_DLL_SFUN(chugl_open_file_dialog)
     /* in case of multiple files, the separator is | */
     /* returns NULL on cancel */
 }
-
-// CK_DLL_SFUN(chugl_save_file_dialog)
-// {
-//     char* save_filepath = tinyfd_saveFileDialog(NULL, NULL, 0, NULL, NULL);
-//     if (save_filepath) {
-//         RETURN->v_object = (Chuck_Object*)chugin_createCkString(save_filepath,
-//         false);
-//     } else {
-//         RETURN->v_object = NULL;
-//     }
-// }
 
 CK_DLL_SFUN(chugl_save_file_dialog_ex)
 {
@@ -807,12 +797,6 @@ CK_DLL_QUERY(ChuGL)
 #ifdef CHUGL_RELEASE
     log_set_level(LOG_WARN); // only log errors and fatal in release mode
 #endif
-
-    char* cwd           = getcwd(NULL, 0);
-    int cwd_size        = strlen(cwd) + 2;
-    g_chugl_working_dir = (char*)malloc(cwd_size);
-    snprintf(g_chugl_working_dir, cwd_size, "%s/", cwd);
-    log_trace("Working Directory: %s\n", g_chugl_working_dir);
 
     // remember
     g_chuglVM  = QUERY->ck_vm(QUERY);
@@ -1110,12 +1094,16 @@ CK_DLL_QUERY(ChuGL)
           "as it waits for this shred to call GG.nextFrame() again.");
 
         SFUN(chugl_open_file_dialog, "string", "openFileDialog");
+        ARG("string", "default_path_or_file");
         DOC_FUNC(
           "Opens an open-file file dialog for the user to select a file. Returns "
           "null if the user cancels the dialog without selecting a file."
           "NOTE: this version of the method is *synchronous* and *blocking*, "
           "meaning that while the user is on the dialog, chuck VM execution--along "
-          "with audio synthesis--will be paused!");
+          "with audio synthesis--will be paused!"
+          "param `default_path_or_file` sets default directory and/or save file name "
+          "in the modal. End this param with a '/' to set only the directory. If "
+          "null, defaults me.dir()");
 
         SFUN(chugl_open_file_dialog_async, "OpenFileEvent", "openFileDialogAsync");
         DOC_FUNC("(hidden)");

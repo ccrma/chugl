@@ -112,7 +112,6 @@ Arena audio_frame_arena         = {};
 f64 g_last_dt                   = 0.0;
 i64 g_frame_count               = 0;
 bool g_chugl_window_initialized = false; // set to true the on first GG.nextFrame()
-char* g_chugl_working_dir       = NULL;
 
 Chuck_ArrayInt* g_dropped_files = NULL;
 
