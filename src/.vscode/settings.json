@@ -134,6 +134,8 @@
     "tinycthread.h": "c",
     "tinyfiledialogs.c": "cpp",
     "strstream": "cpp",
-    "tinycthread.c": "cpp"
+    "tinycthread.c": "cpp",
+    "span": "cpp",
+    "ranges": "cpp"
   }
 }

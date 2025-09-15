@@ -209,6 +209,7 @@ static const char* BufferMapAsyncStatusToString(WGPUBufferMapAsyncStatus status)
 
 static void FlushGraphicsToAudioCQ()
 {
+    CK_DL_API API = g_chuglAPI;
     // swap read/write queues
     CQ_SwapQueues(true);
 
@@ -253,11 +254,18 @@ static void FlushGraphicsToAudioCQ()
                 }
                 ASSERT(bytes_copied == cmd->size_bytes);
 
-                // replace the previous dropped_files ckarray
                 if (g_dropped_files) {
                     g_chuglAPI->object->release((Chuck_Object*)g_dropped_files);
                 }
                 g_dropped_files = ck_string_arr;
+            } break;
+            case SG_COMMAND_G2A_TEXTURE_SAVE: {
+                SG_Command_G2A_TextureSave* cmd = (SG_Command_G2A_TextureSave*)command;
+                OBJ_MEMBER_INT((Chuck_Object*)cmd->texture_save_event,
+                               texture_save_event_status_offset)
+                  = cmd->status;
+                Event_Broadcast(cmd->texture_save_event);
+                API->object->release((Chuck_Object*)cmd->texture_save_event);
             } break;
             default: ASSERT(false)
         }
@@ -729,12 +737,13 @@ CK_DLL_SFUN(chugl_open_file_dialog_async)
 
 CK_DLL_SFUN(chugl_open_file_dialog)
 {
-    // const char* title = API->object->str(GET_NEXT_STRING(ARGS));
-    // const char* default_path_or_file = API->object->str(GET_NEXT_STRING(ARGS));
-    // TODO add filter patterns
 
-    char* file       = tinyfd_openFileDialog(NULL, NULL, 0, NULL, NULL, 0);
-    RETURN->v_object = (Chuck_Object*)chugin_createCkString(file, false);
+    char* file = tinyfd_openFileDialog(NULL, NULL, 0, NULL, NULL, 0);
+    if (file) {
+        RETURN->v_object = (Chuck_Object*)chugin_createCkString(file, false);
+    } else {
+        RETURN->v_object = NULL;
+    }
 
     // char * tinyfd_openFileDialog(
     // 	char const * aTitle, /* NULL or "" */
@@ -748,6 +757,31 @@ CK_DLL_SFUN(chugl_open_file_dialog)
     /* returns NULL on cancel */
 }
 
+CK_DLL_SFUN(chugl_save_file_dialog)
+{
+    char* save_filepath = tinyfd_saveFileDialog(NULL, NULL, 0, NULL, NULL);
+    if (save_filepath) {
+        RETURN->v_object = (Chuck_Object*)chugin_createCkString(save_filepath, false);
+    } else {
+        RETURN->v_object = NULL;
+    }
+}
+
+CK_DLL_SFUN(chugl_save_file_dialog_ex)
+{
+    Chuck_String* ck_str_default_path = GET_NEXT_STRING(ARGS);
+
+    const char* default_path
+      = ck_str_default_path ? API->object->str(ck_str_default_path) : NULL;
+
+    char* save_filepath = tinyfd_saveFileDialog(NULL, default_path, 0, NULL, NULL);
+    if (save_filepath) {
+        RETURN->v_object = (Chuck_Object*)chugin_createCkString(save_filepath, false);
+    } else {
+        RETURN->v_object = NULL;
+    }
+}
+
 // ============================================================================
 // Chugin entry point
 // ============================================================================
@@ -758,7 +792,10 @@ CK_DLL_QUERY(ChuGL)
     log_set_level(LOG_WARN); // only log errors and fatal in release mode
 #endif
 
-    g_chugl_working_dir = getcwd(NULL, 0);
+    char* cwd           = getcwd(NULL, 0);
+    int cwd_size        = strlen(cwd) + 2;
+    g_chugl_working_dir = (char*)malloc(cwd_size);
+    snprintf(g_chugl_working_dir, cwd_size, "%s/", cwd);
     log_trace("Working Directory: %s\n", g_chugl_working_dir);
 
     // remember
@@ -991,9 +1028,6 @@ CK_DLL_QUERY(ChuGL)
           "See examples/rendergraph/bloom.ck for how to set up via the rendergraph and "
           "GPass API explicitly.");
 
-        // SFUN(chugl_get_bloom, "int", "bloom");
-        // DOC_FUNC("Get whether bloom has been added via GG.bloom(int)");
-
         SFUN(chugl_get_auto_update_scenegraph, "int", "autoUpdate");
         DOC_FUNC(
           "Returns true if GGen update() functions are automatically called "
@@ -1060,10 +1094,34 @@ CK_DLL_QUERY(ChuGL)
           "as it waits for this shred to call GG.nextFrame() again.");
 
         SFUN(chugl_open_file_dialog, "string", "openFileDialog");
-        DOC_FUNC("(hidden)");
+        DOC_FUNC(
+          "Opens an open-file file dialog for the user to select a file. Returns "
+          "null if the user cancels the dialog without selecting a file."
+          "NOTE: this version of the method is *synchronous* and *blocking*, "
+          "meaning that while the user is on the dialog, chuck VM execution--along "
+          "with audio synthesis--will be paused!");
 
         SFUN(chugl_open_file_dialog_async, "OpenFileEvent", "openFileDialogAsync");
         DOC_FUNC("(hidden)");
+
+        SFUN(chugl_save_file_dialog, "string", "saveFileDialog");
+        DOC_FUNC(
+          "Open a system save file dialog for the user to select a save path. Returns "
+          "null if the user cancels the dialog without selecting a path."
+          "NOTE: this version of the method is *synchronous* and *blocking*, "
+          "meaning that while the user is on the dialog, chuck VM execution--along "
+          "with audio synthesis--will be paused!");
+
+        SFUN(chugl_save_file_dialog_ex, "string", "saveFileDialog");
+        ARG("string", "default_path_or_file");
+        DOC_FUNC(
+          "Open a system save file dialog for the user to select a save path. Returns "
+          "null if the user cancels the dialog without selecting a path."
+          "NOTE: this version of the method is *synchronous* and *blocking*, "
+          "meaning that while the user is on the dialog, chuck VM execution--along "
+          "with audio synthesis--will be paused!"
+          "param `default_path_or_file` sets default directory and/or save file name "
+          "in the modal. End this param with a '/' to set only the directory");
 
         END_CLASS();
     } // GG

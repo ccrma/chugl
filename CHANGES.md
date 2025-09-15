@@ -1,6 +1,7 @@
 # Changes
 
 ## 0.2.7 (alpha)
+- add `Texture.save(string)` to save a GPU texture to a .png
 - add `Geometry.indexCount()` to control the number of indices drawn in an indexed draw
 - add `GWindow.droppedFiles()` to handle drag+dropping files onto the window
 - New `GText` features

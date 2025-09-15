@@ -703,13 +703,15 @@ void CQ_PushCommand_CopyTextureToCPU(SG_Texture* texture)
     END_COMMAND();
 }
 
-void CQ_PushCommand_SaveTexture(SG_Texture* texture, const char* fp)
+void CQ_PushCommand_SaveTexture(SG_Texture* texture, const char* fp,
+                                Chuck_Event* save_event)
 {
     int size_bytes = strlen(fp);
     BEGIN_COMMAND_ADDITIONAL_MEMORY_ZERO(SG_Command_SaveTexture,
                                          SG_COMMAND_SAVE_TEXTURE, size_bytes + 1);
     memcpy(memory, fp, size_bytes);
     command->id              = texture->id;
+    command->save_event      = save_event;
     command->filepath_offset = Arena::offsetOf(cq.write_q, memory);
     END_COMMAND();
 }
@@ -1132,6 +1134,14 @@ void CQ_PushCommand_G2A_FilesDropped(int count, const char** paths)
         size_bytes -= n;
     }
     ASSERT(size_bytes == 0);
+    END_COMMAND();
+}
+
+void CQ_PushCommand_G2A_TextureSave(Chuck_Event* texture_save_event, int status)
+{
+    BEGIN_COMMAND(SG_Command_G2A_TextureSave, SG_COMMAND_G2A_TEXTURE_SAVE);
+    command->status             = status;
+    command->texture_save_event = texture_save_event;
     END_COMMAND();
 }
 

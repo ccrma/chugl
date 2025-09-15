@@ -2,8 +2,8 @@
 
 // assert default vertex and index counts
 Geometry default_geo;
-T.assert(default_geo.vertexCount == -1, "default vertex count");
-T.assert(default_geo.indexCount == -1, "default index count");
+T.assert(default_geo.vertexCount() == -1, "default vertex count");
+T.assert(default_geo.indexCount() == -1, "default index count");
 
 // Custom geometry test
 T.assert(Geometry.AttributeLocation_Count == 8, "MAX_VERTEX_ATTRIBUTES");

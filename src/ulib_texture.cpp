@@ -90,6 +90,9 @@ CK_DLL_CTOR(texture_load_desc_ctor);
 static t_CKUINT texture_load_desc_flip_y_offset   = 0;
 static t_CKUINT texture_load_desc_gen_mips_offset = 0;
 
+// TextureSaveEvent -----------------------------------------------------------------
+static t_CKUINT texture_save_event_status_offset = 0;
+
 // Texture ---------------------------------------------------------------------
 CK_DLL_CTOR(texture_ctor);
 CK_DLL_CTOR(texture_ctor_with_desc);
@@ -323,6 +326,18 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
         END_CLASS();
     }
 
+    { // TextureSaveEvent
+        BEGIN_CLASS("TextureSaveEvent", "Event");
+        DOC_CLASS(
+          "Event returned by Texture.save(), which is triggered by ChuGL when the save "
+          "operation is finished.");
+
+        texture_save_event_status_offset = MVAR("int", "error", false);
+        DOC_VAR("0 if save was successful, nonzero on failure.");
+
+        END_CLASS();
+    }
+
     // Texture
     {
         BEGIN_CLASS(SG_CKNames[SG_COMPONENT_TEXTURE], SG_CKNames[SG_COMPONENT_BASE]);
@@ -520,9 +535,13 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
           "Get the most recently read texture data. This function should be called "
           "after waiting on the Event object returned by `Texture.read()`");
 
-        MFUN(texture_save, "void", "save");
+        MFUN(texture_save, "TextureSaveEvent", "save");
         ARG("string", "fp");
-        DOC_FUNC("Saves the texture as a .png to the given filepath");
+        DOC_FUNC(
+          "Saves the texture as a .png to the given filepath. If fp is null, returns "
+          "null and does nothing. Otherwise you can wait on the TextureSaveEvent "
+          "returned by this method, which will be broadcast when the texture data is "
+          "finished saving.");
 
         END_CLASS();
     }
@@ -868,14 +887,16 @@ static void ulib_texture_write(SG_Texture* tex, Chuck_ArrayFloat* ck_arr,
         // check offset within image bounds
         if (desc->offset_x + desc->width > tex->desc.width
             || desc->offset_y + desc->height > tex->desc.height
-            || desc->offset_z + desc->depth > tex->desc.depth) {
+            || desc->offset_z + desc->depth > tex->desc.depth || desc->offset_x < 0
+            || desc->offset_y < 0 || desc->offset_z < 0) {
             snprintf(err_msg, sizeof(err_msg),
                      "Texture write region out of bounds. Texture dimensions [%d, %d, "
                      "%d]. Write offsets [%d, %d, %d]. Write region size [%d, %d, %d]",
                      tex->desc.width, tex->desc.height, tex->desc.depth, desc->offset_x,
                      desc->offset_y, desc->offset_z, desc->width, desc->height,
                      desc->depth);
-            CK_THROW("TextureWriteOutOfBounds", err_msg, SHRED);
+            log_warn("TextureWriteOutOfBounds: %s", err_msg);
+            return;
         }
 
         // check mip level valid (only checking for fixed size textures because how do
@@ -887,7 +908,8 @@ static void ulib_texture_write(SG_Texture* tex, Chuck_ArrayFloat* ck_arr,
                          "Invalid mip level. Texture has %d mips, but tried to "
                          "write to mip level %d",
                          max_mips, desc->mip);
-                CK_THROW("TextureWriteInvalidMip", err_msg, SHRED);
+                log_warn("TextureWriteInvalidMip: %s", err_msg);
+                return;
             }
         }
 
@@ -898,7 +920,8 @@ static void ulib_texture_write(SG_Texture* tex, Chuck_ArrayFloat* ck_arr,
               err_msg, sizeof(err_msg),
               "Incorrect number of components in pixel data. Expected %d, got %d",
               expected_len, ck_arr_len);
-            CK_THROW("TextureWriteInvalidPixelData", err_msg, SHRED);
+            log_warn("TextureWriteInvalidPixelData: %s", err_msg);
+            return;
         }
     }
 
@@ -1028,9 +1051,19 @@ CK_DLL_MFUN(texture_get_data)
 
 CK_DLL_MFUN(texture_save)
 {
-    SG_Texture* tex = GET_TEXTURE(SELF);
-    const char* fp  = API->object->str(GET_NEXT_STRING(ARGS));
-    CQ_PushCommand_SaveTexture(tex, fp);
+    SG_Texture* tex      = GET_TEXTURE(SELF);
+    Chuck_String* ck_str = GET_NEXT_STRING(ARGS);
+    if (ck_str == NULL) {
+        RETURN->v_object = NULL;
+        return;
+    }
+
+    // remember to deref TextureSaveEvent after broadcast
+    Chuck_Event* e = (Chuck_Event*)chugin_createCkObj("TextureSaveEvent", true, SHRED);
+
+    CQ_PushCommand_SaveTexture(tex, API->object->str(ck_str), e);
+
+    RETURN->v_object = (Chuck_Object*)e;
 }
 
 CK_DLL_SFUN(texture_load_2d_file)

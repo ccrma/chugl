@@ -184,6 +184,7 @@ enum SG_CommandType : u32 {
     // reading back gpu data
     SG_COMMAND_G2A_TEXTURE_READ,
     SG_COMMAND_G2A_FILES_DROPPED,
+    SG_COMMAND_G2A_TEXTURE_SAVE,
 
     SG_COMMAND_COUNT
 };
@@ -428,6 +429,7 @@ struct SG_Command_CopyTextureToCPU : public SG_Command {
 
 struct SG_Command_SaveTexture : public SG_Command {
     SG_ID id;
+    Chuck_Event* save_event;
     ptrdiff_t filepath_offset;
     // Format can add later...
 };
@@ -626,6 +628,11 @@ struct SG_Command_G2A_FilesDropped : public SG_Command {
     ptrdiff_t data_offset; // byte offset into command queue arena for paths
 };
 
+struct SG_Command_G2A_TextureSave : public SG_Command {
+    Chuck_Event* texture_save_event; // event to broadcast
+    int status;                      // 0 on success
+};
+
 // ============================================================================
 // Command Queue API
 // ============================================================================
@@ -723,7 +730,8 @@ void CQ_PushCommand_CopyTextureToTexture(SG_Texture* dst_texture,
                                          SG_TextureLocation* src_location, int width,
                                          int height, int depth);
 void CQ_PushCommand_CopyTextureToCPU(SG_Texture* texture);
-void CQ_PushCommand_SaveTexture(SG_Texture* texture, const char* fp);
+void CQ_PushCommand_SaveTexture(SG_Texture* texture, const char* fp,
+                                Chuck_Event* save_event);
 
 // shader
 void CQ_PushCommand_ShaderCreate(SG_Shader* shader);
@@ -784,3 +792,5 @@ void CQ_PushCommand_WebcamUpdate(SG_Webcam* webcam);
 
 void CQ_PushCommand_G2A_TextureRead(SG_ID id, void* data, int size_bytes,
                                     WGPUBufferMapAsyncStatus status);
+
+void CQ_PushCommand_G2A_TextureSave(Chuck_Event* texture_save_event, int status);

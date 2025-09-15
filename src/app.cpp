@@ -1547,11 +1547,13 @@ static BufferMapAsyncData* BufferMapAsyncData_Get(int index)
 struct R_TextureWriteParams {
     int async_buffer_idx;
     char* filepath_MALLOC;
+    Chuck_Event* texture_save_event;
 };
 
 static void TextureSaveOnBufferMap(WGPUBufferMapAsyncStatus status,
                                    void* udata_MALLOCED)
 {
+    int error               = 0; // nonzero on failure
     R_TextureWriteParams* p = (R_TextureWriteParams*)udata_MALLOCED;
     defer({
         free(p->filepath_MALLOC);
@@ -1583,6 +1585,7 @@ static void TextureSaveOnBufferMap(WGPUBufferMapAsyncStatus status,
         log_error("Unable to save Texture %s to file %s", tex->name,
                   p->filepath_MALLOC);
         perror(p->filepath_MALLOC);
+        error = 1;
     }
 
     // Then do not forget to unmap the memory
@@ -1591,6 +1594,9 @@ static void TextureSaveOnBufferMap(WGPUBufferMapAsyncStatus status,
     // this also removes from buffer map async data arena
     // by setting buffer to null
     WGPU_RELEASE_RESOURCE(Buffer, data->buffer);
+
+    // pass back to chuck vm thread
+    CQ_PushCommand_G2A_TextureSave(p->texture_save_event, error);
 }
 
 // TODO make sure switch statement is in correct order?
@@ -2236,6 +2242,7 @@ static void _R_HandleCommand(App* app, SG_Command* command)
                 p->async_buffer_idx = index;
                 p->filepath_MALLOC
                   = strdup((char*)CQ_ReadCommandGetOffset(cmd->filepath_offset));
+                p->texture_save_event = cmd->save_event;
 
                 wgpuBufferMapAsync(mapped_buffer, WGPUMapMode_Read, 0,
                                    wgpuBufferGetSize(mapped_buffer),
