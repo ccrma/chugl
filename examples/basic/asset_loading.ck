@@ -2,8 +2,11 @@
 // name: asset_loading.ck
 // desc: example of loading assets (e.g., 3D models) from file
 //       and rendering as a GGen
+//
+// requires: ChuGL + chuck-1.5.5.5
 //--------------------------------------------------------------------
 
+// set an orbit camera as the main camera
 GOrbitCamera camera => GG.scene().camera;
 
 // using asset loader, load from file, returns a GGen as the root of a model graph

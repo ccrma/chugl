@@ -8,26 +8,19 @@
 //   date: Summer 2025
 //--------------------------------------------------------------------
 
-/*
-TODO:
-- have GText/console error msg on
-    - invalid model type (only supports OBJ)
-- click to select bounding-box isection test
-- adjust camera position and/or model scale to fit model in screen
-- UI
-    - sub-mesh explorer (include their names)
-- run other raylib model examples for ideas
-
- Test
-  - Rungholt 7M triangle scene(260 MB)
-*/
-
 // set new orbit camera as main camera
 GG.scene().camera(new GOrbitCamera);
 // position the main camera
 GG.scene().camera().posY(5);
 // set ambient lights on scene
 GG.scene().ambient( @(.5, .5, .5) );
+
+// add a text object to scene
+GText text --> GG.scene();
+// set text
+text.text("drag and drop files here!");
+// text size
+text.size(.2);
 
 // an empty GModel
 GModel model;
@@ -40,7 +33,7 @@ ground.material().wireframe(true);
 ground.rotX(.5 * Math.pi);
 
 // create a bounding box
-GMesh bbox(new CubeGeometry, new FlatMaterial) --> GG.scene();
+GMesh bbox(new CubeGeometry, new FlatMaterial);
 // set wireframe 
 bbox.material().wireframe(true);
 
@@ -115,6 +108,9 @@ while( true )
         // get array of filenames
         GWindow.files() @=> files;
 
+        // remove "drag and drop"
+        text --< GG.scene();
+
         // detach prev model
         model.detach(); 
         // create new model
@@ -141,6 +137,10 @@ while( true )
         // update bounding box
         bbox.sca(scale * (model.max - model.min));
         bbox.posY(bbox.scaY() * 0.5);
+
+        // show bounding box
+        if (show_bounding_box.val()) bbox --> GG.scene();
+        else bbox.detach();
 
         // <<< "scale", scale >>>;
         // <<< "min: ", model.min, "max: ", model.max, "center: ", (0.5* (model.min + model.max))>>>;
