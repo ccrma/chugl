@@ -1,12 +1,9 @@
 TODO
 
 - Test fileDialog methods on Windows (something about weird utf8 vs utf-16 behaviour)
-- Texture.save(null) should save <timestamp>.png in cwd
-
 - change GModel.materials to PhongMaterial?
 
 - leakcheck GModel obj loading
-- leakcheck texture write
 
 - OBJ rework
   - GModel(string path)

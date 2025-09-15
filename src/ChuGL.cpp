@@ -757,15 +757,16 @@ CK_DLL_SFUN(chugl_open_file_dialog)
     /* returns NULL on cancel */
 }
 
-CK_DLL_SFUN(chugl_save_file_dialog)
-{
-    char* save_filepath = tinyfd_saveFileDialog(NULL, NULL, 0, NULL, NULL);
-    if (save_filepath) {
-        RETURN->v_object = (Chuck_Object*)chugin_createCkString(save_filepath, false);
-    } else {
-        RETURN->v_object = NULL;
-    }
-}
+// CK_DLL_SFUN(chugl_save_file_dialog)
+// {
+//     char* save_filepath = tinyfd_saveFileDialog(NULL, NULL, 0, NULL, NULL);
+//     if (save_filepath) {
+//         RETURN->v_object = (Chuck_Object*)chugin_createCkString(save_filepath,
+//         false);
+//     } else {
+//         RETURN->v_object = NULL;
+//     }
+// }
 
 CK_DLL_SFUN(chugl_save_file_dialog_ex)
 {
@@ -775,6 +776,21 @@ CK_DLL_SFUN(chugl_save_file_dialog_ex)
       = ck_str_default_path ? API->object->str(ck_str_default_path) : NULL;
 
     char* save_filepath = tinyfd_saveFileDialog(NULL, default_path, 0, NULL, NULL);
+    if (save_filepath) {
+        RETURN->v_object = (Chuck_Object*)chugin_createCkString(save_filepath, false);
+    } else {
+        RETURN->v_object = NULL;
+    }
+}
+
+CK_DLL_SFUN(chugl_select_folder_dialog)
+{
+    Chuck_String* ck_str_default_path = GET_NEXT_STRING(ARGS);
+
+    const char* default_path
+      = ck_str_default_path ? API->object->str(ck_str_default_path) : NULL;
+
+    char* save_filepath = tinyfd_selectFolderDialog(NULL, default_path);
     if (save_filepath) {
         RETURN->v_object = (Chuck_Object*)chugin_createCkString(save_filepath, false);
     } else {
@@ -1104,13 +1120,13 @@ CK_DLL_QUERY(ChuGL)
         SFUN(chugl_open_file_dialog_async, "OpenFileEvent", "openFileDialogAsync");
         DOC_FUNC("(hidden)");
 
-        SFUN(chugl_save_file_dialog, "string", "saveFileDialog");
-        DOC_FUNC(
-          "Open a system save file dialog for the user to select a save path. Returns "
-          "null if the user cancels the dialog without selecting a path."
-          "NOTE: this version of the method is *synchronous* and *blocking*, "
-          "meaning that while the user is on the dialog, chuck VM execution--along "
-          "with audio synthesis--will be paused!");
+        // SFUN(chugl_save_file_dialog, "string", "saveFileDialog");
+        // DOC_FUNC(
+        //   "Open a system save file dialog for the user to select a save path. Returns
+        //   " "null if the user cancels the dialog without selecting a path." "NOTE:
+        //   this version of the method is *synchronous* and *blocking*, " "meaning that
+        //   while the user is on the dialog, chuck VM execution--along " "with audio
+        //   synthesis--will be paused!");
 
         SFUN(chugl_save_file_dialog_ex, "string", "saveFileDialog");
         ARG("string", "default_path_or_file");
@@ -1121,7 +1137,19 @@ CK_DLL_QUERY(ChuGL)
           "meaning that while the user is on the dialog, chuck VM execution--along "
           "with audio synthesis--will be paused!"
           "param `default_path_or_file` sets default directory and/or save file name "
-          "in the modal. End this param with a '/' to set only the directory");
+          "in the modal. End this param with a '/' to set only the directory. If "
+          "null, defaults me.dir()");
+
+        SFUN(chugl_select_folder_dialog, "string", "selectFolderDialog");
+        ARG("string", "default_path_or_file");
+        DOC_FUNC(
+          "Open a file dialog for the user to select a folder. Returns "
+          "null if the user cancels the dialog without selecting a folder."
+          "NOTE: this version of the method is *synchronous* and *blocking*, "
+          "meaning that while the user is on the dialog, chuck VM execution--along "
+          "with audio synthesis--will be paused!"
+          "param `default_path` sets directory that the dialog opens "
+          "to. if null, defaults to me.dir().");
 
         END_CLASS();
     } // GG
