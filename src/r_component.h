@@ -1905,7 +1905,7 @@ struct G_DrawCallList {
 #ifdef CHUGL_DEBUG // drawcall validation
             if (d->instance_count == 0) log_warn("drawcall instance count of 0");
             // sortkey should match pipeline desc
-            ASSERT(d->_pipeline_desc.is_transparent
+            ASSERT((bool) d->_pipeline_desc.is_transparent
                    == G_SortKey::transparent(d->sort_key));
 #endif
 

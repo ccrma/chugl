@@ -562,7 +562,6 @@ static ModelLoadObjResult ulib_assloader_tinyobj_load(const char* filepath,
                 ulib_component_set_name(mesh, geo->name);
                 
                 // add to GModel
-                *ARENA_PUSH_TYPE(&result.geo_ckobj_list, Chuck_Object*) = geo->ckobj;
                 *ARENA_PUSH_TYPE(&result.gmesh_id_list, SG_ID) = mesh->id;
             }
         }
