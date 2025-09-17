@@ -25,7 +25,8 @@ doc.addGroup(
         "ContentScaleChangedEvent",
         "SG_Component",
         "Color",
-        "AssLoader"
+        "AssLoader",
+        "ModelLoadDesc"
     ],
     // group name
     "Basic Classes",
@@ -59,7 +60,9 @@ doc.addGroup(
         "GCamera",
         "GOrbitCamera",
         "GFlyCamera",
-        "GText"
+        "GText",
+        "GModel",
+        "GPolyhedron"
     ],
     // group name
     "Graphics Generators",
@@ -84,6 +87,7 @@ doc.addGroup(
         "SuzanneGeometry",
         "LinesGeometry",
         "PolygonGeometry",
+        "PolyhedronGeometry",
     ],
     // group name
     "ChuGL Geometries",
@@ -124,6 +128,7 @@ doc.addGroup(
         "LinesMaterial", 
         "UVMaterial", 
         "PBRMaterial", 
+        "SkyboxMaterial", 
     ],
     // group name
     "ChuGL Materials",
@@ -160,6 +165,8 @@ doc.addGroup(
         "TextureDesc",
         "TextureWriteDesc",
         "TextureLoadDesc",
+        "TextureLocation",
+        "TextureSaveEvent",
     ],
     // group name
     "ChuGL Textures",
@@ -298,4 +305,4 @@ doc.addGroup(
 doc.sort(true);
 
 // generate
-doc.outputToDir( ".", "ChuGL [alpha] API Reference (v0.2.6)" );
+doc.outputToDir( ".", "ChuGL [alpha] API Reference (v0.2.7)" );

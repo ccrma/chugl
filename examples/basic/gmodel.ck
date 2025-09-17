@@ -18,7 +18,7 @@ GG.scene().ambient( @(.5, .5, .5) );
 // add a text object to scene
 GText text --> GG.scene();
 // set text
-text.text("drag and drop files here!");
+text.text("drag and drop an OBJ file!");
 // text size
 text.size(.2);
 
@@ -72,6 +72,7 @@ while( true )
         UI.text("mesh count: " + model.meshes.size());
         UI.text("geometry count: " + model.geometries.size());
         UI.text("material count: " + model.materials.size());
+        UI.text("vertex count: " + model.vertexCount);
 
         // model load options
         UI.separatorText("model load options: ");

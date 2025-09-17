@@ -41,6 +41,9 @@
 #define UNUSED_FUNCTION(x) ((void)(x))
 #define ARRAY_LENGTH(array) (sizeof(array) / sizeof((array)[0]))
 #define ZERO_ARRAY(array) (memset((array), 0, sizeof(array)))
+#define ZERO_ARRAY_PTR(arrayPtr, length)                                               \
+    memset((arrayPtr), 0, sizeof(*(arrayPtr)) * (length));
+
 #define COPY_STRUCT_TYPE(dst, src, type) (memcpy((dst), (src), sizeof(type)))
 #define COPY_STRUCT(dst, src) (memcpy((dst), (src), sizeof(*src)))
 #define COPY_STRING(dst, src) (snprintf(dst, sizeof(dst), "%s", src));

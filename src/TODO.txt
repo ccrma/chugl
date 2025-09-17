@@ -1,15 +1,15 @@
 TODO
 
 Release
-- GPolyhedron
+- build-gcc
 - CKDocs
 - ADD_EX()
 - update chuck_website repo tutorials with streamlined stuff (like GG.bloom)
 
-- Test fileDialog methods on Windows (something about weird utf8 vs utf-16 behaviour)
 - change GModel.materials to PhongMaterial?
 
-- leakcheck GModel obj loading
+how does https://threejs.org/editor/ do raycast mousepicking? (can select model subcomponents on click)
+- is it just AABB raycast?
 
 - OBJ rework
   - GModel(string path)

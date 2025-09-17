@@ -1210,7 +1210,7 @@ CK_DLL_QUERY(ChuGL)
 
         SG_Pass* bloom_pass = ulib_pass_create(SG_PassType_Bloom, NULL, true, NULL);
         gg_config.default_bloom_pass_id = bloom_pass->id;
-        ulib_component_set_name(output_pass, "ChuGL Default BloomPass");
+        ulib_component_set_name(bloom_pass, "ChuGL Default BloomPass");
 
         // set render texture as input to output pass
         SG_Material* material = SG_GetMaterial(output_pass->screen_material_id);

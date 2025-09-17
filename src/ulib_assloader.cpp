@@ -90,11 +90,12 @@ struct AssloaderMat2GeoItem {
 
 // GModel offsets
 // idea: store these as static ints on SG_Sampler struct?
-static t_CKUINT gmodel_offset_geo_array  = 0;
-static t_CKUINT gmodel_offset_mat_array  = 0;
-static t_CKUINT gmodel_offset_mesh_array = 0;
-static t_CKUINT gmodel_offset_bbox_min   = 0;
-static t_CKUINT gmodel_offset_bbox_max   = 0;
+static t_CKUINT gmodel_offset_geo_array    = 0;
+static t_CKUINT gmodel_offset_mat_array    = 0;
+static t_CKUINT gmodel_offset_mesh_array   = 0;
+static t_CKUINT gmodel_offset_bbox_min     = 0;
+static t_CKUINT gmodel_offset_bbox_max     = 0;
+static t_CKUINT gmodel_offset_vertex_count = 0;
 
 CK_DLL_CTOR(gmodel_ctor);
 CK_DLL_CTOR(gmodel_ctor_with_fp);
@@ -154,13 +155,13 @@ void ulib_assloader_query(Chuck_DL_Query* QUERY)
         ADD_EX("basic/gmodel.ck");
 
         gmodel_offset_geo_array = MVAR("Geometry[]", "geometries", true);
-        DOC_VAR("TODO");
+        DOC_VAR("List of all geometries in this model.");
 
         gmodel_offset_mat_array = MVAR("Material[]", "materials", true);
-        DOC_VAR("TODO");
+        DOC_VAR("List of all materials in this model.");
 
         gmodel_offset_mesh_array = MVAR("GMesh[]", "meshes", true);
-        DOC_VAR("TODO");
+        DOC_VAR("List of all meshes in this model.");
 
         gmodel_offset_bbox_max = MVAR("vec3", "max", true);
         DOC_VAR(
@@ -171,6 +172,9 @@ void ulib_assloader_query(Chuck_DL_Query* QUERY)
         DOC_VAR(
           "Get the min position of this model's bounding box. NOT scale-adjusted, "
           "multiply by GModel.scaWorld() to get scaled bounding box.");
+
+        gmodel_offset_vertex_count = MVAR("int", "vertexCount", true);
+        DOC_VAR("The number of vertices in this model");
 
         CTOR(gmodel_ctor);
         DOC_FUNC(
@@ -215,9 +219,8 @@ struct SG_AssetLoadDesc {
     }
 };
 
-static Arena
-  ulib_assloader_filebuffer_arena; // TODO free the file memory from OBJ loader!!!
-
+static Arena ulib_assloader_tinyobj_filedata_pointers; // track allocations from openned
+                                                       // files to free later
 static void ulib_assloader_tinyobj_filereader(void* ctx, const char* filename,
                                               const int is_mtl,
                                               const char* obj_filename, char** data,
@@ -251,6 +254,8 @@ static void ulib_assloader_tinyobj_filereader(void* ctx, const char* filename,
 
     *data = result.data_owned;
     *len  = result.size;
+    *ARENA_PUSH_TYPE(&ulib_assloader_tinyobj_filedata_pointers, char*)
+      = result.data_owned;
 }
 
 struct ModelLoadObjResult {
@@ -259,6 +264,7 @@ struct ModelLoadObjResult {
     Arena gmesh_id_list;  // list of SG_ID
     glm::vec3 bmin;
     glm::vec3 bmax;
+    size_t vertex_count;
 
     static void free(ModelLoadObjResult* result)
     {
@@ -268,6 +274,7 @@ struct ModelLoadObjResult {
     }
 };
 
+// ==optimize== if has_normals, do indexed draw
 static ModelLoadObjResult ulib_assloader_tinyobj_load(const char* filepath,
                                                       Chuck_VM_Shred* SHRED,
                                                       SG_AssetLoadDesc desc)
@@ -285,14 +292,30 @@ static ModelLoadObjResult ulib_assloader_tinyobj_load(const char* filepath,
         return result;
     }
 
-    tinyobj_attrib_t attrib;
-    tinyobj_shape_t* shapes = NULL;
-    size_t num_shapes;
+    tinyobj_attrib_t attrib       = {};
+    tinyobj_shape_t* shapes       = NULL;
+    size_t num_shapes             = 0;
     tinyobj_material_t* materials = NULL;
-    size_t num_materials;
+    size_t num_materials          = 0;
+    defer({ // cleanup
+        tinyobj_attrib_free(&attrib);
+        tinyobj_shapes_free(shapes, num_shapes);
+        tinyobj_materials_free(materials, num_materials);
+    });
+
     int ret = tinyobj_parse_obj(
       &attrib, &shapes, &num_shapes, &materials, &num_materials, filepath,
       ulib_assloader_tinyobj_filereader, NULL, TINYOBJ_FLAG_TRIANGULATE);
+
+    // free memory allocated by file reader
+    for (int file_malloc_idx = 0; file_malloc_idx < ARENA_LENGTH(
+                                    &ulib_assloader_tinyobj_filedata_pointers, void*);
+         ++file_malloc_idx) {
+        void* data_MALLOC = *ARENA_GET_TYPE(&ulib_assloader_tinyobj_filedata_pointers,
+                                            void*, file_malloc_idx);
+        free(data_MALLOC);
+    }
+    Arena::clear(&ulib_assloader_tinyobj_filedata_pointers);
 
     if (ret != TINYOBJ_SUCCESS) {
         switch (ret) {
@@ -427,8 +450,8 @@ static ModelLoadObjResult ulib_assloader_tinyobj_load(const char* filepath,
     // clang-format off
     for (size_t shape_i = 0; shape_i < num_shapes; shape_i++) {
         if (!desc.combine_geos) { // zero out so we can build new meshes/geos per mesh
-            memset(geometry_ids, 0, num_materials + 1);
-            memset(mesh_ids, 0, num_materials + 1);
+			ZERO_ARRAY_PTR(geometry_ids, num_materials + 1);
+			ZERO_ARRAY_PTR(mesh_ids, num_materials + 1);
         }
 
         tinyobj_shape_t* obj_shape = shapes + shape_i;
@@ -473,9 +496,6 @@ static ModelLoadObjResult ulib_assloader_tinyobj_load(const char* filepath,
                 }
                 ASSERT(geo);
             }
-            
-            // TODO only set geo name if we are *not* combining geos across shapes
-//            ulib_component_set_name(geo, obj_shape->name);
 
             tinyobj_vertex_index_t indices[3]
               = { attrib.faces[3 * face_idx + 0], attrib.faces[3 * face_idx + 1],
@@ -485,6 +505,7 @@ static ModelLoadObjResult ulib_assloader_tinyobj_load(const char* filepath,
             glm::vec3* positions = ARENA_PUSH_ZERO_COUNT(
               &geo->vertex_attribute_data[SG_GEOMETRY_POSITION_ATTRIBUTE_LOCATION],
               glm::vec3, 3);
+            result.vertex_count += 3;
 
             glm::vec3* normals = ARENA_PUSH_ZERO_COUNT(
               &geo->vertex_attribute_data[SG_GEOMETRY_NORMAL_ATTRIBUTE_LOCATION], glm::vec3,
@@ -638,8 +659,9 @@ static SG_Transform* ulib_gmodel_create(Chuck_Object* ckobj, Chuck_VM_Shred* shr
       = chugin_createCkObj("Material[]", true, shred);
     OBJ_MEMBER_OBJECT(ckobj, gmodel_offset_mesh_array)
       = chugin_createCkObj("GMesh[]", true, shred);
-    OBJ_MEMBER_VEC3(ckobj, gmodel_offset_bbox_max) = { 0, 0, 0 };
-    OBJ_MEMBER_VEC3(ckobj, gmodel_offset_bbox_min) = { 0, 0, 0 };
+    OBJ_MEMBER_VEC3(ckobj, gmodel_offset_bbox_max)    = { 0, 0, 0 };
+    OBJ_MEMBER_VEC3(ckobj, gmodel_offset_bbox_min)    = { 0, 0, 0 };
+    OBJ_MEMBER_INT(ckobj, gmodel_offset_vertex_count) = 0;
 
     return model;
 }
@@ -686,6 +708,9 @@ static void ulib_gmodel_load(SG_Transform* model, const char* filepath,
       = { result.bmin.x, result.bmin.y, result.bmin.z };
     OBJ_MEMBER_VEC3(model->ckobj, gmodel_offset_bbox_max)
       = { result.bmax.x, result.bmax.y, result.bmax.z };
+
+    // set vertex count
+    OBJ_MEMBER_INT(model->ckobj, gmodel_offset_vertex_count) = result.vertex_count;
 
     // cleanup
     ModelLoadObjResult::free(&result);

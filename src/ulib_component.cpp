@@ -1642,8 +1642,10 @@ static void ulib_mesh_query(Chuck_DL_Query* QUERY)
         DOC_CLASS(
           "Convenience class for creating a GMesh(PolyehedronGeometry, PhongMaterial)");
         ADD_EX("basic/geo_and_mat.ck");
+        ADD_EX("basic/ggen_primitives.ck");
 
         CTOR(gpolyhedron_ctor);
+        DOC_FUNC("By default creates a tetrahedron");
 
         CTOR(gpolyhedron_ctor_with_type);
         ARG("int", "type");
