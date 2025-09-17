@@ -1,17 +1,27 @@
 # Changes
 
 ## 0.2.7 (alpha)
+- add `GModel` for loading 3D asset models (currently supports OBJ)
+- add `GPolyhedron` and `PolyhedronGeometry` for builtin platonic solids
+- add `GG.bloom()` and `GG.bloomPass()` to streamline adding bloom to the default scene
+- add `GWindow.files()` to detect draggin+dropping files onto the screen (see basic/gwindow.ck example!)
+- add `Material.wireframe(int)` to easily toggle whether a mesh is rendered as a wireframe
 - add `Texture.save(string)` to save a GPU texture to a .png
 - add `Geometry.indexCount()` to control the number of indices drawn in an indexed draw
 - add `GWindow.droppedFiles()` to handle drag+dropping files onto the window
-- New `GText` features
+- new `GText` features
   - `GText.characters(int)` to control the number of characters rendered on a GText
   - `GText.width(int)` to set text wrap width
   - `GText.align(int)` to set left/center/right alignment
   - `GText.size(int)` to scale text size while respecting wrap and alignment
-- Add `Material.wireframe(int)` to render meshes as wireframes
-- Add `PolyhedronGeometry` (demo in examples/basic/geo_and_mat.ck)
-- Bugfixes: 
+- add `Material.wireframe(int)` to render meshes as wireframes
+- new examples:
+  - basic/gmodel.ck
+  - basic/gtext.ck (added new GText features)
+  - basic/gwindow.ck (added new GWindow features)
+  - basic/ggen_primitives.ck (see new GPolyhedron)
+  - basic/geo_and_mat.ck (see new PolyhedronGeometry)
+- bugfixes: 
   - incorrect transparency sorting on scenes with a large number of materials
   - scene background color not affecting clearcolor, causing semi-transparent objects (e.g. GText) to render incorrectly
 
