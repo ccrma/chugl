@@ -185,7 +185,7 @@ else()
         -Wno-missing-field-initializers # for stb_image_write.h
     )
 
-    if (LINUX)
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         target_compile_options(chugl_shared_properties INTERFACE
             # gcc ignores
             -Wno-strict-aliasing
@@ -201,8 +201,6 @@ else()
             -Wno-class-memaccess
             -Wno-strict-aliasing
         )
-         
-    
     endif()
 endif()
 
