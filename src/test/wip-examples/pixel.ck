@@ -36,6 +36,7 @@ screen_pass.material().sampler(1, TextureSampler.nearest());
 screen_pass.material().uniformInt(2, viewport_height_pixels.val() $ int);
 screen_pass.material().uniformInt2(3, viewport_center_pixels.val().x $ int, viewport_center_pixels.val().y $ int);
 screen_pass.material().uniformInt(4, grid.val()); // grid;
+screen_pass.material().uniformInt(6, brush_size.val()); // grid;
 
 // safe-save on exit
 // TODO API for this of this can be better...see what Raylib does
@@ -123,8 +124,14 @@ while (1) {
         viewport_center_pixels.val() - 0.25 * GWindow.mouseDeltaPos() => viewport_center_pixels.val;
     }
     if (GWindow.keyDown(GWindow.KEY_G)) !grid.val() => grid.val;
-    if (GWindow.keyDown(GWindow.KEY_EQUAL)) brush_size.val() + 1 =>  brush_size.val;
-    if (GWindow.keyDown(GWindow.KEY_MINUS)) Math.max(brush_size.val() - 1, 1) =>  brush_size.val;
+    if (GWindow.keyDown(GWindow.KEY_EQUAL)) {
+        brush_size.val() + 1 =>  brush_size.val;
+        screen_pass.material().uniformInt(6, brush_size.val()); // grid;
+    }
+    if (GWindow.keyDown(GWindow.KEY_MINUS)) {
+        Math.max(brush_size.val() - 1, 1) =>  brush_size.val;
+        screen_pass.material().uniformInt(6, brush_size.val()); // grid;
+    }
 
     if (!mod_key && GWindow.mouseLeft()) writePixel(brush_color.val());
 
@@ -158,7 +165,9 @@ while (1) {
             color_palette.popBack();
         }
 
-        UI.inputInt("brush size", brush_size);
+        if (UI.inputInt("brush size", brush_size)) {
+            screen_pass.material().uniformInt(6, brush_size.val()); // grid;
+        }
 
 
         UI.text("Current save path: " + save_path);

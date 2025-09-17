@@ -155,6 +155,10 @@ CK_DLL_CTOR(polygon_geo_ctor);
 CK_DLL_MFUN(polygon_geo_build);
 CK_DLL_MFUN(polygon_geo_build_with_holes);
 
+CK_DLL_CTOR(polyhedron_geo_ctor);
+CK_DLL_CTOR(polyhedron_geo_ctor_with_type);
+CK_DLL_MFUN(polyhedron_geo_build);
+
 static void ulib_geometry_query(Chuck_DL_Query* QUERY)
 {
     // Geometry -----------------------------------------------------
@@ -720,6 +724,49 @@ static void ulib_geometry_query(Chuck_DL_Query* QUERY)
 
         END_CLASS();
     }
+
+    { // PolyhedronGeometry
+
+        static t_CKINT polyhedron_tetrahedron  = PolyhedronType_Tetrahedron;
+        static t_CKINT polyhedron_cube         = PolyhedronType_Cube;
+        static t_CKINT polyhedron_octahedron   = PolyhedronType_Octahedron;
+        static t_CKINT polyhedron_dodecahedron = PolyhedronType_Dodecahedron;
+        static t_CKINT polyhedron_icosahedron  = PolyhedronType_Icosahedron;
+
+        BEGIN_CLASS(SG_GeometryTypeNames[SG_GEOMETRY_POLYHEDRON],
+                    SG_CKNames[SG_COMPONENT_GEOMETRY]);
+        DOC_CLASS(
+          "Geometry for constructing platonic solids: tetrahedron, cube, icosahedron, "
+          "octahedron, dodecahedron");
+        ADD_EX("basic/geo_and_mat.ck");
+
+        SVAR("int", "TETRAHEDRON", &polyhedron_tetrahedron);
+        SVAR("int", "CUBE", &polyhedron_cube);
+        SVAR("int", "OCTAHEDRON", &polyhedron_octahedron);
+        SVAR("int", "DODECAHEDRON", &polyhedron_dodecahedron);
+        SVAR("int", "ICOSAHEDRON", &polyhedron_icosahedron);
+
+        CTOR(polyhedron_geo_ctor);
+        DOC_FUNC("This default constructor initializes a tetrahedron");
+
+        CTOR(polyhedron_geo_ctor_with_type);
+        ARG("int", "type");
+        DOC_FUNC(
+          "Initialize the polyhedron with a given type: "
+          "PolyhedronGeometry.TETRAHEDRON, PolyhedronGeometry.CUBE, "
+          "PolyhedronGeometry.OCTAHEDRON, PolyhedronGeometry.DODECAHEDRON, "
+          "or PolyhedronGeometry.ICOSAHEDRON");
+
+        MFUN(polyhedron_geo_build, "void", "build");
+        ARG("int", "type");
+        DOC_FUNC(
+          "Change the polyhedron to the given type: "
+          "PolyhedronGeometry.TETRAHEDRON, PolyhedronGeometry.CUBE, "
+          "PolyhedronGeometry.OCTAHEDRON, PolyhedronGeometry.DODECAHEDRON, "
+          "or PolyhedronGeometry.ICOSAHEDRON");
+
+        END_CLASS();
+    } // PolyhedronGeometry
 }
 
 // Geometry -----------------------------------------------------
@@ -782,6 +829,9 @@ static void ulib_geometry_build(SG_Geometry* geo, SG_GeometryType geo_type,
         case SG_GEOMETRY_POLYGON: {
             ASSERT(params);
             SG_Geometry::buildPolygon(geo, (PolygonParams*)params);
+        } break;
+        case SG_GEOMETRY_POLYHEDRON: {
+            SG_Geometry::buildPolyhedron(geo, (PolyhedronType*)params);
         } break;
         default: ASSERT(false);
     }
@@ -1917,4 +1967,28 @@ CK_DLL_MFUN(polygon_geo_build_with_holes)
     params.num_holes           = num_holes;
 
     ulib_geometry_build(geo, SG_GEOMETRY_POLYGON, &params);
+}
+
+// PolyhedronGeometry --------------------------------------
+
+CK_DLL_CTOR(polyhedron_geo_ctor)
+{
+    SG_Geometry* geo = SG_GetGeometry(OBJ_MEMBER_UINT(SELF, component_offset_id));
+
+    PolyhedronType default_type = PolyhedronType_Tetrahedron;
+    ulib_geometry_build(geo, SG_GEOMETRY_POLYHEDRON, &default_type);
+}
+
+CK_DLL_CTOR(polyhedron_geo_ctor_with_type)
+{
+    SG_Geometry* geo = SG_GetGeometry(OBJ_MEMBER_UINT(SELF, component_offset_id));
+    PolyhedronType default_type = (PolyhedronType)GET_NEXT_INT(ARGS);
+    ulib_geometry_build(geo, SG_GEOMETRY_POLYHEDRON, &default_type);
+}
+
+CK_DLL_MFUN(polyhedron_geo_build)
+{
+    SG_Geometry* geo = SG_GetGeometry(OBJ_MEMBER_UINT(SELF, component_offset_id));
+    PolyhedronType default_type = (PolyhedronType)GET_NEXT_INT(ARGS);
+    ulib_geometry_build(geo, SG_GEOMETRY_POLYHEDRON, &default_type);
 }

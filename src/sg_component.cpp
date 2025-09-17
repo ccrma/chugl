@@ -537,6 +537,16 @@ void SG_Geometry::buildPolygon(SG_Geometry* g, PolygonParams* p)
     Geometry_buildPolygon(&gab, p);
 }
 
+void SG_Geometry::buildPolyhedron(SG_Geometry* g, PolyhedronType* p)
+{
+    ASSERT(g->geo_type == SG_GEOMETRY_POLYHEDRON);
+    g->params.polyhedron = *p;
+
+    GeometryArenaBuilder gab;
+    SG_Geometry::initGABandNumComponents(&gab, g);
+    Geometry_buildPolyhedron(&gab, *p);
+}
+
 void SG_Geometry::buildBox(SG_Geometry* g, BoxParams* p)
 {
     ASSERT(g->geo_type == SG_GEOMETRY_CUBE);

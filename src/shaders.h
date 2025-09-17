@@ -317,12 +317,10 @@ static std::unordered_map<std::string, std::string> shader_table = {
         "NORMAL_MAPPING_FUNCTIONS",
         R"glsl(
         // http://www.thetenthplanet.de/archives/1180
-        fn cotangentFrame( N : vec3f, p : vec3f, uv : vec2f ) -> mat3x3f { 
+        fn cotangentFrame( N : vec3f, p : vec3f, duv1: vec2f, duv2: vec2f ) -> mat3x3f { 
             // get edge vectors of the pixel triangle 
             let dp1 = dpdx( p ); 
             let dp2 = dpdy( p ); 
-            let duv1 = dpdx( uv ); 
-            let duv2 = dpdy( uv );   
             // solve the linear system 
             let dp2perp = cross( dp2, N ); 
             let dp1perp = cross( N, dp1 ); 
@@ -333,21 +331,30 @@ static std::unordered_map<std::string, std::string> shader_table = {
             return mat3x3f( T * invmax, B * invmax, N ); 
         }
 
-        fn perturbNormal( v_normal : vec3f, V : vec3f, texcoord : vec2f, scale : f32, is_front : bool) -> vec3f { 
+        fn perturbNormal( v_normal : vec3f, V : vec3f, uv : vec2f, scale : f32, is_front : bool) -> vec3f { 
             let N = normalize(v_normal);
+            var flip = 1.0;
+            if (!is_front) {
+                flip = -1.0;
+            }
+            let duv1 = dpdx( uv ); 
+            let duv2 = dpdy( uv );   
+
+            // handle case where UVs are not provided (all zero)
+            // then TBN frame will be zeroes, so return normalized v_normal instead
+            if (dot(duv1, duv1) == 0 && dot(duv2, duv2) == 0) {
+                return flip * N;
+            }
 
             // assume N, the interpolated vertex normal and 
             // V, the view vector (vertex to eye) 
-            var map = textureSample(u_normal_map, texture_sampler, texcoord).xyz * 2.0 - 1.0;
+            var map = textureSample(u_normal_map, texture_sampler, uv).xyz * 2.0 - 1.0;
             map.x *= scale;
             map.y *= -scale; // flip y too to be consistent with previuos normal map version
 
-            let TBN = cotangentFrame( N, -V, texcoord ); 
-            var normal = normalize( TBN * map ); 
-            if (!is_front) {
-                normal = -normal;
-            }
-            return normal;
+            let TBN = cotangentFrame( N, -V, duv1, duv2 ); 
+            var normal = TBN * map; 
+            return flip * normalize(normal);
         }
         )glsl"
     }
@@ -663,7 +670,6 @@ static const char* phong_shader_string = R"glsl(
         let viewDir = normalize(viewVector);  // direction from camera to this frag
 
         var normal = perturbNormal(in.v_normal, viewVector, in.v_uv, u_normal_factor, is_front);
-
 
         // material color properties (ignore alpha channel for now)
         let diffuseTex = textureSample(u_diffuse_map, texture_sampler, in.v_uv);

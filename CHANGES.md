@@ -10,6 +10,7 @@
   - `GText.align(int)` to set left/center/right alignment
   - `GText.size(int)` to scale text size while respecting wrap and alignment
 - Add `Material.wireframe(int)` to render meshes as wireframes
+- Add `PolyhedronGeometry` (demo in examples/basic/geo_and_mat.ck)
 - Bugfixes: 
   - incorrect transparency sorting on scenes with a large number of materials
   - scene background color not affecting clearcolor, causing semi-transparent objects (e.g. GText) to render incorrectly

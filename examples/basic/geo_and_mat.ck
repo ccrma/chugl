@@ -24,6 +24,7 @@ GMesh mesh --> GG.scene();
     new CylinderGeometry,
     new KnotGeometry,
     new PolygonGeometry,
+    new PolyhedronGeometry,
 ] @=> Geometry geometries[];
 
 // create ChuGL UI integer for communication with picker widget
@@ -216,6 +217,18 @@ fun void buildKnot() {
     );
 }
 
+// polyhedron geometry params 
+geometries[10] $ PolyhedronGeometry @=> PolyhedronGeometry polyhedron_geo;
+UI_Int polyhedron_type_index(0);
+[
+    "Tetrahedron",
+    "Cube",
+    "Octahedron",
+    "Dodecahedron",
+    "Icosahedron",
+] @=> string polyhedron_types[];
+
+
 // ChuGL UI bool for toggling rotation
 UI_Bool rotate;
 
@@ -366,6 +379,15 @@ fun void updateUI()
             if (UI.slider("radial segments", knot_radial_segments, 3, 64)) buildKnot();
             if (UI.slider("p", knot_p, 1, 20)) buildKnot();
             if (UI.slider("q", knot_q, 1, 20)) buildKnot();
+        }
+
+        
+        // polyhedron geometry params
+        if (mesh.geometry() == polyhedron_geo) {
+            // draw list of materials
+            if (UI.listBox("polyhedron types", polyhedron_type_index, polyhedron_types)) {
+                polyhedron_geo.build(polyhedron_type_index.val());
+            }
         }
     }
     

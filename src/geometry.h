@@ -101,6 +101,14 @@ struct PolygonParams {
     int num_holes;         // len(hole_run_lengths)
 };
 
+enum PolyhedronType : u32 {
+    PolyhedronType_Tetrahedron = 0,
+    PolyhedronType_Cube,
+    PolyhedronType_Octahedron,
+    PolyhedronType_Dodecahedron,
+    PolyhedronType_Icosahedron,
+};
+
 // Arena builders
 struct Arena;
 
@@ -120,3 +128,4 @@ void Geometry_buildTorus(GeometryArenaBuilder* gab, TorusParams* params);
 void Geometry_buildCylinder(GeometryArenaBuilder* gab, CylinderParams* params);
 void Geometry_buildKnot(GeometryArenaBuilder* gab, KnotParams* params);
 void Geometry_buildPolygon(GeometryArenaBuilder* gab, PolygonParams* params);
+void Geometry_buildPolyhedron(GeometryArenaBuilder* gab, PolyhedronType type);

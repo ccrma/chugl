@@ -26,6 +26,7 @@
 @group(1) @binding(3) var<uniform> center_pixels: vec2i;
 @group(1) @binding(4) var<uniform> u_grid: i32;
 @group(1) @binding(5) var<uniform> u_brush_color: vec4f;
+@group(1) @binding(6) var<uniform> u_brush_size: i32;
 
 struct VertexOutput {
     @builtin(position) position : vec4<f32>,
@@ -72,8 +73,13 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4f {
 
     var col : vec4f;
 
-    if (all(vec2i(mouse) == vec2i(pixel_x, pixel_y))) {
-    // if (abs(pixel_fx - mouse.x) < 0.5 && abs(pixel_fy - mouse.y) < 0.5) {
+    // if (all(vec2i(mouse) == vec2i(pixel_x, pixel_y))) {
+    let mousei = vec2i(mouse);
+    if (
+        pixel_x >= mousei.x && pixel_x < mousei.x + u_brush_size
+        &&
+        pixel_y >= mousei.y && pixel_y < mousei.y + u_brush_size
+    ) {
         col = u_brush_color;
     } else {
         if (any(pixel_uv > vec2f(1.0)) || any(pixel_uv < vec2f(0.0))) {

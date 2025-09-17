@@ -37,6 +37,10 @@
 
 #include <earcut/earcut.hpp>
 
+#define PAR_SHAPES_IMPLEMENTATION
+#define PAR_SHAPES_T uint32_t
+#include <par_shapes/par_shapes.h>
+
 // ============================================================================
 // Vertex
 // ============================================================================
@@ -802,4 +806,46 @@ void Geometry_buildPolygon(GeometryArenaBuilder* gab, PolygonParams* params)
 
     // copy indices
     memcpy(indices, earcut_indices.data(), earcut_indices.size() * sizeof(*indices));
+}
+
+void Geometry_buildPolyhedron(GeometryArenaBuilder* gab, PolyhedronType type)
+{
+    par_shapes_mesh* par_mesh = NULL;
+    switch (type) {
+        case PolyhedronType_Tetrahedron: {
+            par_mesh = par_shapes_create_tetrahedron();
+        } break;
+        case PolyhedronType_Cube: {
+            par_mesh = par_shapes_create_cube();
+            par_shapes_translate(par_mesh, -0.5, -0.5, -0.5);
+        } break;
+        case PolyhedronType_Octahedron: {
+            par_mesh = par_shapes_create_octahedron();
+        } break;
+        case PolyhedronType_Dodecahedron: {
+            par_mesh = par_shapes_create_dodecahedron();
+        } break;
+        case PolyhedronType_Icosahedron: {
+            par_mesh = par_shapes_create_icosahedron();
+        } break;
+        default: { // default to tetrahedron
+            par_mesh = par_shapes_create_tetrahedron();
+        }
+    }
+    par_shapes_unweld(par_mesh, true);
+    par_shapes_compute_normals(par_mesh);
+
+    glm::vec3* positions
+      = ARENA_PUSH_COUNT(gab->pos_arena, glm::vec3, par_mesh->npoints);
+    glm::vec3* normals
+      = ARENA_PUSH_COUNT(gab->norm_arena, glm::vec3, par_mesh->npoints);
+    gvec2f* uvs = ARENA_PUSH_ZERO_COUNT(gab->uv_arena, gvec2f, par_mesh->npoints);
+    UNUSED_VAR(uvs);
+    u32* indices = ARENA_PUSH_COUNT(gab->indices_arena, u32, par_mesh->ntriangles * 3);
+
+    memcpy(positions, par_mesh->points, par_mesh->npoints * sizeof(*positions));
+    memcpy(normals, par_mesh->normals, par_mesh->npoints * sizeof(*normals));
+    memcpy(indices, par_mesh->triangles, par_mesh->ntriangles * 3 * sizeof(*indices));
+
+    par_shapes_free_mesh(par_mesh);
 }
