@@ -1287,6 +1287,12 @@ CK_DLL_CTOR(gtorus_ctor);
 CK_DLL_CTOR(gcylinder_ctor);
 CK_DLL_CTOR(gknot_ctor);
 CK_DLL_CTOR(gsuzanne_ctor);
+
+CK_DLL_CTOR(gpolyhedron_ctor);
+CK_DLL_CTOR(gpolyhedron_ctor_with_type);
+CK_DLL_MFUN(gpolyhedron_set_shape);
+CK_DLL_MFUN(gpolyhedron_get_shape);
+
 // GShape phong material fns
 CK_DLL_MFUN(gshape_phong_material_get_specular_color);
 CK_DLL_MFUN(gshape_phong_material_set_specular_color);
@@ -1630,6 +1636,42 @@ static void ulib_mesh_query(Chuck_DL_Query* QUERY)
 
         END_CLASS();
     }
+
+    {
+        BEGIN_CLASS("GPolyhedron", SG_CKNames[SG_COMPONENT_MESH]);
+        DOC_CLASS(
+          "Convenience class for creating a GMesh(PolyehedronGeometry, PhongMaterial)");
+        ADD_EX("basic/geo_and_mat.ck");
+
+        CTOR(gpolyhedron_ctor);
+
+        CTOR(gpolyhedron_ctor_with_type);
+        ARG("int", "type");
+        DOC_FUNC(
+          "Specify the polyhedron type: "
+          "PolyhedronGeometry.TETRAHEDRON, PolyhedronGeometry.CUBE, "
+          "PolyhedronGeometry.OCTAHEDRON, PolyhedronGeometry.DODECAHEDRON, "
+          "or PolyhedronGeometry.ICOSAHEDRON");
+
+        MFUN(gpolyhedron_set_shape, "void", "shape");
+        ARG("int", "polyhedron_type");
+        DOC_FUNC(
+          "Specify the polyhedron type: "
+          "PolyhedronGeometry.TETRAHEDRON, PolyhedronGeometry.CUBE, "
+          "PolyhedronGeometry.OCTAHEDRON, PolyhedronGeometry.DODECAHEDRON, "
+          "or PolyhedronGeometry.ICOSAHEDRON");
+
+        MFUN(gpolyhedron_get_shape, "int", "shape");
+        DOC_FUNC(
+          "Get the current polyhedron type: "
+          "PolyhedronGeometry.TETRAHEDRON, PolyhedronGeometry.CUBE, "
+          "PolyhedronGeometry.OCTAHEDRON, PolyhedronGeometry.DODECAHEDRON, "
+          "or PolyhedronGeometry.ICOSAHEDRON");
+
+        PHONG_MATERIAL_METHODS(gshape_phong);
+
+        END_CLASS();
+    }
 }
 
 SG_Transform* ulib_ggen_create(Chuck_Object* ckobj, Chuck_VM_Shred* shred)
@@ -1777,11 +1819,12 @@ CK_DLL_MFUN(ggen_set_shadowed_all_children)
 // GLines2D ===============================================================
 
 static void ulib_mesh_create_gshape(Chuck_Object* ckobj, SG_GeometryType geo_type,
-                                    SG_MaterialType mat_type, Chuck_VM_Shred* shred)
+                                    SG_MaterialType mat_type, Chuck_VM_Shred* shred,
+                                    void* geo_params = NULL)
 {
     CK_DL_API API    = g_chuglAPI;
     SG_Mesh* mesh    = GET_MESH(ckobj);
-    SG_Geometry* geo = ulib_geometry_create(geo_type, shred);
+    SG_Geometry* geo = ulib_geometry_create(geo_type, shred, geo_params);
     SG_Material* mat = ulib_material_create(mat_type, shred);
     SG_Mesh::setGeometry(mesh, geo);
     SG_Mesh::setMaterial(mesh, mat);
@@ -2079,6 +2122,29 @@ CK_DLL_CTOR(gknot_ctor)
 CK_DLL_CTOR(gsuzanne_ctor)
 {
     ulib_mesh_create_gshape(SELF, SG_GEOMETRY_SUZANNE, SG_MATERIAL_PHONG, SHRED);
+}
+
+CK_DLL_CTOR(gpolyhedron_ctor)
+{
+    ulib_mesh_create_gshape(SELF, SG_GEOMETRY_POLYHEDRON, SG_MATERIAL_PHONG, SHRED);
+}
+CK_DLL_CTOR(gpolyhedron_ctor_with_type)
+{
+    PolyhedronType type = (PolyhedronType)GET_NEXT_INT(ARGS);
+    ulib_mesh_create_gshape(SELF, SG_GEOMETRY_POLYHEDRON, SG_MATERIAL_PHONG, SHRED,
+                            &type);
+}
+
+CK_DLL_MFUN(gpolyhedron_set_shape)
+{
+    t_CKINT t           = GET_NEXT_INT(ARGS);
+    PolyhedronType type = (PolyhedronType)CLAMP(t, 0, PolyhedronType_Count - 1);
+    ulib_geometry_build(GET_MESH_GEOMETRY(SELF), SG_GEOMETRY_POLYHEDRON, &type);
+}
+
+CK_DLL_MFUN(gpolyhedron_get_shape)
+{
+    RETURN->v_int = GET_MESH_GEOMETRY(SELF)->params.polyhedron;
 }
 
 // GShape phong material fns ============================================

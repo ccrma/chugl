@@ -772,8 +772,7 @@ static void ulib_geometry_query(Chuck_DL_Query* QUERY)
 // Geometry -----------------------------------------------------
 
 // if params is NULL, uses default values
-static void ulib_geometry_build(SG_Geometry* geo, SG_GeometryType geo_type,
-                                void* params)
+void ulib_geometry_build(SG_Geometry* geo, SG_GeometryType geo_type, void* params)
 {
     geo->geo_type = geo_type;
 
@@ -831,7 +830,9 @@ static void ulib_geometry_build(SG_Geometry* geo, SG_GeometryType geo_type,
             SG_Geometry::buildPolygon(geo, (PolygonParams*)params);
         } break;
         case SG_GEOMETRY_POLYHEDRON: {
-            SG_Geometry::buildPolyhedron(geo, (PolyhedronType*)params);
+            PolyhedronType p = PolyhedronType_Tetrahedron;
+            if (params) p = *(PolyhedronType*)params;
+            SG_Geometry::buildPolyhedron(geo, &p);
         } break;
         default: ASSERT(false);
     }
@@ -839,7 +840,8 @@ static void ulib_geometry_build(SG_Geometry* geo, SG_GeometryType geo_type,
     CQ_UpdateAllVertexAttributes(geo);
 }
 
-SG_Geometry* ulib_geometry_create(SG_GeometryType type, Chuck_VM_Shred* shred)
+SG_Geometry* ulib_geometry_create(SG_GeometryType type, Chuck_VM_Shred* shred,
+                                  void* geo_params = NULL)
 {
     CK_DL_API API = g_chuglAPI;
 
@@ -850,7 +852,7 @@ SG_Geometry* ulib_geometry_create(SG_GeometryType type, Chuck_VM_Shred* shred)
 
     CQ_PushCommand_GeometryCreate(geo);
 
-    ulib_geometry_build(geo, type, NULL);
+    ulib_geometry_build(geo, type, geo_params);
 
     return geo;
 }

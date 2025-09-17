@@ -430,7 +430,9 @@ SG_Material* ulib_material_create(SG_MaterialType type, Chuck_VM_Shred* shred);
 void ulib_material_cq_update_all_uniforms(SG_Material* material);
 
 // impl in ulib_geometry.cpp
-SG_Geometry* ulib_geometry_create(SG_GeometryType type, Chuck_VM_Shred* shred);
+SG_Geometry* ulib_geometry_create(SG_GeometryType type, Chuck_VM_Shred* shred,
+                                  void* geo_params);
+void ulib_geometry_build(SG_Geometry* geo, SG_GeometryType geo_type, void* params);
 void ulib_geo_lines2d_set_lines_points(SG_Geometry* geo, Chuck_Object* ck_arr);
 void ulib_geo_lines2d_set_lines_points(SG_Geometry* geo, Chuck_Object* ck_arr, int len);
 void ulib_geo_lines2d_set_line_colors(SG_Geometry* geo, Chuck_Object* ck_arr);

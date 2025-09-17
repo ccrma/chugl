@@ -1,5 +1,11 @@
 TODO
 
+Release
+- GPolyhedron
+- CKDocs
+- ADD_EX()
+- update chuck_website repo tutorials with streamlined stuff (like GG.bloom)
+
 - Test fileDialog methods on Windows (something about weird utf8 vs utf-16 behaviour)
 - change GModel.materials to PhongMaterial?
 

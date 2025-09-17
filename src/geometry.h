@@ -107,6 +107,7 @@ enum PolyhedronType : u32 {
     PolyhedronType_Octahedron,
     PolyhedronType_Dodecahedron,
     PolyhedronType_Icosahedron,
+    PolyhedronType_Count,
 };
 
 // Arena builders

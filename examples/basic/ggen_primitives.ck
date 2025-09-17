@@ -23,6 +23,18 @@ GCylinder cylinder --> group;
 GKnot knot --> group; knot.sca(.5);
 GSuzanne suzanne --> group; suzanne.sca(.5);
 
+// platonic solids
+GPolyhedron tetrahedron(PolyhedronGeometry.TETRAHEDRON) --> group; tetrahedron.posY(-2.).posX(-2);
+GPolyhedron octahedron(PolyhedronGeometry.OCTAHEDRON) --> group; octahedron.posY(-2).posX(-6);
+GPolyhedron dodecahedron(PolyhedronGeometry.DODECAHEDRON) --> group; dodecahedron.posY(-2).posX(2);
+GPolyhedron icosahedron(PolyhedronGeometry.ICOSAHEDRON) --> group; icosahedron.posY(-2).posX(6);
+
+// randomize polyhedron colors
+Color.random() => tetrahedron.color;
+Color.random() => octahedron.color;
+Color.random() => dodecahedron.color;
+Color.random() => icosahedron.color;
+
 // 2D primitives
 GPlane plane --> group;
 GCircle circle --> group;
@@ -46,11 +58,7 @@ for( GMesh obj : ggens )
     -ggens.size() + 2 * pos++ => obj.posX;
     
     // randomize color
-    Math.random2f(0.0, 1.0) => float r;
-    Math.random2f(0.0, 1.0) => float g;
-    Math.random2f(0.0, 1.0) => float b;
-    // set color on the material for each GGen
-    @(r, g, b) => (obj.mat() $ PhongMaterial).color;
+    Color.random() => (obj.mat() $ PhongMaterial).color;
 }
 
 // position

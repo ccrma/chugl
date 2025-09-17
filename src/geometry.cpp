@@ -810,10 +810,13 @@ void Geometry_buildPolygon(GeometryArenaBuilder* gab, PolygonParams* params)
 
 void Geometry_buildPolyhedron(GeometryArenaBuilder* gab, PolyhedronType type)
 {
+    const float axis[3]       = { 0, 1, 0 };
     par_shapes_mesh* par_mesh = NULL;
     switch (type) {
         case PolyhedronType_Tetrahedron: {
             par_mesh = par_shapes_create_tetrahedron();
+            par_shapes_translate(par_mesh, 0.0, -0.6667, 0.0);
+            par_shapes_rotate(par_mesh, -PI / 6.0, (float*)&axis);
         } break;
         case PolyhedronType_Cube: {
             par_mesh = par_shapes_create_cube();
@@ -830,6 +833,8 @@ void Geometry_buildPolyhedron(GeometryArenaBuilder* gab, PolyhedronType type)
         } break;
         default: { // default to tetrahedron
             par_mesh = par_shapes_create_tetrahedron();
+            par_shapes_translate(par_mesh, 0.0, -0.6667, 0.0);
+            par_shapes_rotate(par_mesh, -PI / 6.0, (float*)&axis);
         }
     }
     par_shapes_unweld(par_mesh, true);
