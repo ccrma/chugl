@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// name: game_of_life.ck
+// name: game-of-life.ck
 // desc: microphone input waveform as seeds for Conway's Game of Life
 // 
 // author: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)

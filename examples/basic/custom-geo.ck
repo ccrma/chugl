@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// name: custom_geo.ck
+// name: custom-geo.ck
 // desc: creating custom meshes via passing vertex data directly
 //       (useful for creating procedural geometry or making your own asset importers)
 // requires: ChuGL + chuck-1.5.3.0 or higher

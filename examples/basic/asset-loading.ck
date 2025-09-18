@@ -1,5 +1,5 @@
 //--------------------------------------------------------------------
-// name: asset_loading.ck
+// name: asset-loading.ck
 // desc: example of loading assets (e.g., 3D models) from file
 //       and rendering as a GGen
 //

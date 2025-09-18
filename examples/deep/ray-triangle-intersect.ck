@@ -1,5 +1,5 @@
 //--------------------------------------------------------------------
-// name: ray_triangle_intersection.ck
+// name: ray-triangle-intersect.ck
 // desc: ray-triangle intersection testing using mouse cursor
 // requires: ChuGL / chuck-1.5.5.5
 // 

@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// name: texture_read.ck
+// name: texture-read.ck
 // desc: how to read back texture data from the GPU to chuck
 //
 // authors: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)

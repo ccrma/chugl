@@ -1,5 +1,5 @@
 /*-----------------------------------------------------------------------------
-name: pokemon_cries.ck
+name: pokemon-cries.ck
 desc: Synthesizes all Gen I Pokemon cries by emulating a subset of the Gameboy
   APU (audio processing unit). T subset comprises 2 pulse oscillators and 1
   LFSR (linear feedback shift register) which is used to produce pseudo-random
