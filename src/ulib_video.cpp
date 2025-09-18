@@ -214,7 +214,7 @@ void ulib_video_query(Chuck_DL_Query* QUERY)
           "updates a texture with the webcam feed. The webcam texture may be "
           "accessed with the `.texture()` member function");
         ADD_EX("basic/webcam.ck");
-        ADD_EX("deep/webcam_echo.ck");
+        ADD_EX("deep/webcam-echo.ck");
 
         CTOR(webcam_ctor);
         DOC_FUNC(

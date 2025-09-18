@@ -166,8 +166,8 @@ static void ulib_geometry_query(Chuck_DL_Query* QUERY)
     DOC_CLASS(
       "Geometry component. Can contain vertex attribute data, indices data, and pulled "
       "vertex buffers");
-    ADD_EX("basic/custom_geo.ck");
-    ADD_EX("basic/geo_and_mat.ck");
+    ADD_EX("basic/custom-geo.ck");
+    ADD_EX("basic/geo-and-mat.ck");
 
     // contants
     static t_CKINT sg_geometry_max_attributes{ SG_GEOMETRY_MAX_VERTEX_ATTRIBUTES };
@@ -697,7 +697,7 @@ static void ulib_geometry_query(Chuck_DL_Query* QUERY)
           "https://github.com/mapbox/earcut.hpp "
           "Supports arbitrary polygons with holes.");
 
-        ADD_EX("basic/geo_and_mat.ck");
+        ADD_EX("basic/geo-and-mat.ck");
         ADD_EX("basic/triangulate.ck");
         ADD_EX("deep/fish.ck");
 
@@ -738,7 +738,7 @@ static void ulib_geometry_query(Chuck_DL_Query* QUERY)
         DOC_CLASS(
           "Geometry for constructing platonic solids: tetrahedron, cube, icosahedron, "
           "octahedron, dodecahedron");
-        ADD_EX("basic/geo_and_mat.ck");
+        ADD_EX("basic/geo-and-mat.ck");
 
         SVAR("int", "TETRAHEDRON", &polyhedron_tetrahedron);
         SVAR("int", "CUBE", &polyhedron_cube);
