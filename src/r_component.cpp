@@ -604,6 +604,8 @@ void R_Geometry::rebuildWireframe(R_Geometry* geo, GraphicsContext* gctx)
     if (!geo->gpu_wireframe_index_buffer_stale) return;
     geo->gpu_wireframe_index_buffer_stale = false;
 
+    log_trace("rebuilding wireframe");
+
     u32 num_indices        = R_Geometry::indexCount(geo);
     int wireframe_i        = 0;
     u64 size_bytes         = 0;

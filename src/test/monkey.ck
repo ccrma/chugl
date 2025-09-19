@@ -1,8 +1,10 @@
 GOrbitCamera orbit_camera --> GG.scene();
 GG.scene().camera(orbit_camera);
+orbit_camera.posZ(99.84);
 
 SuzanneGeometry geo;
-PhongMaterial mat;
+// PhongMaterial mat;
+FlatMaterial mat;
 
 
 100 => int NUM_ROWS;
@@ -31,4 +33,6 @@ while (1) {
             monkeys[y][x].rotateY(dt * rotation_speeds[x][y]);
         }
     }
+
+    <<< orbit_camera.posZ() >>>;
 }

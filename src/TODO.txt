@@ -2,6 +2,10 @@ TODO
 
 Investigate why tmp.txt slows and then freezes...
 - why does stacking 512 meshes on top of each other lock up?
+  - GPU-bound, changing shader to UVMaterial gets back to 60fps
+  - profile PhongMaterial shader, it's even slower than PBRMaterial (maybe because of shadow stuff)
+  - 0.2.6 and 0.2.7 both have 15.5fps with PBR Material
+  - my guess is changes to PhongMaterial caused slowdown?
 - but no lockup when they are in a grid?
 - go through apple metal profiling docs
 - also, why is monkey.ck slower in 0.2.7 than 0.2.6?
@@ -10,7 +14,7 @@ Investigate why tmp.txt slows and then freezes...
 
 Gamepad support! 
 - see https://github.com/ColleagueRiley/minigamepad
-- look at how dearImGui / RayLib / SDL do this
+- look at how dearImGui / RayLib do this
 
 Create skyboxmaterial example
 - atmospheric sunset shader? (reference fabien blogpost)
