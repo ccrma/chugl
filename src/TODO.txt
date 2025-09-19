@@ -1,5 +1,22 @@
 TODO
 
+Investigate why tmp.txt slows and then freezes...
+- why does stacking 512 meshes on top of each other lock up?
+- but no lockup when they are in a grid?
+- go through apple metal profiling docs
+- also, why is monkey.ck slower in 0.2.7 than 0.2.6?
+  - need to add some benchmarks...
+
+
+Gamepad support! 
+- see https://github.com/ColleagueRiley/minigamepad
+- look at how dearImGui / RayLib / SDL do this
+
+Create skyboxmaterial example
+- atmospheric sunset shader? (reference fabien blogpost)
+  - https://fabiensanglard.net/sunset/
+
+
 Release
 - build-gcc
 - CKDocs
