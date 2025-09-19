@@ -346,12 +346,12 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
           "mip levels) "
           "cannot be changed after creation. You can, however, write data to the "
           "texture");
-        ADD_EX("deep/game_of_life.ck");
-        ADD_EX("deep/audio_donut.ck");
+        ADD_EX("deep/game-of-life.ck");
+        ADD_EX("deep/audio-donut.ck");
         ADD_EX("deep/snowstorm.ck");
         ADD_EX("basic/skybox.ck");
-        ADD_EX("deep/webcam_echo.ck");
-        ADD_EX("basic/texture_read.ck");
+        ADD_EX("deep/webcam-echo.ck");
+        ADD_EX("basic/texture-read.ck");
 
         // svars ---------------
         static t_CKINT texture_usage_copy_src        = WGPUTextureUsage_CopySrc;

@@ -112,7 +112,7 @@ void ulib_assloader_query(Chuck_DL_Query* QUERY)
     { // AssLoader --------------------------------------------------------------
         BEGIN_CLASS("AssLoader", "Object");
         DOC_CLASS("Utility for asset loading; supports .obj files");
-        ADD_EX("basic/asset_loading.ck");
+        ADD_EX("basic/asset-loading.ck");
 
         SFUN(assloader_load_obj, "GGen", "loadObj");
         ARG("string", "filepath");

@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// name: drum_machine.ck
+// name: drum-machine.ck
 // desc: a step sequencing drum-machine
 // 
 // author: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)

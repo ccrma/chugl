@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// name: geo_and_mat.ck
+// name: geo-and-mat.ck
 // desc: UI-driven example for geometry + material
 // NOTE: this is a useful example for exploring what you can do with the 
 //       built-in geometries and materials

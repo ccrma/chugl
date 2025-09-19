@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// name: music_for_airports.ck
+// name: music-for-airports.ck
 // desc: Generative ambient music, based on track 2/1 from Brian Eno's 
 // "Music for Airports"
 // 

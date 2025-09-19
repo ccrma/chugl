@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// name: webcam_echo.ck
+// name: webcam-echo.ck
 // desc: create an echo/waterfall video effect using webcam, suing
 // multiple textures and texture copying
 //

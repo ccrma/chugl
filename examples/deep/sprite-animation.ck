@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// name: sprite_animation.ck
+// name: sprite-animation.ck
 // desc: animate a cat with sprite sheet textures and a simple state machine
 // 
 // this example requires downloading the following assets:
