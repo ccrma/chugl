@@ -133,6 +133,36 @@ CK_DLL_SFUN(gwindow_get_kb_released_all_with_arr);
 // drag+drop files
 CK_DLL_SFUN(gwindow_get_dropped_files);
 
+/*
+Gamepad impl notes
+
+GLFW_JOYSTICK_1 through GLFW_JOYSTICK_16 = GLFW_JOYSTICK_LAST
+glfwJoystickIsGamepad (GLFW_JOYSTICK_1); // check if exists
+
+each has
+- axes
+- buttons
+- hats
+- human-readable name
+
+// Input-related functions: gamepads
+bool IsGamepadAvailable(int gamepad);                                        // Check if a gamepad is available
+const char *GetGamepadName(int gamepad);                                     // Get gamepad internal name id
+bool IsGamepadButtonPressed(int gamepad, int button);                        // Check if a gamepad button has been pressed once
+bool IsGamepadButtonDown(int gamepad, int button);                           // Check if a gamepad button is being pressed
+bool IsGamepadButtonReleased(int gamepad, int button);                       // Check if a gamepad button has been released once
+bool IsGamepadButtonUp(int gamepad, int button);                             // Check if a gamepad button is NOT being pressed
+int GetGamepadButtonPressed(void);                                           // Get the last gamepad button pressed
+int GetGamepadAxisCount(int gamepad);                                        // Get gamepad axis count for a gamepad
+float GetGamepadAxisMovement(int gamepad, int axis);                         // Get axis movement value for a gamepad axis
+
+
+
+
+
+
+*/
+
 void ulib_window_query(Chuck_DL_Query* QUERY)
 {
     // BEGIN_CLASS("MonitorInfo", "Object");

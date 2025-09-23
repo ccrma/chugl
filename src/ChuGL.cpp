@@ -205,6 +205,21 @@ static const char* BufferMapAsyncStatusToString(WGPUBufferMapAsyncStatus status)
     return "Invalid Status";
 }
 
+// ===================
+// Gamepad State
+// ===================
+struct CHUGL_Gamepad {
+    b32 connected;
+    char name[128];
+    float axes[6];
+    struct {
+        b8 pressed;  // true on frame of press
+        b8 released; // true on frame of release
+        b8 down;     // true on all frames button is down
+    } buttons[15];
+};
+CHUGL_Gamepad CHUGL_Gamepads[GLFW_JOYSTICK_LAST + 1];
+
 static void FlushGraphicsToAudioCQ()
 {
     CK_DL_API API = g_chuglAPI;
@@ -264,6 +279,37 @@ static void FlushGraphicsToAudioCQ()
                   = cmd->status;
                 Event_Broadcast(cmd->texture_save_event);
                 API->object->release((Chuck_Object*)cmd->texture_save_event);
+            } break;
+            case SG_COMMAND_G2A_GAMEPAD_STATE: {
+                SG_Command_G2A_GamepadState* cmd
+                  = (SG_Command_G2A_GamepadState*)command;
+                CHUGL_Gamepad* gp = &CHUGL_Gamepads[cmd->gp_id];
+                ASSERT(gp->connected);
+
+                // axes state
+                memcpy(gp->axes, cmd->state.axes, sizeof(gp->axes));
+
+                // button state
+                int num_buttons = ARRAY_LENGTH(cmd->state.buttons);
+                for (int i = 0; i < num_buttons; ++i) {
+                    u8 new_button  = cmd->state.buttons[i];
+                    u8 prev_button = gp->buttons[i].down;
+
+                    gp->buttons[i].pressed  = (new_button && !prev_button);
+                    gp->buttons[i].released = (prev_button && !new_button);
+                    gp->buttons[i].down     = new_button;
+                }
+            } break;
+            case SG_COMMAND_G2A_GAMEPAD_CONNECT: {
+                SG_Command_G2A_GamepadConnect* cmd
+                  = (SG_Command_G2A_GamepadConnect*)command;
+                CHUGL_Gamepad* gp = &CHUGL_Gamepads[cmd->gp_id];
+                if (cmd->connected) {
+                    gp->connected = 1;
+                    snprintf(gp->name, sizeof(gp->name), cmd->name);
+                } else {
+                    *gp = {};
+                }
             } break;
             default: ASSERT(false)
         }

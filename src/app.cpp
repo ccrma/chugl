@@ -430,6 +430,7 @@ struct App {
             glfwSetScrollCallback(app->window, _scrollCallback);
             glfwSetCursorPosCallback(app->window, _cursorPositionCallback);
             glfwSetKeyCallback(app->window, _keyCallback);
+            glfwSetJoystickCallback(_joystickCallback);
             glfwSetWindowCloseCallback(app->window, _closeCallback);
             glfwSetWindowContentScaleCallback(app->window, _contentScaleCallback);
             glfwSetDropCallback(app->window, _dropCallback);
@@ -603,6 +604,29 @@ struct App {
             CHUGL_Zero_MouseDeltasAndClickState();
             CHUGL_Kb_ZeroPressedReleased();
             glfwPollEvents();
+
+            { // gamepad
+                for (int gamepad_idx = 0; gamepad_idx <= GLFW_JOYSTICK_LAST;
+                     gamepad_idx++) {
+                    GLFWgamepadstate gp_state = {};
+                    if (glfwGetGamepadState(gamepad_idx, &gp_state)) {
+                        printf("Gamepad detected: %s\n",
+                               glfwGetGamepadName(gamepad_idx));
+                        printf("Buttons state\n");
+                        int num_buttons = ARRAY_LENGTH(gp_state.buttons);
+                        int num_axes    = ARRAY_LENGTH(gp_state.axes);
+                        for (int button_idx = 0; button_idx < num_buttons;
+                             ++button_idx) {
+                            printf("%d: %d\n", button_idx,
+                                   gp_state.buttons[button_idx]);
+                        }
+                        printf("Axes state\n");
+                        for (int axes_idx = 0; axes_idx < num_buttons; ++axes_idx) {
+                            printf("%d: %f\n", axes_idx, gp_state.axes[axes_idx]);
+                        }
+                    }
+                }
+            }
 
             if (do_ui) {
                 // reset imgui
@@ -1243,6 +1267,15 @@ struct App {
         } else if (action == GLFW_RELEASE) {
             CHUGL_Kb_action(key, false);
         }
+    }
+
+    static void _joystickCallback(int jid, int event)
+    {
+        // only trigger connection/disconnection event if the joystick is a gamepad
+        const char* name = glfwGetGamepadName(jid);
+        if (name == NULL) return;
+        ASSERT(event == GLFW_CONNECTED || event == GLFW_DISCONNECTED);
+        CQ_PushCommand_G2A_GamepadConnect(jid, event == GLFW_CONNECTED, name);
     }
 
     static void _dropCallback(GLFWwindow* window, int count, const char** paths)

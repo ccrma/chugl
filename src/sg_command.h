@@ -185,6 +185,8 @@ enum SG_CommandType : u32 {
     SG_COMMAND_G2A_TEXTURE_READ,
     SG_COMMAND_G2A_FILES_DROPPED,
     SG_COMMAND_G2A_TEXTURE_SAVE,
+    SG_COMMAND_G2A_GAMEPAD_STATE,
+    SG_COMMAND_G2A_GAMEPAD_CONNECT,
 
     SG_COMMAND_COUNT
 };
@@ -633,6 +635,17 @@ struct SG_Command_G2A_TextureSave : public SG_Command {
     int status;                      // 0 on success
 };
 
+struct SG_Command_G2A_GamepadState : public SG_Command {
+    int gp_id;
+    GLFWgamepadstate state;
+};
+
+struct SG_Command_G2A_GamepadConnect : public SG_Command {
+    int gp_id;
+    int connected;
+    char name[128];
+}
+
 // ============================================================================
 // Command Queue API
 // ============================================================================
@@ -794,3 +807,6 @@ void CQ_PushCommand_G2A_TextureRead(SG_ID id, void* data, int size_bytes,
                                     WGPUBufferMapAsyncStatus status);
 
 void CQ_PushCommand_G2A_TextureSave(Chuck_Event* texture_save_event, int status);
+
+void CQ_PushCommand_G2A_GamepadConnect(int gp_id, int connected, const char* name);
+void CQ_PushCommand_G2A_GamepadState(int id, GLFWgamepadstate* state);

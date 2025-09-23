@@ -1128,11 +1128,11 @@ void CQ_PushCommand_G2A_FilesDropped(int count, const char** paths)
             ASSERT(false);
             break;
         }
-        
+
         int len = strlen(paths[i]);
         strcpy(write_head, paths[i]);
         write_head += (len + 1);
-        size_bytes -= (len + 1); 
+        size_bytes -= (len + 1);
     }
     ASSERT(size_bytes == 0);
     END_COMMAND();
@@ -1143,6 +1143,23 @@ void CQ_PushCommand_G2A_TextureSave(Chuck_Event* texture_save_event, int status)
     BEGIN_COMMAND(SG_Command_G2A_TextureSave, SG_COMMAND_G2A_TEXTURE_SAVE);
     command->status             = status;
     command->texture_save_event = texture_save_event;
+    END_COMMAND();
+}
+
+void CQ_PushCommand_G2A_GamepadConnect(int gp_id, int connected, const char* name)
+{
+    BEGIN_COMMAND(SG_Command_G2A_GamepadConnect, SG_COMMAND_G2A_GAMEPAD_CONNECT);
+    command->gp_id     = gp_id;
+    command->connected = connected;
+    snprintf(command->name, sizeof(command->name), name);
+    END_COMMAND();
+}
+
+void CQ_PushCommand_G2A_GamepadState(int id, GLFWgamepadstate* state)
+{
+    BEGIN_COMMAND(SG_Command_G2A_GamepadState, SG_COMMAND_G2A_GAMEPAD_STATE);
+    command->gp_id = id;
+    memcpy(&command->state, state, sizeof(command->state));
     END_COMMAND();
 }
 

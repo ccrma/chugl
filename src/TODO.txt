@@ -11,6 +11,11 @@ Investigate why tmp.txt slows and then freezes...
 - also, why is monkey.ck slower in 0.2.7 than 0.2.6?
   - need to add some benchmarks...
 
+Decrement CMakeLists cpp version to 11, make sure it still compiles
+- can probably decrement min MacOS version too
+
+Can we bundle chugl applications?
+- see raylib example on MacOS: https://github.com/raysan5/raylib/wiki/Working-on-macOS#bundle-your-app-in-an-application
 
 Gamepad support! 
 - see https://github.com/ColleagueRiley/minigamepad
