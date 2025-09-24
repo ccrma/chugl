@@ -134,7 +134,7 @@ while (1) {
 
     // draw each connected controller
     for (int gp_id; gp_id <= max_id; gp_id++) {
-        gamepads[gp_id].sca(slot_y);
+        gamepads[gp_id].sca(slot_y * .5);
         gamepads[gp_id] --> GG.scene();
 
         // position in grid
@@ -142,9 +142,9 @@ while (1) {
             gamepads[gp_id].pos(0, 0);
         } else {
             if (gp_id % 2) {
-                gamepads[gp_id].posX(4);
+                gamepads[gp_id].posX(3.5);
             } else {
-                gamepads[gp_id].posX(-4);
+                gamepads[gp_id].posX(-3.5);
             }
             gamepads[gp_id].posY(10 * (slot_y *  (gp_id / 2) + slot_y / 2)  - 5.0);
         }
