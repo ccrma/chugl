@@ -1151,7 +1151,7 @@ void CQ_PushCommand_G2A_GamepadConnect(int gp_id, int connected, const char* nam
     BEGIN_COMMAND(SG_Command_G2A_GamepadConnect, SG_COMMAND_G2A_GAMEPAD_CONNECT);
     command->gp_id     = gp_id;
     command->connected = connected;
-    snprintf(command->name, sizeof(command->name), name);
+    snprintf(command->name, sizeof(command->name), "%s", name);
     END_COMMAND();
 }
 

@@ -1,5 +1,7 @@
 # Changes
 
+## 0.2.8 (alpha)
+
 ## 0.2.7 (alpha)
 - add `GModel` for loading 3D asset models (currently supports OBJ)
 - add `GPolyhedron` and `PolyhedronGeometry` for builtin platonic solids

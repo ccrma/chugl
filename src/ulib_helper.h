@@ -214,6 +214,21 @@ struct {
     Chuck_String* STANDARD_VERTEX_SHADER;
 } g_builtin_ckobjs;
 
+// ===================
+// Gamepad State
+// ===================
+struct CHUGL_Gamepad {
+    b32 connected;
+    char name[128];
+    float axes[6];
+    struct {
+        b8 pressed;  // true on frame of press
+        b8 released; // true on frame of release
+        b8 down;     // true on all frames button is down
+    } buttons[15];
+};
+CHUGL_Gamepad CHUGL_Gamepads[GLFW_JOYSTICK_LAST + 1];
+
 // map from ckobj to shred
 std::unordered_map<Chuck_Object*, Chuck_VM_Shred*> ckobj_2_OriginShred;
 

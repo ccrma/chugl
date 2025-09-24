@@ -205,21 +205,6 @@ static const char* BufferMapAsyncStatusToString(WGPUBufferMapAsyncStatus status)
     return "Invalid Status";
 }
 
-// ===================
-// Gamepad State
-// ===================
-struct CHUGL_Gamepad {
-    b32 connected;
-    char name[128];
-    float axes[6];
-    struct {
-        b8 pressed;  // true on frame of press
-        b8 released; // true on frame of release
-        b8 down;     // true on all frames button is down
-    } buttons[15];
-};
-CHUGL_Gamepad CHUGL_Gamepads[GLFW_JOYSTICK_LAST + 1];
-
 static void FlushGraphicsToAudioCQ()
 {
     CK_DL_API API = g_chuglAPI;
@@ -306,9 +291,9 @@ static void FlushGraphicsToAudioCQ()
                 CHUGL_Gamepad* gp = &CHUGL_Gamepads[cmd->gp_id];
                 if (cmd->connected) {
                     gp->connected = 1;
-                    snprintf(gp->name, sizeof(gp->name), cmd->name);
+                    snprintf(gp->name, sizeof(gp->name), "%s", cmd->name);
                 } else {
-                    *gp = {};
+                    memset(gp, 0, sizeof(*gp));
                 }
             } break;
             default: ASSERT(false)

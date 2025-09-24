@@ -136,6 +136,8 @@
     "strstream": "cpp",
     "tinycthread.c": "cpp",
     "span": "cpp",
-    "ranges": "cpp"
+    "ranges": "cpp",
+    "functional": "cpp",
+    "utility": "cpp"
   }
 }

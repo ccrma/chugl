@@ -644,7 +644,7 @@ struct SG_Command_G2A_GamepadConnect : public SG_Command {
     int gp_id;
     int connected;
     char name[128];
-}
+};
 
 // ============================================================================
 // Command Queue API

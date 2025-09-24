@@ -1,5 +1,7 @@
 TODO
 
+Leakcheck gamepad.ck example
+
 Investigate why tmp.txt slows and then freezes...
 - why does stacking 512 meshes on top of each other lock up?
   - GPU-bound, changing shader to UVMaterial gets back to 60fps
@@ -13,6 +15,7 @@ Investigate why tmp.txt slows and then freezes...
 
 Decrement CMakeLists cpp version to 11, make sure it still compiles
 - can probably decrement min MacOS version too
+
 
 Can we bundle chugl applications?
 - see raylib example on MacOS: https://github.com/raysan5/raylib/wiki/Working-on-macOS#bundle-your-app-in-an-application

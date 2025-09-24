@@ -133,6 +133,7 @@ CK_DLL_SFUN(gwindow_get_kb_released_all_with_arr);
 // drag+drop files
 CK_DLL_SFUN(gwindow_get_dropped_files);
 
+// clang-format off
 /*
 Gamepad impl notes
 
@@ -146,22 +147,20 @@ each has
 - human-readable name
 
 // Input-related functions: gamepads
-bool IsGamepadAvailable(int gamepad);                                        // Check if a gamepad is available
-const char *GetGamepadName(int gamepad);                                     // Get gamepad internal name id
-bool IsGamepadButtonPressed(int gamepad, int button);                        // Check if a gamepad button has been pressed once
-bool IsGamepadButtonDown(int gamepad, int button);                           // Check if a gamepad button is being pressed
-bool IsGamepadButtonReleased(int gamepad, int button);                       // Check if a gamepad button has been released once
-bool IsGamepadButtonUp(int gamepad, int button);                             // Check if a gamepad button is NOT being pressed
 int GetGamepadButtonPressed(void);                                           // Get the last gamepad button pressed
 int GetGamepadAxisCount(int gamepad);                                        // Get gamepad axis count for a gamepad
 float GetGamepadAxisMovement(int gamepad, int axis);                         // Get axis movement value for a gamepad axis
 
-
-
-
-
-
 */
+// clang-format on
+CK_DLL_SFUN(gamepad_get_connected);
+CK_DLL_SFUN(gamepad_get_connected_list);
+CK_DLL_SFUN(gamepad_get_name);
+
+CK_DLL_SFUN(gamepad_get_button_pressed);
+CK_DLL_SFUN(gamepad_get_button_down);
+CK_DLL_SFUN(gamepad_get_button_released);
+CK_DLL_SFUN(gamepad_get_axis);
 
 void ulib_window_query(Chuck_DL_Query* QUERY)
 {
@@ -997,6 +996,118 @@ void ulib_window_query(Chuck_DL_Query* QUERY)
       "call. See examples/basic/gwindow.ck for how to use.");
 
     END_CLASS(); // GWindow
+
+    { // Gamepad
+        BEGIN_CLASS("Gamepad", "Object");
+        DOC_CLASS(
+          "Static class for reading gamepad input. Gamepad state is updated "
+          "per graphics frame, so these functions will only work as expected if "
+          "GG.nextFrame() is being called in a renderloop. Supports up to 16 "
+          "controllers");
+
+        static t_CKINT gamepad_button_a = GLFW_GAMEPAD_BUTTON_A;
+        SVAR("int", "BUTTON_A", &gamepad_button_a);
+        static t_CKINT gamepad_button_b = GLFW_GAMEPAD_BUTTON_B;
+        SVAR("int", "BUTTON_B", &gamepad_button_b);
+        static t_CKINT gamepad_button_x = GLFW_GAMEPAD_BUTTON_X;
+        SVAR("int", "BUTTON_X", &gamepad_button_x);
+        static t_CKINT gamepad_button_y = GLFW_GAMEPAD_BUTTON_Y;
+        SVAR("int", "BUTTON_Y", &gamepad_button_y);
+        static t_CKINT gamepad_button_left_bumper = GLFW_GAMEPAD_BUTTON_LEFT_BUMPER;
+        SVAR("int", "BUTTON_LEFT_BUMPER", &gamepad_button_left_bumper);
+        static t_CKINT gamepad_button_right_bumper = GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER;
+        SVAR("int", "BUTTON_RIGHT_BUMPER", &gamepad_button_right_bumper);
+        static t_CKINT gamepad_button_back = GLFW_GAMEPAD_BUTTON_BACK;
+        SVAR("int", "BUTTON_BACK", &gamepad_button_back);
+        static t_CKINT gamepad_button_start = GLFW_GAMEPAD_BUTTON_START;
+        SVAR("int", "BUTTON_START", &gamepad_button_start);
+        static t_CKINT gamepad_button_guide = GLFW_GAMEPAD_BUTTON_GUIDE;
+        SVAR("int", "BUTTON_GUIDE", &gamepad_button_guide);
+        static t_CKINT gamepad_button_left_thumb = GLFW_GAMEPAD_BUTTON_LEFT_THUMB;
+        SVAR("int", "BUTTON_LEFT_THUMB", &gamepad_button_left_thumb);
+        static t_CKINT gamepad_button_right_thumb = GLFW_GAMEPAD_BUTTON_RIGHT_THUMB;
+        SVAR("int", "BUTTON_RIGHT_THUMB", &gamepad_button_right_thumb);
+        static t_CKINT gamepad_button_dpad_up = GLFW_GAMEPAD_BUTTON_DPAD_UP;
+        SVAR("int", "BUTTON_DPAD_UP", &gamepad_button_dpad_up);
+        static t_CKINT gamepad_button_dpad_right = GLFW_GAMEPAD_BUTTON_DPAD_RIGHT;
+        SVAR("int", "BUTTON_DPAD_RIGHT", &gamepad_button_dpad_right);
+        static t_CKINT gamepad_button_dpad_down = GLFW_GAMEPAD_BUTTON_DPAD_DOWN;
+        SVAR("int", "BUTTON_DPAD_DOWN", &gamepad_button_dpad_down);
+        static t_CKINT gamepad_button_dpad_left = GLFW_GAMEPAD_BUTTON_DPAD_LEFT;
+        SVAR("int", "BUTTON_DPAD_LEFT", &gamepad_button_dpad_left);
+
+        static t_CKINT gamepad_axis_left_x = GLFW_GAMEPAD_AXIS_LEFT_X;
+        SVAR("int", "AXIS_LEFT_X", &gamepad_axis_left_x);
+        static t_CKINT gamepad_axis_left_y = GLFW_GAMEPAD_AXIS_LEFT_Y;
+        SVAR("int", "AXIS_LEFT_Y", &gamepad_axis_left_y);
+        static t_CKINT gamepad_axis_right_x = GLFW_GAMEPAD_AXIS_RIGHT_X;
+        SVAR("int", "AXIS_RIGHT_X", &gamepad_axis_right_x);
+        static t_CKINT gamepad_axis_right_y = GLFW_GAMEPAD_AXIS_RIGHT_Y;
+        SVAR("int", "AXIS_RIGHT_Y", &gamepad_axis_right_y);
+        static t_CKINT gamepad_axis_left_trigger = GLFW_GAMEPAD_AXIS_LEFT_TRIGGER;
+        SVAR("int", "AXIS_LEFT_TRIGGER", &gamepad_axis_left_trigger);
+        static t_CKINT gamepad_axis_right_trigger = GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER;
+        SVAR("int", "AXIS_RIGHT_TRIGGER", &gamepad_axis_right_trigger);
+
+        SFUN(gamepad_get_connected, "int", "available");
+        ARG("int", "gamepad_id");
+        DOC_FUNC(
+          "Returns true if there is a connected gamepad assigned to `gamepad_id`. "
+          "Generally speaking, the first connected gamepad will be assigned id 0, the "
+          "second id 1, etc. "
+          "If a controller is *disconnected*, other controllers will NOT be "
+          "reassigned. E.g. 4 controllers are "
+          "connected, corresponding to ids 0, 1, 2, and 3. If controller 2 "
+          "disconnects, the other controllers "
+          "will remain assigned to IDs 0, 1, and 3. Reconnecting the controller will "
+          "reassign it to id 2.");
+
+        SFUN(gamepad_get_connected_list, "int[]", "available");
+        DOC_FUNC(
+          "Returns an array of the ids of all connected gamepads. IDs are integers "
+          "between 0 and 15, inclusive. These ids can be used to query the state of "
+          "that specific gamepad, e.g. Gamepad.button(2, Gamepad.BUTTON_A)");
+
+        SFUN(gamepad_get_name, "string", "name");
+        ARG("int", "gamepad_id");
+        DOC_FUNC(
+          "Get the name of a gamepad. The id is an integer between 0 and 15, "
+          "inclusive.");
+
+        SFUN(gamepad_get_button_pressed, "int", "buttonDown");
+        ARG("int", "gamepad_id");
+        ARG("int", "button_id");
+        DOC_FUNC(
+          "Returns true on the frame that a given button is first pressed. "
+          "See the Gamepad.BUTTON_ enums for valid options, e.g. "
+          "Gamepad.BUTTON_DPAD_UP");
+
+        SFUN(gamepad_get_button_down, "int", "button");
+        ARG("int", "gamepad_id");
+        ARG("int", "button_id");
+        DOC_FUNC(
+          "Returns true for every frame that a given button is being held. "
+          "See the Gamepad.BUTTON_ enums for valid options, e.g. "
+          "Gamepad.BUTTON_DPAD_UP");
+
+        SFUN(gamepad_get_button_released, "int", "buttonUp");
+        ARG("int", "gamepad_id");
+        ARG("int", "button_id");
+        DOC_FUNC(
+          "Returns true on the frame that a given button is released. "
+          "See the Gamepad.BUTTON_ enums for valid options, e.g. "
+          "Gamepad.BUTTON_DPAD_UP");
+
+        SFUN(gamepad_get_axis, "float", "axis");
+        ARG("int", "gamepad_id");
+        ARG("int", "axis_id");
+        DOC_FUNC(
+          "Get the position of a given gamepad axis. Returns a value in range [-1, 1]. "
+          "See the Gamepad.AXIS_ enums for valid options, e.g. "
+          "Gamepad.AXIS_LEFT_TRIGGER");
+
+        END_CLASS();
+    } // Gamepad
 }
 
 CK_DLL_SFUN(gwindow_monitor_info)
@@ -1422,4 +1533,131 @@ CK_DLL_SFUN(gwindow_get_kb_released_all_with_arr)
 CK_DLL_SFUN(gwindow_get_dropped_files)
 {
     RETURN->v_object = (Chuck_Object*)g_dropped_files;
+}
+
+// ============================================================
+// Gamepad
+// ============================================================
+
+static bool ulib_gamepad_validate_gamepad_id(int gp_id, const char* method)
+{
+    if (gp_id < 0 || gp_id > GLFW_JOYSTICK_LAST) {
+        log_warn(
+          "In %s, the given id: %d is invalid/out of bounds. "
+          "Valid gamepad ids are in the range [0, 15], inclusive. ",
+          method, gp_id);
+        return false;
+    }
+    return true;
+}
+
+static bool ulib_gamepad_validate_button_id(int button_id, const char* method)
+{
+    if (button_id < 0 || button_id > GLFW_GAMEPAD_BUTTON_LAST) {
+        log_warn(
+          "In %s, the given gamepad button id: %d is invalid/out of bounds. "
+          "Valid button ids are in the range [0, 14], inclusive. ",
+          method, button_id);
+        return false;
+    }
+    return true;
+}
+
+static bool ulib_gamepad_validate_axis_id(int axis_id, const char* method)
+{
+    if (axis_id < 0 || axis_id > GLFW_GAMEPAD_AXIS_LAST) {
+        log_warn(
+          "In %s, the given gamepad axis id: %d is invalid/out of bounds. "
+          "Valid axis ids are in the range [0, 5], inclusive. ",
+          method, axis_id);
+        return false;
+    }
+    return true;
+}
+
+CK_DLL_SFUN(gamepad_get_connected)
+{
+    int gp_id = GET_NEXT_INT(ARGS);
+    if (!ulib_gamepad_validate_gamepad_id(gp_id, "Gamepad.available(int id)")) {
+        RETURN->v_int = 0;
+        return;
+    }
+
+    RETURN->v_int = CHUGL_Gamepads[gp_id].connected ? 1 : 0;
+}
+
+CK_DLL_SFUN(gamepad_get_connected_list)
+{
+    Chuck_ArrayInt* ck_int_arr
+      = (Chuck_ArrayInt*)chugin_createCkObj(g_chuck_types.int_array, false, SHRED);
+    for (int i = 0; i < ARRAY_LENGTH(CHUGL_Gamepads); i++) {
+        if (CHUGL_Gamepads[i].connected) {
+            API->object->array_int_push_back(ck_int_arr, i);
+        }
+    }
+
+    RETURN->v_object = (Chuck_Object*)ck_int_arr;
+}
+
+CK_DLL_SFUN(gamepad_get_name)
+{
+    int gp_id = GET_NEXT_INT(ARGS);
+    if (!ulib_gamepad_validate_gamepad_id(gp_id, "Gamepad.name(int id)")) {
+        RETURN->v_string = NULL;
+        return;
+    }
+
+    RETURN->v_string = chugin_createCkString(CHUGL_Gamepads[gp_id].name, false);
+}
+
+CK_DLL_SFUN(gamepad_get_button_pressed)
+{
+    int gp_id     = GET_NEXT_INT(ARGS);
+    int button_id = GET_NEXT_INT(ARGS);
+    if (!ulib_gamepad_validate_gamepad_id(gp_id, "Gamepad.buttonDown(...)")
+        || !ulib_gamepad_validate_button_id(button_id, "Gamepad.buttonDown(...)")) {
+        RETURN->v_int = 0;
+        return;
+    }
+
+    RETURN->v_int = CHUGL_Gamepads[gp_id].buttons[button_id].pressed;
+}
+
+CK_DLL_SFUN(gamepad_get_button_down)
+{
+    int gp_id     = GET_NEXT_INT(ARGS);
+    int button_id = GET_NEXT_INT(ARGS);
+    if (!ulib_gamepad_validate_gamepad_id(gp_id, "Gamepad.button(...)")
+        || !ulib_gamepad_validate_button_id(button_id, "Gamepad.button(...)")) {
+        RETURN->v_int = 0;
+        return;
+    }
+
+    RETURN->v_int = CHUGL_Gamepads[gp_id].buttons[button_id].down;
+}
+
+CK_DLL_SFUN(gamepad_get_button_released)
+{
+    int gp_id     = GET_NEXT_INT(ARGS);
+    int button_id = GET_NEXT_INT(ARGS);
+    if (!ulib_gamepad_validate_gamepad_id(gp_id, "Gamepad.buttonUp(...)")
+        || !ulib_gamepad_validate_button_id(button_id, "Gamepad.buttonUp(...)")) {
+        RETURN->v_int = 0;
+        return;
+    }
+
+    RETURN->v_int = CHUGL_Gamepads[gp_id].buttons[button_id].released;
+}
+
+CK_DLL_SFUN(gamepad_get_axis)
+{
+    int gp_id   = GET_NEXT_INT(ARGS);
+    int axis_id = GET_NEXT_INT(ARGS);
+    if (!ulib_gamepad_validate_gamepad_id(gp_id, "Gamepad.axis(...)")
+        || !ulib_gamepad_validate_axis_id(axis_id, "Gamepad.axis(...)")) {
+        RETURN->v_float = 0;
+        return;
+    }
+
+    RETURN->v_float = CHUGL_Gamepads[gp_id].axes[axis_id];
 }
