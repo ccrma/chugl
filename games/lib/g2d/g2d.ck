@@ -41,12 +41,6 @@ public class G2D extends GGen
 	GG.camera().viewSize(10);
 	GG.camera().posZ(10);
 
-	TextureSampler nn_output_sampler;
-	TextureSampler.Filter_Nearest => nn_output_sampler.filterMin;  
-	TextureSampler.Filter_Nearest => nn_output_sampler.filterMag;  
-	TextureSampler.Filter_Nearest => nn_output_sampler.filterMip;  
-	TextureSampler bfilt_output_sampler;
-
 	// disable tonemapping / HDR
 	GG.outputPass().tonemap(OutputPass.ToneMap_None);
 	// TODO: disable the srgb view on swapchain screen buffer
@@ -72,19 +66,19 @@ public class G2D extends GGen
 	fun void antialias(int bool) {
 		circles.antialias(bool);
 		capsules.antialias(bool);
-
-		if (!bool) {
-			GG.renderPass().msaa(1);
-			GG.outputPass().sampler(nn_output_sampler);
-		} else {
-			GG.renderPass().msaa(4);
-			GG.outputPass().sampler(bfilt_output_sampler);
-		}
+		GG.scenePass().msaa(bool);
+		GG.outputPass().sampler(bool ? TextureSampler.linear() : TextureSampler.nearest());
 	}
 
 	fun void resolution(int w, int h) {
-		GG.renderPass().resolution(w, h);
-		GG.hudPass().resolution(w, h);
+		TextureDesc texture_desc;
+		false => texture_desc.mips;
+		false => texture_desc.resizable;
+		w => texture_desc.width;
+		h => texture_desc.height;
+		Texture color_target(texture_desc);
+		GG.scenePass().colorOutput(color_target);
+		GG.outputPass().input(color_target);
 	}
 
 	fun void backgroundColor(vec3 color) {

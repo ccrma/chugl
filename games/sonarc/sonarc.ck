@@ -51,10 +51,10 @@ Optimization for line collision testing
 
 */
 
-@import "lib/g2d/ChuGL_debug.chug"
-@import "lib/g2d/g2d.ck"
-@import "lib/M.ck"
-@import "lib/T.ck"
+@import "../lib/g2d/ChuGL.chug"
+@import "../lib/g2d/g2d.ck"
+@import "../lib/M.ck"
+@import "../lib/T.ck"
 
 G2D g;
 

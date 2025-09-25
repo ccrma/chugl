@@ -56,7 +56,7 @@ whereas difference in area is 8^2 = 64
 
 */
 
-@import "ChuGL.chug"
+@import "../lib/g2d/ChuGL.chug"
 @import "T.ck"
 @import "b2/b2.ck"
 @import "g2d/g2d.ck"

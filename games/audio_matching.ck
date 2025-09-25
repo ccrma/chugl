@@ -22,15 +22,12 @@ Sound Ideas
 - different levels/worlds can have different musical themes/genres
 - for ambient world:
     - maybe limit to Geodesics Energy + Plateau?
-- binaural spatialization
-    - maybe add doppler too?
 */
 
 @import "lib/g2d/ChuGL.chug"
 @import "lib/g2d/g2d.ck"
 @import "lib/M.ck"
 @import "lib/T.ck"
-@import "lib/Binaural-mac.chug"
 @import "HashMap.chug"
 
 G2D g;
@@ -84,7 +81,6 @@ class Entity {
     vec2 pos;
     int midi_pitch;
     TriOsc osc => ADSR env(10::ms, 2000::ms, .1, 1000::ms);
-    // CNoise osc => ADSR env(10::ms, 2000::ms, .8, 1000::ms) => Binaural binaural;
     int connect_generation;
     int connected;
 
@@ -100,11 +96,6 @@ class Entity {
                 spork ~ FX.ripple(pos, .25);
                 now => last_ripple;
             }
-
-            // spatialization
-            // <<< (M.RAD2DEG * M.angle(gs.player_pos, pos)) - 90 >>>;
-            // (M.RAD2DEG * M.angle(gs.player_pos, pos)) - 90 => float azimuth_deg;
-            // azimuth_deg => binaural.azimuth;
         }
     }
 
@@ -117,7 +108,6 @@ class Entity {
         now => last_ripple;
         ++connect_generation;
         true => connected;
-        // binaural => gs.rev;
         env => gs.rev;
         osc.gain(.2);
         osc.freq(Std.mtof(midi_pitch));
@@ -136,7 +126,6 @@ class Entity {
         // only disconnect if there wasn't another connect
         if (connect_generation == gen) {
             env =< gs.rev;
-            // binaural =< gs.rev;
         }
     }
 }
