@@ -277,13 +277,13 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
         DOC_VAR("Z offset of write region. Default 0");
 
         texture_write_desc_width_offset = MVAR("int", "width", false);
-        DOC_VAR("Width of write region. Default 0");
+        DOC_VAR("Width of write region. Default 1");
 
         texture_write_desc_height_offset = MVAR("int", "height", false);
-        DOC_VAR("Height of write region. Default 0");
+        DOC_VAR("Height of write region. Default 1");
 
         texture_write_desc_depth_offset = MVAR("int", "depth", false);
-        DOC_VAR("Depth of write region. Default 0");
+        DOC_VAR("Depth of write region. Default 1");
 
         END_CLASS();
     };
@@ -408,6 +408,7 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
         static t_CKINT texture_format_rgba16float = WGPUTextureFormat_RGBA16Float;
         static t_CKINT texture_format_rgba32float = WGPUTextureFormat_RGBA32Float;
         static t_CKINT texture_format_r32float    = WGPUTextureFormat_R32Float;
+        static t_CKINT texture_format_r32uint     = WGPUTextureFormat_R32Uint;
         SVAR("int", "Format_RGBA8Unorm", &texture_format_rgba8unorm);
         DOC_VAR("(hidden)");
         SVAR("int", "Format_RGBA16Float", &texture_format_rgba16float);
@@ -421,6 +422,7 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
         SVAR("int", "FORMAT_RGBA16FLOAT", &texture_format_rgba16float);
         SVAR("int", "FORMAT_RGBA32FLOAT", &texture_format_rgba32float);
         SVAR("int", "FORMAT_R32FLOAT", &texture_format_r32float);
+        SVAR("int", "FORMAT_R32UINT", &texture_format_r32uint);
 
         // sfun ------------------------------------------------------------------
 

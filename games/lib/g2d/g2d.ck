@@ -4,7 +4,6 @@
 TODO 
 - modify outputpass gamma so that we can undo the srgb texture
 	- basically just make sure (.5, 0, 0) shows up as (127, 0, 0)
-- default camera orthographic and z position of 10
 - add depth/layer option
 - catmull-rom splines
 - GPolygon triangulation

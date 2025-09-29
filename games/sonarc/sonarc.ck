@@ -49,6 +49,17 @@ Optimization for line collision testing
 - check all players simultaneously against all trail histories to avoid looping per player and to improve cache performance
 - actually most optimal is just put the trail in b2, use b2 for collision detection
 
+
+Feedback 9/25
+- other modes like a racing mode
+    - or modes where being silent (at the right moment) gives an advantage
+- duality between shared mic input (chaos) vs individual component (control)
+    - need to strike the balance, maybe this is the crux of the fun
+- make winner / loser visuals more satisfying
+- separate envelope tracking for different frequency bands (low/hi)
+- everyone records a short clip on character select, that's their "skin" for the game
+
+
 */
 
 @import "../lib/g2d/ChuGL.chug"
