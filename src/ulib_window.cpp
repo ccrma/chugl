@@ -1066,7 +1066,8 @@ void ulib_window_query(Chuck_DL_Query* QUERY)
         DOC_FUNC(
           "Returns an array of the ids of all connected gamepads. IDs are integers "
           "between 0 and 15, inclusive. These ids can be used to query the state of "
-          "that specific gamepad, e.g. Gamepad.button(2, Gamepad.BUTTON_A)");
+          "that specific gamepad, e.g. Gamepad.button(2, Gamepad.BUTTON_A). "
+          "This list is sorted from low to high.");
 
         SFUN(gamepad_get_name, "string", "name");
         ARG("int", "gamepad_id");
@@ -1578,7 +1579,7 @@ static bool ulib_gamepad_validate_axis_id(int axis_id, const char* method)
 CK_DLL_SFUN(gamepad_get_connected)
 {
     int gp_id = GET_NEXT_INT(ARGS);
-    if (!ulib_gamepad_validate_gamepad_id(gp_id, "Gamepad.available(int id)")) {
+    if (gp_id < 0 || gp_id > GLFW_JOYSTICK_LAST) {
         RETURN->v_int = 0;
         return;
     }

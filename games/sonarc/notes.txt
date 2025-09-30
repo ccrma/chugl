@@ -1,0 +1,93 @@
+# Screens
+
+
+# Stages/Modes
+- racetrack
+    - simple indie500 shape, but add obstacles
+    - first to finish wins
+- platformer, jump over the gaps to get to other side
+    - if you fall off, respawn at start
+    - mic level moves forward (can't move backwards lol)
+    - any key to jump
+    - procedurally generate
+    - allow multiple "winners" if multiple get to end platform on same frame
+- flappy bird side scroll dodge
+    - volume makes you go up
+    - gravity naturally pulls you down
+- raft going up, dodge obstacles coming down
+    - maybe use spectrum centroid for this one--higher goes right, lower goes left
+    - visualize spectrum at bottom of screen?
+- hot potato
+    - volume burns down /accelerates the fuse 
+    - what if there are multiple bombs?
+    - or maybe the person with bomb is fast and has to tag the others to pass it on
+        - makes sense then why people would be yelling, to trigger bomb-holder to explode
+    - q: do you get to pick who you throw it to? or is the target player random? 
+    - design q: do we show the remaining time on the bomb? or is it random / invisible?
+        - probably not, then it's just a reaction speed check
+- sound pumps/fills a balloon...
+    - the person who pops the balloon is eliminated
+- something to do with visual of waveform, maybe a dodging laser game
+    - side scroll, go from left to right
+    - making sound above threshold activates top-down vertica lasers
+- golf?
+- snowball fight
+    - volume charges up a snowball, can throw at enemy
+- rhythm game
+- a game where everyone yells at same time would be funny (like temple run) 
+  but everyone is rounding corners at same time?
+- doodle jump??
+- microphone pickup, only the player holding the mic receives (or is immune) to the 
+  effect of the audio
+- timing game where you *don't* want to make sound unless its a very specific time
+- inspo sources
+    - fusion frenzy!
+    - mario party
+    - intentionally *not* playing warioware so I can explore this space as a clean slate
+
+# Core Gameplay 
+- audio is a double-edged sword. because everyone shares the same mic input, leads to 
+a weird coupled-chaotic system....
+- maybe the key is there needs to be a tension when using audio
+    - timing: you need to use audio at the right time, but that time is different for
+    each player so you have to stay vigilant...
+    - double-edged sword: (e.g. in arc battle) increasing volume screws your opponents over
+    but it also makes the game more challenging for yourself
+- every game needs to be playable by any number of players, so cannot have e.g. 2v2 type games 
+- players can influence the game *after* they have died, no boring downtime while waiting
+  for others to finish
+- for tracking wins/points, do the simplest first:
+    - just track # of wins (that way don't need to have a system for quantifying points / 
+    places for lower places)
+    - game ends when first player get X wins
+- any game needs to be playable with just 2 keyboard keys? (for people who don't have controllers)
+
+- can the replay mechanic somehow influence the actual gameplay?
+
+# Mic Input (What can we reliably (or unreliably) get from mic input?)
+- make a playground editor to test / visualize
+- speech recognition (look @ you, Mage Arena)
+- pitch tracking (?)
+- volume (YES)
+- spectral center (for a very rough high vs low pitch)
+- hi-pass or low-pass or band-pass + any of the other features (pitch, volume, centroid)
+- look at UAnas for more
+
+# Ideas
+- At the end of each stage, have an (optional) replay
+    - a volume bar that starts at 50%, if you fill it up with sound it selects YES + replay, 
+    else NO and move onto next stage
+- coop vs competitive: is there room to have both game modes?
+    - only competitive for now
+- should all modes be 4 players on same screen, or in some modes does each player have own viewport?
+    - simple: all on same screen. that way can support an odd number of players or > 4.
+
+# Visuals
+- remember: keep it as shitty as possible for as long as possible
+- characters: 4 different colors, all triangles
+    - distinguish with mic-input "sound effect" 
+        - use LiSa to record your own, or select from a preset 
+        (sonic equivalent of picking a skin / color theme)
+        - can combine with pitshift for funny
+- eventually can move to rounded/soft vector graphics with drop shadows
+
