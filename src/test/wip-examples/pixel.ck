@@ -6,9 +6,6 @@ null => desc.vertexLayout;
 Shader shader(desc);
 shader.name("screen shader");
 
-Texture pixel;
-pixel.write([0.1, .1, .1, 1]);
-
 // render graph
 GG.rootPass() --> ScreenPass screen_pass(shader);
 

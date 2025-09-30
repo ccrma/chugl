@@ -2,38 +2,18 @@ TODO
 
 Leakcheck gamepad.ck example
 
-Investigate why tmp.txt slows and then freezes...
-- why does stacking 512 meshes on top of each other lock up?
-  - GPU-bound, changing shader to UVMaterial gets back to 60fps
-  - profile PhongMaterial shader, it's even slower than PBRMaterial (maybe because of shadow stuff)
-  - 0.2.6 and 0.2.7 both have 15.5fps with PBR Material
-  - my guess is changes to PhongMaterial caused slowdown?
-- but no lockup when they are in a grid?
-- go through apple metal profiling docs
-- also, why is monkey.ck slower in 0.2.7 than 0.2.6?
-  - need to add some benchmarks...
+bugs found working on games
+- setting shader storageBuffer to empty array causes crash
 
 Decrement CMakeLists cpp version to 11, make sure it still compiles
 - can probably decrement min MacOS version too
 
-
 Can we bundle chugl applications?
 - see raylib example on MacOS: https://github.com/raysan5/raylib/wiki/Working-on-macOS#bundle-your-app-in-an-application
-
-Gamepad support! 
-- see https://github.com/ColleagueRiley/minigamepad
-- look at how dearImGui / RayLib do this
 
 Create skyboxmaterial example
 - atmospheric sunset shader? (reference fabien blogpost)
   - https://fabiensanglard.net/sunset/
-
-
-Release
-- build-gcc
-- CKDocs
-- ADD_EX()
-- update chuck_website repo tutorials with streamlined stuff (like GG.bloom)
 
 - change GModel.materials to PhongMaterial?
 
