@@ -101,6 +101,11 @@ public class G2D extends GGen
 		return world_pos $ vec2;
 	}
 
+	fun vec2 NDCToWorldPos(vec2 ndc) {
+		GG.camera().NDCToWorldPos(@(ndc.x, ndc.y, 0)) => vec3 world_pos;
+		return world_pos $ vec2;
+	}
+
 	// get the bounds in world space of the screen
 	// fun vec4 screenBounds() {
 	// 	GG.camera().NDCToWorldPos(@(-1.0, -1.0, 0)) => vec3 bottom_left;

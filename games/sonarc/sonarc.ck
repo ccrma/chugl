@@ -54,11 +54,175 @@ class Sound {
 }
 Sound s;
 
+// key mapping enum
+0 => int Key_Left;
+1 => int Key_Right;
+
+class Entity {
+    // player entity
+    int player_id; // 0, 1, 2, 3
+    -1 => int gamepad_id;  // -1 means no gamepad connected
+    int disabled;
+
+    vec2 player_pos;
+    vec2 player_prev_pos;
+    float player_rot;
+    int frame_alive_count;
+    Color.MAGENTA => vec3 color;
+    float last_speed;
+
+    // used by SnakeGame
+    vec2 player_pos_history[120];
+    int player_pos_history_write_idx;
+    int player_pos_history_read_idx;
+
+    // control mapping for each player
+    fun int key(int which) {
+        // if (gs.room == match_room && match_room.match_state == match_room.Match_Replay) {
+        //     if (which == Key_Left) {
+        //         return T.arrayHas(match_room.replay_current_keys, gs.player_key_left[player_id]);
+        //     }
+        //     if (which == Key_Right) {
+        //         return T.arrayHas(match_room.replay_current_keys, gs.player_key_right[player_id]);
+        //     }
+        // }
+        if (which == Key_Left) {
+            return GWindow.key(gs.player_key_left[player_id]);
+        }
+        if (which == Key_Right) {
+            return GWindow.key(gs.player_key_right[player_id]);
+        }
+        return false;
+    }
+
+    fun float axis(int axis) {
+        Gamepad.axis(gamepad_id, axis) => float val;
+        // deadzone
+        if (Math.fabs(val) < .08) return 0;
+        return val;
+    }
+
+    fun void die() {
+        // destroy player
+        true => disabled;
+        spork ~ FX.explode(player_pos, 1::second, color);
+    }
+
+    fun void draw() {
+        g.pushColor(color);
+
+        // draw player
+        if (!disabled) {
+            g.polygonFilled(
+                player_pos, player_rot, gs.player_vertices, 0.0
+            );
+        }
+        g.popColor();
+    }
+}
+
 class Room {
     fun void enter() {}
     fun void leave() {}
     fun Room update(float dt) { return null; } // returns true if end state is met
 }
+
+class GameState {
+    Room room;
+
+    [
+        GWindow.Key_Right,  // p1
+        GWindow.Key_D,      // p2
+        GWindow.Key_P,
+        GWindow.Key_M,
+    ] @=> int player_key_right[];
+
+    [
+        GWindow.Key_Left, 
+        GWindow.Key_A, 
+        GWindow.Key_O, 
+        GWindow.Key_N, 
+    ] @=> int player_key_left[];
+
+    .25 => float player_scale;
+    [ 
+        player_scale * @(1 / Math.sqrt(3), 0),
+        player_scale * @(-1 / (2 * Math.sqrt(3)), .5),
+        player_scale * @(-1 / (2 * Math.sqrt(3)), -.5),
+    ] @=> vec2 player_vertices[];
+
+    4 => static int MAX_PLAYERS;
+    2 => int num_players;
+    Entity players[MAX_PLAYERS];
+
+    // audio =========================
+    float mic_volume; // should be updated and save at start of each frame
+
+    // config constants =======================
+    .3 => float player_base_speed;
+    3.5 => float player_rot_speed; // idea: scale with mic volume too
+
+    [
+        Color.hex(0x00ffff),
+        Color.hex(0xffa500),
+        Color.hex(0x32CD32),
+        Color.hex(0xFF0f00),
+    ] @=> vec3 player_colors[];
+
+    [
+        @(3, -3),
+        @(-3, 3),
+        @(3, 3),
+        @(-3, -3),
+    ] @=> vec2 player_spawns[];
+
+    [
+        90.0 + 45,
+        -45.0,
+        180 + 45,
+        45,
+    ] @=> float player_rots_deg[];
+
+    // init player info (for now)
+    for (int i; i < players.size(); ++i) {
+        player_colors[i] => players[i].color;
+        i => players[i].player_id;
+    }
+
+    // replay (disabling for now) ==================================
+    // "sonarc-replay-audio.wav" => string replay_audio_filename;
+    // "sonarc-replay-keystrokes.txt" => string replay_ks_filename;
+    // "sonarc-replay-volume.txt" => string replay_gain_filename;
+
+    fun void enterRoom(Room new_room) {
+        T.assert(new_room != null, "cannot transition from a null room");
+        T.assert(new_room != room, "cannot transition from a room to itself");
+        room.leave();
+        new_room.enter();
+        new_room @=> room;
+    }
+
+    // pos in [-1, 1] is NDC
+    // width and height are [0, 1], relative to screen dimensions
+    fun void progressBar(float percentage, vec2 pos_ndc, float width_ndc, float height_ndc, vec3 color) {
+        g.NDCToWorldPos(pos_ndc.x, pos_ndc.y) => vec2 pos;
+        g.NDCToWorldPos(width_ndc, height_ndc) => vec2 hw_hh;
+        hw_hh.x => float hw;
+        hw_hh.y => float hh;
+        // shift pos.x to center
+        // hw +=> pos.x;
+
+        g.box(pos, 2 * hw, 2 * hh, color);
+
+        -hw + (percentage * 2 * hw) => float end_x;
+        g.boxFilled(
+            pos - @(hw, hh),   // bot left
+            pos + @(end_x, hh), // top right
+            Color.WHITE
+        );
+    }
+}
+GameState gs;
 
 class StartRoom extends Room {
     fun Room update(float dt) {
@@ -105,7 +269,6 @@ class StartRoom extends Room {
 
 
         // stage selection
-
         return null;
     }
 }
@@ -229,8 +392,10 @@ class SnakeRoom extends Room {
             }
         }
         
-        if (num_alive <= 1) return start_room;
-        else return null;
+        // if (num_alive <= 1) return start_room;
+        // else return null;
+
+        return null;
     }
 
     fun void draw() {
@@ -366,171 +531,42 @@ class SnakeRoom extends Room {
     }
 }
 
-class GameState {
-    Room room;
 
-    [
-        SnakeRoom snake_room
-    ] @=> Room game_rooms[];
+class PlatformRoom extends Room {
+    vec2 platform_endpoints[4*2];
 
-    4 => static int MAX_PLAYERS;
-    2 => int num_players;
-    Entity players[MAX_PLAYERS];
+    fun void enter() {
+        // TODO: position players, reset Entity state etc
 
-    // audio =========================
-    float mic_volume; // should be updated and save at start of each frame
-
-    // config constants =======================
-    .3 => float player_base_speed;
-    3.5 => float player_rot_speed; // idea: scale with mic volume too
-    .25 => float player_scale;
-    [ 
-        player_scale * @(1 / Math.sqrt(3), 0),
-        player_scale * @(-1 / (2 * Math.sqrt(3)), .5),
-        player_scale * @(-1 / (2 * Math.sqrt(3)), -.5),
-    ] @=> vec2 player_vertices[];
-
-    [
-        Color.hex(0x00ffff),
-        Color.hex(0xffa500),
-        Color.hex(0x32CD32),
-        Color.hex(0xFF0f00),
-    ] @=> vec3 player_colors[];
-
-    [
-        @(3, -3),
-        @(-3, 3),
-        @(3, 3),
-        @(-3, -3),
-    ] @=> vec2 player_spawns[];
-
-    [
-        90.0 + 45,
-        -45.0,
-        180 + 45,
-        45,
-    ] @=> float player_rots_deg[];
-
-    [
-        GWindow.Key_Right,  // p1
-        GWindow.Key_D,      // p2
-        GWindow.Key_P,
-        GWindow.Key_M,
-    ] @=> int player_key_right[];
-
-    [
-        GWindow.Key_Left, 
-        GWindow.Key_A, 
-        GWindow.Key_O, 
-        GWindow.Key_N, 
-    ] @=> int player_key_left[];
-
-    // init player info (for now)
-    for (int i; i < players.size(); ++i) {
-        player_colors[i] => players[i].color;
-        i => players[i].player_id;
+        // position gaps in NDC
+        g.NDCToWorldPos(-7.0/7, 0) => platform_endpoints[0];
+        g.NDCToWorldPos(-5.0/7, 0) => platform_endpoints[1];
+        g.NDCToWorldPos(-3.0/7, 0) => platform_endpoints[2];
+        g.NDCToWorldPos(-1.0/7, 0) => platform_endpoints[3];
+        g.NDCToWorldPos(1.0/7, 0) => platform_endpoints[4];
+        g.NDCToWorldPos(3.0/7, 0) => platform_endpoints[5];
+        g.NDCToWorldPos(5.0/7, 0) => platform_endpoints[6];
+        g.NDCToWorldPos(7.0/7, 0) => platform_endpoints[7];
     }
 
-    // replay (disabling for now) ==================================
-    // "sonarc-replay-audio.wav" => string replay_audio_filename;
-    // "sonarc-replay-keystrokes.txt" => string replay_ks_filename;
-    // "sonarc-replay-volume.txt" => string replay_gain_filename;
-
-    fun void enterRoom(Room new_room) {
-        T.assert(new_room != null, "cannot transition from a null room");
-        T.assert(new_room != room, "cannot transition from a room to itself");
-        room.leave();
-        new_room.enter();
-        new_room @=> room;
-    }
-
-    // pos in [-1, 1] is NDC
-    // width and height are [0, 1], relative to screen dimensions
-    fun void progressBar(float percentage, vec2 pos_ndc, float width_ndc, float height_ndc, vec3 color) {
-        g.NDCToWorldPos(pos_ndc.x, pos_ndc.y) => vec2 pos;
-        g.NDCToWorldPos(width_ndc, height_ndc) => vec2 hw_hh;
-        hw_hh.x => float hw;
-        hw_hh.y => float hh;
-        // shift pos.x to center
-        // hw +=> pos.x;
-
-        g.box(pos, 2 * hw, 2 * hh, color);
-
-        -hw + (percentage * 2 * hw) => float end_x;
-        g.boxFilled(
-            pos - @(hw, hh),   // bot left
-            pos + @(end_x, hh), // top right
-            Color.WHITE
-        );
-    }
-}
-GameState gs;
-
-// key mapping enum
-0 => int Key_Left;
-1 => int Key_Right;
-
-class Entity {
-    // player entity
-    int player_id; // 0, 1, 2, 3
-    -1 => int gamepad_id;  // -1 means no gamepad connected
-    int disabled;
-
-    vec2 player_pos;
-    vec2 player_prev_pos;
-    float player_rot;
-    int frame_alive_count;
-    Color.MAGENTA => vec3 color;
-    float last_speed;
-
-    // used by SnakeGame
-    vec2 player_pos_history[120];
-    int player_pos_history_write_idx;
-    int player_pos_history_read_idx;
-
-    // control mapping for each player
-    fun int key(int which) {
-        // if (gs.room == match_room && match_room.match_state == match_room.Match_Replay) {
-        //     if (which == Key_Left) {
-        //         return T.arrayHas(match_room.replay_current_keys, gs.player_key_left[player_id]);
-        //     }
-        //     if (which == Key_Right) {
-        //         return T.arrayHas(match_room.replay_current_keys, gs.player_key_right[player_id]);
-        //     }
-        // }
-        if (which == Key_Left) {
-            return GWindow.key(gs.player_key_left[player_id]);
+    fun void leave() {}
+    fun Room update(float dt) { 
+        // for (vec2 platform : platform_endpoints) {
+        <<< "start" >>>;
+        for (int i; i < platform_endpoints.size(); 2 +=> i) {
+            g.line(platform_endpoints[i],  platform_endpoints[i + 1]);
+            // g.line(@(platform_endpoints[i].x, 0),  @(platform_endpoints[i].y, 0));
         }
-        if (which == Key_Right) {
-            return GWindow.key(gs.player_key_right[player_id]);
-        }
-        return false;
-    }
+        <<< "end" >>>;
 
-    fun float axis(int axis) {
-        Gamepad.axis(gamepad_id, axis) => float val;
-        // deadzone
-        if (Math.fabs(val) < .08) return 0;
-        return val;
-    }
+        g.circleFilled(g.NDCToWorldPos(0, 0), 1.0);
+        g.circleFilled(g.NDCToWorldPos(-1.0, 0), 1.0);
+        g.circleFilled(g.NDCToWorldPos(1.0, 0), 1.0);
+        g.circleFilled(g.NDCToWorldPos(0.0, 1.0), 1.0);
+        g.circleFilled(g.NDCToWorldPos(0.0, -1.0), 1.0);
 
-    fun void die() {
-        // destroy player
-        true => disabled;
-        spork ~ FX.explode(player_pos, 1::second, color);
-    }
-
-    fun void draw() {
-        g.pushColor(color);
-
-        // draw player
-        if (!disabled) {
-            g.polygonFilled(
-                player_pos, player_rot, gs.player_vertices, 0.0
-            );
-        }
-        g.popColor();
-    }
+        return null;
+    } 
 }
 
 class FX {
@@ -594,7 +630,8 @@ class FX {
 
 // init
 StartRoom start_room;
-gs.enterRoom(start_room);
+PlatformRoom platform_room;
+gs.enterRoom(platform_room);
 
 // gameloop
 while (1) {

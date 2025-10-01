@@ -30,7 +30,19 @@
 - something to do with visual of waveform, maybe a dodging laser game
     - side scroll, go from left to right
     - making sound above threshold activates top-down vertica lasers
-- golf?
+- Sports games
+    - golf? make fun of how quiet it typically is. Also, unlike switch sports, no
+      waiting for your turn! that's boring. Everyone is golfing / making sound at 
+      same time.
+    - Tennis? make fun of how loudly they grunt when hitting
+- games that play off making loud noises in public spaces
+    - studying in library
+    - sneaking/sleuthing/stealth (maybe cat hunting a mouse?)
+- Lip / soundwave bullet hell
+    - similar to tiny towers TD
+    - making sound activates bullets / towers, but those bullets damage everybody
+    - loudspeaker pickup that lets you fire bullets / sound waves too
+    - or maybe dodging spikes on a spectrum...
 - snowball fight
     - volume charges up a snowball, can throw at enemy
 - rhythm game
