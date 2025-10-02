@@ -15,7 +15,7 @@ project(
     LANGUAGES CXX C
 )
 
-if(LINUX OR EMSCRIPTEN)
+if(LINUX OR EMSCRIPTEN OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_compile_options(-fPIC)  # needed for emcripten
     #set( CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined" )
 endif()
