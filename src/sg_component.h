@@ -688,8 +688,10 @@ struct SG_CameraParams {
     float fov_radians = PI / 4.0f; // radians (45deg)
     float size = 6.6f; // orthographic size (scales view volume while preserving ratio
                        // of width to height)
-    float far_plane  = 100.0f;
-    float near_plane = .1f;
+    float far_plane        = 100.0f;
+    float near_plane       = .1f;
+    b32 auto_update_aspect = 1;
+    float aspect           = 1.0; // only used if auto_update_aspect = true
 };
 
 // spherical coordinates for OrbitCamera

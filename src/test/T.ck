@@ -6,6 +6,10 @@ public class T {
     fun static void println(string s) {
         chout <= s <= IO.nl();
     }
+
+    fun static string str(vec2 v) {
+        return "(" + v.x + ", " + v.y + ")";
+    }
     
     fun static void err(string s) {
         cherr <= s <= IO.nl();
@@ -48,6 +52,10 @@ public class T {
 
     fun static int feq(float a, float b) {
         return Math.fabs(a - b) < 0.0001;
+    }
+
+    fun static int eq(vec2 a, vec2 b) {
+        return T.veq(a, b);
     }
 
     fun static int veq(vec2 a, vec2 b) {

@@ -1165,12 +1165,17 @@ struct App {
                     } // end upsample
                 } break;
                 default: ASSERT(false);
-            }
+            } // switch (pass type)
 
             { // write per-frame uniforms
                 if (camera) {
-                    frameUniforms.projection
-                      = R_Camera::projectionMatrix(camera, aspect);
+                    frameUniforms.projection = R_Camera::projectionMatrix(
+                      camera,
+                      camera->params.auto_update_aspect ?
+                        aspect : // the aspect we auto calculate from color target
+                                   // resolution
+                        camera->params.aspect // the user-provided explicit aspect
+                    );
                     frameUniforms.view = R_Camera::viewMatrix(camera);
                     frameUniforms.projection_view_inverse_no_translation
                       = glm::inverse(frameUniforms.projection

@@ -1,0 +1,3 @@
+Default rendergraph
+Fixed resolution render texture with fixed camera aspect
+[chuck]: (VM) removing all (0) shreds...

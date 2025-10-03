@@ -5,8 +5,10 @@ Leakcheck gamepad.ck example
 bugs found working on games
 - setting shader storageBuffer to empty array causes crash
 
-Decrement CMakeLists cpp version to 11, make sure it still compiles
-- can probably decrement min MacOS version too
+setup linux partition on lab machine
+- debug crash caused by std::string in SG_Text component
+
+move off of window spinlock, pipe window events through command queue and make lock-less
 
 Can we bundle chugl applications?
 - see raylib example on MacOS: https://github.com/raysan5/raylib/wiki/Working-on-macOS#bundle-your-app-in-an-application

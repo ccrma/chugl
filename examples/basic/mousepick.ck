@@ -39,6 +39,10 @@ while (true)
 {
     // synchronize
     GG.nextFrame() => now;
+
+    // camera movement
+    if (GWindow.key(GWindow.KEY_LEFT)) GG.camera().rotateY(GG.dt());
+    if (GWindow.key(GWindow.KEY_RIGHT)) GG.camera().rotateY(-GG.dt());
     
     // mouse handling
     if (GWindow.mouseLeftDown())
