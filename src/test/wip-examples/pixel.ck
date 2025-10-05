@@ -28,7 +28,7 @@ UI_Float4 brush_color(color_palette[0].val());
 screen_pass.material().uniformFloat4(5, brush_color.val());
 
 // set defaults
-loadTexture("/Users/Andrew/Downloads/septembit.png");
+loadTexture("/Users/Andrew/Downloads/azaday_septembit.png");
 screen_pass.material().sampler(1, TextureSampler.nearest());
 screen_pass.material().uniformInt(2, viewport_height_pixels.val() $ int);
 screen_pass.material().uniformInt2(3, viewport_center_pixels.val().x $ int, viewport_center_pixels.val().y $ int);

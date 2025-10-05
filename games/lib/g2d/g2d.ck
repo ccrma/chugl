@@ -78,6 +78,26 @@ public class G2D extends GGen
 		Texture color_target(texture_desc);
 		GG.scenePass().colorOutput(color_target);
 		GG.outputPass().input(color_target);
+
+		// setting a fixed resolution color target means we need to lock camera aspect
+		// this is an experimental API to disable the auto-update based on window framebuffer aspect
+		// because the window resolution can change, but the aspect of the actual color 
+		// target stays locked
+		GG.camera().aspect(w$float/h);
+	}
+	
+	// return whether abs(pos) is >= bounding_radius_ndc 
+    fun static int offscreen(vec2 pos, float bounding_radius_ndc) {
+        GG.camera().worldPosToNDC(@(pos.x, pos.y, 0)) => vec3 pos_ndc;
+        return (Math.fabs(pos_ndc.x) > bounding_radius_ndc || Math.fabs(pos_ndc.y) > bounding_radius_ndc);
+    }
+
+    fun static int offscreen(vec2 pos) {
+        return offscreen(pos, 1.0);
+    }
+
+	fun static vec2 world2ndc(vec2 pos) {
+        return GG.camera().worldPosToNDC(@(pos.x, pos.y, 0)) $ vec2;
 	}
 
 	fun void backgroundColor(vec3 color) {
@@ -86,13 +106,7 @@ public class G2D extends GGen
 
 	// get the screen dimensions in worldspace units
 	fun vec2 screenSize() {
-		GWindow.windowSize() => vec2 size;
-		size.x / size.y => float aspect;
-		GG.camera().viewSize() => float height;
-		return @(
-			height * aspect,
-			height
-		);
+		return ndc2world(1, 1) - ndc2world(-1, -1);
 	}
 
 	// in NDC (normalized device coordinates) the screen boundaries go from [-1, 1] in x and y
@@ -103,6 +117,16 @@ public class G2D extends GGen
 
 	fun vec2 NDCToWorldPos(vec2 ndc) {
 		GG.camera().NDCToWorldPos(@(ndc.x, ndc.y, 0)) => vec3 world_pos;
+		return world_pos $ vec2;
+	}
+
+	fun vec2 ndc2world(vec2 ndc) {
+		GG.camera().NDCToWorldPos(@(ndc.x, ndc.y, 0)) => vec3 world_pos;
+		return world_pos $ vec2;
+	}
+
+	fun vec2 ndc2world(float x, float y) {
+		GG.camera().NDCToWorldPos(@(x, y, 0)) => vec3 world_pos;
 		return world_pos $ vec2;
 	}
 
@@ -247,6 +271,10 @@ public class G2D extends GGen
 		polygon(center, 0, square_vertices, @(width, height));
 	}
 
+	fun void box(vec2 center, float width, float height, float rot_radians) {
+		polygon(center, rot_radians, square_vertices, @(width, height));
+	}
+
 	fun void box(vec2 bottom_left, vec2 top_right) {
 		line(bottom_left, @(top_right.x, bottom_left.y));
 		line(@(top_right.x, bottom_left.y), top_right);
@@ -289,7 +317,11 @@ public class G2D extends GGen
     // ---------- filled polygons ----------
 
 	fun void polygonFilled(vec2 pos, float rot_radians, vec2 vertices[], float radius) {
-		polygons.polygonFilled(pos, rot_radians, vertices, radius, color_stack[-1]);
+		polygons.polygonFilled(pos, rot_radians, 1.0, vertices, radius, color_stack[-1]);
+	}
+
+	fun void polygonFilled(vec2 pos, float rot_radians, float sca, vec2 vertices[], float radius, vec3 color) {
+		polygons.polygonFilled(pos, rot_radians, sca, vertices, radius, color);
 	}
 
 	fun void boxFilled(
@@ -599,6 +631,7 @@ public class G2D_SolidPolygon
 	fun void polygonFilled(
 		vec2 position,
 		float rotation_radians,
+		float scale,
 		vec2 vertices[], 
 		float radius,
 		vec3 color
@@ -607,7 +640,8 @@ public class G2D_SolidPolygon
 		u_polygon_vertex_counts << vertices.size(); // count
 
 		init_aabb => vec4 aabb;
-		for (auto v : vertices) {
+		for (auto vert : vertices) {
+			vert * scale => vec2 v;
 			u_polygon_vertices << v;
 
 			// update aabb
@@ -627,6 +661,16 @@ public class G2D_SolidPolygon
 		u_polygon_radius << radius;
 
 		u_polygon_colors << @(color.r, color.g, color.b, 1.0);
+	}
+
+	fun void polygonFilled(
+		vec2 position,
+		float rotation_radians,
+		vec2 vertices[], 
+		float radius,
+		vec3 color
+	) {
+		polygonFilled(position, rotation_radians, 1.0, vertices, radius, color);
 	}
 
 	fun void update() {

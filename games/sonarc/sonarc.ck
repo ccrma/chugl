@@ -32,6 +32,7 @@ Optimization for line collision testing
 @import "../lib/T.ck"
 
 GWindow.windowed(1920, 1080);
+GWindow.center();
 G2D g;
 g.resolution(1920, 1080);
 
@@ -57,6 +58,7 @@ Sound s;
 // key mapping enum
 0 => int Key_Left;
 1 => int Key_Right;
+2 => int Key_Action;
 
 class Entity {
     // player entity
@@ -64,9 +66,11 @@ class Entity {
     -1 => int gamepad_id;  // -1 means no gamepad connected
     int disabled;
 
+    // basic physics stuff
     vec2 player_pos;
     vec2 player_prev_pos;
     float player_rot;
+
     int frame_alive_count;
     Color.MAGENTA => vec3 color;
     float last_speed;
@@ -95,6 +99,19 @@ class Entity {
         return false;
     }
 
+    fun int keyDown(int which) {
+        if (which == Key_Left) {
+            return GWindow.keyDown(gs.player_key_left[player_id]);
+        } else if (which == Key_Right) {
+            return GWindow.keyDown(gs.player_key_right[player_id]);
+        }
+        return false;
+    }
+
+    fun int hasGamepad() {
+        return Gamepad.available(gamepad_id);
+    }
+
     fun float axis(int axis) {
         Gamepad.axis(gamepad_id, axis) => float val;
         // deadzone
@@ -109,22 +126,30 @@ class Entity {
     }
 
     fun void draw() {
-        g.pushColor(color);
-
-        // draw player
         if (!disabled) {
+            g.pushColor(color);
             g.polygonFilled(
                 player_pos, player_rot, gs.player_vertices, 0.0
             );
+            g.popColor();
         }
+    }
+
+    fun void draw(vec3 c) {
+        g.pushColor(c);
+        g.polygonFilled(
+            player_pos, player_rot, gs.player_vertices, 0.0
+        );
         g.popColor();
     }
 }
 
 class Room {
+    "default room" => string room_name;
     fun void enter() {}
     fun void leave() {}
     fun Room update(float dt) { return null; } // returns true if end state is met
+    fun void ui() {}
 }
 
 class GameState {
@@ -150,6 +175,12 @@ class GameState {
         player_scale * @(-1 / (2 * Math.sqrt(3)), .5),
         player_scale * @(-1 / (2 * Math.sqrt(3)), -.5),
     ] @=> vec2 player_vertices[];
+
+    // calculate bbox
+    M.bbox(player_vertices) => vec4 player_bbox;
+    @(player_bbox.x, player_bbox.y) => vec2 player_bbox_min;
+    @(player_bbox.z, player_bbox.w) => vec2 player_bbox_max;
+    .5 * (player_bbox_max - player_bbox_min) => vec2 player_bbox_hw_hh;
 
     4 => static int MAX_PLAYERS;
     2 => int num_players;
@@ -533,10 +564,71 @@ class SnakeRoom extends Room {
 
 
 class PlatformRoom extends Room {
+    "platform room" => room_name;
     vec2 platform_endpoints[4*2];
+
+    // player status enum
+    0 => static int Status_Disconnected;
+    1 => static int Status_Alive;
+    2 => static int Status_Dead;
+
+    int player_status[gs.MAX_PLAYERS];
+    int player_on_ground[gs.MAX_PLAYERS];
+    vec2 player_velocity[gs.MAX_PLAYERS];
+    vec2 player_spawn[gs.MAX_PLAYERS];
+    vec2 booster_direction[gs.MAX_PLAYERS];
+    int player_blackhole_idx[gs.MAX_PLAYERS]; // idx of closest blackhole in range (-1 if none)
+
+    // movement
+    UI_Bool debug_draw(true);
+    UI_Float initial_jump_speed(4.9);
+    UI_Float walk_speed(18.0);
+    UI_Float booster_rot_speed(Math.two_pi);
+
+    // blackholes 
+    float blackhole_spawn_time_sec[0]; // time in secs that the blackhole spawned
+    vec2 blackhole_positions[0];
+    UI_Float blackhole_meter_base_fill_rate(.02); // even if silent, meter still fills at this rate
+    UI_Float blackhole_event_horizon_radius(.3); // here u dead
+    UI_Float blackhole_radius(1.5); // can still get out if u yell 
+    UI_Float blackhole_init_time_secs(3.0); // time it takes for blackhole to grow to max radius and begin sucking
+    float blackhole_gravity; // (calculated from event horizon radius and booster force, i.e. force at event horizon == max booster force
+    float blackhole_meter;  // when at 1.0, all players will spawn a blackhole at their location
+
+    fun void _calcBlackholeGravity() {
+        // 0.5 * walk_speed.val() * (blackhole_event_horizon_radius.val() * blackhole_event_horizon_radius.val()) => blackhole_gravity;
+        0.5 * walk_speed.val() * (blackhole_event_horizon_radius.val()) => blackhole_gravity; // using inv radius, not inv radius squared
+    }
+
+    fun vec2 _blackholeForce(vec2 bpos, vec2 player_pos) {
+        // debug draw line to closest
+        bpos - player_pos => vec2 l;
+        M.mag(l) => float r; // radius
+        M.normalize(l) => vec2 n_hat; // direction vector
+        // return (blackhole_gravity / (r*r) * n_hat); // inv squared
+        return (blackhole_gravity / (r) * n_hat);  // inv
+    }
+
+    fun int _blackholeDoneSpawning(int bidx) {
+        return (now/second) - blackhole_spawn_time_sec[bidx] >= blackhole_init_time_secs.val();
+    }
+
+    fun void ui() {
+        UI.checkbox("debug draw", debug_draw);
+        UI.slider("initial jump vel", initial_jump_speed, 0, 10);
+
+        if (UI.slider("booster power", walk_speed, 1, 100)) _calcBlackholeGravity();
+
+        UI.slider("rot speed", booster_rot_speed, 0, 10);
+
+        UI.slider("blackhole event horizon radius", blackhole_event_horizon_radius, 0, 1);
+        UI.slider("blackhole meter base fill rate", blackhole_meter_base_fill_rate, 0, .5);
+        UI.progressBar(blackhole_meter, @(0, 20), "blackhole meter");
+    }
 
     fun void enter() {
         // TODO: position players, reset Entity state etc
+        _calcBlackholeGravity();
 
         // position gaps in NDC
         g.NDCToWorldPos(-7.0/7, 0) => platform_endpoints[0];
@@ -547,26 +639,402 @@ class PlatformRoom extends Room {
         g.NDCToWorldPos(3.0/7, 0) => platform_endpoints[5];
         g.NDCToWorldPos(5.0/7, 0) => platform_endpoints[6];
         g.NDCToWorldPos(7.0/7, 0) => platform_endpoints[7];
+
+        // calculate
+        gs.player_bbox_max - gs.player_bbox_min => vec2 width_height;
+
+        // init player state
+        player_status.zero();
+        for (int i; i < gs.num_players; ++i) {
+            Status_Alive => player_status[i];
+            0.5 * (platform_endpoints[2*i] + platform_endpoints[2*i+1]) + 
+                @(0, width_height.y * .5) => player_spawn[i] => gs.players[i].player_pos;
+            Math.pi / 2 => gs.players[i].player_rot;
+            true => player_on_ground[i];
+            @(0,0) => player_velocity[i];
+            @(0,1) => booster_direction[i];
+            -1 => player_blackhole_idx[i];
+        }
+
+        blackhole_spawn_time_sec.clear();
+        blackhole_positions.clear();
+        blackhole_spawn_time_sec << (now/second);
+        blackhole_positions << @(0, -2);
+        0 => blackhole_meter;
     }
 
-    fun void leave() {}
-    fun Room update(float dt) { 
-        // for (vec2 platform : platform_endpoints) {
-        <<< "start" >>>;
-        for (int i; i < platform_endpoints.size(); 2 +=> i) {
-            g.line(platform_endpoints[i],  platform_endpoints[i + 1]);
-            // g.line(@(platform_endpoints[i].x, 0),  @(platform_endpoints[i].y, 0));
-        }
-        <<< "end" >>>;
+    fun Room update(float dt) {
+        0.5 * (gs.player_bbox_max - gs.player_bbox_min) => vec2 hw_hh;
+        gs.mic_volume => float mic_volume;
+        for (int idx; idx < gs.num_players; idx++) {
+            if (player_status[idx] == Status_Disconnected) continue; // skip disconnected players
+            if (player_status[idx] == Status_Dead) {
+                // draw dead in event horizon
+                gs.players[idx].draw(Color.GRAY);
+                continue; 
+            }
 
-        g.circleFilled(g.NDCToWorldPos(0, 0), 1.0);
-        g.circleFilled(g.NDCToWorldPos(-1.0, 0), 1.0);
-        g.circleFilled(g.NDCToWorldPos(1.0, 0), 1.0);
-        g.circleFilled(g.NDCToWorldPos(0.0, 1.0), 1.0);
-        g.circleFilled(g.NDCToWorldPos(0.0, -1.0), 1.0);
+            gs.players[idx] @=> Entity player;
+            vec2 acceleration;
+            player.player_pos => player.player_prev_pos;
+
+            { // rocket input
+                Math.atan2(booster_direction[idx].y, booster_direction[idx].x) => float rot_rad;
+                if (player.hasGamepad()) {
+                    player.axis(Gamepad.AXIS_LEFT_X) => float x_axis;
+                    if (x_axis > 0.5) booster_rot_speed.val() * dt +=> rot_rad;
+                    if (x_axis < -0.5) booster_rot_speed.val() * dt -=> rot_rad;
+                } else {
+                    if (player.key(Key_Left))  booster_rot_speed.val() * dt +=> rot_rad;
+                    if (player.key(Key_Right)) booster_rot_speed.val() * dt -=> rot_rad;
+                }
+                M.rot2vec(rot_rad) => booster_direction[idx];
+
+                (gs.mic_volume) * walk_speed.val() * booster_direction[idx] +=> acceleration;
+            }
+
+            // check blackholes and death condition
+            -1 => int closest_blackhole_idx;
+            Math.FLOAT_MAX => float closest_blackhole_dist;
+            for (int bidx; bidx < blackhole_positions.size(); bidx++) {
+                (now/second) - blackhole_spawn_time_sec[bidx] >= blackhole_init_time_secs.val() => int blackhole_done_spawning;
+                if (!blackhole_done_spawning) continue;
+                
+                // try having all blackholes influence 
+                // _blackholeForce(
+                //     blackhole_positions[bidx], player.player_pos
+                // ) +=> acceleration;
+
+                M.dist( player.player_pos, blackhole_positions[bidx]) => float blackhole_dist;
+                // if (blackhole_dist < blackhole_radius.val() && blackhole_dist < closest_blackhole_dist) {
+                if (blackhole_dist < closest_blackhole_dist) {
+                    blackhole_dist => closest_blackhole_dist;
+                    bidx => closest_blackhole_idx;
+                }
+            }
+            closest_blackhole_idx => player_blackhole_idx[idx];
+
+
+            // step
+            if (closest_blackhole_idx >= 0) {
+                // blackhole gravity
+                _blackholeForce(
+                    blackhole_positions[closest_blackhole_idx], player.player_pos
+                ) +=> acceleration;
+            }
+
+            // clamp max accceleration
+            // if (acceleration.magnitude() >= walk_speed.val()) {
+            //     acceleration.normalize();
+            //     walk_speed.val() *=> acceleration;
+            // }
+
+            // update vel
+            acceleration * dt +=> player_velocity[idx];
+
+            // clamp max velocity
+            // if (player_velocity[idx].magnitude() >= walk_speed.val()) {
+            //     player_velocity[idx].normalize();
+            //     walk_speed.val() *=> player_velocity[idx];
+            // }
+
+            // update pos
+            (dt * player_velocity[idx]) +=> player.player_pos;
+            if (player.player_pos.y < 0) false => player_on_ground[idx]; // if below platform, not on ground
+            else if (player.player_pos.y + hw_hh.y > .01) false => player_on_ground[idx];
+
+            // platform collision
+            for (int i; i < platform_endpoints.size(); 2 +=> i) {
+                // we collide with a platform if the previous frame was above, and this frame is below
+                M.overlap(
+                    platform_endpoints[i].x, platform_endpoints[i+1].x,
+                    player.player_prev_pos.x - hw_hh.x, player.player_prev_pos.x + hw_hh.x
+                ) && (player.player_prev_pos.y - hw_hh.y >= 0) => int prev_frame_above;
+                M.overlap(
+                    platform_endpoints[i].x, platform_endpoints[i+1].x,
+                    player.player_pos.x - hw_hh.x, player.player_pos.x + hw_hh.x
+                ) && (player.player_pos.y - hw_hh.y <= 0) => int this_frame_below;
+
+                if (prev_frame_above && this_frame_below) {
+                    // collide with floor
+                    true => player_on_ground[idx];
+                    0 => player_velocity[idx].y;
+                    hw_hh.y => player.player_pos.y;
+                } 
+            }
+
+            // before screen wrap, check for collision with any event horizons
+            for (int bidx; bidx < blackhole_positions.size(); bidx++) {
+                if (!_blackholeDoneSpawning(bidx)) continue;
+
+                M.isect(player.player_prev_pos, player.player_pos, blackhole_positions[bidx], blackhole_event_horizon_radius.val()) => vec2 isects;
+                M.mag(player.player_pos - blackhole_positions[bidx]) < blackhole_event_horizon_radius.val() => int inside_event_horizon;
+
+                // ccd
+                if (isects.x > 0) {
+                    true => inside_event_horizon;
+                    M.lerp(isects.y, player.player_prev_pos, player.player_pos) => player.player_pos;
+                }
+
+                if (inside_event_horizon) {
+                    Status_Dead => player_status[idx];
+                    break;
+                }
+            }
+
+            // screen wrap logic
+            g.world2ndc(player.player_pos) => vec2 ndc;
+            if (Math.fabs(ndc.x) > 1.0) M.sign(ndc.x) * -2.0 +=> ndc.x;
+            if (Math.fabs(ndc.y) > 1.0) M.sign(ndc.y) * -2.0 +=> ndc.y;
+            g.NDCToWorldPos(ndc) => player.player_pos;
+
+            // draw player
+            player.draw();
+            spork ~ FX.booster(
+                player.player_pos - gs.player_scale * booster_direction[idx],
+                player.color,
+                gs.mic_volume * walk_speed.val() * .6
+            );
+            g.circle(player.player_pos - gs.player_scale * booster_direction[idx], .02, player.color);
+
+            if (debug_draw.val()) {
+                // draw bbox
+                g.box(player.player_pos, 2 * hw_hh.x, 2 * hw_hh.y, 0);
+
+                // draw acceleration vector
+                g.line(player.player_pos, player.player_pos + acceleration, Color.RED);
+
+                // draw velocity vector
+                g.line(player.player_pos, player.player_pos + player_velocity[idx], Color.GREEN);
+
+                // draw line to nearest blackhole
+                if (closest_blackhole_idx >= 0) 
+                    g.line(player.player_pos, blackhole_positions[closest_blackhole_idx]);
+            }
+        }
+
+        // draw platforms
+        for (int pfrom_idx; 2*pfrom_idx < platform_endpoints.size(); ++pfrom_idx) {
+            g.line(platform_endpoints[2*pfrom_idx], platform_endpoints[2*pfrom_idx+1], gs.players[pfrom_idx].color);
+        }
+
+        // blackhole spawns
+        (blackhole_meter_base_fill_rate.val() + mic_volume) * dt +=> blackhole_meter;
+        if (blackhole_meter > 1.0) {
+            1.0 -=> blackhole_meter;
+            // spawn blackhole!
+            for (int i; i < player_status.size(); i++) {
+                if (player_status[i] == Status_Alive) {
+                    blackhole_positions << gs.players[i].player_pos;
+                    blackhole_spawn_time_sec << now / second; 
+                }
+            }
+        }
+
+        // draw blackholes and check player positions
+        for (int bidx; bidx < blackhole_positions.size(); ++bidx) {
+            Math.clampf(
+                (now/second - blackhole_spawn_time_sec[bidx]) / blackhole_init_time_secs.val(),
+                0.0,
+                1.0
+            ) => float spawn_progress;
+            g.circleDotted(
+                blackhole_positions[bidx], spawn_progress * blackhole_radius.val(), now/second, M.lerp(spawn_progress, Color.BLACK, Color.WHITE)
+            );
+
+            g.circleDotted(
+                blackhole_positions[bidx], spawn_progress * blackhole_event_horizon_radius.val(), -(now/second), Color.RED
+            );
+        }
 
         return null;
     } 
+}
+
+
+class FlappyBirdRoom extends Room 
+{
+    "flappy bird room" => room_name;
+
+    // sim params
+    UI_Float gravity(2048);
+    UI_Float jump_vel(8);
+
+    UI_Float pipe_vertical_gap_base(1.08);
+    UI_Float pipe_spawn_spacing_width(4.2); // x distance in world space between pipes
+    UI_Float pipe_gap_range(3); // +- where the gap can occur
+    UI_Float pipe_velocity(1.6);
+    UI_Float pipe_volume_factor(18);
+    @(.45, 5.0) => vec2 pipe_hw_hh;
+    float pipe_spawn_timer_sec;
+
+    // pipe
+    vec2 pipe_gap_pos[0];
+
+    // player params
+    [
+        g.ndc2world(-.9, .2),
+        g.ndc2world(-.9, .4),
+        g.ndc2world(-.9, .6),
+        g.ndc2world(-.9, .8),
+    ] @=> vec2 player_spawns[];
+    vec2 player_velocity[gs.MAX_PLAYERS];
+    int player_pressed_space[gs.MAX_PLAYERS];
+
+    fun void ui() {
+        UI.slider("gravity", gravity, 0, 1000);
+        UI.slider("jump vel", jump_vel, 0, 10);
+        
+        UI.slider("pipe_vertical_gap_half", pipe_vertical_gap_base, 0, 10);
+        UI.slider("pipe_spawn_spacing_width", pipe_spawn_spacing_width, .1, 10);
+        UI.slider("pipe_gap_range", pipe_gap_range, 0, 10);
+        UI.slider("pipe_velocity", pipe_velocity, 0, 10);
+        UI.slider("pipe_volume_factor", pipe_volume_factor, 0, 30);
+        // UI.slider("pipe hwidth hheight", pipe_hw_hh, 0, 10
+    }
+
+    fun void enter() {
+        2.0 => pipe_spawn_timer_sec;
+        pipe_gap_pos.clear();
+
+        player_velocity.zero();
+        player_pressed_space.zero();
+        for (int i; i < gs.num_players; ++i) {
+            player_spawns[i] @=> gs.players[i].player_pos;
+            false => gs.players[i].disabled;
+        }
+    }
+
+    fun void leave() {
+    }
+
+    fun Room update(float dt) { 
+        0.5 * g.screenSize() => vec2 screen_hw_hh;
+        gs.mic_volume => float mic_volume;
+
+
+        // pipe movement+spawn logic
+        pipe_vertical_gap_base.val() + (mic_volume * .10*pipe_volume_factor.val())
+            => float pipe_vertical_gap; // scale gap with vol
+        {
+            screen_hw_hh.x + pipe_hw_hh.x => float pipe_spawn_x;
+            if (
+                pipe_gap_pos.size() == 0 || 
+                (pipe_spawn_x - pipe_gap_pos[-1].x) > pipe_spawn_spacing_width.val()) 
+            {
+                // determine 
+                pipe_gap_pos << @(
+                    pipe_spawn_x,
+                    Math.random2f(-pipe_gap_range.val(), pipe_gap_range.val())
+                );
+            }
+
+            // remove first if offscreen
+            if (
+                pipe_gap_pos.size() > 0 && 
+                pipe_gap_pos[0].x < -screen_hw_hh.x - pipe_hw_hh.x
+            ) {
+                pipe_gap_pos.popFront();
+            }
+
+            // slide pipes
+            for (int pipe_idx; pipe_idx < pipe_gap_pos.size(); ++pipe_idx) {
+                (pipe_velocity.val() + mic_volume * pipe_volume_factor.val()) * dt -=> pipe_gap_pos[pipe_idx].x;
+            }
+        }
+
+        for (int i; i < gs.num_players; ++i) {
+            gs.players[i] @=> Entity p;
+            if (p.disabled) continue;
+            vec2 acc;
+
+            // input
+            if (p.keyDown(Key_Left) || p.keyDown(Key_Right)) {
+                jump_vel.val() => player_velocity[i].y;
+                true => player_pressed_space[i];
+            }
+
+            // physics (forward euler)
+            if (player_pressed_space[i])
+                (gravity.val() * dt * @(0, -1)) +=> acc;
+
+            acc * dt +=> player_velocity[i];
+            player_velocity[i] * dt +=> p.player_pos;
+
+            // clamp pos to screen boundaries
+            // gs.bbox_max
+            if (p.player_pos.y - gs.player_bbox_hw_hh.y < -screen_hw_hh.y) {
+                // -screen_hw_hh.y + gs.player_bbox_hw_hh.y => p.player_pos.y;
+                // 0 => player_velocity[i].y;
+                p.die();
+                continue;
+            } 
+            else if (p.player_pos.y + gs.player_bbox_hw_hh.y > screen_hw_hh.y) {
+                screen_hw_hh.y - gs.player_bbox_hw_hh.y => p.player_pos.y;
+                0 => player_velocity[i].y;
+            }
+
+            // map player vel to rotation
+            Math.max(
+                Math.remap(
+                    player_velocity[i].y,
+                    jump_vel.val(), -jump_vel.val(),
+                    Math.pi/3, -Math.pi/3
+                ),
+                -Math.pi/3
+            ) => p.player_rot;
+            <<< p.player_rot >>>;
+
+            // debug rot
+            g.line(p.player_pos, p.player_pos + .3*M.rot2vec(p.player_rot));
+
+            p.draw();
+        }
+
+        // draw pipes and collision detect
+        for (auto pos : pipe_gap_pos) {
+            pos + @(0, pipe_vertical_gap + pipe_hw_hh.y) => vec2 top_pipe_center;
+            pos - @(0, pipe_vertical_gap + pipe_hw_hh.y) => vec2 bot_pipe_center;
+            // top pipe
+            g.boxFilled(
+                top_pipe_center,
+                0,
+                pipe_hw_hh.x * 2,
+                pipe_hw_hh.y * 2,
+                Color.DARKGREEN
+            );
+            // bot pipe
+            g.boxFilled(
+                bot_pipe_center,
+                0,
+                pipe_hw_hh.x * 2,
+                pipe_hw_hh.y * 2,
+                Color.DARKGREEN
+            );
+
+            for (int player_idx; player_idx < gs.num_players; player_idx++) {
+                gs.players[player_idx] @=> Entity p;
+                if (p.disabled) continue;
+                if (
+                    M.aabbIsect(
+                        p.player_pos, gs.player_bbox_hw_hh,
+                        top_pipe_center, pipe_hw_hh
+                    )
+                    ||
+                    M.aabbIsect(
+                        p.player_pos, gs.player_bbox_hw_hh,
+                        bot_pipe_center, pipe_hw_hh
+                    )
+                ) {
+                    p.die();
+                }
+            }
+        }
+
+
+        // TODO when drawing, sort by height (lowest player draw on top?)
+        return null; 
+    }
 }
 
 class FX {
@@ -631,7 +1099,8 @@ class FX {
 // init
 StartRoom start_room;
 PlatformRoom platform_room;
-gs.enterRoom(platform_room);
+FlappyBirdRoom flappy_room;
+gs.enterRoom(flappy_room);
 
 // gameloop
 while (1) {
@@ -645,13 +1114,15 @@ while (1) {
     ) => gs.mic_volume;
 
     // draw sound meter (assumimg all games share same sound meter)
+    g.pushLayer(10);
     gs.progressBar(gs.mic_volume, @(0, .9), .3, .05, Color.WHITE);
+    g.popLayer();
 
     // room update
     gs.room.update(dt) @=> Room new_room;
     if (new_room != null) gs.enterRoom(new_room);
 
-    // { // UI
+    { // UI
     //     if (UI.begin("test")) {
     //         // TODO: UI Library ideas
     //         // - show waveform history of a UGen
@@ -661,9 +1132,11 @@ while (1) {
     //         UI.slider("Mic Exponent", env_exp, 0.00, 1.);
     //         if (UI.slider("Mic Pole", env_pole_pos, 0.95, 1.)) env_pole_pos.val() => env_follower.pole;
     //         UI.slider("Mic Scaled Volume", env_pol_last, 0.00, 1.);
-
     //         UI.slider("Speed-Volume Scale", gs.player_speed_volume_scale, 1.00, 4.);
     //     }
     //     UI.end();
-    // }
+        UI.setNextWindowBgAlpha(0.00);
+        UI.separatorText(gs.room.room_name);
+        gs.room.ui();
+    }
 }

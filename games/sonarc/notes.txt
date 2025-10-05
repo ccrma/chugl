@@ -1,5 +1,6 @@
-# Screens
 
+TODO
+- need to add layers/depth to all g2d drawers
 
 # Stages/Modes
 - racetrack
@@ -14,6 +15,10 @@
 - flappy bird side scroll dodge
     - volume makes you go up
     - gravity naturally pulls you down
+- spin the wheel 
+    - all players are connected as spokes on a wheel
+    - making sound rotates the wheel in a fixed direction
+    - if you are on X side at Y time, you die...
 - raft going up, dodge obstacles coming down
     - maybe use spectrum centroid for this one--higher goes right, lower goes left
     - visualize spectrum at bottom of screen?
@@ -25,15 +30,31 @@
     - q: do you get to pick who you throw it to? or is the target player random? 
     - design q: do we show the remaining time on the bomb? or is it random / invisible?
         - probably not, then it's just a reaction speed check
+- using waveform: running down a zipline
+    - maybe waveform produces obstacles on zipline you have to jump over to dodge
+    - like that procedurally-animated monkey game
+        - https://www.youtube.com/watch?v=KCKdGlpsdlo
 - sound pumps/fills a balloon...
     - the person who pops the balloon is eliminated
 - something to do with visual of waveform, maybe a dodging laser game
     - side scroll, go from left to right
     - making sound above threshold activates top-down vertica lasers
+- need ball pushing game (fusion frenzy sumo)
+- need spin jumpy game (fusion frenzy twisted system)
+    - maybe mic volume controls spin speed...
 - Sports games
     - golf? make fun of how quiet it typically is. Also, unlike switch sports, no
       waiting for your turn! that's boring. Everyone is golfing / making sound at 
       same time.
+        - maybe mic volume builds up your strength meter but you can choose to 
+        let go any time
+        - you can also hit your opponents golf balls!
+        - 2D, so more like air hockey
+        - the balls are large, higher chance of collision / chaos
+        - triangle sprite is the aimer
+        - can choose between fast, weak strokes vs few strong ones
+        - might need box2d update for this...
+        - should this be top down (no gravity) or side view (with gravity)?
     - Tennis? make fun of how loudly they grunt when hitting
 - games that play off making loud noises in public spaces
     - studying in library
@@ -58,6 +79,23 @@
     - intentionally *not* playing warioware so I can explore this space as a clean slate
 
 # Core Gameplay 
+- maybe the core isn't audio, but coupling / linking / connection. The mic input is a means 
+by which one player can influence the the system/controls of all players. This produces a tension
+where in each mini game players are motivated to act independently and competitively, but 
+are prevented from doing so exclusively because they are directly influenced by other players.
+    - similar feeling to the PAX student game where each player was a turret on a ship,
+    and shooting applied an impulse to the ship in the opposite direction; everyone had to
+    work together to steer away from obstacles (coop) but also tried to eek out more points
+    by getting most last hits on incoming asteroids (competitive)
+    - the coupling mechanism doesn't have to be mic audio, it could be some in-game object or 
+    triggered by pressing a controller, but mic audio is convenient because it exists across 
+    game modes and independent of the particular controls of the minigame. flexible
+    - interesting to explore games with the coop-competitive duality...maybe a narrative exists
+    here (similar to undertale) where you initially think all the games are competitive but 
+    eventually realize they are meant to be cooperative once you start questioning why 
+    you are playing these games in the first place, who is controlling the system, etc.
+        - but in the scale of individual games -- what games require cooperation to sustain, but
+        also allow for individual victory?
 - audio is a double-edged sword. because everyone shares the same mic input, leads to 
 a weird coupled-chaotic system....
 - maybe the key is there needs to be a tension when using audio
@@ -102,4 +140,15 @@ a weird coupled-chaotic system....
         (sonic equivalent of picking a skin / color theme)
         - can combine with pitshift for funny
 - eventually can move to rounded/soft vector graphics with drop shadows
+
+
+# resources
+- more accurate movement: verlet integration
+    - https://www.youtube.com/watch?v=hG9SzQxaCm8 GDC: building a better jump
+    - https://web.archive.org/web/20121116064048/http://mpolney.galineer.com/index.php/Super_Meat_Boy_Physics 
+        - super meat boy 
+    - http://lolengine.net/blog/2011/12/14/understanding-motion-in-games
+    - https://www.youtube.com/watch?v=3HjO_RGIjCU Coding math channel
+    - also there are Runge-Kutta and Leapfrog integration
+
 
