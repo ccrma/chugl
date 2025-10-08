@@ -904,7 +904,6 @@ CK_DLL_SFUN(ui_Image);
 CK_DLL_SFUN(ui_ImageEx);
 CK_DLL_SFUN(ui_ImageButton);
 CK_DLL_SFUN(ui_ImageButtonEx);
-// clang-format on
 
 // Widgets: Combo Box (Dropdown)
 // - The BeginCombo()/EndCombo() api allows you to manage your contents and
@@ -1611,8 +1610,6 @@ CK_DLL_SFUN(ui_DrawList_PathRect);
 
 // Helpers -------------------------------------------------------------------
 
-// clang-format off
-
 // helper so that CHUGL_UI_VAL_PTR macro doesn't expand ckobj twice
 static void* _chugl_ui_val_ptr(Chuck_Object* ckobj, t_CKUINT offset)
 {
@@ -1621,7 +1618,6 @@ static void* _chugl_ui_val_ptr(Chuck_Object* ckobj, t_CKUINT offset)
 
 #define CHUGL_UI_VAL_PTR(type, ckobj, offset) (type*) _chugl_ui_val_ptr(ckobj, offset);
 
-// clang-format on
 
 void ulib_imgui_query(Chuck_DL_Query* QUERY)
 {
@@ -2334,7 +2330,7 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
     ARG("vec2", "p2");
     ARG("vec4", "col");
 
-    SFUN(ui_DrawList_AddLineEx, "void", "addLineEx");
+    SFUN(ui_DrawList_AddLineEx, "void", "addLine");
     ARG("vec2", "p1");
     ARG("vec2", "p2");
     ARG("vec4", "col");
@@ -2345,7 +2341,7 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
     ARG("vec2", "p_max");
     ARG("vec4", "col");
 
-    SFUN(ui_DrawList_AddRectEx, "void", "addRectEx");
+    SFUN(ui_DrawList_AddRectEx, "void", "addRect");
     ARG("vec2", "p_min");
     ARG("vec2", "p_max");
     ARG("vec4", "col");
@@ -2359,7 +2355,7 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
     ARG("vec2", "p_max");
     ARG("vec4", "col");
 
-    SFUN(ui_DrawList_AddRectFilledEx, "void", "addRectFilledEx");
+    SFUN(ui_DrawList_AddRectFilledEx, "void", "addRectFilled");
     ARG("vec2", "p_min");
     ARG("vec2", "p_max");
     ARG("vec4", "col");
@@ -2382,7 +2378,7 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
     ARG("vec2", "p4");
     ARG("vec4", "col");
 
-    SFUN(ui_DrawList_AddQuadEx, "void", "addQuadEx");
+    SFUN(ui_DrawList_AddQuadEx, "void", "addQuad");
     ARG("vec2", "p1");
     ARG("vec2", "p2");
     ARG("vec2", "p3");
@@ -2403,7 +2399,7 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
     ARG("vec2", "p3");
     ARG("vec4", "col");
 
-    SFUN(ui_DrawList_AddTriangleEx, "void", "addTriangleEx");
+    SFUN(ui_DrawList_AddTriangleEx, "void", "addTriangle");
     ARG("vec2", "p1");
     ARG("vec2", "p2");
     ARG("vec2", "p3");
@@ -2421,7 +2417,7 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
     ARG("float", "radius");
     ARG("vec4", "col");
 
-    SFUN(ui_DrawList_AddCircleEx, "void", "addCircleEx");
+    SFUN(ui_DrawList_AddCircleEx, "void", "addCircle");
     ARG("vec2", "center");
     ARG("float", "radius");
     ARG("vec4", "col");
@@ -2440,7 +2436,7 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
     ARG("vec4", "col");
     ARG("int", "num_segments");
 
-    SFUN(ui_DrawList_AddNgonEx, "void", "addNgonEx");
+    SFUN(ui_DrawList_AddNgonEx, "void", "addNgon");
     ARG("vec2", "center");
     ARG("float", "radius");
     ARG("vec4", "col");
@@ -2458,7 +2454,7 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
     ARG("vec2", "radius");
     ARG("vec4", "col");
 
-    SFUN(ui_DrawList_AddEllipseEx, "void", "addEllipseEx");
+    SFUN(ui_DrawList_AddEllipseEx, "void", "addEllipse");
     ARG("vec2", "center");
     ARG("vec2", "radius");
     ARG("vec4", "col");
@@ -2471,7 +2467,7 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
     ARG("vec2", "radius");
     ARG("vec4", "col");
 
-    SFUN(ui_DrawList_AddEllipseFilledEx, "void", "addEllipseFilledEx");
+    SFUN(ui_DrawList_AddEllipseFilledEx, "void", "addEllipseFilled");
     ARG("vec2", "center");
     ARG("vec2", "radius");
     ARG("vec4", "col");
@@ -2483,7 +2479,7 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
     ARG("vec4", "col");
     ARG("string", "text_begin");
 
-    SFUN(ui_DrawList_AddTextEx, "void", "addTextEx");
+    SFUN(ui_DrawList_AddTextEx, "void", "addText");
     ARG("vec2", "pos");
     ARG("vec4", "col");
     ARG("string", "text_begin");
@@ -2499,7 +2495,7 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
     //   "Implied text_end = NULL, wrap_width = 0.0f, cpu_fine_clip_rect = "
     //   "NULL");
 
-    // SFUN(ui_DrawList_AddTextImFontPtrEx, "void", "addTextImFontPtrEx");
+    // SFUN(ui_DrawList_AddTextImFontPtrEx, "void", "addTextImFontPtr");
     // ARG("ImFont", "font");
     // ARG("float", "font_size");
     // ARG("vec2", "pos");
@@ -2567,6 +2563,7 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
     ARG("float", "a_min");
     ARG("float", "a_max");
     ARG("int", "num_segments");
+    DOC_FUNC("a_min and a_max are start and end angles, in radians, of the circular arc. pass num_segments = 0 to auto-calculate the number of segments to use");
 
     SFUN(ui_DrawList_PathArcToFast, "void", "pathArcToFast");
     ARG("vec2", "center");
@@ -2582,7 +2579,7 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
     ARG("float", "a_min");
     ARG("float", "a_max");
 
-    SFUN(ui_DrawList_PathEllipticalArcToEx, "void", "pathEllipticalArcToEx");
+    SFUN(ui_DrawList_PathEllipticalArcToEx, "void", "pathEllipticalArcTo");
     ARG("vec2", "center");
     ARG("vec2", "radius");
     ARG("float", "rot");
@@ -4053,6 +4050,80 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
     QUERY->doc_var(QUERY, "Set cell background color (top-most color)");
     QUERY->end_class(QUERY);
 
+    { // UI_DrawFlags
+        QUERY->begin_class(QUERY, "UI_DrawFlags", "Object");
+        QUERY->doc_class(QUERY, "Flags for UI_DrawList functions.");
+
+        static t_CKINT ImDrawFlags_None = cimgui::ImDrawFlags_None;
+        QUERY->add_svar(QUERY, "int", "None", true, &ImDrawFlags_None);
+        DOC_VAR("equals 0");
+
+        static t_CKINT ImDrawFlags_Closed = cimgui::ImDrawFlags_Closed;
+        QUERY->add_svar(QUERY, "int", "Closed", true, &ImDrawFlags_Closed);
+        DOC_VAR("PathStroke(), AddPolyline(): specify that shape should be closed (Important: this is always == 1 for legacy reason)");
+
+		static t_CKINT ImDrawFlags_RoundCornersTopLeft
+			= cimgui::ImDrawFlags_RoundCornersTopLeft;
+		QUERY->add_svar(QUERY, "int", "RoundCornersTopLeft", true,
+						&ImDrawFlags_RoundCornersTopLeft);
+		DOC_VAR("AddRect(), AddRectFilled(), PathRect(): enable rounding top-left corner only (when rounding > 0.0f, we default to all corners). Was 0x01.");
+
+		static t_CKINT ImDrawFlags_RoundCornersTopRight
+			= cimgui::ImDrawFlags_RoundCornersTopRight;
+		QUERY->add_svar(QUERY, "int", "RoundCornersTopRight", true,
+						&ImDrawFlags_RoundCornersTopRight);
+		DOC_VAR("AddRect(), AddRectFilled(), PathRect(): enable rounding top-right corner only (when rounding > 0.0f, we default to all corners). Was 0x02.");
+
+		static t_CKINT ImDrawFlags_RoundCornersBottomLeft
+			= cimgui::ImDrawFlags_RoundCornersBottomLeft;
+		QUERY->add_svar(QUERY, "int", "RoundCornersBottomLeft", true,
+						&ImDrawFlags_RoundCornersBottomLeft);
+		DOC_VAR("AddRect(), AddRectFilled(), PathRect(): enable rounding bottom-left corner only (when rounding > 0.0f, we default to all corners). Was 0x04.");
+
+		static t_CKINT ImDrawFlags_RoundCornersBottomRight
+			= cimgui::ImDrawFlags_RoundCornersBottomRight;
+		QUERY->add_svar(QUERY, "int", "RoundCornersBottomRight", true,
+						&ImDrawFlags_RoundCornersBottomRight);
+		DOC_VAR( "AddRect(), AddRectFilled(), PathRect(): enable rounding bottom-right corner only (when rounding > 0.0f, we default to all corners). Wax 0x08.");
+
+		static t_CKINT ImDrawFlags_RoundCornersNone
+			= cimgui::ImDrawFlags_RoundCornersNone;
+		QUERY->add_svar(QUERY, "int", "RoundCornersNone", true,
+						&ImDrawFlags_RoundCornersNone);
+		DOC_VAR( "AddRect(), AddRectFilled(), PathRect(): disable rounding on all corners (when rounding > 0.0f). This is NOT zero, NOT an implicit flag!");
+
+		static t_CKINT ImDrawFlags_RoundCornersTop
+			= cimgui::ImDrawFlags_RoundCornersTop;
+		QUERY->add_svar(QUERY, "int", "RoundCornersTop", true,
+						&ImDrawFlags_RoundCornersTop);
+		DOC_VAR("equals RoundCornersTopLeft | RoundCornersTopRight");
+
+		static t_CKINT ImDrawFlags_RoundCornersBottom
+			= cimgui::ImDrawFlags_RoundCornersBottom;
+		QUERY->add_svar(QUERY, "int", "RoundCornersBottom", true,
+						&ImDrawFlags_RoundCornersBottom);
+		DOC_VAR("equals RoundCornersBottomLeft | RoundCornersBottomRight");
+
+		static t_CKINT ImDrawFlags_RoundCornersLeft
+			= cimgui::ImDrawFlags_RoundCornersLeft;
+		QUERY->add_svar(QUERY, "int", "RoundCornersLeft", true,
+						&ImDrawFlags_RoundCornersLeft);
+		DOC_VAR("equals RoundCornersTopLeft | RoundCornersBottomLeft");
+
+		static t_CKINT ImDrawFlags_RoundCornersRight
+			= cimgui::ImDrawFlags_RoundCornersRight;
+		QUERY->add_svar(QUERY, "int", "RoundCornersRight", true,
+						&ImDrawFlags_RoundCornersRight);
+		DOC_VAR("equals RoundCornersTopRight | RoundCornersBottomRight");
+
+		static t_CKINT ImDrawFlags_RoundCornersAll
+			= cimgui::ImDrawFlags_RoundCornersAll;
+		QUERY->add_svar(QUERY, "int", "RoundCornersAll", true,
+						&ImDrawFlags_RoundCornersAll);
+		DOC_VAR("equals RoundCornersTopLeft | RoundCornersTopRight | RoundCornersBottomLeft | RoundCornersBottomRight");
+		END_CLASS();
+    } // UI_DrawFlags
+
     QUERY->begin_class(QUERY, "UI_TabBarFlags", "Object");
     QUERY->doc_class(QUERY, "Flags for ImGui::BeginTabBar().\n");
     static t_CKINT ImGuiTabBarFlags_None = 0;
@@ -5088,71 +5159,6 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
     static t_CKINT ImGuiDockNodeFlags_NoUndocking = 128;
     QUERY->add_svar(QUERY, "int", "NoUndocking", true, &ImGuiDockNodeFlags_NoUndocking);
     QUERY->doc_var(QUERY, "Disable undocking this node.");
-    QUERY->end_class(QUERY);
-
-    QUERY->begin_class(QUERY, "UI_DrawFlags", "Object");
-    QUERY->doc_class(
-      QUERY,
-      "Flags for ImDrawList functions.\n(Legacy: bit 0 must always correspond "
-      "to ImDrawFlags_Closed to be backward compatible with old API using a "
-      "bool. Bits 1..3 must be unused).\n");
-    static t_CKINT ImDrawFlags_None = 0;
-    QUERY->add_svar(QUERY, "int", "None", true, &ImDrawFlags_None);
-    static t_CKINT ImDrawFlags_Closed = 1;
-    QUERY->add_svar(QUERY, "int", "Closed", true, &ImDrawFlags_Closed);
-    QUERY->doc_var(QUERY,
-                   "PathStroke(), AddPolyline(): specify that shape should be "
-                   "closed (Important: this is always == 1 for legacy reason)");
-    static t_CKINT ImDrawFlags_RoundCornersTopLeft = 16;
-    QUERY->add_svar(QUERY, "int", "RoundCornersTopLeft", true,
-                    &ImDrawFlags_RoundCornersTopLeft);
-    QUERY->doc_var(
-      QUERY,
-      "AddRect(), AddRectFilled(), PathRect(): enable rounding top-left corner "
-      "only (when rounding > 0.0f, we default to all corners). Was 0x01.");
-    static t_CKINT ImDrawFlags_RoundCornersTopRight = 32;
-    QUERY->add_svar(QUERY, "int", "RoundCornersTopRight", true,
-                    &ImDrawFlags_RoundCornersTopRight);
-    QUERY->doc_var(QUERY,
-                   "AddRect(), AddRectFilled(), PathRect(): enable rounding "
-                   "top-right corner only (when rounding > 0.0f, we default to "
-                   "all corners). Was 0x02.");
-    static t_CKINT ImDrawFlags_RoundCornersBottomLeft = 64;
-    QUERY->add_svar(QUERY, "int", "RoundCornersBottomLeft", true,
-                    &ImDrawFlags_RoundCornersBottomLeft);
-    QUERY->doc_var(QUERY,
-                   "AddRect(), AddRectFilled(), PathRect(): enable rounding "
-                   "bottom-left corner only (when rounding > 0.0f, we default "
-                   "to all corners). Was 0x04.");
-    static t_CKINT ImDrawFlags_RoundCornersBottomRight = 128;
-    QUERY->add_svar(QUERY, "int", "RoundCornersBottomRight", true,
-                    &ImDrawFlags_RoundCornersBottomRight);
-    QUERY->doc_var(QUERY,
-                   "AddRect(), AddRectFilled(), PathRect(): enable rounding "
-                   "bottom-right corner only (when rounding > 0.0f, we default "
-                   "to all corners). Wax 0x08.");
-    static t_CKINT ImDrawFlags_RoundCornersNone = 256;
-    QUERY->add_svar(QUERY, "int", "RoundCornersNone", true,
-                    &ImDrawFlags_RoundCornersNone);
-    QUERY->doc_var(
-      QUERY,
-      "AddRect(), AddRectFilled(), PathRect(): disable rounding on all corners "
-      "(when rounding > 0.0f). This is NOT zero, NOT an implicit flag!");
-    static t_CKINT ImDrawFlags_RoundCornersTop = 48;
-    QUERY->add_svar(QUERY, "int", "RoundCornersTop", true,
-                    &ImDrawFlags_RoundCornersTop);
-    static t_CKINT ImDrawFlags_RoundCornersBottom = 192;
-    QUERY->add_svar(QUERY, "int", "RoundCornersBottom", true,
-                    &ImDrawFlags_RoundCornersBottom);
-    static t_CKINT ImDrawFlags_RoundCornersLeft = 80;
-    QUERY->add_svar(QUERY, "int", "RoundCornersLeft", true,
-                    &ImDrawFlags_RoundCornersLeft);
-    static t_CKINT ImDrawFlags_RoundCornersRight = 160;
-    QUERY->add_svar(QUERY, "int", "RoundCornersRight", true,
-                    &ImDrawFlags_RoundCornersRight);
-    static t_CKINT ImDrawFlags_RoundCornersAll = 240;
-    QUERY->add_svar(QUERY, "int", "RoundCornersAll", true,
-                    &ImDrawFlags_RoundCornersAll);
     QUERY->end_class(QUERY);
 
     QUERY->begin_class(QUERY, "UI_DrawListFlags", "Object");
@@ -13150,3 +13156,5 @@ CK_DLL_SFUN(ui_styleColorsClassic)
 {
     cimgui::ImGui_StyleColorsClassic(NULL);
 }
+
+// clang-format on

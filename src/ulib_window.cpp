@@ -348,6 +348,7 @@ void ulib_window_query(Chuck_DL_Query* QUERY)
     static t_CKINT glfw_key_right_alt     = GLFW_KEY_RIGHT_ALT;
     static t_CKINT glfw_key_right_super   = GLFW_KEY_RIGHT_SUPER;
     static t_CKINT glfw_key_menu          = GLFW_KEY_MENU;
+    static t_CKINT glfw_key_last          = GLFW_KEY_LAST;
     SVAR("int", "Key_Space", &glfw_key_space);
     DOC_VAR("(hidden)");
     SVAR("int", "Key_Apostrophe", &glfw_key_apostrophe);
@@ -709,6 +710,8 @@ void ulib_window_query(Chuck_DL_Query* QUERY)
     SVAR("int", "KEY_RIGHTALT", &glfw_key_right_alt);
     SVAR("int", "KEY_RIGHTSUPER", &glfw_key_right_super);
     SVAR("int", "KEY_MENU", &glfw_key_menu);
+    SVAR("int", "KEY_LAST", &glfw_key_menu);
+    DOC_VAR("Integer value of the highest key enum.");
 
     // callbacks ------------------------------------------------------
     SFUN(gwindow_close_event, CHUGL_EventTypeNames[WINDOW_CLOSE], "closeEvent");

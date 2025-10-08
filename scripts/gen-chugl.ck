@@ -223,6 +223,7 @@ doc.addGroup(
         "UI_SizeCallback",
         "UI_ComboCallback",
         "UI_DrawList",
+        "UI_DrawFlags",
         "UI",
     ],
     // group name
