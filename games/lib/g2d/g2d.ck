@@ -60,6 +60,8 @@ public class G2D extends GGen
 	fun void popColor() { color_stack.popBack(); }
 	fun void pushLayer(float layer) { layer_stack << layer; }
 	fun void popLayer() { layer_stack.popBack(); }
+	fun void pushTextMaxWidth(float w) { texts.max_width_stack << w; }
+	fun void popTextMaxWidth() { texts.max_width_stack.popBack(); }
 
 	// ----------- look & feel (aka antialias and resolution) ----------
 	fun void antialias(int bool) {
@@ -199,6 +201,18 @@ public class G2D extends GGen
 				color_stack[-1]
 			);
 		}
+	}
+
+	// draw line segments
+	fun void line(vec2 arr[], int loop) {
+		for (int i; i < arr.size(); i++) {
+			lines.segment(
+				arr[i],
+				arr[i + 1],
+				color_stack[-1]
+			);
+		}
+		if (loop) lines.segment(arr[-1], arr[0], color_stack[-1]);
 	}
 
 	// draws a polygon outline at given position and rotation
@@ -371,15 +385,15 @@ public class G2D extends GGen
 
 	fun void textLayer(float z) { texts.mesh.posZ(z); } // sets the starting Z position for all text
 
-	fun void text(string s) { texts.text(s, font_stack[-1], @(0,0), @(font_size_stack[-1], font_size_stack[-1]), 0, color_stack[-1]); }
-	fun void text(string s, vec2 pos) { texts.text(s, font_stack[-1], pos, @(font_size_stack[-1],font_size_stack[-1]), 0, color_stack[-1]); }
-	fun void text(string s, vec2 pos, float sca) { texts.text(s, font_stack[-1], pos, @(sca,sca), 0, color_stack[-1]); }
-	fun void text(string s, vec2 pos, float sca, float rot) { texts.text(s, font_stack[-1], pos, @(sca, sca), rot, color_stack[-1]); }
-	fun void text(string s, vec2 pos, vec2 sca, float rot) { texts.text(s, font_stack[-1], pos, sca, rot, color_stack[-1]); }
-	fun void text(string s, vec3 pos) { texts.text(s, font_stack[-1], pos, @(font_size_stack[-1],font_size_stack[-1]), 0, color_stack[-1]); }
-	fun void text(string s, vec3 pos, float sca) { texts.text(s, font_stack[-1], pos, @(sca,sca), 0, color_stack[-1]); }
-	fun void text(string s, vec3 pos, float sca, float rot) { texts.text(s, font_stack[-1], pos, @(sca, sca), rot, color_stack[-1]); }
-	fun void text(string s, vec3 pos, vec2 sca, float rot) { texts.text(s, font_stack[-1], pos, sca, rot, color_stack[-1]); }
+	fun void text(string s) { texts.text(s, font_stack[-1], @(0,0), font_size_stack[-1], @(1, 1), 0, color_stack[-1]); }
+	fun void text(string s, vec2 pos) { texts.text(s, font_stack[-1], pos, font_size_stack[-1], @(1,1), 0, color_stack[-1]); }
+	fun void text(string s, vec2 pos, float size) { texts.text(s, font_stack[-1], pos, size, @(1,1), 0, color_stack[-1]); }
+	fun void text(string s, vec2 pos, float size, float rot) { texts.text(s, font_stack[-1], pos, size, @(1, 1), rot, color_stack[-1]); }
+	fun void text(string s, vec2 pos, vec2 sca, float rot) { texts.text(s, font_stack[-1], pos, font_size_stack[-1], sca, rot, color_stack[-1]); }
+	fun void text(string s, vec3 pos) { texts.text(s, font_stack[-1], pos, font_size_stack[-1], @(1,1), 0, color_stack[-1]); }
+	fun void text(string s, vec3 pos, float size) { texts.text(s, font_stack[-1], pos, size, @(1,1), 0, color_stack[-1]); }
+	fun void text(string s, vec3 pos, float size, float rot) { texts.text(s, font_stack[-1], pos, size, @(1, 1), rot, color_stack[-1]); }
+	fun void text(string s, vec3 pos, vec2 sca, float rot) { texts.text(s, font_stack[-1], pos, font_size_stack[-1], sca, rot, color_stack[-1]); }
 
     // ---------- sprites ----------
 	fun void sprite(Texture tex, vec2 pos) {
@@ -441,25 +455,33 @@ public class G2D_Text
 	int text_count;
 	GGen mesh; // parent of all GTexts
 
-	fun void text(string s, string font, vec3 pos, vec2 sca, float rot, vec3 color) {
+	// stack of wrap widths
+	float max_width_stack[0];
+
+
+	fun void text(string s, string font, vec3 pos, float size, vec2 sca, float rot, vec3 color) {
 		if (text_count == text_pool.size()) {
 			text_pool << new GText;
+			text_pool[-1].align(1);
 		}
 		text_pool[text_count] @=> GText@ gtext;
 
 		gtext --> mesh;
 		gtext.pos(pos);
+		gtext.size(size);
 		gtext.sca(sca);
 		gtext.rotZ(rot);
 		gtext.color(color);
 		gtext.text(s);
 		if (font != null) gtext.font(font);
+		if (max_width_stack.size() > 0)
+			gtext.maxWidth(max_width_stack[-1]);
 
 		text_count++;
 	}
 
-	fun void text(string s, string font, vec2 pos, vec2 sca, float rot, vec3 color) {
-		text(s, font, @(pos.x, pos.y, 0), sca, rot, color);
+	fun void text(string s, string font, vec2 pos, float size, vec2 sca, float rot, vec3 color) {
+		text(s, font, @(pos.x, pos.y, 0), size, sca, rot, color);
 	}
 
 	fun void update() {
@@ -469,6 +491,8 @@ public class G2D_Text
 			if (text_pool[i].parent() == null) break;
 			text_pool[i].detachParent();
 		}
+
+		max_width_stack.clear();
 
 		0 => text_count;
 	}

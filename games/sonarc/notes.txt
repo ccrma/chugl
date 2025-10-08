@@ -1,8 +1,24 @@
 
 TODO
 - need to add layers/depth to all g2d drawers
+- lisa playback options
+    - add reverb
+    - pitchshift
+    - change playrateQ
+- hot potato game
+    - let players record a driving/engine sample
+        - use this for granular synthesis lmao
+- audiovisuals
+    - maybe have a waveform display in each game for when a player's SFX triggers
 
 # Stages/Modes
+- start room
+    - maybe record different audio samples for different conditions
+        - victory audio
+        - hurt audio
+        - loss audio
+    - include some pre-recorded ones too, like "dope" for defaults
+        - all tracks should have a default
 - racetrack
     - simple indie500 shape, but add obstacles
     - first to finish wins

@@ -31,10 +31,12 @@ Optimization for line collision testing
 @import "../lib/M.ck"
 @import "../lib/T.ck"
 
-GWindow.windowed(1920, 1080);
-GWindow.center();
+// GWindow.windowed(1920, 1080);
+// GWindow.center();
+GWindow.maximize();
 G2D g;
 g.resolution(1920, 1080);
+GText.defaultFont(me.dir() + "./assets/m5x7.ttf");
 
 // ========================
 // Sound
@@ -81,20 +83,24 @@ class Entity {
     int player_pos_history_read_idx;
 
     // control mapping for each player
+    fun string keyString(int which) { 
+        if (which == Key_Left) {
+            return gs.key2string[gs.player_key_left[player_id]];
+        } else if (which == Key_Right) {
+            return gs.key2string[gs.player_key_right[player_id]];
+        } else if (which == Key_Action) {
+            return gs.key2string[gs.player_key_action[player_id]];
+        }
+        return "N/A";
+    }
+
     fun int key(int which) {
-        // if (gs.room == match_room && match_room.match_state == match_room.Match_Replay) {
-        //     if (which == Key_Left) {
-        //         return T.arrayHas(match_room.replay_current_keys, gs.player_key_left[player_id]);
-        //     }
-        //     if (which == Key_Right) {
-        //         return T.arrayHas(match_room.replay_current_keys, gs.player_key_right[player_id]);
-        //     }
-        // }
         if (which == Key_Left) {
             return GWindow.key(gs.player_key_left[player_id]);
-        }
-        if (which == Key_Right) {
+        } else if (which == Key_Right) {
             return GWindow.key(gs.player_key_right[player_id]);
+        } else if (which == Key_Action) {
+            return GWindow.key(gs.player_key_action[player_id]);
         }
         return false;
     }
@@ -104,6 +110,19 @@ class Entity {
             return GWindow.keyDown(gs.player_key_left[player_id]);
         } else if (which == Key_Right) {
             return GWindow.keyDown(gs.player_key_right[player_id]);
+        } else if (which == Key_Action) {
+            return GWindow.keyDown(gs.player_key_action[player_id]);
+        }
+        return false;
+    }
+
+    fun int keyUp(int which) {
+        if (which == Key_Left) {
+            return GWindow.keyUp(gs.player_key_left[player_id]);
+        } else if (which == Key_Right) {
+            return GWindow.keyUp(gs.player_key_right[player_id]);
+        } else if (which == Key_Action) {
+            return GWindow.keyUp(gs.player_key_action[player_id]);
         }
         return false;
     }
@@ -165,9 +184,31 @@ class GameState {
     [
         GWindow.Key_Left, 
         GWindow.Key_A, 
-        GWindow.Key_O, 
-        GWindow.Key_N, 
+        GWindow.Key_I, 
+        GWindow.Key_B, 
     ] @=> int player_key_left[];
+
+    [
+        GWindow.KEY_DOWN, 
+        GWindow.KEY_S, 
+        GWindow.KEY_O, 
+        GWindow.KEY_N, 
+    ] @=> int player_key_action[];
+
+    string key2string[GWindow.KEY_LAST];
+
+    "<right>" => key2string[GWindow.Key_Right];
+    "d" => key2string[GWindow.Key_D];
+    "p" => key2string[GWindow.Key_P];
+    "m" => key2string[GWindow.Key_M];
+    "<left>" => key2string[GWindow.Key_Left];
+    "a" => key2string[GWindow.Key_A];
+    "i" => key2string[GWindow.Key_I];
+    "b" => key2string[GWindow.Key_B];
+    "<down>" => key2string[GWindow.KEY_DOWN];
+    "s" => key2string[GWindow.KEY_S];
+    "o" => key2string[GWindow.KEY_O];
+    "n" => key2string[GWindow.KEY_N];
 
     .25 => float player_scale;
     [ 
@@ -188,6 +229,23 @@ class GameState {
 
     // audio =========================
     float mic_volume; // should be updated and save at start of each frame
+    
+    [
+        "Victory",
+        "Action",
+        "Hurt",
+        "Death",
+    ] @=> static string sfx_list[];
+
+    adc => PoleZero rec_input;
+    .99 => rec_input.blockZero; // block ultra low freqs
+    LiSa lisas[MAX_PLAYERS * sfx_list.size()];
+    for (auto lisa : lisas) {
+        rec_input => lisa => dac;
+        2::second => lisa.duration;
+        lisa.loop0(false); // default true
+        lisa.rampDown(10::ms);
+    }
 
     // config constants =======================
     .3 => float player_base_speed;
@@ -256,13 +314,137 @@ class GameState {
 GameState gs;
 
 class StartRoom extends Room {
+    "default room" => room_name;
+
+    UI_Float ui_margin(.2);
+    UI_Int waveform_display_samples(128);
+
+    int sfx_selection[gs.MAX_PLAYERS];
+
+    fun void ui() {
+        UI.slider("margin", ui_margin, 0, 1.0);
+        UI.slider("waveform samples", waveform_display_samples, 36, 1024);
+    }
+    fun void enter() {
+        sfx_selection.zero();
+    }
     fun Room update(float dt) {
+        g.screenSize() => vec2 screen_size;
+
+        screen_size.x -  2 * ui_margin.val() => float menu_total_width;
+        screen_size.y -  2* ui_margin.val() => float menu_total_height;
+        (menu_total_height - (gs.MAX_PLAYERS - 1) * ui_margin.val()) / gs.MAX_PLAYERS => float character_box_height;
+
+        4.0 => float character_box_width;
+        screen_size.x - character_box_width - 3 * ui_margin.val() => float audio_box_width;
+        -screen_size.x/2 + character_box_width + 2*ui_margin.val() => float audio_box_start_x;
+        audio_box_start_x + 0.5*audio_box_width => float audio_box_center_x;
+        character_box_height / gs.sfx_list.size() => float sfx_label_dy;
+
+        // choose # players
         // @bug: not handling case where >4 controllers connect
         // and gamepad ids exceed 3.
-
         if (GWindow.keyDown(GWindow.KEY_2)) 2 => gs.num_players;
         if (GWindow.keyDown(GWindow.KEY_3)) 3 => gs.num_players;
         if (GWindow.keyDown(GWindow.KEY_4)) 4 => gs.num_players;
+
+        // draw num players
+        g.text("Number of Players: " + gs.num_players, @(Math.cos(now/second), Math.sin(now/second)));
+
+        // draw box outlines
+        0.5 * screen_size.y - ui_margin.val() => float cursor_y;
+        for (int i; i < gs.num_players; ++i) { 
+            gs.players[i] @=> Entity player;
+            @(
+                -screen_size.x/2 + ui_margin.val() + 0.5 * character_box_width,
+                cursor_y - 0.5 * character_box_height
+            ) => vec2 center;
+            center => gs.players[i].player_pos;
+
+            g.box(center, character_box_width, character_box_height);
+
+            // draw rec instructions
+            g.pushTextMaxWidth(character_box_width * 0.7);
+            g.text(
+                "hold " + player.keyString(Key_Action) + " to record",
+                @(center.x - .15 * character_box_width, center.y),
+                .4
+            );
+            g.popTextMaxWidth();
+
+
+            // draw voice SFX options
+            center.y + character_box_height * 0.5 - sfx_label_dy * 0.5 => float text_y;
+            center.x + character_box_width * 0.35 => float text_x;
+            for (int sfx_idx; sfx_idx < gs.sfx_list.size(); ++sfx_idx) {
+                g.text(gs.sfx_list[sfx_idx], @(text_x, text_y), .4);
+
+                // draw selection box
+                if (sfx_idx == sfx_selection[i]) {
+                    g.box(@(text_x, text_y), character_box_width * .3, sfx_label_dy, gs.players[i].color);
+                }
+
+                // move cursor
+                sfx_label_dy -=> text_y;
+            }
+
+            // draw waveform widget
+            g.box(@(audio_box_center_x, center.y), audio_box_width, character_box_height);
+
+            // draw waveform
+            gs.lisas[i * gs.sfx_list.size() + sfx_selection[i]] @=> LiSa lisa;
+            lisa.duration() / waveform_display_samples.val() => dur interval;
+            audio_box_width / (waveform_display_samples.val()-1) => float waveform_dx;
+            // g.pushColor(player.color);
+            for (1 => int w; w < waveform_display_samples.val(); w++) {
+                g.line(
+                    @(
+                        audio_box_start_x + (w - 1) * waveform_dx,
+                        center.y + character_box_height * lisa.valueAt(interval * (w - 1))
+                    ),
+                    @(
+                        audio_box_start_x + w * waveform_dx,
+                        center.y + character_box_height * lisa.valueAt(interval * w)
+                    )
+                );
+            }
+            // draw record head
+            lisa.recPos() / lisa.duration() => float rec_progress;
+            if (rec_progress > 0) {
+                g.line(
+                    @(
+                        audio_box_start_x + rec_progress * audio_box_width,
+                        center.y - character_box_height * 0.5
+                    ),
+                    @(
+                        audio_box_start_x + rec_progress * audio_box_width,
+                        center.y + character_box_height * 0.5
+                    ),
+                    player.color
+                );
+            }
+
+            // draw play head
+            if (lisa.playing(0)) {
+                lisa.playPos() / lisa.duration() => float play_progress;
+                g.line(
+                    @(
+                        audio_box_start_x + play_progress * audio_box_width,
+                        center.y - character_box_height * 0.5
+                    ),
+                    @(
+                        audio_box_start_x + play_progress * audio_box_width,
+                        center.y + character_box_height * 0.5
+                    )
+                );
+            }
+
+            // g.popColor();
+
+
+            (ui_margin.val() + character_box_height) -=> cursor_y;
+        }
+
 
         Gamepad.available() @=> int gamepads[];
 
@@ -274,28 +456,54 @@ class StartRoom extends Room {
         // remaining players don't have a gamepad assigned
         for (gamepads.size() => int i; i < gs.MAX_PLAYERS; ++i) {
             -1 => gs.players[i].gamepad_id;
-            gs.player_spawns[i] => gs.players[i].player_pos;
         }
-
-        // draw num players
-        1 => float text_y_offset;
-        g.text("Number of Players: " + gs.num_players, @(0, text_y_offset));
 
         // draw players and allow movement 
         for (int i; i < gs.num_players; ++i) {
             gs.players[i] @=> Entity e;
             float delta_rot;
+            false => int switched_sfx_selection;
 
-            // input
-            if (e.key(Key_Left)) gs.player_rot_speed => delta_rot;
-            if (e.key(Key_Right)) -gs.player_rot_speed => delta_rot;
-            if (Gamepad.available(e.gamepad_id)) {
-                -gs.player_rot_speed * e.axis(Gamepad.AXIS_LEFT_X) => delta_rot;
+            gs.lisas[i * gs.sfx_list.size() + sfx_selection[i]] @=> LiSa prev_lisa;
+
+            // input (switching stops rec and playback on prev)
+            if (e.keyDown(Key_Left)) {
+                1 -=> sfx_selection[i];
+                prev_lisa.play(false);
+                prev_lisa.record(false);
+                true => switched_sfx_selection;
             }
-            (dt * delta_rot) +=> e.player_rot;
+            if (e.keyDown(Key_Right)) {
+                1 +=> sfx_selection[i];
+                prev_lisa.play(false);
+                prev_lisa.record(false);
+                true => switched_sfx_selection;
+            }
+
+            if (sfx_selection[i] >= gs.sfx_list.size()) {
+                gs.sfx_list.size() %=> sfx_selection[i];
+            } else if (sfx_selection[i] < 0) {
+                gs.sfx_list.size() - 1 => sfx_selection[i];
+            }
+
+            gs.lisas[i * gs.sfx_list.size() + sfx_selection[i]] @=> LiSa lisa;
+            if (switched_sfx_selection) {
+                0::ms => lisa.playPos;
+                lisa.play(true);
+            }
+
+            if (e.keyDown(Key_Action)) {
+                lisa.play(false);
+                lisa.record(true);
+            }
+            if (e.keyUp(Key_Action)) {
+                lisa.record(false);
+                0::ms => lisa.playPos;
+                lisa.play(true);
+            }
 
             // draw
-            e.draw();
+            // e.draw();
         }
 
 
@@ -1037,6 +1245,47 @@ class FlappyBirdRoom extends Room
     }
 }
 
+class HotPotatoRoom extends Room
+{
+    "hot potato room" => room_name;
+
+    // movement params
+    UI_Float drive_turn_speed(1.0);
+    UI_Float drive_move_speed(1.0);
+
+
+    fun void enter() {
+        false => gs.players[0].disabled;
+        @(0,0) => gs.players[0].player_pos;
+        0 => gs.players[0].player_rot;
+    }
+
+    fun void leave() {}
+    fun void ui() {
+        UI.slider("turn rate", drive_turn_speed, 0, 10);
+        UI.slider("drive speed", drive_move_speed, 0, 10);
+    }
+
+    fun Room update(float dt) {
+        gs.players[0] @=> Entity p;
+
+        if (p.key(Key_Left)) {
+            dt * drive_turn_speed.val() +=> p.player_rot;
+        }
+        if (p.key(Key_Right)) {
+            dt * drive_turn_speed.val() -=> p.player_rot;
+        }
+        if (p.key(Key_Action)) {
+            dt * drive_move_speed.val() * M.rot2vec(p.player_rot) +=> p.player_pos;
+        }
+
+        p.draw();
+
+
+        return null; 
+    } 
+}
+
 class FX {
     // spawns an explosion of lines going in random directinos that gradually shorten
     fun static void explode(vec2 pos, dur max_dur, vec3 color) {
@@ -1100,7 +1349,8 @@ class FX {
 StartRoom start_room;
 PlatformRoom platform_room;
 FlappyBirdRoom flappy_room;
-gs.enterRoom(flappy_room);
+HotPotatoRoom potato_room;
+gs.enterRoom(potato_room);
 
 // gameloop
 while (1) {
@@ -1114,9 +1364,9 @@ while (1) {
     ) => gs.mic_volume;
 
     // draw sound meter (assumimg all games share same sound meter)
-    g.pushLayer(10);
-    gs.progressBar(gs.mic_volume, @(0, .9), .3, .05, Color.WHITE);
-    g.popLayer();
+    // g.pushLayer(10);
+    // gs.progressBar(gs.mic_volume, @(0, .9), .3, .05, Color.WHITE);
+    // g.popLayer();
 
     // room update
     gs.room.update(dt) @=> Room new_room;
@@ -1136,6 +1386,13 @@ while (1) {
     //     }
     //     UI.end();
         UI.setNextWindowBgAlpha(0.00);
+        UI.separatorText("gamestate");
+        UI.progressBar(gs.mic_volume, @(0, 0), "volume");
+
+    // gs.progressBar(gs.mic_volume, @(0, .9), .3, .05, Color.WHITE);
+
+
+
         UI.separatorText(gs.room.room_name);
         gs.room.ui();
     }
