@@ -11,10 +11,10 @@
 
 out = ""
 prefix = "b2"
-original_type = "b2SegmentDistanceResult"
+original_type = "b2SurfaceMaterial"
 struct_name = original_type
 
-class_doc = "Result of computing the distance between two line segments. https://box2d.org/documentation/group__distance.html#structb2_segment_distance_result"
+class_doc = "Surface materials allow chain shapes to have per segment surface properties.  https://box2d.org/documentation/group__shape.html#structb2_surface_material"
 # (type, name, comment)
 struct_info = [
     # ("vec2", "gravity", "Gravity vector. Box2D has no up-vector defined."),
@@ -28,12 +28,12 @@ struct_info = [
     # ("int", "enableSleep", "Can bodies go to sleep to improve performance"),
     # ("int", "enableContinous", "Enable continuous collision"),
     # ("int", "workerCount", "Number of workers to use with the provided task system. Box2D performs best when using only performance cores and accessing a single L2 cache. Efficiency cores and hyper-threading provide little benefit and may even harm performance."),
-
-    ("vec2", "closest1", "The closest point on the first segment"),
-    ("vec2", "closest2", "The closest point on the second segment"),
-    ("float", "fraction1", "The barycentric coordinate on the first segment"),
-    ("float", "fraction2", "The barycentric coordinate on the second segment"),
-    ("float", "distanceSquared", "The squared distance between the closest points"),
+	("float", "friction", "The Coulomb (dry) friction coefficient, usually in the range [0,1]."),
+	("float", "restitution", "The coefficient of restitution (bounce) usually in the range [0,1]. "),
+	("float", "rollingResistance", "The rolling resistance usually in the range [0,1]."),
+	("float", "tangentSpeed", "The tangent speed for conveyor belts"),
+	("int", "userMaterialId", "User material identifier. This is passed with query results and to friction and restitution combining functions. It is not used internally."),
+	("int", "customColor", "Custom debug draw color.")
 ]
 
 def l(s):

@@ -605,7 +605,11 @@ fun Entity addBody(int which, vec2 pos)
 	true => dynamic_shape_def.enableHitEvents;
     true => dynamic_shape_def.enableContactEvents;
     conf.BASE_BALL_DENSITY * mt.density => dynamic_shape_def.density;
-    0.2 => dynamic_shape_def.restitution;
+    // 0.2 => dynamic_shape_def.restitution;
+
+    b2SurfaceMaterial surface_mat;
+    0.2 => surface_mat.restitution;
+    surface_mat @=> dynamic_shape_def.material;
 
     // shape
     mt.radius => float radius;

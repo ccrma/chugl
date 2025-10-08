@@ -15,6 +15,10 @@ project(
     LANGUAGES CXX C
 )
 
+
+# uncomment to show all errors on clang
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ferror-limit=0") # 0 for unlimited
+
 if(LINUX OR EMSCRIPTEN OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_compile_options(-fPIC)  # needed for emcripten
     #set( CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined" )
@@ -49,7 +53,6 @@ set(
     # tests/obj.cpp
     tests/gltf.cpp
     tests/imgui_test.cpp
-    tests/test_box2d.cpp
     tests/test_lines2d.cpp
 )
 
@@ -271,7 +274,6 @@ target_include_directories(chugl_shared_properties
     INTERFACE vendor/cimgui
     INTERFACE vendor/cimgui/imgui
     INTERFACE vendor/cimgui/imgui
-    INTERFACE vendor/box2d/include
 )
 
 # vendor dependencies ==========================================================
@@ -289,6 +291,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(webgpu)
 
+FetchContent_Declare(
+  box2d
+  GIT_REPOSITORY https://github.com/erincatto/box2d/
+  GIT_TAG        v3.1.1
+)
+FetchContent_MakeAvailable(box2d)
+
 if (NOT EMSCRIPTEN)
     add_subdirectory(vendor/glfw)
 endif()
@@ -305,20 +314,8 @@ set(FT_DISABLE_ZLIB     ON  CACHE BOOL "" FORCE)
 set(FT_ENABLE_ERROR_STRINGS ON CACHE BOOL "" FORCE)
 add_subdirectory(vendor/freetype)
 
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
-	option(BOX2D_AVX2 "Enable AVX2 (faster)" ON)
-endif()
-
-# Needed for samples.exe to find box2d.dll
-# set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
-# set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
-
 # set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-
-# The Box2D library uses simde https://github.com/simd-everywhere/simde
-add_subdirectory(vendor/simde)
-add_subdirectory(vendor/box2d/src)
 
 # linking
 # target_link_libraries(${PROJECT_NAME} PRIVATE webgpu glfw glfw3webgpu)

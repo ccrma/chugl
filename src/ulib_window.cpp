@@ -710,7 +710,7 @@ void ulib_window_query(Chuck_DL_Query* QUERY)
     SVAR("int", "KEY_RIGHTALT", &glfw_key_right_alt);
     SVAR("int", "KEY_RIGHTSUPER", &glfw_key_right_super);
     SVAR("int", "KEY_MENU", &glfw_key_menu);
-    SVAR("int", "KEY_LAST", &glfw_key_menu);
+    SVAR("int", "KEY_LAST", &glfw_key_last);
     DOC_VAR("Integer value of the highest key enum.");
 
     // callbacks ------------------------------------------------------
