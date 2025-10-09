@@ -5,6 +5,11 @@ Leakcheck gamepad.ck example
 bugs found working on games
 - setting shader storageBuffer to empty array causes crash
 
+box2d migration to v3.1.1
+- finish updating API fns
+- delete box2d-old in vendor
+- add box2d v3.1.1 src files, remove FetchContent dependency
+
 setup linux partition on lab machine
 - debug crash caused by std::string in SG_Text component
 

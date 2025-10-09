@@ -8,6 +8,11 @@ G2D g;
 // GWindow.windowed(1920, 1080);
 // g.resolution(1920, 1080);
 
+(1::ms - 10::ms) => dur neg_dur;
+if (neg_dur < 0::ms) {
+    <<< "negative dur" >>>;
+}
+
 
 .2 => float r;
 @(-1, 0) => vec2 l1;

@@ -5,11 +5,17 @@ TODO
     - add reverb
     - pitchshift
     - change playrateQ
+- start room
+    - fire oneshot should only play until end_rec pos
+- placement room
+    - add pitshift or change rate on losers?
 - hot potato game
     - let players record a driving/engine sample
         - use this for granular synthesis lmao
 - audiovisuals
     - maybe have a waveform display in each game for when a player's SFX triggers
+- g2d
+    - look at imgui drawlist impl, can we steal...
 
 # Stages/Modes
 - start room

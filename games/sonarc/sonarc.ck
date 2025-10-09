@@ -31,9 +31,9 @@ Optimization for line collision testing
 @import "../lib/M.ck"
 @import "../lib/T.ck"
 
-// GWindow.windowed(1920, 1080);
-// GWindow.center();
-GWindow.maximize();
+GWindow.windowed(1920, 1080);
+GWindow.center();
+// GWindow.maximize();
 G2D g;
 g.resolution(1920, 1080);
 GText.defaultFont(me.dir() + "./assets/m5x7.ttf");
@@ -57,6 +57,42 @@ class Sound {
 }
 Sound s;
 
+class Sampler extends LiSa {
+    dur rec_end; // point when user stopped recording
+    false => int recording;
+
+
+    // lisa params
+    16 => static int MAX_VOICES;
+    15::ms => static dur RAMP_DUR;
+    2::second => this.duration;
+    this.loop0(false);
+    this.rampDown(10::ms);
+    this.maxVoices(MAX_VOICES);
+
+    fun void oneshotShred(float rate) {
+        this.getVoice() => int voice;
+        Math.min(0.5 * (rec_end / second), RAMP_DUR / second)::second => dur ramp;
+        T.assert(voice > -1, "not available voices in Sampler");
+
+        this.rate( voice, rate );
+        this.loop( voice, false );
+        this.playPos( voice, 0::ms );
+
+        this.rampUp( voice, ramp );
+        rec_end - ramp => now;
+        this.rampDown( voice, ramp );
+        ramp => now;
+    }
+
+    fun void rec(int toggle) {
+        toggle => recording;
+        this.record(toggle);
+
+        if (!toggle) this.recPos() => rec_end;
+    }
+}
+
 // key mapping enum
 0 => int Key_Left;
 1 => int Key_Right;
@@ -66,7 +102,7 @@ class Entity {
     // player entity
     int player_id; // 0, 1, 2, 3
     -1 => int gamepad_id;  // -1 means no gamepad connected
-    int disabled;
+    int disabled; // right now doubling to mean dead OR not connected. if that proves to be a problem, can make an enum
 
     // basic physics stuff
     vec2 player_pos;
@@ -142,6 +178,10 @@ class Entity {
         // destroy player
         true => disabled;
         spork ~ FX.explode(player_pos, 1::second, color);
+        // register placement
+        gs.registerPlacement(this);
+        // sfx!
+        gs.playSfx(this, gs.SfxType_Death, Math.random2f(.5, 1.2));
     }
 
     fun void draw() {
@@ -165,14 +205,17 @@ class Entity {
 
 class Room {
     "default room" => string room_name;
+    fun void ui() {}
     fun void enter() {}
     fun void leave() {}
     fun Room update(float dt) { return null; } // returns true if end state is met
-    fun void ui() {}
 }
 
 class GameState {
-    Room room;
+    string room_names[0];
+    Room rooms[0];
+    Room curr_room;
+    UI_Int curr_room_idx(0);
 
     [
         GWindow.Key_Right,  // p1
@@ -227,28 +270,83 @@ class GameState {
     2 => int num_players;
     Entity players[MAX_PLAYERS];
 
+
+    // placement =========================
+    Entity@ end_game_placements[MAX_PLAYERS]; // player idx 
+    num_players => int placement_idx; // what place the next player who dies will be
+    for (int i; i < players.size(); i++) {
+        players[i] @=> end_game_placements[i];
+    }
+
+    fun void registerPlacement(Entity player) {
+        <<< "registering player ", player.player_id, "to idx", placement_idx, "at time", now/second >>>;
+        player @=> end_game_placements[placement_idx];
+        placement_idx--;
+    }
+
     // audio =========================
     float mic_volume; // should be updated and save at start of each frame
     
     [
         "Victory",
         "Action",
-        "Hurt",
         "Death",
+        "Defeat",
     ] @=> static string sfx_list[];
+
+    // sfx enum. keep in sync with sfx_list
+    0 => int SfxType_Victory;
+    1 => int SfxType_Action;
+    2 => int SfxType_Death;
+    3 => int SfxType_Defeat;
+    4 => int SfxType_Count;
+    T.assert(sfx_list.size() == SfxType_Count, "SFXList and sfxType_ enum not in sync");
 
     adc => PoleZero rec_input;
     .99 => rec_input.blockZero; // block ultra low freqs
-    LiSa lisas[MAX_PLAYERS * sfx_list.size()];
-    for (auto lisa : lisas) {
-        rec_input => lisa => dac;
-        2::second => lisa.duration;
-        lisa.loop0(false); // default true
-        lisa.rampDown(10::ms);
+    Sampler samplers[MAX_PLAYERS * sfx_list.size()];
+    Gain player_gains[MAX_PLAYERS];
+
+    // audio analysis ============================
+    256 => int WINDOW_SIZE; // TODO experiment with different sizes
+    Flip sampler_waveform_accum[MAX_PLAYERS];
+    Windowing.hann(WINDOW_SIZE) @=> float hann_window[];
+    float sampler_waveform[MAX_PLAYERS][0];
+
+    for (int i; i < MAX_PLAYERS; ++i) {
+        WINDOW_SIZE => sampler_waveform_accum[i].size;
+        player_gains[i] => dac;  // sound out
+        player_gains[i] => sampler_waveform_accum[i] => blackhole; // analysis
+
+        for (int sfx_idx; sfx_idx < SfxType_Count; sfx_idx++) {
+            samplers[i * SfxType_Count + sfx_idx] @=> Sampler sampler;
+            rec_input => sampler => player_gains[i];
+        }
+    }
+
+    fun Sampler getSampler(Entity player, int sfx_type) {
+        return samplers[player.player_id * SfxType_Count + sfx_type];
+    }
+
+    fun void playSfx(Entity player, int sfx_type, float rate) {
+        spork ~ getSampler(player, sfx_type).oneshotShred(rate);
+    }
+
+    fun void updateAudioAnalysis() {
+        // only call this once per frame since it's just used for graphical updates
+        for (int i; i < MAX_PLAYERS; i++) {
+            sampler_waveform_accum[i].upchuck();
+            sampler_waveform_accum[i].output( sampler_waveform[i] );
+
+            // taper
+            for (int s; s < sampler_waveform[i].size(); s++) {
+                hann_window[s] *=> sampler_waveform[i][s];
+            }
+        }
+
     }
 
     // config constants =======================
-    .3 => float player_base_speed;
     3.5 => float player_rot_speed; // idea: scale with mic volume too
 
     [
@@ -283,12 +381,37 @@ class GameState {
     // "sonarc-replay-keystrokes.txt" => string replay_ks_filename;
     // "sonarc-replay-volume.txt" => string replay_gain_filename;
 
+    fun void addRoom(Room r) {
+        rooms << r;
+        room_names << r.room_name;
+    }
+
     fun void enterRoom(Room new_room) {
-        T.assert(new_room != null, "cannot transition from a null room");
-        T.assert(new_room != room, "cannot transition from a room to itself");
-        room.leave();
+        <<< "leaving room", curr_room.room_name >>>;
+        curr_room.leave();
+
+        // reset the placement tracker
+        num_players - 1 => placement_idx;
+
+        // reset player state
+        for (int i; i < num_players; ++i) {
+            false => gs.players[i].disabled;
+            0 => gs.players[i].player_rot;
+            @(0, 0) => gs.players[i].player_pos;
+        }
+        for (num_players => int i; i < MAX_PLAYERS; ++i) {
+            true => gs.players[i].disabled;
+        }
+
+        <<< "entering room", new_room.room_name >>>;
+        new_room @=> curr_room;
         new_room.enter();
-        new_room @=> room;
+
+        // validate the room is registered
+        for (int i; i < rooms.size(); i++) {
+            if (rooms[i] == new_room) i => curr_room_idx.val;
+        }
+        T.assert(rooms[curr_room_idx.val()] == curr_room, "room " + new_room.room_name + " not registered");
     }
 
     // pos in [-1, 1] is NDC
@@ -314,7 +437,7 @@ class GameState {
 GameState gs;
 
 class StartRoom extends Room {
-    "default room" => room_name;
+    "start room" => room_name;
 
     UI_Float ui_margin(.2);
     UI_Int waveform_display_samples(128);
@@ -351,6 +474,58 @@ class StartRoom extends Room {
         // draw num players
         g.text("Number of Players: " + gs.num_players, @(Math.cos(now/second), Math.sin(now/second)));
 
+        // draw players and allow movement 
+        for (int i; i < gs.num_players; ++i) {
+            gs.players[i] @=> Entity e;
+            float delta_rot;
+            false => int switched_sfx_selection;
+
+            gs.getSampler(e, sfx_selection[i]) @=> Sampler prev_sampler;
+
+            // input (switching stops rec and playback on prev)
+            if (e.keyDown(Key_Left)) {
+                1 -=> sfx_selection[i];
+                prev_sampler.rampDown(Sampler.RAMP_DUR);
+                prev_sampler.rec(false);
+                true => switched_sfx_selection;
+            }
+            if (e.keyDown(Key_Right)) {
+                1 +=> sfx_selection[i];
+                prev_sampler.rampDown(Sampler.RAMP_DUR);
+                prev_sampler.rec(false);
+                true => switched_sfx_selection;
+            }
+
+            if (sfx_selection[i] >= gs.sfx_list.size()) {
+                gs.sfx_list.size() %=> sfx_selection[i];
+            } else if (sfx_selection[i] < 0) {
+                gs.sfx_list.size() - 1 => sfx_selection[i];
+            }
+
+
+            gs.getSampler(e, sfx_selection[i]) @=> Sampler sampler;
+
+            if (switched_sfx_selection) {
+                0::ms => sampler.playPos;
+                sampler.rampUp(Sampler.RAMP_DUR);
+            }
+
+            if (e.keyDown(Key_Action)) {
+                sampler.rampDown(Sampler.RAMP_DUR);
+                sampler.clear();
+                0::ms => sampler.recPos;
+                sampler.rec(true);
+            }
+            if (e.keyUp(Key_Action)) {
+                sampler.rec(false);
+                0::ms => sampler.playPos;
+                sampler.rampUp(Sampler.RAMP_DUR);
+            }
+
+            // draw
+            // e.draw();
+        }
+
         // draw box outlines
         0.5 * screen_size.y - ui_margin.val() => float cursor_y;
         for (int i; i < gs.num_players; ++i) { 
@@ -360,6 +535,8 @@ class StartRoom extends Room {
                 cursor_y - 0.5 * character_box_height
             ) => vec2 center;
             center => gs.players[i].player_pos;
+
+            gs.getSampler(player, sfx_selection[i]) @=> Sampler sampler;
 
             g.box(center, character_box_width, character_box_height);
 
@@ -380,8 +557,18 @@ class StartRoom extends Room {
                 g.text(gs.sfx_list[sfx_idx], @(text_x, text_y), .4);
 
                 // draw selection box
+                @(character_box_width * .3, sfx_label_dy) => vec2 selection_box_sz;
+                Math.remap(
+                    Math.sin((now/second) * 6),
+                    -1, 1,
+                    .86, 1
+                ) *=> selection_box_sz;
+                .05 * Math.sin((now/second) * 3) => float box_rot;
                 if (sfx_idx == sfx_selection[i]) {
-                    g.box(@(text_x, text_y), character_box_width * .3, sfx_label_dy, gs.players[i].color);
+                    // TODO: if recording, fill box. else just outline
+                    if (sampler.recording) {
+                        g.boxFilled(@(text_x, text_y), box_rot, selection_box_sz.x, selection_box_sz.y, gs.players[i].color);
+                    } else g.box(@(text_x, text_y), selection_box_sz.x, selection_box_sz.y, gs.players[i].color);
                 }
 
                 // move cursor
@@ -392,24 +579,23 @@ class StartRoom extends Room {
             g.box(@(audio_box_center_x, center.y), audio_box_width, character_box_height);
 
             // draw waveform
-            gs.lisas[i * gs.sfx_list.size() + sfx_selection[i]] @=> LiSa lisa;
-            lisa.duration() / waveform_display_samples.val() => dur interval;
+            sampler.duration() / waveform_display_samples.val() => dur interval;
             audio_box_width / (waveform_display_samples.val()-1) => float waveform_dx;
             // g.pushColor(player.color);
             for (1 => int w; w < waveform_display_samples.val(); w++) {
-                g.line(
-                    @(
-                        audio_box_start_x + (w - 1) * waveform_dx,
-                        center.y + character_box_height * lisa.valueAt(interval * (w - 1))
-                    ),
-                    @(
-                        audio_box_start_x + w * waveform_dx,
-                        center.y + character_box_height * lisa.valueAt(interval * w)
-                    )
-                );
+                @(
+                    audio_box_start_x + (w - 1) * waveform_dx,
+                    center.y + character_box_height * sampler.valueAt(interval * (w - 1))
+                ) => vec2 start;
+                @(
+                    audio_box_start_x + w * waveform_dx,
+                    center.y + character_box_height * sampler.valueAt(interval * w)
+                ) => vec2 end;
+                g.line(start, end);
             }
+
             // draw record head
-            lisa.recPos() / lisa.duration() => float rec_progress;
+            sampler.recPos() / sampler.duration() => float rec_progress;
             if (rec_progress > 0) {
                 g.line(
                     @(
@@ -425,8 +611,8 @@ class StartRoom extends Room {
             }
 
             // draw play head
-            if (lisa.playing(0)) {
-                lisa.playPos() / lisa.duration() => float play_progress;
+            if (sampler.playing(0)) {
+                sampler.playPos() / sampler.duration() => float play_progress;
                 g.line(
                     @(
                         audio_box_start_x + play_progress * audio_box_width,
@@ -458,54 +644,6 @@ class StartRoom extends Room {
             -1 => gs.players[i].gamepad_id;
         }
 
-        // draw players and allow movement 
-        for (int i; i < gs.num_players; ++i) {
-            gs.players[i] @=> Entity e;
-            float delta_rot;
-            false => int switched_sfx_selection;
-
-            gs.lisas[i * gs.sfx_list.size() + sfx_selection[i]] @=> LiSa prev_lisa;
-
-            // input (switching stops rec and playback on prev)
-            if (e.keyDown(Key_Left)) {
-                1 -=> sfx_selection[i];
-                prev_lisa.play(false);
-                prev_lisa.record(false);
-                true => switched_sfx_selection;
-            }
-            if (e.keyDown(Key_Right)) {
-                1 +=> sfx_selection[i];
-                prev_lisa.play(false);
-                prev_lisa.record(false);
-                true => switched_sfx_selection;
-            }
-
-            if (sfx_selection[i] >= gs.sfx_list.size()) {
-                gs.sfx_list.size() %=> sfx_selection[i];
-            } else if (sfx_selection[i] < 0) {
-                gs.sfx_list.size() - 1 => sfx_selection[i];
-            }
-
-            gs.lisas[i * gs.sfx_list.size() + sfx_selection[i]] @=> LiSa lisa;
-            if (switched_sfx_selection) {
-                0::ms => lisa.playPos;
-                lisa.play(true);
-            }
-
-            if (e.keyDown(Key_Action)) {
-                lisa.play(false);
-                lisa.record(true);
-            }
-            if (e.keyUp(Key_Action)) {
-                lisa.record(false);
-                0::ms => lisa.playPos;
-                lisa.play(true);
-            }
-
-            // draw
-            // e.draw();
-        }
-
 
         // stage selection
         return null;
@@ -513,6 +651,7 @@ class StartRoom extends Room {
 }
 
 class SnakeRoom extends Room {
+    "snake room" => room_name;
     .5 => float BORDER_PADDING; // padding in worldspace units of sides/top
 
     // match state enum
@@ -521,7 +660,8 @@ class SnakeRoom extends Room {
     // 2 => static int Match_Replay;
     // Match_Select => int match_state;
 
-    UI_Float player_speed_volume_scale(8); // how much to scale speed with mic volume 
+    UI_Float player_base_speed(2.0);
+    UI_Float player_speed_volume_scale(12); // how much to scale speed with mic volume 
 
     [
         @(3, -3),
@@ -539,8 +679,6 @@ class SnakeRoom extends Room {
 
     vec2 border_min, border_max;
 
-    Entity@ winner;
-
     // replay state
     // FileIO replay_ks;
     // FileIO replay_mic_gain;
@@ -548,8 +686,27 @@ class SnakeRoom extends Room {
     // StringTokenizer strtok;
     // float current_mic_gain;
 
+    fun void ui() {
+        UI.slider("base speed", player_base_speed, 00, 10.);
+        UI.slider("speed-volume scale", player_speed_volume_scale, 1.00, 16.);
+    }
+
     fun void enter() {
-        _initPlayers();
+        // init player entities
+        for (int i; i < gs.players.size(); i++) {
+            gs.players[i] @=> Entity@ e;
+            i => e.player_id;
+            gs.player_colors[i] => e.color;
+            gs.player_spawns[i] => e.player_pos;
+            gs.player_spawns[i] => e.player_prev_pos;
+            M.DEG2RAD * gs.player_rots_deg[i] => e.player_rot;
+            0 => e.player_pos_history_write_idx;
+            0 => e.player_pos_history_read_idx;
+            0 => e.frame_alive_count;
+            0 => e.last_speed;
+            (i >= gs.num_players) => e.disabled;
+        }
+
     }
 
     fun Room update(float dt) {
@@ -586,7 +743,7 @@ class SnakeRoom extends Room {
 
             // update position and trail
             e.player_pos => e.player_prev_pos;
-            gs.player_base_speed + this.player_speed_volume_scale.val() * gs.mic_volume => float speed;
+            player_base_speed.val() + this.player_speed_volume_scale.val() * gs.mic_volume => float speed;
             speed => e.last_speed;
             dt * speed * M.rot2vec(e.player_rot) +=> e.player_pos;
             e.player_pos => e.player_pos_history[e.player_pos_history_write_idx++];
@@ -606,38 +763,35 @@ class SnakeRoom extends Room {
         for (auto e : gs.players) {
             if (e.disabled) continue;
 
-            for (-1 => int i; i < border_vertices.size() -1; i++) {
-                e.player_pos.x > border_max.x
-                || 
-                e.player_pos.y > border_max.y
-                || 
-                e.player_pos.x < border_min.x
-                ||
-                e.player_pos.y < border_min.y => int outside_border;
-                if (outside_border) {
-                    e.die();
-                }
+            (
+                e.player_pos.x > border_max.x || e.player_pos.y > border_max.y
+                || e.player_pos.x < border_min.x || e.player_pos.y < border_min.y
+            ) => int outside_border;
+            if (outside_border) {
+                e.die();
             }
         }
 
-        draw();
+        _draw();
 
         // check end game condition
         0 => int num_alive;
+        Entity@ possible_winner;
         for (auto e : gs.players) {
             if (!e.disabled) {
                 num_alive++;
-                e @=> winner;
+                e @=> possible_winner;
             }
         }
         
-        // if (num_alive <= 1) return start_room;
-        // else return null;
-
-        return null;
+        if (num_alive <= 1) {
+            if (possible_winner != null) gs.registerPlacement(possible_winner);
+            return placement_room;
+        }
+        else return null;
     }
 
-    fun void draw() {
+    fun void _draw() {
         // draw border
         g.pushColor(Color.WHITE);
         g.box(border_min, border_max);
@@ -652,11 +806,14 @@ class SnakeRoom extends Room {
             g.pushColor(gs.players[i].color);
 
             g.line(e.player_pos_history, e.player_pos_history_read_idx, e.frame_alive_count);
-            spork ~ FX.booster(
-                e.player_pos,
-                e.color,
-                e.last_speed * gs.player_scale * 2 // scale trail size by speed
-            );
+
+            if (!e.disabled) {
+                spork ~ FX.booster(
+                    e.player_pos,
+                    e.color,
+                    e.last_speed * gs.player_scale * 2 // scale trail size by speed
+                );
+            }
 
             g.popColor();
         }
@@ -703,24 +860,6 @@ class SnakeRoom extends Room {
     //     w.closeFile();
     //     adc =< w;
     // }
-
-    // initializes player data *excluding* trail history
-    fun void _initPlayers() {
-        // init player entities
-        for (int i; i < gs.players.size(); i++) {
-            gs.players[i] @=> Entity@ e;
-            i => e.player_id;
-            gs.player_colors[i] => e.color;
-            gs.player_spawns[i] => e.player_pos;
-            gs.player_spawns[i] => e.player_prev_pos;
-            M.DEG2RAD * gs.player_rots_deg[i] => e.player_rot;
-            0 => e.player_pos_history_write_idx;
-            0 => e.player_pos_history_read_idx;
-            0 => e.frame_alive_count;
-            0 => e.last_speed;
-            (i >= gs.num_players) => e.disabled;
-        }
-    }
 
     fun void _checkAllPlayersAgainstSegment(vec2 p0, vec2 p1) {
         for (auto e : gs.players) {
@@ -771,8 +910,8 @@ class SnakeRoom extends Room {
 }
 
 
-class PlatformRoom extends Room {
-    "platform room" => room_name;
+class BlackholeRoom extends Room {
+    "blackhole room" => room_name;
     vec2 platform_endpoints[4*2];
 
     // player status enum
@@ -788,7 +927,7 @@ class PlatformRoom extends Room {
     int player_blackhole_idx[gs.MAX_PLAYERS]; // idx of closest blackhole in range (-1 if none)
 
     // movement
-    UI_Bool debug_draw(true);
+    UI_Bool debug_draw(false);
     UI_Float initial_jump_speed(4.9);
     UI_Float walk_speed(18.0);
     UI_Float booster_rot_speed(Math.two_pi);
@@ -796,7 +935,7 @@ class PlatformRoom extends Room {
     // blackholes 
     float blackhole_spawn_time_sec[0]; // time in secs that the blackhole spawned
     vec2 blackhole_positions[0];
-    UI_Float blackhole_meter_base_fill_rate(.02); // even if silent, meter still fills at this rate
+    UI_Float blackhole_meter_base_fill_rate(.03); // even if silent, meter still fills at this rate
     UI_Float blackhole_event_horizon_radius(.3); // here u dead
     UI_Float blackhole_radius(1.5); // can still get out if u yell 
     UI_Float blackhole_init_time_secs(3.0); // time it takes for blackhole to grow to max radius and begin sucking
@@ -835,6 +974,7 @@ class PlatformRoom extends Room {
     }
 
     fun void enter() {
+        <<< "BlacholeRoom enter()" >>>;
         // TODO: position players, reset Entity state etc
         _calcBlackholeGravity();
 
@@ -847,6 +987,7 @@ class PlatformRoom extends Room {
         g.NDCToWorldPos(3.0/7, 0) => platform_endpoints[5];
         g.NDCToWorldPos(5.0/7, 0) => platform_endpoints[6];
         g.NDCToWorldPos(7.0/7, 0) => platform_endpoints[7];
+        T.printArray(platform_endpoints);
 
         // calculate
         gs.player_bbox_max - gs.player_bbox_min => vec2 width_height;
@@ -986,6 +1127,7 @@ class PlatformRoom extends Room {
 
                 if (inside_event_horizon) {
                     Status_Dead => player_status[idx];
+                    gs.registerPlacement(player);
                     break;
                 }
             }
@@ -1055,7 +1197,18 @@ class PlatformRoom extends Room {
             );
         }
 
-        return null;
+        // end game logic
+        0 => int num_alive;
+        Entity@ last_alive;
+        for (int idx; idx < gs.num_players; idx++) {
+            if (player_status[idx] != Status_Alive) continue;
+            num_alive++;
+            gs.players[idx] @=> last_alive;
+        }
+        if (num_alive <= 1) {
+            if (last_alive != null) gs.registerPlacement(last_alive);
+            return placement_room;
+        } else return null;
     } 
 }
 
@@ -1151,15 +1304,21 @@ class FlappyBirdRoom extends Room
             }
         }
 
+        Entity@ last_alive;
+        0 => int num_alive;
         for (int i; i < gs.num_players; ++i) {
             gs.players[i] @=> Entity p;
             if (p.disabled) continue;
+            num_alive++;
+            p @=> last_alive;
             vec2 acc;
 
             // input
-            if (p.keyDown(Key_Left) || p.keyDown(Key_Right)) {
+            if (p.keyDown(Key_Left) || p.keyDown(Key_Right) || p.keyDown(Key_Action)) {
                 jump_vel.val() => player_velocity[i].y;
                 true => player_pressed_space[i];
+
+                gs.playSfx(p, gs.SfxType_Action, 1.0 + mic_volume);
             }
 
             // physics (forward euler)
@@ -1191,7 +1350,6 @@ class FlappyBirdRoom extends Room
                 ),
                 -Math.pi/3
             ) => p.player_rot;
-            <<< p.player_rot >>>;
 
             // debug rot
             g.line(p.player_pos, p.player_pos + .3*M.rot2vec(p.player_rot));
@@ -1239,9 +1397,11 @@ class FlappyBirdRoom extends Room
             }
         }
 
-
-        // TODO when drawing, sort by height (lowest player draw on top?)
-        return null; 
+        // determine winner
+        if (num_alive <= 1) {
+            if (last_alive != null) gs.registerPlacement(last_alive);
+            return placement_room;
+        } else return null;
     }
 }
 
@@ -1286,6 +1446,143 @@ class HotPotatoRoom extends Room
     } 
 }
 
+class PlacementsRoom extends Room
+{
+    "placements room" =>  room_name;
+    UI_Float margin(0.1);
+
+    UI_Int num_players(1); // for debugging podium rendering
+
+    UI_Float podium_spacing_x(1.0);
+    UI_Float podium_width(1.0);
+    UI_Float podium_height(4.8);
+
+    UI_Float firework_period_secs(.5);
+
+    // TODO add slider(vec2)
+    // UI_Float podium_group_cx(1.0);
+
+    fun void ui() {
+        if (UI.slider("num players", num_players, 2, gs.MAX_PLAYERS)) {
+            for (int i; i < num_players.val(); ++i) {
+            }
+        }
+        UI.slider("margin", margin, 0.0, 1.0);
+        UI.slider("spacing X", podium_spacing_x, 0.0, 1.0);
+        UI.slider("podium_width", podium_width, 0.0, 10.0);
+        UI.slider("podium_height", podium_height, 0.0, 10.0);
+
+        UI.slider("firework period sec", firework_period_secs, 0.1, 5.0);
+    }
+
+    fun void enter() {
+        gs.num_players => num_players.val;
+        spork ~ fireworkShred();
+
+        for (auto p : gs.players) {
+            p.player_id == gs.end_game_placements[0].player_id => int is_winner;
+            gs.getSampler(p, is_winner ? gs.SfxType_Victory : gs.SfxType_Defeat) @=> Sampler sampler;
+            sampler.loop0(true);
+            sampler.play(true);
+            // TODO change playback rate based on placement position
+            // lisa.rate()
+        }
+    }
+
+    fun void leave() {
+        // turn off playback
+        for (auto p : gs.players) {
+            p.player_id == gs.end_game_placements[0].player_id => int is_winner;
+            gs.getSampler(p, is_winner ? gs.SfxType_Victory : gs.SfxType_Defeat) @=> Sampler sampler;
+            sampler.loop0(false);
+            sampler.rampDown(Sampler.RAMP_DUR);
+            sampler.rate(1.0);
+        }
+    }
+
+    fun Room update(float dt) { 
+        num_players.val() => int num_players;
+        now/second => float t_sec;
+        gs.end_game_placements[0] @=> Entity winner;
+
+
+        g.screenSize() => vec2 screen_size;
+
+        @(0, 0) => vec2 podium_group_center;
+        (num_players - 1) * podium_spacing_x.val() + num_players * podium_width.val() => float placement_group_width;
+        podium_group_center.x - (num_players / 2.0 - 0.5) * (podium_width.val() + podium_spacing_x.val())  => float podium_start_center_x;
+        // if (num_players % 2 == 0) {
+        //     podium_group_center.x - ((num_players / 2)-.5) * (podium_width.val() + podium_spacing_x.val()) => podium_start_x;
+        // } else {
+        //     podium_group_center.x - (num_players / 2) * (podium_width.val() + podium_spacing_x.val())  => podium_start_x;
+        // }
+
+        -0.5 * podium_height.val() => float pod_base_y;
+
+        for (int placement; placement < num_players; placement++) {
+            gs.end_game_placements[placement] @=> Entity player;
+
+            // input
+            10 => float rot_speed;
+            if (player.key(Key_Left)) {
+                dt * rot_speed +=> player.player_rot;
+            }
+            if (player.key(Key_Right)) {
+                dt * rot_speed -=> player.player_rot;
+            }
+
+
+            podium_height.val() * (1.0 - (placement / (num_players + 1.0))) => float pod_height;
+            podium_start_center_x + (podium_width.val() + podium_spacing_x.val()) * placement => float podium_center_x;
+            podium_center_x - 0.5 * podium_width.val() => float pod_bl;
+            g.pushColor(player.color);
+            g.box(
+                @(pod_bl, pod_base_y),
+                @(pod_bl + podium_width.val(), pod_height + pod_base_y)
+            );
+
+            
+            // draw waveform
+            for (1 => int w_idx; w_idx < gs.WINDOW_SIZE; w_idx++) {
+                g.line(
+                    @(
+                        podium_center_x + 2*podium_width.val() * gs.sampler_waveform[placement][w_idx - 1], 
+                        pod_base_y + (w_idx - 1.0)/gs.WINDOW_SIZE * pod_height
+                    ),
+                    @(
+                        podium_center_x + 2*podium_width.val() * gs.sampler_waveform[placement][w_idx], 
+                        pod_base_y + (w_idx $ float) / gs.WINDOW_SIZE * pod_height
+                    )
+                );
+            }
+            g.popColor();
+
+            // draw player
+            @(podium_center_x,
+                pod_base_y + pod_height + gs.player_bbox_hw_hh.y + .2 + .1 * Math.sin(3 * t_sec)
+            ) => player.player_pos;
+            false => player.disabled;
+            player.draw();
+        }
+
+        // victory text
+        g.pushColor(winner.color);
+        g.text("Player " + winner.player_id + " WINS!", @(0, screen_size.y * .4), 1.5 * (1.5 + Math.sin(1.5* t_sec)));
+        g.popColor();
+
+        return null; 
+    } 
+
+    fun void fireworkShred() {
+        while (gs.curr_room == this) {
+            M.poisson(firework_period_secs.val())::second => now;
+            g.screenSize() * 0.5 => vec2 hw_hh;
+            spork ~ FX.explode(
+                M.randomPointInArea(@(0, 0), hw_hh.x, hw_hh.y), 5::second, gs.end_game_placements[0].color);
+        }
+    }
+}
+
 class FX {
     // spawns an explosion of lines going in random directinos that gradually shorten
     fun static void explode(vec2 pos, dur max_dur, vec3 color) {
@@ -1308,7 +1605,10 @@ class FX {
         }
 
         dur elapsed_time;
+
+        gs.curr_room @=> Room room;
         while (elapsed_time < max_dur) {
+            if (gs.curr_room != room) break;
             GG.nextFrame() => now;
             GG.dt()::second +=> elapsed_time;
 
@@ -1346,11 +1646,14 @@ class FX {
 }
 
 // init
-StartRoom start_room;
-PlatformRoom platform_room;
-FlappyBirdRoom flappy_room;
-HotPotatoRoom potato_room;
-gs.enterRoom(potato_room);
+StartRoom start_room;         gs.addRoom(start_room);
+PlacementsRoom placement_room;         gs.addRoom(placement_room);
+SnakeRoom snake_room;   gs.addRoom(snake_room);
+BlackholeRoom blackhole_room;   gs.addRoom(blackhole_room);
+FlappyBirdRoom flappy_room;   gs.addRoom(flappy_room);
+HotPotatoRoom potato_room;    gs.addRoom(potato_room);
+
+gs.enterRoom(start_room);
 
 // gameloop
 while (1) {
@@ -1363,15 +1666,14 @@ while (1) {
         Math.pow(s.env_follower.last(), s.env_exp.val()) - s.env_low_cut.val()
     ) => gs.mic_volume;
 
+    gs.updateAudioAnalysis(); 
+
     // draw sound meter (assumimg all games share same sound meter)
     // g.pushLayer(10);
     // gs.progressBar(gs.mic_volume, @(0, .9), .3, .05, Color.WHITE);
     // g.popLayer();
 
     // room update
-    gs.room.update(dt) @=> Room new_room;
-    if (new_room != null) gs.enterRoom(new_room);
-
     { // UI
     //     if (UI.begin("test")) {
     //         // TODO: UI Library ideas
@@ -1382,18 +1684,23 @@ while (1) {
     //         UI.slider("Mic Exponent", env_exp, 0.00, 1.);
     //         if (UI.slider("Mic Pole", env_pole_pos, 0.95, 1.)) env_pole_pos.val() => env_follower.pole;
     //         UI.slider("Mic Scaled Volume", env_pol_last, 0.00, 1.);
-    //         UI.slider("Speed-Volume Scale", gs.player_speed_volume_scale, 1.00, 4.);
     //     }
     //     UI.end();
         UI.setNextWindowBgAlpha(0.00);
+        UI.begin("");
         UI.separatorText("gamestate");
         UI.progressBar(gs.mic_volume, @(0, 0), "volume");
+        if (UI.listBox("room", gs.curr_room_idx, gs.room_names)) {
+            gs.enterRoom(gs.rooms[gs.curr_room_idx.val()]);
+        }
 
-    // gs.progressBar(gs.mic_volume, @(0, .9), .3, .05, Color.WHITE);
 
-
-
-        UI.separatorText(gs.room.room_name);
-        gs.room.ui();
+        UI.separatorText(gs.curr_room.room_name);
+        gs.curr_room.ui();
+        UI.end();
     }
+
+    // update
+    gs.curr_room.update(dt) @=> Room new_room;
+    if (new_room != null) gs.enterRoom(new_room);
 }
