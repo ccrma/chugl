@@ -1,3 +1,11 @@
+10/9/25 GGRMA Critique
+- maybe save player profiles
+- don't need a metagame, just make it a decathalon
+- coop / PvE mode?
+    - escort mission: defend the payload!!
+    - high/low sounds to shoot different kinds of projectiles?
+    - match pattern with voice
+    - spectrum tracking, different bins power different types of ammo or ammo vs shield
 
 TODO
 - need to add layers/depth to all g2d drawers
@@ -9,6 +17,8 @@ TODO
     - fire oneshot should only play until end_rec pos
 - placement room
     - add pitshift or change rate on losers?
+- flappy bird
+    - add back/front movement
 - hot potato game
     - let players record a driving/engine sample
         - use this for granular synthesis lmao

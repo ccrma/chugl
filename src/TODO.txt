@@ -2,6 +2,16 @@ TODO
 
 Leakcheck gamepad.ck example
 
+additive blending on materials
+- check babylon and threejs impl
+
+3D polylines
+- freya shapes polylines
+- do babylon or threejs support this?
+- that one screen-space 3d line blog post
+- Jasper's 3d line debug tool: https://bsky.app/profile/jasperrlz.bsky.social/post/3lbe2vht6p22s
+- does Greggmann have something for this?
+
 bugs found working on games
 - setting shader storageBuffer to empty array causes crash
 
