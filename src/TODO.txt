@@ -1,5 +1,8 @@
 TODO
 
+for kunwoo: add feature for loading texture directly to CPU as well,
+rather than having to load to GPU and readback via texture.read()
+
 Leakcheck gamepad.ck example
 
 additive blending on materials

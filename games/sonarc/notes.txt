@@ -1,3 +1,40 @@
+- Whisper speech recognition / tongue twister game
+    - non-linguistic pickups: 
+        - (laughs)
+        - (laughing)
+        - *laughs*
+        - (crying)
+        - (humming)
+        - achoo!
+        - (speaking from another room)
+        - *cough*
+        - (coughing)
+        - (whooshing)
+        - (shushing)
+        - (keyboard clicking)
+        - (clicking)
+
+
+COOP ideas
+- brotato/vampire-survivors clone
+    - same problem as bytebeat of how to make this musical
+    - protecting a base justifies teching into shields
+- chaos puzzle platformer (coop mosa lina?)
+    - experiment with audio analysis on mic input, what can we reliably (or unreliably) extract?
+- group-composing game? 
+    - like overcooked, multiple parts to making a dish. but you actually get to "taste" the food, i.e. 
+    listen to the music your group has composed
+
+- inspos
+    - overcooked
+    - unrailed
+    - pico park
+    - the game kunwoo showed of 4 people piloting a ship (also that PAX spaceship game)
+        - guns
+        - movement
+        - shields
+        - 
+
 10/9/25 GGRMA Critique
 - maybe save player profiles
 - don't need a metagame, just make it a decathalon
@@ -29,12 +66,13 @@ TODO
 
 # Stages/Modes
 - start room
-    - maybe record different audio samples for different conditions
-        - victory audio
-        - hurt audio
-        - loss audio
     - include some pre-recorded ones too, like "dope" for defaults
         - all tracks should have a default
+- voice imitation game
+    - imitate each other in reverse and re-reverse it back?
+        - see reverse singing challenges
+    - or imitate, and then take the difference, next player has to imitate that difference
+        - kind of like a LiSa-driven game of "telephone"
 - racetrack
     - simple indie500 shape, but add obstacles
     - first to finish wins
@@ -44,9 +82,6 @@ TODO
     - any key to jump
     - procedurally generate
     - allow multiple "winners" if multiple get to end platform on same frame
-- flappy bird side scroll dodge
-    - volume makes you go up
-    - gravity naturally pulls you down
 - spin the wheel 
     - all players are connected as spokes on a wheel
     - making sound rotates the wheel in a fixed direction
