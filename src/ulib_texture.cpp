@@ -1005,8 +1005,8 @@ SG_Texture* ulib_texture_load(const char* filepath, SG_TextureLoadDesc* load_des
     }
 
     SG_TextureDesc desc = {};
-    desc.width          = width;
-    desc.height         = height;
+    desc.width          = abs(width);
+    desc.height         = abs(height);
     desc.dimension      = WGPUTextureDimension_2D;
     desc.format         = WGPUTextureFormat_RGBA8Unorm;
     desc.usage          = WGPUTextureUsage_All;
