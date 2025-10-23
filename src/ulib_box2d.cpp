@@ -114,16 +114,18 @@ t_CKVEC4 b2AABB_to_vec4(b2AABB aabb)
 
 // ckobj data offsets --------------------------------------------
 // b2WorldDef
-static t_CKUINT b2WorldDef_gravity_offset                = 0;
-static t_CKUINT b2WorldDef_restitutionThreshold_offset   = 0;
-static t_CKUINT b2WorldDef_contactPushoutVelocity_offset = 0;
-static t_CKUINT b2WorldDef_hitEventThreshold_offset      = 0;
-static t_CKUINT b2WorldDef_contactHertz_offset           = 0;
-static t_CKUINT b2WorldDef_contactDampingRatio_offset    = 0;
-static t_CKUINT b2WorldDef_maximumLinearVelocity_offset  = 0;
-static t_CKUINT b2WorldDef_enableSleep_offset            = 0;
-static t_CKUINT b2WorldDef_enableContinous_offset        = 0;
-static t_CKUINT b2WorldDef_workerCount_offset            = 0;
+static t_CKUINT b2WorldDef_gravity_offset               = 0;
+static t_CKUINT b2WorldDef_restitutionThreshold_offset  = 0;
+static t_CKUINT b2WorldDef_hitEventThreshold_offset     = 0;
+static t_CKUINT b2WorldDef_contactHertz_offset          = 0;
+static t_CKUINT b2WorldDef_contactDampingRatio_offset   = 0;
+static t_CKUINT b2WorldDef_maxContactPushSpeed_offset   = 0;
+static t_CKUINT b2WorldDef_maximumLinearVelocity_offset = 0;
+// b2FrictionCallback* frictionCallback; // not supported, chuck no function ptrs :(
+// b2RestitutionCallback* restitutionCallback; // not supported, chuck no function ptrs
+static t_CKUINT b2WorldDef_enableSleep_offset     = 0;
+static t_CKUINT b2WorldDef_enableContinous_offset = 0;
+static t_CKUINT b2WorldDef_workerCount_offset     = 0;
 CK_DLL_CTOR(b2WorldDef_ctor);
 
 static void ckobj_to_b2WorldDef(CK_DL_API API, b2WorldDef* obj, Chuck_Object* ckobj);
@@ -431,6 +433,7 @@ CK_DLL_SFUN(b2_DestroyBody);
 // shape creation
 CK_DLL_SFUN(b2_CreateCircleShape);
 CK_DLL_SFUN(b2_CreateSegmentShape);
+CK_DLL_SFUN(b2_CreateSegmentShape_with_vec2);
 CK_DLL_SFUN(b2_CreateCapsuleShape);
 CK_DLL_SFUN(b2_CreatePolygonShape);
 
@@ -1094,7 +1097,12 @@ DOC_CLASS("Result of computing the distance between two line segments. https://b
         DOC_VAR("The surface material for this shape.");
 
         b2ShapeDef_density_offset = MVAR("float", "density", false);
-        DOC_VAR("The density, usually in kg/m^2");
+        DOC_VAR(
+          "The density, usually in kg/m^2. "
+          "This is not part of the surface material because this is for the interior, "
+          "which may have "
+          "other considerations, such as being hollow. For example a wood barrel may "
+          "be hollow or full of water.");
 
         b2ShapeDef_filter_offset = MVAR("b2Filter", "filter", false);
         DOC_VAR("Collision filtering data");
@@ -1102,23 +1110,28 @@ DOC_CLASS("Result of computing the distance between two line segments. https://b
         b2ShapeDef_isSensor_offset = MVAR("int", "isSensor", false);
         DOC_VAR(
           "A sensor shape generates overlap events but never generates a collision "
-          "response");
+          "response. "
+          "Sensors do not have continuous collision. Instead, use a ray or shape cast "
+          "for those scenarios. "
+          "Sensors still contribute to the body mass if they have non-zero density. "
+          "@note Sensor events are disabled by default. "
+          "@see enableSensorEvents ");
 
         b2ShapeDef_enableSensorEvents_offset = MVAR("int", "enableSensorEvents", false);
         DOC_VAR(
-          "Enable sensor events for this shape. Only applies to kinematic and "
-          "dynamic bodies. Ignored for sensors");
+          "Enable sensor events for this shape. This applies to sensors and "
+          "non-sensors. False by default, even for sensors.");
 
         b2ShapeDef_enableContactEvents_offset
           = MVAR("int", "enableContactEvents", false);
         DOC_VAR(
           "Enable contact events for this shape. Only applies to kinematic and "
-          "dynamic bodies. Ignored for sensors");
+          "dynamic bodies. Ignored for sensors. False by default");
 
         b2ShapeDef_enableHitEvents_offset = MVAR("int", "enableHitEvents", false);
         DOC_VAR(
           "Enable hit events for this shape. Only applies to kinematic and dynamic "
-          "bodies. Ignored for sensors");
+          "bodies. Ignored for sensors. False by default");
 
         b2ShapeDef_enablePreSolveEvents_offset
           = MVAR("int", "enablePreSolveEvents", false);
@@ -1158,11 +1171,13 @@ DOC_CLASS("Result of computing the distance between two line segments. https://b
           "Restitution velocity threshold, usually in m/s. Collisions above this "
           "speed have restitution applied (will bounce).");
 
-        b2WorldDef_contactPushoutVelocity_offset
+        b2WorldDef_maxContactPushSpeed_offset
           = MVAR("float", "maxContactPushSpeed", false);
         DOC_VAR(
-          "This parameter controls how fast overlap is resolved and has units of "
-          "meters per second");
+          "This parameter controls how fast overlap is resolved and usually has units "
+          "of meters per second. This only puts a cap on the resolution speed. The "
+          "resolution speed is increased by increasing the hertz and/or decreasing the "
+          "damping ratio.");
 
         b2WorldDef_hitEventThreshold_offset = MVAR("float", "hitEventThreshold", false);
         DOC_VAR("Threshold velocity for hit events. Usually meters per second.");
@@ -1179,13 +1194,14 @@ DOC_CLASS("Result of computing the distance between two line segments. https://b
         DOC_VAR("Maximum linear velocity");
 
         b2WorldDef_enableSleep_offset = MVAR("int", "enableSleep", false);
-        DOC_VAR("Can bodies go to sleep to improve performance");
+        DOC_VAR("Can bodies go to sleep to improve performance. Default true");
 
         b2WorldDef_enableContinous_offset = MVAR("int", "enableContinuous", false);
-        DOC_VAR("Enable continuous collision");
+        DOC_VAR("Enable continuous collision. Default true.");
 
         b2WorldDef_workerCount_offset = MVAR("int", "workerCount", false);
         DOC_VAR(
+          "CURRENTLY UNSUPPORTED. "
           "Number of workers to use with the provided task system. Box2D performs "
           "best when using only performance cores and accessing a single L2 cache. "
           "Efficiency cores and hyper-threading provide little benefit and may "
@@ -1323,6 +1339,17 @@ DOC_CLASS("Result of computing the distance between two line segments. https://b
         ARG("b2Segment", "segment");
         DOC_FUNC(
           "Create a line segment shape and attach it to a body. The shape "
+          "definition and geometry are fully cloned. Contacts are not created "
+          "until the next time step."
+          "@return the shape id for accessing the shape");
+
+        SFUN(b2_CreateSegmentShape_with_vec2, "int", "createSegmentShape");
+        ARG("int", "body_id");
+        ARG("b2ShapeDef", "def");
+        ARG("vec2", "p1");
+        ARG("vec2", "p2");
+        DOC_FUNC(
+          "Create a line segment shape from p1->p2 and attach it to a body. The shape "
           "definition and geometry are fully cloned. Contacts are not created "
           "until the next time step."
           "@return the shape id for accessing the shape");
@@ -1555,11 +1582,9 @@ DOC_CLASS("Result of computing the distance between two line segments. https://b
           "Get the world position of a body. This is the location of the body "
           "origin.");
 
-        SFUN(b2_Body_get_rotation, "complex", "rotation");
+        SFUN(b2_Body_get_rotation, "vec2", "rotation");
         ARG("int", "b2Body_id");
-        DOC_FUNC(
-          "Get the world rotation of a body as a cosine/sine pair (complex "
-          "number)");
+        DOC_FUNC("Get the world rotation of a body as a cosine/sine pair. ");
 
         SFUN(b2_Body_get_angle, "float", "angle");
         ARG("int", "b2Body_id");
@@ -1861,7 +1886,7 @@ DOC_CLASS("Result of computing the distance between two line segments. https://b
         ARG("int", "b2Body_id");
         DOC_FUNC("Get the number of shapes on this body");
 
-        SFUN(b2_Body_get_shapes, "int[]", "shapes");
+        SFUN(b2_Body_get_shapes, "void", "shapes");
         ARG("int", "b2Body_id");
         ARG("int[]", "shape_id_array");
         DOC_FUNC("Get the shape ids for all shapes on this body");
@@ -3233,7 +3258,7 @@ static void b2WorldDef_to_ckobj(CK_DL_API API, Chuck_Object* ckobj, b2WorldDef* 
       = { obj->gravity.x, obj->gravity.y };
     OBJ_MEMBER_FLOAT(ckobj, b2WorldDef_restitutionThreshold_offset)
       = obj->restitutionThreshold;
-    OBJ_MEMBER_FLOAT(ckobj, b2WorldDef_contactPushoutVelocity_offset)
+    OBJ_MEMBER_FLOAT(ckobj, b2WorldDef_maxContactPushSpeed_offset)
       = obj->maxContactPushSpeed;
     OBJ_MEMBER_FLOAT(ckobj, b2WorldDef_hitEventThreshold_offset)
       = obj->hitEventThreshold;
@@ -3254,7 +3279,7 @@ static void ckobj_to_b2WorldDef(CK_DL_API API, b2WorldDef* obj, Chuck_Object* ck
     obj->restitutionThreshold
       = (float)OBJ_MEMBER_FLOAT(ckobj, b2WorldDef_restitutionThreshold_offset);
     obj->maxContactPushSpeed
-      = (float)OBJ_MEMBER_FLOAT(ckobj, b2WorldDef_contactPushoutVelocity_offset);
+      = (float)OBJ_MEMBER_FLOAT(ckobj, b2WorldDef_maxContactPushSpeed_offset);
     obj->hitEventThreshold
       = (float)OBJ_MEMBER_FLOAT(ckobj, b2WorldDef_hitEventThreshold_offset);
     obj->contactHertz = (float)OBJ_MEMBER_FLOAT(ckobj, b2WorldDef_contactHertz_offset);
@@ -3534,10 +3559,10 @@ CK_DLL_CTOR(b2ShapeDef_ctor)
     // https://github.com/ccrma/chuck/issues/449
     // member vars which are themselves Chuck_Objects are NOT instantiated
     // instantiating manually
-    OBJ_MEMBER_OBJECT(SELF, b2ShapeDef_filter_offset) = chugin_createCkObj(
-      "b2Filter", true, SHRED); 
-    OBJ_MEMBER_OBJECT(SELF, b2ShapeDef_material_offset) = chugin_createCkObj(
-      "b2SurfaceMaterial", true, SHRED);
+    OBJ_MEMBER_OBJECT(SELF, b2ShapeDef_filter_offset)
+      = chugin_createCkObj("b2Filter", true, SHRED);
+    OBJ_MEMBER_OBJECT(SELF, b2ShapeDef_material_offset)
+      = chugin_createCkObj("b2SurfaceMaterial", true, SHRED);
 
     b2ShapeDef default_shape_def = b2DefaultShapeDef();
     b2ShapeDef_to_ckobj(API, SELF, &default_shape_def);
@@ -3647,6 +3672,22 @@ CK_DLL_SFUN(b2_CreateSegmentShape)
     Chuck_Object* segment_obj = GET_NEXT_OBJECT(ARGS);
     b2Segment segment         = {};
     ckobj_to_b2Segment(API, &segment, segment_obj);
+
+    RETURN_B2_ID(b2ShapeId, b2CreateSegmentShape(body_id, &shape_def, &segment));
+}
+
+CK_DLL_SFUN(b2_CreateSegmentShape_with_vec2)
+{
+    ulib_box2d_accessAllowed;
+    b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
+    GET_NEXT_INT(ARGS); // advance to next arg
+
+    b2ShapeDef shape_def = b2DefaultShapeDef();
+    ckobj_to_b2ShapeDef(API, &shape_def, GET_NEXT_OBJECT(ARGS));
+
+    b2Vec2 p1         = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
+    b2Vec2 p2         = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
+    b2Segment segment = { p1, p2 };
 
     RETURN_B2_ID(b2ShapeId, b2CreateSegmentShape(body_id, &shape_def, &segment));
 }
@@ -4080,8 +4121,8 @@ CK_DLL_SFUN(b2_Body_get_rotation)
     ulib_box2d_accessAllowed;
     b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
     GET_NEXT_INT(ARGS); // advance
-    b2Rot rot         = b2Body_GetRotation(body_id);
-    RETURN->v_complex = { rot.c, rot.s };
+    b2Rot rot      = b2Body_GetRotation(body_id);
+    RETURN->v_vec2 = { rot.c, rot.s };
 }
 
 CK_DLL_SFUN(b2_Body_get_angle)

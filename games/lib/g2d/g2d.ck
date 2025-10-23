@@ -51,6 +51,7 @@ public class G2D extends GGen
 	[1.0] @=> float font_size_stack[];
 	[Color.WHITE] @=> vec3 color_stack[];
 	[0.0] @=> float layer_stack[]; // z depth
+	[0.0] @=> float polygon_radius_stack[]; // rounded corners
 
 	fun void pushFont(string s) { font_stack << s; }
 	fun void popFont() { font_stack.popBack(); }
@@ -62,6 +63,8 @@ public class G2D extends GGen
 	fun void popLayer() { layer_stack.popBack(); }
 	fun void pushTextMaxWidth(float w) { texts.max_width_stack << w; }
 	fun void popTextMaxWidth() { texts.max_width_stack.popBack(); }
+	fun void pushPolygonRadius(float r) { polygon_radius_stack << r; }
+	fun void popPolygonRadius() { polygon_radius_stack.popBack(); }
 
 	// ----------- look & feel (aka antialias and resolution) ----------
 	fun void antialias(int bool) {
@@ -351,7 +354,7 @@ public class G2D extends GGen
 			position,
 			rotation_radians,
 			[@(-hw, hh), @(-hw, -hh), @(hw, -hh), @(hw, hh)], 
-			0,
+			polygon_radius_stack[-1],
 			color	
 		);
 	}
@@ -373,6 +376,16 @@ public class G2D extends GGen
 		vec3 color
 	) {
 		boxFilled(position, rotation_radians, l, l, color);
+	}
+
+	fun void capsuleFilled(
+		vec2 pos, 
+		float w /* p1 to p2 width */, 
+		float radius, float rotation, vec3 color
+	) {
+		// @optimize: switch to Nick's speedy sin
+		@(w * Math.cos(rotation), w * Math.sin(rotation)) => vec2 p; 
+		capsules.capsule(.5 * p + pos, -.5 * p + pos, radius, @(color.r, color.g, color.b, 1.0));
 	}
 
 	fun void capsuleFilled(
@@ -444,6 +457,10 @@ public class G2D extends GGen
 			layer_stack[0] => float default_layer; 
 			layer_stack.clear(); 
 			layer_stack << default_layer;
+
+			polygon_radius_stack[0] => float default_polygon_radius;
+			polygon_radius_stack.clear();
+			polygon_radius_stack << default_polygon_radius;
 		}
     }
 }
@@ -741,6 +758,9 @@ public class G2D_Sprite
     TextureSampler.Filter_Nearest => sprite_sampler.filterMin;
     TextureSampler.Filter_Nearest => sprite_sampler.filterMag;
     TextureSampler.Filter_Nearest => sprite_sampler.filterMip;
+    TextureSampler.WRAP_CLAMP => sprite_sampler.wrapU;
+    TextureSampler.WRAP_CLAMP => sprite_sampler.wrapV;
+    TextureSampler.WRAP_CLAMP => sprite_sampler.wrapW;
 
 	GGen mesh;
 	mesh.name("G2D_Sprite Mesh");

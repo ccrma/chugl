@@ -195,13 +195,13 @@ void ulib_text_query(Chuck_DL_Query* QUERY)
     DOC_FUNC(
       "Set the alignment mode of the text. 0 for left, 1 for center, 2 for right. "
       "Default 0 aka left. Only in effect if a wrap width is specified, i.e. "
-      "GText.width > 0");
+      "GText.maxWidth > 0");
 
     MFUN(gtext_get_align, "int", "align");
     DOC_FUNC(
       "Get the alignment mode of the text. 0 for left, 1 for center, 2 for right. "
       "Default 0 aka left. Only in effect if a wrap width is specified, i.e. "
-      "GText.width > 0");
+      "GText.maxWidth > 0");
 
     MFUN(gtext_set_size, "void", "size");
     ARG("float", "size");

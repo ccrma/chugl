@@ -178,7 +178,6 @@ fn cross2d(v1 : vec2f, v2 : vec2f) -> f32
 fn sdConvexPolygon(p : vec2f, v : ptr<function, array<vec2f, 8>>, count : i32) -> f32
 {
     // Initial squared distance
-    // var d = dot(p - v[0], p - v[0]);
     var d = dot(p - (*v)[0], p - (*v)[0]);
 
     // Consider query point inside to start
@@ -222,20 +221,25 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4f {
         in.f_points78.xy, in.f_points78.zw
     );
     let sdf = sdConvexPolygon(in.f_position, &f_points, in.f_count);
+    let d = abs(sdf - in.f_radius);
+
+    // roll the fill alpha down at the border
+    let aaf = fwidth(sdf); // anti alias field
+    let frag_color = vec4f(in.f_color.rgb, in.f_color.a * smoothstep(in.f_radius + aaf, in.f_radius, sdf));
 
     // TODO: anti-aliasing broken, fix later
     // reference: http://www.numb3r23.net/2015/08/17/using-fwidth-for-distance-based-anti-aliasing/
-    var alpha = 1.0;
+    // var alpha = 1.0;
     // if (bool(u_antialias)) {
     //     let aaf = fwidth(sdf); // anti alias field
     //     alpha = smoothstep(inner_radius - aaf, inner_radius, d) - 
     //                 smoothstep(1.0 - aaf, 1.0, d);
     // } else {
-        alpha = step(sdf, 0.0);
+        // alpha = step(sdf, 0.0);
     // }
 
 
-    if (alpha < .01) { discard; }
+    if (frag_color.a < .01) { discard; }
 
-    return vec4(in.f_color.rgb, alpha);
+    return frag_color;
 }

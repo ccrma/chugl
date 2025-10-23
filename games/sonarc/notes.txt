@@ -1,3 +1,79 @@
+PROJECT BARD
+    - prototype goals
+        - door/gate that responds to open sesame, close sesame
+        - check rxi procedural map generator
+            - also check rxi tweening blog
+        - different attacks (and maybe spell cards / programs you can pick up to unlock them?)
+            - fire
+            - laser
+            - boulder (for puzzle platforming?)
+            - meme gifs (for funny)
+            - revive!
+            - barrier
+                - can block projectiles from a single direction
+            - chain lightning
+        - enemy hit box (use capsule for now)
+    - goal is to travel to some part of the map to find a "secret passcode"
+      to open the dungeon door to get to the next area
+    - maybe rooms/dungeons have different types...
+        - puzzle rooms
+        - combat rooms
+        - market/shop rooms?
+        - this is giving me slay-the-spire map vibes...
+    - other classes
+        - warrior
+            - can provide shields
+            - ability: pick up and carry bard a short distance
+        - healer
+        - mage (buffs the bard and other players)
+        - assasin
+    - mechanics
+        - can combine adjectives + abilities
+            - like the gems in Lovers in a Dangerous Spacetime
+            - adjectives
+                - spicy
+                - icy
+                - spiky
+                - electric
+                - firey
+        - the bard has friendly fire ON!
+        - the bard moves extremely slowly...cannot dodge projectiles, relies on teammates for block
+        - add text transcription on top of bard?
+        - the bard randomly gets tired and sits down to play music
+            - during this time he is inactive, other players must protect!!
+    - setting
+        - fantasy setting / spells / wizards
+        - sci-fi setting: you're controlling/traveling with an AI companion
+          with a busted voice recognition box
+    - Single player
+        - audrey's idea: the BARD is a super derpy NPC you have to project and escorting to the dungeon end
+            - game becomes a "protect the payload"
+    - COOP Mode (later)
+        - only 1 person can cast from the book / device...need to chuck it
+          to others
+        - OR WHAT IF: Project BARD: protect the bard *at all costs*
+            - since there's only 1 mic, only 1 person can be the bard
+            - the bard is weak AF, gets 1-shot by everything
+                - but bard has certain spells that are necessary to progress,
+                  e.g. for puzzles or boss fights
+            - other players can be tank / healer / etc to peel for bard
+                - enable many builds, like 3 tank, or 3 healer, or GIGA bard
+                  where bard is just buffed like crazy
+    - inspos
+        - tiny rogues (really like the art style on this one)
+            - also like the way a run is structured, moving through a dungeon w/ boss battles
+            - maybe can steal some ideas...
+        - 20 minutes to midnight
+        - castle crashers
+        - binding of isaac
+        - brotato
+        - vampire survivors
+        - enter the gungeon
+        - nuclear throne
+        - dome keeper (Art style)
+        - snkrx (for having multiple classes + synergies)
+        - go through NL and Olexa vids, probably missing something
+
 - Whisper speech recognition / tongue twister game
     - non-linguistic pickups: 
         - (laughs)
@@ -13,6 +89,18 @@
         - (shushing)
         - (keyboard clicking)
         - (clicking)
+    - words that it really doesn't want to say
+        - dab
+    - funny things to try and read
+        - video game casts (like the example counterstrike one)
+        - tongue twisters
+        - famous film dialogues
+            - use the model that can recognize speaker turns
+    - what if this is a game about captioning a movie???
+        - and records your audio and plays it back at the end
+    - what if this was a first-person narration game... you read the actions like a script and the 
+      character responds...(like edith finch?)
+
 
 
 COOP ideas

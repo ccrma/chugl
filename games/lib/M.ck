@@ -21,7 +21,14 @@ public class M {
         return Math.atan2(n.y, n.x);
     }
 
+    fun static vec2 dir(vec2 a, vec2 b) {
+        b - a => vec2 n;
+        n.normalize();
+        return n;
+    }
+
     fun static vec2 normalize(vec2 n) {
+        // note: can also call n.normalize() to normalize in-place
         return n / Math.hypot(n.x, n.y); // hypot is the magnitude
     }
 
@@ -70,6 +77,10 @@ public class M {
     // =====================================================================
     // Tweens (most take a function that outputs from 0-1 over an input 0-1
     // =====================================================================
+
+    fun static float easeOutSine(float x) {
+        return Math.sin((x * Math.PI) / 2);
+    }
     
     fun static float easeOutQuad(float x) {
         return 1 - (1 - x) * (1 - x);

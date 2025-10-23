@@ -161,7 +161,7 @@ typedef struct b2ShapeDef
 
 Body: transform, body type (static, kinematic, dynamic)
 
-ShapeDef:  collision parameters (friction, density, filter)
+ShapeDef:  collision parameters (friction, density, filter), isSensor
 Polygon/circle/capsule: geometry data
 
 ShapeDef is analgous to a physics "Material", only instead of data for
