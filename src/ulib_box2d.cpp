@@ -112,6 +112,11 @@ t_CKVEC4 b2AABB_to_vec4(b2AABB aabb)
              aabb.upperBound.y };
 }
 
+struct ulib_box2d_cast_result_context {
+    Chuck_VM_Shred* shred;
+    Chuck_ArrayInt* ck_arr;
+};
+
 // ckobj data offsets --------------------------------------------
 // b2WorldDef
 static t_CKUINT b2WorldDef_gravity_offset               = 0;
@@ -491,6 +496,7 @@ CK_DLL_SFUN(b2_World_OverlapPolygon);
 // CK_DLL_SFUN(b2_World_CastPolygon);
 
 CK_DLL_SFUN(b2_World_CastRayClosest);
+CK_DLL_SFUN(b2_World_CastRayAll);
 CK_DLL_SFUN(b2_World_CastCircleClosest);
 CK_DLL_SFUN(b2_World_CastCapsuleClosest);
 CK_DLL_SFUN(b2_World_CastPolygonClosest);
@@ -587,8 +593,10 @@ CK_DLL_SFUN(b2_Body_get_position);
 CK_DLL_SFUN(b2_Body_set_type);
 CK_DLL_SFUN(b2_Body_get_type);
 CK_DLL_SFUN(b2_Body_get_rotation);
+CK_DLL_SFUN(b2_Body_set_rotation);
 CK_DLL_SFUN(b2_Body_get_angle);
 CK_DLL_SFUN(b2_Body_set_transform);
+CK_DLL_SFUN(b2_Body_set_transform_with_dir);
 CK_DLL_SFUN(b2_Body_set_position);
 CK_DLL_SFUN(b2_Body_set_angle);
 CK_DLL_SFUN(b2_Body_get_local_point);
@@ -1601,6 +1609,17 @@ DOC_CLASS("Result of computing the distance between two line segments. https://b
           "@see b2BodyDef.position. Angle is a rotation in radians and will be "
           "converted to a b2Rot rotation");
 
+        SFUN(b2_Body_set_transform_with_dir, "void", "transform");
+        ARG("int", "b2Body_id");
+        ARG("vec2", "position");
+        ARG("vec2", "direction");
+        DOC_FUNC(
+          "Set the world transform of a body. This acts as a teleport and is "
+          "fairly expensive. "
+          "@note Generally you should create a body with the intended transform. "
+          "@see b2BodyDef.position. Direction is a unit vector representing the "
+          "rotation of the body, with @(1,0) being no rotation");
+
         SFUN(b2_Body_set_position, "void", "position");
         ARG("int", "b2Body_id");
         ARG("vec2", "position");
@@ -1618,6 +1637,17 @@ DOC_CLASS("Result of computing the distance between two line segments. https://b
           "fairly expensive.@note Generally you should create a body with the "
           "intended "
           "transform. @see b2BodyDef.position. ");
+
+        SFUN(b2_Body_set_rotation, "void", "rotation");
+        ARG("int", "b2Body_id");
+        ARG("vec2", "direction");
+        DOC_FUNC(
+          "Set the world rotation of a body given the direction vector it should face. "
+          "@param direction is normalized for you. @(1,0) represents 0 rotation. "
+          "@(0, 1) is 90 degrees rotation CCW. "
+          "This acts as a teleport and is "
+          "fairly expensive.@note Generally you should create a body with the "
+          "intended transform. @see b2BodyDef.rotation ");
 
         SFUN(b2_Body_get_local_point, "vec2", "localPoint");
         ARG("int", "b2Body_id");
@@ -2372,6 +2402,15 @@ DOC_CLASS("Result of computing the distance between two line segments. https://b
           "Cast a ray and return the closest hit. translation: The translation of the "
           "ray from the start point to the end point.");
 
+        SFUN(b2_World_CastRayAll, "b2RayResult[]", "castRayAll");
+        ARG("int", "world_id");
+        ARG("vec2", "ray_origin");
+        ARG("vec2", "translation");
+        ARG("b2QueryFilter", "filter");
+        DOC_FUNC(
+          "Cast a ray and return all hits. translation: The translation of the "
+          "ray from the start point to the end point.");
+
         SFUN(b2_World_CastCircleClosest, "b2RayResult", "castCircleClosest");
         ARG("int", "world_id");
         ARG("b2Circle", "circle");
@@ -3092,6 +3131,50 @@ CK_DLL_SFUN(b2_World_CastRayClosest)
     b2RayResult_to_ckobj(ckobj, &result);
 
     RETURN->v_object = ckobj;
+}
+
+// You control how the ray cast proceeds by returning a float:
+// return -1: ignore this shape and continue
+// return 0: terminate the ray cast
+// return fraction: clip the ray to this point
+// return 1: don't clip the ray and continue
+static float b2_RayCastAllFcn(b2ShapeId shapeId, b2Vec2 point, b2Vec2 normal,
+                              float fraction, void* context)
+{
+    // Ignore initial overlap
+    if (fraction == 0.0f) {
+        return -1.0f;
+    }
+
+    ulib_box2d_cast_result_context* ctx = (ulib_box2d_cast_result_context*)context;
+
+    b2RayResult result = {};
+    result.shapeId     = shapeId;
+    result.point       = point;
+    result.normal      = normal;
+    result.fraction    = fraction;
+    result.hit         = true;
+
+    Chuck_Object* ckobj = chugin_createCkObj("b2RayResult", false, ctx->shred);
+    b2RayResult_to_ckobj(ckobj, &result);
+    g_chuglAPI->object->array_int_push_back(ctx->ck_arr, (t_CKUINT)ckobj);
+    return 1;
+}
+
+CK_DLL_SFUN(b2_World_CastRayAll)
+{
+    ulib_box2d_accessAllowed;
+    GET_NEXT_B2_ID(b2WorldId, world_id);
+    b2Vec2 origin        = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
+    b2Vec2 translation   = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
+    b2QueryFilter filter = ckobj_to_b2QueryFilter(GET_NEXT_OBJECT(ARGS));
+
+    Chuck_ArrayInt* ck_arr
+      = (Chuck_ArrayInt*)chugin_createCkObj(g_chuck_types.int_array, false, SHRED);
+    ulib_box2d_cast_result_context ctx = { SHRED, ck_arr };
+    b2World_CastRay(world_id, origin, translation, filter, b2_RayCastAllFcn, &ctx);
+
+    RETURN->v_object = (Chuck_Object*)ck_arr;
 }
 
 // This callback finds the closest hit. This is the most common callback used in games.
@@ -4143,6 +4226,16 @@ CK_DLL_SFUN(b2_Body_set_transform)
     b2Body_SetTransform(body_id, { (float)pos.x, (float)pos.y }, b2MakeRot(angle));
 }
 
+CK_DLL_SFUN(b2_Body_set_transform_with_dir)
+{
+    ulib_box2d_accessAllowed;
+    b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
+    GET_NEXT_INT(ARGS); // advance
+    t_CKVEC2 pos = GET_NEXT_VEC2(ARGS);
+    b2Vec2 dir   = b2Normalize(vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS)));
+    b2Body_SetTransform(body_id, { (float)pos.x, (float)pos.y }, *(b2Rot*)&dir);
+}
+
 CK_DLL_SFUN(b2_Body_set_position)
 {
     ulib_box2d_accessAllowed;
@@ -4158,6 +4251,14 @@ CK_DLL_SFUN(b2_Body_set_angle)
     GET_NEXT_B2_ID(b2BodyId, body_id);
     b2Body_SetTransform(body_id, b2Body_GetTransform(body_id).p,
                         b2MakeRot(GET_NEXT_FLOAT(ARGS)));
+}
+
+CK_DLL_SFUN(b2_Body_set_rotation)
+{
+    ulib_box2d_accessAllowed;
+    GET_NEXT_B2_ID(b2BodyId, body_id);
+    b2Vec2 dir = b2Normalize(vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS)));
+    b2Body_SetTransform(body_id, b2Body_GetTransform(body_id).p, *(b2Rot*)&dir);
 }
 
 CK_DLL_SFUN(b2_Body_get_local_point)

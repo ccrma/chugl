@@ -233,6 +233,14 @@ public class M {
         return @(0, -Math.FLOAT_MAX);
     }
 
+    // @(lowerBound.x, lowerBound.y, upperBound.x, upperBound.y)
+    fun static vec4 aabb(vec2 c, float hw, float hh) {
+        return @(
+            c.x-hw, c.y-hh,
+            c.x+hw, c.y+hh
+        );
+    }
+
     // returns true if 2 aabbs isect
     // params are in form @(minx, miny, maxx, maxy)
     fun static int aabbIsect(vec4 a, vec4 b) {

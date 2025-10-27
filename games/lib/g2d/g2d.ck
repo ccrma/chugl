@@ -63,6 +63,9 @@ public class G2D extends GGen
 	fun void popLayer() { layer_stack.popBack(); }
 	fun void pushTextMaxWidth(float w) { texts.max_width_stack << w; }
 	fun void popTextMaxWidth() { texts.max_width_stack.popBack(); }
+	fun void pushTextControlPoint(vec2 cp) { texts.control_point_stack << cp; }
+	fun void pushTextControlPoint(float x, float y) { texts.control_point_stack << @(x, y); }
+	fun void popTextControlPoint() { texts.control_point_stack.popBack(); }
 	fun void pushPolygonRadius(float r) { polygon_radius_stack << r; }
 	fun void popPolygonRadius() { polygon_radius_stack.popBack(); }
 
@@ -421,6 +424,10 @@ public class G2D extends GGen
 		sprites.sprite(tex, @(pos.x, pos.y, layer_stack[-1]), sca, rot, color_stack[-1]);
 	}
 
+	fun void sprite(Texture tex, vec2 pos, vec2 sca, float rot, vec3 color) {
+		sprites.sprite(tex, @(pos.x, pos.y, layer_stack[-1]), sca, rot, color);
+	}
+
 	fun void sprite(Texture tex, vec2 sprite_sheet_frame_dim, vec2 offset, vec2 pos, vec2 sca, float rot, vec3 color) {
 		sprites.sprite(
 			tex, sprite_sheet_frame_dim, offset, 
@@ -474,6 +481,7 @@ public class G2D_Text
 
 	// stack of wrap widths
 	float max_width_stack[0];
+	vec2 control_point_stack[0];
 
 
 	fun void text(string s, string font, vec3 pos, float size, vec2 sca, float rot, vec3 color) {
@@ -493,6 +501,8 @@ public class G2D_Text
 		if (font != null) gtext.font(font);
 		if (max_width_stack.size() > 0)
 			gtext.maxWidth(max_width_stack[-1]);
+		if (control_point_stack.size() > 0)
+			gtext.controlPoints(control_point_stack[-1]);
 
 		text_count++;
 	}
@@ -510,6 +520,7 @@ public class G2D_Text
 		}
 
 		max_width_stack.clear();
+		control_point_stack.clear();
 
 		0 => text_count;
 	}

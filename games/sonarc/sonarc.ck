@@ -36,12 +36,14 @@ Optimization for line collision testing
 
 Tween t;
 
-GWindow.windowed(1920, 1080);
+// GWindow.windowed(1920, 1080);
 GWindow.center();
-// GWindow.maximize();
+// GWindow.fullscreen();
 G2D g;
-g.resolution(1920, 1080);
+// g.resolution(1920, 1080);
 GText.defaultFont(me.dir() + "./assets/m5x7.ttf");
+UI_Float3 background_color(18/255.0, 39/255.0, 8/255.0);
+g.backgroundColor(background_color.val());
 
 // ========================
 // Sound
@@ -1599,12 +1601,13 @@ class PlacementsRoom extends Room
 0 => int ZSpellType_Thunderbolt; // @TODO change to lightning
 1 => int ZSpellType_Laserbeam;
 2 => int ZSpellType_Fireball;
-ZSpellType_Fireball + 1 => int BARD_SPELL_COUNT;
+3 => int ZSpellType_Revive;
+ZSpellType_Revive + 1 => int BARD_SPELL_COUNT;
 
 // knight abilities
-3 => int ZSpellType_Shield;
+4 => int ZSpellType_Shield;
 
-4 => int ZSpellType_Count;
+5 => int ZSpellType_Count;
 
 class ZGamestate {
     b2WorldDef world_def;
@@ -1616,7 +1619,20 @@ class ZGamestate {
     int entity_pool_idx; // # of entities currently checked out
     HashMap b2body_to_entity_map;
 
-    UI_Float enemy_speed(1.0);
+    ZEntity players[0];
+
+    UI_Float enemy_speed(.4);
+
+    UI_Float animation_secs_per_frame(.1);
+
+    // assets ====================================================
+    static TextureLoadDesc tex_load_desc;
+    true => tex_load_desc.flip_y;
+    false => tex_load_desc.gen_mips;
+
+    10 => int pillbug_animation_frame_count;
+    Texture.load(me.dir() + "./assets/pillbug.png", tex_load_desc) @=> Texture pillbug_sprite;
+    // end assets ====================================================
 
     // @TODO: can just iterate backwards over the entity pool, no longer need pool_idx
     fun ZEntity addEntity(int entity_type, int b2_body_id) {
@@ -1708,6 +1724,8 @@ class Spell {
     string activating_words[];
     1 => float damage;
 
+    int unlocked;  // @TODO should this be on ZEntity instead?
+
     fun static void add(int type, string words[], float damage) {
         Spell s;
         spells << s;
@@ -1731,6 +1749,8 @@ class Spell {
             return;
         }
 
+        spells[spell_type] @=> Spell@ spell_class;
+
         caster.b2_group_idx => spell_filter.groupIndex;
         <<< "setting group idx to", spell_filter.groupIndex >>>;
 
@@ -1740,8 +1760,26 @@ class Spell {
             // instant cast, no need for ZEntity and b2body
         }
         if (spell_type == ZSpellType_Laserbeam) {
-            // @TODO raycast
             spork ~ FX.laser(pos, 50*rot + pos, .2);
+
+            // raycast
+            b2QueryFilter laser_filter; // @optimize make static
+            ZEntityType_Spell => laser_filter.categoryBits;
+            ZEntityType_Enemy | ZEntityType_Player => laser_filter.maskBits;
+            b2World.castRayAll(z.b2_world_id, pos, 50 * rot, laser_filter) @=> b2RayResult results[];
+            for (auto r : results) {
+                ZEntity.fromShape(r.shape) @=> ZEntity hit_entity;
+
+                // @TODO implement Entity.hit()
+                if (hit_entity.entity_type & ZEntityType_Enemy) Enemy.damage(hit_entity, spell_class.damage);
+                if (hit_entity.entity_type & ZEntityType_Player) {
+                    // @TODO: implement player.damage()
+                    true => hit_entity.dead;
+                    b2Body.linearVelocity(hit_entity.b2_body_id, @(0,0));
+                }
+
+                <<< "laser hit", r.shape >>>;
+            }
         }
         if (spell_type == ZSpellType_Fireball) {
             pos => spell_body_def.position;
@@ -1761,13 +1799,23 @@ class Spell {
             // spell_map.set(p.body_id, p);
         }
 
+        if (spell_type == ZSpellType_Revive) {
+            for (auto p : z.players) {
+                // @hardcoded resurrect range
+                if (p.dead && M.dist(p.position(), caster.position()) <= 1.0) {
+                    false => p.dead;
+                    spork ~ FX.ripple(p.position());
+                }
+            }
+        }
+
         if (spell_type == ZSpellType_Shield) {
             pos => spell_body_def.position;
             rot => spell_body_def.rotation;
             b2.createBody(z.b2_world_id, spell_body_def) => int b2_body_id;
 
             // @hardcoded: barrier size 
-            1 => float hw;
+            .5 => float hw;
             b2.createSegmentShape(b2_body_id, spell_shape_def, 
                 @(0, -hw), @(0, hw)
             );
@@ -1794,15 +1842,17 @@ class Spell {
         spells[spell_type] @=> Spell spell_class;
         object.entity_type & ZEntityType_Enemy => int hit_enemy;
         object.entity_type & ZEntityType_Static => int hit_wall;
+        object.entity_type & ZEntityType_Player => int hit_player;
+        spell.spell_type < BARD_SPELL_COUNT => int is_bard_spell;
 
         if (spell_type == ZSpellType_Thunderbolt) {
             // instant cast, no need for ZEntity and b2body
-
+            z.returnEntity(spell);
         } else if (spell_type == ZSpellType_Laserbeam) {
 
         } else if (spell_type == ZSpellType_Fireball) {
             // @TODO apply dmg to enemies in aoe
-            spork ~ FX.smokeCloud(b2Body.position(spell.b2_body_id), Color.RED);
+            spork ~ FX.smokeCloud(b2Body.position(spell.b2_body_id), Color.ORANGE);
             z.returnEntity(spell);
         } else if (spell_type == ZSpellType_Shield) {
             if (hit_wall) z.returnEntity(spell);
@@ -1811,23 +1861,25 @@ class Spell {
         }
 
         if (hit_enemy) {
-            t.easeOutQuad(object.hit_cd, 1.0, 0).over(.3);
             Enemy.damage(object, spell_class.damage);
+        }
+
+        if (hit_player && is_bard_spell) {
+            // insta ded
+            true => object.dead;
+            b2Body.linearVelocity(object.b2_body_id, @(0,0));
         }
     }
 }
 
 // bard spells
 Spell.add(ZSpellType_Thunderbolt, ["thunderbolt", "wonderful"], 2);
-Spell.add(ZSpellType_Laserbeam, ["laser", "lazer", "liza", "lazy", "leisabim", "blazer"], 1);
+Spell.add(ZSpellType_Laserbeam, ["laser", "lazer", "liza", "lazy", "leisabim", "blazer"], 1.5);
 Spell.add(ZSpellType_Fireball, ["fireball"], 3);
+Spell.add(ZSpellType_Revive, ["revive", "resurrect"], 0); true => spells[ZSpellType_Revive].unlocked;
 
 // knight spells
 Spell.add(ZSpellType_Shield, null, 0);
-
-// pickup type enum
-0 => int ZPickupType_Password;
-1 => int ZPickupType_Count;
 
 // enemy type enum
 0 => int ZEnemyType_Default;
@@ -1870,6 +1922,9 @@ class Enemy {
     fun static void damage(ZEntity e, float amt) {
         T.assert(e.entity_type & ZEntityType_Enemy, "calling damage() on non-enemy");
 
+        // hurt anim
+        t.easeOutQuad(e.hit_cd, 1.0, 0).over(.3);
+
         amt -=> e.hp_curr;
         // die
         if (e.hp_curr <= 0) {
@@ -1878,24 +1933,55 @@ class Enemy {
         }
     }
 
-    fun static void draw(ZEntity e) {
+    fun static void draw(ZEntity e, float dt) {
         // draw enemies
         (e.capsule.center1 - e.capsule.center2).magnitude() => float size;
-        g.capsuleFilled(
-            b2Body.position(e.b2_body_id), 
-            size,
-            e.capsule.radius, 
-            b2Body.angle(e.b2_body_id), 
 
+        // TODO add hit CD
+
+        @(
+            size + 2 * e.capsule.radius,
+            size + 2 * e.capsule.radius
+        ) => vec2 sca;
+
+        // g.box(e.position(), sca.x, sca.y);
+
+        g.sprite(
+            z.pillbug_sprite, @(z.pillbug_animation_frame_count, 1), 
+            @(e.current_frame $ float / z.pillbug_animation_frame_count, 0), 
+            e.position(), 
+            sca,
+            e.angle() - Math.pi/2.0, 
             Color.WHITE * e.hit_cd.val() +
-            Color.YELLOW
+            Color.DARKBROWN
         );
+
+        // collider
+        // g.capsuleFilled(
+        //     b2Body.position(e.b2_body_id), 
+        //     size,
+        //     e.capsule.radius, 
+        //     b2Body.angle(e.b2_body_id), 
+
+        //     Color.WHITE * e.hit_cd.val() +
+        //     Color.RED
+        // );
     }
 }
 
 // player type enum
 0 => int ZPlayerType_Bard;
 1 => int ZPlayerType_Knight;
+
+
+// sensor type enum
+0 => int ZSensorType_Default;
+1 => int ZSensorType_UnlockFireball;
+2 => int ZSensorType_UnlockLaser;
+ZSensorType_UnlockLaser + 1 => int UNLOCK_SPELL_COUNT;
+
+3 => int ZSensorType_SpawnZone;
+4 => int ZSensorType_Count;
 
 class ZEntity
 {
@@ -1923,31 +2009,56 @@ class ZEntity
     int player_type;
     int closest_enemy_body; // b2_body_id of closest enemy
     float closest_enemy_dist;
+    int dead;
 
 
     // spell stuff
     int spell_type;
 
     // pickup stuff
-    int pickup_type;
+    int sensor_type;
+    float time_to_spawn_secs; 
 
     // enemy stuff
     UI_Float hit_cd(0.0); // set to 1 on hit and lerped back to 0
     int enemy_type; 
     b2Capsule@ capsule;
 
+    // sprite animation state
+    float time_since_last_frame;
+    int current_frame;
+
     // zeros all fields EXCEPT pool_idx, which is needed by entity pool
     fun void zero() {
         0 => b2_body_id; // @TODO should we b2DestroyBody here?
+        0 => b2_group_idx;
         0 => entity_type;
+        @(0, 0) => spawn_pos;
         @(0, 0) => pos;
+        @(1, 0) => look_dir;
+        0 => last_dir_x;
         0 => rot_rad;
-        0 => speed;
+
         0 => hp_max;
         0 => hp_curr;
+
+        0 => speed;
+        
+        0 => player_type;
+        0 => closest_enemy_body; // b2_body_id of closest enemy
+        Math.FLOAT_MAX => closest_enemy_dist;
+        0 => dead;
+
         0 => spell_type;
-        0 => pickup_type;
+        0 => sensor_type;
+        0 => time_to_spawn_secs;
+
+        0 => hit_cd.val;
         0 => enemy_type;
+        null @=> capsule;
+
+        0 => time_since_last_frame;
+        0 => current_frame;
     }
 
     fun vec2 position() {
@@ -1956,6 +2067,13 @@ class ZEntity
 
     fun vec2 rotation() {
         return b2Body.rotation(b2_body_id);
+    }
+
+    fun float angle() { return b2Body.angle(b2_body_id); }
+
+    fun static ZEntity fromShape(int id) {
+        T.assert(b2Shape.isValid(id), "invalid shape id!!");
+        return z.b2body_to_entity_map.getObj(b2Shape.body(id)) $ ZEntity;
     }
 }
 
@@ -1988,14 +2106,15 @@ class VoiceCommandRoom extends Room
     int begin_touch_events[0];
 
     // Gamestate ===================
+    UI_Float bard_speed(.6);
     UI_Float player_speed(2.2);
     UI_Float player_size(.3);
     UI_Float player_corner_radius(.02);
-    ZEntity players[0];
+    UI_Bool  unlock_all_spells;
 
     // add players
-    addPlayer(ZPlayerType_Bard) @=> ZEntity player;
-    addPlayer(ZPlayerType_Knight) @=> ZEntity knight;
+    addPlayer(ZPlayerType_Bard, @(-1, 0)) @=> ZEntity player;
+    addPlayer(ZPlayerType_Knight, @(1, 0)) @=> ZEntity knight;
 
     // player controls
     fun float axis(int gamepad_id, int axis) {
@@ -2019,8 +2138,9 @@ class VoiceCommandRoom extends Room
     b2.createSegmentShape(wall_body_id, wall_shape_def, @(-dungeon_hw, -dungeon_hw), @(-dungeon_hw, dungeon_hw));
     z.addEntity(ZEntityType_Static, wall_body_id) @=> ZEntity wall;
 
-    fun ZEntity addPlayer(int player_type) {
+    fun ZEntity addPlayer(int player_type, vec2 pos) {
         b2BodyDef player_body_def;
+        pos => player_body_def.position;
         b2BodyType.dynamicBody => player_body_def.type;
         z.addEntity(
             ZEntityType_Player,
@@ -2032,7 +2152,7 @@ class VoiceCommandRoom extends Room
         b2Filter player_filter;
         ZEntityType_Player => player_filter.categoryBits;
         0xFFFF ^ ZEntityType_Player => player_filter.maskBits; // disallow player-player collision
-        -players.size() - 1 => player_filter.groupIndex; // give each player a group index to disallow player collision w/ own spells
+        -z.players.size() - 1 => player_filter.groupIndex; // give each player a group index to disallow player collision w/ own spells
         player_filter.groupIndex => player.b2_group_idx;
         player_filter @=> player_shape_def.filter;
         true => player_shape_def.enableSensorEvents;
@@ -2040,13 +2160,24 @@ class VoiceCommandRoom extends Room
 
         b2.makeRoundedBox(player_size.val(), player_size.val(), player_corner_radius.val()) @=> b2Polygon player_geo;
         b2.createPolygonShape(player.b2_body_id, player_shape_def, player_geo) => int player_shape_id;
-        players << player;
+        z.players << player;
         return player;
     }
 
+    fun void playerCollide(ZEntity player, ZEntity object) {
+        T.assert(player.entity_type & ZEntityType_Player, "player is not type player");
+        T.assert(!(object.entity_type & ZEntityType_Spell), "not handling player-spell collisions here");
+        object.entity_type & ZEntityType_Enemy => int hit_enemy;
+        <<< "hit enemy", hit_enemy, player.player_type >>>;
+
+        if (hit_enemy && player.player_type == ZPlayerType_Bard) {
+            true => player.dead;
+        }
+    }
     // Spells & Projectiles ===================
 
     // Enemies ==================================
+    UI_Bool enemy_update(false);
     Enemy.spawn(@(0,2), .3) @=> ZEntity enemy;
     UI_Float spawn_rate(0.0); // enemy spawn rate (in enemies per second)
     // call once per frame
@@ -2059,14 +2190,16 @@ class VoiceCommandRoom extends Room
 
         dt +=> elapsed_time_secs;
         while (elapsed_time_secs > time_to_next_spawn) {
-            Enemy.spawn(M.randomPointInArea(@(0, 0), .8 * dungeon_hw, .8 * dungeon_hw), .4);
+            spawnPickup(M.randomPointInArea(@(0, 0), .8 * dungeon_hw, .8 * dungeon_hw), ZSensorType_SpawnZone) @=> ZEntity e;
+            4.0 => e.time_to_spawn_secs;
             time_to_next_spawn -=> elapsed_time_secs;
             M.poisson(1.0 / spawn_rate.val()) => time_to_next_spawn;
         }
     }
 
     // Pickups ==================================
-    spawnPickup(@(3, 0));
+    spawnPickup(@(-3, -3), ZSensorType_UnlockFireball);
+    spawnPickup(@(3, -3), ZSensorType_UnlockLaser);
 
 
     // transcription ====================================
@@ -2103,6 +2236,19 @@ class VoiceCommandRoom extends Room
     // Methods =====================
 
     fun void ui() {
+        UI.separatorText("Player");
+        if (UI.button("revive bard")) false => player.dead;
+        UI.checkbox("unlock all spells", unlock_all_spells);
+        UI.slider("bard speed", bard_speed, 0.0, 1.0);
+        UI.slider("knight speed", player_speed, 0.0, 3.0);
+        UI.slider("corner radius", player_corner_radius, 0.0, 1.0);
+
+        UI.separatorText("Enemy");
+        UI.checkbox("update", enemy_update);
+        UI.slider("enemy_speed", z.enemy_speed, 0.0, 3.0);
+        UI.slider("enemy spawn rate", spawn_rate, 0.0, 3.0);
+
+        UI.separatorText("Whisper");
         UI.textColored(@(1, 1, 0, 1), "Transcription: ");
         UI.sameLine();
         UI.textWrapped(transcription_raw);
@@ -2122,17 +2268,12 @@ class VoiceCommandRoom extends Room
         }
         transcription_tokenizer.reset();
 
-        UI.slider("speed", player_speed, 0.0, 3.0);
-        UI.slider("corner radius", player_corner_radius, 0.0, 1.0);
-
-        UI.slider("enemy_speed", z.enemy_speed, 0.0, 3.0);
-        UI.slider("enemy spawn rate", spawn_rate, 0.0, 3.0);
     }
 
     fun Room update(float dt) { 
         g.mousePos() => vec2 mouse_pos;
         b2Body.position(player.b2_body_id) => vec2 player_pos;
-        M.angle(player_pos, mouse_pos) => player.look_dir;
+        M.normalize(mouse_pos - player_pos) => player.look_dir;
 
         spawner(dt);
 
@@ -2145,13 +2286,18 @@ class VoiceCommandRoom extends Room
                 // might be invalid because we destroy in prior iteration
                 if (!b2Shape.isValid(sensor_shape_id) || !b2Shape.isValid(visitor_shape_id)) continue;
 
-                b2Shape.body(sensor_shape_id) => int sensor_id;
-                b2Shape.body(visitor_shape_id) => int visitor_id;
+                ZEntity.fromShape(sensor_shape_id) @=> ZEntity sensor;
+                ZEntity.fromShape(visitor_shape_id) @=> ZEntity visitor;
 
-                T.assert( b2Body.isValid(sensor_id) && b2Body.isValid(visitor_id), "invalid bodies but valid shapes??"); 
+                <<< "sensor collision!" >>>;
 
-                <<< "sensor collision!", sensor_id, visitor_id, player.b2_body_id == sensor_id, player.b2_body_id == visitor_id >>>;
+                if (sensor.sensor_type == ZSensorType_UnlockFireball) {
+                    true => spells[ZSpellType_Fireball].unlocked;
+                } else if (sensor.sensor_type == ZSensorType_UnlockLaser) {
+                    true => spells[ZSpellType_Laserbeam].unlocked;
+                }
 
+                z.returnEntity(sensor);
                 // b2Body.position(sensor_id) => vec2 sensor_pos;
                 // b2Body.position(not_sensor_id) => vec2 not_sensor_pos;
             }
@@ -2171,68 +2317,60 @@ class VoiceCommandRoom extends Room
 
                 a.entity_type & ZEntityType_Spell => int a_is_spell;
                 b.entity_type & ZEntityType_Spell => int b_is_spell;
+                a.entity_type & ZEntityType_Player => int a_is_player;
+                b.entity_type & ZEntityType_Player => int b_is_player;
 
                 T.assert(!(a_is_spell && b_is_spell), "spells should not collide with each other");
                 if (a_is_spell) Spell.collide(a, b);
                 if (b_is_spell) Spell.collide(b, a);
+                if (a_is_player) playerCollide(a, b);
+                if (b_is_player) playerCollide(b, a);
 
                 <<< "begin_touch:", touch_body_id_a, touch_body_id_b, touch_body_id_a == player.b2_body_id, touch_body_id_b == player.b2_body_id >>>;
                 // <<< "begin_touch:", touch_body_id_a == enemy.b2_body_id, touch_body_id_b == enemy.b2_body_id >>>;
             }
         }
 
-        // aim (auto targetting for now)
-        // @TODO add debug mode drawing player colliders only
-        for (auto p : players) {
-            if (b2Body.isValid(p.closest_enemy_body)) {
-                g.dashed(p.position(), b2Body.position(p.closest_enemy_body), Color.RED, .1);
-            }
-        }
-
         { // controls
-        if (GWindow.keyDown(GWindow.KEY_SPACE))  {
-            spork ~ FX.smokeCloud(@(0,0), Color.GRAY);
-        }
 
-        vec2 dir;
-        if (GWindow.key(GWindow.KEY_A)) 1 -=> dir.x;
-        if (GWindow.key(GWindow.KEY_D)) 1 +=> dir.x;
-        if (GWindow.key(GWindow.KEY_S)) 1 -=> dir.y;
-        if (GWindow.key(GWindow.KEY_W)) 1 +=> dir.y;
-        dir.normalize();
-        if (dir.x != 0) dir.x => player.last_dir_x;
-        b2Body.linearVelocity(player.b2_body_id, dir * player_speed.val());
+            vec2 dir;
 
-        @(0, 0) => dir;
-        if (GWindow.key(GWindow.KEY_LEFT)) 1 -=> dir.x;
-        if (GWindow.key(GWindow.KEY_RIGHT)) 1 +=> dir.x;
-        if (GWindow.key(GWindow.KEY_DOWN)) 1 -=> dir.y;
-        if (GWindow.key(GWindow.KEY_UP)) 1 +=> dir.y;
-        b2Body.rotation(player.b2_body_id) => vec2 knight_dir;
+            if (!player.dead) {
+                if (GWindow.key(GWindow.KEY_A)) 1 -=> dir.x;
+                if (GWindow.key(GWindow.KEY_D)) 1 +=> dir.x;
+                if (GWindow.key(GWindow.KEY_S)) 1 -=> dir.y;
+                if (GWindow.key(GWindow.KEY_W)) 1 +=> dir.y;
+                dir.normalize();
+                if (dir.x != 0) dir.x => player.last_dir_x;
+                b2Body.linearVelocity(player.b2_body_id, dir * bard_speed.val());
+            }
 
-        // knight gamepad controls
-        Gamepad.available() @=> int gamepads[];
-        0 => int gamepad_id;
-        if (gamepads.size()) {
-            gamepads[0] => gamepad_id;
+            @(0, 0) => dir;
+            if (GWindow.key(GWindow.KEY_LEFT)) 1 -=> dir.x;
+            if (GWindow.key(GWindow.KEY_RIGHT)) 1 +=> dir.x;
+            if (GWindow.key(GWindow.KEY_DOWN)) 1 -=> dir.y;
+            if (GWindow.key(GWindow.KEY_UP)) 1 +=> dir.y;
 
-            axis(gamepad_id, Gamepad.AXIS_LEFT_X) => dir.x;
-            -axis(gamepad_id, Gamepad.AXIS_LEFT_Y) => dir.y;
+            // knight gamepad controls
+            Gamepad.available() @=> int gamepads[];
+            0 => int gamepad_id;
+            if (gamepads.size()) {
+                gamepads[0] => gamepad_id;
+
+                axis(gamepad_id, Gamepad.AXIS_LEFT_X) => dir.x;
+                -axis(gamepad_id, Gamepad.AXIS_LEFT_Y) => dir.y;
+            }
+
             dir.normalize();
 
-            axis(gamepad_id, Gamepad.AXIS_RIGHT_X) => knight_dir.x;
-            axis(gamepad_id, Gamepad.AXIS_RIGHT_Y) => knight_dir.y;
-        }
+            if (!knight.dead) {
+                if (dir.x != 0) dir.x => knight.last_dir_x;
+                b2Body.linearVelocity(knight.b2_body_id, dir * player_speed.val());
 
-
-
-        dir.normalize();
-        if (dir.x != 0) dir.x => knight.last_dir_x;
-        b2Body.linearVelocity(knight.b2_body_id, dir * player_speed.val());
-
-        if (GWindow.keyDown(GWindow.KEY_RIGHTSHIFT) || Gamepad.buttonDown(gamepad_id, Gamepad.BUTTON_A)) {
-            Spell.cast(ZSpellType_Shield, knight.position(), knight_dir, knight);
-        }
+                if (GWindow.keyDown(GWindow.KEY_RIGHTSHIFT) || Gamepad.buttonDown(gamepad_id, Gamepad.BUTTON_A)) {
+                    Spell.cast(ZSpellType_Shield, knight.position(), knight.look_dir, knight);
+                }
+            }
         } // end controls
 
         { // detect spells
@@ -2240,9 +2378,11 @@ class VoiceCommandRoom extends Room
             for (int i; i < transcription_tokenizer.size(); i++) {
                 for (int spell_idx; spell_idx < BARD_SPELL_COUNT; spell_idx++) {
                     spells[spell_idx] @=> spell;
-                    for (auto word : spell.activating_words) {
-                        if (transcription_tokenizer.get(i) == word) {
-                            spell_token_counts_per_frame[spell.type]++;
+                    if (spell.unlocked || unlock_all_spells.val()) {
+                        for (auto word : spell.activating_words) {
+                            if (transcription_tokenizer.get(i) == word) {
+                                spell_token_counts_per_frame[spell.type]++;
+                            }
                         }
                     }
                 }
@@ -2251,36 +2391,51 @@ class VoiceCommandRoom extends Room
         }
 
         // cast!
-        b2Body.rotation(player.b2_body_id) => vec2 player_dir;
         for (int i; i < BARD_SPELL_COUNT; i++) {
             spells[i] @=> Spell spell;
             spell_token_counts_per_frame[spell.type] > spell_token_counts[spell.type] => int cast;
             if (!cast) continue;
             Spell.cast(
                 spell.type,
-                player_pos + .4 * player_dir,
-                b2Body.rotation(player.b2_body_id), player
+                player_pos + .4 * player.look_dir,
+                player.look_dir, player
             );
         }
-        if (GWindow.mouseLeftDown()) {
-            Spell.cast(
-                ZSpellType_Fireball,
-                player_pos + .4 * player_dir,
-                b2Body.rotation(player.b2_body_id), player
-            );
-        }
+        // if (GWindow.mouseLeftDown()) {
+        //     Spell.cast(
+        //         ZSpellType_Fireball,
+        //         player_pos + .4 * player.look_dir,
+        //         player.look_dir, player
+        //     );
+        // }
         
         // draw players 
-        // g.pushPolygonRadius(player_corner_radius.val());
-        // g.squareFilled(player_pos, player_rot, player_size.val(), Color.WHITE);
-        // g.popPolygonRadius();
         2 * @(player_size.val(), player_size.val()) => vec2 player_sca;
-        if (player.last_dir_x < 0) -1 *=> player_sca.x;
-        g.sprite(bard_sprite, player_pos, player_sca, 0);
+
+        if (player.dead) {
+            g.sprite(bard_sprite, player.position(), player_sca, Math.pi/2.0, Color.BLACK);
+        } else {
+            if (player.last_dir_x < 0) -1 *=> player_sca.x;
+            g.sprite(bard_sprite, player_pos, player_sca, 0);
+        }
+
+        g.pushTextMaxWidth(2);
+        g.pushTextControlPoint(.5, 0);
+        transcription_raw => string bard_text;
+        bard_text.replace("[BLANK_AUDIO]", "...");
+        g.text(bard_text, player_pos + @(0, .25), .3);
+        g.popTextControlPoint();
+        g.popTextMaxWidth();
 
         2 * @(player_size.val(), player_size.val()) => player_sca;
         if (knight.last_dir_x < 0) -1 *=> player_sca.x;
-        g.sprite(knight_sprite, knight.position(), player_sca, 0);
+        if (knight.dead) {
+            g.sprite(knight_sprite, knight.position(), player_sca, Math.pi/2.0, Color.BLACK);
+            g.circleDotted(knight.position(), 1.0, .2*(now/second), Color.WHITE);
+            g.text("REVIVE!", knight.position() + @(0, .1 * Math.sin(2 * (now/second))), .3);
+        } else {
+            g.sprite(knight_sprite, knight.position(), player_sca, 0);
+        }
 
 
         // step and draw spells + pickups
@@ -2303,7 +2458,7 @@ class VoiceCommandRoom extends Room
                     z.returnEntity(spell);
                 } else if (spell.spell_type == ZSpellType_Fireball) {
                     if (g.offscreen(spell.pos, 1.5)) z.returnEntity(spell);
-                    else spork ~ FX.booster(b2Body.position(spell.b2_body_id), Color.RED, 3);
+                    else spork ~ FX.booster(b2Body.position(spell.b2_body_id), Color.ORANGE, 3);
                 } 
                 else if (spell.spell_type == ZSpellType_Shield) {
                     // @hardcoded
@@ -2316,7 +2471,7 @@ class VoiceCommandRoom extends Room
                         spell.rotation() => vec2 rot;
                         M.perp(rot) => vec2 perp;
                         // @hardcoded shield width
-                        1 => float shield_hw;
+                        .5 => float shield_hw;
                         g.line(pos + shield_hw * perp, pos - shield_hw * perp);
                     }
                 }
@@ -2326,37 +2481,100 @@ class VoiceCommandRoom extends Room
             }
 
             if (entity.entity_type & ZEntityType_Pickup) {
-                // for now just draw
-                g.squareFilled(
-                    b2Body.position(entity.b2_body_id),
-                    b2Body.angle(entity.b2_body_id), // @optimize can use b2Body.rotation and pass complex cos/sin to polygonFilled
-                    .1,
-                    @(0, 1, 1)
-                );
+                vec3 color;
+                string text;
+                
+                if (entity.sensor_type < UNLOCK_SPELL_COUNT ) {
+                    if (entity.sensor_type == ZSensorType_UnlockFireball) {
+                        Color.ORANGE => color;
+                        "fireball" => text;
+                    } 
+                    else if (entity.sensor_type == ZSensorType_UnlockLaser) {
+                        Color.RED => color;
+                        "laserbeam" => text;
+                    }
+                    g.square(
+                        b2Body.position(entity.b2_body_id),
+                        b2Body.angle(entity.b2_body_id), // @optimize can use b2Body.rotation and pass complex cos/sin to polygonFilled
+                        .3 + .05 * Math.sin(3 * (now/second)), // @optimize: cache sin results?
+                        color
+                    );
+                    g.squareFilled(
+                        b2Body.position(entity.b2_body_id),
+                        b2Body.angle(entity.b2_body_id), // @optimize can use b2Body.rotation and pass complex cos/sin to polygonFilled
+                        .1,
+                        color
+                    );
+                    g.pushColor(color);
+                    g.text(text, entity.position() + @(0, .35 + .1 * Math.sin(2 * (now/second))), .3);
+                    g.popColor();
+                }
+                else if (entity.sensor_type == ZSensorType_SpawnZone) {
+                    g.boxFilled( entity.position(), Math.pi/4, .3, .1, Color.RED );
+                    g.boxFilled( entity.position(), -Math.pi/4, .3, .1, Color.RED );
+                    dt -=> entity.time_to_spawn_secs;
+
+                    // don't spawn if player on top
+                    if (entity.time_to_spawn_secs <= 0) {
+                        b2QueryFilter filter;
+                        ZEntityType_Player => filter.maskBits;
+                        if (b2World.overlapAABB(z.b2_world_id, M.aabb(entity.position(), .15, .15), filter ).size() == 0) {
+                            Enemy.spawn(entity.position(), .4);
+                        }
+
+                        z.returnEntity(entity);
+                    }
+                }
             }
 
+            // enemy update
             if (entity.entity_type & ZEntityType_Enemy) {
-                // enemy update (walk towards player)
-                b2Body.linearVelocity( 
-                    entity.b2_body_id,
-                    z.enemy_speed.val() * M.dir(b2Body.position(entity.b2_body_id), player_pos));
+                if (enemy_update.val()) {
+                    // enemy update (walk towards player)
+                    b2Body.linearVelocity( 
+                        entity.b2_body_id,
+                        z.enemy_speed.val() * M.dir(b2Body.position(entity.b2_body_id), player_pos));
+                    
+                    b2Body.rotation(
+                        entity.b2_body_id,
+                        player_pos - entity.position()
+                    );
 
-                Enemy.draw(entity);
+
+                    dt +=> entity.time_since_last_frame;
+                    if (entity.time_since_last_frame >= z.animation_secs_per_frame.val()) {
+                        // advance to next frame
+                        0 => entity.time_since_last_frame;
+                        (entity.current_frame + 1) % z.pillbug_animation_frame_count => entity.current_frame;
+                    } 
+                }
 
                 // update closest enemies for all players
                 // @optimize use b2Shape collider distance instead of transform pos
-                for (auto p : players) {
+                for (auto p : z.players) {
+                    if (p.player_type == ZPlayerType_Bard) continue; // don't auto-target bard
                     M.dist(p.position(), entity.position()) => float dist;
                     if (
-                        p.closest_enemy == 0 
+                        p.closest_enemy_body == 0 
                         ||
                         dist < p.closest_enemy_dist
                     ) {
                         dist => p.closest_enemy_dist;
                         enemy.b2_body_id => p.closest_enemy_body;
+                        // update look dir
+                        M.normalize(entity.position() - p.position()) => p.look_dir;
                     }
                 }
 
+                Enemy.draw(entity, dt);
+            }
+        }
+
+        // aim (auto targetting for now)
+        // @TODO add debug mode drawing player colliders only
+        for (auto p : z.players) {
+            if (b2Body.isValid(p.closest_enemy_body)) {
+                g.dashed(p.position(), b2Body.position(p.closest_enemy_body), Color.RED, .1);
             }
         }
 
@@ -2378,7 +2596,7 @@ class VoiceCommandRoom extends Room
         // camera track player @TODO
 
         // reset closest enemy
-        for (auto p : players) {
+        for (auto p : z.players) {
             0 => p.closest_enemy_body; 
             Math.FLOAT_MAX => p.closest_enemy_dist;
         }
@@ -2414,10 +2632,10 @@ class VoiceCommandRoom extends Room
     }
 
 
-    fun void spawnPickup(vec2 pos) {
-        // params @TODO these some come from PickupType class
-        .1 => float w;
-        .1 => float h;
+    fun ZEntity spawnPickup(vec2 pos, int sensor_type) {
+        // params @TODO these come from PickupType class
+        .3 => float w;
+        .3 => float h;
         .12 => float speed;
         .08 => float steering_rate;
         1 => float angular_velocity;
@@ -2444,7 +2662,9 @@ class VoiceCommandRoom extends Room
         b2.createPolygonShape(body_id, pickup_shape_def, polygon) => int shape_id;
 
         z.addEntity(ZEntityType_Pickup, body_id) @=> ZEntity e;
-        ZPickupType_Password => e.pickup_type;
+        sensor_type => e.sensor_type;
+
+        return e;
     } 
 }
 
@@ -2573,6 +2793,20 @@ class FX {
             g.boxFilled(pos, rot, width, t * size, Color.RED * t);
         }
     }
+
+    fun static void ripple(vec2 pos) {
+        1.5 => float end_radius;
+        1.5::second => dur effect_dur;
+
+        dur elapsed_time;
+        while (elapsed_time < effect_dur) {
+            GG.nextFrame() => now;
+            GG.dt()::second +=> elapsed_time;
+            M.easeOutQuad(elapsed_time / effect_dur) => float t;
+
+            g.circle(pos, end_radius * t, .1 * (1 - t), Color.WHITE * (1 - t));
+        }
+    }
 }
 
 // init
@@ -2618,7 +2852,14 @@ while (1) {
     //     }
     //     UI.end();
         UI.setNextWindowBgAlpha(0.00);
+
         UI.begin("");
+
+        if (UI.colorEdit("background color", background_color)) g.backgroundColor(background_color.val());
+
+
+
+
         UI.separatorText("gamestate");
         UI.progressBar(gs.mic_volume, @(0, 0), "volume");
         if (UI.listBox("room", gs.curr_room_idx, gs.room_names)) {
