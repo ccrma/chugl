@@ -2272,10 +2272,11 @@ DOC_CLASS("Result of computing the distance between two line segments. https://b
         ARG("vec3", "color");
         DOC_FUNC("Draw a point.");
 
-        // MFUN(b2_DebugDraw_DrawString, "void", "drawString");
-        // ARG("vec2", "position");
-        // ARG("string", "text");
-        // DOC_FUNC("Draw a string.");
+        MFUN(b2_DebugDraw_DrawString, "void", "drawString");
+        ARG("vec2", "position");
+        ARG("string", "text");
+        ARG("vec3", "color");
+        DOC_FUNC("Draw a string.");
 
         END_CLASS();
 
@@ -2296,8 +2297,8 @@ DOC_CLASS("Result of computing the distance between two line segments. https://b
           = chugin_setVTableOffset("b2DebugDraw", "drawTransform");
         b2_DebugDraw_DrawPoint_callback_offset
           = chugin_setVTableOffset("b2DebugDraw", "drawPoint");
-        // b2_DebugDraw_DrawString_callback_offset
-        //   = chugin_setVTableOffset("b2DebugDraw", "drawString");
+        b2_DebugDraw_DrawString_callback_offset
+          = chugin_setVTableOffset("b2DebugDraw", "drawString");
 
     } // b2DebugDraw
 
@@ -2346,16 +2347,14 @@ DOC_CLASS("Result of computing the distance between two line segments. https://b
         ARG("b2ContactHitEvent[]", "contact_hit_events");
         DOC_FUNC(
           "https://box2d.org/documentation/"
-          "group__world.html#ga67e9e2ecf3897d4c7254196395be65ca"
+          "group__world.html#ga67e9e2ecf3897d4c7254196395be65ca "
           "Unlike the original box2D implementation, this function returns the "
           "ContactBeginTouchEvents and ContactEndTouchEvents in two separate flat "
-          "arrays"
-          "of b2ShapeIds (int), stored in order. E.g. begin_contact_events[i] and "
-          "begin_contact_events[i+1] are the ids of the two shapes that began "
-          "contact."
+          "arrays of b2ShapeIds (int), stored in order. E.g. begin_contact_events[i] "
+          "and begin_contact_events[i+1] are the ids of the two shapes that began "
+          "contact. "
           "The contact_hit_events array is used to store the contact hit events of "
-          "the "
-          "last frame.");
+          "the last frame.");
 
         SFUN(b2_World_OverlapAABB, "int[]", "overlapAABB");
         ARG("int", "world_id");
@@ -4993,17 +4992,13 @@ static void b2_DebugDrawPointCallback(b2Vec2 p, float size, b2HexColor color,
       ARRAY_LENGTH(args));
 }
 
-static void b2_DebugDrawStringCallback(b2Vec2 p, const char* s, void* context)
+static void b2_DebugDrawStringCallback(b2Vec2 p, const char* s, b2HexColor color,
+                                       void* context)
 {
-    // unclear what this does... leaving out for now
-    if (true) return;
-
-    ASSERT(false);
-
     Chuck_Object* ckobj          = (Chuck_Object*)context;
     Chuck_VM_Shred* origin_shred = chugin_getOriginShred(ckobj);
 
-    Chuck_DL_Arg args[2];
+    Chuck_DL_Arg args[3];
 
     // ARG("vec2", "position");
     args[0].kind         = kindof_VEC2;
@@ -5011,6 +5006,9 @@ static void b2_DebugDrawStringCallback(b2Vec2 p, const char* s, void* context)
     // ARG("string", "text");
     args[1].kind           = kindof_INT;
     args[1].value.v_object = (Chuck_Object*)chugin_createCkString(s, false);
+    // ARG("vec3", "color");
+    args[2].kind         = kindof_VEC3;
+    args[2].value.v_vec3 = b2_HexColorToVec3(color);
 
     g_chuglAPI->vm->invoke_mfun_immediate_mode(
       ckobj, b2_DebugDraw_DrawString_callback_offset, g_chuglVM, origin_shred, args,
@@ -5052,7 +5050,7 @@ static void ckobj_to_b2DebugDraw(b2DebugDraw* obj, Chuck_Object* ckobj)
     obj->DrawSegmentFcn      = b2_DebugDrawSegmentCallback;
     obj->DrawTransformFcn    = b2_DebugDrawTransformCallback;
     obj->DrawPointFcn        = b2_DebugDrawPointCallback;
-    // obj->DrawStringFcn       = b2_DebugDrawStringCallback;
+    obj->DrawStringFcn       = b2_DebugDrawStringCallback;
 }
 
 CK_DLL_CTOR(b2_DebugDraw_ctor)
