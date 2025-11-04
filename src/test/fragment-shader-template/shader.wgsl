@@ -1,4 +1,5 @@
 #include FRAME_UNIFORMS
+// what's included:
 // struct FrameUniforms {
 //     // scene params (only set in ScenePass, otherwise 0)
 //     projection: mat4x4f,
@@ -26,6 +27,11 @@ struct VertexOutput {
 };
 
 
+// SHADER UNIFORMS (YOUR CODE GOES HERE)
+@group(1) @binding(0) var<uniform> u_color: f32;
+
+
+// VERTEX SHADER DON'T CHANGE
 @vertex 
 fn vs_main(@builtin(vertex_index) vertexIndex : u32) -> VertexOutput {
     var output : VertexOutput;
@@ -39,9 +45,18 @@ fn vs_main(@builtin(vertex_index) vertexIndex : u32) -> VertexOutput {
 
 @fragment 
 fn fs_main(in : VertexOutput) -> @location(0) vec4f {
-    let t0 = u_frame;
-    var uv = in.position.xy / vec2f(u_frame.resolution.xy); // interesting. fragCoord doesn't change based on viewport
+    // unused variables get excluded from shader compilation which messes up
+    // bindgroup structure...annoying. You'll need to assign like this 
+    // for all your unused shader uniforms so it compiles correctly
+    let t0 = u_frame; 
+
+    // get uv
+    var uv = in.position.xy / vec2f(u_frame.resolution.xy);
     uv.y = 1.0 - uv.y;
 
-    return vec4f(fract(2. * in.v_uv), 0, 1.0);
+    /*
+    YOUR CODE GOES HERE
+    */
+
+    return vec4f(fract(2. * in.v_uv), u_color, 1.0);
 }

@@ -28,7 +28,8 @@ struct VertexOutput {
 
 @group(1) @binding(0) var<storage> u_center_radius_thickness : array<vec4f>; // .xy is center, .z is radius, .w is thickness
 @group(1) @binding(1) var<storage> u_color : array<vec4f>;
-@group(1) @binding(2) var<uniform> u_antialias : i32;
+@group(1) @binding(2) var<storage> u_layer : array<f32>;
+@group(1) @binding(3) var<uniform> u_antialias : i32;
 
 @vertex
 fn vs_main(
@@ -45,11 +46,12 @@ fn vs_main(
     let center = center_radius_thickness.xy;
     let radius = center_radius_thickness.z;
     let thickness = center_radius_thickness.w;
+    let z_layer = u_layer[circle_idx];
 
 
     let p = radius * quad_vertex + center; // transform quad to world space
     var u_Draw : DrawUniforms = u_draw_instances[instance_idx];
-    out.position = (u_frame.projection * u_frame.view) * u_Draw.model * vec4f(p, 0.0, 1.0f);
+    out.position = (u_frame.projection * u_frame.view) * u_Draw.model * vec4f(p, z_layer, 1.0f);
 
     out.v_local_pos = quad_vertex;
     out.v_thickness = thickness;

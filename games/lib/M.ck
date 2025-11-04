@@ -40,6 +40,10 @@ public class M {
         return Math.euclidean(a, b);
     }
 
+    fun static float dist2(vec2 a, vec2 b) {
+        return (b - a).dot(b - a);
+    }
+
     fun static float cross(vec2 a, vec2 b) {
         return a.x * b.y - a.y * b.x;
     }
@@ -142,6 +146,19 @@ public class M {
         return pdf.size() - 1;
     }
 
+    // choose n random numbers (no repeats) from [0, m-1]
+    fun static int[] choose(int m, int n) {
+        if (n > m) {
+            <<< "error, choosing ", n, "from only", m >>>;
+            return null;
+        }
+        int pool[m];
+        for (int i; i < m; i++) i => pool[i];
+        pool.shuffle();
+        pool.erase(n, pool.size());
+        return pool;
+    }
+
     // return a random element from the array with uniform distribution
     fun static int randomElement(int arr[]) {
         return arr[Math.random2(0, arr.size() - 1)];
@@ -238,6 +255,15 @@ public class M {
         return @(
             c.x-hw, c.y-hh,
             c.x+hw, c.y+hh
+        );
+    }
+
+
+    fun static int inside( vec2 p, vec4 aabb ) {
+        return (
+            p.x >= aabb.x && p.x <= aabb.z
+            &&
+            p.x >= aabb.y && p.x <= aabb.w
         );
     }
 

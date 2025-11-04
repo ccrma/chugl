@@ -437,9 +437,11 @@ CK_DLL_SFUN(b2_DestroyBody);
 
 // shape creation
 CK_DLL_SFUN(b2_CreateCircleShape);
+CK_DLL_SFUN(b2_CreateCircleShape_fast);
 CK_DLL_SFUN(b2_CreateSegmentShape);
 CK_DLL_SFUN(b2_CreateSegmentShape_with_vec2);
 CK_DLL_SFUN(b2_CreateCapsuleShape);
+CK_DLL_SFUN(b2_CreateCapsuleShape_fast);
 CK_DLL_SFUN(b2_CreatePolygonShape);
 
 // shape destruction
@@ -1341,6 +1343,16 @@ DOC_CLASS("Result of computing the distance between two line segments. https://b
           "geometry are fully cloned. Contacts are not created until the next time "
           "step.@return the shape id for accessing the shape");
 
+        SFUN(b2_CreateCircleShape_fast, "int", "createCircleShape");
+        ARG("int", "body_id");
+        ARG("b2ShapeDef", "def");
+        ARG("vec2", "center");
+        ARG("float", "radius");
+        DOC_FUNC(
+          "Create a circle shape and attach it to a body. The shape definition and "
+          "geometry are fully cloned. Contacts are not created until the next time "
+          "step.@return the shape id for accessing the shape");
+
         SFUN(b2_CreateSegmentShape, "int", "createSegmentShape");
         ARG("int", "body_id");
         ARG("b2ShapeDef", "def");
@@ -1366,6 +1378,17 @@ DOC_CLASS("Result of computing the distance between two line segments. https://b
         ARG("int", "body_id");
         ARG("b2ShapeDef", "def");
         ARG("b2Capsule", "capsule");
+        DOC_FUNC(
+          "Create a capsule shape and attach it to a body. The shape definition "
+          "and geometry are fully cloned. Contacts are not created until the next "
+          "time step. @return the shape id for accessing the shape");
+
+        SFUN(b2_CreateCapsuleShape_fast, "int", "createCapsuleShape");
+        ARG("int", "body_id");
+        ARG("b2ShapeDef", "def");
+        ARG("vec2", "center1");
+        ARG("vec2", "center2");
+        ARG("float", "radius");
         DOC_FUNC(
           "Create a capsule shape and attach it to a body. The shape definition "
           "and geometry are fully cloned. Contacts are not created until the next "
@@ -2024,9 +2047,7 @@ DOC_CLASS("Result of computing the distance between two line segments. https://b
         SFUN(b2_Shape_EnableSensorEvents, "void", "enableSensorEvents");
         ARG("int", "shape_id");
         ARG("int", "flag");
-        DOC_FUNC(
-          "Enable sensor events for this shape. Only applies to kinematic and "
-          "dynamic bodies. Ignored for sensors. @see b2ShapeDef::isSensor");
+        DOC_FUNC("Enable sensor events for this shape.");
 
         SFUN(b2_Shape_AreSensorEventsEnabled, "int", "areSensorEventsEnabled");
         ARG("int", "shape_id");
@@ -2365,11 +2386,10 @@ DOC_CLASS("Result of computing the distance between two line segments. https://b
           "AABB is in the form of @(lowerBound.x, lowerBound.y, upperBound.x, "
           "upperBound.y)");
 
-        SFUN(b2_World_OverlapCircle, "int[]", "overlapCapsule");
+        SFUN(b2_World_OverlapCircle, "int[]", "overlapCircle");
         ARG("int", "world_id");
-        ARG("b2Circle", "circle");
         ARG("vec2", "circle_position");
-        ARG("float", "circle_rotation_radians");
+        ARG("float", "circle_radius");
         ARG("b2QueryFilter", "filter");
         DOC_FUNC(
           "Returns the b2ShapeId for all shapes that overlap the provided circle");
@@ -3048,19 +3068,15 @@ CK_DLL_SFUN(b2_World_OverlapCircle)
     ulib_box2d_accessAllowed;
     GET_NEXT_B2_ID(b2WorldId, world_id);
 
-    b2Circle circle = ckobj_to_b2Circle(GET_NEXT_OBJECT(ARGS));
-
-    b2Transform transform = {};
-    transform.p           = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
-    transform.q           = b2MakeRot(GET_NEXT_FLOAT(ARGS));
+    b2Vec2 circle_position = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
+    float circle_radius    = GET_NEXT_FLOAT(ARGS);
 
     b2QueryFilter filter = ckobj_to_b2QueryFilter(GET_NEXT_OBJECT(ARGS));
 
     Chuck_Object* overlapping_shapes
       = chugin_createCkObj(g_chuck_types.int_array, false, SHRED);
 
-    b2ShapeProxy proxy
-      = b2MakeOffsetProxy(&circle.center, 1, circle.radius, transform.p, transform.q);
+    b2ShapeProxy proxy = b2MakeProxy(&circle_position, 1, circle_radius);
     b2World_OverlapShape(world_id, &proxy, filter, b2_OverlapResultFcn,
                          overlapping_shapes);
 
@@ -3742,6 +3758,23 @@ CK_DLL_SFUN(b2_CreateCircleShape)
     RETURN_B2_ID(b2ShapeId, b2CreateCircleShape(body_id, &shape_def, &circle));
 }
 
+CK_DLL_SFUN(b2_CreateCircleShape_fast)
+{
+    ulib_box2d_accessAllowed;
+    b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
+    GET_NEXT_INT(ARGS); // advance to next arg
+
+    b2ShapeDef shape_def = b2DefaultShapeDef();
+    ckobj_to_b2ShapeDef(API, &shape_def, GET_NEXT_OBJECT(ARGS));
+
+    b2Vec2 center = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
+    float radius  = GET_NEXT_FLOAT(ARGS);
+
+    b2Circle circle = { center, radius };
+
+    RETURN_B2_ID(b2ShapeId, b2CreateCircleShape(body_id, &shape_def, &circle));
+}
+
 CK_DLL_SFUN(b2_CreateSegmentShape)
 {
     ulib_box2d_accessAllowed;
@@ -3786,6 +3819,24 @@ CK_DLL_SFUN(b2_CreateCapsuleShape)
     Chuck_Object* capsule_obj = GET_NEXT_OBJECT(ARGS);
     b2Capsule capsule         = {};
     ckobj_to_b2Capsule(API, &capsule, capsule_obj);
+
+    RETURN_B2_ID(b2ShapeId, b2CreateCapsuleShape(body_id, &shape_def, &capsule));
+}
+
+CK_DLL_SFUN(b2_CreateCapsuleShape_fast)
+{
+    ulib_box2d_accessAllowed;
+    b2BodyId body_id = GET_B2_ID(b2BodyId, ARGS);
+    GET_NEXT_INT(ARGS); // advance to next arg
+
+    b2ShapeDef shape_def = b2DefaultShapeDef();
+    ckobj_to_b2ShapeDef(API, &shape_def, GET_NEXT_OBJECT(ARGS));
+
+    b2Vec2 center1 = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
+    b2Vec2 center2 = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
+    float radius   = GET_NEXT_FLOAT(ARGS);
+
+    b2Capsule capsule = { center1, center2, radius };
 
     RETURN_B2_ID(b2ShapeId, b2CreateCapsuleShape(body_id, &shape_def, &capsule));
 }

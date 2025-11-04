@@ -1,5 +1,8 @@
 TODO
 
+Add warning on renderthread when a ChuGL Geometry's vertex buffer type (float/vec2/vec3/vec4)
+doesn't match the vertex layout of the ShaderDesc on a Material it's paired with 
+
 for kunwoo: add feature for loading texture directly to CPU as well,
 rather than having to load to GPU and readback via texture.read()
 

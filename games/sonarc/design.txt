@@ -1,0 +1,556 @@
+==TODO=========================================
+
+- Add chugin ability to query for member variable offset from an input object
+  - also implement imgui drag/input/slider Scalar to accept chuck doubles
+  - lets me more easily build UI for chuck objects, more performant too
+
+
+
+
+===============================================
+
+Should all the cart/bard projectiles also dmg the players???
+- worth experimenting with later on
+- maybe can add as a separate mode: all projectiles more 70% slower and do friendly fire
+
+
+Cart Movement
+- Cart doesn't move (like a static base you have to protect)
+- cart on tracks, moving in fixed path
+- bard drives cart in crazy way
+- player character has to pull cart, like wheelbarrow
+- player stands near cart (a la TF2)
+
+Win Condition
+- survive N seconds
+- kill all enemies
+- get from A to B
+
+Enemy Spawn System
+- spawns offscreen and walks towards player (VS)
+- enemy spawns are already pre-determined for room (Nuclear Throne, Isaac, TInyRogues)
+- Enemies spawn on-screen with X warning (Brotato)
+
+Cart Mechanics
+- cart can do trample damage 
+- cart is a healing bay
+- cart can get turret / damage / speed / armor upgrades
+
+Voice Commands
+- cast spell (damage and healing)
+- inspiration
+
+Player Differentiation
+- character
+- weapon
+- ability/rune/spell
+
+How to get Upgrades
+- offered at end of level (StS)
+- shop rooms
+- EXP level up
+- item drops
+- chest drops
+- ??? encounters
+
+Attack mechanic:
+- auto-aim unless you hold down mouse / right bumper. Then you can manually aim.
+  - let's you have best of both worlds: auto VS style and manual nuclear-throne style
+
+Characters
+- cook with frying pan
+- farmer with pitchfork
+- miner with pickaxe
+- monk beggar
+- gong farmer with shovel
+- carpenter (aka engineer)
+- prisoner in pillory
+- painter
+- summoner class
+- play as cattle that can pull cart?
+
+Weapons (up to 2 for now)
+- Types: Melee, Ranged, 2-hand, shield
+- funny: these are serfs/peasants, no traditional weapons allowed (except for the cart maybe?) only everyday tools
+- legendaries are actual military/hunting weapons
+- Melee
+    - Spatula 
+    - frying pan
+    - Pooper Scooper
+    - Shovel
+    - Pitchfork
+    - chisel
+    - hammer
+    - handcuffs
+    - hatchet
+- Ranged
+    - Hard Bread
+    - Rosarie
+    - chicken
+- 2-hand
+    - fleshing knife
+- Shield
+  - pot lid
+  - 
+
+
+Cool Ideas
+- Bard upgrades
+  - unlock new spells / keywords
+    - offense
+    - defense
+    - support
+  - cooldowns
+  - defensive stats
+- synergies between different classes / items 
+- cart and bard upgrades:
+  - follow dome keeper upgrade tree ?
+- fun phenomena
+  - all players die, but bard+cart are strong enough to barely solo the level
+- fun builds to support
+    - DPS bard build
+    - tank bard
+    - player build
+    - cart build 
+    - drunk driver build (cart damage + bard drunkenness + cart speed)
+    - rush / cart speed build
+
+====== Code Organization ======
+
+Type types for metadata
+
+type enums, all enums start with _None = 0, e.g.
+    int Entity_None = 0;
+    int Projectile_None = 0;
+
+single entity class
+
+single entity pool
+
+b2_body_id is unique id for all entities
+- entities with no body can be static body with 0 size, asleep, zerod out collision mask
+- references to other entities are done via b2_body_id, NOT Entity@ since Entities are recycled in pool
+  - use b2Body.isValid() to check this reference is still alive
+
+Single hashmap from b2_body_id --> Entity@
+
+Gameloop: {
+    sensor events
+    collision events
+    player input
+    entity update
+    entity draw
+}
+
+=== stealing from 20min weapon upgrades ===
+
+Defensive
+- holy shield
+- movement speed
+- dodge
+- HP
+
+Elemental Spells
+- Fire
+- Thunder
+- Ice
+- Wind?
+
+Summons (one for each element?)
+- Scythes
+- Tornadoes
+- Little Ghost
+- Dragon
+- electrobug
+
+Bullets
+- size
+- dmg
+- bounce
+- fire rate
+- clip size
+- on-hit effects
+- lens
+
+Basically every aspect/mechanic of the game is explored via these upgrades
+- movement, bullets, reload, clip empty, character size, on-hit, vision etc...
+  - these are form "soil" from which cool designs/upgrades can sprout
+  
+Why does Brotato have unlimited items + body upgrades but not VS or 20min?
+- In Brotato the weapons don't have upgrades! so you gotta get the infinite scaling from 
+  elsewhere.
+- Brotato is also the only one of these games that actually supports multiplayer
+- Instead of upgrading weapons
+  - upgrade player stats
+  - items / runes for cool interactions
+  
+
+====== Enemy Summon Options ======
+
+- brotato: spawn over time on-screen
+- fixed arena size, spawns in fog-of-war which players cannot enter
+- cart emits a radius of light that moves with bard
+  - beyond is fog of war, which enemies spawn in and players cannot enter
+  - after the cart dies, vision radius closes in significantly
+
+
+====== Skill System ======
+
+After each round, player gets X points to upgrade either: Player OR Bard OR Cart
+Like VS, each Entity has N slots for upgrades. After N have been filled, alternates do not show up.
+- this avoids a large skill tree. But maybe a small one like in Dome Keeper is worth testing out
+- Maybe campire has a "flea" market with all the upgrades sprawling on the ground, and all players 
+  can choose how to spend / what to buy from a shared pool ( no separate menu screen for each ) 
+    - but for now just do a UI if faster
+
+Maybe each main "upgrade" slot has 3 possible levels before its maxed.
+When two are maxed, unlocks "combo" upgrade.
+- upgrades can be more than a pure "stat" boost, would be cool if they also changed gameplay somehow
+
+Passive skill tree:
+- 3 slots, 5 levels?
+- Defense
+
+Offense
+- melee
+- ranged
+- AOE
+
+Defense
+- Health
+- Dodge
+- (armor)
+
+Cart
+- Cart Commands
+  - Stop
+  - Drive!
+- Skill Tree
+    - Trample
+      - +knockback and damage to enemies
+    - Ambulance Path
+        1. heal when close (tf2)
+        2. increase healing radius
+        3. increase healing amount 
+        4. 
+        5. holy shield at start to all players that blocks 1 instance of dmg
+    - Fortress
+      - arrow tower
+      - second arrow tower
+      - repair tower?
+      - bomb tower
+      - elemental towers (with bard)
+    - Barricade ( Provides block for others )
+      - gain a rotating barrier that reflects projectiles
+      - FORTRESS EVO: barricade gains spikes, deals dmg on contact with enemies
+    - Engine upgrade (move speed / dodge)
+      1. +10% speed
+      2. +10% speed
+      3. +10% speed
+    - Evasive maneuvers
+      1. +5% dodge
+    - cart HP: massive (HP)
+      1. +10% HP 
+    - Trail blazer
+      1. leave behind caltrops
+      2. increase caltrops lifetime
+      3. landmines
+      - BARD EVO: poison trail / flaming caltrops / ...
+    - Watch Tower
+      - increase vision range (Within which enemies cannot spawn)
+      - within radius, increase player attack range
+
+Bard (Inspiration / (drunkenness?) / Spells)
+- road rage
+  - cart kills give the bard inspiration
+- inspiration
+- Skill Tree
+  - Damage
+    - Earth
+    - Fire
+    - Water
+    - Wind
+    - Lighting
+    - Summon
+  - Defense
+    - bulking season (bard +HP)
+    - 
+  - Utilty
+    - DJ: increases attack speed / dmg of party
+    - Music Therapist: AOE healing on party
+    - Student Driver: bard can now drive the cart
+
+Holy numbers:
+- 1: Represents unity, God, or the source of all numbers
+- 3: Symbolizes the Holy Trinity; the three days Christ spent in the tomb; the Trinity plus the four cardinal virtues equal seven.
+- 4: Represents the four Evangelists and the four corners of the world. When combined with three, it represents the union of spirit (\(3\)) and body (\(4\)).
+- 5: Symbolizes the five wounds of Christ.
+- 7: Represents spiritual completeness and perfection, seen in the seven days of creation, the seven virtues, and the seven gifts of the Holy Ghost.
+- 8: Represents baptism.
+- 9: A significant number in Germanic paganism, often associated with rituals.
+- 12: Symbolizes the twelve Apostles.
+- 40: A number often associated with periods of trial and testing, such as the 40 days Christ fasted in the desert.
+- 666: Known as the Number of the Beast, representing evil and the Antichrist
+
+
+Player Stats
+- defensive
+    - hp
+    - dodge
+    - armor
+- offensive
+  - 
+====== Enemies ======
+
+Enemy Types
+- Basic
+  - slowly walks towards the closest player
+- Pursuer
+  - picks a random player target and pursues them until death
+- Carrier
+  - walks slowly towards player and explodes, spawning 4 basics
+- basic ranged
+  - walk to random point on edge of bard vision and fires projectiles.
+  - tries to stay a fixed radius away from bard
+- Teleporter
+  - ranged 
+
+Wave System to "compose" a wave needs:
+- spawn timings
+    - pre-delay
+    - one-shot at a specific time
+    - loop
+    - % chance
+    - (this is kinda like a granular synth lol or sampler)
+- spawn pattern (group, random, edge, from outside map)
+
+
+
+
+====== Inspos ======
+
+TF2
+- classes have unique weapons and stats
+Hades
+Isaac
+Diablo
+20 Min Till Dawn
+Vampire Survivors
+Tiny Rogues
+Nuclear Throne
+Just King
+    - match3 (with party)
+Brotato
+    - match3 (with guns)
+Castle Crashers
+SNKRX
+    - match3 (with party)
+Gungeon
+Slay the Spire
+Thronefall
+Unrailed!
+Ultimate Chicken Horse 
+    - mod the cart together / Bard?
+
+(Dome Keeper)
+(AK xolotl)
+
+== Visuals ========================
+
+fog, shadows, wind, super cool
+https://www.gamedeveloper.com/programming/graveyard-keeper-how-the-graphics-effects-are-made
+
+Shadows via skewed sprites
+https://love2d.org/forums/viewtopic.php?t=93766&hilit=shadows
+
+Radiance cascades wtf
+https://www.youtube.com/watch?v=6O9-BUDk_-c
+- paper: https://drive.google.com/file/d/1L6v1_7HY2X-LV3Ofb6oyTIxgEaP4LOI6/view
+- realistic lighting could work well with rave music + visuals?
+
+Reddit post with more links to shadows:
+https://www.reddit.com/r/gamedev/comments/1d6kxsx/what_are_top_ways_to_generate_shadows_in_2d_game/
+
+
+====================================================================
+Game Analysis
+====================================================================
+
+## Brotato
+
+The experience needed to gain a level up is:
+XPneeded = (next_level +3)^2
+- Lvl 0 --> Lvl 1: (1+3)^2 = 16
+- Lvl 1 --> Lvl 2: (2+3)^2 = 25
+- Lvl 2 --> Lvl 3: (3+3)^2 = 36
+- etc, scales quadratically (exponentional over 20 waves would be 2^20 which is a little insane)
+
+Upgrades
+- 4 tiers
+- 16 body stats
+  - Lvl 5: each Upgrade is guaranteed to be Tier 2
+  - At Lvls 10, 15, 20 the upgrade is guaranteed to be Tier 3. 
+  - At Lvls 25, 30, and every +5 levels, guaranteed to be Tier 4 upgrades.
+    - interesting: the good upgrades only come once every 5....
+  - rerolls select from 12 not-shown stats!
+    - good to reroll on multiple-of-5 levels to boost your most important stat
+
+Shop
+- Inflation: Item Price = (Base_Price + Wave + (Base_Price * 0.1 * Wave)) * Shop_Price
+The +1 means that cheaper items are hit harder by inflation. 
+  - Shop_Price is global stat affected by coupon item
+  - E.g. base price of 20 costs
+    - wave 1: 20 + 1 + .1 * 20 * 1 = 23 
+    - wave 2: 20 + 2 + .1 * 20 * 2 = 26
+    - wave 3: 20 + 3 + .1 * 20 * 3 = 29
+    - Price increase from (N-1) -> N: N + .1(BN) = N(1+.1B)
+      - scales **linearly** with wave and base price
+      - e.g. if B=20, price increases by 1+.1(20) = 3 each wave
+    - in the first shop. If you lock an item between waves, the price is also locked.
+- Odds: Each slot is **35%** a weapon, **65%** an item.
+- Item Tags: Characters are tagged for certain types of items. (Like Max HP, Life Steal, Melee Damage.) You can see a list Here. Whenever an item shows up in the shop, there is a 5% chance the item is chosen from among an item pool of tagged items, instead of the regular item pool with all items.
+- Items: 
+  - 1st shop: tier 1
+  - Shops 2-3: up to tier 2
+  - Shop 4-7 up to tier 3
+  - Shop 8+: all 4 tiers
+- Guaranteed weapon Slots: The First two shops have 2 Guaranteed weapons in them. Then the next 3 shops have 1 Guaranteed weapon. This helps you get the weapons you need early in the game.
+
+Weapons scale with 3 main stats
+- base dmg (e.g. +melee, +ranged dmg)
+- %dmg
+- attack speed
+- bonus effect: piercing, bouncing, explosion radius, etc
+
+Enemy Stats (W = wave#)
+- Tree
+  - hp: 10 + 5W
+  - drop: 80% fruit, 20% loot crate
+  - XP: 0
+  - $ : 3
+  - spawn logic:
+    - every 10 seconds, 0.5 + .33(tree stat) trees spawn
+- baby alien
+  - hp: 3 + 2W
+  - dmg: 1 + 0.6W
+  - speed: 200 - 300
+  - $ : 1
+- chaser
+  - hp: 1 + 1W
+  - dmg: 1 + 0.6W
+  - speed: 380
+  - $ : 1
+- charger
+  - hp: 4 + 2.5W
+  - dmg: 1 + .85W
+  - speed: 400
+  - $ : 1
+- loot horader
+  - hp: 50 + 25W
+  - dmg: 1 + .85W
+  - speed: 300-400
+  - $ : 8
+- spitter
+  - hp: 8 + 1W
+  - dmg: 1 + .6W
+  - speed: 200
+  - $ : 1
+- fly
+  - hp: 15 + 4W
+  - dmg: 1 + .85W
+  - dmg projectile: 1 + 1W
+  - speed: 325 - 375
+  - $ : 1
+- helmet alien
+  - hp: 8 + 3W
+  - dmg: 1 + 1W
+  - speed: 225 - 375 
+  - $ : 1
+- horned charger
+  - hp: 12 + 5W
+  - dmg: 1 + 1.1W
+  - speed: 425
+  - $ : 1
+- healer
+  - hp: 10 + 8W
+  - dmg: 1 + .85W
+  - speed: 400
+  - $ : 1
+  - ability: heals for 100 + 10W
+- slicer
+  - hp: 50 + 25W
+  - dmg: 1 + 1.15W
+  - dmg projectile: 1 + 1W
+  - speed: 250 - 300
+  - $ : 3
+  - ability: heals for 100 + 10W
+- bruiser
+  - hp: 20 + 11W
+  - dmg: 2 + 0.85W
+  - speed: 300
+  - $ : 3
+- armored bruiser
+  - hp: 30 + 22W
+  - dmg: 1 + 1.15W
+  - speed: 300
+  - $ : 3
+- pursuer:
+- tentacle:
+  - hp: 100 + 20W
+  - dmg: 1 + 1W
+  - dmg projectile: 1 + 1W
+  - speed: 200
+  - knockback: 70% resistance
+  - $ : 3
+- **Takeaways**
+  - most enemies drop 1 or 3 materials
+  - all dmg and hp scales **linearly**, simple!
+
+
+
+Waves
+- There is a maximum of 100 spawned enemies, past that enemies will start despawning to accomodate new spawns (i think). 
+- Wave 1:
+  - Tree / 10s
+  - 4-5 baby alien / 3 sec
+- Wave 2:
+  - tree / 10s
+  - 4-5 baby alien / 5 sec
+  - 3-4 chaser / 3 sec
+- Wave 3:
+  - tree / 10s
+  - 10% chance of loot hoarder at t=5s
+  - 5-6 baby aliens / 3s
+  - 3-4 chaser at t = 20, 13, 6, 2
+  - 2 chargers at t = 15
+  - 1 fly after 10s
+- Wave 4:
+  - tree at t = 25, 15, 5
+  - 10% loot hoarder at t = 10
+  - 2 spitters at t = 10, 3
+  - 6-7 baby alien after 4s, / 3s
+  - 2 fly at t = 15
+  - 2 helmet every 3s starting at t = 32
+- Wave 5:
+  - 1-2 trees (33% spawn chance) at t = 30, 20, 10
+  - 1 loot hoarder (10% chance) at t=15
+  - 8 baby aliens after 1sec, every 4s, at edge of map
+  - 3-4 chasers every 5, 4, 3, 2s starting at t=37
+  - 1-2 spitters every 6s after 25 sec
+  - 2 chargers after 15s every 4s
+  - 1 horned charger after 15s every 8s
+
+
+Animations
+- appreciating the uniformity across Brotato's animation system 
+  (maybe this is why it reads so well / can easily tell what's happening)
+- gun fire: muzzle flash + bullet
+    - muzzle flashes are just different colors
+    - bullets are just stretched version of the same base sprite
+- melee weapons: different attack types, all have same movement pattern
+- movement animations:
+  - all characters have the same squish/squash idle and movement 
+    - when stretching X, they shrink in Y and vice versa
+- enemies flash white on-hit
+- enemies flash red when charging up an attack
+

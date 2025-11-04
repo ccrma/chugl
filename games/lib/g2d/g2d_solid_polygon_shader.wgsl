@@ -41,7 +41,7 @@
 @group(1) @binding(2) var<storage> u_polygon_transforms : array<vec4f>; // every 4 floats is a transform, x, y, cos rotation, sin rot radians 
 @group(1) @binding(3) var<storage> u_polygon_colors: array<vec4f>;
 @group(1) @binding(4) var<storage> u_polygon_aabb: array<vec4f>; // lower left, upper right vec4f
-@group(1) @binding(5) var<storage> u_polygon_radius: array<f32>; // rounding per polygon
+@group(1) @binding(5) var<storage> u_polygon_radius_and_depth: array<vec2f>; // @(radius, z_layer)
 
 
 
@@ -91,7 +91,8 @@ fn vs_main(
     // let polygon = u_polygon_instances[polygon_instance_idx];
     // access polygon params
     let polygon_color = vec4f(u_polygon_colors[polygon_instance_idx]);
-    let polygon_radius = u_polygon_radius[polygon_instance_idx];
+    let polygon_radius = u_polygon_radius_and_depth[polygon_instance_idx].x;
+    let polygon_z_layer = u_polygon_radius_and_depth[polygon_instance_idx].y;
     let polygon_vertex_offset = u_polygon_vertex_counts[2 * polygon_instance_idx + 0];
     let polygon_vertex_count = u_polygon_vertex_counts[2 * polygon_instance_idx + 1];
     let polygon_aabb = vec4f(u_polygon_aabb[polygon_instance_idx]);
@@ -145,7 +146,7 @@ fn vs_main(
     p = vec2f((c * p.x - s * p.y) + x, (s * p.x + c * p.y) + y);
 
     var u_Draw : DrawUniforms = u_draw_instances[instance_idx];
-    out.position = (u_frame.projection * u_frame.view) * u_Draw.model * vec4f(p, 0.0, 1.0f);
+    out.position = (u_frame.projection * u_frame.view) * u_Draw.model * vec4f(p, polygon_z_layer, 1.0f);
 
     return out;
 }
@@ -237,7 +238,6 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4f {
     // } else {
         // alpha = step(sdf, 0.0);
     // }
-
 
     if (frag_color.a < .01) { discard; }
 
