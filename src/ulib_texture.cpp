@@ -87,8 +87,9 @@ static t_CKUINT texture_location_origin_z_offset = 0;
 // TextureWriteDesc -----------------------------------------------------------------
 CK_DLL_CTOR(texture_load_desc_ctor);
 
-static t_CKUINT texture_load_desc_flip_y_offset   = 0;
-static t_CKUINT texture_load_desc_gen_mips_offset = 0;
+static t_CKUINT texture_load_desc_flip_y_offset      = 0;
+static t_CKUINT texture_load_desc_gen_mips_offset    = 0;
+static t_CKUINT texture_load_desc_load_to_cpu_offset = 0;
 
 // TextureSaveEvent -----------------------------------------------------------------
 static t_CKUINT texture_save_event_status_offset = 0;
@@ -322,6 +323,11 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
 
         texture_load_desc_gen_mips_offset = MVAR("int", "gen_mips", false);
         DOC_VAR("Generate mipmaps for the texture. Default true");
+
+        texture_load_desc_load_to_cpu_offset = MVAR("int", "read", false);
+        DOC_VAR(
+          "When loading, also write the texture data to a chuck array, accessible via "
+          "Texture.data(). Default false, due to the steep performance cost.");
 
         END_CLASS();
     }
@@ -732,8 +738,9 @@ static SG_TextureLocation ulib_texture_textureLocationFromCkobj(Chuck_Object* ck
 
 CK_DLL_CTOR(texture_load_desc_ctor)
 {
-    OBJ_MEMBER_INT(SELF, texture_load_desc_flip_y_offset)   = false;
-    OBJ_MEMBER_INT(SELF, texture_load_desc_gen_mips_offset) = true;
+    OBJ_MEMBER_INT(SELF, texture_load_desc_flip_y_offset)      = false;
+    OBJ_MEMBER_INT(SELF, texture_load_desc_gen_mips_offset)    = true;
+    OBJ_MEMBER_INT(SELF, texture_load_desc_load_to_cpu_offset) = false;
 }
 
 static SG_TextureLoadDesc ulib_texture_textureLoadDescFromCkobj(Chuck_Object* ckobj)
@@ -743,6 +750,7 @@ static SG_TextureLoadDesc ulib_texture_textureLoadDescFromCkobj(Chuck_Object* ck
     SG_TextureLoadDesc desc = {};
     desc.flip_y             = OBJ_MEMBER_INT(ckobj, texture_load_desc_flip_y_offset);
     desc.gen_mips           = OBJ_MEMBER_INT(ckobj, texture_load_desc_gen_mips_offset);
+    desc.read_to_ck_array = OBJ_MEMBER_INT(ckobj, texture_load_desc_load_to_cpu_offset);
 
     return desc;
 }
@@ -994,8 +1002,26 @@ CK_DLL_MFUN(texture_write_external_ptr)
 SG_Texture* ulib_texture_load(const char* filepath, SG_TextureLoadDesc* load_desc,
                               Chuck_VM_Shred* shred)
 {
-    int width, height, num_components;
-    if (!stbi_info(filepath, &width, &height, &num_components)) {
+    int width = 0, height = 0, num_components = 0;
+    int desired_comps      = STBI_rgb_alpha;
+    void* pixel_data_OWNED = NULL;
+    bool stbi_error        = false;
+
+    defer(stbi_image_free(pixel_data_OWNED));
+
+    if (load_desc->read_to_ck_array) {
+        pixel_data_OWNED = stbi_load(filepath,        //
+                                     &width,          //
+                                     &height,         //
+                                     &num_components, //
+                                     desired_comps    //
+        );
+        stbi_error       = (pixel_data_OWNED == NULL);
+    } else {
+        stbi_error = !(stbi_info(filepath, &width, &height, &num_components));
+    }
+
+    if (stbi_error) {
         log_warn("could not load texture file '%s'", filepath);
         log_warn(" |- Reason: %s", stbi_failure_reason());
         log_warn(" |- Defaulting to magenta texture");
@@ -1016,6 +1042,11 @@ SG_Texture* ulib_texture_load(const char* filepath, SG_TextureLoadDesc* load_des
       = SG_CreateTexture(&desc, NULL, shred, false, File_basename(filepath));
 
     CQ_PushCommand_TextureFromFile(tex, filepath, load_desc);
+
+    if (pixel_data_OWNED) {
+        int size_bytes = width * height * desired_comps;
+        SG_Texture::updateTextureData(tex, pixel_data_OWNED, size_bytes);
+    }
 
     return tex;
 }

@@ -191,8 +191,10 @@ struct SG_TextureWriteDesc {
 };
 
 struct SG_TextureLoadDesc {
-    bool flip_y   = false;
-    bool gen_mips = true;
+    bool flip_y           = false;
+    bool gen_mips         = true;
+    bool read_to_ck_array = false; // on audio thread, during load also read data into
+                                   // Texture.data() ck array
 };
 
 struct SG_TextureLocation {
