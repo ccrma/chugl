@@ -147,6 +147,9 @@ CK_DLL_MFUN(flat_material_set_texture_scale);
 CK_DLL_MFUN(flat_material_get_texture_offset);
 CK_DLL_MFUN(flat_material_get_texture_scale);
 
+CK_DLL_MFUN(flat_material_set_emissive_color);
+CK_DLL_MFUN(flat_material_get_emissive_color);
+
 CK_DLL_CTOR(uv_material_ctor);
 
 CK_DLL_CTOR(normal_material_ctor);
@@ -826,6 +829,15 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
 
         MFUN(flat_material_get_texture_scale, "vec2", "scale");
         DOC_FUNC("Get the texture sampler scale of the material.");
+
+        MFUN(flat_material_set_emissive_color, "void", "emissive");
+        ARG("vec4", "color");
+        DOC_FUNC(
+          "Set the emissive color of the material. This will be added to the final "
+          "color");
+
+        MFUN(flat_material_get_emissive_color, "vec4", "emissive");
+        DOC_FUNC("Get the emissive color of the material");
 
         END_CLASS();
     }
@@ -1767,6 +1779,7 @@ static void ulib_material_init_uniforms_and_pso(SG_Material* material)
               SG_GetTexture(g_builtin_textures.white_pixel_id));     // color map
             SG_Material::uniformVec2f(material, 3, glm::vec4(0.0f)); // texture offset
             SG_Material::uniformVec2f(material, 4, glm::vec4(1.0f)); // texture scale
+            SG_Material::uniformVec4f(material, 5, glm::vec4(0.0f)); // emission
 
             ulib_material_cq_update_all_uniforms(material);
         } break;
@@ -2098,6 +2111,21 @@ CK_DLL_MFUN(flat_material_get_texture_scale)
     SG_Material* material = GET_MATERIAL(SELF);
     RETURN->v_vec2
       = { material->uniforms[4].as.vec2f.x, material->uniforms[4].as.vec2f.y };
+}
+
+CK_DLL_MFUN(flat_material_set_emissive_color)
+{
+    SG_Material* material = GET_MATERIAL(SELF);
+    t_CKVEC4 v            = GET_NEXT_VEC4(ARGS);
+    SG_Material::uniformVec4f(material, 5, glm::vec4(v.x, v.y, v.z, v.w));
+    CQ_PushCommand_MaterialSetUniform(material, 4);
+}
+
+CK_DLL_MFUN(flat_material_get_emissive_color)
+{
+    SG_Material* material = GET_MATERIAL(SELF);
+    glm::vec4 v           = material->uniforms[5].as.vec4f;
+    RETURN->v_vec4        = { v.r, v.g, v.b, v.a };
 }
 
 // UVMaterial ===================================================================

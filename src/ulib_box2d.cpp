@@ -2303,23 +2303,23 @@ DOC_CLASS("Result of computing the distance between two line segments. https://b
 
         // store callback offsets
         b2_DebugDraw_DrawPolygon_callback_offset
-          = chugin_setVTableOffset("b2DebugDraw", "drawPolygon");
+          = chugin_getVTableOffset("b2DebugDraw", "drawPolygon");
         b2_DebugDraw_DrawSolidPolygon_callback_offset
-          = chugin_setVTableOffset("b2DebugDraw", "drawSolidPolygon");
+          = chugin_getVTableOffset("b2DebugDraw", "drawSolidPolygon");
         b2_DebugDraw_DrawCircle_callback_offset
-          = chugin_setVTableOffset("b2DebugDraw", "drawCircle");
+          = chugin_getVTableOffset("b2DebugDraw", "drawCircle");
         b2_DebugDraw_DrawSolidCircle_callback_offset
-          = chugin_setVTableOffset("b2DebugDraw", "drawSolidCircle");
+          = chugin_getVTableOffset("b2DebugDraw", "drawSolidCircle");
         b2_DebugDraw_DrawSolidCapsule_callback_offset
-          = chugin_setVTableOffset("b2DebugDraw", "drawSolidCapsule");
+          = chugin_getVTableOffset("b2DebugDraw", "drawSolidCapsule");
         b2_DebugDraw_DrawSegment_callback_offset
-          = chugin_setVTableOffset("b2DebugDraw", "drawSegment");
+          = chugin_getVTableOffset("b2DebugDraw", "drawSegment");
         b2_DebugDraw_DrawTransform_callback_offset
-          = chugin_setVTableOffset("b2DebugDraw", "drawTransform");
+          = chugin_getVTableOffset("b2DebugDraw", "drawTransform");
         b2_DebugDraw_DrawPoint_callback_offset
-          = chugin_setVTableOffset("b2DebugDraw", "drawPoint");
+          = chugin_getVTableOffset("b2DebugDraw", "drawPoint");
         b2_DebugDraw_DrawString_callback_offset
-          = chugin_setVTableOffset("b2DebugDraw", "drawString");
+          = chugin_getVTableOffset("b2DebugDraw", "drawString");
 
     } // b2DebugDraw
 

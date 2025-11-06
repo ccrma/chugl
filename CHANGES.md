@@ -3,6 +3,7 @@
 ## 0.2.8 (alpha)
 - Gamepad support!!
 - GCamera `.aspect()` and `.autoUpdateAspect()`
+- Add `TextureLoadDesc.read` to read the texture data into a chuck array on load
 - `UI_DrawList` methods that ended in `...Ex` were renamed to take advantage of method overloading, e.g. `.addLineEx(...)` renamed to `.addLine()`
   - plus general improvements to `UI_DrawList` and `UI_DrawFlags` docs
 - Bug fixes

@@ -232,7 +232,7 @@ CHUGL_Gamepad CHUGL_Gamepads[GLFW_JOYSTICK_LAST + 1];
 // map from ckobj to shred
 std::unordered_map<Chuck_Object*, Chuck_VM_Shred*> ckobj_2_OriginShred;
 
-t_CKINT chugin_setVTableOffset(const char* type_name, const char* method_name)
+t_CKINT chugin_getVTableOffset(const char* type_name, const char* method_name)
 {
     // update() vt offset
     Chuck_Type* cktype = g_chuglAPI->type->lookup(g_chuglVM, type_name);

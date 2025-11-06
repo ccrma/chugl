@@ -502,6 +502,7 @@ static const char* flat_shader_string  = R"glsl(
 @group(1) @binding(2) var u_color_map : texture_2d<f32>;
 @group(1) @binding(3) var<uniform> u_texture_offset : vec2f;
 @group(1) @binding(4) var<uniform> u_texture_scale : vec2f;
+@group(1) @binding(5) var<uniform> u_emissive : vec4f;
 
 fn srgbToLinear(c : vec4f) -> vec4f {
     return vec4f(
@@ -517,7 +518,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4f
 {
     let uv = in.v_uv * u_texture_scale + u_texture_offset;
     let tex = srgbToLinear(textureSample(u_color_map, u_sampler, uv));
-    var ret = u_color * tex;
+    var ret = u_color * tex + u_emissive;
 
     // alpha test
     ret.a = clamp(ret.a, 0.0, 1.0);
