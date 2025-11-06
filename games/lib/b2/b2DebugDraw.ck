@@ -621,6 +621,12 @@ public class b2DebugDraw_Capsule extends GGen
 		material.storageBuffer(0, empty_float_arr);
 		material.storageBuffer(1, empty_float_arr);
 		material.storageBuffer(2, empty_float_arr);
+		material.uniformInt(3, 0);
+	}
+
+	// if true, renders outline instead of filled shape
+	fun void outlineOnly(int b) {
+		material.uniformInt(3, b ? 1 : 0);
 	}
 
 	fun void drawCapsule( vec2 p1, vec2 p2, float radius, vec3 color) {
@@ -728,6 +734,7 @@ public class DebugDraw extends b2DebugDraw
 		solid_polygons.update();
 		lines.update();
 		circles.update();
+		capsules.outlineOnly(this.outlines_only);
 		capsules.update();
 	}
 }

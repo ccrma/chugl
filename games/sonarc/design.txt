@@ -1,8 +1,25 @@
 ==TODO=========================================
+- add arrow sprite
+- add whisper back
+- basic cart commands: stop and go
+- bard fireball! (can use same graphic as bomb tower, only much larger)
+
+- organize UI to use imgui collapsing headers
+
+- bard lightning
+  - multiple strikes coming from sky, similar to 20min
 
 - Add chugin ability to query for member variable offset from an input object
   - also implement imgui drag/input/slider Scalar to accept chuck doubles
   - lets me more easily build UI for chuck objects, more performant too
+
+
+Engine references
+- Love2D
+- Raylib
+- Haxe / Hashlink (mosa lina and deadcells?)
+- ThreeJS
+- BabylonJS
 
 
 
@@ -354,6 +371,8 @@ Ultimate Chicken Horse
 
 (Dome Keeper)
 (AK xolotl)
+(Binding of Isaac)
+(Nova Drift)
 
 == Visuals ========================
 

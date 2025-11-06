@@ -6,17 +6,31 @@
 @import "../lib/tween.ck"
 @import "../lib/b2/b2DebugDraw.ck"
 @import "HashMap.chug"
+@import "voice.ck"
 
 Tween t;
+VoiceCommand voice(me.dir() + "../lib/whisper/models/ggml-base.en.bin");
 
-// GWindow.windowed(1920, 1080);
+GWindow.windowed(1920, 1080);
 GWindow.center();
 // GWindow.fullscreen();
 BardG2D g;
 g.sortDepthByY(true);
 GText.defaultFont(me.dir() + "./assets/m5x7.ttf");
 
-GG.camera().viewSize(16);
+GG.camera().viewSize(12);
+
+// == load assets ================================================
+TextureLoadDesc tex_load_desc;
+true => tex_load_desc.flip_y;
+false => tex_load_desc.gen_mips;
+Texture.load(me.dir() + "./assets/bard.bmp", tex_load_desc) @=> Texture bard_sprite;
+Texture.load(me.dir() + "./assets/knight.bmp", tex_load_desc) @=> Texture knight_sprite;
+Texture.load(me.dir() + "./assets/ground_8x8.png", tex_load_desc) @=> Texture ground_texture;
+Texture.load(me.dir() + "./assets/cart.png", tex_load_desc) @=> Texture cart_sprite;
+Texture.load(me.dir() + "./assets/wheel.png", tex_load_desc) @=> Texture wheel_sprite;
+Texture.load(me.dir() + "./assets/chisel.png", tex_load_desc) @=> Texture chisel_sprite;
+Texture.load(me.dir() + "./assets/arrow.png", tex_load_desc) @=> Texture arrow_sprite;
 
 // == custom graphics ================================================
 class BardG2D extends G2D {
@@ -217,10 +231,26 @@ class FX {
             g.circle(pos, end_radius * t, .1 * (1 - t), color);
         }
     }
+
+    fun static void bulletHitEffect(vec2 pos, float scale) {
+        dur elapsed_time;
+        while (elapsed_time < .28::second) {
+            GG.nextFrame() => now;
+            GG.dt()::second +=> elapsed_time;
+
+            if (elapsed_time < .12::second) 
+                g.squareFilled( pos, 0, scale, Color.WHITE);
+            else g.squareFilled(pos, 0, scale, Color.RED);
+        }
+    }
 }
 
 // == constants ================================================
 
+@(1,0) => vec2 RIGHT;
+@(-1,0) => vec2 LEFT;
+@(0,1) => vec2 UP;
+@(0,-1) => vec2 DOWN;
 6 => int MAX_ACTIVE_UPGRADES;
 
 // == enums ================================================
@@ -233,6 +263,7 @@ class FX {
 (1 << 4) => int EntityType_Pickup;
 (1 << 5) => int EntityType_Weapon;
 (1 << 6) => int EntityType_PlayerProjectile;
+(1 << 7) => int EntityType_EnemyProjectile;
 
 0 =>        int PlayerType_None;
 1 =>        int PlayerType_Bard;
@@ -241,18 +272,19 @@ class FX {
 0 =>        int EnemyType_None;
 1 =>        int EnemyType_Basic;
 2 =>        int EnemyType_Pursuer;
+3 =>        int EnemyType_Shooter;
 
 -1 =>        int Layer_Background;
 5  =>        int Layer_Player;
 6  =>        int Layer_Cart;
 7  =>        int Layer_Fog; // drawing b2 physics colliders
 8  =>        int Layer_Light; // drawing b2 physics colliders
-9  =>        int Layer_DebugDraw; // drawing b2 physics colliders
+9  =>        int Layer_Projectile;
+10  =>        int Layer_DebugDraw; // drawing b2 physics colliders
 
 // @design: is this better or the "smear" melee attack (like in nuclear throne)
-0 => int WeaponState_Rest;
-1 => int WeaponState_Attack;  // going out to target
-2 => int WeaponState_Return;  // (for melee weapons) coming back after reaching target
+0 => int WeaponState_Rest;    // holding at rest position
+1 => int WeaponState_Attack;  // lerping to attack, holding, and returning to rest
 
 
 // upgrade category enum
@@ -280,24 +312,27 @@ class FX {
 
 // and maybe bullets are their own class? or they can just 
 // be an Entity...
-// or should this be class Weapon?
 class AttackParams { 
     UI_Float _dmg;
     UI_Float _dmg_mult(1.0);
+
     UI_Float _range;
     UI_Float _range_mult(1.0);
+
     UI_Float _cd_sec;
     UI_Float _atk_speed(1.0); // need to invert in attack speed calc
 
+    float cd;
+
     fun AttackParams(float dmg, float range, float cd) {
-        dmg => this._dmg;
-        range => this._range;
-        cd => this._cd_sec;
+        dmg => this._dmg.val;
+        range => this._range.val;
+        cd => this._cd_sec.val;
+        cd => this.cd;
     }
 
     fun float dmg() { return this._dmg.val() * this._dmg_mult.val(); }
     fun float range() { return this._range.val() * this._range_mult.val(); }
-    fun float cd() { return this._cd_sec.val() * (1.0 / this._atk_speed.val()); } 
 }
 
 // == upgrades ================================================
@@ -339,7 +374,23 @@ class Player {
     string name;
 
     float base_hp;
-    float base_speed;
+    UI_Float base_speed;
+
+    fun static void ui() {
+        if (!UI.collapsingHeader("player type", 0)) return;
+
+        for (1 => int i; i < player_type_list.size(); ++i) {
+            player_type_list[i] @=> Player p;
+
+            UI.pushID(p.name);
+
+            UI.text(p.name);
+            UI.slider("base speed", p.base_speed, 0, 10);
+            UI.separator();
+            UI.popID();
+        }
+    }
+
 }
 
 Player player_type_list[0];
@@ -351,7 +402,7 @@ fun void PlayerAddType(
     player_type => p.player_type;
     name => p.name;
     base_hp => p.base_hp;
-    base_speed => p.base_speed;
+    base_speed => p.base_speed.val;
 
     player_type_list << p;
     T.assert(player_type_list[player_type] == p, "adding player type out of order");
@@ -361,53 +412,209 @@ fun void PlayerAddType(
 //            player_type           hp     speed    name
 PlayerAddType(PlayerType_None,      0,     0,       "");
 PlayerAddType(PlayerType_Bard,      8,     .3,      "Bard");
-PlayerAddType(PlayerType_Carpenter, 10,    .6,      "Carpenter");
+PlayerAddType(PlayerType_Carpenter, 10,    3.6,      "Carpenter");
 
 // == enemy type ================================================
 
 class Enemy {
     int enemy_type;
+    string name;
     float base_hp;
     float hp_scaling;
 
     float drop; // how much exp/$ it gives on death
 
-    float dmg; // dmg dealt via contact OR projectile
+    float base_dmg; // dmg dealt via contact OR projectile
     float dmg_scaling; // linearly scales with wave
-    UI_Float2 speed; // range of speed to spawn with @(min, max)
+    UI_Float speed; // range of speed to spawn with @(min, max)
 
     // collider stuff
     int b2_shape_type;
     UI_Float2 size;          // for capsule: @(p1 -- p2, radius)
                              // for box:     @(w, h)
                              // for circle   @(radius, radius)
+    vec2 rotation;
+
+    // for ranged-atk enemies
+    UI_Float projectile_cd;
+    UI_Float projectile_speed;
+
+    // shared contact dmg cooldown
+    static UI_Float contact_dmg_cd(1.0);
+    static UI_Float contact_attack_anim_amt(.4);
+
+    fun float dmg(int wave) { return this.base_dmg + wave * this.dmg_scaling; }
+
+    // manipulate enemy params
+    fun static void ui() {
+        if (!UI.collapsingHeader("enemy type params", 0)) return;
+
+        UI.slider("contact dmg cd(sec)", contact_dmg_cd, .1, 5);
+        UI.slider("contact attack anim lurch amt", contact_attack_anim_amt, 0, 1);
+
+        for (1 => int i; i < enemy_type_list.size(); ++i) {
+            enemy_type_list[i] @=> Enemy et;
+            UI.pushID(et.name);
+            UI.text(et.name);
+            UI.slider("speed", et.speed, 0, 1.0);
+
+            if (et.projectile_cd.val() > 0) {
+                UI.slider("projectile cd", et.projectile_cd, .1, 5);
+                UI.slider("projectile speed", et.projectile_speed, .1, 10);
+            }
+
+            UI.separator();
+            UI.popID();
+        }
+    }
 }
 
 Enemy enemy_type_list[0];
 fun void EnemyAddType(
-    int enemy_type, float base_hp, float hp_scaling, float dmg, float dmg_scaling, float drop, vec2 speed,
-    int b2_shape_type, vec2 size
+    int enemy_type, string name, float base_hp, float hp_scaling, float dmg, float dmg_scaling, float drop, float speed,
+    int b2_shape_type, vec2 size, float rot, 
+    float cd, float projectile_speed
 ) {
     Enemy e;
     enemy_type => e.enemy_type;
+    name => e.name;
     base_hp => e.base_hp;
     hp_scaling => e.hp_scaling;
     drop => e.drop;
-    dmg => e.dmg;
+    dmg => e.base_dmg;
     dmg_scaling => e.dmg_scaling;
-    new UI_Float2(speed) @=> e.speed; 
+    speed => e.speed.val; 
     b2_shape_type => e.b2_shape_type;
-    new UI_Float2(size) @=> e.size;
+    size => e.size.val;
+    M.rot2vec(rot) => e.rotation;
+
+    cd => e.projectile_cd.val;
+    projectile_speed => e.projectile_speed.val;
+
     enemy_type_list << e;
 
     T.assert(enemy_type_list[enemy_type] == e, "adding enemy type out of order");
 }
 
 // enemy types
-//                                 hp   hp_scaling  dmg  dmg_scaling  drop  speed_range  shape                     size
-EnemyAddType(EnemyType_None, 0, 0, 0, 0, 0, @(0,0), 0, @(0,0));
-EnemyAddType(EnemyType_Basic,      4,   2,          2,   1,           1,    @(.3, .4),   b2ShapeType.circleShape,  @(.5, .5));
-EnemyAddType(EnemyType_Pursuer,    2,   1,          1,   .5,          1,    @(.5, .5),   b2ShapeType.capsuleShape, @(.3, .1));
+//                                             hp   hp_scaling  dmg  dmg_scaling  drop  speed        shape                     size       rot          attack_cd    projectile_speed
+EnemyAddType(EnemyType_None,    "None",        0,   0,          0,    0,          0,    0,           0,                        @(0,0),    0,           0,           0);
+EnemyAddType(EnemyType_Basic,   "Basic",       4,   2,          1,   .5,          1,    .4,          b2ShapeType.circleShape,  @(.5, .5), 0,           0,           0);
+EnemyAddType(EnemyType_Pursuer, "Pursuer",     2,   1,          .5,  .5,          1,    .5,          b2ShapeType.capsuleShape, @(.3, .1), 0,           0,           0);
+EnemyAddType(EnemyType_Shooter, "Shooter",     5,   1.5,        1,   .5,          1,    .8,          b2ShapeType.polygonShape, @(.7, .7), Math.pi/4,   5,           1);
+
+// == Weapon ============================================
+
+0 => int WeaponType_None;
+1 => int WeaponType_Chisel;
+1 => int WeaponType_Chicken;
+
+class Weapon {
+    int weapon_type;
+    string name;
+    Texture@ sprite;
+
+    UI_Float base_cd_sec;
+    UI_Float base_dmg;
+    UI_Float base_range;
+
+    vec2 size;
+
+    fun static void ui() {
+        if (!UI.collapsingHeader("weapon types", 0)) return;
+
+        for (1 => int i; i < weapon_type_list.size(); ++i) {
+            weapon_type_list[i] @=> Weapon w;
+
+            UI.pushID(w.name);
+
+            UI.text(w.name);
+            UI.slider("cd", w.base_cd_sec, .2, 5);
+            UI.slider("dmg", w.base_dmg, 0, 10);
+            UI.slider("range", w.base_range, 0, 10);
+
+            UI.popID();
+            UI.separator();
+        }
+    }
+}
+
+Weapon weapon_type_list[0];
+
+fun void WeaponAddType(int weapon_type, string name, Texture@ sprite, float cd, float dmg, float range, vec2 size) {
+    Weapon w;
+    weapon_type => w.weapon_type;
+    name => w.name;
+    sprite @=> w.sprite;
+    cd => w.base_cd_sec.val;
+    dmg => w.base_dmg.val;
+    range => w.base_range.val;
+    size => w.size;
+
+    weapon_type_list << w;
+    T.assert(weapon_type_list[weapon_type] == w, "adding weapon types out of order");
+}
+
+//                                              sprite         cd      dmg      range     size(collider)
+WeaponAddType(WeaponType_None,   "",            null,          0.0,    0,       0,        @(0,0) );
+WeaponAddType(WeaponType_Chisel, "chisel",      chisel_sprite, 1.0,    3,       3,        @(.85,.33)   );
+
+// == Projectile ============================================
+
+0 => int ProjectileType_None;
+1 => int ProjectileType_EnemyBasic;
+2 => int ProjectileType_Arrow;
+
+class Projectile {
+    int projectile_type;
+    string name;
+
+    // float dmg; // dmg dealt via contact OR projectile
+    // float dmg_scaling; // linearly scales with wave
+    // UI_Float speed; // range of speed to spawn with @(min, max)
+
+    // collider stuff
+    int b2_shape_type;
+    UI_Float2 size;          // for capsule: @(p1 -- p2, radius)
+                             // for box:     @(w, h)
+                             // for circle   @(radius, radius)
+    vec2 rotation;
+
+    UI_Float2 what;
+    fun static void ui() {
+        if (!UI.collapsingHeader("projectile types", 0)) return;
+
+        for (1 => int i; i < projectile_type_list.size(); ++i) {
+            projectile_type_list[i] @=> Projectile p;
+            UI.pushID(p.name);
+
+            UI.text(p.name);
+            UI.drag("size", p.size, .005);
+
+            UI.popID();
+            UI.separator();
+        }
+    }
+}
+
+
+Projectile projectile_type_list[0];
+fun void ProjectileAddType(int type, string name, int shape_type, vec2 size, float angle) {
+    Projectile p;
+    type => p.projectile_type;
+    name => p.name;
+    shape_type => p.b2_shape_type;
+    new UI_Float2(size) @=> p.size;
+    M.rot2vec(angle) => p.rotation;
+
+    projectile_type_list << p;
+    T.assert(projectile_type_list[type] == p, "adding projectile type out of order");
+}
+
+//                type,                        name,          shape_type,                size,      angle
+ProjectileAddType(ProjectileType_None,         "",            0,                         @(0,0),    0    );
+ProjectileAddType(ProjectileType_EnemyBasic,   "enemy_basic", b2ShapeType.circleShape,   @(.16,0),  0    );
+ProjectileAddType(ProjectileType_Arrow,        "arrow",       b2ShapeType.segmentShape,  @(.5,0),   0    );
 
 // == Entity ================================================
 
@@ -428,12 +635,13 @@ class Entity {
     int b2_group_idx;
 
     // hp
-    UI_Float hit_cd(0.0); // used for drawing hit flash
+    UI_Float hit_cd(0.0); // used for drawing hit flash. // @TODO: replace with gametime of last hit, use that for drawing instead
+    // UI_Float invuln_cd(0.0); // used for player invuln on hit
     UI_Float hp_max;
     UI_Float hp_curr;
 
     // movement
-    float speed;
+    float speed; // @TODO: might not need this, can just look up speed from EntityType
 
     // player
     int player_type;
@@ -442,76 +650,142 @@ class Entity {
 
     // enemy
     int enemy_type;
-    int target_player_id;
+    int target_player_id; // used by pursuer to lock on player
+    int touching_player_id; // set in contactEvents()
+    int touching_player_count; 
+    float enemy_contact_dmg_cd; // countdown timer for contact dmg
+
+    // projectile
+    int projectile_type;
+    float projectile_dmg;
+
+    // attack
+    float attack_cd; // look up max CD from the EntityType class. This is a countdown cd
 
     // weapon
     int weapon_type;
     int player_id; // b2bodyid of player this weapon belongs to
     int weapon_state;
-        // for attack targeting
-        vec2 weapon_attack_start_pos;
-        vec2 weapon_attack_dir;
-        float weapon_attack_dist;
 
     // @feature: ability to zero classes in chuck
     fun void zero() {
         // DON'T ZERO POOL IDX
         PoolState_Returned => this._pool_state;
 
+        T.assert(!b2Body.isValid(this.b2_body_id), "didn't destory body before return");
+        T.assert(!b2Shape.isValid(this.b2_shape_id), "didn't destory shape before return");
+
         0 => this.entity_type; 
         0 => this.b2_body_id;
+        0 => this.b2_shape_id;
         0 => this.b2_group_idx;
+
+        0 => this.hit_cd.val; // used for drawing hit flash
         0 => this.hp_max.val;
         0 => this.hp_curr.val;
+
+        0 => this.speed;
+
         0 => this.player_type;
+        0 => this.in_cart;
         0 => this.dead;
+
         0 => this.enemy_type;
+        0 => this.target_player_id;
+        0 => this.touching_player_id;
+        0 => this.touching_player_count;
+        0 => this.enemy_contact_dmg_cd;
+
+        0 => this.projectile_type;
+        0 => this.projectile_dmg;
+        0 => this.attack_cd;
 
         0 => this.weapon_type;
         0 => this.player_id;
         0 => this.weapon_state;
-
-        @(0,0) => this.weapon_attack_start_pos;
-        @(0,0) => this.weapon_attack_dir;
-        0 => this.weapon_attack_dist;
     }
 
     fun vec2 pos() { return b2Body.position(this.b2_body_id); }
     fun void pos(vec2 p) { b2Body.position(this.b2_body_id, p); }
     fun void rot(vec2 rot) { b2Body.rotation(this.b2_body_id, rot); }
+    fun vec2 rot() { return b2Body.rotation(this.b2_body_id); }
+
+    // rotate body to face p
+    fun void lookAt(vec2 p) {
+        p - this.pos() => vec2 dir;
+        dir.normalize();
+        this.rot(dir);
+    }
+
+    fun float angle() { return b2Body.angle(this.b2_body_id); }
     fun void vel(vec2 v) {  b2Body.linearVelocity(this.b2_body_id, v); }
     fun vec2 vel() {  return b2Body.linearVelocity(this.b2_body_id); }
+
+    // move towards p with this.speed velocity
+    fun void moveTo(vec2 p) { 
+        T.assert(this.entity_type == EntityType_Enemy, "moveTO not impl for non-enemy types");
+        p - this.pos() => vec2 dir; dir.normalize();
+        enemy_type_list[this.enemy_type].speed.val() => float speed;
+        b2Body.linearVelocity(this.b2_body_id, dir * speed);
+    }
+
+    // move in dir with this.speed velocity
+    fun void moveDir(vec2 dir) {
+        T.assert(this.entity_type == EntityType_Enemy, "moveDir not impl for non-enemy types");
+        enemy_type_list[this.enemy_type].speed.val() => float speed;
+        b2Body.linearVelocity(this.b2_body_id, dir * speed);
+    }
+
+    fun void die() {
+        if (this.entity_type == EntityType_Enemy) {
+            spork ~ FX.smokeCloud(this.pos(), Color.BLACK);
+            EntityReturn(this);
+
+            // add money!
+            enemy_type_list[this.enemy_type].drop +=> currency;
+        }
+        else if (this.entity_type == EntityType_Player) {
+
+        }
+        else if (this.entity_type == EntityType_Player) {
+
+        }
+        else {
+            T.err("in die(), unsupported entity type: " + this.entity_type);
+        }
+
+    }
 
     fun void takeDamage(float amt) {
         T.assert(this.hp_max.val() > 0, "calling damage() on entity without hp");
         if (this.hp_curr.val() <= 0) return; // already dead, do nothing
+        // if (this.invuln_cd.val() > 0) return; // invuln, do nothing
 
         t.easeOutQuad(this.hit_cd, 1.0, 0).over(.3);
+
+        // apply player invuln
+        // if (this.entity_type & EntityType_Player) {
+        //     t.lerp(this.invuln_cd, 1.0, 0).over(1);
+        // }
 
         this.hp_curr.val() - amt => this.hp_curr.val;
 
         // die
-        if (this.hp_curr.val() <= 0) { 
-            if (this.entity_type == EntityType_Enemy) {
-                spork ~ FX.smokeCloud(this.pos(), Color.BLACK);
-                EntityReturn(this);
-
-                // add money!
-                enemy_type_list[this.enemy_type].drop +=> currency;
-            } else {
-                T.err("calling damage on unsupported entity type: " + this.entity_type);
-            }
-        }
+        if (this.hp_curr.val() <= 0) this.die();
     }
 
 }
 
 // == gamestate ================================================
+
+UI_Float timescale(1.0);
+
 // physics
 b2WorldDef world_def;
 int b2_world_id;
 int begin_sensor_events[0];
 int begin_touch_events[0];
+int end_touch_events[0];
 
 UI_Bool draw_b2_debug(true);
 DebugDraw debug_draw;
@@ -529,8 +803,9 @@ Entity player_list[0];
 int players_num_alive;
 
 // weapon stuff
-UI_Float weapon_speed(8.0);
-UI_Float weapon_zeno(.4);
+UI_Float weapon_speed(30.0);
+UI_Float2 weapon_rest_pos(.8, 0.0); 
+UI_Float weapon_size(0.85);
 
 // spawning
 // UI_Float spawn_period(-1); // seconds until next spawn
@@ -564,9 +839,10 @@ Layer_Fog => fog_mesh.posZ;
 
 UI_Bool show_fog(true);
 
-// cart
+// cart params
+UI_Float cart_hp(20);
 UI_Float2 cart_size(1.67, 1.0);
-UI_Float cart_speed(.2);
+UI_Float cart_speed(.5);
 UI_Float cart_speed_mult(1.0);
 UI_Float cart_dodge(.0);
 float cart_wheel_rot;
@@ -582,9 +858,8 @@ cart_heal_period_sec.val() => float cart_heal_cd;
     // tower params
 int cart_arrow_tower_count;
 int cart_bomb_tower_count;
-AttackParams arrow_tower_atk(5.0, 2 * cart_size.val().x, 1.0);
+AttackParams arrow_tower_atk(5.0, 2 * cart_size.val().x, 1.0)[2];
 AttackParams bomb_tower_atk(10.0, 4 * cart_size.val().x, 3.2);
-
 
 vec2 cart_target;
 null @=> Entity@ cart;
@@ -725,7 +1000,7 @@ fun Entity PlayerAdd(int player_type, vec2 pos) {
     // assign stats
     pt.base_hp => player.hp_max.val;
     pt.base_hp => player.hp_curr.val;
-    pt.base_speed => player.speed;
+    pt.base_speed.val() => player.speed;
 
     T.assert(EntityHas(player.b2_body_id), "player not in pool but still registered in b2body LUT");
     return player;
@@ -759,6 +1034,10 @@ fun Entity CartAdd() {
     // geo
     b2.makeBox(cart_size.val().x, cart_size.val().y) @=> b2Polygon geo;
     b2.createPolygonShape(e.b2_body_id, shape_def, geo) => int shape_id;
+
+    // hp
+    20 => e.hp_max.val;
+    20 => e.hp_curr.val;
 
     T.assert(EntityHas(e.b2_body_id), "cart not registered in b2body LUT");
     return e;
@@ -800,7 +1079,7 @@ fun Entity EnemyClosest(vec2 pos, float range) {
         }
     }
 
-    return closest
+    return closest;
 }
 
 // gets random *living* player. null if none
@@ -823,20 +1102,65 @@ fun Entity EntityClosestFromShapes(vec2 pos, int shape_ids[]) {
     return closest;
 }
 
-fun Entity EnemyAdd(int enemy_type, vec2 pos) {
+fun int CreateShape(int b2_shape_type, int body_id, vec2 size, b2ShapeDef@ def) {
+    int shape_id;
+    if (b2_shape_type == b2ShapeType.polygonShape) {
+        // @optimize avoid creating a new b2Polygon object every time
+        b2.makeBox(size.x, size.y) @=> b2Polygon enemy_geo;
+        b2.createPolygonShape(body_id, def, enemy_geo) => shape_id;
+    }
+    else if (b2_shape_type == b2ShapeType.capsuleShape) {
+        b2.createCapsuleShape(
+            body_id, def, 
+            @(-size.x/2, 0),  // center1
+            @(size.x/2, 0),  // center1
+            size.y // radius
+        ) => shape_id;
+    }
+    else if (b2_shape_type == b2ShapeType.circleShape) {
+        b2.createCircleShape(
+            body_id, def, 
+            @(0, 0),
+            size.x // radius
+        ) => shape_id;
+    } 
+    else if (b2_shape_type == b2ShapeType.segmentShape) {
+        // for segments, `size` represents vector which is auto-centered
+        b2.createSegmentShape(
+            body_id, def, 
+            -.5 * size,
+            .5 * size
+        ) => shape_id;
+    }
+    else {
+        T.err("unrecognized shape type in CreateShape(): " + b2_shape_type);
+    }
+    return shape_id;
+}
+
+fun Entity EnemyAdd(int enemy_type, vec2 pos, int wave) {
     // @TODO test different spawn modes
     // @optimize: reuse static b2 defs 
+    enemy_type_list[enemy_type] @=> Enemy et;
+
+    // clampSpawnToArena
+    .5 * field_len.val() - 1.5 => float hw;
+    Math.clampf(pos.x, -hw, hw) => pos.x;
+    Math.clampf(pos.y, -hw, hw) => pos.y;
 
     // body
     b2BodyDef enemy_body_def;
     pos => enemy_body_def.position;
     b2BodyType.dynamicBody => enemy_body_def.type;
     true => enemy_body_def.fixedRotation;
+    et.rotation => enemy_body_def.rotation;
+
     b2.createBody(b2_world_id, enemy_body_def) => int body_id;
     
     // filter
     b2Filter enemy_filter;
     EntityType_Enemy => enemy_filter.categoryBits;
+    (0xFFFFFFFF ^ (EntityType_Enemy)) => enemy_filter.maskBits;
     // @TODO: we might want a separate collision shape at feet of enemy that only
     // collides with other enemies. Allows enemies to partially stack
 
@@ -850,30 +1174,8 @@ fun Entity EnemyAdd(int enemy_type, vec2 pos) {
     enemy_filter @=> enemy_shape_def.filter;
 
     // geo
-    int shape_id;
-    enemy_type_list[enemy_type] @=> Enemy et;
-    if (et.b2_shape_type == b2ShapeType.polygonShape) {
-        b2.makeBox(et.size.val().x, et.size.val().y) @=> b2Polygon enemy_geo;
-        b2.createPolygonShape(body_id, enemy_shape_def, enemy_geo) => shape_id;
-    }
-    else if (et.b2_shape_type == b2ShapeType.capsuleShape) {
-        b2.createCapsuleShape(
-            body_id, enemy_shape_def, 
-            @(-et.size.val().x/2, 0),  // center1
-            @(et.size.val().x/2, 0),  // center1
-            et.size.val().y // radius
-        ) => shape_id;
-    }
-    else if (et.b2_shape_type == b2ShapeType.circleShape) {
-        b2.createCircleShape(
-            body_id, enemy_shape_def, 
-            @(0, 0),
-            et.size.val().x // radius
-        ) => shape_id;
-    }
-    else {
-        T.err("unknown enemy shape type: " + et.b2_shape_type);
-    }
+    CreateShape(et.b2_shape_type, body_id, et.size.val(), enemy_shape_def) => int shape_id;
+    T.assert(b2Shape.isValid(shape_id), "EnemyAdd invalid shape id");
 
     // entity
     EntityAdd(
@@ -883,9 +1185,13 @@ fun Entity EnemyAdd(int enemy_type, vec2 pos) {
     ) @=> Entity enemy;
 
     enemy_type => enemy.enemy_type;
-    et.base_hp => enemy.hp_max.val;
-    et.base_hp => enemy.hp_curr.val;
-    Math.random2f(et.speed.val().x, et.speed.val().y) => enemy.speed;
+
+    et.base_hp + wave * et.hp_scaling => float max_hp;
+    max_hp => enemy.hp_max.val;
+    max_hp => enemy.hp_curr.val;
+    et.speed.val() => enemy.speed;
+    et.projectile_cd.val() => enemy.attack_cd;
+    Enemy.contact_dmg_cd.val() => enemy.enemy_contact_dmg_cd;
 
     return enemy;
 }
@@ -901,11 +1207,12 @@ fun Entity StaticAdd(vec2 vertices[], vec2 pos) {
     // filter
     b2Filter filter;
     EntityType_Static => filter.categoryBits;
-    EntityType_Player => filter.maskBits;
+    0xFFFFFFFF ^ EntityType_Enemy => filter.maskBits;
 
     // shape def
     b2ShapeDef shape_def;
     filter @=> shape_def.filter;
+    true => shape_def.enableSensorEvents;
 
     // shape
     for (int i; i < vertices.size(); ++i)
@@ -921,10 +1228,13 @@ fun Entity StaticAdd(vec2 vertices[], vec2 pos) {
 }
 
 // gives weapon to player
-fun Entity WeaponAdd(Entity@ player) {
+fun Entity WeaponAdd(int weapon_type, Entity@ player) {
+    weapon_type_list[weapon_type] @=> Weapon@ wt;
+
     // body
     b2BodyDef body_def;
     b2BodyType.kinematicBody => body_def.type;
+    UP => body_def.rotation;
     b2.createBody(b2_world_id, body_def) => int body_id;
 
     // filter
@@ -939,7 +1249,7 @@ fun Entity WeaponAdd(Entity@ player) {
     filter @=> shape_def.filter;
 
     // geo
-    b2.makeBox(.3 * player_size.val(), .3 * player_size.val()) @=> b2Polygon geo;
+    b2.makeBox(wt.size.x, wt.size.y) @=> b2Polygon geo;
     b2.createPolygonShape(body_id, shape_def, geo) => int shape_id;
 
     // entity
@@ -947,10 +1257,98 @@ fun Entity WeaponAdd(Entity@ player) {
         EntityType_Weapon,
         body_id, shape_id
     ) @=> Entity e;
-    // weapon_type => enemy.weapon_type; // @TODO
+    weapon_type => e.weapon_type;
     player.b2_body_id => e.player_id;
 
     return e;
+}
+
+fun void EnemyFire(int projectile_type, vec2 pos, vec2 dir, float speed, float dmg) {
+    projectile_type_list[projectile_type] @=> Projectile pt;
+    dir.normalize();
+
+    // body
+    b2BodyDef body_def;
+    b2BodyType.kinematicBody => body_def.type;
+    pos => body_def.position;
+    dir => body_def.rotation;
+    speed * dir => body_def.linearVelocity;
+
+    b2.createBody(b2_world_id, body_def) => int body_id;
+
+    // filter
+    b2Filter filter;
+    EntityType_EnemyProjectile => filter.categoryBits;
+    EntityType_Player | EntityType_Static | EntityType_Cart => filter.maskBits;
+
+    // shape
+    b2ShapeDef shape_def;
+    true => shape_def.enableSensorEvents;
+    true => shape_def.isSensor;
+    filter @=> shape_def.filter;
+
+    // geo
+    CreateShape(pt.b2_shape_type, body_id, pt.size.val(), shape_def) => int shape_id;
+    T.assert(b2Shape.isValid(shape_id), "EnemyFire invalid shape id");
+
+    // entity
+    EntityAdd(
+        EntityType_EnemyProjectile,
+        body_id, shape_id
+    ) @=> Entity e;
+    dmg => e.projectile_dmg;
+    projectile_type => e.projectile_type;
+
+    return;
+}
+
+fun void Fire(AttackParams@ p, float dt, int projectile_type, vec2 pos, vec2 target) {
+    projectile_type_list[projectile_type] @=> Projectile pt;
+
+    // check if off cooldown first
+    dt * p._atk_speed.val() -=> p.cd;
+    if (p.cd > 0) return;
+    p._cd_sec.val() +=> p.cd;
+
+    <<< "firing", pos, target >>>;
+
+    target - pos => vec2 dir;
+    dir.normalize();
+
+    // body
+    b2BodyDef body_def;
+    b2BodyType.kinematicBody => body_def.type;
+    pos => body_def.position;
+    dir => body_def.rotation;
+    // @TODO projectile speed
+    10 * dir => body_def.linearVelocity;
+
+    b2.createBody(b2_world_id, body_def) => int body_id;
+
+    // filter
+    b2Filter filter;
+    EntityType_PlayerProjectile => filter.categoryBits;
+    EntityType_Enemy | EntityType_Static => filter.maskBits;
+
+    // shape
+    b2ShapeDef shape_def;
+    true => shape_def.enableSensorEvents;
+    true => shape_def.isSensor;
+    filter @=> shape_def.filter;
+
+    // geo
+    CreateShape(pt.b2_shape_type, body_id, pt.size.val(), shape_def) => int shape_id;
+    T.assert(b2Shape.isValid(shape_id), "Player Projectile invalid shape id");
+
+    // entity
+    EntityAdd(
+        EntityType_PlayerProjectile,
+        body_id, shape_id
+    ) @=> Entity e;
+    projectile_type => e.projectile_type;
+    p.dmg() => e.projectile_dmg;
+
+    return;
 }
 
 fun void UpdateFogGeometry(float radius) {
@@ -1117,24 +1515,25 @@ class Spawn {
 }
 
 class SpawnManager {
-    Spawn spawn_list[];
+    Wave@ wave;
     float prev_time_sec;
     float curr_time_sec;
 
     // switches to the given spawn list
-    fun void register(Spawn spawn_list[]) {
+    fun void register(Wave wave) {
         0.0 => this.prev_time_sec;
-        spawn_list @=> this.spawn_list;
+        wave @=> this.wave;
     }
 
     // inner_r is bard vision, outer_r is s max spawn distance
     fun void update(float dt, vec2 bard_pos, float inner_r, float outer_r) {
+        if (wave == null) return;
         T.assert(outer_r > inner_r, "spawner invalid spawn ranges");
 
         this.curr_time_sec => this.prev_time_sec;
         dt +=> this.curr_time_sec;
 
-        for (auto spawn : spawn_list) {
+        for (auto spawn : this.wave.spawn_list) {
             int do_spawn;
             if (spawn.spawn_timing_type == SpawnTiming_OneShot) {
                 spawn.pre_delay_sec + spawn.interval_sec => float time_to_spawn;
@@ -1160,20 +1559,46 @@ class SpawnManager {
             if (spawn.location_type == SpawnLocation_Random) {
                 T.assert(spawn.spawn_group_radius == 0, "mistake: random spawn location specified nonzero group radius");
                 repeat (spawn.number) {
-                    EnemyAdd(spawn.enemy_type, M.randomPointInCircle(bard_pos, inner_r, outer_r));
+                    EnemyAdd(spawn.enemy_type, M.randomPointInCircle(bard_pos, inner_r, outer_r), this.wave.wave_number);
                 }
             }
             else if (spawn.location_type == SpawnLocation_Group) {
                 // adjust inner_r so that the radius of the spawn group doesn't intersect with bard circle
                 M.randomPointInCircle(bard_pos, inner_r + spawn.spawn_group_radius, outer_r) => vec2 group_center;
                 repeat (spawn.number) {
-                    EnemyAdd(spawn.enemy_type, M.randomPointInCircle(group_center, 0, spawn.spawn_group_radius));
+                    EnemyAdd(
+                        spawn.enemy_type, 
+                        M.randomPointInCircle(group_center, 0, spawn.spawn_group_radius), 
+                        this.wave.wave_number
+                    );
                 }
             }
             else {
                 T.err("unknown spawn location " + spawn.location_type);
             }
         }
+    }
+
+    UI_Int spawner_wave_num;
+    fun void ui() {
+        // wave and spawn UI
+        UI.separatorText("wave");
+        if (UI.listBox("wave", curr_wave, wave_names)) {
+            spawn_manager.register(wave_list[curr_wave.val()]);
+        }
+
+        UI.inputInt("Manual Spawn Wave# ", this.spawner_wave_num);
+
+        for (1 => int i; i < enemy_type_list.size(); ++i) {
+            enemy_type_list[i] @=> Enemy et;
+            UI.pushID(et.enemy_type);
+            if (UI.button("Spawn " + et.name)) {
+                EnemyAdd(et.enemy_type, M.randomPointInCircle(bard.pos(), spawn_inner_r.val(), spawn_outer_r.val()), this.spawner_wave_num.val());
+            }
+
+            UI.popID();
+        }
+
     }
 }
 
@@ -1184,7 +1609,7 @@ class Wave {
     Spawn spawn_list[];
 }
 
-UI_Int curr_wave(-1);
+UI_Int curr_wave(0);
 Wave wave_list[0];
 string wave_names[0];
 
@@ -1207,16 +1632,6 @@ new Spawn(EnemyType_Pursuer,SpawnLocation_Group,   1,             4,        Spaw
 ]);
 
 
-// == load assets ================================================
-TextureLoadDesc tex_load_desc;
-true => tex_load_desc.flip_y;
-false => tex_load_desc.gen_mips;
-Texture.load(me.dir() + "./assets/bard.bmp", tex_load_desc) @=> Texture bard_sprite;
-Texture.load(me.dir() + "./assets/knight.bmp", tex_load_desc) @=> Texture knight_sprite;
-Texture.load(me.dir() + "./assets/ground_8x8.png", tex_load_desc) @=> Texture ground_texture;
-Texture.load(me.dir() + "./assets/cart.png", tex_load_desc) @=> Texture cart_sprite;
-Texture.load(me.dir() + "./assets/wheel.png", tex_load_desc) @=> Texture wheel_sprite;
-
 
 // == rooms (maybe this was a bad idea) ================================================
 
@@ -1231,6 +1646,7 @@ fun void leave() {
 }
 
 fun Room update(float dt) { 
+    curr_wave.val() => int wave_number;
 
 // == process collisions ================================================
 b2World.sensorEvents(b2_world_id, begin_sensor_events, null);
@@ -1244,25 +1660,70 @@ for (int i; i < begin_sensor_events.size(); 2 +=> i) {
     EntityFromShape(sensor_shape_id) @=> Entity sensor;
     EntityFromShape(visitor_shape_id) @=> Entity visitor;
 
-    // weapon collide
+    // collide weapon
     if (sensor.entity_type == EntityType_Weapon) {
         T.assert(visitor.entity_type == EntityType_Enemy, "weapon collide with non-enemy");
-        visitor.takeDamage(1.0);
+        visitor.takeDamage(weapon_type_list[sensor.weapon_type].base_dmg.val());
+    }
+    // collide player projectile
+    if (sensor.entity_type == EntityType_PlayerProjectile) {
+        <<< "projectile collision" >>>;
+
+        spork ~ FX.bulletHitEffect(sensor.pos(), .3);
+        EntityReturn(sensor);
+
+        if (visitor.entity_type == EntityType_Static) { 
+        }
+        else if (visitor.entity_type == EntityType_Enemy) {
+            visitor.takeDamage(sensor.projectile_dmg);
+        } else {
+            T.err("unhandled player projectile collision with entity type " + visitor.entity_type);
+        }
+    }
+    else if (sensor.entity_type == EntityType_EnemyProjectile) {
+        EntityReturn(sensor);
+        if (visitor.entity_type & (EntityType_Player | EntityType_Cart)) {
+            visitor.takeDamage(sensor.projectile_dmg);
+        }
     }
 
     // z.returnEntity(sensor);
 }
 
-b2World.contactEvents(b2_world_id, begin_touch_events, null, null);
+b2World.contactEvents(b2_world_id, begin_touch_events, end_touch_events, null);
 for (int i; i < begin_touch_events.size(); 2 +=> i) {
     begin_touch_events[i] => int touch_shape_a;
     begin_touch_events[i+1] => int touch_shape_b;
     if (!b2Shape.isValid(touch_shape_a) || !b2Shape.isValid(touch_shape_b)) continue;
-    b2Shape.body(begin_touch_events[i]) => int touch_body_id_a;
-    b2Shape.body(begin_touch_events[i+1]) => int touch_body_id_b;
+    b2Shape.body(touch_shape_a) => int touch_body_id_a;
+    b2Shape.body(touch_shape_b) => int touch_body_id_b;
     if (!b2Body.isValid(touch_body_id_a) || !b2Body.isValid(touch_body_id_b)) continue;
     EntityGet(touch_body_id_a) @=> Entity a;
     EntityGet(touch_body_id_b) @=> Entity b;
+
+    a.entity_type & EntityType_Enemy => int a_is_enemy;
+    b.entity_type & EntityType_Enemy => int b_is_enemy;
+
+    <<< "contact event", a_is_enemy, b_is_enemy >>>;
+
+    // contact enemy
+    T.assert(!a_is_enemy, "assuming enemy is always second in contact event pair");
+    if (b_is_enemy) {
+        b @=> Entity@ enemy;
+        if (a.entity_type & (EntityType_Player | EntityType_Cart)) {
+            T.assert(
+                (enemy.touching_player_count == 0 && enemy.touching_player_id == 0)
+                ||
+                (enemy.touching_player_count > 0 && b2Body.isValid(enemy.touching_player_id)),
+                "enemy contact semantics"
+            );
+            a.b2_body_id => enemy.touching_player_id;
+            ++enemy.touching_player_count;
+        }
+        else {
+            T.err("unhandled enemy contact with entity type " + a.entity_type);
+        }
+    }
 
     // a.entity_type & EntityType_Spell => int a_is_spell;
     // b.entity_type & EntityType_Spell => int b_is_spell;
@@ -1276,22 +1737,34 @@ for (int i; i < begin_touch_events.size(); 2 +=> i) {
     // if (b_is_player) playerCollide(b, a);
 }
 
-// == enemy spawn ================================================
-// if (spawn_period.val() > 0) {
-//     dt +=> time_since_last_spawn;
-//     if (time_to_next_spawn <= 0) M.poisson(spawn_period.val()) => time_to_next_spawn;
+for (int i; i < end_touch_events.size(); 2 +=> i) {
+    end_touch_events[i] => int touch_shape_a;
+    end_touch_events[i+1] => int touch_shape_b;
+    if (!b2Shape.isValid(touch_shape_a) || !b2Shape.isValid(touch_shape_b)) continue;
+    b2Shape.body(touch_shape_a) => int touch_body_id_a;
+    b2Shape.body(touch_shape_b) => int touch_body_id_b;
+    if (!b2Body.isValid(touch_body_id_a) || !b2Body.isValid(touch_body_id_b)) continue;
+    EntityGet(touch_body_id_a) @=> Entity a;
+    EntityGet(touch_body_id_b) @=> Entity b;
 
-//     while (time_since_last_spawn > time_to_next_spawn) {
-//         // spawnPickup(M.randomPointInArea(@(0, 0), .8 * dungeon_hw, .8 * dungeon_hw), ZSensorType_SpawnZone) @=> ZEntity e;
-//         // 4.0 => e.time_to_spawn_secs;
+    a.entity_type & EntityType_Enemy => int a_is_enemy;
+    b.entity_type & EntityType_Enemy => int b_is_enemy;
 
-//         // @TODO replace center w/ bard pos
-//         EnemyAdd(EnemyType_Basic, M.randomPointInCircle(bard.pos(), spawn_inner_r.val(), spawn_outer_r.val()));
-
-//         time_to_next_spawn -=> time_since_last_spawn;
-//         M.poisson(spawn_period.val()) => time_to_next_spawn;
-//     }
-// }
+    T.assert(!a_is_enemy, "assuming enemy is always second in end_contact event pair");
+    if (b_is_enemy) {
+        b @=> Entity@ enemy;
+        if (a.entity_type & (EntityType_Player | EntityType_Cart)) {
+            T.assert(enemy.touching_player_count > 0, "enemy player contact refcoount busted");
+            --enemy.touching_player_count;
+            if (enemy.touching_player_count == 0) {
+                0 => enemy.touching_player_id;
+            }
+        }
+        else {
+            T.err("unhandled enemy contact with entity type " + a.entity_type);
+        }
+    }
+}
 
 // == input ================================================
 
@@ -1301,6 +1774,8 @@ for (int player_idx; player_idx < player_list.size(); ++player_idx) {
     if (player.player_type == PlayerType_Bard) continue; // maybe the bard shouldn't be a player?
     if (player.dead) continue;
 
+    player_type_list[player.player_type] @=> Player pt;
+
     vec2 dir;
     if (GWindow.key(GWindow.KEY_A)) 1 -=> dir.x;
     if (GWindow.key(GWindow.KEY_D)) 1 +=> dir.x;
@@ -1308,7 +1783,7 @@ for (int player_idx; player_idx < player_list.size(); ++player_idx) {
     if (GWindow.key(GWindow.KEY_W)) 1 +=> dir.y;
     dir.normalize();
     // if (dir.x != 0) dir.x => player.last_dir_x;
-    b2Body.linearVelocity(player.b2_body_id, dir * 3); // @TODO: speed should be a stat
+    b2Body.linearVelocity(player.b2_body_id, dir * pt.base_speed.val());
 }
 
 { // verify alive players are contiguous and at start of array
@@ -1319,14 +1794,25 @@ for (players_num_alive => int i; i < player_list.size(); ++i) T.assert(player_li
 // == update ================================================
 
 { // update cart
+.5 * .75 * field_len.val() => float hw;
+// debug draw bounds
+g.pushLayer(Layer_DebugDraw);
+g.square(@(0,0), 0, 2*hw, Color.WHITE);
+g.popLayer();
+
 if (M.dist(cart.pos(), cart_target) < .05) {
     M.randomPointInCircle(cart.pos(), 1, spawn_inner_r.val()) => cart_target;
-    // clamp to arena bounds
-    .5 * field_len.val() - cart_size.val().x => float hw;
 
-    Math.clampf(cart_target.x, -hw, hw) => cart_target.x;
-    Math.clampf(cart_target.y, -hw, hw) => cart_target.y;
+    // cart stays within inner 75% of the arena
+
+
+    // bounce away from edges
+    if (cart_target.x > hw) cart.pos().x - (cart_target.x - cart.pos().x) => cart_target.x;
+    if (cart_target.x < -hw) cart.pos().x + (cart.pos().x - cart_target.x) => cart_target.x;
+    if (cart_target.y > hw) cart.pos().y - (cart_target.y - cart.pos().y) => cart_target.y;
+    if (cart_target.y < -hw) cart.pos().y + (cart.pos().y - cart_target.y) => cart_target.y;
     T.assert(M.inside(cart_target, M.aabb(@(0,0), hw, hw)), "cart target is not inside bounds");
+    T.assert(M.dist(cart_target, cart.pos()) < spawn_inner_r.val(), "cart target is not inside spawn_inner_r");
 }
 cart_speed.val() * M.dir(cart.pos(), cart_target) => cart.vel;
 
@@ -1366,11 +1852,10 @@ if (UpgradeHas(Upgrade_Cart_Ambulance)) {
 
 // tower upgrade
 for (int i; i < cart_arrow_tower_count; i++) {
-    EnemyClosest(cart.pos(), arrow_tower_atk.range()) @=> Enemy target;
+    EnemyClosest(cart.pos(), arrow_tower_atk[i].range()) @=> Entity target;
     if (target == null) continue;
 
-    // FireProjectile
-
+    Fire(arrow_tower_atk[i], dt, ProjectileType_Arrow, cart.pos(), target.pos());
 }
 
 } // update cart
@@ -1393,10 +1878,23 @@ fog_mesh.pos(bard.pos());
 // update entity
 for (int entity_idx; entity_idx < entity_count; ++entity_idx) {
     entity_pool[entity_idx] @=> Entity e;
+    e.pos() => vec2 pos;
 
     // update enemy
     if (e.entity_type == EntityType_Enemy) {
-        enemy_type_list[e.enemy_type] @=> Enemy enemy_t;
+        enemy_type_list[e.enemy_type] @=> Enemy et;
+
+        // all enemies do contact dmg, process that first
+        dt -=> e.enemy_contact_dmg_cd;
+        if (e.touching_player_count > 0 && e.enemy_contact_dmg_cd <= 0) {
+            Enemy.contact_dmg_cd.val() => e.enemy_contact_dmg_cd; // reset cd
+            EntityGet(e.touching_player_id) @=> Entity player;
+            player.takeDamage(et.dmg(wave_number));
+
+            // lurch towards player as attack animation
+            M.dir(pos, player.pos()) => vec2 attack_dir;
+            e.pos(pos + Enemy.contact_attack_anim_amt.val() * attack_dir);
+        }
 
         if (e.enemy_type == EnemyType_Basic) {
             // find closest player
@@ -1420,22 +1918,71 @@ for (int entity_idx; entity_idx < entity_count; ++entity_idx) {
                 e.vel(dir * e.speed);
                 e.rot(dir);
             }
-        } else {
+        } 
+        else if (e.enemy_type == EnemyType_Shooter) {
+            // behavior idea:
+            // stays around perimeter of inner circle, (fixed distance from bard) 
+            // shoots bullets in 4 directions
+            vec2 dir;
+            M.dir(e.pos(), bard.pos()) => vec2 dir_to_bard;
+            M.dist(e.pos(), bard.pos()) => float d;
+
+            if (d > spawn_inner_r.val()) {
+                // move towards bard
+                dir_to_bard +=> dir;
+            } 
+            if (d < spawn_inner_r.val() - 1) {
+                // move way from bard
+                -1*dir_to_bard +=> dir;
+            } 
+            // orbit bard
+            M.perp(dir_to_bard) +=> dir;
+            e.moveDir(dir);
+
+            // fire on cd
+            dt -=> e.attack_cd;
+            if (e.attack_cd <= 0) {
+                projectile_type_list[ProjectileType_EnemyBasic] @=> Projectile pt;
+                et.dmg(wave_number) => float dmg;
+                EnemyFire(ProjectileType_EnemyBasic, pos, UP, et.projectile_speed.val(), dmg);
+                EnemyFire(ProjectileType_EnemyBasic, pos, DOWN, et.projectile_speed.val(), dmg);
+                EnemyFire(ProjectileType_EnemyBasic, pos, LEFT, et.projectile_speed.val(), dmg);
+                EnemyFire(ProjectileType_EnemyBasic, pos, RIGHT, et.projectile_speed.val(), dmg);
+                et.projectile_cd.val() +=> e.attack_cd;
+            }
+        } 
+        else {
             T.err("unknown enemy type " + e.enemy_type);
         }
     }
 
     // update weapon
     if (e.entity_type == EntityType_Weapon) {
-        1.0 => float weapon_range; // @TODO
-        EntityGet(e.player_id) @=> Entity p;
-        p.pos() + @(.5 * player_size.val(), 0) => vec2 rest_pos;
+        // determine phase from the timing
+        weapon_type_list[e.weapon_type] @=> Weapon w;
+        
+        // current idea: break entire cd into 4 equal-sized phases:
+        // 1. lerp to attack target
+        // 2. hold at attack target
+        // 3. lerp to rest position
+        // 4. rest position
+
+        w.base_range.val() => float weapon_range;
+        EntityGet(e.player_id) @=> Entity p; 
+        T.assert(p != null, "weapon must belong to player");
+
+        // @TODO rest_pos should be based on number of weapons held by player
+        // p.pos() + @(0, -.5 * player_size.val()) => vec2 rest_pos;
+        p.pos() + weapon_rest_pos.val() => vec2 rest_pos;
+        dt -=> e.attack_cd;
 
         // check for enemies in range
         if (e.weapon_state == WeaponState_Rest) {
             T.assert(!b2Shape.areSensorEventsEnabled(e.b2_shape_id), "sensors enabled on weapon at rest");
+            e.pos(rest_pos);
 
-            e.pos(p.pos() + @(.5 * player_size.val(), 0));
+            // default rest angle
+            e.rot(UP);
 
             // query for enemies in range
             // @optimize pass in int[], don't reallocate
@@ -1447,33 +1994,43 @@ for (int entity_idx; entity_idx < entity_count; ++entity_idx) {
             b2World.overlapCircle( b2_world_id, e.pos(), weapon_range, filter) @=> int enemies_in_range[];
             if (enemies_in_range.size() > 0) {
                 EntityClosestFromShapes(e.pos(), enemies_in_range) @=> Entity target;
+                e.lookAt(target.pos());
 
                 // attack!
-                WeaponState_Attack => e.weapon_state;
-                b2Shape.enableSensorEvents(e.b2_shape_id, true);
-                e.pos() => e.weapon_attack_start_pos;
-                weapon_speed.val() * M.dir(e.pos(), target.pos()) => e.vel;
-                weapon_range => e.weapon_attack_dist;
+                if (e.attack_cd <= 0) {
+                    WeaponState_Attack => e.weapon_state;
+                    b2Shape.enableSensorEvents(e.b2_shape_id, true);
+                    // weapon_speed.val() * M.dir(e.pos(), target.pos()) => e.vel;
+
+                    // reset cd
+                    w.base_cd_sec.val() => e.attack_cd;
+                }
             }
-        } else if (e.weapon_state == WeaponState_Attack) {
+        } 
+        else if (e.weapon_state == WeaponState_Attack) {
             // don't zeno interp because there's no dt
             T.assert(b2Shape.areSensorEventsEnabled(e.b2_shape_id), "sensor not enabled on weapon");
 
-            // reached target, return
-            if (M.dist(e.pos(), e.weapon_attack_start_pos) > weapon_range) {
-                WeaponState_Return => e.weapon_state;
-                @(0,0) => e.vel;
-            }
-        } else if (e.weapon_state == WeaponState_Return) {
-            // zeno interp back @TODO add BSC GingerBill math video dt modification
-            e.pos() + weapon_zeno.val() * (rest_pos - e.pos()) => e.pos;
+            M.dist(e.pos(), rest_pos) => float dist_from_rest;
+            dt * weapon_speed.val() => float dist_to_travel;
 
-            if (M.dist(e.pos(), rest_pos) < .01) {
-                rest_pos => e.pos;
-                WeaponState_Rest => e.weapon_state;
-                b2Shape.enableSensorEvents(e.b2_shape_id, false);
+            // lerping to target in first half of cd
+            if (e.attack_cd > .5 * w.base_cd_sec.val()) {
+                Math.min(dist_from_rest + dist_to_travel, weapon_range) => float dist;
+                rest_pos + dist * e.rot() => e.pos;
+            } else { // lerping back to rest pos in second half of cd
+                // made it back to rest pos, transition to rest state
+                if (dist_from_rest < dist_to_travel) {
+                    WeaponState_Rest => e.weapon_state;
+                    rest_pos => e.pos;
+                    b2Shape.enableSensorEvents(e.b2_shape_id, false);
+                } else {
+                    // lerp back to rest pos
+                    rest_pos + Math.max(dist_from_rest - dist_to_travel, 0) * e.rot() => e.pos;
+                }
             }
-        } else {
+        } 
+        else {
             T.err("unrecognized weapon state " + e.weapon_state);
         }
     }
@@ -1503,12 +2060,22 @@ g.popPolygonRadius();
 g.popLayer();
 
 // draw bard (sprite is drawn in player update loop)
-if (draw_b2_debug.val()) {
-g.pushLayer(Layer_DebugDraw); 
-g.circle(bard.pos(), spawn_inner_r.val(), Color.RED);
-g.circle(bard.pos(), spawn_outer_r.val(), Color.RED);
-if (!bard.in_cart) g.dashed(bard_target, bard.pos(), Color.WHITE, .1);
-g.popLayer(); 
+{
+    if (draw_b2_debug.val()) {
+    g.pushLayer(Layer_DebugDraw); 
+    g.circle(bard.pos(), spawn_inner_r.val(), Color.RED);
+    g.circle(bard.pos(), spawn_outer_r.val(), Color.RED);
+    if (!bard.in_cart) g.dashed(bard_target, bard.pos(), Color.WHITE, .1);
+    g.popLayer(); 
+    }
+        // bard voice transcription
+    g.pushTextMaxWidth(2);
+    g.pushTextControlPoint(.5, 0);
+    voice.transcription_raw => string bard_text;
+    bard_text.replace("[BLANK_AUDIO]", "...");
+    g.text(bard_text, bard.pos() + @(0, .3), .4);
+    g.popTextControlPoint();
+    g.popTextMaxWidth();
 }
 
 // draw cart
@@ -1533,6 +2100,11 @@ g.sprite(wheel_sprite, wheel1, 2 * wheel_radius, cart_wheel_rot);
 g.sprite(wheel_sprite, wheel2, 2 * wheel_radius, cart_wheel_rot);
 g.popLayer();
 
+g.pushLayer(Layer_DebugDraw);
+g.circleDotted(cart.pos(), arrow_tower_atk[0].range(), 0, Color.BROWN);
+g.popLayer();
+
+
 // g.(bard_target, bard.pos(), Color.WHITE, .1);
 
 // draw player
@@ -1552,12 +2124,13 @@ for (int player_idx; player_idx < player_list.size(); ++player_idx) {
         );
     }
 
+    M.lerp(player.hit_cd.val(), Color.WHITE, Color.RED) => vec3 color;
     if (player.player_type == PlayerType_Carpenter) {
         // @TODO sprite should be field of Entity
-        g.sprite(knight_sprite, pos, player_size.val(), 0);
+        g.sprite(knight_sprite, pos, player_size.val(), 0, color);
     }
     else if (player.player_type == PlayerType_Bard) {
-        g.sprite(bard_sprite, pos, player_size.val(), 0);
+        g.sprite(bard_sprite, pos, player_size.val(), 0, color);
         // <<< "bard pos", player.pos() >>>;
     }
 }
@@ -1566,6 +2139,7 @@ for (int player_idx; player_idx < player_list.size(); ++player_idx) {
 // draw entity
 for (int entity_idx; entity_idx < entity_count; ++entity_idx) {
     entity_pool[entity_idx] @=> Entity e;
+    e.pos() => vec2 pos;
 
     if (e.entity_type == EntityType_Static) {
         // not drawing borders for now
@@ -1579,28 +2153,87 @@ for (int entity_idx; entity_idx < entity_count; ++entity_idx) {
         M.normalize(e.vel()) => vec2 dir;
         M.perp(dir) => vec2 perp;
 
+        e.hit_cd.val() * Color.WHITE + Color.BLACK => vec3 color;
+
         if (e.enemy_type == EnemyType_Basic) {
             et.size.val().x => float r;
 
-            e.pos() + .4 * r * dir + .2 * r * perp => vec2 eye1;
-            e.pos() + .4 * r * dir - .2 * r * perp => vec2 eye2;
-            g.circleFilled(e.pos(), r, e.hit_cd.val() * Color.WHITE + Color.BLACK);
-            g.pushLayer(Layer_Light);
-            g.circleFilled(eye1, .08 * r, Color.YELLOW);
-            g.circleFilled(eye2, .08 * r, Color.YELLOW);
-            g.popLayer();
+            g.circleFilled(e.pos(), r, color);
+
+            if (e.hit_cd.val() <= 0) {
+                g.pushLayer(Layer_Light);
+                e.pos() + .4 * r * dir + .2 * r * perp => vec2 eye1;
+                e.pos() + .4 * r * dir - .2 * r * perp => vec2 eye2;
+                g.circleFilled(eye1, .08 * r, Color.YELLOW);
+                g.circleFilled(eye2, .08 * r, Color.YELLOW);
+                g.popLayer();
+            }
         }
         else if (e.enemy_type == EnemyType_Pursuer) {
+            et.size.val().x => float l;
+            g.capsuleFilled(e.pos(), l, et.size.val().y, e.angle(), color);
+            g.pushLayer(Layer_Light);
+            g.circleFilled(e.pos() + .5 * l * e.rot(), .15 * l, Color.YELLOW);
+            g.popLayer();
+        } 
+        else if (e.enemy_type == EnemyType_Shooter) {
+            et.size.val().x / 2 => float l;
+            g.pushPolygonRadius(l/2);
+            g.squareFilled(e.pos(), Math.pi/4, l, color);
+            g.popPolygonRadius();
 
-        } else {
+            g.pushLayer(Layer_Light);
+            .14 * l => float r;
+            g.circleFilled(e.pos() + .8 * l*@(1, 0), r, Color.YELLOW);
+            g.circleFilled(e.pos() + .8 * l*@(-1, 0), r, Color.YELLOW);
+            g.circleFilled(e.pos() + .8 * l*@(0, 1), r, Color.YELLOW);
+            g.circleFilled(e.pos() + .8 * l*@(0, -1), r, Color.YELLOW);
+            g.popLayer();
+        }
+        else {
             T.err("cannot draw enemy type " + e.enemy_type);
         }
 
     }
     else if (e.entity_type == EntityType_Weapon) {
+        weapon_type_list[e.weapon_type] @=> Weapon w;
         // debug range
         g.pushLayer(Layer_DebugDraw);
-        g.circle(e.pos(), 1.0, Color.WHITE);
+        g.circle(e.pos(), w.base_range.val(), Color.WHITE);
+        g.popLayer();
+
+        g.sprite(chisel_sprite, pos, weapon_size.val(), e.angle());
+    }
+    else if (e.entity_type == EntityType_PlayerProjectile) {
+        projectile_type_list[e.projectile_type] @=> Projectile pt;
+        if (e.projectile_type == ProjectileType_Arrow) {
+            g.pushLayer(Layer_Projectile);
+            // g.pushEmission(Color.WHITE);
+            g.pushColor(2 * Color.WHITE);
+            g.sprite(arrow_sprite, e.pos(), pt.size.val().x, e.angle());
+            // g.sprite(arrow_sprite, e.pos(), 10, e.angle());
+            g.popColor();
+            // g.popEmission();
+            g.popLayer();
+        }
+        else {
+            T.err("cannot draw player projectile type " + e.projectile_type);
+
+        }
+    }
+    else if (e.entity_type == EntityType_EnemyProjectile) {
+        g.pushLayer(Layer_Projectile);
+
+        projectile_type_list[e.projectile_type] @=> Projectile p;
+        if (e.projectile_type == ProjectileType_EnemyBasic) {
+            p.size.val().x => float r;
+            g.circleFilled(pos, r, Color.RED);
+            g.circleFilled(pos, .8 * r, Color.WHITE);
+        }
+        else {
+            T.err("cannot draw projectile type " + e.projectile_type);
+        }
+        
         g.popLayer();
     }
     else {
@@ -1716,14 +2349,14 @@ StaticAdd([
 CartAdd() @=> cart;
 PlayerAdd(PlayerType_Bard, @(0,0)) @=> bard;
 PlayerAdd(PlayerType_Carpenter, @(1,0)) @=> Entity player1;
-WeaponAdd(player1);
+WeaponAdd(WeaponType_Chisel, player1);
 
-// put bard in cart
+// put bard in cart (need to disable collision)
 true => bard.in_cart;
+b2Body.disable(bard.b2_body_id);
+// q: should players collide with enemies?
 b2Shape.enableSensorEvents(bard.b2_shape_id, false);
 b2Shape.enableContactEvents(bard.b2_shape_id, false);
-
-EnemyAdd(EnemyType_Basic, @(0, 1));
 
 UpdateFogGeometry(spawn_inner_r.val());
 
@@ -1735,11 +2368,15 @@ RoomEnter(rooms[curr_room_idx.val()]);
 
 while (1) {
 GG.nextFrame() => now;
-GG.dt() => float dt;
+GG.dt() * timescale.val() => float dt;
 
 { // ui
 UI.setNextWindowBgAlpha(0.00);
 UI.begin("");
+
+if (UI.slider("timescale", timescale, 0.0, 2.0)) {
+    timescale.val() => b2.rate;  // adjust physics rate.
+}
 
 if (UI.listBox("room", curr_room_idx, room_names)) {
     RoomEnter(rooms[curr_room_idx.val()]);
@@ -1760,30 +2397,32 @@ if (UI.checkbox("fog", show_fog)) {
 }
 if (UI.slider("alpha", fog_alpha, 0.0, 1.0)) fog_material.alpha(fog_alpha.val());
 
-UI.separatorText("enemy");
-// UI.slider("spawn period (sec)", spawn_period, .1, 5);
+UI.separatorText("spawn zone");
 if (UI.slider("spawn inner radius", spawn_inner_r, 0, 10)) UpdateFogGeometry(spawn_inner_r.val());
 UI.slider("spawn outer radius", spawn_outer_r, 1, 10);
 
 UI.separatorText("weapons");
-UI.slider("weapon speed", weapon_speed, 0, 10);
-UI.slider("weapon zeno", weapon_zeno, 0, 1);
+UI.slider("weapon speed", weapon_speed, 0, 50);
+UI.drag("weapon rest pos", weapon_rest_pos, .01);
+UI.slider("weapon size", weapon_size, 0, 2);
 
-UI.separatorText("cart");
-UI.slider("speed", cart_speed, 0.0, 1.0);
-UI.slider("speed mult", cart_speed_mult, 0.0, 2.0);
-
-UI.separatorText("wave");
-if (UI.listBox("wave", curr_wave, wave_names)) {
-    spawn_manager.register(wave_list[curr_wave.val()].spawn_list);
-}
-
-
+voice.ui();
+Player.ui();
+Weapon.ui();
+Projectile.ui();
+Enemy.ui();
+spawn_manager.ui();
 
 UI.separatorText("Entity Stats");
 UI.text("#Entities: " + (player_list.size() + entity_count));
 UI.text("#Players: " + player_list.size());
 
+
+UI.separatorText("cart");
+UI.slider("speed", cart_speed, 0.0, 1.0);
+UI.slider("speed mult", cart_speed_mult, 0.0, 2.0);
+UI.slider("cart max hp", cart.hp_max, 0.0, 50.0);
+UI.slider("cart curr hp", cart.hp_curr, 0.0, cart.hp_max.val());
 
 UI.separatorText("upgrades");
 for (1 => int i; i < upgrade_type_list.size(); i++) {
@@ -1821,7 +2460,7 @@ rooms[curr_room_idx.val()].update(dt) @=> Room@ next_room;
 if (next_room != null) RoomEnter(next_room);
 
 // == cleanup / bookkeeping ================================================
-if (draw_b2_debug.val()) debug_draw.update();
+debug_draw.update();
 t.update(dt);
 EntityProcessReturned();
 }

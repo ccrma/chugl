@@ -55,6 +55,7 @@ public class G2D extends GGen
 	[null] @=> string font_stack[];
 	[1.0] @=> float font_size_stack[];
 	[Color.WHITE] @=> vec3 color_stack[];
+	[Color.BLACK] @=> vec3 emission_stack[];
 	[0.0] @=> float layer_stack[]; // z depth
 	[0.0] @=> float polygon_radius_stack[]; // rounded corners
 
@@ -64,6 +65,8 @@ public class G2D extends GGen
 	fun void popFontSize() { font_size_stack.popBack(); }
 	fun void pushColor(vec3 c) { color_stack << c; }
 	fun void popColor() { color_stack.popBack(); }
+	fun void pushEmission(vec3 c) { emission_stack << c; }
+	fun void popEmission() { emission_stack.popBack(); }
 	fun void pushLayer(float layer) { 
 		layer_stack << layer; 
 		layer => lines.z_layer;
@@ -439,25 +442,31 @@ public class G2D extends GGen
 
     // ---------- sprites ----------
 	fun void sprite(Texture tex, vec2 pos) {
-		sprites.sprite(tex, @(pos.x, pos.y, layer_stack[-1]), @(1,1), 0, color_stack[-1]);
+		sprites.sprite(tex, @(pos.x, pos.y, layer_stack[-1]), @(1,1), 0, color_stack[-1], emission_stack[-1]);
 	}
 
 	fun void sprite(Texture tex, vec2 pos, float sca, float rot) {
-		sprites.sprite(tex, @(pos.x, pos.y, layer_stack[-1]), @(sca,sca), rot, color_stack[-1]);
+		sprites.sprite(tex, @(pos.x, pos.y, layer_stack[-1]), @(sca,sca), rot, color_stack[-1], emission_stack[-1]);
+	}
+
+	fun void sprite(Texture tex, vec2 pos, float sca, float rot, vec3 color) {
+		sprites.sprite(tex, @(pos.x, pos.y, layer_stack[-1]), @(sca,sca), rot, color, emission_stack[-1]);
 	}
 	
 	fun void sprite(Texture tex, vec2 pos, vec2 sca, float rot) {
-		sprites.sprite(tex, @(pos.x, pos.y, layer_stack[-1]), sca, rot, color_stack[-1]);
+		sprites.sprite(tex, @(pos.x, pos.y, layer_stack[-1]), sca, rot, color_stack[-1], emission_stack[-1]);
 	}
 
 	fun void sprite(Texture tex, vec2 pos, vec2 sca, float rot, vec3 color) {
-		sprites.sprite(tex, @(pos.x, pos.y, layer_stack[-1]), sca, rot, color);
+		sprites.sprite(tex, @(pos.x, pos.y, layer_stack[-1]), sca, rot, color, emission_stack[-1]);
 	}
 
-	fun void sprite(Texture tex, vec2 sprite_sheet_frame_dim, vec2 offset, vec2 pos, vec2 sca, float rot, vec3 color) {
+	fun void sprite(
+		Texture tex, vec2 sprite_sheet_frame_dim, vec2 offset, vec2 pos, vec2 sca, float rot, vec3 color
+	) {
 		sprites.sprite(
 			tex, sprite_sheet_frame_dim, offset, 
-			@(pos.x, pos.y, layer_stack[-1]), sca, rot, color
+			@(pos.x, pos.y, layer_stack[-1]), sca, rot, color, emission_stack[-1]
 		);
 	}
 
@@ -486,6 +495,8 @@ public class G2D extends GGen
 			color_stack[0] => vec3 default_text_color; 
 			color_stack.clear(); 
 			color_stack << default_text_color;
+
+			emission_stack.erase(1, emission_stack.size());
 
 			layer_stack[0] => float default_layer; 
 			layer_stack.clear(); 
@@ -826,7 +837,7 @@ public class G2D_Sprite
 	// TODO: add instanced mode 
 	fun void sprite(
 		Texture sprite_sheet, vec2 sprite_sheet_frame_dim, vec2 offset, 
-		vec3 pos, vec2 sca, float rot, vec3 color
+		vec3 pos, vec2 sca, float rot, vec3 color, vec3 emission
 	) {
 		_resizeSpritePool();
 
@@ -838,6 +849,7 @@ public class G2D_Sprite
 			@(1.0 / sprite_sheet_frame_dim.x, 1.0 / sprite_sheet_frame_dim.y)
 		);
 		sprite_material.offset(offset); // set UV sample offset
+		sprite_material.emissive(@(emission.x, emission.y, emission.z, 0)); // set UV sample offset
 
 		sprite_mesh --> mesh;
 		sprite_mesh.pos(pos);
@@ -857,8 +869,8 @@ public class G2D_Sprite
 		sprite_count++;
 	}
 
-	fun void sprite(Texture tex, vec3 pos, vec2 sca, float rot, vec3 color) {
-		sprite(tex, @(1,1), @(0,0), pos, sca, rot, color);
+	fun void sprite(Texture tex, vec3 pos, vec2 sca, float rot, vec3 color, vec3 emissive) {
+		sprite(tex, @(1,1), @(0,0), pos, sca, rot, color, emissive);
 	}
 
     fun void update() {
