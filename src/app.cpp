@@ -1747,9 +1747,31 @@ static void _R_HandleCommand(App* app, SG_Command* command)
               app->window,
               (cmd->aspect_ratio_x <= 0) ? GLFW_DONT_CARE : cmd->aspect_ratio_x,
               (cmd->aspect_ratio_y <= 0) ? GLFW_DONT_CARE : cmd->aspect_ratio_y);
+
             // reset size to constrain to new limits
             int width, height;
             glfwGetWindowSize(app->window, &width, &height);
+            if (cmd->min_width > 0) width = MAX(width, cmd->min_width);
+            if (cmd->max_width > 0) width = MIN(width, cmd->max_width);
+            if (cmd->min_height > 0) height = MAX(height, cmd->min_height);
+            if (cmd->max_height > 0) height = MIN(height, cmd->max_height);
+
+            // fit within aspect ratio if specified
+            // here only ever decrease a dimension to respect max size limits
+            // choosing to always make the window smaller rather than bigger bc
+            // it sucks when the window gets too big and the resize corner goes
+            // offscreen
+            if (cmd->aspect_ratio_x > 0 && cmd->aspect_ratio_y > 0) {
+                if (cmd->aspect_ratio_y >= cmd->aspect_ratio_x) {
+                    width = height
+                            * ((float)cmd->aspect_ratio_x / (float)cmd->aspect_ratio_y);
+                } else {
+                    height
+                      = width
+                        * ((float)cmd->aspect_ratio_y / (float)cmd->aspect_ratio_x);
+                }
+            }
+
             glfwSetWindowSize(app->window, width, height);
             break;
         }
