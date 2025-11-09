@@ -235,7 +235,7 @@ public class G2D extends GGen
 
 	// draw line segments
 	fun void line(vec2 arr[], int loop) {
-		for (int i; i < arr.size(); i++) {
+		for (int i; i < arr.size() - 1; i++) {
 			lines.segment(
 				arr[i],
 				arr[i + 1],

@@ -1,18 +1,25 @@
 ==TODO=========================================
-- add arrow sprite
-- add whisper back
 - basic cart commands: stop and go
-- bard fireball! (can use same graphic as bomb tower, only much larger)
 
 - organize UI to use imgui collapsing headers
 
+- bard fireball! (can use same graphic as bomb tower, only much larger)
 - bard lightning
   - multiple strikes coming from sky, similar to 20min
+  - should feel high-risk high-reward, like calling down an air strike on yourself
+  - visualize the tells!
+  - creates interesting 3-way tension (similar to that tower-defense bullet hell gamejam?):
+    1. you want to protect the bard
+    2. the bard spells help clear the field
+    3. those same spells threaten you
+    - typically the source of bullets is the enemy boss you are trying to destroy,
+      this time it is who you are escorting
+
+SIEGE MODE ON CART
 
 - Add chugin ability to query for member variable offset from an input object
   - also implement imgui drag/input/slider Scalar to accept chuck doubles
   - lets me more easily build UI for chuck objects, more performant too
-
 
 Engine references
 - Love2D
@@ -20,8 +27,6 @@ Engine references
 - Haxe / Hashlink (mosa lina and deadcells?)
 - ThreeJS
 - BabylonJS
-
-
 
 
 ===============================================

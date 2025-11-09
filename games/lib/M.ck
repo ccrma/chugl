@@ -21,6 +21,10 @@ public class M {
         return Math.atan2(n.y, n.x);
     }
 
+    fun static float angle(vec2 a) {
+        return Math.atan2(a.y, a.x);
+    }
+
     fun static vec2 dir(vec2 a, vec2 b) {
         b - a => vec2 n;
         n.normalize();

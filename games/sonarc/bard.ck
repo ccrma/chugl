@@ -55,6 +55,33 @@ class BardG2D extends G2D {
             color
         );
     }
+
+    fun void chevron(
+        vec2 pos, float rot_rad, float angle_rad, float height, float thickness, vec3 color
+    ) {
+        height * .5 => float hh;
+        Math.tan(angle_rad * .5) => float tan_theta;
+        // sadly polygons only supports convex shapes (which a chevron is not)
+        // so drawing as two thick lines with miter join
+        // @TODO how to support non-convex polygons? check freya shapes
+        // does it require earcut triangulation?
+        polygons.polygonFilled(pos, rot_rad, 
+            [
+                @(0, hh),
+                @(hh / tan_theta, 0),
+                @(thickness + hh / tan_theta, 0),
+                @(thickness, hh),
+            ],
+            0, color);
+        polygons.polygonFilled(pos, rot_rad, 
+            [
+                @(hh / tan_theta, 0),
+                @(0, -hh),
+                @(thickness, -hh),
+                @(thickness + hh / tan_theta, 0),
+            ],
+            0, color);
+    }
 }
 
 // == room ================================================
@@ -173,8 +200,8 @@ class FX {
         }
     }
 
-    fun static void booster(vec2 pos, vec3 color, float radius_scale) {
-        radius_scale * Math.random2f(.04, .046) => float init_radius;
+    fun static void booster(vec2 pos, vec3 color, float radius) {
+        Math.random2f(.98 * radius, radius) => float init_radius;
         init_radius * 8 * .5::second => dur effect_dur; // time to dissolve
 
         Math.random2f(0.8, 1.0) * color => vec3 init_color;
@@ -277,10 +304,10 @@ class FX {
 -1 =>        int Layer_Background;
 5  =>        int Layer_Player;
 6  =>        int Layer_Cart;
-7  =>        int Layer_Fog; // drawing b2 physics colliders
-8  =>        int Layer_Light; // drawing b2 physics colliders
+7  =>        int Layer_Fog; 
+8  =>        int Layer_Light; 
 9  =>        int Layer_Projectile;
-10  =>        int Layer_DebugDraw; // drawing b2 physics colliders
+10  =>       int Layer_DebugDraw; // drawing b2 physics colliders
 
 // @design: is this better or the "smear" melee attack (like in nuclear throne)
 0 => int WeaponState_Rest;    // holding at rest position
@@ -300,6 +327,11 @@ class FX {
 3 =>  int Upgrade_Cart_Speed;
 4 =>  int Upgrade_Cart_Dodge;
 10 =>  int Upgrade_Count;
+
+// cart move state enum
+"Cart_MoveState_Stop" => string Cart_MoveState_Stop;
+"Cart_MoveState_Roam" => string Cart_MoveState_Roam;
+
 
 // == ui ================================================
 
@@ -616,6 +648,113 @@ ProjectileAddType(ProjectileType_None,         "",            0,                
 ProjectileAddType(ProjectileType_EnemyBasic,   "enemy_basic", b2ShapeType.circleShape,   @(.16,0),  0    );
 ProjectileAddType(ProjectileType_Arrow,        "arrow",       b2ShapeType.segmentShape,  @(.5,0),   0    );
 
+// == Spells and Voice Commands ============================================
+
+0 => int SpellPhase_Init;
+1 => int SpellPhase_Pre;
+2 => int SpellPhase_Active;
+3 => int SpellPhase_Post;
+4 => int SpellPhase_Done; // mark spell as done to be removed from active_spells array
+
+class Spell {
+    int command_type; // for now just reusing CommandType_ enum
+    int spell_phase;
+
+    // timing (in secs)
+    float total_time;
+    float phase_time; // assuming here that spells use time elapsed to transition phase
+
+    // aiming
+    vec2 aim; // can mean either position or direction depending on spell
+
+    // spell params
+        // fireball
+    static UI_Float fireball_tell_time_sec(1.0);
+    static UI_Float fireball_dmg;
+    static UI_Float fireball_radius;  // explosion radius
+
+    fun void transition(int phase) {
+        phase => this.spell_phase;
+        0 => this.phase_time;
+    }
+
+    fun static void ui() {
+        if (!UI.collapsingHeader("spell stats", 0)) return;
+    }
+}
+
+Spell active_spells[0]; // @optimize: turn into pool if there are ever a lot of concurrent spells
+
+fun void SpellCast(int type) {
+    Spell s;
+    type => s.command_type;
+    SpellPhase_Init => s.spell_phase;
+    active_spells << s;
+}
+
+0 => int CommandType_None;
+1 => int CommandType_Stop;
+2 => int CommandType_Roam;
+3 => int CommandType_Fireball;
+
+class Command {
+    int command_type;
+    string name;
+    string words[];
+
+    fun static void ui() {
+        if (!UI.collapsingHeader("voice commands", 0)) return;
+
+        for (1 => int i; i < command_type_list.size(); ++i) {
+            command_type_list[i] @=> Command c;
+
+            if (UI.button(c.name)) CommandActivate(c.command_type);
+            for (auto word : c.words) {
+                UI.sameLine();
+                UI.textColored(@(1, 1, 0, 1), word + ",");
+            }
+            
+            UI.separator();
+        }
+    }
+}
+
+Command command_type_list[0];
+
+fun void CommandAddType(int type, string name, string words[]) {
+    Command c;
+    type => c.command_type;
+    name => c.name;
+    words @=> c.words;
+    command_type_list << c;
+    T.assert(command_type_list[type] == c, "adding command out of order");
+
+    voice.add(type, words);
+}
+
+fun void CommandActivate(int command_type) {
+    command_type_list[command_type] @=> Command c;
+
+    if (command_type == CommandType_Stop) {
+        Cart_MoveState_Stop => cart_move_state;
+    }
+    else if (command_type == CommandType_Roam) {
+        Cart_MoveState_Roam => cart_move_state;
+    } 
+    else if (command_type == CommandType_Fireball) {
+        SpellCast(command_type);
+    } 
+    else {
+        T.err("Unsupported command " + command_type);
+    }
+}
+
+
+CommandAddType(CommandType_None, "", null);
+CommandAddType(CommandType_Stop, "Cart Stop", ["stop"]);
+CommandAddType(CommandType_Roam, "Cart Roam", ["move", "start", "roam"]);
+CommandAddType(CommandType_Fireball, "Spell Fireball", ["fireball"]);
+
 // == Entity ================================================
 
 0 => int PoolState_Returned;
@@ -840,6 +979,7 @@ Layer_Fog => fog_mesh.posZ;
 UI_Bool show_fog(true);
 
 // cart params
+string cart_move_state;
 UI_Float cart_hp(20);
 UI_Float2 cart_size(1.67, 1.0);
 UI_Float cart_speed(.5);
@@ -1646,7 +1786,16 @@ fun void leave() {
 }
 
 fun Room update(float dt) { 
-    curr_wave.val() => int wave_number;
+
+curr_wave.val() => int wave_number;
+
+// == handle voice commands ================================================
+voice.activated() @=> int activated[];
+for (int c : activated) {
+    if (c == CommandType_Stop) {
+
+    }
+}
 
 // == process collisions ================================================
 b2World.sensorEvents(b2_world_id, begin_sensor_events, null);
@@ -1794,32 +1943,37 @@ for (players_num_alive => int i; i < player_list.size(); ++i) T.assert(player_li
 // == update ================================================
 
 { // update cart
-.5 * .75 * field_len.val() => float hw;
-// debug draw bounds
-g.pushLayer(Layer_DebugDraw);
-g.square(@(0,0), 0, 2*hw, Color.WHITE);
-g.popLayer();
+if (cart_move_state == Cart_MoveState_Roam ) 
+{ 
+    .5 * .75 * field_len.val() => float hw;
+    // debug draw bounds
+    g.pushLayer(Layer_DebugDraw);
+    g.square(@(0,0), 0, 2*hw, Color.WHITE);
+    g.popLayer();
 
-if (M.dist(cart.pos(), cart_target) < .05) {
-    M.randomPointInCircle(cart.pos(), 1, spawn_inner_r.val()) => cart_target;
+    if (M.dist(cart.pos(), cart_target) < .05) {
+        M.randomPointInCircle(cart.pos(), 1, spawn_inner_r.val()) => cart_target;
 
-    // cart stays within inner 75% of the arena
+        // cart stays within inner 75% of the arena
 
 
-    // bounce away from edges
-    if (cart_target.x > hw) cart.pos().x - (cart_target.x - cart.pos().x) => cart_target.x;
-    if (cart_target.x < -hw) cart.pos().x + (cart.pos().x - cart_target.x) => cart_target.x;
-    if (cart_target.y > hw) cart.pos().y - (cart_target.y - cart.pos().y) => cart_target.y;
-    if (cart_target.y < -hw) cart.pos().y + (cart.pos().y - cart_target.y) => cart_target.y;
-    T.assert(M.inside(cart_target, M.aabb(@(0,0), hw, hw)), "cart target is not inside bounds");
-    T.assert(M.dist(cart_target, cart.pos()) < spawn_inner_r.val(), "cart target is not inside spawn_inner_r");
+        // bounce away from edges
+        if (cart_target.x > hw) cart.pos().x - (cart_target.x - cart.pos().x) => cart_target.x;
+        if (cart_target.x < -hw) cart.pos().x + (cart.pos().x - cart_target.x) => cart_target.x;
+        if (cart_target.y > hw) cart.pos().y - (cart_target.y - cart.pos().y) => cart_target.y;
+        if (cart_target.y < -hw) cart.pos().y + (cart.pos().y - cart_target.y) => cart_target.y;
+        T.assert(M.inside(cart_target, M.aabb(@(0,0), hw, hw)), "cart target is not inside bounds");
+        T.assert(M.dist(cart_target, cart.pos()) < spawn_inner_r.val(), "cart target is not inside spawn_inner_r");
+    }
+    cart_speed.val() * M.dir(cart.pos(), cart_target) => cart.vel;
+
+    // wheel anim
+    2 => float cart_wheel_speed;
+    if (cart.pos().x < cart_target.x) cart_wheel_speed * dt -=> cart_wheel_rot;
+    else                              cart_wheel_speed * dt +=> cart_wheel_rot;
+} else {
+    @(0, 0) => cart.vel;
 }
-cart_speed.val() * M.dir(cart.pos(), cart_target) => cart.vel;
-
-// wheel anim
-2 => float cart_wheel_speed;
-if (cart.pos().x < cart_target.x) cart_wheel_speed * dt -=> cart_wheel_rot;
-else                              cart_wheel_speed * dt +=> cart_wheel_rot;
 
 // cart upgrades
 if (UpgradeHas(Upgrade_Cart_Ambulance)) {
@@ -2047,6 +2201,57 @@ if (draw_b2_debug.val()) {
 }
 GG.camera().viewSize() + 4 * dt * GWindow.scrollY() => GG.camera().viewSize;
 
+// == update and draw spells ================================================
+for (active_spells.size()-1 => int i; i >= 0; --i) {
+    active_spells[i] @=> Spell s;
+    if (s.spell_phase == SpellPhase_Done) {
+        active_spells.erase(i);
+        continue;
+    }
+
+    dt +=> s.total_time;
+    dt +=> s.phase_time;
+
+    T.assert(
+        s.spell_phase >= SpellPhase_Init && s.spell_phase < SpellPhase_Done,
+         "unknown spell phase " + s.spell_phase + " for spell " + s.command_type);
+
+    g.pushLayer(Layer_Projectile);
+
+    if (s.command_type == CommandType_Fireball) {
+        if (s.spell_phase == SpellPhase_Init) {
+            // aim (TODO)
+            RIGHT => s.aim;
+            s.transition(SpellPhase_Pre);
+        }
+        else if (s.spell_phase == SpellPhase_Pre) {
+            s.phase_time / Spell.fireball_tell_time_sec.val() => float t;
+
+            // draw the tell (just charge up the ball)
+            g.chevron(
+                bard.pos() + s.aim, M.angle(s.aim), Math.pi/2, player_size.val(), .4, 
+                Color.RED
+            );
+            g.circle(bard.pos(), t * t, 1.0, t * t * Color.RED);
+            
+            // transition
+            if (s.phase_time >= s.fireball_tell_time_sec.val()) 
+                s.transition(SpellPhase_Active);
+        }
+        else if (s.spell_phase == SpellPhase_Active) {
+            // @TODO summon projectile
+            s.transition(SpellPhase_Done);
+        }
+        else if (s.spell_phase == SpellPhase_Post) {
+
+        } 
+    }
+    else {
+        T.err("unrecognized spell type: " + s.command_type);
+    }
+
+    g.popLayer();
+}
 
 
 
@@ -2370,6 +2575,10 @@ while (1) {
 GG.nextFrame() => now;
 GG.dt() * timescale.val() => float dt;
 
+{ // random test stuff
+}
+
+
 { // ui
 UI.setNextWindowBgAlpha(0.00);
 UI.begin("");
@@ -2407,6 +2616,7 @@ UI.drag("weapon rest pos", weapon_rest_pos, .01);
 UI.slider("weapon size", weapon_size, 0, 2);
 
 voice.ui();
+Command.ui();
 Player.ui();
 Weapon.ui();
 Projectile.ui();

@@ -117,7 +117,6 @@ public class VoiceCommand {
 
 // unit test
 if (0) { 
-
     VoiceCommand vc(me.dir() + "../lib/whisper/models/ggml-base.en.bin");
     vc.add(0, ["apple", "banana"]);
     vc.add(1, ["cheese", "dog", "enchilada"]);
