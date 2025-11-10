@@ -576,12 +576,30 @@ union SG_MaterialParams {
     SG_Material_PBR_Params pbr;
 };
 
+enum SG_MaterialBlendMode : u8 {
+    SG_MaterialBlendMode_Alpha = 0,
+    SG_MaterialBlendMode_Replace,
+    SG_MaterialBlendMode_Add,
+    SG_MaterialBlendMode_Subtract,
+    SG_MaterialBlendMode_Multiply,
+    SG_MaterialBlendMode_Screen,
+    SG_MaterialBlendMode_Count,
+};
+
 struct SG_MaterialPipelineState {
     SG_ID sg_shader_id;
     WGPUCullMode cull_mode                   = WGPUCullMode_None;
     WGPUPrimitiveTopology primitive_topology = WGPUPrimitiveTopology_TriangleList;
     b16 transparent;
     b16 wireframe;
+
+    WGPUBlendState blend_state = {
+        // defaults to alpha blending
+        { WGPUBlendOperation_Add, WGPUBlendFactor_SrcAlpha,
+          WGPUBlendFactor_OneMinusSrcAlpha },
+        { WGPUBlendOperation_Add, WGPUBlendFactor_SrcAlpha,
+          WGPUBlendFactor_OneMinusSrcAlpha },
+    };
 };
 
 struct SG_Material : SG_Component {

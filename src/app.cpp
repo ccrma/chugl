@@ -982,7 +982,8 @@ struct App {
                           &app->gctx);
                         d->pipelineDesc(material->pso.sg_shader_id,
                                         material->pso.cull_mode,
-                                        material->pso.primitive_topology, false);
+                                        material->pso.primitive_topology,
+                                        &material->pso.blend_state, false);
                     }
                 } break;
                 case SG_PassType_Compute: {
@@ -1101,7 +1102,8 @@ struct App {
                             d->pipelineDesc(
                               bloom_downscale_material->pso.sg_shader_id,
                               bloom_downscale_material->pso.cull_mode,
-                              bloom_downscale_material->pso.primitive_topology, false);
+                              bloom_downscale_material->pso.primitive_topology,
+                              &bloom_downscale_material->pso.blend_state, false);
                         } // end for
                     } // end downscale
 
@@ -1158,7 +1160,8 @@ struct App {
                             d->pipelineDesc(
                               bloom_upscale_material->pso.sg_shader_id,
                               bloom_upscale_material->pso.cull_mode,
-                              bloom_upscale_material->pso.primitive_topology, false);
+                              bloom_upscale_material->pso.primitive_topology,
+                              &bloom_upscale_material->pso.blend_state, false);
 
                             first_upsample = false;
                         } // end for
@@ -1448,7 +1451,7 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Pass* pass, R_Camera* cam
         d->pipelineDesc(shader_id, material->pso.cull_mode,
                         material->pso.wireframe ? WGPUPrimitiveTopology_LineList :
                                                   material->pso.primitive_topology,
-                        is_transparent);
+                        &material->pso.blend_state, is_transparent);
 
         { // set bindgroups
             // set frame uniforms
@@ -1547,10 +1550,10 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Pass* pass, R_Camera* cam
                               camera->params.far_plane, camera->params.far_plane);
         d->vertex_count   = 3;
         d->instance_count = 1;
-        d->pipelineDesc(skybox_material->pso.sg_shader_id,
-                        skybox_material->pso.cull_mode,
-                        skybox_material->pso.primitive_topology,
-                        false // not transparent
+        d->pipelineDesc(
+          skybox_material->pso.sg_shader_id, skybox_material->pso.cull_mode,
+          skybox_material->pso.primitive_topology, &skybox_material->pso.blend_state,
+          false // not transparent
         );
 
         R_Shader* skybox_shader

@@ -24,6 +24,17 @@ CircleGeometry particle_geo;
 // audio graph
 Gain main_gain(1) => dac;
 
+// blend modes
+[
+    "default",
+    "replace",
+    "add",
+    "subtract",
+    "multiply",
+    "screen",
+] @=> string blend_modes[];
+UI_Int blend_mode_idx;
+
 // custom Particle class (graphics + audio)
 class Particle
 {
@@ -146,6 +157,13 @@ while (true)
         UI.colorEdit("Start Color", start_color, 0);
         UI.colorEdit("End Color", end_color, 0);
         UI.slider("Lifetime", lifetime, 0.1, 5.0); 
+
+        // change blend mode
+        if (UI.listBox("blend mode", blend_mode_idx, blend_modes)) {
+            for (auto p : particles) {
+                p.particle_mat.blend(blend_mode_idx.val());
+            }
+        }
     }
     // end UI
     UI.end();

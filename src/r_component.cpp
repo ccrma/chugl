@@ -1584,7 +1584,8 @@ void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene,
             // ==optimize== create duplicate shader that only has vertex shader, no
             // fragment
             d->pipelineDesc(material->pso.sg_shader_id, material->pso.cull_mode,
-                            material->pso.primitive_topology, false, true);
+                            material->pso.primitive_topology,
+                            &material->pso.blend_state, false, true);
         }
     }
 

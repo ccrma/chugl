@@ -70,6 +70,31 @@ T.assert(material.shader() == null, "material shader default");
 shader => material.shader;
 T.assert(material.shader() == shader, "material shader");
 
+// blend modes
+T.assert(material.blendSrc() == Material.BlendFactor_SrcAlpha, "default blendSrc");
+T.assert(material.blendDst() == Material.BlendFactor_OneMinusSrcAlpha, "default blendDst");
+T.assert(material.blendOp() == Material.BlendOp_Add, "default blendOp");
+T.assert(material.blendSrcAlpha() == Material.BlendFactor_SrcAlpha, "default blendSrc alpha");
+T.assert(material.blendDstAlpha() == Material.BlendFactor_OneMinusSrcAlpha, "default blendDst alpha");
+T.assert(material.blendOpAlpha() == Material.BlendOp_Add, "default blendOp alpha");
+
+material.blend(
+    Material.BlendFactor_One,
+    Material.BlendFactor_Zero,
+    Material.BlendOp_Min,
+    Material.BlendFactor_OneMinusSrc,
+    Material.BlendFactor_OneMinusDst,
+    Material.BlendOp_ReverseSubtract
+);
+
+T.assert(material.blendSrc() == Material.BlendFactor_One, "set blendSrc");
+T.assert(material.blendDst() == Material.BlendFactor_Zero, "set blendDst");
+T.assert(material.blendOp() == Material.BlendOp_Min, "set blendOp");
+T.assert(material.blendSrcAlpha() == Material.BlendFactor_OneMinusSrc, "set blendSrc alpha");
+T.assert(material.blendDstAlpha() == Material.BlendFactor_OneMinusDst, "set blendDst alpha");
+T.assert(material.blendOpAlpha() == Material.BlendOp_ReverseSubtract, "set blendOp alpha");
+
+
 // Uniforms
 
 material.uniformFloat(0, 1.2);
