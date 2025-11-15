@@ -1,3 +1,13 @@
+//--------------------------------------------------------------------
+// name: shadertoy.ck
+// desc: boilerplate for creating a full-screen screenpass shader
+// requires: ChuGL 0.2.8 (alpha) + chuck-1.5.5.6 or higher
+// 
+// author: Andrew Zhu Aday
+//   date: Fall 2025
+//--------------------------------------------------------------------
+
+"
 #include FRAME_UNIFORMS
 // what's included:
 // struct FrameUniforms {
@@ -26,12 +36,11 @@ struct VertexOutput {
     @location(0) v_uv : vec2<f32>,
 };
 
-
 // SHADER UNIFORMS (YOUR CODE GOES HERE)
 @group(1) @binding(0) var<uniform> u_color: f32;
 
 
-// VERTEX SHADER DON'T CHANGE
+// VERTEX SHADER DON'T CHANGE! This draws the full-screen quad
 @vertex 
 fn vs_main(@builtin(vertex_index) vertexIndex : u32) -> VertexOutput {
     var output : VertexOutput;
@@ -45,10 +54,20 @@ fn vs_main(@builtin(vertex_index) vertexIndex : u32) -> VertexOutput {
 
 @fragment 
 fn fs_main(in : VertexOutput) -> @location(0) vec4f {
-    // unused variables get excluded from shader compilation which messes up
-    // bindgroup structure...annoying. You'll need to assign like this 
-    // for all your unused shader uniforms so it compiles correctly
-    let t0 = u_frame; 
+    /*
+    NOTE If you see an error such as:
+        [ChuGL]: ERROR Uncaptured device error: type 1 (Validation Error
+            Caused by:
+            In wgpuDeviceCreateBindGroup, label = ' @group(0)'
+                Number of bindings in bind group descriptor (1) does not match the number of bindings defined in the bind group layout (0)
+            )
+    
+    This means that one or more uniform variables was unused, and therefore 
+    optimized out by the gpu shader compiler.  This causes the layout of the
+    shader to misalign with what chugl expects.
+    Workaround: simply add a dummy reference to the unused uniform, like so
+    */
+    let UNUSED = u_frame; 
 
     // get uv
     var uv = in.position.xy / vec2f(u_frame.resolution.xy);
@@ -59,4 +78,25 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4f {
     */
 
     return vec4f(fract(2. * in.v_uv), u_color, 1.0);
+}
+" => string shader_code;
+
+ShaderDesc desc;
+shader_code => desc.vertexCode;
+shader_code => desc.fragmentCode;
+null => desc.vertexLayout;
+
+Shader shader(desc);
+shader.name("screen shader");
+
+// render graph
+GG.rootPass() --> ScreenPass screen_pass(shader);
+
+// set uniforms
+// (be sure to initialize all uniforms before the first call to GG.nextFrame())
+screen_pass.material().uniformFloat(0, 0);
+
+while (1) {
+    GG.nextFrame() => now;
+    screen_pass.material().uniformFloat(0, .5 + .5 * Math.sin(now/second));
 }

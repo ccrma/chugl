@@ -479,6 +479,10 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
           "a given shader");
         ADD_EX("basic/geo-and-mat.ck");
         ADD_EX("basic/transparency.ck");
+        ADD_EX("basic/blend.ck");
+        ADD_EX("deep/lines3d.ck");
+        ADD_EX("deep/custom-material.ck");
+        ADD_EX("deep/particles.ck");
 
         CTOR(material_ctor);
 
@@ -616,27 +620,55 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
         static t_CKINT BlendMode_Alpha = SG_MaterialBlendMode_Alpha;
         SVAR("int", "BlendMode_Alpha", &BlendMode_Alpha);
         DOC_VAR(
-          "Normal alpha blending. The default for Materials. Equivalent to "
+          "Equals 0. Normal alpha blending. The default for Materials. Equivalent to "
           "blend(SrcAlpha, OneMinusSrcAlpha)");
+        SVAR("int", "BLEND_MODE_ALPHA", &BlendMode_Alpha);
+        DOC_VAR(
+          "Equals 0. Normal alpha blending. The default for Materials. Equivalent to "
+          "blend(SrcAlpha, OneMinusSrcAlpha)");
+
         static t_CKINT BlendMode_Replace = SG_MaterialBlendMode_Replace;
         SVAR("int", "BlendMode_Replace", &BlendMode_Replace);
-        DOC_VAR("Ignore alpha channel. Equivalent to blend(One, Zero)");
+        DOC_VAR("Equals 1. Ignore alpha channel. Equivalent to blend(One, Zero)");
+        SVAR("int", "BLEND_MODE_REPLACE", &BlendMode_Replace);
+        DOC_VAR("Equals 1. Ignore alpha channel. Equivalent to blend(One, Zero)");
+
         static t_CKINT BlendMode_Add = SG_MaterialBlendMode_Add;
         SVAR("int", "BlendMode_Add", &BlendMode_Add);
-        DOC_VAR("Additive blending. Equivalent to blend(One, One)");
+        DOC_VAR("Equals 2. Additive blending. Equivalent to blend(One, One)");
+        SVAR("int", "BLEND_MODE_ADD", &BlendMode_Add);
+        DOC_VAR("Equals 2. Additive blending. Equivalent to blend(One, One)");
+
         static t_CKINT BlendMode_Subtract = SG_MaterialBlendMode_Subtract;
         SVAR("int", "BlendMode_Subtract", &BlendMode_Subtract);
         DOC_VAR(
-          "Subtractive blending. Equivalent to blend(One, One, BlendOp_Subtract)");
+          "Equals 3. Subtractive blending. Equivalent to blend(One, One, "
+          "BlendOp_Subtract)");
+        SVAR("int", "BLEND_MODE_SUBTRACT", &BlendMode_Subtract);
+        DOC_VAR(
+          "Equals 3. Subtractive blending. Equivalent to blend(One, One, "
+          "BlendOp_Subtract)");
+
         static t_CKINT BlendMode_Multiply = SG_MaterialBlendMode_Multiply;
         SVAR("int", "BlendMode_Multiply", &BlendMode_Multiply);
         DOC_VAR(
-          "Multiplicative blending. Darkens. Equivalent to blend(Dst, "
+          "Equals 4. Multiplicative blending. Darkens. Equivalent to blend(Dst, "
           "OneMinusSrcAlpha)");
+        SVAR("int", "BLEND_MODE_MULTIPLY", &BlendMode_Multiply);
+        DOC_VAR(
+          "Equals 4. Multiplicative blending. Darkens. Equivalent to blend(Dst, "
+          "OneMinusSrcAlpha)");
+
         static t_CKINT BlendMode_Screen = SG_MaterialBlendMode_Screen;
         SVAR("int", "BlendMode_Screen", &BlendMode_Screen);
         DOC_VAR(
-          "Screen blending. Opposite of multiply. Lightens. Equivalent to blend(One, "
+          "Equals 5. Screen blending. Opposite of multiply. Lightens. Equivalent to "
+          "blend(One, "
+          "OneMinusSrc)");
+        SVAR("int", "BLEND_MODE_SCREEN", &BlendMode_Screen);
+        DOC_VAR(
+          "Equals 5. Screen blending. Opposite of multiply. Lightens. Equivalent to "
+          "blend(One, "
           "OneMinusSrc)");
 
         // pso modifiers (shouldn't be set often, so we lump all together in a single

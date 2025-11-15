@@ -259,12 +259,6 @@ static std::unordered_map<std::string, std::string> shader_table = {
             var out : VertexOutput;
             var u_Draw : DrawUniforms = u_draw_instances[in.instance];
 
-            let modelMat3 : mat3x3<f32> = mat3x3(
-                u_Draw.model[0].xyz,
-                u_Draw.model[1].xyz,
-                u_Draw.model[2].xyz
-            );
-
             let worldpos = u_Draw.model * vec4f(in.position, 1.0f);
             out.position = (u_frame.projection * u_frame.view) * worldpos;
             out.v_worldpos = worldpos.xyz;

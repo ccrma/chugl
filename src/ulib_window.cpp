@@ -1007,6 +1007,7 @@ void ulib_window_query(Chuck_DL_Query* QUERY)
           "per graphics frame, so these functions will only work as expected if "
           "GG.nextFrame() is being called in a renderloop. Supports up to 16 "
           "controllers");
+        ADD_EX("basic/gamepad.ck");
 
         static t_CKINT gamepad_button_a = GLFW_GAMEPAD_BUTTON_A;
         SVAR("int", "BUTTON_A", &gamepad_button_a);

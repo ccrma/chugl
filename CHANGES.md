@@ -1,14 +1,21 @@
 # Changes
 
 ## 0.2.8 (alpha)
-- Gamepad support!!
+- Gamepad support! (see basic/gamepad.ck)
+- Material blend modes! Additive, multiplicative, subtractive, custom, etc. (see basic/blend.ck)
 - GCamera `.aspect()` and `.autoUpdateAspect()`
 - Add `TextureLoadDesc.read` to read the texture data into a chuck array on load
 - `UI_DrawList` methods that ended in `...Ex` were renamed to take advantage of method overloading, e.g. `.addLineEx(...)` renamed to `.addLine()`
   - plus general improvements to `UI_DrawList` and `UI_DrawFlags` docs
+- New Examples
+  - basic/gamepad.ck
+  - basic/blend.ck
+  - deep/lines3d.ck
+  - deep/custom-material.ck
+  - rendergraph/shadertoy.ck
 - Bug fixes
   - camera raycast methods (e.g. `NDCToWorldPos`) fixed when using a render-target that is *not* the same resolution as the GWindow (basically we assumed camera aspect was always same as GWindow aspect when in reality it is determined by color target its rendering too)
-  - fix Texture.load() bug where some textures were incorrectly loaded with negative dimensions. 
+  - fix Texture.load() bug where some textures were incorrectly loaded with negative dimensions.
   - fixed `GWindow.sizeLimits()` not correctly updating window size (thanks Ben)
 
 ## 0.2.7 (alpha)

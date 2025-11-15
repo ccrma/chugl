@@ -335,6 +335,7 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
         DOC_CLASS(
           "Screen pass for applying screen shaders and visual effects to the entire "
           "screen ");
+        ADD_EX("rendergraph/shadertoy.ck");
 
         CTOR(screenpass_ctor_with_shader);
         ARG(SG_CKNames[SG_COMPONENT_SHADER], "screen_shader");
