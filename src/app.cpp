@@ -283,6 +283,10 @@ struct App {
     nanotime_step_data stepper;
     int stepper_fps = 60; // default to 60fps
 
+    // window wait events state
+    b32 should_wait_for_input;
+    float wait_for_input_timeout;
+
     // mouse state
     double mouse_x = 0, mouse_y = 0;
     bool mouse_left = 0, mouse_right = 0;
@@ -605,7 +609,16 @@ struct App {
             // imgui and window callbacks
             CHUGL_Zero_MouseDeltasAndClickState();
             CHUGL_Kb_ZeroPressedReleased();
-            glfwPollEvents();
+
+            // process glfw input event queue
+            if (app->should_wait_for_input) {
+                if (app->wait_for_input_timeout > 0)
+                    glfwWaitEventsTimeout(app->wait_for_input_timeout);
+                else
+                    glfwWaitEvents();
+            } else {
+                glfwPollEvents();
+            }
 
             { // gamepad
                 for (int gamepad_idx = 0; gamepad_idx <= GLFW_JOYSTICK_LAST;
@@ -1666,6 +1679,12 @@ static void _R_HandleCommand(App* app, SG_Command* command)
                                    (u64)(NANOTIME_NSEC_PER_SEC / app->stepper_fps),
                                    nanotime_now_max(), nanotime_now, nanotime_sleep);
             }
+        } break;
+        case SG_COMMAND_SET_WAIT_EVENTS_TIMEOUT: {
+            SG_Command_SetWaitEventsTimeout* cmd
+              = (SG_Command_SetWaitEventsTimeout*)command;
+            app->should_wait_for_input  = cmd->should_wait;
+            app->wait_for_input_timeout = MAX(0.0, cmd->timeout_secs);
         } break;
         case SG_COMMAND_SET_CHUCK_VM_INFO: {
             SG_Command_SetChuckVMInfo* cmd = (SG_Command_SetChuckVMInfo*)command;
