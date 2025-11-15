@@ -161,7 +161,7 @@ while (true)
     // update window mode 
     if (GWindow.keyDown(GWindow.KEY_SPACE)) {
         !wait_on_input => wait_on_input;
-        GG.snooze(wait_on_input, 0);
+        GWindow.snooze(wait_on_input, 0);
     }
 
     if (wait_on_input)

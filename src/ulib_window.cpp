@@ -133,6 +133,9 @@ CK_DLL_SFUN(gwindow_get_kb_released_all_with_arr);
 // drag+drop files
 CK_DLL_SFUN(gwindow_get_dropped_files);
 
+// wait for input
+CK_DLL_SFUN(gwindow_set_wait_event_mode);
+
 // clang-format off
 /*
 Gamepad impl notes
@@ -998,6 +1001,16 @@ void ulib_window_query(Chuck_DL_Query* QUERY)
       "previous array returned by this function, and see if it changed on a subsequent "
       "call. See examples/basic/gwindow.ck for how to use.");
 
+    SFUN(gwindow_set_wait_event_mode, "void", "snooze");
+    ARG("int", "bool_should_wait");
+    ARG("float", "timeout");
+    DOC_FUNC(
+      "If set `bool_should_wait` is set to true, the ChuGL window will only "
+      "refresh and broadcast GG.nextFrame() upon receiving user input. "
+      "If `timeout` is > 0, the window will wait at most `timeout` seconds "
+      "before refreshing. if `timeout` == 0, the window will wait indefinitely. "
+      "Useful for editing tools or other apps that are mostly static");
+
     END_CLASS(); // GWindow
 
     { // Gamepad
@@ -1538,6 +1551,14 @@ CK_DLL_SFUN(gwindow_get_kb_released_all_with_arr)
 CK_DLL_SFUN(gwindow_get_dropped_files)
 {
     RETURN->v_object = (Chuck_Object*)g_dropped_files;
+}
+
+// only renders nextFrame on user input
+CK_DLL_SFUN(gwindow_set_wait_event_mode)
+{
+    b32 should_wait    = GET_NEXT_INT(ARGS) ? 1 : 0;
+    float timeout_secs = GET_NEXT_FLOAT(ARGS);
+    CQ_PushCommand_SetWaitEventsTimeout(should_wait, timeout_secs);
 }
 
 // ============================================================

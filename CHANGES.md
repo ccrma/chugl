@@ -7,6 +7,7 @@
 - Add `TextureLoadDesc.read` to read the texture data into a chuck array on load
 - `UI_DrawList` methods that ended in `...Ex` were renamed to take advantage of method overloading, e.g. `.addLineEx(...)` renamed to `.addLine()`
   - plus general improvements to `UI_DrawList` and `UI_DrawFlags` docs
+- Add `GWindow.snooze()` which puts the graphics window in a low-power mode that only refreshes upon receiving user input. Useful for editing tools / static apps
 - New Examples
   - basic/gamepad.ck
   - basic/blend.ck

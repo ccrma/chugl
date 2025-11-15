@@ -519,14 +519,6 @@ CK_DLL_SFUN(chugl_get_fps)
     return;
 }
 
-// only renders nextFrame on user input
-CK_DLL_SFUN(chugl_set_wait_event_mode)
-{
-    b32 should_wait    = GET_NEXT_INT(ARGS) ? 1 : 0;
-    float timeout_secs = GET_NEXT_FLOAT(ARGS);
-    CQ_PushCommand_SetWaitEventsTimeout(should_wait, timeout_secs);
-}
-
 CK_DLL_SFUN(chugl_get_dt)
 {
     RETURN->v_float = g_last_dt;
@@ -1043,16 +1035,6 @@ CK_DLL_QUERY(ChuGL)
 
         SFUN(chugl_get_fps, "float", "fps");
         DOC_FUNC("FPS of current window, updated every second");
-
-        SFUN(chugl_set_wait_event_mode, "void", "snooze");
-        ARG("int", "bool_should_wait");
-        ARG("float", "timeout");
-        DOC_FUNC(
-          "If set `bool_should_wait` is set to true, the ChuGL window will only "
-          "refresh and broadcast GG.nextFrame() upon receiving user input. "
-          "If `timeout` is > 0, the window will wait at most `timeout` seconds "
-          "before refreshing. if `timeout` == 0, the window will wait indefinitely. "
-          "Useful for editing tools or other apps that are mostly static");
 
         SFUN(chugl_set_fps, "void", "fps");
         ARG("int", "fps");
