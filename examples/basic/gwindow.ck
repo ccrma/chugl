@@ -142,6 +142,7 @@ fun void contentScaleCallback() {
     }
 } spork ~ contentScaleCallback(); // spork it
 
+float elapsed_time;
 // an array for getting dragged-and-dropped filepaths
 GWindow.files() @=> string files[];
 // render loop
@@ -150,8 +151,12 @@ while (true)
     // synchronize 
     GG.nextFrame() => now;
 
+    // track accumulated time
+    Math.min(.02, GG.dt()) +=> elapsed_time;
+
     // update window title
     GWindow.title(title + " | Frame: " + GG.fc());
+    Math.sin(elapsed_time) => text.posX;
 
     // update window mode 
     if (GWindow.keyDown(GWindow.KEY_SPACE)) {
