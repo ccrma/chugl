@@ -19,7 +19,7 @@
 // @group(2) @binding(0) var<storage> u_draw_instances: array<DrawUniforms>;
 
 struct VertexInput {
-    @location(0) position : vec2f,
+    @location(0) position : vec3f,
     @location(1) color : vec3f,     // per-vertex color
 };
 
@@ -40,7 +40,7 @@ fn vs_main(
     let p = in.position;
     
     var u_Draw : DrawUniforms = u_draw_instances[instance_idx];
-    out.position = (u_frame.projection * u_frame.view) * u_Draw.model * vec4f(p, 0.0, 1.0f);
+    out.position = (u_frame.projection * u_frame.view) * u_Draw.model * vec4f(p, 1.0f);
     out.v_color = in.color;
 
     return out;

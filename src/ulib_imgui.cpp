@@ -955,6 +955,7 @@ CK_DLL_SFUN(ui_DragScalarNEx_CKFLOAT);
 // Widgets: Regular Sliders
 CK_DLL_SFUN(ui_SliderFloat);
 CK_DLL_SFUN(ui_SliderFloatEx);
+CK_DLL_SFUN(ui_SliderFloat2);
 CK_DLL_SFUN(ui_SliderAngle);
 CK_DLL_SFUN(ui_SliderAngleBounds);
 CK_DLL_SFUN(ui_SliderAngleEx);
@@ -5240,14 +5241,14 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
     QUERY->end_class(QUERY);
 
     // update() vt offset
-    ui_size_callback_vt_offset = chugin_setVTableOffset("UI_SizeCallback", "handler");
+    ui_size_callback_vt_offset = chugin_getVTableOffset("UI_SizeCallback", "handler");
 
     BEGIN_CLASS("UI_ComboCallback", "UI_Callback");
     MFUN(ui_combo_callback, "void", "handler");
     ARG("int", "idx");
     END_CLASS();
 
-    ui_combo_callback_vt_offset = chugin_setVTableOffset("UI_ComboCallback", "handler");
+    ui_combo_callback_vt_offset = chugin_getVTableOffset("UI_ComboCallback", "handler");
 
     // complex, not yet implemented
     // BEGIN_CLASS("UI_InputTextCallback", "UI_Callback");
@@ -5255,7 +5256,7 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
     // ARG("UI_InputTextCallbackData", "data");
     // END_CLASS();
 
-    // chugin_setVTableOffset(&ui_input_text_callback_vt_offset,
+    // chugin_getVTableOffset(&ui_input_text_callback_vt_offset,
     // "UI_InputTextCallback",
     //                        "handler");
 
@@ -6490,6 +6491,14 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
           "adjust format to decorate the value with a prefix or a suffix for in-"
           "slider labels or unit display. `flags` is an enum of type "
           "UI_SliderFlags");
+        
+        // not working for some reason
+        // SFUN(ui_SliderFloat2, "int", "slider");
+        // ARG("string", "label");
+        // ARG("UI_Float2", "v");
+        // ARG("float", "v_min");
+        // ARG("float", "v_max");
+        // DOC_FUNC("Implied format = \"%.3f\", flags = 0");
 
         SFUN(ui_SliderAngle, "int", "sliderAngle");
         ARG("string", "label");
@@ -11272,6 +11281,20 @@ CK_DLL_SFUN(ui_SliderFloat)
     float v_max = GET_NEXT_FLOAT(ARGS);
 
     RETURN->v_int = cimgui::ImGui_SliderFloat(label, v, v_min, v_max);
+}
+
+CK_DLL_SFUN(ui_SliderFloat2)
+{
+    if (!verifyInitialization(SHRED)) return;
+    const char* label = API->object->str(GET_NEXT_STRING(ARGS));
+
+    Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
+    float* v          = (float*)OBJ_MEMBER_UINT(obj, ui_float_ptr_offset);
+
+    float v_min = GET_NEXT_FLOAT(ARGS);
+    float v_max = GET_NEXT_FLOAT(ARGS);
+
+    RETURN->v_int = ImGui::SliderScalarN(label, ImGuiDataType_Float, v, 2, &v_min, &v_max);
 }
 
 CK_DLL_SFUN(ui_SliderFloatEx)

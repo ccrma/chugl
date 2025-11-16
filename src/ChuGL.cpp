@@ -820,6 +820,23 @@ CK_DLL_SFUN(chugl_select_folder_dialog)
 }
 
 // ============================================================================
+// nocheckin
+// ============================================================================
+CK_DLL_SFUN(chugl_check_vtable_offset)
+{
+    RETURN->v_int                  = -1;
+    Chuck_Object* ckobj            = GET_NEXT_OBJECT(ARGS);
+    Chuck_String* field_name_ckstr = GET_NEXT_STRING(ARGS);
+    if (!ckobj || !field_name_ckstr) return;
+
+    const char* field_name = API->object->str(field_name_ckstr);
+
+    // find the offset for update
+    RETURN->v_int
+      = API->type->get_vtable_offset(VM, API->object->get_type(ckobj), field_name);
+}
+
+// ============================================================================
 // Chugin entry point
 // ============================================================================
 CK_DLL_QUERY(ChuGL)
@@ -1185,6 +1202,11 @@ CK_DLL_QUERY(ChuGL)
           "with audio synthesis--will be paused!"
           "param `default_path` sets directory that the dialog opens "
           "to. if null, defaults to me.dir().");
+
+        SFUN(chugl_check_vtable_offset, "int", "offset");
+        ARG("Object", "obj");
+        ARG("string", "field");
+        DOC_FUNC("(hidden)");
 
         END_CLASS();
     } // GG

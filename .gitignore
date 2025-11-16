@@ -62,3 +62,6 @@ assets/
 # auto-generated html
 *.html
 *.css
+
+# binary files
+*.bin

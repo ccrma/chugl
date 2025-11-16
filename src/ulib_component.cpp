@@ -585,9 +585,9 @@ static void ulib_ggen_query(Chuck_DL_Query* QUERY)
         QUERY->end_class(QUERY); // GGen
     }
 
-    // set update vt offset
+    // cache update vt offset
     ggen_update_vt_offset
-      = chugin_setVTableOffset(SG_CKNames[SG_COMPONENT_TRANSFORM], "update");
+      = chugin_getVTableOffset(SG_CKNames[SG_COMPONENT_TRANSFORM], "update");
 }
 
 // CGLObject DLL ==============================================

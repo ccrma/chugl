@@ -972,7 +972,8 @@ struct G_DrawCallPipelineDesc {
     WGPUCullMode cull_mode;
     WGPUPrimitiveTopology primitive_topology;
     b16 is_transparent; // TODO support other blend modes (subtrative, additive etc)
-    b16 is_shadow_pass; // if true will create a pipeline with depthbias*
+    b16 is_shadow_pass; // if true will create a pipeline with depthbias
+    WGPUBlendState blend_state;
 };
 
 struct G_CacheComputePipeline {
@@ -1399,7 +1400,7 @@ struct G_Cache {
                 UNUSED_VAR(i);
             }
 
-            WGPUBlendState blend_state            = G_createBlendState(true);
+            WGPUBlendState blend_state = key.drawcall_pipeline_desc.blend_state;
             WGPUColorTargetState colorTargetState = {};
             WGPUFragmentState fragmentState       = {};
             bool has_color_target
@@ -1843,7 +1844,8 @@ struct G_DrawCall {
     // if is_shadow_pass = true, will create a pipeline with depthBias* params in
     // WGPUDepthStencilState
     void pipelineDesc(SG_ID sg_shader_id, WGPUCullMode cull_mode,
-                      WGPUPrimitiveTopology primitive_topology, bool is_transparent,
+                      WGPUPrimitiveTopology primitive_topology,
+                      WGPUBlendState* blend_state, bool is_transparent,
                       bool is_shadow_pass = false)
     {
         _pipeline_desc                    = {};
@@ -1855,6 +1857,9 @@ struct G_DrawCall {
         // didn't zero out all the padded memory
         _pipeline_desc.is_transparent = is_transparent ? 1UL : 0UL;
         _pipeline_desc.is_shadow_pass = is_shadow_pass ? 1UL : 0UL;
+
+        memcpy(&_pipeline_desc.blend_state, blend_state,
+               sizeof(_pipeline_desc.blend_state));
     }
 };
 

@@ -216,6 +216,14 @@ void CQ_PushCommand_SetFixedTimestep(int fps)
     END_COMMAND();
 }
 
+void CQ_PushCommand_SetWaitEventsTimeout(b32 should_wait, float timeout_secs)
+{
+    BEGIN_COMMAND(SG_Command_SetWaitEventsTimeout, SG_COMMAND_SET_WAIT_EVENTS_TIMEOUT);
+    command->should_wait  = should_wait;
+    command->timeout_secs = timeout_secs;
+    END_COMMAND();
+}
+
 void CQ_PushCommand_SetChuckVMInfo(int srate)
 {
     BEGIN_COMMAND(SG_Command_SetChuckVMInfo, SG_COMMAND_SET_CHUCK_VM_INFO);

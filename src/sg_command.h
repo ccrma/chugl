@@ -74,6 +74,7 @@ enum SG_CommandType : u32 {
 
     // chugl config
     SG_COMMAND_SET_FIXED_TIMESTEP,
+    SG_COMMAND_SET_WAIT_EVENTS_TIMEOUT,
     SG_COMMAND_SET_CHUCK_VM_INFO,
 
     // window
@@ -200,6 +201,11 @@ struct SG_Command {
 
 struct SG_Command_SetFixedTimestep : public SG_Command {
     int fps;
+};
+
+struct SG_Command_SetWaitEventsTimeout : public SG_Command {
+    b32 should_wait;
+    float timeout_secs;
 };
 
 struct SG_Command_SetChuckVMInfo : public SG_Command {

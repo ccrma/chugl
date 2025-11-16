@@ -32,6 +32,7 @@ struct VertexOutput {
 @group(1) @binding(0) var<storage> u_p1p2 : array<vec4f>; // .xy is p1, .zw is p2
 @group(1) @binding(1) var<storage> u_radius : array<f32>;
 @group(1) @binding(2) var<storage> u_color : array<vec4f>;  // vec3f color
+@group(1) @binding(3) var<uniform> u_outline_only: i32; // f32
 
 @vertex
 fn vs_main(
@@ -94,8 +95,14 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4f {
     let sdf = sdSegment(in.v_pos, in.v_p1, in.v_p2, in.v_radius);
     let aaf = fwidth(sdf); // anti alias field
 
-    let alpha = smoothstep(aaf, 0.0, sdf);
-    
+    var alpha = 0.0f;
+
+    if (bool(u_outline_only)) {
+        alpha = smoothstep(-aaf, 0.0, sdf) - smoothstep(0.0, aaf, sdf);
+    } else {
+        alpha = smoothstep(aaf, 0.0, sdf);
+    }
+
     if (alpha < .01) { discard; }
 
     return vec4f(in.v_color.rgb, alpha);

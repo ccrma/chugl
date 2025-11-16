@@ -283,6 +283,10 @@ struct App {
     nanotime_step_data stepper;
     int stepper_fps = 60; // default to 60fps
 
+    // window wait events state
+    b32 should_wait_for_input;
+    float wait_for_input_timeout;
+
     // mouse state
     double mouse_x = 0, mouse_y = 0;
     bool mouse_left = 0, mouse_right = 0;
@@ -605,7 +609,16 @@ struct App {
             // imgui and window callbacks
             CHUGL_Zero_MouseDeltasAndClickState();
             CHUGL_Kb_ZeroPressedReleased();
-            glfwPollEvents();
+
+            // process glfw input event queue
+            if (app->should_wait_for_input) {
+                if (app->wait_for_input_timeout > 0)
+                    glfwWaitEventsTimeout(app->wait_for_input_timeout);
+                else
+                    glfwWaitEvents();
+            } else {
+                glfwPollEvents();
+            }
 
             { // gamepad
                 for (int gamepad_idx = 0; gamepad_idx <= GLFW_JOYSTICK_LAST;
@@ -982,7 +995,8 @@ struct App {
                           &app->gctx);
                         d->pipelineDesc(material->pso.sg_shader_id,
                                         material->pso.cull_mode,
-                                        material->pso.primitive_topology, false);
+                                        material->pso.primitive_topology,
+                                        &material->pso.blend_state, false);
                     }
                 } break;
                 case SG_PassType_Compute: {
@@ -1101,7 +1115,8 @@ struct App {
                             d->pipelineDesc(
                               bloom_downscale_material->pso.sg_shader_id,
                               bloom_downscale_material->pso.cull_mode,
-                              bloom_downscale_material->pso.primitive_topology, false);
+                              bloom_downscale_material->pso.primitive_topology,
+                              &bloom_downscale_material->pso.blend_state, false);
                         } // end for
                     } // end downscale
 
@@ -1158,7 +1173,8 @@ struct App {
                             d->pipelineDesc(
                               bloom_upscale_material->pso.sg_shader_id,
                               bloom_upscale_material->pso.cull_mode,
-                              bloom_upscale_material->pso.primitive_topology, false);
+                              bloom_upscale_material->pso.primitive_topology,
+                              &bloom_upscale_material->pso.blend_state, false);
 
                             first_upsample = false;
                         } // end for
@@ -1448,7 +1464,7 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Pass* pass, R_Camera* cam
         d->pipelineDesc(shader_id, material->pso.cull_mode,
                         material->pso.wireframe ? WGPUPrimitiveTopology_LineList :
                                                   material->pso.primitive_topology,
-                        is_transparent);
+                        &material->pso.blend_state, is_transparent);
 
         { // set bindgroups
             // set frame uniforms
@@ -1547,10 +1563,10 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Pass* pass, R_Camera* cam
                               camera->params.far_plane, camera->params.far_plane);
         d->vertex_count   = 3;
         d->instance_count = 1;
-        d->pipelineDesc(skybox_material->pso.sg_shader_id,
-                        skybox_material->pso.cull_mode,
-                        skybox_material->pso.primitive_topology,
-                        false // not transparent
+        d->pipelineDesc(
+          skybox_material->pso.sg_shader_id, skybox_material->pso.cull_mode,
+          skybox_material->pso.primitive_topology, &skybox_material->pso.blend_state,
+          false // not transparent
         );
 
         R_Shader* skybox_shader
@@ -1664,6 +1680,12 @@ static void _R_HandleCommand(App* app, SG_Command* command)
                                    nanotime_now_max(), nanotime_now, nanotime_sleep);
             }
         } break;
+        case SG_COMMAND_SET_WAIT_EVENTS_TIMEOUT: {
+            SG_Command_SetWaitEventsTimeout* cmd
+              = (SG_Command_SetWaitEventsTimeout*)command;
+            app->should_wait_for_input  = cmd->should_wait;
+            app->wait_for_input_timeout = MAX(0.0, cmd->timeout_secs);
+        } break;
         case SG_COMMAND_SET_CHUCK_VM_INFO: {
             SG_Command_SetChuckVMInfo* cmd = (SG_Command_SetChuckVMInfo*)command;
             app->ck_srate                  = cmd->srate;
@@ -1747,9 +1769,31 @@ static void _R_HandleCommand(App* app, SG_Command* command)
               app->window,
               (cmd->aspect_ratio_x <= 0) ? GLFW_DONT_CARE : cmd->aspect_ratio_x,
               (cmd->aspect_ratio_y <= 0) ? GLFW_DONT_CARE : cmd->aspect_ratio_y);
+
             // reset size to constrain to new limits
             int width, height;
             glfwGetWindowSize(app->window, &width, &height);
+            if (cmd->min_width > 0) width = MAX(width, cmd->min_width);
+            if (cmd->max_width > 0) width = MIN(width, cmd->max_width);
+            if (cmd->min_height > 0) height = MAX(height, cmd->min_height);
+            if (cmd->max_height > 0) height = MIN(height, cmd->max_height);
+
+            // fit within aspect ratio if specified
+            // here only ever decrease a dimension to respect max size limits
+            // choosing to always make the window smaller rather than bigger bc
+            // it sucks when the window gets too big and the resize corner goes
+            // offscreen
+            if (cmd->aspect_ratio_x > 0 && cmd->aspect_ratio_y > 0) {
+                if (cmd->aspect_ratio_y >= cmd->aspect_ratio_x) {
+                    width = height
+                            * ((float)cmd->aspect_ratio_x / (float)cmd->aspect_ratio_y);
+                } else {
+                    height
+                      = width
+                        * ((float)cmd->aspect_ratio_y / (float)cmd->aspect_ratio_x);
+                }
+            }
+
             glfwSetWindowSize(app->window, width, height);
             break;
         }

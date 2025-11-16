@@ -59,6 +59,14 @@ text.size(.2);
 // set text
 text.text("drag and drop files here!");
 
+// window mode text
+false => int wait_on_input;
+GText window_mode --> GG.scene();
+window_mode.size(.2);
+window_mode.posY(-1);
+window_mode.align(1);
+window_mode.maxWidth(5);
+
 // mouse input listener
 fun void mouseListener()
 {
@@ -134,6 +142,7 @@ fun void contentScaleCallback() {
     }
 } spork ~ contentScaleCallback(); // spork it
 
+float elapsed_time;
 // an array for getting dragged-and-dropped filepaths
 GWindow.files() @=> string files[];
 // render loop
@@ -142,8 +151,23 @@ while (true)
     // synchronize 
     GG.nextFrame() => now;
 
+    // track accumulated time
+    Math.min(.02, GG.dt()) +=> elapsed_time;
+
     // update window title
     GWindow.title(title + " | Frame: " + GG.fc());
+    Math.sin(elapsed_time) => text.posX;
+
+    // update window mode 
+    if (GWindow.keyDown(GWindow.KEY_SPACE)) {
+        !wait_on_input => wait_on_input;
+        GWindow.snooze(wait_on_input, 0);
+    }
+
+    if (wait_on_input)
+        window_mode.text("Window Refresh Mode: On Input\n(press <space> to toggle)");
+    else
+        window_mode.text("Window Refresh Mode: Always\n(press <space> to toggle)");
 
     // detect when files are dropped onto this window
     if (GWindow.files() != files) {

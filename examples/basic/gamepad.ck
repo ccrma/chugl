@@ -1,3 +1,16 @@
+//--------------------------------------------------------------------
+// name: gamepad.ck
+// desc: reading gamepad input
+// requires: ChuGL 0.2.8 (alpha) + chuck-1.5.5.6 or higher
+//
+// Connect a gamepad (e.g. xbox or ps controller) and visualize the
+// inputs!
+// 
+// author: Andrew Zhu Aday
+//   date: Fall 2025
+//--------------------------------------------------------------------
+
+// 2D camera setup
 GG.camera().orthographic();
 GG.camera().viewSize(10);
 
@@ -113,7 +126,8 @@ class GamepadViz extends GGen {
     }
 }
 
-while (1) {
+// render loop
+while (true) {
     GG.nextFrame() => now;
 
     Gamepad.available() @=> int gamepad_ids[];

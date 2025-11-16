@@ -1,6 +1,19 @@
 TODO
 
+Add warning on renderthread when a ChuGL Geometry's vertex buffer type (float/vec2/vec3/vec4)
+doesn't match the vertex layout of the ShaderDesc on a Material it's paired with 
+
+for kunwoo: add feature for loading texture directly to CPU as well,
+rather than having to load to GPU and readback via texture.read()
+
 Leakcheck gamepad.ck example
+
+3D polylines
+- freya shapes polylines
+- do babylon or threejs support this?
+- that one screen-space 3d line blog post
+- Jasper's 3d line debug tool: https://bsky.app/profile/jasperrlz.bsky.social/post/3lbe2vht6p22s
+- does Greggmann have something for this?
 
 bugs found working on games
 - setting shader storageBuffer to empty array causes crash
@@ -27,11 +40,6 @@ Create skyboxmaterial example
 how does https://threejs.org/editor/ do raycast mousepicking? (can select model subcomponents on click)
 - is it just AABB raycast?
 
-- OBJ rework
-  - GModel(string path)
-  - see how raylib handles all the tinyobj_material properties in their shader
-  - remove dependency on rapidobj, port AssLoader backend to tinyobj
-
 - Shadow
   - add shadowNearPlane to SpotLight
 
@@ -45,23 +53,17 @@ how does https://threejs.org/editor/ do raycast mousepicking? (can select model 
 - add pipeline/bindgroup gc for R_Shader
   - want to prevent memory leak from say CHydra building new shaders every frame
 - check if imgui has multi-window support now for webgpu backend
-- port geometry builders to use par_shapes
 - GLTF loader!!!! (after adding GC?)
   - how does raylib do it? reference their pbr material system 
 
 UI
 - add nearest-neighbor filtering
 
-- look into other blendmodes besides alpha blending
-  - see acerola blend modes video
-  - impl additive blending particle system example, see https://www.youtube.com/watch?v=ahOfNgvQ93Q&ab_channel=NeverEngineStudios
-    - also acerola particle system / compute shader video
+- also acerola particle system / compute shader video
 
 - default GScene with a main camera?
-- add inverse normal matrix to PER_DRAW instanced draw uniforms
 - group all the commands of the frame together, submit all at once at end of RenderGraph 
 
-- add back MSAA to rendergraph API, see if that fixes the appearance of audio_donut.ck
 
 - ==optimize== for G_DrawCall sortkey, use the material AND shader index into arrays,
 store 16 bits each (assumes we won't ever have more than 16k live materials and shaders),
@@ -113,7 +115,6 @@ lets us sort by shaders as well to minimize pipeline switches
   - anything we can use from https://github.com/google/filament
 - add more builtin-shapes
   - see raylib 3d mesh generator
-  - https://prideout.net/shapes
 - Swapping out for simpler libraries
   - swap out glm for handmade math
   - swap GLFW for https://github.com/ColleagueRiley/RGFW

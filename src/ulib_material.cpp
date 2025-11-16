@@ -75,6 +75,25 @@ CK_DLL_MFUN(material_get_transparent);
 CK_DLL_MFUN(material_set_wireframe);
 CK_DLL_MFUN(material_get_wireframe);
 
+// blend modes
+CK_DLL_MFUN(material_set_blendmode);
+CK_DLL_MFUN(material_set_blend);
+CK_DLL_MFUN(material_set_blend_rgba);
+
+CK_DLL_MFUN(material_get_blend_factor_src);
+CK_DLL_MFUN(material_get_blend_factor_dst);
+CK_DLL_MFUN(material_get_blend_op);
+CK_DLL_MFUN(material_get_blend_factor_src_alpha);
+CK_DLL_MFUN(material_get_blend_factor_dst_alpha);
+CK_DLL_MFUN(material_get_blend_op_alpha);
+
+// CK_DLL_MFUN(material_set_blend_factor_src);
+// CK_DLL_MFUN(material_set_blend_factor_dst);
+// CK_DLL_MFUN(material_set_blend_op);
+// CK_DLL_MFUN(material_set_blend_factor_src_alpha);
+// CK_DLL_MFUN(material_set_blend_factor_dst_alpha);
+// CK_DLL_MFUN(material_set_blend_op_alpha);
+
 // material uniforms
 CK_DLL_MFUN(material_uniform_remove);
 CK_DLL_MFUN(material_uniform_active_locations);
@@ -146,6 +165,9 @@ CK_DLL_MFUN(flat_material_set_texture_offset);
 CK_DLL_MFUN(flat_material_set_texture_scale);
 CK_DLL_MFUN(flat_material_get_texture_offset);
 CK_DLL_MFUN(flat_material_get_texture_scale);
+
+CK_DLL_MFUN(flat_material_set_emissive_color);
+CK_DLL_MFUN(flat_material_get_emissive_color);
 
 CK_DLL_CTOR(uv_material_ctor);
 
@@ -448,272 +470,501 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
     END_CLASS();
 
     // Material -----------------------------------------------------
-    BEGIN_CLASS(SG_CKNames[SG_COMPONENT_MATERIAL], SG_CKNames[SG_COMPONENT_BASE]);
-    DOC_CLASS(
-      "Chugl material types. Represents uniforms/textures/buffers that are passed into "
-      "a given shader");
-    ADD_EX("basic/geo-and-mat.ck");
-    ADD_EX("basic/transparency.ck");
+    {
 
-    CTOR(material_ctor);
+        BEGIN_CLASS(SG_CKNames[SG_COMPONENT_MATERIAL], SG_CKNames[SG_COMPONENT_BASE]);
+        DOC_CLASS(
+          "Chugl material types. Represents uniforms/textures/buffers that are passed "
+          "into "
+          "a given shader");
+        ADD_EX("basic/geo-and-mat.ck");
+        ADD_EX("basic/transparency.ck");
+        ADD_EX("basic/blend.ck");
+        ADD_EX("deep/lines3d.ck");
+        ADD_EX("deep/custom-material.ck");
+        ADD_EX("deep/particles.ck");
 
-    CTOR(material_ctor_with_shader);
-    ARG(SG_CKNames[SG_COMPONENT_SHADER], "shader");
-    DOC_FUNC("Create a Material component with the given Shader.");
+        CTOR(material_ctor);
 
-    // svars
-    static t_CKINT cullmode_none  = WGPUCullMode_None;
-    static t_CKINT cullmode_front = WGPUCullMode_Front;
-    static t_CKINT cullmode_back  = WGPUCullMode_Back;
-    SVAR("int", "Cull_None", &cullmode_none);
-    DOC_VAR("(hidden)");
-    SVAR("int", "Cull_Front", &cullmode_front);
-    DOC_VAR("(hidden)");
-    SVAR("int", "Cull_Back", &cullmode_back);
-    DOC_VAR("(hidden)");
+        CTOR(material_ctor_with_shader);
+        ARG(SG_CKNames[SG_COMPONENT_SHADER], "shader");
+        DOC_FUNC("Create a Material component with the given Shader.");
 
-    SVAR("int", "CULL_NONE", &cullmode_none);
-    DOC_VAR("No culling.");
-    SVAR("int", "CULL_FRONT", &cullmode_front);
-    DOC_VAR("Cull front faces.");
-    SVAR("int", "CULL_BACK", &cullmode_back);
-    DOC_VAR("Cull back faces.");
+        // svars
+        static t_CKINT cullmode_none  = WGPUCullMode_None;
+        static t_CKINT cullmode_front = WGPUCullMode_Front;
+        static t_CKINT cullmode_back  = WGPUCullMode_Back;
+        SVAR("int", "Cull_None", &cullmode_none);
+        DOC_VAR("(hidden)");
+        SVAR("int", "Cull_Front", &cullmode_front);
+        DOC_VAR("(hidden)");
+        SVAR("int", "Cull_Back", &cullmode_back);
+        DOC_VAR("(hidden)");
 
-    static t_CKINT topology_pointlist     = WGPUPrimitiveTopology_PointList;
-    static t_CKINT topology_linelist      = WGPUPrimitiveTopology_LineList;
-    static t_CKINT topology_linestrip     = WGPUPrimitiveTopology_LineStrip;
-    static t_CKINT topology_trianglelist  = WGPUPrimitiveTopology_TriangleList;
-    static t_CKINT topology_trianglestrip = WGPUPrimitiveTopology_TriangleStrip;
-    SVAR("int", "Topology_PointList", &topology_pointlist);
-    DOC_VAR("(hidden)");
-    SVAR("int", "Topology_LineList", &topology_linelist);
-    DOC_VAR("(hidden)");
-    SVAR("int", "Topology_LineStrip", &topology_linestrip);
-    DOC_VAR("(hidden)");
-    SVAR("int", "Topology_TriangleList", &topology_trianglelist);
-    DOC_VAR("(hidden)");
-    SVAR("int", "Topology_TriangleStrip", &topology_trianglestrip);
-    DOC_VAR("(hidden)");
+        SVAR("int", "CULL_NONE", &cullmode_none);
+        DOC_VAR("No culling.");
+        SVAR("int", "CULL_FRONT", &cullmode_front);
+        DOC_VAR("Cull front faces.");
+        SVAR("int", "CULL_BACK", &cullmode_back);
+        DOC_VAR("Cull back faces.");
 
-    SVAR("int", "TOPOLOGY_POINTLIST", &topology_pointlist);
-    DOC_VAR("Interpret each vertex as a point.");
-    SVAR("int", "TOPOLOGY_LINELIST", &topology_linelist);
-    DOC_VAR("Interpret each pair of vertices as a line.");
-    SVAR("int", "TOPOLOGY_LINESTRIP", &topology_linestrip);
-    DOC_VAR(
-      "Each vertex after the first defines a line primitive between it and the "
-      "previous vertex.");
-    SVAR("int", "TOPOLOGY_TRIANGLELIST", &topology_trianglelist);
-    DOC_VAR("Interpret each triplet of vertices as a triangle.");
-    SVAR("int", "TOPOLOGY_TRIANGLESTRIP", &topology_trianglestrip);
-    DOC_VAR(
-      "Each vertex after the first two defines a triangle primitive between it and the "
-      "previous two vertices.");
+        static t_CKINT topology_pointlist     = WGPUPrimitiveTopology_PointList;
+        static t_CKINT topology_linelist      = WGPUPrimitiveTopology_LineList;
+        static t_CKINT topology_linestrip     = WGPUPrimitiveTopology_LineStrip;
+        static t_CKINT topology_trianglelist  = WGPUPrimitiveTopology_TriangleList;
+        static t_CKINT topology_trianglestrip = WGPUPrimitiveTopology_TriangleStrip;
+        SVAR("int", "Topology_PointList", &topology_pointlist);
+        DOC_VAR("(hidden)");
+        SVAR("int", "Topology_LineList", &topology_linelist);
+        DOC_VAR("(hidden)");
+        SVAR("int", "Topology_LineStrip", &topology_linestrip);
+        DOC_VAR("(hidden)");
+        SVAR("int", "Topology_TriangleList", &topology_trianglelist);
+        DOC_VAR("(hidden)");
+        SVAR("int", "Topology_TriangleStrip", &topology_trianglestrip);
+        DOC_VAR("(hidden)");
 
-    // pso modifiers (shouldn't be set often, so we lump all together in a single
-    // command that copies the entire PSO struct)
-    MFUN(material_get_shader, SG_CKNames[SG_COMPONENT_SHADER], "shader");
-    DOC_FUNC("Get the shader of the material.");
+        SVAR("int", "TOPOLOGY_POINTLIST", &topology_pointlist);
+        DOC_VAR("Interpret each vertex as a point.");
+        SVAR("int", "TOPOLOGY_LINELIST", &topology_linelist);
+        DOC_VAR("Interpret each pair of vertices as a line.");
+        SVAR("int", "TOPOLOGY_LINESTRIP", &topology_linestrip);
+        DOC_VAR(
+          "Each vertex after the first defines a line primitive between it and the "
+          "previous vertex.");
+        SVAR("int", "TOPOLOGY_TRIANGLELIST", &topology_trianglelist);
+        DOC_VAR("Interpret each triplet of vertices as a triangle.");
+        SVAR("int", "TOPOLOGY_TRIANGLESTRIP", &topology_trianglestrip);
+        DOC_VAR(
+          "Each vertex after the first two defines a triangle primitive between it and "
+          "the "
+          "previous two vertices.");
 
-    MFUN(material_set_shader, "void", "shader");
-    ARG(SG_CKNames[SG_COMPONENT_SHADER], "shader");
-    DOC_FUNC("Set the shader of the material.");
+        // blend factor constants
+        static t_CKINT BlendFactor_Zero = WGPUBlendFactor_Zero;
+        SVAR("int", "BlendFactor_Zero", &BlendFactor_Zero);
+        DOC_VAR("(0, 0, 0, 0)");
 
-    MFUN(material_get_cullmode, "int", "cullMode");
-    DOC_FUNC(
-      "Get the cull mode of the material. Material.Cull_None, Material.Cull_Front, or "
-      "Material.Cull_Back.");
+        static t_CKINT BlendFactor_One = WGPUBlendFactor_One;
+        SVAR("int", "BlendFactor_One", &BlendFactor_One);
+        DOC_VAR("(1, 1, 1, 1)");
 
-    MFUN(material_set_cullmode, "void", "cullMode");
-    ARG("int", "cullMode");
-    DOC_FUNC(
-      "Set the cull mode of the material. valid options: Material.Cull_None, "
-      "Material.Cull_Front, or Material.Cull_Back.");
+        static t_CKINT BlendFactor_Src = WGPUBlendFactor_Src;
+        SVAR("int", "BlendFactor_Src", &BlendFactor_Src);
+        DOC_VAR("(R_src, G_src, B_src, A_src)");
 
-    MFUN(material_set_topology, "void", "topology");
-    ARG("int", "topology");
-    DOC_FUNC(
-      "Set the primitive topology of the material. valid options: "
-      "Material.Topology_PointList, Material.Topology_LineList, "
-      "Material.Topology_LineStrip, Material.Topology_TriangleList, or "
-      "Material.Topology_TriangleStrip.");
+        static t_CKINT BlendFactor_OneMinusSrc = WGPUBlendFactor_OneMinusSrc;
+        SVAR("int", "BlendFactor_OneMinusSrc", &BlendFactor_OneMinusSrc);
+        DOC_VAR("(1 - R_src, 1 - G_src, 1 - B_src, 1 - A_src)");
 
-    MFUN(material_get_topology, "int", "topology");
-    DOC_FUNC(
-      "Get the primitive topology of the material. Material.Topology_PointList, "
-      "Material.Topology_LineList, Material.Topology_LineStrip, "
-      "Material.Topology_TriangleList, or Material.Topology_TriangleStrip.");
+        static t_CKINT BlendFactor_SrcAlpha = WGPUBlendFactor_SrcAlpha;
+        SVAR("int", "BlendFactor_SrcAlpha", &BlendFactor_SrcAlpha);
+        DOC_VAR("(A_src, A_src, A_src, A_src)");
 
-    MFUN(material_set_transparent, "void", "transparent");
-    ARG("int", "is_transparent");
-    DOC_FUNC(
-      "Mark the material as transparent. Transparent materials will be rendered after "
-      "all opaque (i.e. non-transparent) objects in back-to-front order based on "
-      "their GMesh's distance from the camera, and colors will be alpha-blended "
-      "together. The renderer does *not* implement per-pixel sorting or OIT so you may "
-      "observe artifacts/incorrectness in 3D scenes");
+        static t_CKINT BlendFactor_OneMinusSrcAlpha = WGPUBlendFactor_OneMinusSrcAlpha;
+        SVAR("int", "BlendFactor_OneMinusSrcAlpha", &BlendFactor_OneMinusSrcAlpha);
+        DOC_VAR("(1 - A_src, 1 - A_src, 1 - A_src, 1 - A_src)");
 
-    MFUN(material_get_transparent, "int", "transparent");
-    DOC_FUNC("Get whether this material is treated as transparent");
+        static t_CKINT BlendFactor_Dst = WGPUBlendFactor_Dst;
+        SVAR("int", "BlendFactor_Dst", &BlendFactor_Dst);
+        DOC_VAR("(R_dst, G_dst, B_dst, A_dst)");
 
-    MFUN(material_set_wireframe, "void", "wireframe");
-    ARG("int", "wireframe");
-    DOC_FUNC(
-      "Mark whether this material should be rendered as a wireframe. Internally this "
-      "sets the Material.Topology to a LineList and will use a special wireframe "
-      "indices buffer for any geometry paired with this material");
+        static t_CKINT BlendFactor_OneMinusDst = WGPUBlendFactor_OneMinusDst;
+        SVAR("int", "BlendFactor_OneMinusDst", &BlendFactor_OneMinusDst);
+        DOC_VAR("(1 - R_dst, 1 - G_dst, 1 - B_dst, 1 - A_dst)");
 
-    MFUN(material_get_wireframe, "int", "wireframe");
-    DOC_FUNC("Get whether this material will be rendered as a wireframe.");
+        static t_CKINT BlendFactor_DstAlpha = WGPUBlendFactor_DstAlpha;
+        SVAR("int", "BlendFactor_DstAlpha", &BlendFactor_DstAlpha);
+        DOC_VAR("(A_dst, A_dst, A_dst, A_dst)");
 
-    // uniforms
+        static t_CKINT BlendFactor_OneMinusDstAlpha = WGPUBlendFactor_OneMinusDstAlpha;
+        SVAR("int", "BlendFactor_OneMinusDstAlpha", &BlendFactor_OneMinusDstAlpha);
+        DOC_VAR("(1 - A_dst, 1 - A_dst, 1 - A_dst, 1 - A_dst)");
 
-    // TODO
-    // MFUN(material_uniform_remove, "void", "removeUniform");
-    // ARG("int", "location");
+        static t_CKINT BlendFactor_SrcAlphaSaturated
+          = WGPUBlendFactor_SrcAlphaSaturated;
+        SVAR("int", "BlendFactor_SrcAlphaSaturated", &BlendFactor_SrcAlphaSaturated);
+        DOC_VAR(
+          "(min(A_src, 1 - A_dst), min(A_src, 1 - A_dst), min(A_src, 1 - A_dst), 1)");
 
-    MFUN(material_uniform_active_locations, "int[]", "activeUniformLocations");
-    DOC_FUNC(
-      "Get list of active uniform locations, i.e. uniform locations that have been set "
-      "(bind group entry locations)");
+        // not adding untl we support setting blend constants
+        // static t_CKINT BlendFactor_Constant = WGPUBlendFactor_Constant;
+        // SVAR("int", "BlendFactor_Constant", &BlendFactor_Constant);
+        // DOC_VAR("");
+        // static t_CKINT BlendFactor_OneMinusConstant =
+        // WGPUBlendFactor_OneMinusConstant; SVAR("int", "BlendFactor_Zero",
+        // &BlendFactor_OneMinusConstant); DOC_VAR("");
 
-    MFUN(material_set_uniform_float, "void", "uniformFloat");
-    ARG("int", "location");
-    ARG("float", "uniform_value");
-    DOC_FUNC("Set a float uniform value at the given location.");
+        // blend operation constants
+        static t_CKINT BlendOperation_Add = WGPUBlendOperation_Add;
+        SVAR("int", "BlendOp_Add", &BlendOperation_Add);
+        DOC_VAR("RGBAsrc × RGBAsrcFactor + RGBAdst × RGBAdstFactor");
 
-    MFUN(material_get_uniform_float, "float", "uniformFloat");
-    ARG("int", "location");
-    DOC_FUNC("Get a float uniform value at the given location.");
+        static t_CKINT BlendOperation_Subtract = WGPUBlendOperation_Subtract;
+        SVAR("int", "BlendOp_Subtract", &BlendOperation_Subtract);
+        DOC_VAR("RGBAsrc × RGBAsrcFactor - RGBAdst × RGBAdstFactor");
 
-    MFUN(material_set_uniform_float2, "void", "uniformFloat2");
-    ARG("int", "location");
-    ARG("vec2", "uniform_value");
-    DOC_FUNC("Set a vec2 uniform value at the given location.");
+        static t_CKINT BlendOperation_ReverseSubtract
+          = WGPUBlendOperation_ReverseSubtract;
+        SVAR("int", "BlendOp_ReverseSubtract", &BlendOperation_ReverseSubtract);
+        DOC_VAR("RGBAdst × RGBAdstFactor - RGBAsrc × RGBAsrcFactor");
 
-    MFUN(material_get_uniform_float2, "vec2", "uniformFloat2");
-    ARG("int", "location");
-    DOC_FUNC("Get a vec2 uniform value at the given location.");
+        static t_CKINT BlendOperation_Min = WGPUBlendOperation_Min;
+        SVAR("int", "BlendOp_Min", &BlendOperation_Min);
+        DOC_VAR("min(RGBAsrc, RGBAdst)");
 
-    MFUN(material_set_uniform_float3, "void", "uniformFloat3");
-    ARG("int", "location");
-    ARG("vec3", "uniform_value");
-    DOC_FUNC("Set a vec3 uniform value at the given location.");
+        static t_CKINT BlendOperation_Max = WGPUBlendOperation_Max;
+        SVAR("int", "BlendOp_Max", &BlendOperation_Max);
+        DOC_VAR("max(RGBAsrc, RGBAdst)");
 
-    MFUN(material_get_uniform_float3, "vec3", "uniformFloat3");
-    ARG("int", "location");
-    DOC_FUNC("Get a vec3 uniform value at the given location.");
+        static t_CKINT BlendMode_Alpha = SG_MaterialBlendMode_Alpha;
+        SVAR("int", "BlendMode_Alpha", &BlendMode_Alpha);
+        DOC_VAR(
+          "Equals 0. Normal alpha blending. The default for Materials. Equivalent to "
+          "blend(SrcAlpha, OneMinusSrcAlpha)");
+        SVAR("int", "BLEND_MODE_ALPHA", &BlendMode_Alpha);
+        DOC_VAR(
+          "Equals 0. Normal alpha blending. The default for Materials. Equivalent to "
+          "blend(SrcAlpha, OneMinusSrcAlpha)");
 
-    MFUN(material_set_uniform_float4, "void", "uniformFloat4");
-    ARG("int", "location");
-    ARG("vec4", "uniform_value");
-    DOC_FUNC("Set a vec4 uniform value at the given location.");
+        static t_CKINT BlendMode_Replace = SG_MaterialBlendMode_Replace;
+        SVAR("int", "BlendMode_Replace", &BlendMode_Replace);
+        DOC_VAR("Equals 1. Ignore alpha channel. Equivalent to blend(One, Zero)");
+        SVAR("int", "BLEND_MODE_REPLACE", &BlendMode_Replace);
+        DOC_VAR("Equals 1. Ignore alpha channel. Equivalent to blend(One, Zero)");
 
-    MFUN(material_get_uniform_float4, "vec4", "uniformFloat4");
-    ARG("int", "location");
-    DOC_FUNC("Get a vec4 uniform value at the given location.");
+        static t_CKINT BlendMode_Add = SG_MaterialBlendMode_Add;
+        SVAR("int", "BlendMode_Add", &BlendMode_Add);
+        DOC_VAR("Equals 2. Additive blending. Equivalent to blend(One, One)");
+        SVAR("int", "BLEND_MODE_ADD", &BlendMode_Add);
+        DOC_VAR("Equals 2. Additive blending. Equivalent to blend(One, One)");
 
-    MFUN(material_set_uniform_int, "void", "uniformInt");
-    ARG("int", "location");
-    ARG("int", "uniform_value");
-    DOC_FUNC("Set an int uniform value at the given location.");
+        static t_CKINT BlendMode_Subtract = SG_MaterialBlendMode_Subtract;
+        SVAR("int", "BlendMode_Subtract", &BlendMode_Subtract);
+        DOC_VAR(
+          "Equals 3. Subtractive blending. Equivalent to blend(One, One, "
+          "BlendOp_Subtract)");
+        SVAR("int", "BLEND_MODE_SUBTRACT", &BlendMode_Subtract);
+        DOC_VAR(
+          "Equals 3. Subtractive blending. Equivalent to blend(One, One, "
+          "BlendOp_Subtract)");
 
-    MFUN(material_get_uniform_int, "int", "uniformInt");
-    ARG("int", "location");
-    DOC_FUNC("Get an int uniform value at the given location.");
+        static t_CKINT BlendMode_Multiply = SG_MaterialBlendMode_Multiply;
+        SVAR("int", "BlendMode_Multiply", &BlendMode_Multiply);
+        DOC_VAR(
+          "Equals 4. Multiplicative blending. Darkens. Equivalent to blend(Dst, "
+          "OneMinusSrcAlpha)");
+        SVAR("int", "BLEND_MODE_MULTIPLY", &BlendMode_Multiply);
+        DOC_VAR(
+          "Equals 4. Multiplicative blending. Darkens. Equivalent to blend(Dst, "
+          "OneMinusSrcAlpha)");
 
-    MFUN(material_set_uniform_int2, "void", "uniformInt2");
-    ARG("int", "location");
-    ARG("int", "x");
-    ARG("int", "y");
-    DOC_FUNC("Set an vec2<i32> uniform value at the given location.");
+        static t_CKINT BlendMode_Screen = SG_MaterialBlendMode_Screen;
+        SVAR("int", "BlendMode_Screen", &BlendMode_Screen);
+        DOC_VAR(
+          "Equals 5. Screen blending. Opposite of multiply. Lightens. Equivalent to "
+          "blend(One, "
+          "OneMinusSrc)");
+        SVAR("int", "BLEND_MODE_SCREEN", &BlendMode_Screen);
+        DOC_VAR(
+          "Equals 5. Screen blending. Opposite of multiply. Lightens. Equivalent to "
+          "blend(One, "
+          "OneMinusSrc)");
 
-    MFUN(material_get_uniform_int2, "int[]", "uniformInt2");
-    ARG("int", "location");
-    DOC_FUNC("Get an vec2<i32> uniform value at the given location.");
+        // pso modifiers (shouldn't be set often, so we lump all together in a single
+        // command that copies the entire PSO struct)
+        MFUN(material_get_shader, SG_CKNames[SG_COMPONENT_SHADER], "shader");
+        DOC_FUNC("Get the shader of the material.");
 
-    MFUN(material_set_uniform_int3, "void", "uniformInt3");
-    ARG("int", "location");
-    ARG("int", "x");
-    ARG("int", "y");
-    ARG("int", "z");
-    DOC_FUNC("Set an vec3<i32> uniform value at the given location.");
+        MFUN(material_set_shader, "void", "shader");
+        ARG(SG_CKNames[SG_COMPONENT_SHADER], "shader");
+        DOC_FUNC("Set the shader of the material.");
 
-    MFUN(material_get_uniform_int3, "int[]", "uniformInt3");
-    ARG("int", "location");
-    DOC_FUNC("Get an vec3<i32> uniform value at the given location.");
+        MFUN(material_get_cullmode, "int", "cullMode");
+        DOC_FUNC(
+          "Get the cull mode of the material. Material.Cull_None, Material.Cull_Front, "
+          "or "
+          "Material.Cull_Back.");
 
-    MFUN(material_set_uniform_int4, "void", "uniformInt4");
-    ARG("int", "location");
-    ARG("int", "x");
-    ARG("int", "y");
-    ARG("int", "z");
-    ARG("int", "w");
-    DOC_FUNC("Set an vec4<i32> uniform value at the given location.");
+        MFUN(material_set_cullmode, "void", "cullMode");
+        ARG("int", "cullMode");
+        DOC_FUNC(
+          "Set the cull mode of the material. valid options: Material.Cull_None, "
+          "Material.Cull_Front, or Material.Cull_Back.");
 
-    MFUN(material_get_uniform_int4, "int[]", "uniformInt4");
-    ARG("int", "location");
-    DOC_FUNC("Get an vec4<i32> uniform value at the given location.");
+        MFUN(material_set_topology, "void", "topology");
+        ARG("int", "topology");
+        DOC_FUNC(
+          "Set the primitive topology of the material. valid options: "
+          "Material.Topology_PointList, Material.Topology_LineList, "
+          "Material.Topology_LineStrip, Material.Topology_TriangleList, or "
+          "Material.Topology_TriangleStrip.");
 
-    // storage buffers
-    MFUN(material_set_storage_buffer, "void", "storageBuffer");
-    ARG("int", "location");
-    ARG("float[]", "storageBuffer");
-    DOC_FUNC("Bind the given array data as a storage buffer at the given location.");
+        MFUN(material_get_topology, "int", "topology");
+        DOC_FUNC(
+          "Get the primitive topology of the material. Material.Topology_PointList, "
+          "Material.Topology_LineList, Material.Topology_LineStrip, "
+          "Material.Topology_TriangleList, or Material.Topology_TriangleStrip.");
 
-    MFUN(material_set_storage_buffer_vec2, "void", "storageBuffer");
-    ARG("int", "location");
-    ARG("vec2[]", "storageBuffer");
-    DOC_FUNC("Bind the given array data as a storage buffer at the given location.");
+        MFUN(material_set_transparent, "void", "transparent");
+        ARG("int", "is_transparent");
+        DOC_FUNC(
+          "Mark the material as transparent. Transparent materials will be rendered "
+          "after "
+          "all opaque (i.e. non-transparent) objects in back-to-front order based on "
+          "their GMesh's distance from the camera, and colors will be alpha-blended "
+          "together. The renderer does *not* implement per-pixel sorting or OIT so you "
+          "may "
+          "observe artifacts/incorrectness in 3D scenes");
 
-    MFUN(material_set_storage_buffer_vec3, "void", "storageBuffer");
-    ARG("int", "location");
-    ARG("vec3[]", "storageBuffer");
-    DOC_FUNC("Bind the given array data as a storage buffer at the given location.");
+        MFUN(material_get_transparent, "int", "transparent");
+        DOC_FUNC("Get whether this material is treated as transparent");
 
-    MFUN(material_set_storage_buffer_vec4, "void", "storageBuffer");
-    ARG("int", "location");
-    ARG("vec4[]", "storageBuffer");
-    DOC_FUNC("Bind the given array data as a storage buffer at the given location.");
+        MFUN(material_set_wireframe, "void", "wireframe");
+        ARG("int", "wireframe");
+        DOC_FUNC(
+          "Mark whether this material should be rendered as a wireframe. Internally "
+          "this "
+          "sets the Material.Topology to a LineList and will use a special wireframe "
+          "indices buffer for any geometry paired with this material");
 
-    MFUN(material_set_storage_buffer_integer, "void", "storageBuffer");
-    ARG("int", "location");
-    ARG("int[]", "storageBuffer");
-    DOC_FUNC("Bind the given array data as a storage buffer at the given location.");
+        MFUN(material_get_wireframe, "int", "wireframe");
+        DOC_FUNC("Get whether this material will be rendered as a wireframe.");
 
-    // external storage buffer
-    MFUN(material_set_storage_buffer_external, "void", "storageBuffer");
-    ARG("int", "location");
-    ARG("StorageBuffer", "storageBuffer");
-    DOC_FUNC("Bind a storage buffer at the given location.");
+        // blend =============================
 
-    MFUN(material_set_sampler, "void", "sampler");
-    ARG("int", "location");
-    ARG("TextureSampler", "sampler");
-    DOC_FUNC("Bind a sampler at the given location.");
+        MFUN(material_get_blend_factor_src, "int", "blendSrc");
+        DOC_FUNC("Get the blending src factor");
+        MFUN(material_get_blend_factor_dst, "int", "blendDst");
+        DOC_FUNC("Get the blending dst factor");
+        MFUN(material_get_blend_op, "int", "blendOp");
+        DOC_FUNC("Get the blending operator");
+        MFUN(material_get_blend_factor_src_alpha, "int", "blendSrcAlpha");
+        DOC_FUNC("Get the blending src alpha factor");
+        MFUN(material_get_blend_factor_dst_alpha, "int", "blendDstAlpha");
+        DOC_FUNC("Get the blending dst alpha factor");
+        MFUN(material_get_blend_op_alpha, "int", "blendOpAlpha");
+        DOC_FUNC("Get the blending alpha operator");
 
-    MFUN(material_get_sampler, "TextureSampler", "sampler");
-    ARG("int", "location");
-    DOC_FUNC("Get the sampler at the given location.");
+        // MFUN(material_set_blend_factor_src, "void", "blendSrc");
+        // ARG("int", "src_factor");
+        // DOC_FUNC(
+        //   "Set the blend src factor. `src_factor` is a Material.BlendFactor_XXX
+        //   enum");
 
-    MFUN(material_set_texture, "void", "texture");
-    ARG("int", "location");
-    ARG("Texture", "texture");
-    DOC_FUNC("Bind a texture at the given location.");
+        // MFUN(material_set_blend_factor_dst, "void", "blendDst");
+        // ARG("int", "dst_factor");
+        // DOC_FUNC(
+        //   "Set the blend dst factor. `dst_factor` is a Material.BlendFactor_XXX
+        //   enum");
 
-    MFUN(material_get_texture, "Texture", "texture");
-    ARG("int", "location");
-    DOC_FUNC("Get the texture at the given location.");
+        // MFUN(material_set_blend_op, "void", "blendOp");
+        // ARG("int", "op");
+        // DOC_FUNC("Set the blend operator. `op` is a Material.BlendOp_XXX enum");
 
-    MFUN(material_set_storage_texture, "void", "storageTexture");
-    ARG("int", "location");
-    ARG("Texture", "texture");
-    DOC_FUNC(
-      "Binds a storage texture at the given location. Defaults to the textures base "
-      "mip level 0.");
+        // MFUN(material_set_blend_factor_src_alpha, "void", "blendSrcAlpha");
+        // ARG("int", "src_factor");
+        // DOC_FUNC(
+        //   "Set the alpha blend src factor. `src_factor` is a Material.BlendFactor_XXX
+        //   " "enum");
 
-    // abstract class, no destructor or constructor
-    END_CLASS();
+        // MFUN(material_set_blend_factor_dst_alpha, "void", "blendDstAlpha");
+        // ARG("int", "dst_factor");
+        // DOC_FUNC(
+        //   "Set the alpha blend dst factor. `dst_factor` is a Material.BlendFactor_XXX
+        //   " "enum");
+
+        // MFUN(material_set_blend_op_alpha, "void", "blendOpAlpha");
+        // ARG("int", "op");
+        // DOC_FUNC("Set the blend alpha operator. `op` is a Material.BlendOp_XXX
+        // enum");
+
+        MFUN(material_set_blendmode, "void", "blend");
+        ARG("int", "blend_mode");
+        DOC_FUNC(
+          "Set the blend mode to one of the builtin Material.BlendMode_XXX enums. "
+          "Under the hood this will call Material.blend(...) with the appropriate "
+          "blend factors and operations");
+
+        MFUN(material_set_blend, "void", "blend");
+        ARG("int", "src_factor");
+        ARG("int", "dst_factor");
+        ARG("int", "op");
+        ARG("int", "src_factor_alpha");
+        ARG("int", "dst_factor_alpha");
+        ARG("int", "op_alpha");
+        DOC_FUNC(
+          "Set the blending equation used by this material. When writing a pixel of "
+          "color SRC to a texture position with color DST, the resultant color is SRC "
+          "× src_factor (op) DST × dst_factor."
+          "Where src_factor and dst_factor are enums of type Material.BlendFactor_XXX "
+          "and (op) is an enum of type Material.BlendOp_XXX ");
+
+        MFUN(material_set_blend_rgba, "void", "blend");
+        ARG("int", "src_factor");
+        ARG("int", "dst_factor");
+        ARG("int", "op");
+        DOC_FUNC(
+          "Set the blend components. src_factor and dst_factor should be a "
+          "Material.BlendFactor_XXX enum, and `op` should be a Material.BlendOp_XXX "
+          "enum. These components are applied to both rgb color and alpha channels "
+          "identically");
+
+        // uniforms
+
+        // TODO
+        // MFUN(material_uniform_remove, "void", "removeUniform");
+        // ARG("int", "location");
+
+        MFUN(material_uniform_active_locations, "int[]", "activeUniformLocations");
+        DOC_FUNC(
+          "Get list of active uniform locations, i.e. uniform locations that have been "
+          "set "
+          "(bind group entry locations)");
+
+        MFUN(material_set_uniform_float, "void", "uniformFloat");
+        ARG("int", "location");
+        ARG("float", "uniform_value");
+        DOC_FUNC("Set a float uniform value at the given location.");
+
+        MFUN(material_get_uniform_float, "float", "uniformFloat");
+        ARG("int", "location");
+        DOC_FUNC("Get a float uniform value at the given location.");
+
+        MFUN(material_set_uniform_float2, "void", "uniformFloat2");
+        ARG("int", "location");
+        ARG("vec2", "uniform_value");
+        DOC_FUNC("Set a vec2 uniform value at the given location.");
+
+        MFUN(material_get_uniform_float2, "vec2", "uniformFloat2");
+        ARG("int", "location");
+        DOC_FUNC("Get a vec2 uniform value at the given location.");
+
+        MFUN(material_set_uniform_float3, "void", "uniformFloat3");
+        ARG("int", "location");
+        ARG("vec3", "uniform_value");
+        DOC_FUNC("Set a vec3 uniform value at the given location.");
+
+        MFUN(material_get_uniform_float3, "vec3", "uniformFloat3");
+        ARG("int", "location");
+        DOC_FUNC("Get a vec3 uniform value at the given location.");
+
+        MFUN(material_set_uniform_float4, "void", "uniformFloat4");
+        ARG("int", "location");
+        ARG("vec4", "uniform_value");
+        DOC_FUNC("Set a vec4 uniform value at the given location.");
+
+        MFUN(material_get_uniform_float4, "vec4", "uniformFloat4");
+        ARG("int", "location");
+        DOC_FUNC("Get a vec4 uniform value at the given location.");
+
+        MFUN(material_set_uniform_int, "void", "uniformInt");
+        ARG("int", "location");
+        ARG("int", "uniform_value");
+        DOC_FUNC("Set an int uniform value at the given location.");
+
+        MFUN(material_get_uniform_int, "int", "uniformInt");
+        ARG("int", "location");
+        DOC_FUNC("Get an int uniform value at the given location.");
+
+        MFUN(material_set_uniform_int2, "void", "uniformInt2");
+        ARG("int", "location");
+        ARG("int", "x");
+        ARG("int", "y");
+        DOC_FUNC("Set an vec2<i32> uniform value at the given location.");
+
+        MFUN(material_get_uniform_int2, "int[]", "uniformInt2");
+        ARG("int", "location");
+        DOC_FUNC("Get an vec2<i32> uniform value at the given location.");
+
+        MFUN(material_set_uniform_int3, "void", "uniformInt3");
+        ARG("int", "location");
+        ARG("int", "x");
+        ARG("int", "y");
+        ARG("int", "z");
+        DOC_FUNC("Set an vec3<i32> uniform value at the given location.");
+
+        MFUN(material_get_uniform_int3, "int[]", "uniformInt3");
+        ARG("int", "location");
+        DOC_FUNC("Get an vec3<i32> uniform value at the given location.");
+
+        MFUN(material_set_uniform_int4, "void", "uniformInt4");
+        ARG("int", "location");
+        ARG("int", "x");
+        ARG("int", "y");
+        ARG("int", "z");
+        ARG("int", "w");
+        DOC_FUNC("Set an vec4<i32> uniform value at the given location.");
+
+        MFUN(material_get_uniform_int4, "int[]", "uniformInt4");
+        ARG("int", "location");
+        DOC_FUNC("Get an vec4<i32> uniform value at the given location.");
+
+        // storage buffers
+        MFUN(material_set_storage_buffer, "void", "storageBuffer");
+        ARG("int", "location");
+        ARG("float[]", "storageBuffer");
+        DOC_FUNC(
+          "Bind the given array data as a storage buffer at the given location.");
+
+        MFUN(material_set_storage_buffer_vec2, "void", "storageBuffer");
+        ARG("int", "location");
+        ARG("vec2[]", "storageBuffer");
+        DOC_FUNC(
+          "Bind the given array data as a storage buffer at the given location.");
+
+        MFUN(material_set_storage_buffer_vec3, "void", "storageBuffer");
+        ARG("int", "location");
+        ARG("vec3[]", "storageBuffer");
+        DOC_FUNC(
+          "Bind the given array data as a storage buffer at the given location.");
+
+        MFUN(material_set_storage_buffer_vec4, "void", "storageBuffer");
+        ARG("int", "location");
+        ARG("vec4[]", "storageBuffer");
+        DOC_FUNC(
+          "Bind the given array data as a storage buffer at the given location.");
+
+        MFUN(material_set_storage_buffer_integer, "void", "storageBuffer");
+        ARG("int", "location");
+        ARG("int[]", "storageBuffer");
+        DOC_FUNC(
+          "Bind the given array data as a storage buffer at the given location.");
+
+        // external storage buffer
+        MFUN(material_set_storage_buffer_external, "void", "storageBuffer");
+        ARG("int", "location");
+        ARG("StorageBuffer", "storageBuffer");
+        DOC_FUNC("Bind a storage buffer at the given location.");
+
+        MFUN(material_set_sampler, "void", "sampler");
+        ARG("int", "location");
+        ARG("TextureSampler", "sampler");
+        DOC_FUNC("Bind a sampler at the given location.");
+
+        MFUN(material_get_sampler, "TextureSampler", "sampler");
+        ARG("int", "location");
+        DOC_FUNC("Get the sampler at the given location.");
+
+        MFUN(material_set_texture, "void", "texture");
+        ARG("int", "location");
+        ARG("Texture", "texture");
+        DOC_FUNC("Bind a texture at the given location.");
+
+        MFUN(material_get_texture, "Texture", "texture");
+        ARG("int", "location");
+        DOC_FUNC("Get the texture at the given location.");
+
+        MFUN(material_set_storage_texture, "void", "storageTexture");
+        ARG("int", "location");
+        ARG("Texture", "texture");
+        DOC_FUNC(
+          "Binds a storage texture at the given location. Defaults to the textures "
+          "base "
+          "mip level 0.");
+
+        END_CLASS();
+    } // material
 
     // Lines2DMaterial -----------------------------------------------------
     BEGIN_CLASS(SG_MaterialTypeNames[SG_MATERIAL_LINES2D],
@@ -826,6 +1077,15 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
 
         MFUN(flat_material_get_texture_scale, "vec2", "scale");
         DOC_FUNC("Get the texture sampler scale of the material.");
+
+        MFUN(flat_material_set_emissive_color, "void", "emissive");
+        ARG("vec4", "color");
+        DOC_FUNC(
+          "Set the emissive color of the material. This will be added to the final "
+          "color");
+
+        MFUN(flat_material_get_emissive_color, "vec4", "emissive");
+        DOC_FUNC("Get the emissive color of the material");
 
         END_CLASS();
     }
@@ -1345,6 +1605,116 @@ CK_DLL_MFUN(material_get_wireframe)
     RETURN->v_int = GET_MATERIAL(SELF)->pso.wireframe;
 }
 
+// ===========================================
+// Material blend
+// ===========================================
+
+CK_DLL_MFUN(material_get_blend_factor_src)
+{
+    RETURN->v_int = GET_MATERIAL(SELF)->pso.blend_state.color.srcFactor;
+}
+
+CK_DLL_MFUN(material_get_blend_factor_dst)
+{
+    RETURN->v_int = GET_MATERIAL(SELF)->pso.blend_state.color.dstFactor;
+}
+
+CK_DLL_MFUN(material_get_blend_op)
+{
+    RETURN->v_int = GET_MATERIAL(SELF)->pso.blend_state.color.operation;
+}
+
+CK_DLL_MFUN(material_get_blend_factor_src_alpha)
+{
+    RETURN->v_int = GET_MATERIAL(SELF)->pso.blend_state.alpha.srcFactor;
+}
+
+CK_DLL_MFUN(material_get_blend_factor_dst_alpha)
+{
+    RETURN->v_int = GET_MATERIAL(SELF)->pso.blend_state.alpha.dstFactor;
+}
+
+CK_DLL_MFUN(material_get_blend_op_alpha)
+{
+    RETURN->v_int = GET_MATERIAL(SELF)->pso.blend_state.alpha.operation;
+}
+
+CK_DLL_MFUN(material_set_blend)
+{
+    WGPUBlendFactor src_factor       = (WGPUBlendFactor)GET_NEXT_INT(ARGS);
+    WGPUBlendFactor dst_factor       = (WGPUBlendFactor)GET_NEXT_INT(ARGS);
+    WGPUBlendOperation op            = (WGPUBlendOperation)GET_NEXT_INT(ARGS);
+    WGPUBlendFactor src_factor_alpha = (WGPUBlendFactor)GET_NEXT_INT(ARGS);
+    WGPUBlendFactor dst_factor_alpha = (WGPUBlendFactor)GET_NEXT_INT(ARGS);
+    WGPUBlendOperation op_alpha      = (WGPUBlendOperation)GET_NEXT_INT(ARGS);
+
+    SG_Material* mat     = GET_MATERIAL(SELF);
+    mat->pso.blend_state = {
+        { op, src_factor, dst_factor },
+        { op_alpha, src_factor_alpha, dst_factor_alpha },
+    };
+
+    CQ_PushCommand_MaterialUpdatePSO(mat);
+}
+
+CK_DLL_MFUN(material_set_blend_rgba)
+{
+    WGPUBlendFactor src_factor = (WGPUBlendFactor)GET_NEXT_INT(ARGS);
+    WGPUBlendFactor dst_factor = (WGPUBlendFactor)GET_NEXT_INT(ARGS);
+    WGPUBlendOperation op      = (WGPUBlendOperation)GET_NEXT_INT(ARGS);
+
+    SG_Material* mat     = GET_MATERIAL(SELF);
+    mat->pso.blend_state = {
+        { op, src_factor, dst_factor },
+        { op, src_factor, dst_factor },
+    };
+
+    CQ_PushCommand_MaterialUpdatePSO(mat);
+}
+
+CK_DLL_MFUN(material_set_blendmode)
+{
+    SG_MaterialBlendMode blend_mode = (SG_MaterialBlendMode)GET_NEXT_INT(ARGS);
+    SG_Material* mat                = GET_MATERIAL(SELF);
+
+    WGPUBlendComponent blend = {};
+
+    switch (blend_mode) {
+        case SG_MaterialBlendMode_Alpha: {
+            blend = { WGPUBlendOperation_Add, WGPUBlendFactor_SrcAlpha,
+                      WGPUBlendFactor_OneMinusSrcAlpha };
+        } break;
+        case SG_MaterialBlendMode_Replace: {
+            blend
+              = { WGPUBlendOperation_Add, WGPUBlendFactor_One, WGPUBlendFactor_Zero };
+        } break;
+        case SG_MaterialBlendMode_Add: {
+            blend
+              = { WGPUBlendOperation_Add, WGPUBlendFactor_One, WGPUBlendFactor_One };
+        } break;
+        case SG_MaterialBlendMode_Subtract: {
+            blend = { WGPUBlendOperation_Subtract, WGPUBlendFactor_One,
+                      WGPUBlendFactor_One };
+        } break;
+        case SG_MaterialBlendMode_Multiply: {
+            blend = { WGPUBlendOperation_Add, WGPUBlendFactor_Dst,
+                      WGPUBlendFactor_OneMinusSrcAlpha };
+        } break;
+        case SG_MaterialBlendMode_Screen: {
+            blend = { WGPUBlendOperation_Add, WGPUBlendFactor_One,
+                      WGPUBlendFactor_OneMinusSrc };
+        } break;
+        default: {
+            log_warn("invalid blend mode %d passed to Material.blend(int blend_mode)",
+                     blend_mode);
+            return;
+        }
+    }
+
+    mat->pso.blend_state = { blend, blend };
+    CQ_PushCommand_MaterialUpdatePSO(mat);
+}
+
 CK_DLL_MFUN(material_uniform_active_locations)
 {
     SG_Material* material = GET_MATERIAL(SELF);
@@ -1767,6 +2137,7 @@ static void ulib_material_init_uniforms_and_pso(SG_Material* material)
               SG_GetTexture(g_builtin_textures.white_pixel_id));     // color map
             SG_Material::uniformVec2f(material, 3, glm::vec4(0.0f)); // texture offset
             SG_Material::uniformVec2f(material, 4, glm::vec4(1.0f)); // texture scale
+            SG_Material::uniformVec4f(material, 5, glm::vec4(0.0f)); // emission
 
             ulib_material_cq_update_all_uniforms(material);
         } break;
@@ -2098,6 +2469,21 @@ CK_DLL_MFUN(flat_material_get_texture_scale)
     SG_Material* material = GET_MATERIAL(SELF);
     RETURN->v_vec2
       = { material->uniforms[4].as.vec2f.x, material->uniforms[4].as.vec2f.y };
+}
+
+CK_DLL_MFUN(flat_material_set_emissive_color)
+{
+    SG_Material* material = GET_MATERIAL(SELF);
+    t_CKVEC4 v            = GET_NEXT_VEC4(ARGS);
+    SG_Material::uniformVec4f(material, 5, glm::vec4(v.x, v.y, v.z, v.w));
+    CQ_PushCommand_MaterialSetUniform(material, 4);
+}
+
+CK_DLL_MFUN(flat_material_get_emissive_color)
+{
+    SG_Material* material = GET_MATERIAL(SELF);
+    glm::vec4 v           = material->uniforms[5].as.vec4f;
+    RETURN->v_vec4        = { v.r, v.g, v.b, v.a };
 }
 
 // UVMaterial ===================================================================

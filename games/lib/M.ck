@@ -21,7 +21,18 @@ public class M {
         return Math.atan2(n.y, n.x);
     }
 
+    fun static float angle(vec2 a) {
+        return Math.atan2(a.y, a.x);
+    }
+
+    fun static vec2 dir(vec2 a, vec2 b) {
+        b - a => vec2 n;
+        n.normalize();
+        return n;
+    }
+
     fun static vec2 normalize(vec2 n) {
+        // note: can also call n.normalize() to normalize in-place
         return n / Math.hypot(n.x, n.y); // hypot is the magnitude
     }
 
@@ -31,6 +42,10 @@ public class M {
 
     fun static float dist(vec2 a, vec2 b) {
         return Math.euclidean(a, b);
+    }
+
+    fun static float dist2(vec2 a, vec2 b) {
+        return (b - a).dot(b - a);
     }
 
     fun static float cross(vec2 a, vec2 b) {
@@ -70,6 +85,10 @@ public class M {
     // =====================================================================
     // Tweens (most take a function that outputs from 0-1 over an input 0-1
     // =====================================================================
+
+    fun static float easeOutSine(float x) {
+        return Math.sin((x * Math.PI) / 2);
+    }
     
     fun static float easeOutQuad(float x) {
         return 1 - (1 - x) * (1 - x);
@@ -129,6 +148,19 @@ public class M {
             if (accum >= pick) return i;
         }
         return pdf.size() - 1;
+    }
+
+    // choose n random numbers (no repeats) from [0, m-1]
+    fun static int[] choose(int m, int n) {
+        if (n > m) {
+            <<< "error, choosing ", n, "from only", m >>>;
+            return null;
+        }
+        int pool[m];
+        for (int i; i < m; i++) i => pool[i];
+        pool.shuffle();
+        pool.erase(n, pool.size());
+        return pool;
     }
 
     // return a random element from the array with uniform distribution
@@ -220,6 +252,23 @@ public class M {
 
         // no intn: FallShort, Past, CompletelyInside
         return @(0, -Math.FLOAT_MAX);
+    }
+
+    // @(lowerBound.x, lowerBound.y, upperBound.x, upperBound.y)
+    fun static vec4 aabb(vec2 c, float hw, float hh) {
+        return @(
+            c.x-hw, c.y-hh,
+            c.x+hw, c.y+hh
+        );
+    }
+
+
+    fun static int inside( vec2 p, vec4 aabb ) {
+        return (
+            p.x >= aabb.x && p.x <= aabb.z
+            &&
+            p.x >= aabb.y && p.x <= aabb.w
+        );
     }
 
     // returns true if 2 aabbs isect

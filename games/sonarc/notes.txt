@@ -1,3 +1,242 @@
+BARD ON A CART
+    - unhinged ideas
+        - bard on a cart is going to a tavern in a cavern to perform a rave in a cave / gig in a wig
+            - PLATOS RAVE
+        - why are so many people/things trying to stop you from getting to the cave?
+            - because the Bard brings music from the future / music of resistance
+            - the king fears rebellion so he summons monsters / sends troops to supress/repress the bard 
+              and the music of the people.
+                - for every rave that he lets happen, the chances of the people gaining collective conscious,
+                  organizing, and rebelling increases. So he can't let it happen!
+                    - this framework also justifies the rogouelike genre, why you have to try multiple times
+            - music should be futuristic (for medieval times)...some kind of dance music/house/techno/electronic
+        - if the bard is on a cart, throw in the trolley problem in one of the choice rooms
+    - design ideas
+        - is there a way to support the randomness / crafting / match-3 of weapons with the unique personal-quality
+          of RPG skill trees?
+        - don't break immersion with UI rooms -- all the upgrades / rest / shop / path picking
+          should happen *in run*, and enacted via player controls. player should be controlling
+          their character the entire time, not some omniscient mouse cursor
+        - visualize data, avoid big walls of text 
+        - combos/crafting/improvisation is cool. massive skill trees / walls of text / build optimization 
+          is sweaty.
+            - like Mosa Lina: you play what you get
+        - maybe something like Diablo where each character (including Bard and Cart) have their own unique skill tree.
+            - but problems:
+                - want to avoid optimization and having to read a massive skill tree
+                - in diablo you character levels up over many hours, and persists in a save file...
+                - 
+            - workaround:
+        - on weapons / items:
+            - weapons exist in diablo but purely for stats. whereas in nucelar throne weapons are everything
+                - weapons introduce a welcome randomness, but lack differentiation between characters because anyone
+                  can use any weapon. 
+            - nobody likes having limited inventory / slots! 
+                - Brotato balanced this with items/body upgrades, which you can get unlimited of
+        - maximalism: many possibilities, suprising combinations, "more is more"
+        - items / weapons / builds should synergize across character classes and party
+            - e.g. this item scales with # of party members that also have it
+    - characters
+        - cook with frying pan
+        - farmer with pitchfork
+        - miner with pickaxe
+        - monk beggar
+        - gong farmer with shovel
+    - bard as NPC
+        - drunken meter  <---> inspiration meter
+            - movement becomes crazier / more random
+        - bard is always listening
+        - random wards charge bards inspo
+        - have to chant words to calm the bard or inspire them "it's OK! it's OK!"
+        - bard driving cart; "start" or "stop" to control
+    - prototype goals
+        - door/gate that responds to open sesame, close sesame
+        - check rxi procedural map generator
+        - different attacks (and maybe spell cards / programs you can pick up to unlock them?)
+            - fire
+            - boulder (for puzzle platforming?)
+                - falls and damages AOE
+                - maybe blocks pathing?
+            - meme gifs (for funny)
+            - barrier
+                - can block projectiles from a single direction
+            - chain lightning
+        - enemy hit box (use capsule for now)
+    - goal is to travel to some part of the map to find a "secret passcode"
+      to open the dungeon door to get to the next area
+    - maybe rooms/dungeons have different types...
+        - puzzle rooms
+        - combat rooms
+        - market/shop rooms?
+        - this is giving me slay-the-spire map vibes...
+    - other classes
+        - warrior
+            - can provide shields
+            - ability: pick up and carry bard a short distance
+        - healer
+        - mage (buffs the bard and other players)
+        - assasin
+    - mechanics
+        - can combine adjectives + abilities
+            - like the gems in Lovers in a Dangerous Spacetime
+            - adjectives
+                - spicy
+                - icy
+                - spiky
+                - electric
+                - firey
+        - the bard has friendly fire ON!
+        - the bard moves extremely slowly...cannot dodge projectiles, relies on teammates for block
+        - add text transcription on top of bard?
+        - the bard randomly gets tired and sits down to play music
+            - during this time he is inactive, other players must protect!!
+    - Upgrades
+        - Bard
+            - Unlock Spells
+            - increase movement speed
+        - Non-bard
+            - Share EXP ?
+    - Single player
+        - audrey's idea: the BARD is a super derpy NPC you have to project and escorting to the dungeon end
+            - game becomes a "protect the payload"
+    - dungeons
+        - SIMPLEST THING TO TRY: 
+            - VS/Brotato route: spawn a bunch of dudes who drop XP. survive for N seconds
+                - at end of round, show UI for upgrades for all players who leveled
+                - what are the upgrades?? 
+            - TinyRogues route: 
+                - 
+        - parameters (per level)
+            - multiple rooms or single room
+            - procedurally generated or simple rectangular
+            - pretty sure all the enemies are procedurally spawned
+        - "clear" conditions
+            - survive for X seconds (VS / Brotato / 20min to midnight)
+            - eliminate all enemies (Tiny Rogues / SNKRX)
+            - what if: get to the choppa style
+                - find chest with password, open door
+        - progression / character leveling (in-run, ignoring roguelike meta progression for now)
+            - in-dungeon shop that freezes gameplay (VS, 20min to midnight)
+                - is this annoying in a co-op situation?
+            - shop as separate room (brotato, SNKRX, balatro, tiny rogues, SlayTheSpire)
+            - EXP
+            - $$$
+            - having multiple character classes already adds diversity, does each have their own skill tree?
+                - 20min to midnight: each has own weapon
+                - nuclear throne & brotato: each class has own special ability, but shares same pool of weapons
+                - tiny rogues & VS : each character just has different stat allocation / starter weapon. Not orthogonally different
+            - reading/parsing big skill trees is a drag, *especially* in a multiplayer setting. 
+              no one wants to wait / explain a bunch of stats.
+                - random pick 3 is simple
+                - shop is also prob too complicated for multiplayer
+                - but having non-combat rooms (like fishing or tavern) is a fun breather
+        - vampire survivors / brotato / SNKRX / 20min to midnight
+            - single room, no procedurally-generated dungeon
+            - also means pathfinding is dead simple, no need for A* or more complex enemy pathfinding
+            - passing a round means surviving the wave. each wave is basically a stat check
+        - Multiple rooms (binding of Isaac or Enter the Gungeon or Tiny Rogues)
+            - 
+        - procedural generation with complex room geometry (Hades - Diablo - Nuclear Throne)
+            - by far the most work.
+
+Dungeon Types (Per "level")
+
+            single room            |  multiple rooms
+           ------------------------------------------------
+             
+simple      SNKRX / VS / Brotato   |  Tiny Rogues        
+
+           ------------------------------------------------
+
+complex     ??                     |  Diablo / Hades / Nuclear Throne
+
+           ------------------------------------------------
+
+
+
+
+
+    - COOP Mode (later)
+        - OR WHAT IF: Project BARD: protect the bard *at all costs*
+            - since there's only 1 mic, only 1 person can be the bard
+            - the bard is weak AF, gets 1-shot by everything
+                - but bard has certain spells that are necessary to progress,
+                  e.g. for puzzles or boss fights
+            - other players can be tank / healer / etc to peel for bard
+                - enable many builds, like 3 tank, or 3 healer, or GIGA bard
+                  where bard is just buffed like crazy
+    - inspos
+        - tiny rogues (really like the art style on this one)
+            - also like the way a run is structured, moving through a dungeon w/ boss battles
+            - maybe can steal some ideas...
+        - 20 minutes to midnight
+        - castle crashers
+        - binding of isaac
+        - brotato
+        - vampire survivors
+        - enter the gungeon
+        - nuclear throne
+        - dome keeper (Art style)
+        - snkrx (for having multiple classes + synergies)
+        - go through NL and Olexa vids, probably missing something
+
+- Whisper speech recognition / tongue twister game
+    - non-linguistic pickups: 
+        - (laughs)
+        - (laughing)
+        - *laughs*
+        - (crying)
+        - (humming)
+        - achoo!
+        - (speaking from another room)
+        - *cough*
+        - (coughing)
+        - (whooshing)
+        - (shushing)
+        - (keyboard clicking)
+        - (clicking)
+    - words that it really doesn't want to say
+        - dab
+    - funny things to try and read
+        - video game casts (like the example counterstrike one)
+        - tongue twisters
+        - famous film dialogues
+            - use the model that can recognize speaker turns
+    - what if this is a game about captioning a movie???
+        - and records your audio and plays it back at the end
+    - what if this was a first-person narration game... you read the actions like a script and the 
+      character responds...(like edith finch?)
+
+
+
+COOP ideas
+- brotato/vampire-survivors clone
+    - same problem as bytebeat of how to make this musical
+    - protecting a base justifies teching into shields
+- chaos puzzle platformer (coop mosa lina?)
+    - experiment with audio analysis on mic input, what can we reliably (or unreliably) extract?
+- group-composing game? 
+    - like overcooked, multiple parts to making a dish. but you actually get to "taste" the food, i.e. 
+    listen to the music your group has composed
+
+- inspos
+    - overcooked
+    - unrailed
+    - pico park
+    - the game kunwoo showed of 4 people piloting a ship (also that PAX spaceship game)
+        - guns
+        - movement
+        - shields
+        - 
+
+10/9/25 GGRMA Critique
+- maybe save player profiles
+- don't need a metagame, just make it a decathalon
+- coop / PvE mode?
+    - escort mission: defend the payload!!
+    - high/low sounds to shoot different kinds of projectiles?
+    - match pattern with voice
+    - spectrum tracking, different bins power different types of ammo or ammo vs shield
 
 TODO
 - need to add layers/depth to all g2d drawers
@@ -9,6 +248,8 @@ TODO
     - fire oneshot should only play until end_rec pos
 - placement room
     - add pitshift or change rate on losers?
+- flappy bird
+    - add back/front movement
 - hot potato game
     - let players record a driving/engine sample
         - use this for granular synthesis lmao
@@ -19,12 +260,13 @@ TODO
 
 # Stages/Modes
 - start room
-    - maybe record different audio samples for different conditions
-        - victory audio
-        - hurt audio
-        - loss audio
     - include some pre-recorded ones too, like "dope" for defaults
         - all tracks should have a default
+- voice imitation game
+    - imitate each other in reverse and re-reverse it back?
+        - see reverse singing challenges
+    - or imitate, and then take the difference, next player has to imitate that difference
+        - kind of like a LiSa-driven game of "telephone"
 - racetrack
     - simple indie500 shape, but add obstacles
     - first to finish wins
@@ -34,9 +276,6 @@ TODO
     - any key to jump
     - procedurally generate
     - allow multiple "winners" if multiple get to end platform on same frame
-- flappy bird side scroll dodge
-    - volume makes you go up
-    - gravity naturally pulls you down
 - spin the wheel 
     - all players are connected as spokes on a wheel
     - making sound rotates the wheel in a fixed direction
