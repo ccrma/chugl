@@ -7,13 +7,9 @@
 //   date: Fall 2025
 //--------------------------------------------------------------------
 
-// assuming a compatible path (change as needed)
-Texture.load(me.dir() + "../data/textures/artful-design/flare-tng-1.png") @=> Texture flare1_tex;
-Texture.load(me.dir() + "../data/textures/artful-design/flare-tng-5.png") @=> Texture flare2_tex;
-
-// flare enum
-0 => int FLARE_1;
-1 => int FLARE_2;
+// load textures; assuming a compatible path (change as needed)
+Texture.load( me.dir() + "../data/textures/artful-design/flare-tng-1.png" ) @=> Texture flare1_tex;
+Texture.load( me.dir() + "../data/textures/artful-design/flare-tng-5.png" ) @=> Texture flare2_tex;
 
 // all flares are rendered on quads, can share the same plane geometry
 PlaneGeometry geo;
@@ -30,7 +26,7 @@ fun GMesh addFlare( Texture tex, vec3 color)
     // set material blend mode to additive blending
     mat.blend(Material.BLEND_MODE_ADD);
     // make a mesh GGen using mat and the shared geo
-    return new GMesh(geo, mat);
+    return new GMesh( geo, mat );
 }
 
 // initialize flares as 3 GGens
@@ -50,6 +46,6 @@ while( true )
     GG.nextFrame() => now;
 
     // move two of the flares
-    Math.sin(now/second) => flare1.posX;
-    -Math.sin(now/second) => flare3.posX;
+    Math.sin( now/second ) => flare1.posX;
+    -Math.sin( now/second ) => flare3.posX;
 }
