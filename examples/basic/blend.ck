@@ -23,17 +23,14 @@ fun GMesh addFlare( Texture tex, vec3 color)
 {
     // material
     FlatMaterial mat;
-    // make a mesh GGen using mat and the shared geo
-    GMesh flare(geo, mat);
-
     // apply texture to material
     mat.colorMap(tex);
     // set base color
     mat.color(color);
     // set material blend mode to additive blending
     mat.blend(Material.BLEND_MODE_ADD);
-
-    return flare;
+    // make a mesh GGen using mat and the shared geo
+    return new GMesh(geo, mat);
 }
 
 // initialize flares as 3 GGens
