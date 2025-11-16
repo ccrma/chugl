@@ -2595,7 +2595,7 @@ CK_DLL_SFUN(b2_MakeOffsetBox)
     b2Vec2 center       = vec2_to_b2Vec2(GET_NEXT_VEC2(ARGS));
     float angle_radians = GET_NEXT_FLOAT(ARGS);
     b2Polygon polygon
-      = b2MakeOffsetBox(hx, hy, center, b2MakeRot(GET_NEXT_FLOAT(angle_radians)));
+      = b2MakeOffsetBox(hx, hy, center, b2MakeRot(angle_radians));
     RETURN->v_object = b2Polygon_create(SHRED, &polygon);
 }
 
@@ -2607,7 +2607,7 @@ CK_DLL_SFUN(b2_MakeOffsetRoundedBox)
     float angle_radians = GET_NEXT_FLOAT(ARGS);
     float radius        = GET_NEXT_FLOAT(ARGS);
     b2Polygon polygon   = b2MakeOffsetRoundedBox(
-      hx, hy, center, b2MakeRot(GET_NEXT_FLOAT(angle_radians)), radius);
+      hx, hy, center, b2MakeRot(angle_radians), radius);
     RETURN->v_object = b2Polygon_create(SHRED, &polygon);
 }
 
@@ -4851,6 +4851,7 @@ static void b2_DebugDrawPointCallback(b2Vec2 p, float size, b2HexColor color,
       ARRAY_LENGTH(args));
 }
 
+/*
 static void b2_DebugDrawStringCallback(b2Vec2 p, const char* s, void* context)
 {
     // unclear what this does... leaving out for now
@@ -4874,6 +4875,7 @@ static void b2_DebugDrawStringCallback(b2Vec2 p, const char* s, void* context)
       ckobj, b2_DebugDraw_DrawString_callback_offset, g_chuglVM, origin_shred, args,
       ARRAY_LENGTH(args));
 }
+*/
 
 static void ckobj_to_b2DebugDraw(b2DebugDraw* obj, Chuck_Object* ckobj)
 {

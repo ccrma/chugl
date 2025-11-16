@@ -18,6 +18,7 @@ doc.addGroup(
     [
         "GG", 
         "GWindow", 
+        "Gamepad", 
         "NextFrameEvent",
         "WindowResizeEvent",
         "WindowResizeEvent",                                             

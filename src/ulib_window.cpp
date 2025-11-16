@@ -1008,6 +1008,17 @@ void ulib_window_query(Chuck_DL_Query* QUERY)
           "GG.nextFrame() is being called in a renderloop. Supports up to 16 "
           "controllers");
 
+        static t_CKINT gamepad_max_id = GLFW_JOYSTICK_LAST;
+        SVAR("int", "ID_MAX", &gamepad_max_id);
+        DOC_VAR(
+          "The maximum assignable gamepad id. Equal to 15, the maximum number of "
+          "simultaneous supported controllers minus 1.");
+        static t_CKINT gamepad_max_controllers = GLFW_JOYSTICK_LAST + 1;
+        SVAR("int", "CONTROLLERS_MAX", &gamepad_max_controllers);
+        DOC_VAR(
+          "Equal to 16, the maximum number of controllers that can be supported at "
+          "once.");
+
         static t_CKINT gamepad_button_a = GLFW_GAMEPAD_BUTTON_A;
         SVAR("int", "BUTTON_A", &gamepad_button_a);
         static t_CKINT gamepad_button_b = GLFW_GAMEPAD_BUTTON_B;
@@ -1545,11 +1556,12 @@ CK_DLL_SFUN(gwindow_get_dropped_files)
 
 static bool ulib_gamepad_validate_gamepad_id(int gp_id, const char* method)
 {
+    UNUSED_VAR(method);
     if (gp_id < 0 || gp_id > GLFW_JOYSTICK_LAST) {
-        log_warn(
-          "In %s, the given id: %d is invalid/out of bounds. "
-          "Valid gamepad ids are in the range [0, 15], inclusive. ",
-          method, gp_id);
+        // log_warn(
+        // "In %s, the given id: %d is invalid/out of bounds. "
+        // "Valid gamepad ids are in the range [0, 15], inclusive. ",
+        // method, gp_id);
         return false;
     }
     return true;
@@ -1557,6 +1569,7 @@ static bool ulib_gamepad_validate_gamepad_id(int gp_id, const char* method)
 
 static bool ulib_gamepad_validate_button_id(int button_id, const char* method)
 {
+    UNUSED_VAR(method);
     if (button_id < 0 || button_id > GLFW_GAMEPAD_BUTTON_LAST) {
         log_warn(
           "In %s, the given gamepad button id: %d is invalid/out of bounds. "
