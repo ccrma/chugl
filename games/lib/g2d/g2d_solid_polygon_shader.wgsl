@@ -222,7 +222,6 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4f {
         in.f_points78.xy, in.f_points78.zw
     );
     let sdf = sdConvexPolygon(in.f_position, &f_points, in.f_count);
-    let d = abs(sdf - in.f_radius);
 
     // roll the fill alpha down at the border
     let aaf = fwidth(sdf); // anti alias field
@@ -230,6 +229,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4f {
 
     // TODO: anti-aliasing broken, fix later
     // reference: http://www.numb3r23.net/2015/08/17/using-fwidth-for-distance-based-anti-aliasing/
+    // let d = abs(sdf - in.f_radius);
     // var alpha = 1.0;
     // if (bool(u_antialias)) {
     //     let aaf = fwidth(sdf); // anti alias field

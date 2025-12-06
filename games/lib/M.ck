@@ -77,6 +77,13 @@ public class M {
         return Math.min(Math.max(a, b), c);
     }
 
+    fun static vec2 clamp(vec2 a, vec2 b, vec2 c) {
+        return @(
+            Math.clampf(a.x, b.x, c.x),
+            Math.clampf(a.y, b.y, c.y)
+        );
+    }
+
     // returns -1 if negative, +1 if pos
     fun static float sign(float x) {
         return 2*(x >= 0) - 1;
@@ -85,6 +92,14 @@ public class M {
     // =====================================================================
     // Tweens (most take a function that outputs from 0-1 over an input 0-1
     // =====================================================================
+
+    // remaps [0,1] -> [0,1], such that the corners are mapped to 0 and the center to 1.
+    // raised to power k
+    // https://graphtoy.com/?f1(x,t)=cond(abs(x-.5)%3E.5,0,pow(4*x*(1-x),1/4))&v1=true&f2(x,t)=cond(abs(x-.5)%3E.5,0,pow(4*x*(1-x),1/2))&v2=true&f3(x,t)=cond(abs(x-.5)%3E.5,0,pow(4*x*(1-x),1))&v3=true&f4(x,t)=cond(abs(x-.5)%3E.5,0,pow(4*x*(1-x),2))&v4=true&f5(x,t)=cond(abs(x-.5)%3E.5,0,pow(4*x*(1-x),4))&v5=true&f6(x,t)=&v6=false&grid=1&coords=0.5,0.5,0.75
+    fun static float parabola( float x, float k )
+    {
+        return Math.pow( 4.0*x*(1.0-x), k );
+    }
 
     fun static float easeOutSine(float x) {
         return Math.sin((x * Math.PI) / 2);

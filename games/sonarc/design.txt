@@ -1,9 +1,5 @@
 ==TODO=========================================
-- basic cart commands: stop and go
-
-- organize UI to use imgui collapsing headers
-
-- bard fireball! (can use same graphic as bomb tower, only much larger)
+- change shooter enemy to exploder (like goobies red ball)
 - bard lightning
   - multiple strikes coming from sky, similar to 20min
   - should feel high-risk high-reward, like calling down an air strike on yourself
@@ -30,6 +26,122 @@ Engine references
 
 
 ===============================================
+
+More design ideas 11/23 (After watching Edmund's Mewgenics demo)
+- constraints are powerful, they force player to be thoughtful and enable deeper gameplay
+  - e.g. cooldowns, durability on items, mana/energy/inspiration cost to abilities
+    - maybe player and cart abilities should also have energy/inspiration cost... does that
+    help unify things?
+      - or do we deliberately *not* want to unify things so that the bard, cart, and player
+      all feel mechanically distinct, rather than 3 types of the same thing
+- in line with making choosing abilities like drafting cards...
+  - player can draft additional ability on level up
+  - player can also draft a passive! Or maybe the different player types (cook, prisoner, etc)
+    all have different passives...
+  - maybe (like in StS), abilities can have classes and levels, and provide set bonuses
+    - this is just like weapons in brotato
+    - each ability belongs to a certain class, and getting multiple from that class 
+      gives bonuses to character. 
+      - this makes me realize that a TFT or SNKRX team is "multi-classing" whereas a StS
+      deck is limited to a single class...
+      - class distinctions help form distinct gameplay styles. mutli-classing, if carefully 
+      limited, can allow for really cool dynamics, otherwise it creates a melting pot 
+    - abilities can level up by getting 2 copies...and have a max level
+  - initial limit: 3 abilities, 1 ultimate, 2 passives
+- distinguish repairing from healing -- repair only affects cart, heal affects player + bard
+- items
+  - should items be specific to cart/bard/player, or can any item be placed on anything?
+  - items are different from "global" relics that cross-pollinate
+  - should items have quantity or durablity limits??? 
+  - idk, let's figure out the abilities first
+
+Upgrade system:
+- cart: modular diamond, like nova drift
+- bard: linear, N slots, like VS
+- player: shop like brotato? items + weapons. NVM try LoL style abilities
+  - mark: the next bard spell cycle is guaranteed to strike the marked target
+
+- items/relics: special drops, take it or leave it
+- voice control: troll ass idea. voice control is only for ults, 
+  or evos, game-ending spells. these spells can be long corny fantasy incantations/poems,
+  pick a random player to recite.
+  - echo the voice recording back with reverb upon casting 
+
+vertical slice: for each strategic roguelike element, just make 2 very different archetypes and polish. 
+go deep before making a bunch of content.
+- Player
+  - offensive
+  - defensive
+  - support
+- Spell
+  - offensive
+    - fireball
+    - lightning
+  - defensive
+  - support
+- Cart Upgrade
+  - offensive
+  - defensive
+  - support
+- Weapon
+  - offensive
+  - defensive
+  - support
+- Item/Relic
+  - the mad-libs style <conditional> + <action> card. these cause cross-pollination across entity types
+- Enemy
+  - basic
+  - splitter
+  - charger
+  - ranged
+  - exploder (a la goobies)
+  - support
+  - tank
+  - treasure goblin! 
+    - stealing from E.T. game: drops a skill upgrade
+    - high-risk high-reward incentive to run through the mob and use
+    CC to lock down a target, rather than just peel for bard
+  - preset formations
+    - e.g. enemies that spawn on left side, and will only move directly right
+    - these formations test the resiliency of the build against more interesting
+    or challening scenarios...force the build to be adaptable
+- Item(?)
+
+Roguelikes are about engine-building. You get to try out
+vastly different builds across runs in 10s of minutes, 
+whereas an RPG might require 10s of hours to get to the same place.
+- diversity of builds
+- experimenting
+- "game breaking" builds
+- a good roguelike offers many builds to try, and meaningful challenges
+to test that build against.
+- interesting: a shop / rerolls / multiple choices doesn't *necessarily*
+support the roguelike; if shop and rerolls means people can always optimize
+the same build, then it's actually less about engine building and experimentation.
+  - there's probably a delicate balance to strike for the amount of decision-making
+  given to the player, vs things they can't control and have to adapt to
+  - tradeoffs are interesting! E.g. sacrificing health for dmg. 
+  - rare game-breaking builds are fun
+  - connections across stats are fun (e.g. self-healing now does dmg to enemies)
+    - creates a rich interconnected space to explore
+- engine builds can be split on the spectrum of aggro vs control
+  - don't worry about procedural content
+  - just build the bare minimum amount of the game to test the most vastly different builds:
+    - bard build
+    - cart build
+    - player build
+    - each of these can have synergies with each other
+      - e.g. bard-cart, bard-player, cart-player
+    - each one can be
+      - aggro
+      - control
+      - support
+    - seems fun to experiment with different combinations:
+      - e.g. cart tank, bard dps, player support OR
+       all 3 tank OR
+       all 3 dps 
+       etc....
+
 
 Should all the cart/bard projectiles also dmg the players???
 - worth experimenting with later on
@@ -394,6 +506,10 @@ https://www.youtube.com/watch?v=6O9-BUDk_-c
 
 Reddit post with more links to shadows:
 https://www.reddit.com/r/gamedev/comments/1d6kxsx/what_are_top_ways_to_generate_shadows_in_2d_game/
+
+https://www.slembcke.net/blog/
+- some useful blog posts on 2D lighting and shadows
+- also he made a really simple command-line debugger for lua. maybe can learn something from that for chuck
 
 
 ====================================================================

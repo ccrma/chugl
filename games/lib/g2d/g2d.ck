@@ -18,17 +18,46 @@ public class G2D extends GGen
 	this --> GG.scene();
 
     // initialize batch drawers
-    G2D_Circles circles;
+    G2D_Circles circles[6];
+		// create one for each blend mode
+	for (int i; i < circles.size(); i++) {
+		if (i != Material.BLEND_MODE_REPLACE) circles[i].material.transparent(true);
+		circles[i].material.blend(i);
+
+		circles[i].mesh --> GG.scene();
+	}
+
+    G2D_Ellipse ellipses[6];
+	for (int i; i < ellipses.size(); i++) {
+		if (i != Material.BLEND_MODE_REPLACE) ellipses[i].material.transparent(true);
+		ellipses[i].material.blend(i);
+
+		ellipses[i].mesh --> GG.scene();
+	}
+
     G2D_Lines lines;
-    G2D_SolidPolygon polygons;
+
+    G2D_TriangleStrip tristrips[6];
+	for (int i; i < tristrips.size(); i++) {
+		if (i != Material.BLEND_MODE_REPLACE) ellipses[i].material.transparent(true);
+		tristrips[i].material.blend(i);
+		tristrips[i].mesh --> GG.scene();
+	}
+
+    G2D_SolidPolygon polygons[6];
+	for (int i; i < polygons.size(); i++) {
+		// replace is NOT transparent
+		if (i != Material.BLEND_MODE_REPLACE) polygons[i].solid_polygon_material.transparent(true);
+		polygons[i].solid_polygon_material.blend(i);
+		polygons[i].mesh --> GG.scene();
+	}
+
     G2D_Sprite sprites; 
     G2D_Capsule capsules;
 	G2D_Text texts;
 
     // connect to scene
-    circles.mesh --> GG.scene();
     lines.mesh --> GG.scene();
-    polygons.mesh --> GG.scene();
     sprites.mesh --> GG.scene();
 	capsules.mesh --> GG.scene();
 
@@ -49,6 +78,13 @@ public class G2D extends GGen
 		// @TODO the other shaders
 	}
 
+
+	// ------------------- constants --------------------------
+	Material.BLEND_MODE_ALPHA => int BLEND_ALPHA;
+	Material.BLEND_MODE_ADD => int BLEND_ADD;
+	Material.BLEND_MODE_SUBTRACT => int BLEND_SUB;
+	Material.BLEND_MODE_MULTIPLY => int BLEND_MULT;
+
 	// ------------------- state stacks --------------------------
 	// note: these config stacks are cleared at the end of every frame to prevent accidental leaks
 	// you *don't* have to call popXXX() for every pushXXX
@@ -58,6 +94,8 @@ public class G2D extends GGen
 	[Color.BLACK] @=> vec3 emission_stack[];
 	[0.0] @=> float layer_stack[]; // z depth
 	[0.0] @=> float polygon_radius_stack[]; // rounded corners
+	[1.0] @=> float alpha_stack[];
+	[Material.BLEND_MODE_REPLACE] @=> int blend_stack[];
 
 	fun void pushFont(string s) { font_stack << s; }
 	fun void popFont() { font_stack.popBack(); }
@@ -70,15 +108,11 @@ public class G2D extends GGen
 	fun void pushLayer(float layer) { 
 		layer_stack << layer; 
 		layer => lines.z_layer;
-		layer => polygons.z_layer;
-		layer => circles.z_layer;
 		layer => sprites.z_layer;
 	}
 	fun void popLayer() { 
 		layer_stack.popBack(); 
 		layer_stack[-1] => lines.z_layer; 
-		layer_stack[-1] => polygons.z_layer; 
-		layer_stack[-1] => circles.z_layer; 
 		layer_stack[-1] => sprites.z_layer; 
 	}
 	fun void pushTextMaxWidth(float w) { texts.max_width_stack << w; }
@@ -89,9 +123,15 @@ public class G2D extends GGen
 	fun void pushPolygonRadius(float r) { polygon_radius_stack << r; }
 	fun void popPolygonRadius() { polygon_radius_stack.popBack(); }
 
+	fun void pushAlpha(float a) { alpha_stack << a; }
+	fun void popAlpha() { alpha_stack.popBack(); }
+	fun void pushBlend(int b) { blend_stack << b; }
+	fun void popBlend() { blend_stack.popBack(); }
+
 	// ----------- look & feel (aka antialias and resolution) ----------
 	fun void antialias(int bool) {
-		circles.antialias(bool);
+		for (auto c : circles) c.antialias(bool);
+		for (auto e : ellipses) e.antialias(bool);
 		capsules.antialias(bool);
 		GG.scenePass().msaa(bool);
 		GG.outputPass().sampler(bool ? TextureSampler.linear() : TextureSampler.nearest());
@@ -177,21 +217,57 @@ public class G2D extends GGen
 	}
 
 
+    // ----------- ellipse ----------
+	fun void ellipseFilled(vec2 c, vec2 ab, vec4 color) {
+		ellipses[blend_stack[-1]].ellipse(c, ab, Math.max(ab.x, ab.y), layer_stack[-1], color);
+	}
+
+	fun void ellipseFilled(vec2 c, vec2 ab, vec3 color) {
+		ellipses[blend_stack[-1]].ellipse(c, ab, Math.max(ab.x, ab.y), layer_stack[-1], 
+			@(color.r, color.g, color.b, alpha_stack[-1])
+		);
+	}
+
+	fun void ellipse(vec2 c, vec2 ab, vec4 color) {
+		ellipses[blend_stack[-1]].ellipse(c, ab, 0, layer_stack[-1], color);
+	}
+
+	fun void ellipse(vec2 c, vec2 ab, float thickness, vec4 color) {
+		ellipses[blend_stack[-1]].ellipse(c, ab, thickness, layer_stack[-1], color);
+	}
+
     // ----------- circle ----------
 	fun void circle(vec2 center, float radius, float thickness, vec3 color) {
-        circles.circle(center, radius, thickness, @(color.r, color.g, color.b, 1.0));
+        circles[blend_stack[-1]].circle(
+			center, radius, thickness, @(color.r, color.g, color.b, alpha_stack[-1]), layer_stack[-1]
+		);
 	}
 
 	fun void circleFilled(vec2 center, float radius, vec3 color) {
-        circles.circle(center, radius, 1.0, @(color.r, color.g, color.b, 1.0));
+        circles[blend_stack[-1]].circle(center, radius, 1.0, @(color.r, color.g, color.b, alpha_stack[-1]), layer_stack[-1]);
 	}
 
 	fun void circleFilled(vec2 center, float radius, vec4 color) {
-        circles.circle(center, radius, 1.0, color);
+        circles[blend_stack[-1]].circle(center, radius, 1.0, color, layer_stack[-1]);
 	}
 
 	fun void circleFilled(vec2 center, float radius) {
-        circles.circle(center, radius, 1.0, color_stack[-1]);
+		@(
+			color_stack[-1].r,
+			color_stack[-1].g,
+			color_stack[-1].b,
+			alpha_stack[-1]
+		) => vec4 color;
+        circles[blend_stack[-1]].circle(center, radius, 1.0, color, layer_stack[-1]);
+	}
+
+    // ----------- tristrip -----------
+	fun void pushStrip(vec2 p) {
+		tristrips[blend_stack[-1]].push(p, layer_stack[-1], color_stack[-1], alpha_stack[-1]);
+	}
+
+	fun void endStrip() {
+		tristrips[blend_stack[-1]].end();
 	}
 
     // ----------- line -----------
@@ -242,7 +318,7 @@ public class G2D extends GGen
 				color_stack[-1]
 			);
 		}
-		if (loop) lines.segment(arr[-1], arr[0], color_stack[-1]);
+		if (loop && arr.size() > 0) lines.segment(arr[-1], arr[0], color_stack[-1]);
 	}
 
 	// draws a polygon outline at given position and rotation
@@ -336,11 +412,11 @@ public class G2D extends GGen
 		Math.two_pi * i / circle_segments => float theta;
 		@( Math.cos(theta), Math.sin(theta)) => circle_vertices[i];
 	}
-	fun void circle(vec2 pos, float radians, vec3 color) {
+	fun void circle(vec2 pos, float radius, vec3 color) {
 		for (int i; i < circle_vertices.size() - 1; i++) {
-			lines.segment(pos + radians * circle_vertices[i], pos + radians * circle_vertices[i+1], color);
+			lines.segment(pos + radius * circle_vertices[i], pos + radius * circle_vertices[i+1], color);
 		}
-		lines.segment(pos + radians * circle_vertices[-1], pos + radians * circle_vertices[0], color);
+		lines.segment(pos + radius * circle_vertices[-1], pos + radius * circle_vertices[0], color);
 	}
 
 	fun void circle(vec2 pos, float radius) {
@@ -365,36 +441,52 @@ public class G2D extends GGen
 
     // ---------- filled polygons ----------
 
-	fun void polygonFilled(vec2 pos, float rot_radians, vec2 vertices[], float radius) {
-		polygons.polygonFilled(pos, rot_radians, 1.0, vertices, radius, color_stack[-1]);
+	fun void polygonFilled(vec2 pos, vec2 rotation, vec2 vertices[], float radius) {
+		polygons[blend_stack[-1]].polygonFilled(
+			pos, rotation, 1.0, vertices, radius, color_stack[-1], layer_stack[-1]
+		);
 	}
 
-	fun void polygonFilled(vec2 pos, float rot_radians, float sca, vec2 vertices[], float radius, vec3 color) {
-		polygons.polygonFilled(pos, rot_radians, sca, vertices, radius, color);
+	fun void polygonFilled(vec2 pos, float rot, vec2 vertices[], float radius) {
+		polygons[blend_stack[-1]].polygonFilled(
+			pos, @(Math.cos(rot), Math.sin(rot)), 1.0, vertices, radius, color_stack[-1], layer_stack[-1]
+		);
+	}
+
+	fun void polygonFilled(vec2 pos, vec2 rotation, float sca, vec2 vertices[], float radius, vec3 color) {
+		polygons[blend_stack[-1]].polygonFilled(
+			pos, rotation, sca, vertices, radius, color, layer_stack[-1]
+		);
+	}
+
+	fun void polygonFilled(vec2 pos, float rot, float sca, vec2 vertices[], float radius, vec3 color) {
+		polygons[blend_stack[-1]].polygonFilled(
+			pos, @(Math.cos(rot), Math.sin(rot)), sca, vertices, radius, color, layer_stack[-1]
+		);
 	}
 
 	fun void boxFilled(
 		vec2 position,
-		float rotation_radians,
+		vec2 rotation,
 		float width,
 		float height,
 		vec3 color
 	) {
 		.5 * width => float hw;
 		.5 * height => float hh;
-		polygons.polygonFilled(
-			position,
-			rotation_radians,
+		polygons[blend_stack[-1]].polygonFilled(
+			position, rotation, 1.0,
 			[@(-hw, hh), @(-hw, -hh), @(hw, -hh), @(hw, hh)], 
 			polygon_radius_stack[-1],
-			color	
+			color,
+			layer_stack[-1]
 		);
 	}
 
 	fun void boxFilled(vec2 top_left, vec2 bottom_right, vec3 color) {
 		boxFilled(
 			(top_left + bottom_right) * .5, // pos
-			0, // rot
+			@(1, 0), // rot
 			Math.fabs(top_left.x - bottom_right.x), // w
 			Math.fabs(top_left.y - bottom_right.y), // h
 			color
@@ -407,7 +499,10 @@ public class G2D extends GGen
 		float l,
 		vec3 color
 	) {
-		boxFilled(position, rotation_radians, l, l, color);
+		boxFilled(position, 
+			@(Math.cos(rotation_radians), Math.sin(rotation_radians)), 
+			l, l, color
+		);
 	}
 
 	fun void capsuleFilled(
@@ -461,6 +556,16 @@ public class G2D extends GGen
 		sprites.sprite(tex, @(pos.x, pos.y, layer_stack[-1]), sca, rot, color, emission_stack[-1]);
 	}
 
+	// for 1D sprite sheets
+	fun void sprite(
+		Texture tex, int nframes, int offset, vec2 pos, vec2 sca, float rot, vec3 color
+	) {
+		sprites.sprite(
+			tex, @(nframes, 1),@(offset$float / nframes, 0), 
+			@(pos.x, pos.y, layer_stack[-1]), sca, rot, color, emission_stack[-1]
+		);
+	}
+
 	fun void sprite(
 		Texture tex, vec2 sprite_sheet_frame_dim, vec2 offset, vec2 pos, vec2 sca, float rot, vec3 color
 	) {
@@ -476,9 +581,11 @@ public class G2D extends GGen
 	}
 
     fun void update(float dt) {
-        circles.update();
+		for (auto c : circles) c.update();
+		for (auto e : ellipses) e.update();
+		for (auto p : polygons) p.update();
+		for (auto t : tristrips) t.update();
         lines.update();
-        polygons.update();
         sprites.update();
 		capsules.update();
 		texts.update();
@@ -505,6 +612,9 @@ public class G2D extends GGen
 			polygon_radius_stack[0] => float default_polygon_radius;
 			polygon_radius_stack.clear();
 			polygon_radius_stack << default_polygon_radius;
+
+			alpha_stack.erase(1, alpha_stack.size());
+			blend_stack.erase(1, blend_stack.size());
 		}
     }
 }
@@ -565,8 +675,7 @@ public class G2D_Text
 
 public class G2D_Circles
 {
-	me.dir() + "./g2d_circle_shader.wgsl" @=> string shader_path;
-	float z_layer;
+	me.dir() + "./g2d_circle_shader.wgsl" @=> string shader_path;	
 
 	// set drawing shader
 	ShaderDesc shader_desc;
@@ -604,15 +713,9 @@ public class G2D_Circles
 		material.uniformInt(3, value);
 	}
 
-	fun void circle(vec2 center, float radius, float thickness, vec4 color) {
+	fun void circle(vec2 center, float radius, float thickness, vec4 color, float z_layer) {
 		u_center_radius_thickness << @(center.x, center.y, radius, thickness);
 		u_colors << color;
-		u_layers << z_layer;
-	}
-
-	fun void circle(vec2 center, float radius, float thickness, vec3 color) {
-		u_center_radius_thickness << @(center.x, center.y, radius, thickness);
-		u_colors << @(color.r, color.g, color.b, 1.0);
 		u_layers << z_layer;
 	}
 
@@ -632,6 +735,66 @@ public class G2D_Circles
 		u_center_radius_thickness.clear();
 		u_colors.clear();
 		u_layers.clear();
+	}
+}
+
+public class G2D_Ellipse
+{
+	me.dir() + "./g2d_ellipse_shader.wgsl" @=> string shader_path;
+
+	// set drawing shader
+	ShaderDesc shader_desc;
+	shader_path => shader_desc.vertexPath;
+	shader_path => shader_desc.fragmentPath;
+	null @=> shader_desc.vertexLayout; 
+
+	// material shader (draws all line segments in 1 draw call)
+	Shader shader(shader_desc);
+	Material material;
+	material.shader(shader);
+	antialias(true); // default antialiasing to true
+
+	// default bindings
+	float empty_float_arr[4];
+	initStorageBuffers();
+
+	// vertex buffers
+	float u_data[0];
+
+	Geometry geo;
+	geo.vertexCount(0);
+
+	GMesh mesh(geo, material);
+
+	fun void initStorageBuffers() {
+		material.storageBuffer(0, empty_float_arr);
+	}
+
+	// set whether to antialias
+	fun void antialias(int value) {
+		material.uniformInt(1, value);
+	}
+
+	// [ vec2 center, vec2 ab, f32 thickness, f32 layer, vec4 color]
+	fun void ellipse(vec2 c, vec2 ab, float thickness, float layer, vec4 color) {
+		u_data << c.x << c.y << ab.x << ab.y << thickness << layer << color.r << color.g << color.b << color.a;
+	}
+
+	fun void update() {
+		if (u_data.size() == 0) {
+			initStorageBuffers(); // needed because empty storage buffers cause WGPU to crash on bindgroup creation
+			return;
+		}
+
+		if (u_data.size() % 10 != 0) 
+			<<< "u_data not properly filled" >>>;
+
+		// update GPU vertex buffers
+		material.storageBuffer(0, u_data);
+		geo.vertexCount(6 * u_data.size()/10);
+
+		// reset
+		u_data.clear();
 	}
 }
 
@@ -687,8 +850,6 @@ public class G2D_SolidPolygon
 {
 	me.dir() + "./g2d_solid_polygon_shader.wgsl" @=> string shader_path;
 
-	float z_layer;
-
 	// set drawing shader
 	ShaderDesc shader_desc;
 	shader_path => shader_desc.vertexPath;
@@ -730,11 +891,12 @@ public class G2D_SolidPolygon
 
 	fun void polygonFilled(
 		vec2 position,
-		float rotation_radians,
+		vec2 rotation,
 		float scale,
 		vec2 vertices[], 
 		float radius,
-		vec3 color
+		vec3 color,
+		float z_layer
 	) {
 		u_polygon_vertex_counts << u_polygon_vertices.size(); // offset
 		u_polygon_vertex_counts << vertices.size(); // count
@@ -755,7 +917,7 @@ public class G2D_SolidPolygon
 
 		u_polygon_transforms << @(
             position.x, position.y, // position
-            Math.cos(rotation_radians), Math.sin(rotation_radians) // rotation
+            rotation.x, rotation.y // rotation
         );
 
 		u_polygon_radius_and_depth << @(radius, z_layer);
@@ -763,15 +925,15 @@ public class G2D_SolidPolygon
 		u_polygon_colors << @(color.r, color.g, color.b, 1.0);
 	}
 
-	fun void polygonFilled(
-		vec2 position,
-		float rotation_radians,
-		vec2 vertices[], 
-		float radius,
-		vec3 color
-	) {
-		polygonFilled(position, rotation_radians, 1.0, vertices, radius, color);
-	}
+	// fun void polygonFilled(
+	// 	vec2 position,
+	// 	float rotation_radians,
+	// 	vec2 vertices[], 
+	// 	float radius,
+	// 	vec3 color
+	// ) {
+	// 	polygonFilled(position, rotation_radians, 1.0, vertices, radius, color);
+	// }
 
 	fun void update() {
 		if (u_polygon_aabb.size() == 0) {
@@ -949,4 +1111,56 @@ public class G2D_Capsule
         u_radius.clear();
         u_colors.clear();
     }
+}
+
+public class G2D_TriangleStrip
+{	
+	me.dir() + "./g2d_tristrip_shader.wgsl" @=> string shader_path;
+
+	// set drawing shader
+	ShaderDesc shader_desc;
+	shader_path => shader_desc.vertexPath;
+	shader_path => shader_desc.fragmentPath;
+	[VertexFormat.Float3, VertexFormat.Float4] @=> shader_desc.vertexLayout;
+
+	// material shader (draws all line segments in 1 draw call)
+	Shader shader(shader_desc);
+	Material material;
+	material.shader(shader);
+	material.topology(Material.Topology_TriangleStrip); 
+
+	// vertex buffers
+	vec3 u_positions[0];
+	vec4 u_colors[0];
+	int indices[0];
+	int indices_count;
+
+	Geometry geo; // just used to set vertex count
+	geo.vertexCount(0);
+	GMesh mesh(geo, material);
+
+	fun void push(vec2 p, float z_layer, vec3 c, float alpha) {
+		u_positions << @(p.x, p.y, z_layer);
+		u_colors << @(c.r, c.g, c.b, alpha);
+		indices << indices_count++;
+	}
+
+	fun void end() {
+		indices << 0xFFFFFFFF; // @TODO make a constant in Material
+	}
+
+	fun void update()
+	{
+		// update GPU vertex buffers
+		geo.vertexAttribute(0, u_positions);
+		geo.vertexCount(u_positions.size());
+		geo.vertexAttribute(1, u_colors);
+		geo.indices(indices);
+
+		// reset
+		u_positions.clear();
+		u_colors.clear();
+		indices.clear();
+		0 => indices_count;
+	}
 }

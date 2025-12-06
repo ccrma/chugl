@@ -1,0 +1,59 @@
+== Bullet Hell Design ==
+Super inspired by JVWorks "Through the Void" https://jvworks.itch.io/through-the-void
+
+Ideas:
+- similar control scheme (mouse to move) but have shoot be enabled by default, and a toggle
+- beat-sync to music!!! gotta practice my tracking.... Will be happy if I can get 1 boss fight + 1 song. all synthesized of course
+- boss phases are nice, breaks a single extended fight into bite-sized waves, and lets you feel the anticipation of surviving each one
+- might want to implement a GText2D for this so we can have more stylized text... or just add ability to animate/color individual characters in GText string
+- keep it minimal. no upgrades, no classes...polish and quality over quantity
+
+Bullet Patterns
+- bullet shape / color should have meaning, e.g. color is speed and shape is targeting logic
+    - homing
+    - straight line
+    - bullets that spawn other bullets
+- Modular system
+    - spawn position
+    - spray pattern
+    - fire rate
+    - initial rotation
+    - bullet type
+    - Example:
+        - firing two offset circles would be 2 "patterns"; one circle firing at rate N 
+        and another also at rate N with offset XX degrees and time offset T/2
+- can have a pre-coded pool of bullet patterns, grouped by difficulty level
+    - boss then randomly picks from the appropriate difficulty pool
+- if needed, can optimize with an instanced/batch 2d sprite shader
+- bullet visuals
+    - shape
+    - size
+    - color
+    - speed
+        - speed over time
+    - direction
+    - targeting / movement logic
+        - bullets that spawn other bullets
+        - fixed straight line
+        - arc
+        - target player
+- change over time. maybe each bullet sequence can have
+    - delta_theta
+    - delta_cd...
+- crazy idea: some bullet trajectories can actually be in 3D space, and project back to 2D for visuals and updating 
+  the b2 collider
+    - maybe a theme can be 3D-->2D???
+
+Movement Pattern X Bullet Pattern = multiplicative, combinatorial variety
+- maybe draw from a movement pool and bullet pattern pool separately so each repeat of a fight is different
+    - but is that difference desirable? is it better to lock down the boss fight so its more learnable?
+        - need to just try and test this...
+
+drive everything off of shared dt so we can do cool slowdown timewarp effect when getting hit
+- also music should slow down
+- and camera zoom in on player
+
+== Inspos (but don't worry about these just make the game) ==
+
+Touhou
+The Void Rains Upon Her Heart
