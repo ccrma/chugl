@@ -2151,6 +2151,24 @@ CK_DLL_MFUN(gpolyhedron_get_shape)
 
 // GShape phong material fns ============================================
 
+static bool ulib_component_gshape_verify_material_is_phong(Chuck_Object* ck_mat)
+{
+    if (chugin_typeIsA(ck_mat, SG_MaterialTypeNames[SG_MATERIAL_PHONG])) return true;
+    log_warn(
+      "setting a builtin mesh.mat(...) to a material type other than "
+      "PhongMaterial");
+    log_warn(
+      " |- builtin meshes such as GSphere, GCube, etc are only intended to be used "
+      "with PhongMaterial");
+    log_warn(
+      " |- setting their material to something else will cause the material "
+      "methods (e.g .color(), .specular()) to be a no-op");
+    log_warn(
+      " |- (hint: try using the GMesh class directly, e.g. `GMesh mesh(my_geo, "
+      "my_mat)`");
+    return false;
+}
+
 CK_DLL_MFUN(gshape_phong_material_get_specular_color)
 {
     glm::vec3 color = *PhongParams::specular(GET_MESH_MATERIAL(SELF));
@@ -2159,6 +2177,8 @@ CK_DLL_MFUN(gshape_phong_material_get_specular_color)
 
 CK_DLL_MFUN(gshape_phong_material_set_specular_color)
 {
+    if (!ulib_component_gshape_verify_material_is_phong(GET_MESH_MATERIAL(SELF)->ckobj))
+        return;
     t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
     PhongParams::specular(GET_MESH_MATERIAL(SELF),
                           glm::vec3(color.x, color.y, color.z));
@@ -2172,6 +2192,8 @@ CK_DLL_MFUN(gshape_phong_material_get_sampler)
 
 CK_DLL_MFUN(gshape_phong_material_set_sampler)
 {
+    if (!ulib_component_gshape_verify_material_is_phong(GET_MESH_MATERIAL(SELF)->ckobj))
+        return;
     PhongParams::sampler(GET_MESH_MATERIAL(SELF),
                          SG_Sampler::fromCkObj(GET_NEXT_OBJECT(ARGS)));
 }
@@ -2184,6 +2206,8 @@ CK_DLL_MFUN(gshape_phong_material_get_diffuse_color)
 
 CK_DLL_MFUN(gshape_phong_material_set_diffuse_color)
 {
+    if (!ulib_component_gshape_verify_material_is_phong(GET_MESH_MATERIAL(SELF)->ckobj))
+        return;
     t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
     PhongParams::diffuse(GET_MESH_MATERIAL(SELF), glm::vec3(color.x, color.y, color.z));
 }
@@ -2195,6 +2219,8 @@ CK_DLL_MFUN(gshape_phong_material_get_alpha)
 
 CK_DLL_MFUN(gshape_phong_material_set_alpha)
 {
+    if (!ulib_component_gshape_verify_material_is_phong(GET_MESH_MATERIAL(SELF)->ckobj))
+        return;
     PhongParams::alpha(GET_MESH_MATERIAL(SELF), GET_NEXT_FLOAT(ARGS));
 }
 
@@ -2205,6 +2231,8 @@ CK_DLL_MFUN(gshape_phong_material_get_log_shininess)
 
 CK_DLL_MFUN(gshape_phong_material_set_log_shininess)
 {
+    if (!ulib_component_gshape_verify_material_is_phong(GET_MESH_MATERIAL(SELF)->ckobj))
+        return;
     t_CKFLOAT shininess = GET_NEXT_FLOAT(ARGS);
     PhongParams::shininess(GET_MESH_MATERIAL(SELF), glm::pow(2.0f, (f32)shininess));
 }
@@ -2217,6 +2245,8 @@ CK_DLL_MFUN(gshape_phong_material_get_emission_color)
 
 CK_DLL_MFUN(gshape_phong_material_set_emission_color)
 {
+    if (!ulib_component_gshape_verify_material_is_phong(GET_MESH_MATERIAL(SELF)->ckobj))
+        return;
     t_CKVEC3 color = GET_NEXT_VEC3(ARGS);
     PhongParams::emission(GET_MESH_MATERIAL(SELF),
                           glm::vec3(color.x, color.y, color.z));
@@ -2229,6 +2259,8 @@ CK_DLL_MFUN(gshape_phong_material_get_normal_factor)
 
 CK_DLL_MFUN(gshape_phong_material_set_normal_factor)
 {
+    if (!ulib_component_gshape_verify_material_is_phong(GET_MESH_MATERIAL(SELF)->ckobj))
+        return;
     PhongParams::normalFactor(GET_MESH_MATERIAL(SELF), GET_NEXT_FLOAT(ARGS));
 }
 
@@ -2239,6 +2271,8 @@ CK_DLL_MFUN(gshape_phong_material_get_ao_factor)
 
 CK_DLL_MFUN(gshape_phong_material_set_ao_factor)
 {
+    if (!ulib_component_gshape_verify_material_is_phong(GET_MESH_MATERIAL(SELF)->ckobj))
+        return;
     PhongParams::aoFactor(GET_MESH_MATERIAL(SELF), GET_NEXT_FLOAT(ARGS));
 }
 
@@ -2250,6 +2284,8 @@ CK_DLL_MFUN(gshape_phong_material_get_albedo_tex)
 
 CK_DLL_MFUN(gshape_phong_material_set_albedo_tex)
 {
+    if (!ulib_component_gshape_verify_material_is_phong(GET_MESH_MATERIAL(SELF)->ckobj))
+        return;
     Chuck_Object* ckobj = GET_NEXT_OBJECT(ARGS);
     SG_Texture* tex
       = ckobj ? SG_GetTexture(OBJ_MEMBER_UINT(ckobj, component_offset_id)) : NULL;
@@ -2264,6 +2300,8 @@ CK_DLL_MFUN(gshape_phong_material_get_specular_tex)
 
 CK_DLL_MFUN(gshape_phong_material_set_specular_tex)
 {
+    if (!ulib_component_gshape_verify_material_is_phong(GET_MESH_MATERIAL(SELF)->ckobj))
+        return;
     Chuck_Object* ckobj = GET_NEXT_OBJECT(ARGS);
     SG_Texture* tex
       = ckobj ? SG_GetTexture(OBJ_MEMBER_UINT(ckobj, component_offset_id)) : NULL;
@@ -2278,6 +2316,8 @@ CK_DLL_MFUN(gshape_phong_material_get_ao_tex)
 
 CK_DLL_MFUN(gshape_phong_material_set_ao_tex)
 {
+    if (!ulib_component_gshape_verify_material_is_phong(GET_MESH_MATERIAL(SELF)->ckobj))
+        return;
     Chuck_Object* ckobj = GET_NEXT_OBJECT(ARGS);
     SG_Texture* tex
       = ckobj ? SG_GetTexture(OBJ_MEMBER_UINT(ckobj, component_offset_id)) : NULL;
@@ -2292,6 +2332,8 @@ CK_DLL_MFUN(gshape_phong_material_get_emissive_tex)
 
 CK_DLL_MFUN(gshape_phong_material_set_emissive_tex)
 {
+    if (!ulib_component_gshape_verify_material_is_phong(GET_MESH_MATERIAL(SELF)->ckobj))
+        return;
     Chuck_Object* ckobj = GET_NEXT_OBJECT(ARGS);
     SG_Texture* tex
       = ckobj ? SG_GetTexture(OBJ_MEMBER_UINT(ckobj, component_offset_id)) : NULL;
@@ -2306,6 +2348,8 @@ CK_DLL_MFUN(gshape_phong_material_get_normal_tex)
 
 CK_DLL_MFUN(gshape_phong_material_set_normal_tex)
 {
+    if (!ulib_component_gshape_verify_material_is_phong(GET_MESH_MATERIAL(SELF)->ckobj))
+        return;
     Chuck_Object* ckobj = GET_NEXT_OBJECT(ARGS);
     SG_Texture* tex
       = ckobj ? SG_GetTexture(OBJ_MEMBER_UINT(ckobj, component_offset_id)) : NULL;
@@ -2319,6 +2363,8 @@ CK_DLL_MFUN(gshape_phong_material_get_envmap_method)
 
 CK_DLL_MFUN(gshape_phong_material_set_envmap_method)
 {
+    if (!ulib_component_gshape_verify_material_is_phong(GET_MESH_MATERIAL(SELF)->ckobj))
+        return;
     PhongParams::envmapMethod(GET_MESH_MATERIAL(SELF),
                               (SG_EnvmapSampleMode)GET_NEXT_INT(ARGS));
 }
@@ -2330,6 +2376,8 @@ CK_DLL_MFUN(gshape_phong_material_get_envmap_refraction_ratio)
 
 CK_DLL_MFUN(gshape_phong_material_set_envmap_refraction_ratio)
 {
+    if (!ulib_component_gshape_verify_material_is_phong(GET_MESH_MATERIAL(SELF)->ckobj))
+        return;
     PhongParams::envmapRefractionRatio(GET_MESH_MATERIAL(SELF), GET_NEXT_FLOAT(ARGS));
 }
 
@@ -2340,6 +2388,8 @@ CK_DLL_MFUN(gshape_phong_material_get_envmap_blend_mode)
 
 CK_DLL_MFUN(gshape_phong_material_set_envmap_blend_mode)
 {
+    if (!ulib_component_gshape_verify_material_is_phong(GET_MESH_MATERIAL(SELF)->ckobj))
+        return;
     PhongParams::envmapBlendMode(GET_MESH_MATERIAL(SELF),
                                  (SG_EnvmapBlendMode)GET_NEXT_INT(ARGS));
 }
@@ -2351,5 +2401,7 @@ CK_DLL_MFUN(gshape_phong_material_get_envmap_intensity)
 
 CK_DLL_MFUN(gshape_phong_material_set_envmap_intensity)
 {
+    if (!ulib_component_gshape_verify_material_is_phong(GET_MESH_MATERIAL(SELF)->ckobj))
+        return;
     PhongParams::envmapIntensity(GET_MESH_MATERIAL(SELF), GET_NEXT_FLOAT(ARGS));
 }

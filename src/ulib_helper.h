@@ -430,6 +430,14 @@ bool chugin_typeEquals(Chuck_Object* ckobj, const char* type_name)
     return g_chuglAPI->type->is_equal(thisType, ggenType);
 }
 
+bool chugin_typeIsA(Chuck_Object* ckobj, const char* type_name)
+{
+    Chuck_DL_Api::Type lhs = g_chuglAPI->object->get_type(ckobj);
+    Chuck_DL_Api::Type rhs = g_chuglAPI->type->lookup(g_chuglVM, type_name);
+    // check for subclass match
+    return g_chuglAPI->type->isa(lhs, rhs);
+}
+
 // impl in ulib_light.cpp
 SG_Light* ulib_light_create(Chuck_Object* ckobj, SG_LightType type);
 

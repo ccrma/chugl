@@ -1,0 +1,5 @@
+[ChuGL]: [33mWARN [0msetting a builtin mesh.mat(...) to a material type other than PhongMaterial
+[ChuGL]: [33mWARN [0m |- builtin meshes such as GSphere, GCube, etc are only intended to be used with PhongMaterial
+[ChuGL]: [33mWARN [0m |- setting their material to something else will cause the material methods (e.g .color(), .specular()) to be a no-op
+[ChuGL]: [33mWARN [0m |- (hint: try using the GMesh class directly, e.g. `GMesh mesh(my_geo, my_mat)`
+[chuck]: (VM) removing all (0) shreds...
