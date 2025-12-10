@@ -1521,8 +1521,9 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Pass* pass, R_Camera* cam
                                       // normalize against camera far plane
                     } break;
                     case SG_CameraType_ORTHOGRAPHIC: {
-                        dist_from_camera = glm::dot(cam_forward, world_pos);
+                        dist_from_camera = glm::dot(cam_forward, world_pos - cam_pos);
                     } break;
+                    default: UNREACHABLE;
                 }
 
                 td->sort_key
