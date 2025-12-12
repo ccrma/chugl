@@ -115,6 +115,7 @@ public class G2D extends GGen
 		layer_stack[-1] => lines.z_layer; 
 		layer_stack[-1] => sprites.z_layer; 
 	}
+	fun float layer() { return layer_stack[-1]; }
 	fun void pushTextMaxWidth(float w) { texts.max_width_stack << w; }
 	fun void popTextMaxWidth() { texts.max_width_stack.popBack(); }
 	fun void pushTextControlPoint(vec2 cp) { texts.control_point_stack << cp; }
@@ -443,25 +444,25 @@ public class G2D extends GGen
 
 	fun void polygonFilled(vec2 pos, vec2 rotation, vec2 vertices[], float radius) {
 		polygons[blend_stack[-1]].polygonFilled(
-			pos, rotation, 1.0, vertices, radius, color_stack[-1], layer_stack[-1]
+			pos, rotation, 1.0, vertices, radius, color_stack[-1], layer_stack[-1], alpha_stack[-1]
 		);
 	}
 
 	fun void polygonFilled(vec2 pos, float rot, vec2 vertices[], float radius) {
 		polygons[blend_stack[-1]].polygonFilled(
-			pos, @(Math.cos(rot), Math.sin(rot)), 1.0, vertices, radius, color_stack[-1], layer_stack[-1]
+			pos, @(Math.cos(rot), Math.sin(rot)), 1.0, vertices, radius, color_stack[-1], layer_stack[-1], alpha_stack[-1]
 		);
 	}
 
 	fun void polygonFilled(vec2 pos, vec2 rotation, float sca, vec2 vertices[], float radius, vec3 color) {
 		polygons[blend_stack[-1]].polygonFilled(
-			pos, rotation, sca, vertices, radius, color, layer_stack[-1]
+			pos, rotation, sca, vertices, radius, color, layer_stack[-1], alpha_stack[-1]
 		);
 	}
 
 	fun void polygonFilled(vec2 pos, float rot, float sca, vec2 vertices[], float radius, vec3 color) {
 		polygons[blend_stack[-1]].polygonFilled(
-			pos, @(Math.cos(rot), Math.sin(rot)), sca, vertices, radius, color, layer_stack[-1]
+			pos, @(Math.cos(rot), Math.sin(rot)), sca, vertices, radius, color, layer_stack[-1], alpha_stack[-1]
 		);
 	}
 
@@ -479,7 +480,8 @@ public class G2D extends GGen
 			[@(-hw, hh), @(-hw, -hh), @(hw, -hh), @(hw, hh)], 
 			polygon_radius_stack[-1],
 			color,
-			layer_stack[-1]
+			layer_stack[-1],
+			alpha_stack[-1]
 		);
 	}
 
@@ -678,13 +680,15 @@ public class G2D_Circles
 	me.dir() + "./g2d_circle_shader.wgsl" @=> string shader_path;	
 
 	// set drawing shader
-	ShaderDesc shader_desc;
+	static ShaderDesc shader_desc;
 	shader_path => shader_desc.vertexPath;
 	shader_path => shader_desc.fragmentPath;
 	null @=> shader_desc.vertexLayout; 
 
 	// material shader (draws all line segments in 1 draw call)
-	Shader shader(shader_desc);
+	static Shader@ shader;
+	if (shader == null) new Shader(shader_desc) @=> shader;
+
 	Material material;
 	material.shader(shader);
 	antialias(true); // default antialiasing to true
@@ -743,13 +747,15 @@ public class G2D_Ellipse
 	me.dir() + "./g2d_ellipse_shader.wgsl" @=> string shader_path;
 
 	// set drawing shader
-	ShaderDesc shader_desc;
+	static ShaderDesc shader_desc;
 	shader_path => shader_desc.vertexPath;
 	shader_path => shader_desc.fragmentPath;
 	null @=> shader_desc.vertexLayout; 
 
 	// material shader (draws all line segments in 1 draw call)
-	Shader shader(shader_desc);
+	static Shader@ shader;
+    if (shader == null) new Shader(shader_desc) @=> shader;
+
 	Material material;
 	material.shader(shader);
 	antialias(true); // default antialiasing to true
@@ -804,13 +810,15 @@ public class G2D_Lines
 	me.dir() + "./g2d_lines_shader.wgsl" @=> string shader_path;
 
 	// set drawing shader
-	ShaderDesc shader_desc;
+	static ShaderDesc shader_desc;
 	shader_path => shader_desc.vertexPath;
 	shader_path => shader_desc.fragmentPath;
 	[VertexFormat.Float3, VertexFormat.Float3] @=> shader_desc.vertexLayout;
 
 	// material shader (draws all line segments in 1 draw call)
-	Shader shader(shader_desc);
+	static Shader@ shader;
+    if (shader == null) new Shader(shader_desc) @=> shader;
+
 	Material material;
 	material.shader(shader);
 
@@ -851,13 +859,15 @@ public class G2D_SolidPolygon
 	me.dir() + "./g2d_solid_polygon_shader.wgsl" @=> string shader_path;
 
 	// set drawing shader
-	ShaderDesc shader_desc;
+	static ShaderDesc shader_desc;
 	shader_path => shader_desc.vertexPath;
 	shader_path => shader_desc.fragmentPath;
 	null => shader_desc.vertexLayout; // no vertex layout
 
-	// material shader (draws all solid polygons in 1 draw call)
-	Shader shader(shader_desc);
+	// material shader (draws all solid polygons in 1 draw call)	
+	static Shader@ shader;
+    if (shader == null) new Shader(shader_desc) @=> shader;
+
 	Material solid_polygon_material;
 	solid_polygon_material.shader(shader);
 
@@ -896,7 +906,8 @@ public class G2D_SolidPolygon
 		vec2 vertices[], 
 		float radius,
 		vec3 color,
-		float z_layer
+		float z_layer,
+		float alpha
 	) {
 		u_polygon_vertex_counts << u_polygon_vertices.size(); // offset
 		u_polygon_vertex_counts << vertices.size(); // count
@@ -922,7 +933,7 @@ public class G2D_SolidPolygon
 
 		u_polygon_radius_and_depth << @(radius, z_layer);
 
-		u_polygon_colors << @(color.r, color.g, color.b, 1.0);
+		u_polygon_colors << @(color.r, color.g, color.b, alpha);
 	}
 
 	// fun void polygonFilled(
@@ -1054,13 +1065,15 @@ public class G2D_Capsule
 	me.dir() + "./g2d_capsule_shader.wgsl" @=> string shader_path;
 
 	// set drawing shader
-	ShaderDesc shader_desc;
+	static ShaderDesc shader_desc;
 	shader_path => shader_desc.vertexPath;
 	shader_path => shader_desc.fragmentPath;
 	null @=> shader_desc.vertexLayout; 
 
 	// material shader (draws all line segments in 1 draw call)
-	Shader shader(shader_desc);
+	static Shader@ shader;
+    if (shader == null) new Shader(shader_desc) @=> shader;
+
 	Material material;
 	material.shader(shader);
 	antialias(true);
@@ -1118,13 +1131,15 @@ public class G2D_TriangleStrip
 	me.dir() + "./g2d_tristrip_shader.wgsl" @=> string shader_path;
 
 	// set drawing shader
-	ShaderDesc shader_desc;
+	static ShaderDesc shader_desc;
 	shader_path => shader_desc.vertexPath;
 	shader_path => shader_desc.fragmentPath;
 	[VertexFormat.Float3, VertexFormat.Float4] @=> shader_desc.vertexLayout;
 
 	// material shader (draws all line segments in 1 draw call)
-	Shader shader(shader_desc);
+	static Shader@ shader;
+    if (shader == null) new Shader(shader_desc) @=> shader;
+
 	Material material;
 	material.shader(shader);
 	material.topology(Material.Topology_TriangleStrip); 

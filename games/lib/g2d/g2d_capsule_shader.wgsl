@@ -28,6 +28,8 @@ struct VertexOutput {
     @location(4) v_color: vec4f,
 };
 
+// @note i'm pretty sure these could actually be passed as vertex attributes, don't need to do vertex pulling here
+// because each quad only needs to know about itself, not its neighbors (unlike in line rendering)
 @group(1) @binding(0) var<storage> u_p1p2 : array<vec4f>; // .xy is p1, .zw is p2
 @group(1) @binding(1) var<storage> u_radius : array<f32>;
 @group(1) @binding(2) var<storage> u_color : array<vec4f>;

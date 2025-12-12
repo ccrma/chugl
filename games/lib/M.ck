@@ -124,6 +124,17 @@ public class M {
         return (1.0 - x) * a + x * b;
     }
 
+    fun static float lerp(float t, float a, float b) {
+        return a + t * (b - a);
+    }
+
+    // grows fast, decays slow
+    // Use k to control the stretching of the function. Its maximum, which is 1, happens at exactly x = 1/k.
+    fun static float expImpulse( float x, float k ) {
+        k*x => float h;
+        return h*Math.exp(1.0-h);
+    }
+
     // ===================================================
     // Random
     // ===================================================

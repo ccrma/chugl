@@ -172,26 +172,22 @@ public class FX {
     }
 
     // algo: divide the line into n segments, jitter, and flash/dissolve
-    fun static void lightning(vec2 pos, int n_segments, float rand_displacement_max, float fade_secs) {
+    fun static void lightning(vec2 start, vec2 end, int n_segments, float rand_displacement_max, float fade_secs) {
         vec2 vertices[0];
-        // assum lightning goes straight down from same x position at top of screen
-        @(
-            pos.x,
-            g.ndc2world(@(0,1)).y
-        ) => vec2 start;
         vertices << start;
 
-        Math.fabs(pos.y - start.y) / n_segments => float dy;
+        (end - start) / n_segments => vec2 delta;
+        M.perp(M.dir(start, end)) => vec2 perp;
 
         for (int i; i < n_segments - 1; i++) {
-            start.y - (i * dy + Math.random2f(0, dy)) => float y;
+            start + (i + Math.random2f(0, 1)) * delta => vec2 v;
             // displace along normal
-            pos.x + Math.random2f(-rand_displacement_max, rand_displacement_max) => float x;
-            vertices << @(x, y) << @(x, y);
+            v + Math.random2f(-rand_displacement_max, rand_displacement_max) * perp => v;
+            vertices << v << v;
         }
 
         // final endpoint
-        vertices << pos;    
+        vertices << end;    
 
         // draw and animate
         float elapsed;
@@ -287,6 +283,72 @@ public class FX {
 
             g.popColor();
             g.popLayer();
+        }
+    }
+
+    fun static void screenFlashEffect(dur duration) {
+        float elapsed;
+        duration/second => float total_time;
+        while (elapsed < total_time) {
+            GG.nextFrame() => now;
+            GG.dt() +=> elapsed;
+            elapsed / total_time => float t;
+
+            g.pushBlend(g.BLEND_ADD);
+            g.pushLayer(GG.camera().posZ() - 1);
+            g.squareFilled(
+                GG.camera().pos() $ vec2,
+                0, 
+	            GG.camera().viewSize() * 1,
+                Color.WHITE * M.expImpulse(t, 9)
+                // Color.WHITE
+            );
+            // g.popLayer();
+            g.popBlend();
+        }
+    }
+
+    static int camera_shake_generation;
+    fun static void cameraShakeEffect(float amplitude, dur shake_dur, float hz) {
+        ++camera_shake_generation => int gen;
+        dur elapsed_time;
+
+        // generate shake params
+        shake_dur / 1::second => float shake_dur_secs;
+        vec2 camera_deltas[(hz * shake_dur_secs + 1) $ int];
+        for (int i; i < camera_deltas.size(); i++) {
+            @(Math.random2f(-amplitude, amplitude),
+            Math.random2f(-amplitude, amplitude)) => camera_deltas[i];
+        }
+        @(0,0) => camera_deltas[0]; // start from original pos
+        @(0,0) => camera_deltas[-2]; // return to original pos
+        @(0,0) => camera_deltas[-1]; // return to original pos (yes need this one too)
+
+        (1.0 / hz)::second => dur camera_delta_period; // time for 1 cycle of shake
+
+        while (true) {
+            GG.nextFrame() => now;
+            // another shake triggred, stop this one
+            if (elapsed_time > shake_dur || gen != camera_shake_generation) break;
+            // update elapsed time
+            GG.dt()::second +=> elapsed_time;
+
+            // compute fraction shake progress
+            elapsed_time / shake_dur => float progress;
+            elapsed_time / camera_delta_period => float elapsed_periods;
+            elapsed_periods $ int => int floor;
+            elapsed_periods - floor => float fract;
+
+            // clamp to end of camera_deltas
+            if (floor + 1 >= camera_deltas.size()) {
+                camera_deltas.size() - 2 => floor;
+                1.0 => fract;
+            }
+
+            // interpolate the progress
+            camera_deltas[floor] * (1.0 - fract) + camera_deltas[floor + 1] * fract => vec2 delta;
+            // update camera pos with linear decay based on progress
+            (1.0 - progress) * delta => GG.camera().pos;
         }
     }
 }
