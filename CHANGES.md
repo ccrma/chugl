@@ -1,5 +1,11 @@
 # Changes
 
+## 0.2.9 (alpha)
+- Bug fixes
+  - fixed transparency depth sorting when using an orthographic camera. the original math was so scuffed (thanks Ben)
+- New Examples
+  - deep/meshlines.ck: 3D line rendering that supports per-vertex line width, dashed lines, and more
+
 ## 0.2.8 (alpha)
 - Gamepad support! (see basic/gamepad.ck)
 - Material blend modes! Additive, multiplicative, subtractive, custom, etc. (see basic/blend.ck)

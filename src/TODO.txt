@@ -1,19 +1,14 @@
 TODO
 
+bullshit vec3 storage buffer alignment seems to require 16 byte alignment
+- meaning you can't pass a chuck vec3[] to a bindgroup that expects a storage array<vec3f>
+- somehow chugl needs to detect this and when copying the chuck array pad out the last 3 bytes of the chuck vec3
+
+- fix empty storage buffer crash
+
 Add warning on renderthread when a ChuGL Geometry's vertex buffer type (float/vec2/vec3/vec4)
 doesn't match the vertex layout of the ShaderDesc on a Material it's paired with 
-
-for kunwoo: add feature for loading texture directly to CPU as well,
-rather than having to load to GPU and readback via texture.read()
-
-Leakcheck gamepad.ck example
-
-3D polylines
-- freya shapes polylines
-- do babylon or threejs support this?
-- that one screen-space 3d line blog post
-- Jasper's 3d line debug tool: https://bsky.app/profile/jasperrlz.bsky.social/post/3lbe2vht6p22s
-- does Greggmann have something for this?
+- add warning to storageBuffer(vec3[]) about alignment
 
 bugs found working on games
 - setting shader storageBuffer to empty array causes crash
@@ -128,6 +123,14 @@ lets us sort by shaders as well to minimize pipeline switches
 - paperjs
 - processing/p5
 - love.graphics
+
+
+== Engine references ============
+- Love2D
+- Raylib
+- Haxe / Hashlink (mosa lina and deadcells?)
+- ThreeJS
+- BabylonJS
 
 == Examples ====================
 - Mirrors
