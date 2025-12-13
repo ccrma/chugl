@@ -9,11 +9,18 @@ For testing alpha-mapping, download the brushstroke texture from:
 https://chuck.stanford.edu/chugl/examples/data/textures/brush-texture.png
 and uncomment the relevant lines below.
 
-Note: this line renderer performs best on vertex data that is relatively dense
+Some remarks:
+- this line renderer performs best on vertex data that is relatively dense
 and smooth, e.g. as one would get with bezier curves or some other spline.
-
-Prefer using GLines for lines that have sharp corners and whose vertices
+- prefer using GLines for lines that have sharp corners and whose vertices
 are coplanar.
+- if sizeAttenuation == true, the line will appear smaller the farther 
+it is, and .width corresponds to world-space width.
+- if sizeAttenuation == false, the line will have constant size, and
+.width corresponds to width in pixels.
+- looping is janky when it breaks continuity or suddenly jumps a large
+distance. in those cases prefer creating the loop yourself via adding 
+more points.
 
 references:
 - https://mattdesl.svbtle.com/drawing-lines-is-hard
