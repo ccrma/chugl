@@ -306,4 +306,4 @@ doc.addGroup(
 doc.sort(true);
 
 // generate
-doc.outputToDir( ".", "ChuGL [alpha] API Reference (v0.2.7)" );
+doc.outputToDir( ".", "ChuGL [alpha] API Reference (v0.2.9)" );
