@@ -2363,8 +2363,9 @@ static void _R_HandleCommand(App* app, SG_Command* command)
             R_Buffer* buffer            = Component_GetBuffer(cmd->buffer_id);
             void* data                  = CQ_ReadCommandGetOffset(cmd->data_offset);
 
-            GPU_Buffer::write(&app->gctx, &buffer->gpu_buffer, buffer->gpu_buffer.usage,
-                              cmd->offset_bytes, data, cmd->data_size_bytes);
+            GPU_Buffer::write(&app->gctx, &buffer->gpu_buffer,
+                              GPU_Buffer::usage(buffer->gpu_buffer), cmd->offset_bytes,
+                              data, cmd->data_size_bytes);
 
         } break;
         case SG_COMMAND_LIGHT_UPDATE: {

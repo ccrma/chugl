@@ -940,7 +940,7 @@ void R_Material::setSamplerBinding(GraphicsContext* gctx, R_Material* mat, u32 l
 void R_Material::setExternalStorageBinding(GraphicsContext* gctx, R_Material* mat,
                                            u32 location, GPU_Buffer* buffer)
 {
-    ASSERT(buffer->usage & WGPUBufferUsage_Storage);
+    ASSERT(GPU_Buffer::usage(*buffer) & WGPUBufferUsage_Storage);
     R_Material::setBinding(gctx, mat, location, R_BIND_STORAGE_EXTERNAL, buffer,
                            buffer->size);
 }
@@ -1118,14 +1118,17 @@ struct GeometryToXforms {
               = { xform->world, xform->normal, xform->id, xform->receives_shadows, {} };
         }
 
-        snprintf(g2x->xform_storage_buffer.label,
-                 sizeof(g2x->xform_storage_buffer.label),
-                 "Per-Draw Storage Buffer for Mat: %d, Geo: %d", g2x->key.mat_id,
-                 g2x->key.geo_id);
-
         u64 write_size = g2x->draw_uniform_list.curr;
         GPU_Buffer::write(gctx, &g2x->xform_storage_buffer, WGPUBufferUsage_Storage,
                           g2x->draw_uniform_list.base, write_size);
+
+        // if (recreated) {
+        //     snprintf(gctx->label, sizeof(gctx->label),
+        //              "Per-Draw Storage Buffer for Mat: %d, Geo: %d", g2x->key.mat_id,
+        //              g2x->key.geo_id);
+        //     wgpuBufferSetLabel(g2x->xform_storage_buffer.buf, gctx->label);
+        // WTFFFF wgpuBufferSetLabel is not implemented????
+        // }
     }
 
     static DrawUniforms* drawUniform(GeometryToXforms* g2x, int i)

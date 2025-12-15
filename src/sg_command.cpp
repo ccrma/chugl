@@ -843,12 +843,20 @@ void CQ_PushCommand_MaterialSetStorageBuffer(SG_Material* material, int location
         } break;
         default: ASSERT(false); // unsupported type
     }
+    // to match wsgl storage buffer binding size requirements, set minimum storage
+    // buffer size to 4 floats = 16 bytes (for a vec4 uniform)
+    int storage_buffer_size = MAX(data_count, 4) * sizeof(f32);
     BEGIN_COMMAND_ADDITIONAL_MEMORY(SG_Command_MaterialSetStorageBuffer,
                                     SG_COMMAND_MATERIAL_SET_STORAGE_BUFFER,
-                                    data_count * sizeof(f32));
+                                    storage_buffer_size);
     command->sg_id           = material->id;
     command->location        = location;
-    command->data_size_bytes = data_count * sizeof(f32);
+    command->data_size_bytes = storage_buffer_size;
+
+    // zero the initial min size
+    memset(memory, 0, 4 * sizeof(f32));
+
+    // copy chuck data
     switch (storage_buffer_type) {
         case SG_MATERIAL_UNIFORM_FLOAT: {
             chugin_copyCkFloatArray((Chuck_ArrayFloat*)ck_arr, (f32*)memory,

@@ -1192,28 +1192,32 @@ bool GPU_Buffer::resizeNoCopy(GraphicsContext* gctx, GPU_Buffer* gpu_buffer,
                               u64 new_size, WGPUBufferUsageFlags usage_flags)
 
 {
-    if (new_size <= gpu_buffer->capacity
-        && (usage_flags & gpu_buffer->usage) == usage_flags) {
+
+    u64 capacity               = 0;
+    WGPUBufferUsageFlags usage = 0;
+    if (gpu_buffer->buf) {
+        usage    = wgpuBufferGetUsage(gpu_buffer->buf);
+        capacity = wgpuBufferGetSize(gpu_buffer->buf);
+    }
+
+    if (new_size <= capacity && (usage_flags & usage) == usage_flags) {
         gpu_buffer->size = new_size;
         return false;
     }
 
-    log_debug("Resizing GPU_Buffer from %llu to %llu\n", gpu_buffer->capacity,
-              new_size);
+    log_debug("Resizing GPU_Buffer from %llu to %llu\n", capacity, new_size);
 
     WGPUBufferDescriptor desc = {};
     desc.usage                = usage_flags | WGPUBufferUsage_CopyDst;
-    u64 new_capacity          = MAX(gpu_buffer->capacity * 2, new_size);
+    u64 new_capacity          = MAX(capacity * 2, new_size);
     desc.size                 = NEXT_MULT4(new_capacity);
 
     // release old buffer
     WGPU_RELEASE_RESOURCE(Buffer, gpu_buffer->buf);
 
     // update buffer
-    gpu_buffer->buf      = wgpuDeviceCreateBuffer(gctx->device, &desc);
-    gpu_buffer->capacity = desc.size;
-    gpu_buffer->usage    = desc.usage;
-    gpu_buffer->size     = new_size;
+    gpu_buffer->buf  = wgpuDeviceCreateBuffer(gctx->device, &desc);
+    gpu_buffer->size = new_size;
     return true;
 }
 

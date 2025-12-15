@@ -88,6 +88,9 @@ struct GraphicsContext {
     WGPUTexture sentinel_spotlight_depth_2d_array;
     WGPUTexture sentinel_dirlight_depth_2d_array;
 
+    // label buffer ------
+    char label[256];
+
     // Methods --------
     static bool init(GraphicsContext* context, GLFWwindow* window);
     static bool prepareFrame(GraphicsContext* ctx);
@@ -168,10 +171,17 @@ struct G_DynamicGPUBuffer { // for use with dynamic bg offsets
 // grows buffer to new size, copying old data
 struct GPU_Buffer {
     WGPUBuffer buf;
-    WGPUBufferUsageFlags usage;
-    u64 capacity; // total size in bytes
-    u64 size;     // current size in bytes
-    char label[64];
+    u64 size; // current size in bytes
+
+    static u64 capacity(GPU_Buffer gpu_buffer)
+    {
+        return gpu_buffer.buf ? wgpuBufferGetSize(gpu_buffer.buf) : 0;
+    }
+
+    static WGPUBufferUsageFlags usage(GPU_Buffer gpu_buffer)
+    {
+        return gpu_buffer.buf ? wgpuBufferGetUsage(gpu_buffer.buf) : 0;
+    }
 
     // resizes buffer, does NOT copy old data
     // returns true if buffer was recreated
@@ -191,9 +201,7 @@ struct GPU_Buffer {
         WGPUBuffer new_buf = wgpuDeviceCreateBuffer(gctx->device, &desc);
 
         // update buffer
-        gpu_buffer->buf      = new_buf;
-        gpu_buffer->capacity = desc.size;
-        gpu_buffer->usage    = desc.usage;
+        gpu_buffer->buf = new_buf;
     }
 
     // returns true if buffer was recreated (because of capacity or usage flags)
@@ -203,16 +211,17 @@ struct GPU_Buffer {
     {
         bool recreated = false;
 
-        // if (size == 0) return recreated;
+        u64 capacity               = 0;
+        WGPUBufferUsageFlags usage = 0;
+        if (gpu_buffer->buf) {
+            usage    = wgpuBufferGetUsage(gpu_buffer->buf);
+            capacity = wgpuBufferGetSize(gpu_buffer->buf);
+        }
 
-        bool needs_new_capacity    = size + offset > gpu_buffer->capacity;
-        bool needs_new_permissions = (usage_flags & gpu_buffer->usage) != usage_flags;
+        bool needs_new_capacity    = size + offset > capacity;
+        bool needs_new_permissions = (usage_flags & usage) != usage_flags;
         bool needs_initialization  = gpu_buffer->buf == NULL;
-        if (needs_new_capacity || needs_new_permissions || needs_initialization
-            // offset + size > gpu_buffer->capacity
-            // || (usage_flags & gpu_buffer->usage) != usage_flags
-        ) {
-
+        if (needs_new_capacity || needs_new_permissions || needs_initialization) {
             recreated = true;
 
             // recreating buffer with non-zero offset is bug
@@ -220,14 +229,14 @@ struct GPU_Buffer {
             ASSERT(offset == 0);
 
             // grow buffer
-            u64 new_capacity = MAX(gpu_buffer->capacity * 2, size + offset);
+            u64 new_capacity = MAX(capacity * 2, size + offset);
             new_capacity     = NEXT_MULT4(new_capacity); // align to 4 bytes
             ASSERT(new_capacity % 4 == 0);
 
             WGPUBufferDescriptor desc = {};
-            desc.label                = gpu_buffer->label;
-            desc.usage                = usage_flags | WGPUBufferUsage_CopyDst;
-            desc.size                 = new_capacity;
+            // desc.label                = gpu_buffer->label;
+            desc.usage = usage_flags | WGPUBufferUsage_CopyDst;
+            desc.size  = new_capacity;
 
             WGPUBuffer new_buf = wgpuDeviceCreateBuffer(gctx->device, &desc);
 
@@ -235,9 +244,7 @@ struct GPU_Buffer {
             WGPU_RELEASE_RESOURCE(Buffer, gpu_buffer->buf);
 
             // update buffer
-            gpu_buffer->buf      = new_buf;
-            gpu_buffer->capacity = desc.size;
-            gpu_buffer->usage    = desc.usage;
+            gpu_buffer->buf = new_buf;
         }
 
         wgpuQueueWriteBuffer(gctx->queue, gpu_buffer->buf, offset, data, size);

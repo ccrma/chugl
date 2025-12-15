@@ -917,7 +917,16 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
         ARG("int", "location");
         ARG("vec3[]", "storageBuffer");
         DOC_FUNC(
-          "Bind the given array data as a storage buffer at the given location.");
+          "Bind the given array data as a storage buffer at the given location."
+          "WARNING: if you're binding in the wgsl shader is type vec3f, i.e. you are "
+          "binding to a location of type `var<storage> : array<vec3f>`, note that due "
+          "to GPU byte alignment constraints, vec3f actually has 4 bytes of padding, "
+          "making it the same size as a vec4f. The vec3 arrays in chugl however have 0 "
+          "extra padding, and so the copy will not align leading most likely to very "
+          "strange visual bugs. To work around this: change the type in your shader to "
+          "array<f32>, which has no extra padding and will align nicely. Or change it "
+          "to array<vec4f> and on the chuck side copy an array of vec4 instead, with "
+          "the .w value being unused.");
 
         MFUN(material_set_storage_buffer_vec4, "void", "storageBuffer");
         ARG("int", "location");

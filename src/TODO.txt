@@ -1,5 +1,9 @@
 TODO
 
+update to newer wgpu version so that
+- fix wgpu leak
+- hopefully it implements wgpuBufferSetLabel
+
 bullshit vec3 storage buffer alignment seems to require 16 byte alignment
 - meaning you can't pass a chuck vec3[] to a bindgroup that expects a storage array<vec3f>
 - somehow chugl needs to detect this and when copying the chuck array pad out the last 3 bytes of the chuck vec3
@@ -91,6 +95,22 @@ lets us sort by shaders as well to minimize pipeline switches
         -  Ryan fleury arena talk
         -  eskil steenberg how I program C leak checker
         -  stb leak check
+
+Benefits of having wgsl shader reflection and pipeline layout
+- *NOTE* keep checking the webgpu discussion, they might add this themselves
+  - https://github.com/gpuweb/gpuweb/issues/624
+  - https://github.com/gfx-rs/wgpu/blob/trunk/CHANGELOG.md
+  
+- don't need to use auto-layout, can share pipeline layouts and add bindgroupLayouts
+to the renderer cache
+- enables dynamicBindGroup offsets, don't need to recreate bindgroups 
+for different offsets, can using a single dynamic GPU_Buffer that is refilled
+every frame with all uniforms (noclips gfxr does this)
+- ChuGL API side
+  - can validate that chuck users are setting the write type
+  - vec3 padding to vec4!!!
+  - allows you to not use variable in a shader and it won't be optimized out
+  - possibly allows setting struct uniforms??
 
 ### Long-Term
 - C-port of webgpu-utils shader pipeline layout generator
