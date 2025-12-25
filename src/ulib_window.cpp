@@ -1255,8 +1255,11 @@ CK_DLL_SFUN(gwindow_set_window_size_limits)
     t_CKINT max_height    = GET_NEXT_INT(ARGS);
     t_CKVEC2 aspect_ratio = GET_NEXT_VEC2(ARGS);
 
+    const int PRECISION = 10000; // allows 4 decimal places of precision, approximately.
+
     CQ_PushCommand_WindowSizeLimits(min_width, min_height, max_width, max_height,
-                                    (int)aspect_ratio.x, (int)aspect_ratio.y);
+                                    (int)(aspect_ratio.x * PRECISION),
+                                    (int)(aspect_ratio.y * PRECISION));
 }
 
 // ============================================================================
