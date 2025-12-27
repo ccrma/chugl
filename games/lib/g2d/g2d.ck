@@ -71,13 +71,14 @@ public class G2D extends GGen
 
 	// disable tonemapping / HDR
 	GG.outputPass().tonemap(OutputPass.ToneMap_None);
+	// disable gamma
+	GG.outputPass().gamma(false);
 	// TODO: disable the srgb view on swapchain screen buffer
 
 	fun void sortDepthByY(int b) { 
 		b => sprites.sort_depth_by_y;
 		// @TODO the other shaders
 	}
-
 
 	// ------------------- constants --------------------------
 	Material.BLEND_MODE_ALPHA => int BLEND_ALPHA;
@@ -133,6 +134,7 @@ public class G2D extends GGen
 	fun void antialias(int bool) {
 		for (auto c : circles) c.antialias(bool);
 		for (auto e : ellipses) e.antialias(bool);
+		bool => texts.antialias;
 		capsules.antialias(bool);
 		GG.scenePass().msaa(bool);
 		GG.outputPass().sampler(bool ? TextureSampler.linear() : TextureSampler.nearest());
@@ -194,6 +196,16 @@ public class G2D extends GGen
 		return world_pos $ vec2;
 	}
 
+	fun vec2 n2w(vec2 ndc) {
+		GG.camera().NDCToWorldPos(@(ndc.x, ndc.y, 0)) => vec3 world_pos;
+		return world_pos $ vec2;
+	}
+
+	fun vec2 n2w(float x, float y) {
+		GG.camera().NDCToWorldPos(@(x, y, 0)) => vec3 world_pos;
+		return world_pos $ vec2;
+	}
+
 	fun vec2 ndc2world(float x, float y) {
 		GG.camera().NDCToWorldPos(@(x, y, 0)) => vec3 world_pos;
 		return world_pos $ vec2;
@@ -206,17 +218,47 @@ public class G2D extends GGen
 	// 	return (Math.fabs(pos_ndc.x) > threshold || Math.fabs(pos_ndc.y) > threshold);
 	// }
 
-	// ----------- mouse and camera --------------
+	// ----------- input --------------
 	// returns world-coordinates of mouse pos
 	fun vec2 mousePos() {
 		GG.camera().screenCoordToWorldPos(GWindow.mousePos(), 1.0) => vec3 world_pos;
 		return @(world_pos.x, world_pos.y);
 	}
 
-	fun int mouseLeftDown() {
-		return GWindow.mouseLeftDown();
+	fun int mouseLeftDown() { return GWindow.mouseLeftDown(); }
+	fun int mouseLeftUp() { return GWindow.mouseLeftUp(); }
+	fun int mouseLeft() { return GWindow.mouseLeft(); }
+
+	fun int anyInput() { return GWindow.mouseLeft() || GWindow.mouseRight() || GWindow.keys().size(); }
+	fun int anyInputDown() { return GWindow.mouseLeftDown() || GWindow.mouseRightDown() || GWindow.keysDown().size(); }
+	fun int anyInputUp() { return GWindow.mouseLeftUp() || GWindow.mouseRightUp() || GWindow.keysUp().size(); }
+
+	// ------------------- effects --------------------------
+	Effect effects[0];
+	int effects_count;
+	fun void add(Effect e) {
+		if (effects_count == effects.size()) effects << e;
+		else e @=> effects[effects_count];
+		effects_count++;
 	}
 
+	fun void remove(Effect e, int idx) {
+		if (effects[idx] != e) {
+			<<< "error, effect does not match idx", idx >>>;
+			return;
+		}
+
+		// swap with last and decrement count
+		effects[effects_count - 1] @=> effects[idx];
+		e @=> effects[effects_count - 1];
+		effects_count--;
+	}
+
+	// note: to stop an effect call effect.stop();
+	fun void explode(vec2 pos) { add(new ExplodeEffect(pos, 1, 1, Color.WHITE)); }
+	fun void explode(vec2 pos, float radius, dur d) { add(new ExplodeEffect(pos, d/second, radius, Color.WHITE)); }
+
+	fun void score(string s, vec2 pos, dur d, float dy, float size) { add(new ScoreEffect(s, pos, d/second, dy, size )); }
 
     // ----------- ellipse ----------
 	fun void ellipseFilled(vec2 c, vec2 ab, vec4 color) {
@@ -421,7 +463,6 @@ public class G2D extends GGen
 	}
 
 	fun void circle(vec2 pos, float radius) {
-		<<< "cricle", color_stack[-1] >>>;
 		circle(pos, radius, color_stack[-1]);
 	}
 
@@ -527,15 +568,20 @@ public class G2D extends GGen
 
 	fun void textLayer(float z) { texts.mesh.posZ(z); } // sets the starting Z position for all text
 
-	fun void text(string s) { texts.text(s, font_stack[-1], @(0,0), font_size_stack[-1], @(1, 1), 0, color_stack[-1]); }
-	fun void text(string s, vec2 pos) { texts.text(s, font_stack[-1], pos, font_size_stack[-1], @(1,1), 0, color_stack[-1]); }
-	fun void text(string s, vec2 pos, float size) { texts.text(s, font_stack[-1], pos, size, @(1,1), 0, color_stack[-1]); }
-	fun void text(string s, vec2 pos, float size, float rot) { texts.text(s, font_stack[-1], pos, size, @(1, 1), rot, color_stack[-1]); }
-	fun void text(string s, vec2 pos, vec2 sca, float rot) { texts.text(s, font_stack[-1], pos, font_size_stack[-1], sca, rot, color_stack[-1]); }
-	fun void text(string s, vec3 pos) { texts.text(s, font_stack[-1], pos, font_size_stack[-1], @(1,1), 0, color_stack[-1]); }
-	fun void text(string s, vec3 pos, float size) { texts.text(s, font_stack[-1], pos, size, @(1,1), 0, color_stack[-1]); }
-	fun void text(string s, vec3 pos, float size, float rot) { texts.text(s, font_stack[-1], pos, size, @(1, 1), rot, color_stack[-1]); }
-	fun void text(string s, vec3 pos, vec2 sca, float rot) { texts.text(s, font_stack[-1], pos, font_size_stack[-1], sca, rot, color_stack[-1]); }
+
+	// fun void text(
+	// 	string s, string font, vec3 pos, float size, vec2 sca, float rot, 
+	// 	vec3 color, float alpha
+	// )
+	fun void text(string s) { texts.text(s, font_stack[-1], @(0,0), font_size_stack[-1], @(1, 1), 0, color_stack[-1], alpha_stack[-1], layer_stack[-1]); }
+	fun void text(string s, vec2 pos) { texts.text(s, font_stack[-1], pos, font_size_stack[-1], @(1,1), 0, color_stack[-1], alpha_stack[-1], layer_stack[-1]); }
+	fun void text(string s, vec2 pos, float size) { texts.text(s, font_stack[-1], pos, size, @(1,1), 0, color_stack[-1], alpha_stack[-1], layer_stack[-1]); }
+	fun void text(string s, vec2 pos, float size, float rot) { texts.text(s, font_stack[-1], pos, size, @(1, 1), rot, color_stack[-1], alpha_stack[-1], layer_stack[-1]); }
+	fun void text(string s, vec2 pos, vec2 sca, float rot) { texts.text(s, font_stack[-1], pos, font_size_stack[-1], sca, rot, color_stack[-1], alpha_stack[-1], layer_stack[-1]); }
+	fun void text(string s, vec3 pos) { texts.text(s, font_stack[-1], pos $ vec2, font_size_stack[-1], @(1,1), 0, color_stack[-1], alpha_stack[-1], pos.z); }
+	fun void text(string s, vec3 pos, float size) { texts.text(s, font_stack[-1], pos $ vec2, size, @(1,1), 0, color_stack[-1], alpha_stack[-1], pos.z); }
+	fun void text(string s, vec3 pos, float size, float rot) { texts.text(s, font_stack[-1], pos $ vec2, size, @(1, 1), rot, color_stack[-1], alpha_stack[-1], pos.z); }
+	fun void text(string s, vec3 pos, vec2 sca, float rot) { texts.text(s, font_stack[-1], pos $ vec2, font_size_stack[-1], sca, rot, color_stack[-1], alpha_stack[-1], pos.z); }
 
     // ---------- sprites ----------
 	fun void sprite(Texture tex, vec2 pos) {
@@ -618,6 +664,13 @@ public class G2D extends GGen
 			alpha_stack.erase(1, alpha_stack.size());
 			blend_stack.erase(1, blend_stack.size());
 		}
+
+		// update effects
+		for (effects_count - 1 => int i; i >= 0; i--) { 
+			effects[i] @=> Effect e;
+			if (!e.update(this, dt)) remove(e, i);
+			dt +=> e.uptime;
+		}
     }
 }
 
@@ -631,9 +684,13 @@ public class G2D_Text
 	// stack of wrap widths
 	float max_width_stack[0];
 	vec2 control_point_stack[0];
+	1 => int antialias;
 
 
-	fun void text(string s, string font, vec3 pos, float size, vec2 sca, float rot, vec3 color) {
+	fun void text(
+		string s, string font, vec2 pos, float size, vec2 sca, float rot, 
+		vec3 color, float alpha, float layer
+	) {
 		if (text_count == text_pool.size()) {
 			text_pool << new GText;
 			text_pool[-1].align(1);
@@ -641,12 +698,14 @@ public class G2D_Text
 		text_pool[text_count] @=> GText@ gtext;
 
 		gtext --> mesh;
-		gtext.pos(pos);
+		gtext.pos(@(pos.x, pos.y, layer));
 		gtext.size(size);
 		gtext.sca(sca);
 		gtext.rotZ(rot);
 		gtext.color(color);
 		gtext.text(s);
+		gtext.alpha(alpha);
+		gtext.antialias(antialias);
 		if (font != null) gtext.font(font);
 		if (max_width_stack.size() > 0)
 			gtext.maxWidth(max_width_stack[-1]);
@@ -654,10 +713,6 @@ public class G2D_Text
 			gtext.controlPoints(control_point_stack[-1]);
 
 		text_count++;
-	}
-
-	fun void text(string s, string font, vec2 pos, float size, vec2 sca, float rot, vec3 color) {
-		text(s, font, @(pos.x, pos.y, 0), size, sca, rot, color);
 	}
 
 	fun void update() {
@@ -1177,5 +1232,108 @@ public class G2D_TriangleStrip
 		u_colors.clear();
 		indices.clear();
 		0 => indices_count;
+	}
+}
+
+// ==============================
+//             FX
+// ==============================
+class Effect {
+	float uptime; // time in seconds since this effect was initialized
+
+	0 => static int END;
+	1 => static int STILL_GOING;
+
+	// returns false to remove from pool
+	fun int update(G2D g, float dt) { 
+		<<< "Effect.update(G2D g, float dt) unimplemented" >>>;
+		return END; 
+	}
+
+	// helper fns
+    fun static vec2 randomDir() {
+		Math.random2f(0, Math.two_pi) => float angle;
+        return @(Math.cos(angle), Math.sin(angle));
+    }
+}
+
+// spawns an explosion of lines going in random directions that gradually shorten
+class ExplodeEffect extends Effect {
+	vec2 pos;
+	float max_dur; 
+	vec3 color;
+
+	// internal
+	Math.random2(10, 16) => int num; // number of lines
+	vec2 dir[num];
+	float lengths[num];
+	float durations[num];
+	vec2 end[num];
+
+	fun @construct(vec2 pos, float max_dur, float radius, vec3 color) {
+		pos => this.pos;
+		max_dur => this.max_dur;
+		color => this.color;
+
+		// init
+		for (int i; i < num; i++) {
+			Math.random2f(.1, .2) => lengths[i]; // maybe scale with radius
+			Math.random2f(.5 * max_dur, max_dur) => durations[i];
+			randomDir() => dir[i];
+			pos + dir[i] * Math.random2f(.9 * radius, radius) => end[i];
+		}
+	}
+
+	fun int update(G2D g, float dt) {
+		if (uptime > max_dur) return END;
+
+		for (int i; i < num; i++) {
+			// update line 
+			uptime / durations[i] => float t;
+			// if animation still in progress for this line
+			if (t < 1) {
+				// update position
+				pos + t * (end[i] - pos) => vec2 p;
+				// shrink lengths linearly down to 0
+				lengths[i] * (1 - t) => float len;
+				// draw
+				g.line(p, p + len * dir[i], color);
+			}
+		}
+		return STILL_GOING;
+	}
+}
+
+// 
+class ScoreEffect extends Effect {
+	string s;
+	vec2 pos;
+	float max_dur;
+	float dy;
+	float size;
+
+	// internal
+
+	fun @construct(string s, vec2 pos, float max_dur, float dy, float size) {
+		s => this.s;
+		pos => this.pos;
+		max_dur => this.max_dur;
+		dy => this.dy;
+		size => this.size;
+	}
+
+	fun int update(G2D g, float dt) {
+		if (uptime > max_dur) return END;
+		uptime / max_dur => float t;
+
+		// removing alpha because the smoothness doesn't match the 8bit feel
+		// g.pushAlpha(Math.sqrt((1 - t)));
+
+		// quadratic ease
+		1 - (1 - t) * (1 - t) => t;
+		g.text(s, pos + @(0, t * dy), size);
+
+		// g.popAlpha();
+		return STILL_GOING;
 	}
 }

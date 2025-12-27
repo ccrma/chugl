@@ -84,6 +84,8 @@ public class M {
         );
     }
 
+    fun static float rnd(float a, float b) { return Math.random2f(a, b); }
+
     // returns -1 if negative, +1 if pos
     fun static float sign(float x) {
         return 2*(x >= 0) - 1;
@@ -210,6 +212,12 @@ public class M {
     // ===================================================
     // Intersection Collision Testing
     // ===================================================
+
+    // returns true if overlap between 2 circles
+    // with position p1, p2 and radii r1, r2
+    fun static int circlesOverlap(vec2 p1, float r1, vec2 p2, float r2) {
+        return Math.euclidean(p1, p2) < (r1 + r2);
+    }
 
     // Returns 1 if the lines intersect, otherwise 0. In addition, if the lines 
     // intersect the intersection point may be stored in the floats i_x and i_y.
