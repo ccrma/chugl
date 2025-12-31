@@ -35,3 +35,23 @@ Combat "ingredients"
     - AOE
     - Flat Damage
     - Attack Speed
+
+== Music ==
+
+Goals:
+- support rez-like quantized SFX (and actions?)
+    - means that whatever system generates music needs to have predictable downbeats/percussion
+- do music aesthetic and visual aesthetic need to align? high-def audio with pixelated low-res 
+graphics seems like a weird combo...
+
+Options
+- VCV Rack modules
+- Chuck builtin UGens (see Ilan's projects for reference)
+- bytebeat
+- demoscene methods (see lovebyte audio presentation)
+- tracker stuff (like lsdj or furnace)
+- VCV Rack Prototype, but in chuck
+    - basically a chugin that has a builtin C or lua interpreter
+- ABA sounds-some-sounds https://github.com/abagames/sounds-some-sounds/tree/master/src
+    - MML generator?
+    - sounds like shit tho

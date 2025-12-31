@@ -50,9 +50,13 @@ public class Topograph
 
     // x,y in range [0, 1]
     fun void pos(float x, float y) {
-        Math.clampf(x, 0.0, 1.0) * 4.0 => this.x;
-        Math.clampf(y, 0.0, 1.0) * 4.0 => this.y;
+        if (x < 0) -1 *=> x;
+        if (y < 0) -1 *=> y;
+        Math.fmod(x, 1.0) * 4.0 => this.x;
+        Math.fmod(y, 1.0) * 4.0 => this.y;
     }
+
+    fun void pos(vec2 xy) { pos(xy.x, xy.y); }
 
     // `d` in range [0, 1], inst is one of Inst_ enums
     fun void density(int inst, float d) {
@@ -102,7 +106,7 @@ public class Topograph
                 127 => int maxValue;
                 (( a * x + b * (maxValue - x) ) * y + (c * x + d * (maxValue - x)) *
                     ( maxValue - y )) / maxValue / maxValue => level; 
-                <<< "level: " + level>>>;
+                // <<< "level: " + level>>>;
                 if (level > 255) { 255 => level; }
             } else {
                 // bilinear filter on given samples (a,b,c,d) given sample position @(x,y)
@@ -110,7 +114,7 @@ public class Topograph
                     (a * (1 - x_frac) + b * x_frac) * (1 - y_frac) + 
                     (c * (1 - x_frac) + d * x_frac) * (y_frac)
                 ) $ int => level;
-                T.assert(level >= 0 && level <= 255, "level out of bounds: " + level);
+                T.assert(level >= 0 && level <= 255, "level out of bounds: " + level + " xy: " + this.x + " " + this.y);
             }
 
             // TODO: better place to add randomization

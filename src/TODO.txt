@@ -4,18 +4,16 @@ update to newer wgpu version so that
 - fix wgpu leak
 - hopefully it implements wgpuBufferSetLabel
 
+gif encoding
+- https://github.com/notnullnotvoid/msf_gif
+- helpful for recording quick demo videos (can use chuck wvout for sound)
+
 bullshit vec3 storage buffer alignment seems to require 16 byte alignment
 - meaning you can't pass a chuck vec3[] to a bindgroup that expects a storage array<vec3f>
 - somehow chugl needs to detect this and when copying the chuck array pad out the last 3 bytes of the chuck vec3
 
-- fix empty storage buffer crash
-
 Add warning on renderthread when a ChuGL Geometry's vertex buffer type (float/vec2/vec3/vec4)
 doesn't match the vertex layout of the ShaderDesc on a Material it's paired with 
-- add warning to storageBuffer(vec3[]) about alignment
-
-bugs found working on games
-- setting shader storageBuffer to empty array causes crash
 
 box2d migration to v3.1.1
 - finish updating API fns

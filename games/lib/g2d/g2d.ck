@@ -211,6 +211,17 @@ public class G2D extends GGen
 		return world_pos $ vec2;
 	}
 
+	// clamp p to the bounds of the screen (in world space)
+	fun vec2 clampScreen(vec2 p) {
+		.5 * GG.camera().viewSize() => float hh;
+		hh * GG.camera().aspect() => float hw;
+		GG.camera().posWorld() $ vec2 => vec2 c;
+		return @(
+			Math.clampf(p.x, c.x - hw, c.x + hw),
+			Math.clampf(p.y, c.y - hh, c.y + hh)
+		);
+	}
+
 	// get the bounds in world space of the screen
 	// fun vec4 screenBounds() {
 	// 	GG.camera().NDCToWorldPos(@(-1.0, -1.0, 0)) => vec3 bottom_left;
@@ -223,6 +234,20 @@ public class G2D extends GGen
 	fun vec2 mousePos() {
 		GG.camera().screenCoordToWorldPos(GWindow.mousePos(), 1.0) => vec3 world_pos;
 		return @(world_pos.x, world_pos.y);
+	}
+
+	fun vec2 mouseDeltaWorld() { 
+		GWindow.mouseDeltaPos() => vec2 delta;
+
+		GG.camera().viewSize() => float height_world;
+		height_world * GG.camera().aspect() => float width_world;
+
+		GWindow.windowSize() => vec2 w;
+		(delta.x / w.x) * width_world => delta.x; 
+		(delta.y / w.y) * height_world => delta.y; 
+		-1 *=> delta.y; // flip y
+
+		return delta;
 	}
 
 	fun int mouseLeftDown() { return GWindow.mouseLeftDown(); }
@@ -255,10 +280,14 @@ public class G2D extends GGen
 	}
 
 	// note: to stop an effect call effect.stop();
-	fun void explode(vec2 pos) { add(new ExplodeEffect(pos, 1, 1, Color.WHITE)); }
-	fun void explode(vec2 pos, float radius, dur d) { add(new ExplodeEffect(pos, d/second, radius, Color.WHITE)); }
+	fun void explode(vec2 pos) { add(new ExplodeEffect(pos, 1, 1, Color.WHITE, 0, Math.two_pi, ExplodeEffect.Shape_Lines)); }
+	fun void explode(vec2 pos, float radius, dur d) { add(new ExplodeEffect(pos, d/second, radius, Color.WHITE, 0, Math.two_pi, ExplodeEffect.Shape_Lines)); }
+	fun void explode(vec2 pos, float radius, dur d, vec3 color, float angle, float width, int type) { 
+		add(new ExplodeEffect(pos, d/second, radius, color, angle, width, type)); 
+	}
 
 	fun void score(string s, vec2 pos, dur d, float dy, float size) { add(new ScoreEffect(s, pos, d/second, dy, size )); }
+	fun void screenFlash(dur d) { add(new ScreenFlashEffect(d/second)); }
 
     // ----------- ellipse ----------
 	fun void ellipseFilled(vec2 c, vec2 ab, vec4 color) {
@@ -623,6 +652,90 @@ public class G2D extends GGen
 		);
 	}
 
+    // ----------- characters -----------
+
+	// string to color map
+	vec3 char_to_color['z' + 1];
+	Color.RED => char_to_color['r'];
+	Color.GREEN => char_to_color['g'];
+	Color.BLUE => char_to_color['b'];
+	Color.CYAN => char_to_color['c'];
+	Color.YELLOW => char_to_color['y'];
+	Color.PURPLE => char_to_color['p'];
+	Color.WHITE => char_to_color['w'];
+	Color.BLACK => char_to_color['l'];
+	Color.ORANGE => char_to_color['o'];
+
+	// draws an NxN sprite
+	// assumes first character is a newline
+	// e.g.
+	// "
+	// www
+	// wbw
+	// www
+	// " => string sprite;
+	fun void char(string s, vec2 pos, float size, float pixel_sca, vec3 color) {
+		// first calculate the dim
+		s.find('\n', 1) - 1 => int N;
+		if (N <= 0) return;
+
+		s.length() => int len;
+
+		// for now assume entire size is 1x1
+		size / N => float sz;
+		pos - (N - 1)*.5*@(sz,-sz) => vec2 start;
+		
+		int tile;
+		for (int i; i < len; ++i) {
+			s.charAt(i) => int c;
+			if (c == '\n' || c == '\t') continue;
+			
+			if (c != ' ') {
+				tile / N => int y;
+				tile - (N * y) => int x;
+				// pushPolygonRadius(sz*.25);
+				squareFilled(
+					start + @(sz * x, -sz * y), 0, sz*pixel_sca, char_to_color[c] + color
+				);
+				// popPolygonRadius();
+			}
+
+			++tile;
+		}
+	}
+
+
+    // ---------- misc shapes --------------------------------------
+
+	fun void chevron(
+		vec2 pos, float rot_rad, float angle_rad, float height, float thickness, vec3 color
+	) {
+		height * .5 => float hh;
+		Math.tan(angle_rad * .5) => float tan_theta;
+		// sadly polygons only supports convex shapes (which a chevron is not)
+		// so drawing as two thick lines with miter join
+		// @TODO how to support non-convex polygons? check freya shapes
+		// does it require earcut triangulation?
+		pushColor(color);
+		polygonFilled(pos, rot_rad, 
+			[
+				@(0, hh),
+				@(hh / tan_theta, 0),
+				@(thickness + hh / tan_theta, 0),
+				@(thickness, hh),
+			],
+			0);
+		polygonFilled(pos, rot_rad, 
+			[
+				@(hh / tan_theta, 0),
+				@(0, -hh),
+				@(thickness, -hh),
+				@(thickness + hh / tan_theta, 0),
+			],
+			0);
+		popColor();
+	}
+
     // ---------- internal --------------------------------------
 	fun static void assert(int t, string error) {
 		if (!t) <<< error >>>;
@@ -682,8 +795,8 @@ public class G2D_Text
 	GGen mesh; // parent of all GTexts
 
 	// stack of wrap widths
-	float max_width_stack[0];
-	vec2 control_point_stack[0];
+	[0.0] @=> float max_width_stack[];
+	[@(0.5, 0.5)] @=> vec2 control_point_stack[];
 	1 => int antialias;
 
 
@@ -707,10 +820,8 @@ public class G2D_Text
 		gtext.alpha(alpha);
 		gtext.antialias(antialias);
 		if (font != null) gtext.font(font);
-		if (max_width_stack.size() > 0)
-			gtext.maxWidth(max_width_stack[-1]);
-		if (control_point_stack.size() > 0)
-			gtext.controlPoints(control_point_stack[-1]);
+		gtext.maxWidth(max_width_stack[-1]); // @optimize: setting maxWidth triggers rebuild, set stale flag instead to batch rebuild
+		gtext.controlPoints(control_point_stack[-1]);
 
 		text_count++;
 	}
@@ -723,8 +834,8 @@ public class G2D_Text
 			text_pool[i].detachParent();
 		}
 
-		max_width_stack.clear();
-		control_point_stack.clear();
+		max_width_stack.erase(1, max_width_stack.size());
+		control_point_stack.erase(1, control_point_stack.size());
 
 		0 => text_count;
 	}
@@ -1255,13 +1366,27 @@ class Effect {
 		Math.random2f(0, Math.two_pi) => float angle;
         return @(Math.cos(angle), Math.sin(angle));
     }
+
+    fun static vec2 randomDir(float angle, float width) {
+		angle + Math.random2f(-width/2, width/2) => angle;
+        return @(Math.cos(angle), Math.sin(angle));
+	 }
+
+    fun static float expImpulse( float x, float k ) {
+        k*x => float h;
+        return h*Math.exp(1.0-h);
+    }
 }
 
 // spawns an explosion of lines going in random directions that gradually shorten
-class ExplodeEffect extends Effect {
+public class ExplodeEffect extends Effect {
 	vec2 pos;
 	float max_dur; 
 	vec3 color;
+	int type;
+
+	0 => static int Shape_Lines;
+	1 => static int Shape_Squares;
 
 	// internal
 	Math.random2(10, 16) => int num; // number of lines
@@ -1270,17 +1395,21 @@ class ExplodeEffect extends Effect {
 	float durations[num];
 	vec2 end[num];
 
-	fun @construct(vec2 pos, float max_dur, float radius, vec3 color) {
+	fun @construct(
+		vec2 pos, float max_dur, float radius, vec3 color, float angle, float width,
+		int type
+	) {
 		pos => this.pos;
 		max_dur => this.max_dur;
 		color => this.color;
+		type => this.type;
 
 		// init
 		for (int i; i < num; i++) {
 			Math.random2f(.1, .2) => lengths[i]; // maybe scale with radius
 			Math.random2f(.5 * max_dur, max_dur) => durations[i];
-			randomDir() => dir[i];
-			pos + dir[i] * Math.random2f(.9 * radius, radius) => end[i];
+			randomDir(angle, width) => dir[i];
+			pos + dir[i] * Math.random2f(.5 * radius, radius) => end[i];
 		}
 	}
 
@@ -1297,7 +1426,8 @@ class ExplodeEffect extends Effect {
 				// shrink lengths linearly down to 0
 				lengths[i] * (1 - t) => float len;
 				// draw
-				g.line(p, p + len * dir[i], color);
+				if (type == Shape_Lines) g.line(p, p + len * dir[i], color);
+				else if (type == Shape_Squares) g.squareFilled(p, 0, .5 * len, color);
 			}
 		}
 		return STILL_GOING;
@@ -1334,6 +1464,31 @@ class ScoreEffect extends Effect {
 		g.text(s, pos + @(0, t * dy), size);
 
 		// g.popAlpha();
+		return STILL_GOING;
+	}
+}
+
+class ScreenFlashEffect extends Effect {
+	float max_dur;
+	
+	fun @construct(float max_dur) {
+		max_dur => this.max_dur;
+	}
+
+	fun int update(G2D g, float dt) {
+		if (uptime > max_dur) return END;
+		uptime / max_dur => float t;
+
+		g.pushBlend(g.BLEND_ADD);
+		g.pushLayer(GG.camera().posZ() - 1);
+		g.squareFilled(
+			GG.camera().pos() $ vec2,
+			0, 
+			GG.camera().viewSize() * 1,
+			Color.WHITE * expImpulse(t, 9)
+		);
+		g.popBlend();
+
 		return STILL_GOING;
 	}
 }

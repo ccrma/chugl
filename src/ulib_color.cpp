@@ -65,6 +65,7 @@ const t_CKVEC3 ulib_color_DARKBROWN{ 76.0 / 255.0, 63.0 / 255.0, 47.0 / 255.0 };
 const t_CKVEC3 ulib_color_WHITE{ 255.0 / 255.0, 255.0 / 255.0, 255.0 / 255.0 };
 const t_CKVEC3 ulib_color_BLACK{ 0.0 / 255.0, 0.0 / 255.0, 0.0 / 255.0 };
 const t_CKVEC3 ulib_color_MAGENTA{ 255.0 / 255.0, 0.0 / 255.0, 255.0 / 255.0 };
+const t_CKVEC3 ulib_color_CYAN{ 0.0, 255.0 / 255.0, 255.0 / 255.0 };
 
 static void ulib_color_query(Chuck_DL_Query* QUERY)
 {
@@ -145,6 +146,9 @@ static void ulib_color_query(Chuck_DL_Query* QUERY)
 
     QUERY->add_svar(QUERY, "vec3", "MAGENTA", true, (void*)&ulib_color_MAGENTA);
     QUERY->doc_var(QUERY, "magenta: (1.0, 0.0, 1.0)");
+
+    QUERY->add_svar(QUERY, "vec3", "CYAN", true, (void*)&ulib_color_CYAN);
+    QUERY->doc_var(QUERY, "cyan: (0.0, 1.0, 1.0)");
 
     // helper color fns =======================================================
     QUERY->add_sfun(QUERY, chugl_color_hsv_to_rgb, "vec3", "hsv2rgb");

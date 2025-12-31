@@ -19,6 +19,7 @@ GWindow.center();
 BardG2D g;
 g.sortDepthByY(true);
 GText.defaultFont(me.dir() + "./assets/m5x7.ttf");
+GG.outputPass().gamma(true);
 
 // g.resolution(1920 / 2, 1080 / 2);
 // g.antialias(false);
