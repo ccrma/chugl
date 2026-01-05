@@ -1,6 +1,8 @@
 public class M {
     0.017453292519943 => static float DEG2RAD;
     57.295779513082320 => static float RAD2DEG;
+    1.4142135624 => static float ROOT2;
+    .7071067812 => static float INV_ROOT2;
 
     // TODO: add to ulib_color
     fun static vec3 srgbToLinear(vec3 c) {
@@ -301,7 +303,7 @@ public class M {
         return (
             p.x >= aabb.x && p.x <= aabb.z
             &&
-            p.x >= aabb.y && p.x <= aabb.w
+            p.y >= aabb.y && p.y <= aabb.w
         );
     }
 

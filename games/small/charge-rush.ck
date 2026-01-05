@@ -7,37 +7,25 @@
 
 // Charge Rush
 // https://junongx.github.io/crips-game-lib-collection/?chargerushre
+// https://abagames.sakura.ne.jp/html5/cr/
 
 /*
-TODO
-- shape-player collision
-- score
-- starfield (see paperjs example)
-    - https://editor.p5js.org/codingtrain/sketches/4ln5hPM4Y
-    - https://starfield.js.org/
-    - http://paperjs.org/features/ (scroll down to Symbols section)
-
 IDEAS
-- buffer sound and play on next beat, like rez
-- stall enemies on hit -- explode on next beat, also like rez
-    - simplest thing to try: 
-        - play a kick every beat. quantize spawn, fire to kick
-        - see ilans projects for synthesized kick
-        - otherwise recreate kick from VCV rack (pitched sin wave) 
-            - https://www.youtube.com/watch?v=vUEGW3ixW5s has some cool ideas
 - display difficulty as current level
     - change enemy and ebullet color based on level + speed? 
-
 - play vlambeer airplane game
-- play other more recent kento cho spaceship shooter games
-
 - lives
     - player has N lives, regens life after M kills
-    - enemies take more than 1 shot? nah seems less fun
 - how does this compare to jblows space invaders? 
     - whats more fun
     - what has been minified/concentrated?
     - what is missing?
+NEXT UP
+- the mechanic of "marking" a group of enemies and then detonating all at once is super satisfying
+    - remniscent of demoman sticky grenades from TF2
+        - maybe combine with a vlambeer-style side-scroll schmup?
+    - maybe can make a game around this mechanic, only the detonation is voluntary by the player
+    and not decided by the music
 */
 
 // text
@@ -116,43 +104,13 @@ fun void bgm() {
     }
 } spork ~ bgm();
 
-
-// fun void kickShred() {
-//     while (second => now) {
-//         kick.play();
-//     }
-// } spork ~ kickShred();
-
-fun void laser() {
-    sfx.resetParams();
-
-    sfx.WaveType_SQUARE => sfx.p_wave_type;
-    // frnd(-120, -12) => sfx.p_freq_ramp;
-    -80 => sfx.p_freq_ramp;
-    // frnd(-80, -12) => sfx.p_freq_dramp;
-    -60 => sfx.p_freq_dramp;
-    // frnd(60, 127) => sfx.p_freq_base_midi;
-    80 => sfx.p_freq_base_midi;
-    // frnd(0.05, 0.2)::second => sfx.p_sustain_dur;
-    0.05::second => sfx.p_sustain_dur;
-    // frnd(0.05, 0.3)::second => sfx.p_release_dur;
-    .05::second => sfx.p_release_dur;
-    // frnd(.6, .9) => sfx.p_sustain_level;
-    .6 => sfx.p_sustain_level;
-
-    sfx.play();
-}
-
 // appearance
 .67 => float aspect;
-// 300 => int resolution;
 GWindow.sizeLimits(0, 0, 0, 0, @(aspect, 1));
 GWindow.center();
 GWindow.mouseMode(GWindow.MouseMode_Disabled);
 
 G2D g;
-// g.resolution(resolution, (resolution/aspect) $ int );
-// g.antialias(false);
 
 // utility (TODO maybe move this into g2d)
 -.5 * GG.camera().viewSize() => float screen_min_y;
@@ -284,19 +242,24 @@ while (1) {
     // only play music in play mode
     (room == Room_Start) => mute_bgm; 
 
-    // ui
-    // UI.text("player bullets: " + player_bullets.size());
-    // UI.text("#enemies: " + enemies.size());
-    // UI.text("gametime: " + gametime);
-    // for (auto e : enemies) UI.text("    pos: " + (e.pos.x) + (",") + e.pos.y + " hit: " + e.hit);
-    
     // difficulty scaling
     // difficulty incr every 30 seconds instead of crisp-game-lib's typical 60
     (1 + (gametime / 30)) $ int => int difficulty; 
 
     topograph.density(2, .85 + .05 * difficulty); // hat density
     topograph.density(1, .15 + .05 * difficulty); // snare density
-    topograph.density(0, .1);                     // kick density
+    topograph.density(0, .05 + .05 * difficulty);                     // kick density
+
+    // ui
+    // UI.text("player bullets: " + player_bullets.size());
+    // UI.text("#enemies: " + enemies.size());
+    // UI.text("gametime: " + gametime);
+    // UI.text("difficulty: " + difficulty);
+    // UI.text("kick density: " + topograph._density[0]);
+    // UI.text("sna density: " + topograph._density[1]);
+    // UI.text("hat density: " + topograph._density[2]);
+    // for (auto e : enemies) UI.text("    pos: " + (e.pos.x) + (",") + e.pos.y + " hit: " + e.hit);
+    
 
     { // score
         g.pushTextControlPoint(@(1, 1));
@@ -349,9 +312,6 @@ while (1) {
             g.pushLayer(1);
             g.circleFilled(muzzle_pos, 1 * player_bullet_radius.val(), Color.WHITE);
             g.popLayer();
-
-            // laser sfx
-            // spork ~ laser();
         }
     }
 
@@ -361,7 +321,7 @@ while (1) {
 
     // if (enemies.size() == 0) {
     if (num_unhit_enemies == 0) {
-        Math.random2f(2,4) + difficulty => enemy_speed;
+        Math.random2f(2,3) + .5 * difficulty => enemy_speed;
         enemy_fire_period.val() => enemy_bullet_cd;
 
         Math.random2(5, 8) + difficulty => int n;
@@ -459,7 +419,7 @@ while (1) {
     // update and draw bullets
     for (enemy_bullet_pos.size() - 1 => int i; i >= 0; i--) {
         // update pos
-        dt * (enemy_bullet_speed.val() + difficulty) * enemy_bullet_dir[i] +=> enemy_bullet_pos[i];
+        dt * (enemy_bullet_speed.val() + .5 * difficulty) * enemy_bullet_dir[i] +=> enemy_bullet_pos[i];
 
         if (g.offscreen(enemy_bullet_pos[i], 1.1)) {
             enemy_bullet_pos.erase(i);

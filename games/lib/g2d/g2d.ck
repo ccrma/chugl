@@ -20,8 +20,9 @@ public class G2D extends GGen
     // initialize batch drawers
     G2D_Circles circles[6];
 		// create one for each blend mode
+	// TODO @BUG the transparency stuff is giga broken
 	for (int i; i < circles.size(); i++) {
-		if (i != Material.BLEND_MODE_REPLACE) circles[i].material.transparent(true);
+		// if (i != Material.BLEND_MODE_REPLACE) circles[i].material.transparent(true);
 		circles[i].material.blend(i);
 
 		circles[i].mesh --> GG.scene();
@@ -47,7 +48,7 @@ public class G2D extends GGen
     G2D_SolidPolygon polygons[6];
 	for (int i; i < polygons.size(); i++) {
 		// replace is NOT transparent
-		if (i != Material.BLEND_MODE_REPLACE) polygons[i].solid_polygon_material.transparent(true);
+		// if (i != Material.BLEND_MODE_REPLACE) polygons[i].solid_polygon_material.transparent(true);
 		polygons[i].solid_polygon_material.blend(i);
 		polygons[i].mesh --> GG.scene();
 	}
@@ -86,6 +87,11 @@ public class G2D extends GGen
 	Material.BLEND_MODE_SUBTRACT => int BLEND_SUB;
 	Material.BLEND_MODE_MULTIPLY => int BLEND_MULT;
 
+	@(1, 0) => vec2 RIGHT;
+	@(-1, 0) => vec2 LEFT;
+	@(0, 1) => vec2 UP;
+	@(0, -1) => vec2 DOWN;
+
 	// ------------------- state stacks --------------------------
 	// note: these config stacks are cleared at the end of every frame to prevent accidental leaks
 	// you *don't* have to call popXXX() for every pushXXX
@@ -96,7 +102,7 @@ public class G2D extends GGen
 	[0.0] @=> float layer_stack[]; // z depth
 	[0.0] @=> float polygon_radius_stack[]; // rounded corners
 	[1.0] @=> float alpha_stack[];
-	[Material.BLEND_MODE_REPLACE] @=> int blend_stack[];
+	[Material.BLEND_MODE_ALPHA] @=> int blend_stack[];
 
 	fun void pushFont(string s) { font_stack << s; }
 	fun void popFont() { font_stack.popBack(); }
@@ -543,10 +549,29 @@ public class G2D extends GGen
 		float height,
 		vec3 color
 	) {
+		if (rotation.dot(rotation) == 0) @(1, 0) => rotation;
 		.5 * width => float hw;
 		.5 * height => float hh;
 		polygons[blend_stack[-1]].polygonFilled(
 			position, rotation, 1.0,
+			[@(-hw, hh), @(-hw, -hh), @(hw, -hh), @(hw, hh)], 
+			polygon_radius_stack[-1],
+			color,
+			layer_stack[-1],
+			alpha_stack[-1]
+		);
+	}
+
+	fun void boxFilled(
+		vec2 position,
+		float width,
+		float height,
+		vec3 color
+	) {
+		.5 * width => float hw;
+		.5 * height => float hh;
+		polygons[blend_stack[-1]].polygonFilled(
+			position, @(1, 0), 1.0,
 			[@(-hw, hh), @(-hw, -hh), @(hw, -hh), @(hw, hh)], 
 			polygon_radius_stack[-1],
 			color,
@@ -734,6 +759,18 @@ public class G2D extends GGen
 			],
 			0);
 		popColor();
+	}
+
+	fun void diamond(vec2 pos, float rot, float w, float h) {
+		polygonFilled(pos, rot, 
+			[
+				.5 * w * RIGHT,
+				.5 * h * UP,
+				.5 * w * LEFT,
+				.5 * h * DOWN,
+			],
+			polygon_radius_stack[-1]
+		);
 	}
 
     // ---------- internal --------------------------------------
@@ -1075,6 +1112,8 @@ public class G2D_SolidPolygon
 		float z_layer,
 		float alpha
 	) {
+		// <<< position, rotation, scale, radius, color, z_layer, alpha >>>;
+
 		u_polygon_vertex_counts << u_polygon_vertices.size(); // offset
 		u_polygon_vertex_counts << vertices.size(); // count
 

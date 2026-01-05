@@ -225,7 +225,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4f {
 
     // roll the fill alpha down at the border
     let aaf = fwidth(sdf); // anti alias field
-    let frag_color = vec4f(in.f_color.rgb, in.f_color.a * smoothstep(in.f_radius + aaf, in.f_radius, sdf));
+    let frag_color = vec4f(in.f_color.rgb, in.f_color.a * smoothstep(in.f_radius, in.f_radius - aaf, sdf));
 
     // TODO: anti-aliasing broken, fix later
     // reference: http://www.numb3r23.net/2015/08/17/using-fwidth-for-distance-based-anti-aliasing/
