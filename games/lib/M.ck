@@ -93,6 +93,10 @@ public class M {
         return 2*(x >= 0) - 1;
     }
 
+    fun static float fract(float x) {
+        return x - (x $ int);
+    }
+
     // =====================================================================
     // Tweens (most take a function that outputs from 0-1 over an input 0-1
     // =====================================================================

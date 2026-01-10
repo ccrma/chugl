@@ -63,7 +63,7 @@ public class G2D extends GGen
 	capsules.mesh --> GG.scene();
 
 	texts.mesh --> GG.scene();
-	texts.mesh.posZ(1); // default on top
+	texts.mesh.posZ(0.01); // default on top
 
 	// init camera
 	GG.camera().orthographic();
@@ -91,6 +91,10 @@ public class G2D extends GGen
 	@(-1, 0) => vec2 LEFT;
 	@(0, 1) => vec2 UP;
 	@(0, -1) => vec2 DOWN;
+
+	// ------------------- params (updated every frame) --------------------------
+	n2w(-1, -1) => vec2 screen_min; // bottom left 
+	n2w(1, 1)   => vec2 screen_max; // top right
 
 	// ------------------- state stacks --------------------------
 	// note: these config stacks are cleared at the end of every frame to prevent accidental leaks
@@ -294,6 +298,8 @@ public class G2D extends GGen
 
 	fun void score(string s, vec2 pos, dur d, float dy, float size) { add(new ScoreEffect(s, pos, d/second, dy, size )); }
 	fun void screenFlash(dur d) { add(new ScreenFlashEffect(d/second)); }
+
+	fun void hitFlash(dur d, float size, vec2 pos, vec3 color) { add(new HitFlashEffect(d/second, size, pos, color)); }
 
     // ----------- ellipse ----------
 	fun void ellipseFilled(vec2 c, vec2 ab, vec4 color) {
@@ -580,6 +586,15 @@ public class G2D extends GGen
 		);
 	}
 
+	fun void boxDotted(vec2 pos, float w, float h, float segment_length) {
+		.5 * w => float hw;
+		.5 * h => float hh;
+		dashed(pos + @(hw, -hh), pos + @(hw, hh), color_stack[-1], segment_length);
+		dashed(pos + @(hw, hh), pos + @(-hw, hh), color_stack[-1], segment_length);
+		dashed(pos + @(-hw, hh), pos + @(-hw, -hh), color_stack[-1], segment_length);
+		dashed(pos + @(-hw, -hh), pos + @(hw, -hh), color_stack[-1], segment_length);
+	}
+
 	fun void boxFilled(vec2 top_left, vec2 bottom_right, vec3 color) {
 		boxFilled(
 			(top_left + bottom_right) * .5, // pos
@@ -658,12 +673,12 @@ public class G2D extends GGen
 		sprites.sprite(tex, @(pos.x, pos.y, layer_stack[-1]), sca, rot, color, emission_stack[-1]);
 	}
 
-	// for 1D sprite sheets
+	// for 1d horizontal sprite sheets
 	fun void sprite(
-		Texture tex, int nframes, int offset, vec2 pos, vec2 sca, float rot, vec3 color
+		Texture tex, int n_frames, int frame, vec2 pos, vec2 sca, float rot, vec3 color
 	) {
 		sprites.sprite(
-			tex, @(nframes, 1),@(offset$float / nframes, 0), 
+			tex, @(n_frames, 1), @(frame$float / n_frames, 0), 
 			@(pos.x, pos.y, layer_stack[-1]), sca, rot, color, emission_stack[-1]
 		);
 	}
@@ -676,6 +691,8 @@ public class G2D extends GGen
 			@(pos.x, pos.y, layer_stack[-1]), sca, rot, color, emission_stack[-1]
 		);
 	}
+
+
 
     // ----------- characters -----------
 
@@ -788,6 +805,11 @@ public class G2D extends GGen
 		capsules.update();
 		texts.update();
 
+		{ // update state params 
+			n2w(-1, -1) => screen_min; // bottom left 
+			n2w(1, 1)   => screen_max; // top right
+		}
+
 		{ // clear state stacks (prevents accidental leak)
 			font_stack[0] => string default_font; 
 			font_stack.clear(); 
@@ -846,6 +868,7 @@ public class G2D_Text
 			text_pool[-1].align(1);
 		}
 		text_pool[text_count] @=> GText@ gtext;
+
 
 		gtext --> mesh;
 		gtext.pos(@(pos.x, pos.y, layer));
@@ -1227,7 +1250,7 @@ public class G2D_Sprite
 			@(1.0 / sprite_sheet_frame_dim.x, 1.0 / sprite_sheet_frame_dim.y)
 		);
 		sprite_material.offset(offset); // set UV sample offset
-		sprite_material.emissive(@(emission.x, emission.y, emission.z, 0)); // set UV sample offset
+		sprite_material.emissive(@(emission.x, emission.y, emission.z, 0));
 
 		sprite_mesh --> mesh;
 		sprite_mesh.pos(pos);
@@ -1388,8 +1411,9 @@ public class G2D_TriangleStrip
 // ==============================
 //             FX
 // ==============================
-class Effect {
+public class Effect {
 	float uptime; // time in seconds since this effect was initialized
+	GG.camera().posZ() - 1 => float layer; // default renders on top of everything
 
 	0 => static int END;
 	1 => static int STILL_GOING;
@@ -1455,6 +1479,7 @@ public class ExplodeEffect extends Effect {
 	fun int update(G2D g, float dt) {
 		if (uptime > max_dur) return END;
 
+		g.pushLayer(layer);
 		for (int i; i < num; i++) {
 			// update line 
 			uptime / durations[i] => float t;
@@ -1469,6 +1494,7 @@ public class ExplodeEffect extends Effect {
 				else if (type == Shape_Squares) g.squareFilled(p, 0, .5 * len, color);
 			}
 		}
+		g.popLayer();
 		return STILL_GOING;
 	}
 }
@@ -1500,9 +1526,35 @@ class ScoreEffect extends Effect {
 
 		// quadratic ease
 		1 - (1 - t) * (1 - t) => t;
+		g.pushLayer(layer);
 		g.text(s, pos + @(0, t * dy), size);
+		g.popLayer();
 
 		// g.popAlpha();
+		return STILL_GOING;
+	}
+}
+
+class HitFlashEffect extends Effect {
+	float max_dur;
+	vec2 pos;
+	float size;
+	vec3 color;
+	
+	fun @construct(float max_dur, float size, vec2 pos, vec3 color) {
+		max_dur => this.max_dur;
+		size => this.size;
+		pos => this.pos;
+		color => this.color;
+	}
+
+	fun int update(G2D g, float dt) {
+		if (uptime > max_dur) return END;
+
+		g.pushLayer(1);
+		g.squareFilled(pos, 0, size, color);
+		g.popLayer();
+
 		return STILL_GOING;
 	}
 }
