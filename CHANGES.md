@@ -3,7 +3,7 @@
 ## 0.2.9 (alpha)
 - Bug fixes
   - fixed transparency depth sorting when using an orthographic camera. the original math was so scuffed (thanks Ben)
-  - fix crash caused by https://github.com/ccrma/chugl/issues/8 (thanks Nathan)
+  - fix crash caused by changing material of GGee primitives, see https://github.com/ccrma/chugl/issues/8 (thanks Nathan)
   - calling Material.storageBuffer(...) with an empty chuck array no longer crashes
   - fix GWindow.sizeLimits(...) to allow non-integer aspect ratios, e.g. 1.6:1
 - New Examples
