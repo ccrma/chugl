@@ -11,6 +11,7 @@ public class Spring {
     }
 
     fun void update(float dt) {
+        // TODO replace with symplectic integrator or use fixed-timestep
         -k*(x - target_x) - d*v => float a;
         a*dt +=> v;
         v*dt +=> x;
@@ -31,10 +32,15 @@ k = 1000
 d = 10
 f = .1
 
+weapon switch
+k = 500
+d = 20
+f = .3
+
 */
 
 
-if (0) {
+if (1) {
 
 Spring y_spring(0, 4200, 20);
 Spring s(0, 4 * Math.pi, Math.pi/128);
@@ -61,8 +67,10 @@ UI_Float f;
 
         s.update(GG.dt());
         y_spring.update(GG.dt());
-        y_spring.x => g.posY;
-        s.x => g.rotZ;
+        // y_spring.x => g.posY;
+
+        // s.x => g.rotZ;
+        1.0 + s.x => g.sca;
 
     }
 }

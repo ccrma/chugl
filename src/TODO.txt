@@ -1,5 +1,9 @@
 TODO
 
+Add 2d and 3d Skew
+- see love2d for 2d example
+- eric lengyels graphics book has math for 3d
+
 update to newer wgpu version so that
 - fix wgpu leak
 - hopefully it implements wgpuBufferSetLabel

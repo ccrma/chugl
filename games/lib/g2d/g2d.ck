@@ -796,6 +796,13 @@ public class G2D extends GGen
 	}
 
     fun void update(float dt) {
+		// update effects *BEFORE* updating g2d drawers
+		for (effects_count - 1 => int i; i >= 0; i--) { 
+			effects[i] @=> Effect e;
+			if (!e.update(this, dt)) remove(e, i);
+			dt +=> e.uptime;
+		}
+
 		for (auto c : circles) c.update();
 		for (auto e : ellipses) e.update();
 		for (auto p : polygons) p.update();
@@ -835,13 +842,6 @@ public class G2D extends GGen
 
 			alpha_stack.erase(1, alpha_stack.size());
 			blend_stack.erase(1, blend_stack.size());
-		}
-
-		// update effects
-		for (effects_count - 1 => int i; i >= 0; i--) { 
-			effects[i] @=> Effect e;
-			if (!e.update(this, dt)) remove(e, i);
-			dt +=> e.uptime;
 		}
     }
 }
