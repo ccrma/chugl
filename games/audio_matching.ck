@@ -223,7 +223,7 @@ while (1) {
         g.circleFilled(e.pos, .08);
 
         // debug colors
-        // g.circleFilled(e.pos, .08, midi_colors[(e.midi_pitch % 12)]);
+        g.circleFilled(e.pos, .08, midi_colors[(e.midi_pitch % 12)]);
 
         // M.dist(player_pos, e.pos) => float dist;
         // g.pushColor(Color.RED);

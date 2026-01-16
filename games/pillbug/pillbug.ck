@@ -14,12 +14,13 @@ GG.scene().backgroundColor(M.srgbToLinear(Color.hex(0xaba395)));
 class M {
     // TODO: add to ulib_color
     fun static vec3 srgbToLinear(vec3 c) {
-        2.2 => float g;
-        return @(
-            Math.pow(c.r, g),
-            Math.pow(c.g, g),
-            Math.pow(c.b, g)
-        );
+        return c;
+        // 2.2 => float g;
+        // return @(
+        //     Math.pow(c.r, g),
+        //     Math.pow(c.g, g),
+        //     Math.pow(c.b, g)
+        // );
     }
 
     fun static vec2 rot2vec(float radians) {
@@ -448,7 +449,7 @@ while (true) {
             -(6 - gs.midi_pitch_curr) / 6.0 * speedometer_hw => float vel_meter_x;
             g2d.boxFilled(
                 @(vel_meter_x * .5, 3),
-                0.0,
+                @(1.0, 0),
                 Math.fabs(vel_meter_x),
                 2*speedometer_hh,
                 Color.WHITE

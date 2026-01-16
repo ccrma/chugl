@@ -18,6 +18,7 @@ Most solid one from playtesting with physical cards:
 - 1 empty column
 - iffy: allow placing cards in foundation (starting at 2, going up)
     - makes it easier to win, not sure if necessary
+- do you start with aces unearthed? or should they be in the stack, and you need to uncover them first?
 
 Other configs to Test
 - 36 cards, 8 columns with 1,2,3,...,8 cards each
@@ -32,7 +33,6 @@ Other configs to Test
 @import "../lib/g2d/g2d.ck"
 @import "../lib/M.ck"
 @import "../lib/T.ck"
-@import "../bytepath/topograph.ck"
 
 G2D g;
 g.antialias(true);
@@ -82,10 +82,69 @@ class Card {
     fun Card(int val, int suit) {
         val => this.val; suit => this.suit;
     }
+
+    fun static int oppositeColors(int a, int b) {
+        (a == Suit_Club || a == Suit_Spade) => int a_is_black;
+        (b == Suit_Club || b == Suit_Spade) => int b_is_black;
+        (a == Suit_Diamond || a == Suit_Heart) => int a_is_red;
+        (b == Suit_Diamond || b == Suit_Heart) => int b_is_red;
+        return (
+            a_is_black && b_is_red
+            ||
+            a_is_red && b_is_black
+        );
+    }
+
+    // get position in stack
+    fun vec2 pos() {
+        T.assert(stack != null, "cannot get pos of card not in stack");
+        T.assert(stack.cards[stack_idx] == this, "stack_idx state not synced");
+        return stack.cardPos(stack_idx);
+    }
+
+    fun static void draw(Card c, vec2 pos, int layer, int selected) {
+        CARD_ROUNDING.val() * .5 => float radius;
+
+        g.pushLayer(layer); g.pushPolygonRadius(radius); {
+            CARD_HEIGHT * CARD_ASPECT => float w;
+            CARD_HEIGHT => float h;
+            radius -=> w;
+            radius -=> h;
+            g.boxFilled(pos, w, h, selected ? Color.WHITE : Color.GRAY);
+            CARD_BORDER.val() -=> w;
+            CARD_BORDER.val() -=> h;
+            g.boxFilled(pos, w, h, Color.BLACK);
+        } g.popPolygonRadius(); g.popLayer();
+
+        // TODO fix layer/depth sorting
+        g.pushLayer(layer + .01); g.pushColor(suit_colors[c.suit]); {
+            pos + CARD_HH * g.UP + CARD_HW * g.RIGHT => vec2 top_right;
+            pos + CARD_HH * g.UP + CARD_HW * g.LEFT => vec2 top_left;
+            .5 * CARD_HW => float suit_size;
+
+            g.pushTextControlPoint(0, 1);
+            g.text("" + c.val, top_left + CARD_INNER_PAD.val() * @(1, -1), 1.1*suit_size);
+            g.popTextControlPoint();
+
+            drawSuit(c.suit, top_right - (.5 * suit_size + CARD_INNER_PAD.val() + SUIT_SYMBOL_OFFSET.val()) * @(1, 1), suit_size);
+        } g.popColor(); g.popLayer();
+    }
+
+    fun int legalToPickup() {
+        // legal if this card and below are sorted in descending + alternating color order
+        this @=> Card@ prev_card;
+        for (this.stack_idx + 1 => int i; i < stack.cards.size(); i++) {
+            stack.cards[i] @=> Card@ next_card;
+            if (!oppositeColors(prev_card.suit, next_card.suit) || prev_card.val != next_card.val + 1)
+                return false;
+            next_card @=> prev_card;
+        }
+        return true;
+    }
 }
 
 class Stack {
-    vec2 pos; // needed?
+    vec2 pos;
     Card cards[0];
 
     fun void add(Card c) {
@@ -95,9 +154,16 @@ class Stack {
         cards << c;
     }
 
-    fun vec2 cardPos(int idx) {
-        STACK_OFFET_RATIO.val() * CARD_HEIGHT => float dy;
-        return pos + dy * idx * g.DOWN;
+    fun int legalToAdd(Card c) {
+        return (
+            cards.size() == 0
+            || 
+            (
+                Card.oppositeColors(c.suit, cards[-1].suit)
+                &&
+                cards[-1].val - 1 == c.val
+            )
+        );
     }
 
     // does NOT change the card's assigned stack and idx to handle if the player drops in invalid position,
@@ -107,34 +173,43 @@ class Stack {
         cards.erase(idx);
         return c;
     }
-}
 
-fun void draw(Card c, vec2 pos, int layer, int selected) {
-    CARD_ROUNDING.val() * .5 => float radius;
+    fun int hovered(vec2 mouse_pos) {
+        return (mouse_pos.x >= pos.x - CARD_HW) && (mouse_pos.x <= pos.x + CARD_HW);
+    }
 
-    g.pushLayer(layer); g.pushPolygonRadius(radius); {
-        CARD_HEIGHT * CARD_ASPECT => float w;
-        CARD_HEIGHT => float h;
-        radius -=> w;
-        radius -=> h;
-        g.boxFilled(pos, w, h, selected ? Color.WHITE : Color.GRAY);
-        CARD_BORDER.val() -=> w;
-        CARD_BORDER.val() -=> h;
-        g.boxFilled(pos, w, h, Color.BLACK);
-    } g.popPolygonRadius(); g.popLayer();
+    fun vec2 cardPos(int card_idx) {
+        STACK_OFFET_RATIO.val() * CARD_HEIGHT => float dy;
+        return pos + dy * card_idx * g.DOWN;
+    }
 
-    // TODO fix layer/depth sorting
-    g.pushLayer(layer + .01); g.pushColor(suit_colors[c.suit]); {
-        pos + CARD_HH * g.UP + CARD_HW * g.RIGHT => vec2 top_right;
-        pos + CARD_HH * g.UP + CARD_HW * g.LEFT => vec2 top_left;
-        .5 * CARD_HW => float suit_size;
+    fun void draw(vec3 color, vec2 mouse_pos) {
+        // draw stack base
+        g.pushColor(color);
+        g.boxDotted(pos, CARD_WIDTH + .0, CARD_HEIGHT + 0.0, CARD_WIDTH / 9);
+        g.popColor();
 
-        g.pushTextControlPoint(0, 1);
-        g.text("" + c.val, top_left + CARD_INNER_PAD.val() * @(1, -1), 1.1*suit_size);
-        g.popTextControlPoint();
+        // draw cards in stack
+        STACK_OFFET_RATIO.val() * CARD_HEIGHT => float dy;
+        for (int card_idx; card_idx < cards.size(); card_idx++) {
+            this.cards[card_idx] @=> Card card;
+            cardPos(card_idx) => vec2 card_pos;
 
-        drawSuit(c.suit, top_right - (.5 * suit_size + CARD_INNER_PAD.val() + SUIT_SYMBOL_OFFSET.val()) * @(1, 1), suit_size);
-    } g.popColor(); g.popLayer();
+            // check which card is hovered from stack
+            int invert;
+            (card_idx == this.cards.size() - 1) => int last_card;
+            if (
+                (last_card && M.inside(mouse_pos, M.aabb(card_pos, CARD_HW, CARD_HH)))
+                ||
+                (!last_card && M.inside(mouse_pos, M.aabb(card_pos + @(0, CARD_HH - .5 * dy), CARD_HW, .5*dy)))
+            ) {
+                true => invert;
+                card @=> hovered_card;
+            } 
+
+            Card.draw(this.cards[card_idx], card_pos, card_idx, invert);
+        }
+    }
 }
 
 fun void drawSuit(int suit, vec2 pos, float sz) {
@@ -193,9 +268,12 @@ UI_Float STACK_START_Y(3); // absolute y position that stack centers begin
 Stack stacks[6];
 Card deck[0];
 
-// add A-10
+Stack ace_stack[4];
+
+// add 2-10
+// keep aces on side
 for (int suit; suit < Suit_Count; suit++) {
-    for (1 => int i; i <= 10; i++)
+    for (2 => int i; i <= 10; i++)
         deck << new Card(i, suit);
 }
 
@@ -212,6 +290,7 @@ for (int i; i < 6; i++) {
 
 while (1) {
     GG.nextFrame() => now;
+    g.mousePos() => vec2 mouse_pos;
 
     // ui
     UI.slider("card inner pad", CARD_INNER_PAD, 0, 1);
@@ -234,43 +313,17 @@ while (1) {
         for (int i; i < stacks.size(); i++) {
             stacks[i] @=> Stack stack;
             center => stack.pos;
+
             // check if mouse is in this column
             // TODO add y bounds checking
             Color.WHITE => vec3 color;
-            if (
-                g.mousePos().x >= center.x - CARD_HW
-                && g.mousePos().x <= center.x + CARD_HW
-            ) {
+            if (stack.hovered(mouse_pos)) {
                 i => hovered_stack_idx;
                 Color.ORANGE => color;
             }
 
-            
-            // draw stack base
-            g.pushColor(color);
-            g.boxDotted(center, CARD_WIDTH + .0, CARD_HEIGHT + 0.0, CARD_WIDTH / 9);
-            g.popColor();
-
-            // draw cards in stack
-            STACK_OFFET_RATIO.val() * CARD_HEIGHT => float dy;
-            for (int card_idx; card_idx < stack.cards.size(); card_idx++) {
-                stack.cards[card_idx] @=> Card card;
-                stack.cardPos(card_idx) => vec2 card_pos;
-
-                // check which card is hovered from stack
-                int invert;
-                (card_idx == stack.cards.size() - 1) => int last_card;
-                if (
-                    (last_card && M.inside(g.mousePos(), M.aabb(card_pos, CARD_HW, CARD_HH)))
-                    ||
-                    (!last_card && M.inside(g.mousePos(), M.aabb(card_pos + @(0, CARD_HH - .5 * dy), CARD_HW, .5*dy)))
-                ) {
-                    true => invert;
-                    card @=> hovered_card;
-                } 
-
-                draw(stack.cards[card_idx], card_pos, card_idx, invert);
-            }
+            // draw
+            stack.draw(color, mouse_pos);
 
             // update center
             CARD_WIDTH + STACK_SPACING.val() +=> center.x;
@@ -280,7 +333,7 @@ while (1) {
     // if (hovered_card != null) <<< hovered_card.suit, hovered_card.val >>>;
 
     { // input
-        if (g.mouseLeftDown() && hovered_card != null) {
+        if (g.mouseLeftDown() && hovered_card != null && hovered_card.legalToPickup()) {
             hovered_card.stack @=> Stack stack;
             // pick up entire stack
             T.assert(held_cards.size() == 0, "held cards should be clear");
@@ -299,9 +352,13 @@ while (1) {
         // drop cards
         if (g.mouseLeftUp() && held_cards.size()) {
             Stack @stack;
-            // no stack hovered, put back in original
-            if (hovered_card == null) held_cards[0].stack @=> stack;
-            else                      hovered_card.stack @=> stack;
+            // no stack hovered OR illegal move, put back in original
+            if (hovered_card == null || !hovered_card.stack.legalToAdd(held_cards[0])) 
+                held_cards[0].stack @=> stack;
+            else
+                hovered_card.stack @=> stack;
+
+            // add to selected stack
             for (auto c : held_cards) stack.add(c);
             held_cards.clear();
         }
@@ -310,28 +367,9 @@ while (1) {
         STACK_OFFET_RATIO.val() * CARD_HEIGHT => float dy;
         for (int i; i < held_cards.size(); i++) {
             g.mousePos() + dy * i * g.DOWN + held_card_delta => vec2 card_pos;
-            draw(held_cards[i], card_pos, deck.size() + i, true);
+            Card.draw(held_cards[i], card_pos, deck.size() + i, true);
         }
     }
-
-
-
-    // if (g.mouseLeftUp()) {
-    //     null @=> hovered_card;
-    // }
-    // if (hovered_card != null) g.mousePos() + held_card_delta => hovered_card.pos;
-
-
-    // M.aabb(c.pos, CARD_HW, CARD_HH) => vec4 aabb;
-    // aabb.z - aabb.x => float w;
-    // aabb.w - aabb.y => float h;
-    // g.boxFilled(c.pos, w, h, Color.GREEN);
-
-
-    // draw(c, 0);
-
-    // M.inside()
-
 
     { // cleanup
         null @=> hovered_card;

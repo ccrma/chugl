@@ -33,6 +33,8 @@ TODO
 
 */
 
+@import "../lib/T.ck"
+
 // Window
 // GWindow.windowed(1920 /2, 1080 /2);
 GWindow.maximize();

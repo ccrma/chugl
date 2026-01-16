@@ -1,5 +1,11 @@
 TODO
 
+
+Optimization to ungrucking/grucking:
+  - instead of storing array of children per node, just have pointers to first and last children
+  - ungrucking then becomes O(1)
+  - see ryan fleury arena talk
+
 Add 2d and 3d Skew
 - see love2d for 2d example
 - eric lengyels graphics book has math for 3d
@@ -148,6 +154,7 @@ every frame with all uniforms (noclips gfxr does this)
 - dearimgui UI_DrawList
 - https://www.youtube.com/watch?app=desktop&v=il-TXbn5iMA
   - specialized 3D sdf engine
+- pico8?
   
 
 
@@ -157,6 +164,7 @@ every frame with all uniforms (noclips gfxr does this)
 - Haxe / Hashlink (mosa lina and deadcells?)
 - ThreeJS
 - BabylonJS
+- PICO8
 
 == Examples ====================
 - Mirrors
