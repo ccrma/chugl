@@ -2485,7 +2485,7 @@ CK_DLL_MFUN(flat_material_set_emissive_color)
     SG_Material* material = GET_MATERIAL(SELF);
     t_CKVEC4 v            = GET_NEXT_VEC4(ARGS);
     SG_Material::uniformVec4f(material, 5, glm::vec4(v.x, v.y, v.z, v.w));
-    CQ_PushCommand_MaterialSetUniform(material, 4);
+    CQ_PushCommand_MaterialSetUniform(material, 5);
 }
 
 CK_DLL_MFUN(flat_material_get_emissive_color)
