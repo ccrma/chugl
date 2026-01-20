@@ -95,6 +95,8 @@ public class G2D extends GGen
 	// ------------------- params (updated every frame) --------------------------
 	n2w(-1, -1) => vec2 screen_min; // bottom left 
 	n2w(1, 1)   => vec2 screen_max; // top right
+	screen_max.x - screen_min.x => float screen_w;
+	screen_max.y - screen_min.y => float screen_h;
 
 	// ------------------- state stacks --------------------------
 	// note: these config stacks are cleared at the end of every frame to prevent accidental leaks
@@ -148,6 +150,11 @@ public class G2D extends GGen
 		capsules.antialias(bool);
 		GG.scenePass().msaa(bool);
 		GG.outputPass().sampler(bool ? TextureSampler.linear() : TextureSampler.nearest());
+
+		// set sprite sampler
+		// TODO have push/pop sampler API?
+		if (bool) TextureSampler.linear() @=> G2D_Sprite.sprite_sampler;
+		else TextureSampler.nearest() @=> G2D_Sprite.sprite_sampler;
 	}
 
 	fun void resolution(int w, int h) {
@@ -815,6 +822,8 @@ public class G2D extends GGen
 		{ // update state params 
 			n2w(-1, -1) => screen_min; // bottom left 
 			n2w(1, 1)   => screen_max; // top right
+			screen_max.x - screen_min.x => screen_w;
+			screen_max.y - screen_min.y => screen_h;
 		}
 
 		{ // clear state stacks (prevents accidental leak)
