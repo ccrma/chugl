@@ -146,7 +146,7 @@ UI_Float ACE_SYMBOL_SIZE(1.29);
 UI_Float SYMBOL_SIZE(.4);
 UI_Float ACE_STACK_SYMBOL(.5);
 
-UI_Float CARD_ZENO_INTERP(.08);
+UI_Float CARD_ZENO_INTERP(.16);
 
 UI_Float3 BACKGROUND_COLOR(.4 * Color.GREEN);
 
@@ -158,7 +158,7 @@ UI_Float STACK_SPACING(CARD_WIDTH * .25);
 UI_Float STACK_START_Y(1); // absolute y position that stack centers begin
 UI_Float ACE_STACK_START_Y(3.5); // absolute y position that stack centers begin
 
-UI_Float RULEBOOK_ANIM_ZENO(.08);
+UI_Float RULEBOOK_ANIM_ZENO(.12);
 
 vec2 symbol_positions[0][0];
 // init positions
@@ -287,7 +287,9 @@ class Card {
     Stack@ stack;
     int stack_idx;
 
-    // dealing animation state
+    // animation state (only zeno animates during dealing/shuffle and automatic ace swap)
+    int was_swapped;
+    float anim_layer;
     vec2 deal_curr_pos;
 
 
@@ -324,12 +326,21 @@ class Card {
         return stack.cardPos(stack_idx);
     }
 
-    fun static void draw(Card c, vec2 pos, int layer) {
+    fun static void draw(Card c, vec2 pos, float layer) {
         // if being dealt, zeno interp towards pos
-        if (room == Room_Deal) {
+        if (room == Room_Deal || c.was_swapped) {
+            // update visual position
             CARD_ZENO_INTERP.val() * (pos - c.deal_curr_pos) +=> c.deal_curr_pos;
+
+            if (c.was_swapped) {
+                c.anim_layer => layer;
+                if (M.dist(c.deal_curr_pos, pos) < .0001) {
+                    false => c.was_swapped;
+                }
+            }
+
             c.deal_curr_pos => pos;
-        }
+        } 
 
         CARD_ROUNDING.val() * .5 => float radius;
 
@@ -435,8 +446,15 @@ class Stack {
         while (cards.size()) remove(0);
     }
 
-    fun void add(Card c) {
-        // T.assert(c.stack != this, "adding duplicate card to stack");
+    fun void add(Card c, int animate) {
+        if (c.stack != null) {
+            if (animate) {
+                c.pos() => c.deal_curr_pos;
+                true => c.was_swapped;
+                c.stack_idx + 1 => c.anim_layer;
+            }
+        }
+
         this @=> c.stack;
         cards.size() => c.stack_idx;
         cards << c;
@@ -637,7 +655,7 @@ fun void deal() {
     // add aces
     for (int suit; suit < Suit_Count; suit++) {
         ace_stack[suit].clear();
-        ace_stack[suit].add(aces[suit]);
+        ace_stack[suit].add(aces[suit], false);
     }
 
     // shuffle
@@ -646,7 +664,7 @@ fun void deal() {
     // add non-aces
     for (int i; i < 6; i++) {
         for (int j; j < 6; j++) {
-            stacks[i].add(deck[i*6 + j]);
+            stacks[i].add(deck[i*6 + j], false);
         }
     }
 
@@ -664,7 +682,7 @@ fun void deal() {
     held_cards.clear();
     @(0,0) => held_card_delta;
 
-    1.8::second => now;
+    1::second => now;
 
     if (deal_gen == curr_gen) {
         Room_Play => room;
@@ -826,6 +844,7 @@ while (1) {
     UI.slider("stack dy", STACK_OFFET_RATIO, 0, 1);
     UI.colorEdit("background color", BACKGROUND_COLOR);
     UI.slider("acemat symbol", ACE_STACK_SYMBOL, 0, 1);
+    UI.slider("card anim zeno", CARD_ZENO_INTERP, 0, 1);
 
     for (int i; i < Suit_Count; i++) {
         UI.pushID(i);
@@ -952,9 +971,11 @@ while (1) {
                 if (hovered_card != null) {
                     if (
                         hovered_card.suit == selected_ace.suit && !hovered_card.stack.is_ace_stack
-                        // && !hovered_card.isTopCard()
                     ) {
                         // remove ace
+                        selected_ace.pos() => selected_ace.deal_curr_pos;
+                        hovered_card.stack_idx + 1 => selected_ace.anim_layer;
+                        true => selected_ace.was_swapped;
                         selected_ace.stack.remove(0);
 
                         // copy data
@@ -963,7 +984,7 @@ while (1) {
                         hovered_card.stack @=> selected_ace.stack;
 
                         // add hovered to ace stack
-                        ace_stack[selected_ace.suit].add(hovered_card);
+                        ace_stack[selected_ace.suit].add(hovered_card, true);
                     }
                 }
 
@@ -973,6 +994,7 @@ while (1) {
             else if (selected_ace == null && hovered_card != null && hovered_card.stack.is_ace_stack && hovered_card.val == 1) {
                 hovered_card @=> selected_ace;
                 true => selected_ace.selected;
+                false => selected_ace.was_swapped;
             }
             else if (selected_ace == null && hovered_card != null && hovered_card.legalToPickup()) {
                 hovered_card.stack @=> Stack stack;
@@ -989,6 +1011,7 @@ while (1) {
                     stack.remove(i) @=> Card c;
                     c @=> held_cards[i - hovered_card.stack_idx];
                     true => c.selected;
+                    false => c.was_swapped;
                 }
             }
         }
@@ -1008,7 +1031,7 @@ while (1) {
             // add to selected stack
             for (auto c : held_cards) {
                 false => c.selected;
-                stack.add(c);
+                stack.add(c, false);
             }
             held_cards.clear();
         }
@@ -1022,7 +1045,7 @@ while (1) {
                     // remove from current stack
                     s.pop();
                     // put it back
-                    ace_stack[ace.suit].add(ace);
+                    ace_stack[ace.suit].add(ace, true);
                 }
             }
         }
