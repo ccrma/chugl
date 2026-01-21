@@ -124,6 +124,13 @@ public class M {
             return 1 - Math.pow(-2 * x + 2, 3) / 2;
     }
 
+    fun static float easeOutBack(float x) {
+        1.70158 => float c1;
+        c1 + 1 => float c3;
+        
+        return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
+    }
+
     fun static vec3 lerp(float x, vec3 a, vec3 b) {
         return (1.0 - x) * a + x * b;
     }
@@ -299,6 +306,14 @@ public class M {
         return @(
             c.x-hw, c.y-hh,
             c.x+hw, c.y+hh
+        );
+    }
+
+    fun static int inside( vec2 p, vec2 bottom_left, vec2 top_right ) {
+        return (
+            p.x >= bottom_left.x && p.x <= top_right.x
+            &&
+            p.y >= bottom_left.y && p.y <= top_right.y
         );
     }
 

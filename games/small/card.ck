@@ -31,24 +31,32 @@ Other configs to Test
 UI QOL
 - err msg when trying to swap ace with top card of playfield stack (can't swap, it wouldn't do anything)
 
+Instructions
+- stack cards by alternating type and decreasing value. Sorted stacks can be moved together.
+- win by sorting all number cards 10-2 into 4 stacks
+- Aces are special cards that can be swapped with any card of the same suit. 
+    - Once in play, aces may be stacked like any other card. 
+    - Aces return to their empty free cell when possible, and can then be swapped again.
+- Free cells in the top left may be filled with any card of a matching suit.
+
 TODO
-- fixed over logic to test for card-card overlap
 - fix transparency sorting for dropshadow and g2d_sprite
-- for 2-10, draw symbols in pattern (see zachtronics for example)
-- go right to left for aces and the card numbers + symbol, matching chinese scrolls
-    - card symbol + number should be on top-right corner.
-- don't draw drop shadow if being held
 - juice
+    - animate the ace swap and ace returning with a zeno interp
     - see emoji tsuika github for ideas 
         - interactive music/sfx toggle buttons
-    - inkwash shader background (see guqin.ck)
-        - green and orange color sources
 - remove unused assets
     - font files
     - handwritten number pngs
 - sfx
     - hovering over card "strums" it, mapped to pentatonic scale
         - e.g. running 2-10 is a gliss
+- music
+    - birdcalls! (magpie and duck)
+- art
+    - small alpha hole in persimmon (obvious on ace stack all white)
+
+
 */
 
 @import "../lib/g2d/ChuGL.chug"
@@ -66,27 +74,16 @@ g.backgroundColor(.2 * Color.GREEN);
 TextureLoadDesc tex_load_desc;
 true => tex_load_desc.flip_y;
 true => tex_load_desc.gen_mips;
-Texture.load(me.dir() + "./card_assets/card2.png", tex_load_desc) @=> Texture card_back_sprite;
+
+Texture.load(me.dir() + "./card_assets/victory.png", tex_load_desc) @=> Texture victory_sprite;
+Texture.load(me.dir() + "./card_assets/card.png", tex_load_desc) @=> Texture card_back_sprite;
 
 Texture.load(me.dir() + "./card_assets/duck.PNG", tex_load_desc) @=> Texture duck_sprite;
 Texture.load(me.dir() + "./card_assets/magpie.PNG", tex_load_desc) @=> Texture magpie_sprite;
 Texture.load(me.dir() + "./card_assets/orange.PNG", tex_load_desc) @=> Texture orange_sprite;
 Texture.load(me.dir() + "./card_assets/persimmon.PNG", tex_load_desc) @=> Texture persimmon_sprite;
 
-[
-Texture.load(me.dir() + "./card_assets/A.PNG", tex_load_desc),
-Texture.load(me.dir() + "./card_assets/2.PNG", tex_load_desc),
-Texture.load(me.dir() + "./card_assets/3.PNG", tex_load_desc),
-Texture.load(me.dir() + "./card_assets/4.PNG", tex_load_desc),
-Texture.load(me.dir() + "./card_assets/5.PNG", tex_load_desc),
-Texture.load(me.dir() + "./card_assets/6.PNG", tex_load_desc),
-Texture.load(me.dir() + "./card_assets/7.PNG", tex_load_desc),
-Texture.load(me.dir() + "./card_assets/8.PNG", tex_load_desc),
-Texture.load(me.dir() + "./card_assets/9.PNG", tex_load_desc),
-Texture.load(me.dir() + "./card_assets/10.PNG", tex_load_desc),
-] @=> Texture number_sprites[];
-
-
+Texture.load(me.dir() + "./card_assets/Instructions.png", tex_load_desc) @=> Texture rule_sprite;
 
 fun Texture suit2sprite(int suit) {
     if (suit == Suit_Club) return duck_sprite;
@@ -104,12 +101,14 @@ GText.defaultFont(me.dir() + "./card_assets/ritegaki.otf");
 3 => int Suit_Spade;
 4 => int Suit_Count;
 
-[
-    Color.LIGHTGRAY,
-    Color.RED,
-    Color.RED,
-    Color.LIGHTGRAY,
-] @=> vec3 suit_colors[];
+0 => int VictoryAnim_Left;
+1 => int VictoryAnim_Right;
+2 => int VictoryAnim_Up;
+3 => int VictoryAnim_Count;
+
+0 => int Room_Deal;
+1 => int Room_Play;
+2 => int Room_Win;
 
 [
     // old colors
@@ -121,6 +120,8 @@ GText.defaultFont(me.dir() + "./card_assets/ritegaki.otf");
     new UI_Float3(Color.hex(0xffffaa)), // persimmon - heart
     new UI_Float3(Color.hex(0xaaddff)), // magpie - spade
 ] @=> UI_Float3 ace_colors[];
+
+.8 * Color.hex(0xCD071E) => vec3 selected_color;
 
 [
     "duck",
@@ -135,23 +136,145 @@ CARD_HEIGHT * CARD_ASPECT => float CARD_WIDTH;
 CARD_HEIGHT * .5 => float CARD_HH;
 CARD_WIDTH * .5 => float CARD_HW;
 
+"./card_data.txt" => string SAVE_FILE;
+
 UI_Float CARD_BORDER(.05);
 UI_Float CARD_ROUNDING(.1);
-UI_Float CARD_INNER_PAD(.1);
+UI_Float CARD_INNER_PAD(.085);
 UI_Float CARD_DOTTED_SEGMENT_LENGTH(CARD_WIDTH / 10);
-UI_Float SYMBOL_SIZE(1.29);
+UI_Float ACE_SYMBOL_SIZE(1.29);
+UI_Float SYMBOL_SIZE(.4);
+UI_Float ACE_STACK_SYMBOL(.5);
 
+UI_Float CARD_ZENO_INTERP(.08);
 
 UI_Float3 BACKGROUND_COLOR(.4 * Color.GREEN);
 
 UI_Float SUIT_SYMBOL_OFFSET(-.05);
 
-UI_Float STACK_OFFET_RATIO(.25); // ratio of CARD_HEIGHT to displace in Y axis when stacking
+UI_Float STACK_OFFET_RATIO(.22); // ratio of CARD_HEIGHT to displace in Y axis when stacking
 
 UI_Float STACK_SPACING(CARD_WIDTH * .25);
 UI_Float STACK_START_Y(1); // absolute y position that stack centers begin
 UI_Float ACE_STACK_START_Y(3.5); // absolute y position that stack centers begin
 
+UI_Float RULEBOOK_ANIM_ZENO(.08);
+
+vec2 symbol_positions[0][0];
+// init positions
+for (int i; i < 11; i++) {
+    symbol_positions << symbolPositions(CARD_HH / 5.25, CARD_HW / 2, i);
+}
+
+// dy corresponds to smallest increment in x or y
+// try CARD_HH / 5 or something
+fun vec2[] symbolPositions(float dy, float dx, int n) {
+
+    if (n == 1) {
+        return [@(0, 0)];
+    }
+
+    if (n == 2) {
+        return [
+            @(0, dy),
+            @(0, -dy),
+        ];
+    }
+
+    if (n == 3) {
+        return [
+            @(-dx, -2 * dy),
+            @(0, 0),
+            @(dx, 2 * dy),
+        ];
+    }
+
+    if (n == 4) {
+        return [
+            @(dx, 2 * dy),
+            @(-dx, 2 * dy),
+            @(-dx, -2 * dy),
+            @(dx, -2 * dy),
+        ];
+    }
+
+    if (n == 5) {
+        return [
+            @(dx, 2 * dy),
+            @(-dx, 2 * dy),
+            @(-dx, -2 * dy),
+            @(dx, -2 * dy),
+            @(0, 0),
+        ];
+    }
+
+    if (n == 6) {
+        return [
+            @(dx, 2 * dy),
+            @(-dx, 2 * dy),
+            @(-dx, -2 * dy),
+            @(dx, -2 * dy),
+            @(dx, 0),
+            @(-dx, 0),
+        ];
+    }
+
+    if (n == 7) {
+        return [
+            @(dx, 2 * dy),
+            @(-dx, 2 * dy),
+            @(-dx, -2 * dy),
+            @(dx, -2 * dy),
+            @(dx, 0),
+            @(-dx, 0),
+            @(0, dy),
+        ];
+    }
+
+    if (n == 8) {
+        return [
+            @(dx, 2 * dy),
+            @(-dx, 2 * dy),
+            @(-dx, -2 * dy),
+            @(dx, -2 * dy),
+            @(0, dy),
+            @(0, -dy),
+            @(0, 3*dy),
+            @(0, -3*dy),
+        ];
+    }
+
+    if (n == 9) {
+        return [
+            @(dx, 2 * dy),
+            @(-dx, 2 * dy),
+            @(-dx, -2 * dy),
+            @(dx, -2 * dy),
+            @(0, dy),
+            @(0, 3*dy),
+            @(0, -3*dy),
+            @(dx, 0),
+            @(-dx, 0),
+        ];
+    }
+    
+    if (n == 10) {
+        return [
+            @(dx, 2 * dy),
+            @(-dx, 2 * dy),
+            @(-dx, -2 * dy),
+            @(dx, -2 * dy),
+            @(0, dy),
+            @(0, -dy),
+            @(0, 3*dy),
+            @(0, -3*dy),
+            @(dx, 0),
+            @(-dx, 0),
+        ];
+    }
+
+    return null;
+}
 
 class Card {
     int val;
@@ -163,6 +286,10 @@ class Card {
     // stack params
     Stack@ stack;
     int stack_idx;
+
+    // dealing animation state
+    vec2 deal_curr_pos;
+
 
     fun Card(int val, int suit) {
         val => this.val; suit => this.suit;
@@ -193,26 +320,20 @@ class Card {
 
     // get position in stack
     fun vec2 pos() {
-        T.assert(stack != null, "cannot get pos of card not in stack");
-        T.assert(stack.cards[stack_idx] == this, "stack_idx state not synced");
+        if (stack == null) return @(0,0);
         return stack.cardPos(stack_idx);
     }
 
     fun static void draw(Card c, vec2 pos, int layer) {
-        CARD_ROUNDING.val() * .5 => float radius;
-
-        Color.WHITE => vec3 body_color;
-        suit_colors[c.suit] => vec3 suit_color;
-
-        // invert colors on ace
-        if (c.val == 1) {
-            body_color => vec3 tmp;
-            suit_color => body_color;
-            tmp => suit_color;
+        // if being dealt, zeno interp towards pos
+        if (room == Room_Deal) {
+            CARD_ZENO_INTERP.val() * (pos - c.deal_curr_pos) +=> c.deal_curr_pos;
+            c.deal_curr_pos => pos;
         }
 
-        // force body color to be white
-        // .8 * Color.WHITE => body_color;
+        CARD_ROUNDING.val() * .5 => float radius;
+
+        .96 * Color.WHITE => vec3 body_color;
 
         // draw card body
         g.pushLayer(layer); g.pushPolygonRadius(radius); {
@@ -226,7 +347,7 @@ class Card {
             if (c.selected || c.hovered) .06 => border_sca;
 
             g.pushPolygonRadius(radius + .5 * border_sca);
-            g.boxFilled(pos, w + 0, h + 0, (c.selected || c.hovered) ? .8 * Color.hex(0xCD071E) : Color.BLACK);
+            g.boxFilled(pos, w + 0, h + 0, (c.selected || c.hovered) ? selected_color : Color.BLACK);
             g.popPolygonRadius();
 
             1.0 * CARD_BORDER.val() -=> w;
@@ -235,18 +356,21 @@ class Card {
             if (c.val == 1) g.boxFilled(pos, w, h, ace_colors[c.suit].val());
             else g.boxFilled(pos, w, h, body_color);
 
-            .07 => float shadow_displacement;
-            g.pushLayer(layer - .01); 
-            // g.pushAlpha(.1);
-            // g.pushBlend(g.BLEND_MULT);
-            g.boxFilled(pos - shadow_displacement * @(1, 1), w, h, .2 * Color.GREEN);
-            // g.popAlpha(); 
-            // g.popBlend();
-            g.popLayer(); 
+            if (!c.selected && !c.hovered) {
+                .07 => float shadow_displacement;
+                g.pushLayer(layer - .01); 
+                // g.pushAlpha(.1);
+                // g.pushBlend(g.BLEND_MULT);
+                g.boxFilled(pos - shadow_displacement * @(1, 1), w, h, .2 * Color.GREEN);
+                // g.popAlpha(); 
+                // g.popBlend();
+                g.popLayer(); 
+            }
         } g.popPolygonRadius(); g.popLayer();
 
         // TODO fix layer/depth sorting
-        g.pushLayer(layer + .01); g.pushColor(suit_color); {
+        g.pushLayer(layer + .01); 
+        {
             pos + CARD_HH * g.UP + CARD_HW * g.RIGHT => vec2 top_right;
             pos + CARD_HH * g.UP + CARD_HW * g.LEFT => vec2 top_left;
             .5 * CARD_HW => float suit_size;
@@ -261,21 +385,21 @@ class Card {
 
             top_right - (.5 * suit_size + CARD_INNER_PAD.val() + SUIT_SYMBOL_OFFSET.val()) * @(1, 1) => vec2 suit_pos;
 
-            // draw suit
-            // drawSuit(c.suit, top_right - (.5 * suit_size + CARD_INNER_PAD.val() + SUIT_SYMBOL_OFFSET.val()) * @(1, 1), suit_size);
-
-            // audrey's numbers
-            // g.pushColor(Color.BLACK);
-            // g.sprite(number_sprites[c.val-1], number_pos, suit_size, 0);
-            // g.popColor();
-
             // audge's art
             g.pushColor(Color.WHITE);
             g.sprite(suit2sprite(c.suit), suit_pos, suit_size * 1.2, 0);
-            g.sprite(suit2sprite(c.suit), pos, CARD_HH * SYMBOL_SIZE.val(), 0);
+
+            if (c.val == 1) g.sprite(suit2sprite(c.suit), pos, CARD_HH * ACE_SYMBOL_SIZE.val(), 0);
+            else {
+                for (auto delta : symbol_positions[c.val]) {
+                    g.sprite(suit2sprite(c.suit), pos + delta - @(0, .16), suit_size * 1.12, 0);
+                }
+            }
+
             g.popColor();
 
-        } g.popColor(); g.popLayer();
+        } 
+        g.popLayer();
     }
 
     fun int legalToPickup() {
@@ -328,7 +452,6 @@ class Stack {
                 cards[-1].val - 1 == c.val
             )
         ) => int ret;
-        <<< ret >>>;
         return ret;
     }
 
@@ -365,12 +488,23 @@ class Stack {
         g.boxDotted(pos, CARD_WIDTH + .0, CARD_HEIGHT + 0.0, CARD_WIDTH / 9);
         g.popColor();
 
+        // draw symbol if ace stack
+        if (is_ace_stack) {
+            g.pushBlend(g.BLEND_MULT);
+            g.pushEmission(ACE_STACK_SYMBOL.val()*Color.WHITE);
+            g.pushColor(Color.BLACK);
+            g.sprite(suit2sprite(suit), pos, CARD_HH * ACE_SYMBOL_SIZE.val(), 0);
+            g.popColor();
+            g.popEmission();
+            g.popBlend();
+        }
+
         // draw cards in stack
         STACK_OFFET_RATIO.val() * CARD_HEIGHT => float dy;
         for (int card_idx; card_idx < cards.size(); card_idx++) {
             this.cards[card_idx] @=> Card card;
             cardPos(card_idx) => vec2 card_pos;
-            Card.draw(this.cards[card_idx], card_pos, card_idx);
+            Card.draw(this.cards[card_idx], card_pos, card_idx + 1);
         }
     }
 }
@@ -419,10 +553,18 @@ fun void drawSuit(int suit, vec2 pos, float sz) {
 
 // == GAMESTATE ===============================
 
+int num_wins;
+
+float gametime;
+float win_time;
+
 // room
-0 => int Room_Deal;
-1 => int Room_Play;
-2 => int Room_Win;
+Room_Play => int room;
+int display_rules;
+
+// victory animation
+int victory_anim;
+int victory_color;
 
 // persistent card pool
 Card deck[0];
@@ -443,6 +585,8 @@ Stack ace_stack[4];
 
 // called once per app-start, to initialize 
 fun void init() {
+    readWinCount() => num_wins;
+
     // create 2-10
     for (int suit; suit < Suit_Count; suit++) {
         for (2 => int i; i <= 10; i++)
@@ -450,18 +594,41 @@ fun void init() {
     }
 
     // create aces and init ace stacks
+    @(
+        -1 * (stacks.size() - 1) * (STACK_SPACING.val() * .5 + CARD_HW),
+        ACE_STACK_START_Y.val()
+    ) => vec2 center;
     for (int suit; suit < Suit_Count; suit++) {
         aces << new Card(1, suit);
         true => ace_stack[suit].is_ace_stack;
         suit => ace_stack[suit].suit;
+
+        center + @((suit * (CARD_WIDTH + STACK_SPACING.val())), 0) => ace_stack[suit].pos;
     }
 }
 
 // called once per hand/game to reset board
+int deal_gen;
 fun void deal() {
-    // reset all cards
-    for (auto card : deck) card.reset();
-    for (auto card : aces) card.reset();
+    ++deal_gen => int curr_gen;
+
+    // reset timers
+    0 => gametime;
+    0 => win_time;
+
+    // reset all cards and set to dealing
+    for (auto card : deck) {
+        // if statement to handle spam-clicking reset
+        if (room != Room_Deal) card.pos() => card.deal_curr_pos;
+        card.reset();
+    }
+    for (auto card : aces) {
+        // if statement to handle spam-clicking reset
+        if (room != Room_Deal) card.pos() => card.deal_curr_pos;
+        card.reset();
+    }
+
+    Room_Deal => room;
 
     // reset all stacks
     for (auto stack : stacks) stack.clear();
@@ -496,6 +663,12 @@ fun void deal() {
 
     held_cards.clear();
     @(0,0) => held_card_delta;
+
+    1.8::second => now;
+
+    if (deal_gen == curr_gen) {
+        Room_Play => room;
+    }
 }
 
 // returns true if all stacks are sorted
@@ -511,12 +684,139 @@ fun int winstate() {
     return true;
 }
 
+fun void saveWinCount() {
+    // instantiate a file IO object
+    FileIO fout;
+    // open for write (default mode: ASCII)
+    fout.open( me.dir() + SAVE_FILE, FileIO.WRITE );
+
+    // test
+    if( !fout.good() ) {
+        cherr <= "can't open file for writing..." <= IO.newline();
+        return;
+    }
+
+    // write some stuff
+    fout.write(num_wins);
+
+    fout.close();
+}
+
+fun int readWinCount() {
+    // instantiate
+    FileIO fio;
+
+    // open a file
+    fio.open( me.dir() + SAVE_FILE, FileIO.READ );
+
+    // ensure it's ok
+    if( !fio.good() ) {
+        cherr <= "cannot read" <= IO.newline();
+        return 0;
+    }
+
+    // variable to read into
+    int val;
+    fio => val;
+
+    return val;
+}
+
+
 init();
-deal();
+spork ~ deal();
+
+Color.hex(0xCD071E) => vec3 RED;
+[
+    ace_colors[1].val(), Color.BLACK,
+    Color.BLACK, ace_colors[1].val(),
+    ace_colors[0].val(), Color.BLACK,
+    Color.BLACK, ace_colors[0].val(),
+    RED, Color.BLACK,
+    Color.BLACK, RED,
+    ace_colors[1].val(), RED,
+    RED, ace_colors[1].val(),
+    ace_colors[0].val(), RED,
+    RED, ace_colors[0].val(),
+] @=> vec3 victory_color_combos[];
+
+fun void victoryAnimation(float elapsed) {
+    g.pushLayer(20);
+
+    victory_color_combos[victory_color * 2 + 0] => vec3 bg_color;
+    victory_color_combos[victory_color * 2 + 1] => vec3 char_color;
+
+    // scroll params
+    .08 => float border;
+    g.screen_w => float w;
+    0 => float x;
+    .66 * g.screen_min.y => float target_y;
+    target_y => float y;
+
+    // scroll progress
+    .8 => float scroll_time;
+    1 - Math.clampf(elapsed / scroll_time, 0, 1) => float t;
+
+    if (victory_anim == VictoryAnim_Left) M.lerp(t*t, 0, w+1) => x;
+    else if (victory_anim == VictoryAnim_Right) M.lerp(t*t, 0, -w-1) => x;
+    else if (victory_anim == VictoryAnim_Up) M.lerp((t)*(t), target_y, g.screen_min.y - 1.2) => y;
+
+    // fade in character .2 seconds after scroll
+    Math.clampf(elapsed - scroll_time - .2, 0, 1) => float t2;
+
+    // draw scroll border
+    g.pushPolygonRadius(CARD_ROUNDING.val() * .5 + .5 * border);
+    g.pushLayer(19);
+    g.boxFilled(@(x, y), w, 2 , char_color);
+    g.popLayer();
+    g.popPolygonRadius();
+
+    // draw scroll
+    g.pushPolygonRadius(CARD_ROUNDING.val() * .5);
+    g.boxFilled(@(x, y), w + border, 2 - border, bg_color);
+    g.popPolygonRadius();
+
+    // draw sheng
+    g.pushEmission(.95*char_color);
+    g.pushAlpha(t2);
+    g.sprite(victory_sprite, @(0,y), 2, 0);
+    g.popAlpha();
+    g.popEmission();
+
+    g.popLayer();
+}
+
+float rulebook_zeno; // at 0, off screen. At 1, on screen;
+fun void drawRules() {
+    // set zeno target
+    @(0, 0) => vec2 onscreen_target;
+    @(1.1 * g.screen_w, 0) => vec2 offscreen_target;
+    display_rules ? 1 : 0 => float zeno_target;
+
+    // lerp towards target
+    // RULEBOOK_ANIM_ZENO.val() * (target - rulebook_pos) +=> rulebook_pos;
+    RULEBOOK_ANIM_ZENO.val() * (zeno_target - rulebook_zeno) +=> rulebook_zeno;
+    M.lerp(rulebook_zeno, offscreen_target, onscreen_target) => vec2 rulebook_pos;
+
+    // calculate size (preserving 2:1 aspect ratio)
+    30 => float layer;
+    .92 * g.screen_w => float w;
+    Math.min(.5 * w, .9 * g.screen_h) => float h;
+    2 * h => w;
+
+    // draw
+    g.pushLayer(layer);
+    g.sprite(rule_sprite, rulebook_pos, @(w, h), 0);
+    g.popLayer();
+}
+
+// empty frame to load
+GG.nextFrame() => now;
 
 while (1) {
     GG.nextFrame() => now;
     g.mousePos() => vec2 mouse_pos;
+    GG.dt() +=> gametime;
 
     // ui
     UI.slider("card inner pad", CARD_INNER_PAD, 0, 1);
@@ -525,6 +825,7 @@ while (1) {
     UI.slider("stack spacing", STACK_SPACING, 0, 1);
     UI.slider("stack dy", STACK_OFFET_RATIO, 0, 1);
     UI.colorEdit("background color", BACKGROUND_COLOR);
+    UI.slider("acemat symbol", ACE_STACK_SYMBOL, 0, 1);
 
     for (int i; i < Suit_Count; i++) {
         UI.pushID(i);
@@ -532,26 +833,60 @@ while (1) {
         UI.popID();
     }
 
-    if (UI.button("reset")) deal();
+    // instructions input
+    int bypass_rule_button;
+    if (display_rules) {
+        // exit instructions on click
+        if (g.mouseLeftDown()) {
+            false => display_rules;
+            true => bypass_rule_button;
+        }
+    }
 
-    // drawSuit(Suit_Club, @(0, 0), Color.WHITE, 1.0);
-    // drawSuit(Suit_Diamond, @(0, 1), Color.WHITE, 1.0);
-    // drawSuit(Suit_Heart, @(0, -1), Color.WHITE, 1.0);
-    // drawSuit(Suit_Spade, @(0, -2), Color.WHITE, 1.0);
+    { // game ui
+        @(
+            (stacks.size() - 1) * (STACK_SPACING.val() * .5 + CARD_HW) + CARD_HW,
+            ACE_STACK_START_Y.val() + CARD_HH
+        ) => vec2 center;
+        g.pushTextControlPoint(1, 1);
 
-    /* input logic
+        // check isect
+        if (M.inside(mouse_pos, center - @(1.1, .3), center)) {
+            g.pushColor(ace_colors[0].val());
+            if (g.mouseLeftDown()) {
+                spork ~ deal();
+            }
+        } else {
+            g.pushColor(.8 * Color.WHITE);
+        }
+        g.text("reset", center, .5 * CARD_HW);
+        g.popColor();
+        // bbox
+        // g.box(center - @(1.1, .3), center);
 
-    mousedown
-    - if ace_selected
-        - if hover, try swap
-        - else cancel selection
-    - else
-        - if hover, try pickup substack
+        .5 * CARD_HH -=> center.y;
 
-    */
+        if (M.inside(mouse_pos, center - @(1.1, .3), center)) {
+            g.pushColor(ace_colors[1].val());
+            if (!bypass_rule_button && g.mouseLeftDown()) true => display_rules;
+        } else {
+            g.pushColor(.8 * Color.WHITE);
+        }
+        g.text("rules", center, .5 * CARD_HW);
+        g.popColor();
 
-    { // input
+        // bbox
+        // g.box(center - @(1.1, .3), center);
 
+        .6 * CARD_HH -=> center.y;
+        g.pushColor(.8 * Color.WHITE);
+        g.text("W:" + num_wins, center, .5 * CARD_HW);
+        g.popColor();
+
+        g.popTextControlPoint();
+    }
+
+    if (room == Room_Play && !display_rules) { // play input
         { // calculate hovered card and stacks
             // first check main playfield stacks
             for (auto s : stacks) {
@@ -559,7 +894,6 @@ while (1) {
                     s @=> hovered_stack;
                 }
 
-                // draw cards in stack
                 STACK_OFFET_RATIO.val() * CARD_HEIGHT => float dy;
                 for (int card_idx; card_idx < s.cards.size(); card_idx++) {
                     s.cards[card_idx] @=> Card card;
@@ -580,29 +914,42 @@ while (1) {
                 }
             }
 
+
+            // if still no hovered card, check if held card overlaps stack top
+            if (hovered_card == null && held_cards.size()) {
+                // keep in sync with drawing of held cards
+                STACK_OFFET_RATIO.val() * CARD_HEIGHT => float dy;
+                mouse_pos + held_card_delta => vec2 held_card_pos;
+                for (auto s : stacks) {
+                    // skip all stacks except the one same column as mouse
+                    if (mouse_pos.x < s.pos.x - CARD_HW || mouse_pos.x > s.pos.x + CARD_HW) continue;
+                    if (s.empty()) continue;
+                    if (M.aabbIsect(held_card_pos, @(CARD_HW, CARD_HH), s.cards[-1].pos(), @(CARD_HW, CARD_HH))) {
+                        true => s.cards[-1].hovered;
+                        s.cards[-1] @=> hovered_card;
+                        break;
+                    } 
+                }
+            }
+
             // then check ace stacks
-            for (auto s : ace_stack) {
-                s.hovered(mouse_pos) => int hovered;
-                if (s.cards.size()) {
-                    hovered => s.cards[-1].hovered;
-                    if (hovered) s.cards[-1] @=> hovered_card;
-                } else {
-                    if (hovered) s @=> hovered_ace_stack;
+            if (hovered_card == null) {
+                for (auto s : ace_stack) {
+                    s.hovered(mouse_pos) => int hovered;
+                    if (s.cards.size()) {
+                        hovered => s.cards[-1].hovered;
+                        if (hovered) s.cards[-1] @=> hovered_card;
+                    } else {
+                        if (hovered) s @=> hovered_ace_stack;
+                    }
                 }
             }
         }
 
         if (g.mouseLeftDown()) {
-
-            <<< "selected_ace", selected_ace >>>;
             if (selected_ace != null && selected_ace.val == 1) {
                 // ace already selected, attempt to perform a swap
                 if (hovered_card != null) {
-                    <<< "attempting swap" >>>;
-                    <<< hovered_card.isTopCard() >>>;
-                    <<< !hovered_card.stack.is_ace_stack >>>;
-                    <<< Card.oppositeColors(selected_ace.suit, hovered_card.suit) >>>;
-                    <<< hovered_card.val == 2 >>>;
                     if (
                         hovered_card.suit == selected_ace.suit && !hovered_card.stack.is_ace_stack
                         // && !hovered_card.isTopCard()
@@ -624,12 +971,10 @@ while (1) {
                 null @=> selected_ace;
             }
             else if (selected_ace == null && hovered_card != null && hovered_card.stack.is_ace_stack && hovered_card.val == 1) {
-                <<< "selecting from ace stack" >>>;
                 hovered_card @=> selected_ace;
                 true => selected_ace.selected;
             }
             else if (selected_ace == null && hovered_card != null && hovered_card.legalToPickup()) {
-                <<< "selecting from play stack" >>>;
                 hovered_card.stack @=> Stack stack;
                 // pick up entire stack
                 T.assert(held_cards.size() == 0, "held cards should be clear");
@@ -652,16 +997,10 @@ while (1) {
         if (g.mouseLeftUp() && held_cards.size()) {
             Stack @stack;
 
-            if (hovered_ace_stack != null) {
-            <<< "hovered_stack", hovered_stack, "hovered_ace_stack", hovered_ace_stack >>>;
-            <<< "held_cards", held_cards.size(), "hovered_ace_stack count", hovered_ace_stack.cards.size() >>>;
-            }
-
             // no stack hovered OR illegal move, put back in originalA
             if (hovered_card != null && hovered_card.stack.legalToAdd(held_cards[0])) hovered_card.stack @=> stack;
             else if (hovered_stack != null && hovered_stack.legalToAdd(held_cards[0])) hovered_stack @=> stack;
             else if (held_cards.size() == 1 && hovered_ace_stack != null && hovered_ace_stack.empty() && held_cards[0].suit == hovered_ace_stack.suit) {
-                <<< "putting card in ace stack" >>>;
                 hovered_ace_stack @=> stack;
             }
             else held_cards[0].stack @=> stack;
@@ -675,7 +1014,7 @@ while (1) {
         }
     } // input
 
-    if (held_cards.size() == 0) { // if any aces are on top of playfield stacks, send back to ace stack
+    if (held_cards.size() == 0) { 
         for (auto s : stacks) {
             if (!s.empty() && s.cards[-1].val == 1) {
                 s.cards[-1] @=> Card ace;
@@ -722,30 +1061,15 @@ while (1) {
     }
 
     { // update ace stacks
-        // g.screen_w / 4 => float dx;
-        // @(
-        //     -1.5 * dx, ACE_STACK_START_Y.val()
-        // ) => vec2 center;
-
-        @(
-            -1 * (stacks.size() - 1) * (STACK_SPACING.val() * .5 + CARD_HW),
-            ACE_STACK_START_Y.val()
-        ) => vec2 center;
         for (int i; i < ace_stack.size(); i++) {
             ace_stack[i] @=> Stack stack;
-            center => stack.pos;
-
-            // check if mouse is in this column
-            // TODO add y bounds checking
 
             // draw
             Color.WHITE => vec3 color;
-            if (hovered_ace_stack == stack) Color.ORANGE => color;
+            if (hovered_ace_stack == stack) {
+                Color.ORANGE => color;
+            }
             stack.draw(color, mouse_pos);
-
-            // update center
-            // dx +=> center.x;
-            1 * (CARD_WIDTH + STACK_SPACING.val()) +=> center.x;
         }
     }
 
@@ -753,6 +1077,31 @@ while (1) {
     g.pushLayer(-1);
     g.sprite(card_back_sprite, @(0,0), 1.1*@(g.screen_w, g.screen_h), 0, BACKGROUND_COLOR.val());
     g.popLayer();
+
+    // check win condition
+    if (room == Room_Play && winstate() || UI.button("win")) {
+        Room_Win => room;
+        gametime => win_time;
+
+        ++num_wins;
+        saveWinCount();
+
+        // deselect all cards
+        for (auto c : deck) {
+            false => c.hovered;
+            false => c.selected;
+        }
+
+        // randomize win animation params
+        Math.random2(0, VictoryAnim_Count - 1) => victory_anim;
+        Math.random2(0, victory_color_combos.size() / 2 - 1) => victory_color;
+    }
+    
+    // draw rules
+    drawRules();
+    
+    // draw victory screen
+    if (room == Room_Win) victoryAnimation(gametime - win_time);
 
     { // cleanup
         null @=> hovered_card;

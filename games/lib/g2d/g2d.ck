@@ -53,13 +53,17 @@ public class G2D extends GGen
 		polygons[i].mesh --> GG.scene();
 	}
 
-    G2D_Sprite sprites; 
+    G2D_Sprite sprites[6]; 
+	for (int blend_mode; blend_mode < sprites.size(); blend_mode++) {
+		blend_mode => sprites[blend_mode].blend_mode;
+		sprites[blend_mode].mesh --> GG.scene();
+	}
+
     G2D_Capsule capsules;
 	G2D_Text texts;
 
     // connect to scene
     lines.mesh --> GG.scene();
-    sprites.mesh --> GG.scene();
 	capsules.mesh --> GG.scene();
 
 	texts.mesh --> GG.scene();
@@ -77,7 +81,7 @@ public class G2D extends GGen
 	// TODO: disable the srgb view on swapchain screen buffer
 
 	fun void sortDepthByY(int b) { 
-		b => sprites.sort_depth_by_y;
+		for (auto s : sprites) b => s.sort_depth_by_y;
 		// @TODO the other shaders
 	}
 
@@ -121,12 +125,10 @@ public class G2D extends GGen
 	fun void pushLayer(float layer) { 
 		layer_stack << layer; 
 		layer => lines.z_layer;
-		layer => sprites.z_layer;
 	}
 	fun void popLayer() { 
 		layer_stack.popBack(); 
 		layer_stack[-1] => lines.z_layer; 
-		layer_stack[-1] => sprites.z_layer; 
 	}
 	fun float layer() { return layer_stack[-1]; }
 	fun void pushTextMaxWidth(float w) { texts.max_width_stack << w; }
@@ -153,7 +155,13 @@ public class G2D extends GGen
 
 		// set sprite sampler
 		// TODO have push/pop sampler API?
-		if (bool) TextureSampler.linear() @=> G2D_Sprite.sprite_sampler;
+		if (bool) {
+			TextureSampler.linear() @=> TextureSampler sampler;
+			TextureSampler.WRAP_CLAMP => sampler.wrapU;
+			TextureSampler.WRAP_CLAMP => sampler.wrapV;
+			TextureSampler.WRAP_CLAMP => sampler.wrapW;
+			sampler @=> G2D_Sprite.sprite_sampler;
+		}
 		else TextureSampler.nearest() @=> G2D_Sprite.sprite_sampler;
 	}
 
@@ -661,41 +669,41 @@ public class G2D extends GGen
 
     // ---------- sprites ----------
 	fun void sprite(Texture tex, vec2 pos) {
-		sprites.sprite(tex, @(pos.x, pos.y, layer_stack[-1]), @(1,1), 0, color_stack[-1], emission_stack[-1]);
+		sprites[blend_stack[-1]].sprite(tex, @(pos.x, pos.y, layer_stack[-1]), @(1,1), 0, color_stack[-1], emission_stack[-1], alpha_stack[-1]);
 	}
 
 	fun void sprite(Texture tex, vec2 pos, float sca, float rot) {
-		sprites.sprite(tex, @(pos.x, pos.y, layer_stack[-1]), @(sca,sca), rot, color_stack[-1], emission_stack[-1]);
+		sprites[blend_stack[-1]].sprite(tex, @(pos.x, pos.y, layer_stack[-1]), @(sca,sca), rot, color_stack[-1], emission_stack[-1], alpha_stack[-1]);
 	}
 
 	fun void sprite(Texture tex, vec2 pos, float sca, float rot, vec3 color) {
-		sprites.sprite(tex, @(pos.x, pos.y, layer_stack[-1]), @(sca,sca), rot, color, emission_stack[-1]);
+		sprites[blend_stack[-1]].sprite(tex, @(pos.x, pos.y, layer_stack[-1]), @(sca,sca), rot, color, emission_stack[-1], alpha_stack[-1]);
 	}
 	
 	fun void sprite(Texture tex, vec2 pos, vec2 sca, float rot) {
-		sprites.sprite(tex, @(pos.x, pos.y, layer_stack[-1]), sca, rot, color_stack[-1], emission_stack[-1]);
+		sprites[blend_stack[-1]].sprite(tex, @(pos.x, pos.y, layer_stack[-1]), sca, rot, color_stack[-1], emission_stack[-1], alpha_stack[-1]);
 	}
 
 	fun void sprite(Texture tex, vec2 pos, vec2 sca, float rot, vec3 color) {
-		sprites.sprite(tex, @(pos.x, pos.y, layer_stack[-1]), sca, rot, color, emission_stack[-1]);
+		sprites[blend_stack[-1]].sprite(tex, @(pos.x, pos.y, layer_stack[-1]), sca, rot, color, emission_stack[-1], alpha_stack[-1]);
 	}
 
 	// for 1d horizontal sprite sheets
 	fun void sprite(
 		Texture tex, int n_frames, int frame, vec2 pos, vec2 sca, float rot, vec3 color
 	) {
-		sprites.sprite(
+		sprites[blend_stack[-1]].sprite(
 			tex, @(n_frames, 1), @(frame$float / n_frames, 0), 
-			@(pos.x, pos.y, layer_stack[-1]), sca, rot, color, emission_stack[-1]
+			@(pos.x, pos.y, layer_stack[-1]), sca, rot, color, emission_stack[-1], alpha_stack[-1]
 		);
 	}
 
 	fun void sprite(
 		Texture tex, vec2 sprite_sheet_frame_dim, vec2 offset, vec2 pos, vec2 sca, float rot, vec3 color
 	) {
-		sprites.sprite(
+		sprites[blend_stack[-1]].sprite(
 			tex, sprite_sheet_frame_dim, offset, 
-			@(pos.x, pos.y, layer_stack[-1]), sca, rot, color, emission_stack[-1]
+			@(pos.x, pos.y, layer_stack[-1]), sca, rot, color, emission_stack[-1], alpha_stack[-1]
 		);
 	}
 
@@ -814,8 +822,8 @@ public class G2D extends GGen
 		for (auto e : ellipses) e.update();
 		for (auto p : polygons) p.update();
 		for (auto t : tristrips) t.update();
+		for (auto s : sprites) s.update();
         lines.update();
-        sprites.update();
 		capsules.update();
 		texts.update();
 
@@ -1218,8 +1226,8 @@ public class G2D_Sprite
 {
 	int sprite_count;
 
-	float z_layer;
 	int sort_depth_by_y;
+	int blend_mode;
 
 	FlatMaterial flat_materials[0];
 	GMesh sprites[0];
@@ -1240,6 +1248,8 @@ public class G2D_Sprite
 		if (sprite_count == sprites.size()) {
 			flat_materials << new FlatMaterial;
 			flat_materials[-1].sampler(sprite_sampler);
+			blend_mode => flat_materials[-1].blend;
+			if (blend_mode != Material.BLEND_MODE_REPLACE) true => flat_materials[-1].transparent;
 			sprites << new GMesh(plane_geo, flat_materials[-1]);
 		}
 	}
@@ -1247,7 +1257,7 @@ public class G2D_Sprite
 	// TODO: add instanced mode 
 	fun void sprite(
 		Texture sprite_sheet, vec2 sprite_sheet_frame_dim, vec2 offset, 
-		vec3 pos, vec2 sca, float rot, vec3 color, vec3 emission
+		vec3 pos, vec2 sca, float rot, vec3 color, vec3 emission, float alpha
 	) {
 		_resizeSpritePool();
 
@@ -1260,6 +1270,7 @@ public class G2D_Sprite
 		);
 		sprite_material.offset(offset); // set UV sample offset
 		sprite_material.emissive(@(emission.x, emission.y, emission.z, 0));
+		sprite_material.alpha(alpha);
 
 		sprite_mesh --> mesh;
 		sprite_mesh.pos(pos);
@@ -1279,8 +1290,8 @@ public class G2D_Sprite
 		sprite_count++;
 	}
 
-	fun void sprite(Texture tex, vec3 pos, vec2 sca, float rot, vec3 color, vec3 emissive) {
-		sprite(tex, @(1,1), @(0,0), pos, sca, rot, color, emissive);
+	fun void sprite(Texture tex, vec3 pos, vec2 sca, float rot, vec3 color, vec3 emissive, float alpha) {
+		sprite(tex, @(1,1), @(0,0), pos, sca, rot, color, emissive, alpha);
 	}
 
     fun void update() {
