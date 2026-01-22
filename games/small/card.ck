@@ -49,10 +49,13 @@ TODO
     - font files
     - handwritten number pngs
 - sfx
-    - hovering over card "strums" it, mapped to pentatonic scale
-        - e.g. running 2-10 is a gliss
+    - bamboo sound for shuffle?
+    - reso or beats for card swap or ace click
 - music
     - birdcalls! (magpie and duck)
+    - terry sonic pinwheel
+    - geodesics energy?
+    - thinking.ck
 - art
     - small alpha hole in persimmon (obvious on ace stack all white)
 
@@ -63,12 +66,14 @@ TODO
 @import "../lib/g2d/g2d.ck"
 @import "../lib/M.ck"
 @import "../lib/T.ck"
+@import "card_music.ck"
 
 G2D g;
 g.antialias(true);
 GG.outputPass().gamma(false);
 
 g.backgroundColor(.2 * Color.GREEN);
+
 
 // == load assets ================================================
 TextureLoadDesc tex_load_desc;
@@ -576,6 +581,10 @@ int num_wins;
 float gametime;
 float win_time;
 
+// options
+true => int sfx_on;
+true => int music_on;
+
 // room
 Room_Play => int room;
 int display_rules;
@@ -600,6 +609,228 @@ Stack stacks[7];
 Stack ace_stack[4];
 
 // ============================================
+
+// == sound ================================================
+class Sound {
+    ADSR sfx_adsr => GVerb gverb => dac;
+    sfx_adsr.keyOn();
+    gverb.revtime(.5::second);
+    gverb.roomsize(20);
+
+    CardMusic card_music;
+    card_music.rev => ADSR music_adsr => gverb;
+    card_music.rev.gain(0);
+    music_adsr.keyOn(); // default music on
+
+    SinOsc win_sounds[5];
+    ADSR win_adsr(2::second, 4::second, 0, 1::second) => gverb;
+    for (auto s : win_sounds) {
+        .04 => s.gain;
+        s => win_adsr;
+    }
+
+    SndBuf magpie_forest(me.dir() + "./card_assets/magpie-moon.wav") => HPF magpie_bpf(1000, 1) => music_adsr;
+    1 => magpie_forest.loop;
+
+    ModalBar pickup_card_sfx => LPF ooo(8000) => sfx_adsr;
+    0 => pickup_card_sfx.preset;  // marimba
+    .8 => pickup_card_sfx.gain;
+
+    ModalBar reject_sfx => LPF r(10000) => sfx_adsr;
+    5 => reject_sfx.preset;
+    1.5 => reject_sfx.masterGain;
+
+    ModalBar click_nothing => sfx_adsr;
+    5 => click_nothing.preset;
+    1.5 => click_nothing.masterGain;
+
+    ModalBar swap0 => sfx_adsr;
+    6 => swap0.preset;
+    2 => swap0.masterGain;
+    ModalBar swap1 => sfx_adsr;
+    6 => swap1.preset;
+    2 => swap1.masterGain;
+
+    fun void enableSfx(int b) {
+        if (b) sfx_adsr.keyOn();
+        else sfx_adsr.keyOff();
+    }
+
+    fun void enableMusic(int b) {
+        if (b) music_adsr.keyOn();
+        else music_adsr.keyOff();
+    }
+
+
+    fun void win() {
+        freq(Math.random2(1,10)) => win_sounds[0].freq;
+        freq(Math.random2(1,10)) => win_sounds[1].freq;
+        freq(Math.random2(1,10)) => win_sounds[2].freq;
+        freq(Math.random2(1,10)) => win_sounds[3].freq;
+        freq(Math.random2(1,10)) => win_sounds[4].freq;
+        win_adsr.keyOn();
+    }
+
+    fun void swap(Card@ a, Card@ b) {
+        freq(a.val) => swap0.freq;
+        freq(b.val) => swap1.freq;
+        2 * swap0.noteOn(Math.random2f(.9, 1));
+        2 * swap1.noteOn(Math.random2f(.9, 1));
+    }
+
+    fun void returnAce(Card@ ace) {
+        freq(ace.val) => swap0.freq;
+        2 * swap0.noteOn(Math.random2f(.9, 1));
+    }
+
+    Shakers bamboo => LPF bamboo_lpf(2300);
+    8 => bamboo.gain;
+    22 => bamboo.which;
+
+    [
+        -3,
+        0,  // A
+        2,  // 1
+        4,  // 2
+        7,  // 3
+        9,  // 4
+        11, // 5
+        12, // 6
+        14, // 7
+        16, // 8
+        19, // 9
+        21, // 10
+        23, // J
+    ] @=> int val2midi[];
+    60 => int root;
+
+    [
+        new SndBuf(me.dir() + "./card_assets/paper_med_1.wav"),
+        new SndBuf(me.dir() + "./card_assets/paper_med_2.wav"),
+        new SndBuf(me.dir() + "./card_assets/paper_med_4.wav"),
+    ] @=> SndBuf paper_bank[];
+    BPF paper_hpf(1500, 2) => sfx_adsr;
+    for (auto s : paper_bank) {
+        s => paper_hpf;
+        s.rate(0);
+    }
+
+    fun float freq(int val) {
+        return Std.mtof(root + val2midi[val]);
+    }
+
+    fun void shuffle() { spork ~ shuffleImpl(); }
+    fun void shuffleImpl() {
+        bamboo => sfx_adsr;
+        freq(Math.random2(1, 10)) => bamboo.freq;
+        (Math.random2(10, 60)) => bamboo.objects;
+        2 => bamboo.noteOn;
+        .7::second => now;
+        bamboo.noteOff(.0);
+        bamboo =< sfx_adsr;
+    }
+
+    fun void paper() { 
+        paper_bank[Math.random2(0, paper_bank.size()-1)] @=> SndBuf@ buf;
+        buf.pos(0);
+        buf.rate(1);
+    }
+
+    fun void pickup(Card@ c, vec2 card_pos) { 
+        Math.remap(
+            c.val * (c.suit + 1),
+            1, 40,
+            .2, 1
+        ) => pickup_card_sfx.stickHardness;
+        Math.clampf(M.dist(card_pos, g.mousePos()), 0, 1) => pickup_card_sfx.strikePosition;
+        freq(c.val) => pickup_card_sfx.freq;
+        pickup_card_sfx.noteOn(Math.random2f(.9, 1.0));
+    }
+
+
+    fun void reject() { 
+        Math.random2f(0, 1) => click_nothing.stickHardness;
+        Math.random2f(0, 1) => click_nothing.strikePosition;
+        Math.random2f(0, 1) => click_nothing.vibratoGain;
+        Math.random2f(0, 60) => click_nothing.vibratoFreq;
+        click_nothing.noteOn(Math.random2f(.9, 1.0));
+    }
+
+    fun void reject(Card@ c) { 
+        Math.remap(
+            c.val * (c.suit + 1),
+            1, 40,
+            .0, 1
+        ) => reject_sfx.stickHardness;
+        Math.clampf(M.dist(c.pos(), g.mousePos()), 0, 1) => reject_sfx.strikePosition;
+        freq(c.val) => reject_sfx.freq;
+        reject_sfx.noteOn(Math.random2f(.9, 1.0));
+    }
+
+    
+    [
+        -3,
+        0,  // A
+        2,  // 1
+        4,  // 2
+        7,  // 3
+        9,  // 4
+        12, // 5
+        14, // 6
+        16, // 7
+        19, // 8
+        21, // 9
+        24, // 10
+        26, // J
+    ] @=> int val2midi_music[];
+    fun void musicShred() {
+        while (1) {
+            Math.random2(8, 16) * 8::second => now;
+            card_music.rev.gain(.18);
+
+            card_music.bass_env.keyOn();
+            8::second => now;
+            card_music.tenor_env.keyOn();
+            8::second => now;
+            card_music.osc_env.keyOn();
+            8::second => now;
+            card_music.alto_env.keyOn();
+            8::second => now;
+            card_music.osc2_env.keyOn();
+            8::second => now;
+            card_music.soprano_env.keyOn();
+            8::second => now;
+            card_music.shimmer_switch.keyOn();
+            8::second => now;
+            8::second => now;
+            card_music.mainOff(8::second);
+            card_music.allOff();
+        }
+    } spork ~ musicShred();
+
+    // tried setting melody based on current cards, but sounds repetitive
+    fun void soundbankShred() {
+        while (1) {
+            8::second => now;
+            // load current stack state into notes
+            card_music.notebank.clear();
+            for (auto s : stacks) {
+                maybe => int rise; // if true, adds card stack in reverse order
+                if (!rise) {
+                    for (auto c : s.cards) {
+                        card_music.notebank << val2midi_music[c.val] + root;
+                    }
+                } else {
+                    for (s.cards.size() - 1 => int i; i >= 0; i--) {
+                        card_music.notebank << val2midi_music[s.cards[i].val] + root;
+                    }
+
+                }
+            }
+        }
+    } spork ~ soundbankShred();
+}
+Sound sfx;
 
 // called once per app-start, to initialize 
 fun void init() {
@@ -627,6 +858,7 @@ fun void init() {
 
 // called once per hand/game to reset board
 int deal_gen;
+true => int first_deal;
 fun void deal() {
     ++deal_gen => int curr_gen;
 
@@ -652,6 +884,11 @@ fun void deal() {
     for (auto stack : stacks) stack.clear();
     for (auto stack : ace_stack) stack.clear();
 
+    if (first_deal) {
+        1::second => now;
+        false => first_deal;
+    }
+
     // add aces
     for (int suit; suit < Suit_Count; suit++) {
         ace_stack[suit].clear();
@@ -667,6 +904,8 @@ fun void deal() {
             stacks[i].add(deck[i*6 + j], false);
         }
     }
+
+    sfx.shuffle();
 
     // move last empty stack to middle
     // stacks[-1] @=> Stack tmp;
@@ -828,28 +1067,47 @@ fun void drawRules() {
     g.popLayer();
 }
 
+fun int button(string text, vec2 center, vec3 color) {
+    M.inside(g.mousePos(), center - @(1.1, .3), center) => int inside;
+
+    if (inside) {
+        g.pushColor(color);
+    } else {
+        g.pushColor(.8 * Color.WHITE);
+    }
+    g.text(text, center, .5 * CARD_HW);
+    g.popColor();
+
+    return inside && g.mouseLeftDown();
+}
+
+
 // empty frame to load
 GG.nextFrame() => now;
 
+
+false => int do_ui;
 while (1) {
     GG.nextFrame() => now;
     g.mousePos() => vec2 mouse_pos;
     GG.dt() +=> gametime;
 
     // ui
-    UI.slider("card inner pad", CARD_INNER_PAD, 0, 1);
-    UI.slider("card symbol size", SYMBOL_SIZE, 0, 2);
-    UI.slider("suit symbol offset", SUIT_SYMBOL_OFFSET, -1, 1);
-    UI.slider("stack spacing", STACK_SPACING, 0, 1);
-    UI.slider("stack dy", STACK_OFFET_RATIO, 0, 1);
-    UI.colorEdit("background color", BACKGROUND_COLOR);
-    UI.slider("acemat symbol", ACE_STACK_SYMBOL, 0, 1);
-    UI.slider("card anim zeno", CARD_ZENO_INTERP, 0, 1);
+    if (do_ui) {
+        UI.slider("card inner pad", CARD_INNER_PAD, 0, 1);
+        UI.slider("card symbol size", SYMBOL_SIZE, 0, 2);
+        UI.slider("suit symbol offset", SUIT_SYMBOL_OFFSET, -1, 1);
+        UI.slider("stack spacing", STACK_SPACING, 0, 1);
+        UI.slider("stack dy", STACK_OFFET_RATIO, 0, 1);
+        UI.colorEdit("background color", BACKGROUND_COLOR);
+        UI.slider("acemat symbol", ACE_STACK_SYMBOL, 0, 1);
+        UI.slider("card anim zeno", CARD_ZENO_INTERP, 0, 1);
 
-    for (int i; i < Suit_Count; i++) {
-        UI.pushID(i);
-        UI.colorEdit("suit color "+ card_symbol_names[i], ace_colors[i]);
-        UI.popID();
+        for (int i; i < Suit_Count; i++) {
+            UI.pushID(i);
+            UI.colorEdit("suit color "+ card_symbol_names[i], ace_colors[i]);
+            UI.popID();
+        }
     }
 
     // instructions input
@@ -859,6 +1117,7 @@ while (1) {
         if (g.mouseLeftDown()) {
             false => display_rules;
             true => bypass_rule_button;
+            sfx.paper();
         }
     }
 
@@ -883,21 +1142,37 @@ while (1) {
         // bbox
         // g.box(center - @(1.1, .3), center);
 
-        .5 * CARD_HH -=> center.y;
+        .4 * CARD_HH -=> center.y;
 
         if (M.inside(mouse_pos, center - @(1.1, .3), center)) {
             g.pushColor(ace_colors[1].val());
-            if (!bypass_rule_button && g.mouseLeftDown()) true => display_rules;
+            if (!bypass_rule_button && g.mouseLeftDown()) {
+                sfx.paper();
+                // sfx.swoosh();
+                true => display_rules;
+            }
         } else {
             g.pushColor(.8 * Color.WHITE);
         }
         g.text("rules", center, .5 * CARD_HW);
         g.popColor();
 
-        // bbox
-        // g.box(center - @(1.1, .3), center);
+        .5 * CARD_HH -=> center.y;
 
-        .6 * CARD_HH -=> center.y;
+        if (button("sfx:" + (sfx_on ? "on" : "off"), center, ace_colors[2].val())) {
+            !sfx_on => sfx_on;
+            sfx.enableSfx(sfx_on);
+        }
+
+        .5 * CARD_HH -=> center.y;
+
+        if (button("music:" + (music_on ? "on" : "off"), center, ace_colors[3].val())) {
+            !music_on => music_on;
+            sfx.enableMusic(music_on);
+            sfx.reject();
+        }
+
+        .5 * CARD_HH -=> center.y;
         g.pushColor(.8 * Color.WHITE);
         g.text("W:" + num_wins, center, .5 * CARD_HW);
         g.popColor();
@@ -985,7 +1260,14 @@ while (1) {
 
                         // add hovered to ace stack
                         ace_stack[selected_ace.suit].add(hovered_card, true);
+
+                        // play sound
+                        sfx.swap(selected_ace, hovered_card);
+                    } else {
+                        sfx.reject(selected_ace);
                     }
+                } else {
+                    sfx.reject(selected_ace);
                 }
 
                 false => selected_ace.selected;
@@ -995,6 +1277,7 @@ while (1) {
                 hovered_card @=> selected_ace;
                 true => selected_ace.selected;
                 false => selected_ace.was_swapped;
+                sfx.pickup(selected_ace, selected_ace.pos());
             }
             else if (selected_ace == null && hovered_card != null && hovered_card.legalToPickup()) {
                 hovered_card.stack @=> Stack stack;
@@ -1013,20 +1296,45 @@ while (1) {
                     true => c.selected;
                     false => c.was_swapped;
                 }
+
+                // play pickup card sfx
+                sfx.pickup(held_cards[0], held_cards[0].pos());
+            }
+            else if (hovered_card != null && !hovered_card.legalToPickup()) {
+                sfx.reject(hovered_card);
             }
         }
 
         // drop cards
         if (g.mouseLeftUp() && held_cards.size()) {
+            held_cards[0].stack @=> Stack original_stack;
             Stack @stack;
 
-            // no stack hovered OR illegal move, put back in originalA
+            // no stack hovered OR illegal move, put back in original
             if (hovered_card != null && hovered_card.stack.legalToAdd(held_cards[0])) hovered_card.stack @=> stack;
             else if (hovered_stack != null && hovered_stack.legalToAdd(held_cards[0])) hovered_stack @=> stack;
             else if (held_cards.size() == 1 && hovered_ace_stack != null && hovered_ace_stack.empty() && held_cards[0].suit == hovered_ace_stack.suit) {
                 hovered_ace_stack @=> stack;
             }
             else held_cards[0].stack @=> stack;
+
+            if (stack == original_stack) {
+                // sfx.swoosh();
+                // sfx.pickup(held_cards[0], held_cards[0].pos());
+                sfx.reject(held_cards[0]);
+            } else {
+                vec2 pos;
+                Card@ c;
+                if (stack.empty()) {
+                    stack.pos => pos;
+                    held_cards[0] @=> c;
+                }
+                else {
+                    stack.cards[-1] @=> c;
+                    stack.cards[-1].pos() => pos;
+                }
+                sfx.pickup(c, pos);
+            }
 
             // add to selected stack
             for (auto c : held_cards) {
@@ -1046,6 +1354,7 @@ while (1) {
                     s.pop();
                     // put it back
                     ace_stack[ace.suit].add(ace, true);
+                    sfx.returnAce(ace);
                 }
             }
         }
@@ -1102,12 +1411,14 @@ while (1) {
     g.popLayer();
 
     // check win condition
-    if (room == Room_Play && winstate() || UI.button("win")) {
+    if (room == Room_Play && winstate() || (UI.button("win"))) {
         Room_Win => room;
         gametime => win_time;
 
         ++num_wins;
         saveWinCount();
+
+        sfx.win();
 
         // deselect all cards
         for (auto c : deck) {
