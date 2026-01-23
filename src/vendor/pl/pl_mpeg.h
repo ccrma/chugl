@@ -724,6 +724,9 @@ plm_samples_t* plm_audio_decode(plm_audio_t* self);
 #endif
 
 #define PLM_UNUSED(expr) (void)(expr)
+#ifdef _MSC_VER
+#pragma warning(disable : 4996)
+#endif
 
 // -----------------------------------------------------------------------------
 // plm (high-level interface) implementation
@@ -1006,7 +1009,8 @@ void plm_rewind(plm_t* self)
     }
 
     plm_demux_rewind(self->demux);
-    self->time = 0;
+    self->time      = 0;
+    self->has_ended = FALSE;
 }
 
 int plm_get_loop(plm_t* self)
@@ -1069,7 +1073,8 @@ void plm_decode_last_frame_only(plm_t* self, double tick)
             // only callback on the final frame of this tick
             if (frame) {
                 did_decode = TRUE;
-                if (plm_video_get_time(self->video_decoder) + (1.0 / plm_get_framerate(self))
+                if (plm_video_get_time(self->video_decoder)
+                      + (1.0 / plm_get_framerate(self))
                     >= video_target_time) {
                     self->video_decode_callback(self, frame,
                                                 self->video_decode_callback_user_data);
@@ -1891,7 +1896,7 @@ int plm_demux_has_headers(plm_demux_t* self)
 
 int plm_demux_probe(plm_demux_t* self, size_t probesize)
 {
-    int previous_pos = (int) plm_buffer_tell(self->buffer);
+    int previous_pos = (int)plm_buffer_tell(self->buffer);
 
     int video_stream     = FALSE;
     int audio_streams[4] = { FALSE, FALSE, FALSE, FALSE };
@@ -1955,7 +1960,7 @@ double plm_demux_get_start_time(plm_demux_t* self, int type)
         return self->start_time;
     }
 
-    int previous_pos        = (int) plm_buffer_tell(self->buffer);
+    int previous_pos        = (int)plm_buffer_tell(self->buffer);
     int previous_start_code = self->start_code;
 
     // Find first video PTS
@@ -3044,7 +3049,7 @@ void plm_video_decode_picture(plm_video_t* self)
     // Decode all slices
     while (PLM_START_IS_SLICE(self->start_code)) {
         plm_video_decode_slice(self, self->start_code & 0x000000FF);
-        if (self->macroblock_address >= self->mb_size - 2) {
+        if (self->macroblock_address >= self->mb_size - 1) {
             break;
         }
         self->start_code = plm_buffer_next_start_code(self->buffer);
@@ -4140,12 +4145,12 @@ void plm_audio_decode_frame(plm_audio_t* self)
                     float* out_channel
                       = ch == 0 ? self->samples.left : self->samples.right;
                     for (int j = 0; j < 32; j++) {
-                        out_channel[out_pos + j] = self->U[j] / 2147418112.0f;
+                        out_channel[out_pos + j] = self->U[j] / -1090519040.0f;
                     }
 #else
                     for (int j = 0; j < 32; j++) {
                         self->samples.interleaved[((out_pos + j) << 1) + ch]
-                          = self->U[j] / 2147418112.0f;
+                          = self->U[j] / -1090519040.0f;
                     }
 #endif
                 } // End of synthesis channel loop
