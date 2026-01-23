@@ -685,7 +685,7 @@ static LoadImageResult R_Texture_LoadImage(LoadImageParams p)
     stbi_set_flip_vertically_on_load(p.flip_y);
 
     // currently only support ldr (TODO add hdr f16 and f32)
-    ASSERT(p.format == WGPUTextureFormat_RGBA8Unorm);
+    ASSERT(p.format & (WGPUTextureFormat_RGBA8Unorm | WGPUTextureFormat_RGBA8UnormSrgb));
 
     if (p.type == LoadImageType_File) {
         result.pixel_data_OWNED = stbi_load(p.filepath,         //

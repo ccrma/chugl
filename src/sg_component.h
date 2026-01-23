@@ -195,6 +195,7 @@ struct SG_TextureLoadDesc {
     bool gen_mips         = true;
     bool read_to_ck_array = false; // on audio thread, during load also read data into
                                    // Texture.data() ck array
+    bool is_srgb = false;          // if true, will pick srgb version of format
 };
 
 struct SG_TextureLocation {

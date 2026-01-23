@@ -90,6 +90,7 @@ CK_DLL_CTOR(texture_load_desc_ctor);
 static t_CKUINT texture_load_desc_flip_y_offset      = 0;
 static t_CKUINT texture_load_desc_gen_mips_offset    = 0;
 static t_CKUINT texture_load_desc_load_to_cpu_offset = 0;
+static t_CKUINT texture_load_desc_is_srgb            = 0;
 
 // TextureSaveEvent -----------------------------------------------------------------
 static t_CKUINT texture_save_event_status_offset = 0;
@@ -328,6 +329,11 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
         DOC_VAR(
           "When loading, also write the texture data to a chuck array, accessible via "
           "Texture.data(). Default false, due to the steep performance cost.");
+
+        texture_load_desc_is_srgb = MVAR("int", "srgb", false);
+        DOC_VAR(
+          "If true, creates an sRGB texture variant. When sampled in a shader, the "
+          "value from this texture will be convered from srgb-space to linear-space");
 
         END_CLASS();
     }
@@ -741,6 +747,7 @@ CK_DLL_CTOR(texture_load_desc_ctor)
     OBJ_MEMBER_INT(SELF, texture_load_desc_flip_y_offset)      = false;
     OBJ_MEMBER_INT(SELF, texture_load_desc_gen_mips_offset)    = true;
     OBJ_MEMBER_INT(SELF, texture_load_desc_load_to_cpu_offset) = false;
+    OBJ_MEMBER_INT(SELF, texture_load_desc_is_srgb)            = false;
 }
 
 static SG_TextureLoadDesc ulib_texture_textureLoadDescFromCkobj(Chuck_Object* ckobj)
@@ -751,6 +758,7 @@ static SG_TextureLoadDesc ulib_texture_textureLoadDescFromCkobj(Chuck_Object* ck
     desc.flip_y             = OBJ_MEMBER_INT(ckobj, texture_load_desc_flip_y_offset);
     desc.gen_mips           = OBJ_MEMBER_INT(ckobj, texture_load_desc_gen_mips_offset);
     desc.read_to_ck_array = OBJ_MEMBER_INT(ckobj, texture_load_desc_load_to_cpu_offset);
+    desc.is_srgb          = OBJ_MEMBER_INT(ckobj, texture_load_desc_is_srgb);
 
     return desc;
 }
@@ -1034,9 +1042,14 @@ SG_Texture* ulib_texture_load(const char* filepath, SG_TextureLoadDesc* load_des
     desc.width          = abs(width);
     desc.height         = abs(height);
     desc.dimension      = WGPUTextureDimension_2D;
-    desc.format         = WGPUTextureFormat_RGBA8Unorm;
+    desc.format         = load_desc->is_srgb ? WGPUTextureFormat_RGBA8UnormSrgb :
+                                               WGPUTextureFormat_RGBA8Unorm;
     desc.usage          = WGPUTextureUsage_All;
-    desc.gen_mips       = load_desc->gen_mips ? true : false;
+    // TextureUsages(STORAGE_BINDING) are not allowed on a texture of type
+    // Rgba8UnormSrgb as of wgpu-static-22.1.0.5
+    if (load_desc->is_srgb) desc.usage ^= WGPUTextureUsage_StorageBinding;
+
+    desc.gen_mips = load_desc->gen_mips ? true : false;
 
     SG_Texture* tex
       = SG_CreateTexture(&desc, NULL, shred, false, File_basename(filepath));

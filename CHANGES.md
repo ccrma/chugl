@@ -1,6 +1,7 @@
 # Changes
 
 ## 0.2.10 (alpha)
+- add `TextureLoadDesc.srgb` for loading image data into srgb textures
 - Bug fixes
   - fixed bug of FlatMaterial.emissive not being properly set
 
