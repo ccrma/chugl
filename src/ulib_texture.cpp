@@ -421,6 +421,7 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
         static t_CKINT texture_format_rgba32float = WGPUTextureFormat_RGBA32Float;
         static t_CKINT texture_format_r32float    = WGPUTextureFormat_R32Float;
         static t_CKINT texture_format_r32uint     = WGPUTextureFormat_R32Uint;
+        static t_CKINT texture_format_r8unorm     = WGPUTextureFormat_R8Unorm;
         SVAR("int", "Format_RGBA8Unorm", &texture_format_rgba8unorm);
         DOC_VAR("(hidden)");
         SVAR("int", "Format_RGBA16Float", &texture_format_rgba16float);
@@ -429,12 +430,15 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
         DOC_VAR("(hidden)");
         SVAR("int", "Format_R32Float", &texture_format_r32float);
         DOC_VAR("(hidden)");
+        SVAR("int", "Format_R8Unorm", &texture_format_r8unorm);
+        DOC_VAR("(hidden)");
 
         SVAR("int", "FORMAT_RGBA8UNORM", &texture_format_rgba8unorm);
         SVAR("int", "FORMAT_RGBA16FLOAT", &texture_format_rgba16float);
         SVAR("int", "FORMAT_RGBA32FLOAT", &texture_format_rgba32float);
         SVAR("int", "FORMAT_R32FLOAT", &texture_format_r32float);
         SVAR("int", "FORMAT_R32UINT", &texture_format_r32uint);
+        SVAR("int", "FORMAT_R8UNORM", &texture_format_r8unorm);
 
         // sfun ------------------------------------------------------------------
 

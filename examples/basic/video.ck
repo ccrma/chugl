@@ -10,6 +10,9 @@
 // find more mpeg samples here:
 //   https://filesamples.com/formats/mpeg
 //
+// convert an mp4 to mpg with the following terminal command:
+// ffmpeg -i input.mp4 -c:v mpeg1video -q:v 0 -c:a libtwolame -b:a 224k -format mpeg output.mpg
+//
 // authors: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
 //    date: Fall 2024
 //-----------------------------------------------------------------------------

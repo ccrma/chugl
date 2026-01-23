@@ -173,6 +173,7 @@ enum SG_CommandType : u32 {
     SG_COMMAND_VIDEO_UPDATE,
     SG_COMMAND_VIDEO_SEEK,
     SG_COMMAND_VIDEO_RATE,
+    SG_COMMAND_VIDEO_TEXTURE_MODE,
 
     // webcam
     SG_COMMAND_WEBCAM_CREATE,
@@ -586,6 +587,9 @@ struct SG_Command_MeshSetShadowed : public SG_Command {
 struct SG_Command_VideoUpdate : public SG_Command {
     SG_ID video_id;
     SG_ID rgba_video_texture_id;
+    SG_ID y_video_texture_id;
+    SG_ID cr_video_texture_id;
+    SG_ID cb_video_texture_id;
     ptrdiff_t path_offset;
 };
 
@@ -598,6 +602,11 @@ struct SG_Command_VideoRate : public SG_Command {
     SG_ID video_id;
     double rate;
     bool loop;
+};
+
+struct SG_Command_VideoTextureMode : public SG_Command {
+    SG_ID video_id;
+    SG_Video_TextureMode mode;
 };
 
 // webcam commands -----------------------------------------------------
@@ -800,6 +809,7 @@ void CQ_PushCommand_MeshSetShadowed(SG_Transform* xform, bool shadowed);
 void CQ_PushCommand_VideoUpdate(SG_Video* video);
 void CQ_PushCommand_VideoSeek(SG_ID video_id, double time);
 void CQ_PushCommand_VideoRate(SG_ID video_id, double rate, bool loop);
+void CQ_PushCommand_VideoTextureMode(SG_Video* video, int mode);
 
 // webcam
 void CQ_PushCommand_WebcamCreate(SG_Webcam* webcam, sr_webcam_device* device);

@@ -853,9 +853,13 @@ struct R_Video : public R_Component {
     plm_t* plm;            // plm_destroy(plm) to free
     GraphicsContext* gctx; // messy workaround for plm callbacks
     SG_ID video_texture_rgba_id;
+    SG_ID video_texture_y_id;
+    SG_ID video_texture_cr_id;
+    SG_ID video_texture_cb_id;
     u8* rgba_data_OWNED; // free with free(rgba_data)
     int rgba_data_size;
     float rate = 1.0f;
+    SG_Video_TextureMode texture_mode;
 };
 
 // =============================================================================
@@ -906,7 +910,7 @@ R_Buffer* Component_CreateBuffer(SG_ID id);
 R_Light* Component_CreateLight(SG_ID id, SG_LightDesc* desc, WGPUDevice device,
                                WGPULimits* limits);
 R_Video* Component_CreateVideo(GraphicsContext* gctx, SG_ID id, const char* filename,
-                               SG_ID rgba_texture_id);
+                               SG_Command_VideoUpdate* cmd);
 R_Webcam* Component_CreateWebcam(SG_Command_WebcamCreate* cmd);
 
 R_Component* Component_GetComponent(SG_ID id);

@@ -1064,6 +1064,9 @@ void CQ_PushCommand_VideoUpdate(SG_Video* video)
                                          SG_COMMAND_VIDEO_UPDATE, path_len);
     command->video_id              = video->id;
     command->rgba_video_texture_id = video->video_texture_rgba_id;
+    command->y_video_texture_id    = video->video_texture_y_id;
+    command->cr_video_texture_id   = video->video_texture_cr_id;
+    command->cb_video_texture_id   = video->video_texture_cb_id;
     command->path_offset           = Arena::offsetOf(cq.write_q, memory);
     strncpy((char*)memory, path, path_len);
     END_COMMAND();
@@ -1083,6 +1086,15 @@ void CQ_PushCommand_VideoRate(SG_ID video_id, double rate, bool loop)
     command->video_id = video_id;
     command->rate     = rate;
     command->loop     = loop;
+    END_COMMAND();
+}
+
+void CQ_PushCommand_VideoTextureMode(SG_Video* video, SG_Video_TextureMode mode)
+{
+    ASSERT(video->texture_mode == mode);
+    BEGIN_COMMAND(SG_Command_VideoTextureMode, SG_COMMAND_VIDEO_TEXTURE_MODE);
+    command->video_id = video->id;
+    command->mode     = mode;
     END_COMMAND();
 }
 

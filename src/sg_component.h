@@ -953,10 +953,23 @@ struct SG_Light : public SG_Transform {
 // SG Video
 // ============================================================================
 
+enum SG_Video_TextureMode : u8 {
+    SG_Video_TextureMode_RGBA = 0,
+    SG_Video_TextureMode_YCRCB,
+    SG_Video_TextureMode_Count,
+};
+
 struct SG_Video : public SG_Component {
     plm_t* plm;
     const char* path_OWNED; // malloced, must free
+
     SG_ID video_texture_rgba_id;
+
+    // YCrCb textures
+    SG_ID video_texture_y_id;
+    SG_ID video_texture_cr_id;
+    SG_ID video_texture_cb_id;
+
     float framerate;
     int samplerate;
     float duration_secs;
@@ -967,6 +980,8 @@ struct SG_Video : public SG_Component {
     plm_samples_t* samples;
     float last_audio_samples[2]; // last audio samples (left/right channel) from
                                  // previous audio frame. used for interpolation
+
+    SG_Video_TextureMode texture_mode;
 
     // get length of video in samples
     static int audioFrames(SG_Video* video)

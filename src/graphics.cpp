@@ -788,6 +788,8 @@ int G_componentsPerTexel(WGPUTextureFormat format)
 int G_bytesPerTexel(WGPUTextureFormat format)
 {
     switch (format) {
+        case WGPUTextureFormat_R8Unorm:
+            return 1;
         case WGPUTextureFormat_RGBA8Unorm:
         case WGPUTextureFormat_RGBA8UnormSrgb:
             return 4;

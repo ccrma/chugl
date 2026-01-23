@@ -1,5 +1,9 @@
 TODO
 
+BUGS
+- rendering material with null shader causes crash. should log warn and skip.
+- chuck bug-- referencing variable of same type in constructor causes bad.
+
 https://jrouwe.github.io/JoltPhysics/index.html
 - multithreaded 3D physics
 - if safe to read/write from chuck audio thread then can integrate

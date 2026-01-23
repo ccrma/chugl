@@ -685,7 +685,8 @@ static LoadImageResult R_Texture_LoadImage(LoadImageParams p)
     stbi_set_flip_vertically_on_load(p.flip_y);
 
     // currently only support ldr (TODO add hdr f16 and f32)
-    ASSERT(p.format & (WGPUTextureFormat_RGBA8Unorm | WGPUTextureFormat_RGBA8UnormSrgb));
+    ASSERT(p.format
+           & (WGPUTextureFormat_RGBA8Unorm | WGPUTextureFormat_RGBA8UnormSrgb));
 
     if (p.type == LoadImageType_File) {
         result.pixel_data_OWNED = stbi_load(p.filepath,         //
@@ -2242,35 +2243,56 @@ static void R_Video_OnVideo(plm_t* player, plm_frame_t* frame, void* video_id)
     //     app_update_texture(self, GL_TEXTURE2, self->texture_cr, &frame->cr);
     // } else {
 
-    R_Texture* video_texture_rgba = Component_GetTexture(video->video_texture_rgba_id);
+    if (video->texture_mode == SG_Video_TextureMode_YCRCB) {
+        R_Texture* video_texture_y  = Component_GetTexture(video->video_texture_y_id);
+        R_Texture* video_texture_cr = Component_GetTexture(video->video_texture_cr_id);
+        R_Texture* video_texture_cb = Component_GetTexture(video->video_texture_cb_id);
 
-    { // memory bounds check
-        // check texture
-        ASSERT(video_texture_rgba);
-        ASSERT(video_texture_rgba->desc.width == frame->width);
-        ASSERT(video_texture_rgba->desc.height == frame->height);
-        ASSERT(video_texture_rgba->desc.depth == 1);
-        ASSERT(!video_texture_rgba->desc.gen_mips);
-        ASSERT(video_texture_rgba->desc.format
-               == WGPUTextureFormat_RGBA8Unorm); // TODO might need to go srgb
+        SG_TextureWriteDesc write_desc = {};
+        write_desc.width               = frame->y.width;
+        write_desc.height              = frame->y.height;
+        R_Texture::write(video->gctx, video_texture_y, &write_desc, frame->y.data,
+                         frame->y.width * frame->y.height);
+        write_desc.width  = frame->cr.width;
+        write_desc.height = frame->cr.height;
+        R_Texture::write(video->gctx, video_texture_cr, &write_desc, frame->cr.data,
+                         frame->cr.width * frame->cr.height);
+        write_desc.width  = frame->cb.width;
+        write_desc.height = frame->cb.height;
+        R_Texture::write(video->gctx, video_texture_cb, &write_desc, frame->cb.data,
+                         frame->cb.width * frame->cb.height);
+    } else {
+        R_Texture* video_texture_rgba
+          = Component_GetTexture(video->video_texture_rgba_id);
 
-        // check cpu pixel buffer size
-        ASSERT(video->rgba_data_size == frame->width * frame->height * 4);
-        ASSERT(video->rgba_data_OWNED);
+        { // memory bounds check
+            // check texture
+            ASSERT(video_texture_rgba);
+            ASSERT(video_texture_rgba->desc.width == frame->width);
+            ASSERT(video_texture_rgba->desc.height == frame->height);
+            ASSERT(video_texture_rgba->desc.depth == 1);
+            ASSERT(!video_texture_rgba->desc.gen_mips);
+            ASSERT(video_texture_rgba->desc.format
+                   == WGPUTextureFormat_RGBA8Unorm); // TODO might need to go srgb
+
+            // check cpu pixel buffer size
+            ASSERT(video->rgba_data_size == frame->width * frame->height * 4);
+            ASSERT(video->rgba_data_OWNED);
+        }
+
+        // convert yCrCb to rgba
+        plm_frame_to_rgba(frame, video->rgba_data_OWNED, frame->width * 4);
+
+        SG_TextureWriteDesc write_desc = {};
+        write_desc.width               = frame->width;
+        write_desc.height              = frame->height;
+        R_Texture::write(video->gctx, video_texture_rgba, &write_desc,
+                         video->rgba_data_OWNED, video->rgba_data_size);
     }
-
-    // convert yCrCb to rgba
-    plm_frame_to_rgba(frame, video->rgba_data_OWNED, frame->width * 4);
-
-    SG_TextureWriteDesc write_desc = {};
-    write_desc.width               = frame->width;
-    write_desc.height              = frame->height;
-    R_Texture::write(video->gctx, video_texture_rgba, &write_desc,
-                     video->rgba_data_OWNED, video->rgba_data_size);
 }
 
 R_Video* Component_CreateVideo(GraphicsContext* gctx, SG_ID id, const char* filename,
-                               SG_ID rgba_texture_id)
+                               SG_Command_VideoUpdate* cmd)
 {
     Arena* arena   = &videoArena;
     R_Video* video = ARENA_PUSH_TYPE(arena, R_Video);
@@ -2289,7 +2311,10 @@ R_Video* Component_CreateVideo(GraphicsContext* gctx, SG_ID id, const char* file
 
     { // video init (TODO move to video Desc struct)
         video->gctx                  = gctx;
-        video->video_texture_rgba_id = rgba_texture_id;
+        video->video_texture_rgba_id = cmd->rgba_video_texture_id;
+        video->video_texture_y_id    = cmd->y_video_texture_id;
+        video->video_texture_cr_id   = cmd->cr_video_texture_id;
+        video->video_texture_cb_id   = cmd->cb_video_texture_id;
 
         video->plm = plm_create_with_filename(filename);
 

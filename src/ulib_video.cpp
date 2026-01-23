@@ -52,12 +52,19 @@ CK_DLL_CTOR(video_ctor);
 CK_DLL_CTOR(video_ctor_with_path);
 CK_DLL_TICKF(video_tick_multichannel);
 
+// video decompression mode
+CK_DLL_MFUN(video_get_texture_mode);
+CK_DLL_MFUN(video_set_texture_mode);
+
 // video metadata
 CK_DLL_MFUN(video_get_framerate);
 CK_DLL_MFUN(video_get_samplerate);
 CK_DLL_MFUN(video_get_length);
 
 CK_DLL_MFUN(video_get_texture_rgba);
+CK_DLL_MFUN(video_get_texture_y);
+CK_DLL_MFUN(video_get_texture_cr);
+CK_DLL_MFUN(video_get_texture_cb);
 CK_DLL_MFUN(video_get_width_texels);
 CK_DLL_MFUN(video_get_height_texels);
 
@@ -112,8 +119,22 @@ void ulib_video_query(Chuck_DL_Query* QUERY)
           "command-line ffmpeg command: `ffmpeg -i input.mp4 -c:v mpeg1video -q:v 0 "
           "-c:a mp2 -format mpeg output.mpg`");
         ADD_EX("basic/video.ck");
+        ADD_EX("basic/video-ycrcb.ck");
 
         video_component_offset_id = MVAR("int", "@component_ptr", false);
+
+        static t_CKINT TEXTURE_MODE_RGBA  = SG_Video_TextureMode_RGBA;
+        static t_CKINT TEXTURE_MODE_YCRCB = SG_Video_TextureMode_YCRCB;
+
+        SVAR("int", "MODE_RGBA", &TEXTURE_MODE_RGBA);
+        DOC_VAR(
+          "The default mode. Equals 0. The raw YCrCb video data is converted to RGBA "
+          "on the CPU.");
+        SVAR("int", "MODE_YCRCB", &TEXTURE_MODE_YCRCB);
+        DOC_VAR(
+          "Equals 1. Copies the raw YCrCb video data directly to the video textures. "
+          "Significantly reduces CPU overhead, but conversion must happen in a "
+          "shader.");
 
         QUERY->add_ugen_funcf(QUERY, video_tick_multichannel, NULL,
                               0, // 0 channels in
@@ -139,6 +160,24 @@ void ulib_video_query(Chuck_DL_Query* QUERY)
           "the "
           "video object will default to a static magenta video texture.");
 
+        MFUN(video_get_texture_mode, "int", "mode");
+        DOC_FUNC("Get the texture conversion mode for this video.");
+
+        MFUN(video_set_texture_mode, "void", "mode");
+        ARG("int", "mode");
+        DOC_FUNC(
+          "Set the texture conversion mode for this video. Valid values are "
+          "Video.MODE_RGBA and Video.MODE_YCRCB. Defaults to Video.MODE_RGBA,"
+          "which converts the decoded "
+          "video YCrCb planes into into rgba format and writes them to the rgba "
+          "texture, accessible via Video.texture(). However, this YCrCb-->RGBA "
+          "conversion is very costly (taking as much time as all the other video "
+          "decodings steps combined). Setting Video.MODE_YCRCB will skip this costly "
+          "conversion steps and write the individual planes to their own textures, "
+          "Video.textureY(), Video.textureCr(), Video.textureCb(), where they may be "
+          "sampled and converted in parallel on a shader. See "
+          "examples/deep/video-ycrcb.ck for an demonstration of how to do so.");
+
         MFUN(video_get_framerate, "float", "framerate");
         DOC_FUNC("Get the framerate of the video.");
 
@@ -152,7 +191,24 @@ void ulib_video_query(Chuck_DL_Query* QUERY)
         DOC_FUNC("Get total length of the file as a duration.");
 
         MFUN(video_get_texture_rgba, SG_CKNames[SG_COMPONENT_TEXTURE], "texture");
-        DOC_FUNC("Get the RGBA texture of the video.");
+        DOC_FUNC(
+          "Get the RGBA texture of the video. Only updated if Video.mode() == "
+          "Video.MODE_RGBA");
+
+        MFUN(video_get_texture_y, SG_CKNames[SG_COMPONENT_TEXTURE], "textureY");
+        DOC_FUNC(
+          "Get the decoded Luma plane of the video. Only updated if Video.mode() == "
+          "Video.MODE_YCRCB");
+
+        MFUN(video_get_texture_cr, SG_CKNames[SG_COMPONENT_TEXTURE], "textureCr");
+        DOC_FUNC(
+          "Get the decoded Cr chroma plane of the video. Only updated if Video.mode() "
+          "== Video.MODE_YCRCB");
+
+        MFUN(video_get_texture_cb, SG_CKNames[SG_COMPONENT_TEXTURE], "textureCb");
+        DOC_FUNC(
+          "Get the decoded Cb chroma plane of the video. Only updated if Video.mode() "
+          "== Video.MODE_YCRCB");
 
         MFUN(video_get_width_texels, "int", "width");
         DOC_FUNC("Get the width of the video in texels.");
@@ -447,16 +503,35 @@ CK_DLL_CTOR(video_ctor_with_path)
         }
     }
 
-    // create the rgb video texture (TODO support YcbCr later)
+    int frame_w = plm_get_width(plm);
+    int frame_h = plm_get_height(plm);
+
+    // create the rgb video texture
     SG_TextureDesc desc = {};
-    desc.width          = plm_get_width(plm);
-    desc.height         = plm_get_height(plm);
+    desc.width          = frame_w;
+    desc.height         = frame_h;
     desc.dimension      = WGPUTextureDimension_2D;
     desc.format         = WGPUTextureFormat_RGBA8Unorm;
-    desc.usage          = WGPUTextureUsage_All; // TODO: restrict usage?
-    desc.gen_mips       = false;                // no mipmaps for video
+    desc.usage          = WGPUTextureUsage_All;
+    desc.gen_mips       = false;
 
     video_texture_rgba = SG_CreateTexture(&desc, NULL, SHRED, true);
+
+    // create the YCbCr video textures
+    desc.width     = NEXT_MULT16(frame_w); // Plane size rounded up to nearest 16 px
+    desc.height    = NEXT_MULT16(frame_h);
+    desc.dimension = WGPUTextureDimension_2D;
+    desc.format    = WGPUTextureFormat_R8Unorm;
+    // TextureUsages(STORAGE_BINDING) are not allowed on a texture of type R8Unorm
+    desc.usage                = WGPUTextureUsage_All ^ WGPUTextureUsage_StorageBinding;
+    desc.gen_mips             = false;
+    video->video_texture_y_id = SG_CreateTexture(&desc, NULL, SHRED, true)->id;
+
+    // Y plane is twice the width and height of the CbCr planes
+    desc.width                 = NEXT_MULT16(frame_w) / 2;
+    desc.height                = NEXT_MULT16(frame_h) / 2;
+    video->video_texture_cr_id = SG_CreateTexture(&desc, NULL, SHRED, true)->id;
+    video->video_texture_cb_id = SG_CreateTexture(&desc, NULL, SHRED, true)->id;
 
     // init remaining video fields
     video->plm                   = plm;
@@ -464,6 +539,25 @@ CK_DLL_CTOR(video_ctor_with_path)
     video->video_texture_rgba_id = video_texture_rgba->id;
 
     CQ_PushCommand_VideoUpdate(video);
+}
+
+CK_DLL_MFUN(video_get_texture_mode)
+{
+    RETURN->v_int = GET_VIDEO(SELF)->texture_mode;
+}
+
+CK_DLL_MFUN(video_set_texture_mode)
+{
+    SG_Video* video = GET_VIDEO(SELF);
+    if (!video->plm) return;
+
+    int mode = GET_NEXT_INT(ARGS);
+    SG_Video_TextureMode texture_mode
+      = (SG_Video_TextureMode)CLAMP(mode, 0, SG_Video_TextureMode_Count);
+    if (mode != video->texture_mode) {
+        video->texture_mode = texture_mode;
+        CQ_PushCommand_VideoTextureMode(video, texture_mode);
+    }
 }
 
 CK_DLL_MFUN(video_get_framerate)
@@ -485,6 +579,24 @@ CK_DLL_MFUN(video_get_texture_rgba)
 {
     SG_Video* video  = GET_VIDEO(SELF);
     RETURN->v_object = SG_GetTexture(video->video_texture_rgba_id)->ckobj;
+}
+
+CK_DLL_MFUN(video_get_texture_y)
+{
+    SG_Video* video  = GET_VIDEO(SELF);
+    RETURN->v_object = SG_GetTexture(video->video_texture_y_id)->ckobj;
+}
+
+CK_DLL_MFUN(video_get_texture_cr)
+{
+    SG_Video* video  = GET_VIDEO(SELF);
+    RETURN->v_object = SG_GetTexture(video->video_texture_cr_id)->ckobj;
+}
+
+CK_DLL_MFUN(video_get_texture_cb)
+{
+    SG_Video* video  = GET_VIDEO(SELF);
+    RETURN->v_object = SG_GetTexture(video->video_texture_cb_id)->ckobj;
 }
 
 CK_DLL_MFUN(video_get_width_texels)

@@ -2398,8 +2398,7 @@ static void _R_HandleCommand(App* app, SG_Command* command)
             if (!video)
                 Component_CreateVideo(
                   &app->gctx, cmd->video_id,
-                  (const char*)CQ_ReadCommandGetOffset(cmd->path_offset),
-                  cmd->rgba_video_texture_id);
+                  (const char*)CQ_ReadCommandGetOffset(cmd->path_offset), cmd);
         } break;
         case SG_COMMAND_VIDEO_SEEK: {
             SG_Command_VideoSeek* cmd = (SG_Command_VideoSeek*)command;
@@ -2415,6 +2414,11 @@ static void _R_HandleCommand(App* app, SG_Command* command)
                 video->rate = cmd->rate;
                 plm_set_loop(video->plm, cmd->loop);
             }
+        } break;
+        case SG_COMMAND_VIDEO_TEXTURE_MODE: {
+            SG_Command_VideoTextureMode* cmd = (SG_Command_VideoTextureMode*)command;
+            R_Video* video                   = Component_GetVideo(cmd->video_id);
+            if (video) video->texture_mode = cmd->mode;
         } break;
         case SG_COMMAND_WEBCAM_CREATE: {
             SG_Command_WebcamCreate* cmd = (SG_Command_WebcamCreate*)command;
