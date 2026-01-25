@@ -1411,11 +1411,20 @@ static void _R_RenderScene(App* app, R_Scene* scene, R_Pass* pass, R_Camera* cam
 
         // Get shader id from material
         R_Material* material = Component_GetMaterial(primitive->key.mat_id);
-        bool is_transparent  = material->pso.transparent;
         ASSERT(material);
-        R_Geometry* geo  = Component_GetGeometry(primitive->key.geo_id);
-        SG_ID shader_id  = material->pso.sg_shader_id;
-        R_Shader* shader = Component_GetShader(shader_id);
+        bool is_transparent = material->pso.transparent;
+        SG_ID shader_id     = material->pso.sg_shader_id;
+        R_Shader* shader    = Component_GetShader(shader_id);
+
+        if (shader == NULL) {
+            log_warn(
+              "Material[%s] has no shader, GMeshes that use this material cannot be "
+              "drawn",
+              material->name);
+            continue;
+        }
+
+        R_Geometry* geo = Component_GetGeometry(primitive->key.geo_id);
 
         // add to draw call list
         G_DrawCall* d = is_transparent ? app->rendergraph.templateDraw() :

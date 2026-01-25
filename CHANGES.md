@@ -2,8 +2,12 @@
 
 ## 0.2.10 (alpha)
 - add `TextureLoadDesc.srgb` for loading image data into srgb textures
+- Add YCrCb video decoding mode to `Video`
+- Examples
+  - `deep/video-ycrcb.ck`: demonstrating the YCrCb decoding mode on `Video` UGen
 - Bug fixes
   - fixed bug of FlatMaterial.emissive not being properly set
+  - fixed crash caused by using a Material with no Shader
 
 ## 0.2.9 (alpha)
 - Bug fixes

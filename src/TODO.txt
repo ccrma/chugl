@@ -171,13 +171,19 @@ every frame with all uniforms (noclips gfxr does this)
 == Engine references ============
 - 2D
   - Love2D
-  - Raylib
   - PICO8
   - Haxe / Hashlink (mosa lina and deadcells?)
 - 3D
   - Godot
   - ThreeJS
   - BabylonJS
+- Engine Frameworks/Libraries
+  - Sokol
+  - SDL
+  - Raylib
+- Fantasy Consoles
+  - Pico8
+  - Tic80
 
 == Examples ====================
 - Mirrors

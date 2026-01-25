@@ -1,0 +1,3 @@
+[ChuGL]: [33mWARN [0mMaterial[no shader mat] has no shader, GMeshes that use this material cannot be drawn
+[ChuGL]: [33mWARN [0mMaterial[no shader mat] has no shader, GMeshes that use this material cannot be drawn
+[chuck]: (VM) removing all (0) shreds...
