@@ -75,6 +75,111 @@ GG.outputPass().gamma(false);
 g.backgroundColor(.2 * Color.GREEN);
 
 
+// == video ================================================
+
+class YCrCbMaterial extends Material {
+    "
+    #include FRAME_UNIFORMS
+    #include DRAW_UNIFORMS
+    #include STANDARD_VERTEX_INPUT
+
+    struct VertexOutput {
+        @builtin(position) position : vec4f,
+        @location(1) v_uv : vec2f,
+    };
+
+    @group(1) @binding(0) var texture_sampler: sampler;
+    @group(1) @binding(1) var texture_y: texture_2d<f32>;   
+    @group(1) @binding(2) var texture_cr: texture_2d<f32>;   
+    @group(1) @binding(3) var texture_cb: texture_2d<f32>;   
+    @group(1) @binding(4) var<uniform> crop_uv: vec2f;
+
+
+    @vertex 
+    fn vs_main(in : VertexInput) -> VertexOutput
+    {
+        var out : VertexOutput;
+        var u_Draw : DrawUniforms = u_draw_instances[in.instance];
+
+        let worldpos = u_Draw.model * vec4f(in.position, 1.0f);
+        out.position = (u_frame.projection * u_frame.view) * worldpos;
+        out.v_uv     = in.uv;
+
+        // crop UV because yCrCb planes are always rounded to a multiple of 16
+        out.v_uv *= crop_uv;
+
+        return out;
+    }
+
+    // YCrCb --> srgb conversion matrix
+    const rec601 = mat4x4f(
+        1.16438,  0.00000,  1.59603, -0.87079,
+        1.16438, -0.39176, -0.81297,  0.52959,
+        1.16438,  2.01723,  0.00000, -1.08139,
+        0, 0, 0, 1
+    );
+
+    @fragment 
+    fn fs_main(in : VertexOutput) -> @location(0) vec4f
+    {   
+        var y = textureSample(texture_y, texture_sampler, in.v_uv).r;
+        var cb = textureSample(texture_cb, texture_sampler, in.v_uv).r;
+        var cr = textureSample(texture_cr, texture_sampler, in.v_uv).r;
+
+        let col_srgb = vec4f(y, cb, cr, 1.0) * rec601;
+
+        // after multiplying with the conversion matrix, we are now in gamma/srgb space.
+        // convert back to linear space so the final color doesn't look overly bright
+        let col_linear = pow(col_srgb, vec4f(2.2));
+
+        return col_linear;
+    }
+    " => static string shader_code;
+
+    static Shader@ ycrcb_shader;
+    if (ycrcb_shader == null) {
+        ShaderDesc shader_desc;
+        shader_code => shader_desc.vertexCode;
+        shader_code => shader_desc.fragmentCode;
+
+        new Shader(shader_desc) @=> ycrcb_shader;
+    }
+
+    // set shader
+    ycrcb_shader => this.shader;
+
+    fun @construct(Video video) {
+        // set uniform defaults
+        this.sampler(0, TextureSampler.linear());
+        this.texture(1, video.textureY());
+        this.texture(2, video.textureCr());
+        this.texture(3, video.textureCb());
+            // YCrCb dimensions always a multiple of 16, so set a crop window to remove empty pixels
+        this.uniformFloat2(
+            4, 
+            @(
+                video.width() $ float / video.textureY().width(),
+                video.height() $ float / video.textureY().height()
+            )
+        ); 
+    }
+}
+
+// Video video( "/Users/Andrew/Downloads/chugl-sizzle.mpg" ) => dac; 
+// video.mode(Video.MODE_YCRCB);
+
+// material for rendering YCrCb planes
+// YCrCbMaterial ycrcb_material(video);
+
+// FlatMaterial rgba_material;
+// rgba_material.colorMap(video.texture());
+
+// GMesh mesh(new PlaneGeometry, ycrcb_material) --> GG.scene();
+// mesh.posZ(10);
+// mesh.scaX(3 * (video.width() $ float / video.height()));
+// mesh.scaY(-3);
+
+
 // == load assets ================================================
 TextureLoadDesc tex_load_desc;
 true => tex_load_desc.flip_y;
@@ -88,7 +193,7 @@ Texture.load(me.dir() + "./card_assets/magpie.PNG", tex_load_desc) @=> Texture m
 Texture.load(me.dir() + "./card_assets/orange.PNG", tex_load_desc) @=> Texture orange_sprite;
 Texture.load(me.dir() + "./card_assets/persimmon.PNG", tex_load_desc) @=> Texture persimmon_sprite;
 
-Texture.load(me.dir() + "./card_assets/Instructions.png", tex_load_desc) @=> Texture rule_sprite;
+Texture.load(me.dir() + "./card_assets/Instructions-new.PNG", tex_load_desc) @=> Texture rule_sprite;
 
 fun Texture suit2sprite(int suit) {
     if (suit == Suit_Club) return duck_sprite;

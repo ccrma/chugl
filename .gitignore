@@ -47,7 +47,7 @@ chuck*.exe
 imgui.ini
 
 # assets
-assets/
+*assets/
 
 # chugins
 *.chug
