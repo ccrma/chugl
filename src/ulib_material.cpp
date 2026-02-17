@@ -2067,7 +2067,8 @@ CK_DLL_MFUN(material_set_texture)
     SG_Material* material = GET_MATERIAL(SELF);
     t_CKINT location      = GET_NEXT_INT(ARGS);
     Chuck_Object* ckobj   = GET_NEXT_OBJECT(ARGS);
-    SG_Texture* tex       = SG_GetTexture(OBJ_MEMBER_UINT(ckobj, component_offset_id));
+    SG_Texture* tex       = NULL;
+    if (ckobj) tex = SG_GetTexture(OBJ_MEMBER_UINT(ckobj, component_offset_id));
 
     SG_Material::setTexture(material, location, tex);
 

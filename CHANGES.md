@@ -10,6 +10,7 @@
   - fixed bug of FlatMaterial.emissive not being properly set
   - fixed crash caused by using a Material with no Shader
   - fixed bug where main camera (`GG.camera()`) was being incorrectly replaced upon instantiating a new `GScene` 
+  - fixed segfault caused by setting a null texture to `Material.texture(int, Texture)`
 - General improvements:
   - add warning when setting RenderPass.clear(false) on a GScene that has a skybox
   - the default scene rendertexture does *not* generate mips, reducing GPU memory overhead

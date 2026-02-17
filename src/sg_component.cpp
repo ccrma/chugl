@@ -1569,20 +1569,23 @@ void SG_Material::setUniform(SG_Material* mat, int location, void* uniform,
 
 void SG_Material::setTexture(SG_Material* mat, int location, SG_Texture* tex)
 {
-    if (mat->uniforms[location].type == SG_MATERIAL_UNIFORM_TEXTURE
-        && mat->uniforms[location].as.texture_id == tex->id) {
-        return; // no change
-    }
-
-    mat->uniforms[location].type = SG_MATERIAL_UNIFORM_TEXTURE;
-
     // refcount incoming texture
     SG_AddRef(tex);
-
     // decrement refcount of previous texture
     SG_DecrementRef(mat->uniforms[location].as.texture_id);
 
-    mat->uniforms[location].as.texture_id = tex->id;
+    if (tex == NULL) {
+        mat->uniforms[location].type          = SG_MATERIAL_UNIFORM_NONE;
+        mat->uniforms[location].as.texture_id = 0;
+    } else {
+        if (mat->uniforms[location].type == SG_MATERIAL_UNIFORM_TEXTURE
+            && mat->uniforms[location].as.texture_id == tex->id) {
+            return; // no change
+        }
+
+        mat->uniforms[location].type          = SG_MATERIAL_UNIFORM_TEXTURE;
+        mat->uniforms[location].as.texture_id = tex->id;
+    }
 }
 
 void SG_Material::setStorageTexture(SG_Material* mat, int location, SG_Texture* tex)

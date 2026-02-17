@@ -18,6 +18,10 @@ Add 2d and 3d Skew
 - see love2d for 2d example
 - eric lengyels graphics book has math for 3d
 
+PhysFS for bundling data with executable
+- according to reddit: if you want a cool use case for PhysFS, which the Love2D game framework utilises, is that if you concatenate a zip file to the end of an executable ($cat myapp res.zip > myapp) and use PhysFS to mount its own binary then you can easily embed resources within the executable without having to use anything specific to Windows or Linux.
+  - src: https://www.reddit.com/r/cpp/comments/b25dja/physicsfs_vs_stdfilesystem/ 
+
 update to newer wgpu version so that
 - fix wgpu leak
 - hopefully it implements wgpuBufferSetLabel
@@ -122,6 +126,7 @@ to the renderer cache
 - enables dynamicBindGroup offsets, don't need to recreate bindgroups 
 for different offsets, can using a single dynamic GPU_Buffer that is refilled
 every frame with all uniforms (noclips gfxr does this)
+  - meanwhile: optimize Material uniform updates by batching the wgpuBufferWrite for all uniforms to draw time (add stale flag) 
 - ChuGL API side
   - can validate that chuck users are setting the write type
   - vec3 padding to vec4!!!

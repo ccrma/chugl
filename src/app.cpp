@@ -932,7 +932,9 @@ struct App {
                     WGPUTexture color_target = NULL;
 
                     // set G_Pass
-                    app->rendergraph.addRenderPass(pass->sg_pass.name);
+                    snprintf(string_buff, sizeof(string_buff), "ScreenPass[%d:%s]",
+                             pass->id, pass->sg_pass.name);
+                    app->rendergraph.addRenderPass(string_buff);
                     // defaults to swapchain current view if null
                     if (r_tex) {
                         color_target = r_tex->gpu_texture;
@@ -2053,6 +2055,13 @@ static void _R_HandleCommand(App* app, SG_Command* command)
             R_Material* material = Component_GetMaterial(cmd->sg_id);
 
             switch (cmd->uniform.type) {
+                // NONE uniform, assume this means removing a binding
+                // assumes garbage collection refcounting is tracked on
+                // chuck/audio-thread side
+                case SG_MATERIAL_UNIFORM_NONE: {
+                    material->bindings[cmd->location].type = R_BIND_EMPTY;
+                    material->bindings[cmd->location].size = 0;
+                } break;
                 // basic uniform
                 case SG_MATERIAL_UNIFORM_FLOAT:
                 case SG_MATERIAL_UNIFORM_VEC2F:
