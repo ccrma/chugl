@@ -43,7 +43,7 @@ G2D g;
 // g.resolution(1920, 1080);
 GText.defaultFont(me.dir() + "./assets/m5x7.ttf");
 UI_Float3 background_color(18/255.0, 39/255.0, 8/255.0);
-g.backgroundColor(background_color.val());
+// g.backgroundColor(background_color.val());
 
 // ========================
 // Sound
@@ -574,7 +574,7 @@ class StartRoom extends Room {
                 if (sfx_idx == sfx_selection[i]) {
                     // TODO: if recording, fill box. else just outline
                     if (sampler.recording) {
-                        g.boxFilled(@(text_x, text_y), box_rot, selection_box_sz.x, selection_box_sz.y, gs.players[i].color);
+                        g.boxFilled(@(text_x, text_y), M.rot2vec(box_rot), selection_box_sz.x, selection_box_sz.y, gs.players[i].color);
                     } else g.box(@(text_x, text_y), selection_box_sz.x, selection_box_sz.y, gs.players[i].color);
                 }
 
@@ -1371,7 +1371,7 @@ class FlappyBirdRoom extends Room
             // top pipe
             g.boxFilled(
                 top_pipe_center,
-                0,
+                @(1,0),
                 pipe_hw_hh.x * 2,
                 pipe_hw_hh.y * 2,
                 Color.DARKGREEN
@@ -1379,7 +1379,7 @@ class FlappyBirdRoom extends Room
             // bot pipe
             g.boxFilled(
                 bot_pipe_center,
-                0,
+                @(1,0),
                 pipe_hw_hh.x * 2,
                 pipe_hw_hh.y * 2,
                 Color.DARKGREEN
@@ -2510,8 +2510,8 @@ class VoiceCommandRoom extends Room
                     g.popColor();
                 }
                 else if (entity.sensor_type == ZSensorType_SpawnZone) {
-                    g.boxFilled( entity.position(), Math.pi/4, .3, .1, Color.RED );
-                    g.boxFilled( entity.position(), -Math.pi/4, .3, .1, Color.RED );
+                    g.boxFilled( entity.position(), M.rot2vec(Math.pi/4), .3, .1, Color.RED );
+                    g.boxFilled( entity.position(), M.rot2vec(-Math.pi/4), .3, .1, Color.RED );
                     dt -=> entity.time_to_spawn_secs;
 
                     // don't spawn if player on top
@@ -2790,7 +2790,7 @@ class FX {
             GG.dt()::second +=> elapsed_time;
 
             1.0 - M.easeOutQuad(elapsed_time / effect_dur) => float t;
-            g.boxFilled(pos, rot, width, t * size, Color.RED * t);
+            g.boxFilled(pos, M.rot2vec(rot), width, t * size, Color.RED * t);
         }
     }
 
@@ -2818,7 +2818,7 @@ FlappyBirdRoom flappy_room;   gs.addRoom(flappy_room);
 HotPotatoRoom potato_room;    gs.addRoom(potato_room);
 VoiceCommandRoom voice_command_room;    gs.addRoom(voice_command_room);
 
-gs.enterRoom(voice_command_room);
+gs.enterRoom(start_room);
 
 // gameloop
 while (1) {

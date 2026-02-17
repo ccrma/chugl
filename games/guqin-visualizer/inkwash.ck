@@ -1,4 +1,4 @@
-@import "../lib/g2d/ChuGL.chug"
+// @import "../lib/g2d/ChuGL.chug"
 
 // inspo: https://www.shadertoy.com/view/4tGfDW
 
@@ -39,9 +39,43 @@ null => desc.vertexLayout;
 
 Shader shader(desc);
 
+// framebuffer
+TextureDesc tex_desc;
+true => tex_desc.resizable;
+Texture simulation_map_a(tex_desc);
+Texture simulation_map_b(tex_desc);
+Texture color_map(tex_desc);
+
 // render graph
 GG.rootPass() --> ScreenPass screen_pass(shader);
 
+// init uniforms
+screen_pass.material().sampler(0, TextureSampler.linear());
+screen_pass.material().texture(1, simulation_map_a);
+screen_pass.material().texture(2, color_map);
+screen_pass.material().uniformFloat3(3, @(0,0,0));
+screen_pass.material().uniformFloat3(4, @(0,0,0));
+screen_pass.material().uniformFloat(5, .11);
+
+vec3 curr_mouse;
+vec3 prev_mouse;
+
 while (1) {
     GG.nextFrame() => now;
+    GWindow.mousePos() => vec2 mouse;
+    GG.fc() => int fc;
+
+    curr_mouse => prev_mouse;
+    @(mouse.x, mouse.y, GWindow.mouseLeft()) => curr_mouse;
+
+    screen_pass.material().uniformFloat3(3, curr_mouse);
+    screen_pass.material().uniformFloat3(4, prev_mouse);
+
+    // ping pong textures
+    if (fc % 2) {
+        screen_pass.material().texture(1, simulation_map_a);
+    } else {
+        screen_pass.material().texture(1, simulation_map_b);
+    }
+
 }

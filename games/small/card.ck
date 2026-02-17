@@ -41,24 +41,8 @@ Instructions
 
 TODO
 - fix transparency sorting for dropshadow and g2d_sprite
-- juice
-    - animate the ace swap and ace returning with a zeno interp
-    - see emoji tsuika github for ideas 
-        - interactive music/sfx toggle buttons
-- remove unused assets
-    - font files
-    - handwritten number pngs
-- sfx
-    - bamboo sound for shuffle?
-    - reso or beats for card swap or ace click
-- music
-    - birdcalls! (magpie and duck)
-    - terry sonic pinwheel
-    - geodesics energy?
-    - thinking.ck
 - art
     - small alpha hole in persimmon (obvious on ace stack all white)
-
 
 */
 
@@ -77,93 +61,93 @@ g.backgroundColor(.2 * Color.GREEN);
 
 // == video ================================================
 
-class YCrCbMaterial extends Material {
-    "
-    #include FRAME_UNIFORMS
-    #include DRAW_UNIFORMS
-    #include STANDARD_VERTEX_INPUT
+// class YCrCbMaterial extends Material {
+//     "
+//     #include FRAME_UNIFORMS
+//     #include DRAW_UNIFORMS
+//     #include STANDARD_VERTEX_INPUT
 
-    struct VertexOutput {
-        @builtin(position) position : vec4f,
-        @location(1) v_uv : vec2f,
-    };
+//     struct VertexOutput {
+//         @builtin(position) position : vec4f,
+//         @location(1) v_uv : vec2f,
+//     };
 
-    @group(1) @binding(0) var texture_sampler: sampler;
-    @group(1) @binding(1) var texture_y: texture_2d<f32>;   
-    @group(1) @binding(2) var texture_cr: texture_2d<f32>;   
-    @group(1) @binding(3) var texture_cb: texture_2d<f32>;   
-    @group(1) @binding(4) var<uniform> crop_uv: vec2f;
+//     @group(1) @binding(0) var texture_sampler: sampler;
+//     @group(1) @binding(1) var texture_y: texture_2d<f32>;   
+//     @group(1) @binding(2) var texture_cr: texture_2d<f32>;   
+//     @group(1) @binding(3) var texture_cb: texture_2d<f32>;   
+//     @group(1) @binding(4) var<uniform> crop_uv: vec2f;
 
 
-    @vertex 
-    fn vs_main(in : VertexInput) -> VertexOutput
-    {
-        var out : VertexOutput;
-        var u_Draw : DrawUniforms = u_draw_instances[in.instance];
+//     @vertex 
+//     fn vs_main(in : VertexInput) -> VertexOutput
+//     {
+//         var out : VertexOutput;
+//         var u_Draw : DrawUniforms = u_draw_instances[in.instance];
 
-        let worldpos = u_Draw.model * vec4f(in.position, 1.0f);
-        out.position = (u_frame.projection * u_frame.view) * worldpos;
-        out.v_uv     = in.uv;
+//         let worldpos = u_Draw.model * vec4f(in.position, 1.0f);
+//         out.position = (u_frame.projection * u_frame.view) * worldpos;
+//         out.v_uv     = in.uv;
 
-        // crop UV because yCrCb planes are always rounded to a multiple of 16
-        out.v_uv *= crop_uv;
+//         // crop UV because yCrCb planes are always rounded to a multiple of 16
+//         out.v_uv *= crop_uv;
 
-        return out;
-    }
+//         return out;
+//     }
 
-    // YCrCb --> srgb conversion matrix
-    const rec601 = mat4x4f(
-        1.16438,  0.00000,  1.59603, -0.87079,
-        1.16438, -0.39176, -0.81297,  0.52959,
-        1.16438,  2.01723,  0.00000, -1.08139,
-        0, 0, 0, 1
-    );
+//     // YCrCb --> srgb conversion matrix
+//     const rec601 = mat4x4f(
+//         1.16438,  0.00000,  1.59603, -0.87079,
+//         1.16438, -0.39176, -0.81297,  0.52959,
+//         1.16438,  2.01723,  0.00000, -1.08139,
+//         0, 0, 0, 1
+//     );
 
-    @fragment 
-    fn fs_main(in : VertexOutput) -> @location(0) vec4f
-    {   
-        var y = textureSample(texture_y, texture_sampler, in.v_uv).r;
-        var cb = textureSample(texture_cb, texture_sampler, in.v_uv).r;
-        var cr = textureSample(texture_cr, texture_sampler, in.v_uv).r;
+//     @fragment 
+//     fn fs_main(in : VertexOutput) -> @location(0) vec4f
+//     {   
+//         var y = textureSample(texture_y, texture_sampler, in.v_uv).r;
+//         var cb = textureSample(texture_cb, texture_sampler, in.v_uv).r;
+//         var cr = textureSample(texture_cr, texture_sampler, in.v_uv).r;
 
-        let col_srgb = vec4f(y, cb, cr, 1.0) * rec601;
+//         let col_srgb = vec4f(y, cb, cr, 1.0) * rec601;
 
-        // after multiplying with the conversion matrix, we are now in gamma/srgb space.
-        // convert back to linear space so the final color doesn't look overly bright
-        let col_linear = pow(col_srgb, vec4f(2.2));
+//         // after multiplying with the conversion matrix, we are now in gamma/srgb space.
+//         // convert back to linear space so the final color doesn't look overly bright
+//         let col_linear = pow(col_srgb, vec4f(2.2));
 
-        return col_linear;
-    }
-    " => static string shader_code;
+//         return col_linear;
+//     }
+//     " => static string shader_code;
 
-    static Shader@ ycrcb_shader;
-    if (ycrcb_shader == null) {
-        ShaderDesc shader_desc;
-        shader_code => shader_desc.vertexCode;
-        shader_code => shader_desc.fragmentCode;
+//     static Shader@ ycrcb_shader;
+//     if (ycrcb_shader == null) {
+//         ShaderDesc shader_desc;
+//         shader_code => shader_desc.vertexCode;
+//         shader_code => shader_desc.fragmentCode;
 
-        new Shader(shader_desc) @=> ycrcb_shader;
-    }
+//         new Shader(shader_desc) @=> ycrcb_shader;
+//     }
 
-    // set shader
-    ycrcb_shader => this.shader;
+//     // set shader
+//     ycrcb_shader => this.shader;
 
-    fun @construct(Video video) {
-        // set uniform defaults
-        this.sampler(0, TextureSampler.linear());
-        this.texture(1, video.textureY());
-        this.texture(2, video.textureCr());
-        this.texture(3, video.textureCb());
-            // YCrCb dimensions always a multiple of 16, so set a crop window to remove empty pixels
-        this.uniformFloat2(
-            4, 
-            @(
-                video.width() $ float / video.textureY().width(),
-                video.height() $ float / video.textureY().height()
-            )
-        ); 
-    }
-}
+//     fun @construct(Video video) {
+//         // set uniform defaults
+//         this.sampler(0, TextureSampler.linear());
+//         this.texture(1, video.textureY());
+//         this.texture(2, video.textureCr());
+//         this.texture(3, video.textureCb());
+//             // YCrCb dimensions always a multiple of 16, so set a crop window to remove empty pixels
+//         this.uniformFloat2(
+//             4, 
+//             @(
+//                 video.width() $ float / video.textureY().width(),
+//                 video.height() $ float / video.textureY().height()
+//             )
+//         ); 
+//     }
+// }
 
 // Video video( "/Users/Andrew/Downloads/chugl-sizzle.mpg" ) => dac; 
 // video.mode(Video.MODE_YCRCB);
@@ -1073,7 +1057,7 @@ fun int readWinCount() {
 
     // ensure it's ok
     if( !fio.good() ) {
-        cherr <= "cannot read" <= IO.newline();
+        // probably not created, make it
         return 0;
     }
 
@@ -1516,7 +1500,7 @@ while (1) {
     g.popLayer();
 
     // check win condition
-    if (room == Room_Play && winstate() || (UI.button("win"))) {
+    if (room == Room_Play && winstate() || (do_ui && UI.button("win"))) {
         Room_Win => room;
         gametime => win_time;
 

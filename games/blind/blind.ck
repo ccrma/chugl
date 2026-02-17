@@ -21,7 +21,7 @@ vec2 player_pos;
 GG.scene().backgroundColor(Color.ORANGE);
 GG.rootPass() --> GG.scenePass() --> ScreenPass screen_pass(screen_shader);
 screen_pass.material().texture(0, GG.scenePass().colorOutput());
-screen_pass.material().sampler(1, TextureSampler.linear());
+screen_pass.material().sampler(1, TextureSampler.nearest());
 screen_pass.material().uniformFloat(2, GG.camera().viewSize());
 screen_pass.material().storageBuffer(3, lights);
 

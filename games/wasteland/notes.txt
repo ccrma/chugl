@@ -1,0 +1,47 @@
+Short Story Idea
+
+High level: a window into a larger world. Don't need to explain everything, just allude to
+its existence.
+
+3 conversations:
+1. robot who you interact successfully with
+2. robot that is at the point of expiration, watch the meltdown happen
+3. robot who you begin to suspect is *also* another human, open up, but then eliminate,
+releaving that you are a robot all along
+    - ends with SYSTEM ANOMALY DETECTED, WIPING MEMORY UNITS. RESETING
+
+
+Game interface design
+- what if it's revealed that the dialog options are presented to *you* by the robots AI themselves, i.e.
+the AI is telling what everyone around them is supposed to say, in order to guarantee an "optimal" 
+experience for the emtombed
+- the ironic catch--everyone thinks they are human, so everyone is just reading prompts from other
+AIs, nobody actually has the "optimal experience" that was original promised by those with the technology
+
+
+Input Ideas
+- basic dialog (a la eliza)
+- vocodor with dials, mic input
+- fridge magnet pick words from pool
+- TTS chugin
+- fridge magnet but can only pick the very next word at a time
+- word2vec auto-generate synonyms
+- typing game input
+
+_____
+
+Test Dialog ideas
+- date between 2 robots
+- interview at tech company
+- talk between yourself (burned out tech bro) and old friend who made it out and is doing art/computer music stuff
+- prison interrogation
+- rejoining the dating scene as a newly-unemployed ex tech person trying to get into creative coding
+    - date is a total normie
+
+Test Monolog Ideas
+- talking to Eliza / AI Therapist
+- amping yourself up before a presentation
+
+You (internal): 
+Them: 
+You:

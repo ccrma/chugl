@@ -95,6 +95,7 @@ public class G2D extends GGen
 	@(-1, 0) => vec2 LEFT;
 	@(0, 1) => vec2 UP;
 	@(0, -1) => vec2 DOWN;
+	@(0, 0) => vec2 CENTER;
 
 	// ------------------- params (updated every frame) --------------------------
 	n2w(-1, -1) => vec2 screen_min; // bottom left 
@@ -148,6 +149,7 @@ public class G2D extends GGen
 	fun void antialias(int bool) {
 		for (auto c : circles) c.antialias(bool);
 		for (auto e : ellipses) e.antialias(bool);
+		for (auto p : polygons) p.antialias(bool);
 		bool => texts.antialias;
 		capsules.antialias(bool);
 		GG.scenePass().msaa(bool);
@@ -282,6 +284,15 @@ public class G2D extends GGen
 	fun int anyInput() { return GWindow.mouseLeft() || GWindow.mouseRight() || GWindow.keys().size(); }
 	fun int anyInputDown() { return GWindow.mouseLeftDown() || GWindow.mouseRightDown() || GWindow.keysDown().size(); }
 	fun int anyInputUp() { return GWindow.mouseLeftUp() || GWindow.mouseRightUp() || GWindow.keysUp().size(); }
+
+	// ------------------- shader helpers --------------------------
+	fun Shader screenShaderFromPath(string wgsl_path) {
+		ShaderDesc screen_shader_desc;
+		wgsl_path => screen_shader_desc.vertexPath;
+		wgsl_path => screen_shader_desc.fragmentPath;
+		null => screen_shader_desc.vertexLayout;
+		return new Shader(screen_shader_desc);
+	}
 
 	// ------------------- effects --------------------------
 	Effect effects[0];
@@ -1127,6 +1138,7 @@ public class G2D_SolidPolygon
 	int empty_int_arr[1];
 	float empty_float_arr[4];
 	initStorageBuffers();
+	antialias(true); // default antialiasing to true
 
 	Geometry solid_polygon_geo; // just used to set vertex count
 	GMesh mesh(solid_polygon_geo, solid_polygon_material);
@@ -1140,6 +1152,10 @@ public class G2D_SolidPolygon
 		solid_polygon_material.storageBuffer(3, empty_float_arr);
 		solid_polygon_material.storageBuffer(4, empty_float_arr);
 		solid_polygon_material.storageBuffer(5, empty_float_arr);
+	}
+
+	fun void antialias(int value) {
+		solid_polygon_material.uniformInt(6, value);
 	}
 
 	fun void polygonFilled(

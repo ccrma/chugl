@@ -42,6 +42,7 @@
 @group(1) @binding(3) var<storage> u_polygon_colors: array<vec4f>;
 @group(1) @binding(4) var<storage> u_polygon_aabb: array<vec4f>; // lower left, upper right vec4f
 @group(1) @binding(5) var<storage> u_polygon_radius_and_depth: array<vec2f>; // @(radius, z_layer)
+@group(1) @binding(6) var<uniform> u_antialias: i32; 
 
 
 
@@ -224,22 +225,16 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4f {
     let sdf = sdConvexPolygon(in.f_position, &f_points, in.f_count);
 
     // roll the fill alpha down at the border
-    let aaf = fwidth(sdf); // anti alias field
-    let frag_color = vec4f(in.f_color.rgb, in.f_color.a * smoothstep(in.f_radius, in.f_radius - aaf, sdf));
+    var alpha = in.f_color.a;
+    if (bool(u_antialias)) {
+        let aaf = fwidth(sdf); // anti alias field
+        // let frag_color = vec4f(in.f_color.rgb, in.f_color.a * smoothstep(in.f_radius, in.f_radius - aaf, sdf));
+        alpha = in.f_color.a * smoothstep(in.f_radius, in.f_radius - aaf, sdf);
+    } else {
+        alpha = step(sdf, 0.0);
+    }
 
-    // TODO: anti-aliasing broken, fix later
-    // reference: http://www.numb3r23.net/2015/08/17/using-fwidth-for-distance-based-anti-aliasing/
-    // let d = abs(sdf - in.f_radius);
-    // var alpha = 1.0;
-    // if (bool(u_antialias)) {
-    //     let aaf = fwidth(sdf); // anti alias field
-    //     alpha = smoothstep(inner_radius - aaf, inner_radius, d) - 
-    //                 smoothstep(1.0 - aaf, 1.0, d);
-    // } else {
-        // alpha = step(sdf, 0.0);
-    // }
+    if (alpha < .01) { discard; }
 
-    if (frag_color.a < .01) { discard; }
-
-    return frag_color;
+    return vec4f(in.f_color.rgb, alpha);
 }

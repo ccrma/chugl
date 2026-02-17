@@ -1,5 +1,7 @@
 TODO
 
+BUG: GText.characters doesn't account for spaces
+
 https://jrouwe.github.io/JoltPhysics/index.html
 - multithreaded 3D physics
 - if safe to read/write from chuck audio thread then can integrate
