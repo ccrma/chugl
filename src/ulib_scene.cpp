@@ -87,8 +87,7 @@ SG_Scene* ulib_scene_create(Chuck_Object* ckobj, bool skybox, bool orthographic)
       = ulib_camera_create(chugin_createCkObj(SG_CKNames[SG_COMPONENT_CAMERA], false));
     CQ_PushCommand_AddChild(scene, default_camera);
     SG_Scene::setMainCamera(scene, default_camera);
-    gg_config.mainCamera = default_camera->id;
-    default_camera->pos  = glm::vec3(0.0f, 0.0f, 5.0f);
+    default_camera->pos = glm::vec3(0.0f, 0.0f, 5.0f);
     CQ_PushCommand_SetPosition(default_camera);
     if (orthographic) {
         default_camera->params.camera_type = SG_CameraType_ORTHOGRAPHIC;
