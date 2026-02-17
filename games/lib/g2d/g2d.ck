@@ -15,70 +15,85 @@ TODO
 
 public class G2D extends GGen
 {
-	this --> GG.scene();
+	// the target scene we are rendering to
+	GScene@ _scene;
+	ScenePass@ _scene_pass;
 
-    // initialize batch drawers
     G2D_Circles circles[6];
-		// create one for each blend mode
-	// TODO @BUG the transparency stuff is giga broken
-	for (int i; i < circles.size(); i++) {
-		// if (i != Material.BLEND_MODE_REPLACE) circles[i].material.transparent(true);
-		circles[i].material.blend(i);
-
-		circles[i].mesh --> GG.scene();
-	}
-
     G2D_Ellipse ellipses[6];
-	for (int i; i < ellipses.size(); i++) {
-		if (i != Material.BLEND_MODE_REPLACE) ellipses[i].material.transparent(true);
-		ellipses[i].material.blend(i);
-
-		ellipses[i].mesh --> GG.scene();
-	}
-
     G2D_Lines lines;
-
     G2D_TriangleStrip tristrips[6];
-	for (int i; i < tristrips.size(); i++) {
-		if (i != Material.BLEND_MODE_REPLACE) ellipses[i].material.transparent(true);
-		tristrips[i].material.blend(i);
-		tristrips[i].mesh --> GG.scene();
-	}
-
     G2D_SolidPolygon polygons[6];
-	for (int i; i < polygons.size(); i++) {
-		// replace is NOT transparent
-		// if (i != Material.BLEND_MODE_REPLACE) polygons[i].solid_polygon_material.transparent(true);
-		polygons[i].solid_polygon_material.blend(i);
-		polygons[i].mesh --> GG.scene();
-	}
-
     G2D_Sprite sprites[6]; 
-	for (int blend_mode; blend_mode < sprites.size(); blend_mode++) {
-		blend_mode => sprites[blend_mode].blend_mode;
-		sprites[blend_mode].mesh --> GG.scene();
-	}
-
     G2D_Capsule capsules;
 	G2D_Text texts;
 
-    // connect to scene
-    lines.mesh --> GG.scene();
-	capsules.mesh --> GG.scene();
+	fun G2D() { init(GG.scene()); } 
+	fun G2D(GScene@ s) { init(s); }
 
-	texts.mesh --> GG.scene();
-	texts.mesh.posZ(0.01); // default on top
+	fun void init(GScene@ s) {
+		this --> s;
+		s @=> this._scene; 
 
-	// init camera
-	GG.camera().orthographic();
-	GG.camera().viewSize(10);
-	GG.camera().posZ(GG.camera().clipFar() - 1.0);
+		// disable skybox (messes with screen clear / load)
+		null => s.skybox;
 
-	// disable tonemapping / HDR
-	GG.outputPass().tonemap(OutputPass.ToneMap_None);
-	// disable gamma
-	GG.outputPass().gamma(false);
-	// TODO: disable the srgb view on swapchain screen buffer
+		// init rendergraph
+		if (s == GG.scene()) GG.scenePass() @=> this._scene_pass;
+		else 			     new ScenePass(s) @=> this._scene_pass;
+
+		// disable tonemapping / HDR
+		GG.outputPass().tonemap(OutputPass.ToneMap_None);
+		// disable gamma
+		GG.outputPass().gamma(false);
+
+		// initialize batch drawers
+		{
+			// TODO @BUG the transparency stuff is giga broken
+			for (int i; i < circles.size(); i++) {
+				// if (i != Material.BLEND_MODE_REPLACE) circles[i].material.transparent(true);
+				circles[i].material.blend(i);
+				circles[i].mesh --> this;
+			}
+
+			for (int i; i < ellipses.size(); i++) {
+				if (i != Material.BLEND_MODE_REPLACE) ellipses[i].material.transparent(true);
+				ellipses[i].material.blend(i);
+				ellipses[i].mesh --> this;
+			}
+
+			for (int i; i < tristrips.size(); i++) {
+				if (i != Material.BLEND_MODE_REPLACE) ellipses[i].material.transparent(true);
+				tristrips[i].material.blend(i);
+				tristrips[i].mesh --> this;
+			}
+
+			for (int i; i < polygons.size(); i++) {
+				// replace is NOT transparent
+				// if (i != Material.BLEND_MODE_REPLACE) polygons[i].solid_polygon_material.transparent(true);
+				polygons[i].solid_polygon_material.blend(i);
+				polygons[i].mesh --> this;
+			}
+
+			for (int blend_mode; blend_mode < sprites.size(); blend_mode++) {
+				blend_mode => sprites[blend_mode].blend_mode;
+				sprites[blend_mode].mesh --> this;
+			}
+
+			// connect to scene
+			lines.mesh --> this;
+			capsules.mesh --> this;
+			texts.mesh --> this;
+			texts.mesh.posZ(0.01); // default on top
+		}
+
+		// init camera
+		this._scene.camera().orthographic();
+		this._scene.camera().viewSize(10);
+		this._scene.camera().posZ(this._scene.camera().clipFar() - 1.0);
+
+		_updateScreenBounds();
+	}
 
 	fun void sortDepthByY(int b) { 
 		for (auto s : sprites) b => s.sort_depth_by_y;
@@ -98,11 +113,17 @@ public class G2D extends GGen
 	@(0, 0) => vec2 CENTER;
 
 	// ------------------- params (updated every frame) --------------------------
-	n2w(-1, -1) => vec2 screen_min; // bottom left 
-	n2w(1, 1)   => vec2 screen_max; // top right
-	screen_max.x - screen_min.x => float screen_w;
-	screen_max.y - screen_min.y => float screen_h;
+	vec2 screen_min; // bottom left 
+	vec2 screen_max; // top right
+	float screen_w;
+	float screen_h;
 
+	fun void _updateScreenBounds() {
+		n2w(-1, -1) => vec2 screen_min;
+		n2w(1, 1)   => vec2 screen_max;
+		screen_max.x - screen_min.x => screen_w;
+		screen_max.y - screen_min.y => screen_h;
+	}
 	// ------------------- state stacks --------------------------
 	// note: these config stacks are cleared at the end of every frame to prevent accidental leaks
 	// you *don't* have to call popXXX() for every pushXXX
@@ -152,7 +173,7 @@ public class G2D extends GGen
 		for (auto p : polygons) p.antialias(bool);
 		bool => texts.antialias;
 		capsules.antialias(bool);
-		GG.scenePass().msaa(bool);
+		this._scene_pass.msaa(bool);
 		GG.outputPass().sampler(bool ? TextureSampler.linear() : TextureSampler.nearest());
 
 		// set sprite sampler
@@ -174,32 +195,32 @@ public class G2D extends GGen
 		w => texture_desc.width;
 		h => texture_desc.height;
 		Texture color_target(texture_desc);
-		GG.scenePass().colorOutput(color_target);
+		this._scene_pass.colorOutput(color_target);
 		GG.outputPass().input(color_target);
 
 		// setting a fixed resolution color target means we need to lock camera aspect
 		// this is an experimental API to disable the auto-update based on window framebuffer aspect
 		// because the window resolution can change, but the aspect of the actual color 
 		// target stays locked
-		GG.camera().aspect(w$float/h);
+		this._scene.camera().aspect(w$float/h);
 	}
 	
 	// return whether abs(pos) is >= bounding_radius_ndc 
-    fun static int offscreen(vec2 pos, float bounding_radius_ndc) {
-        GG.camera().worldPosToNDC(@(pos.x, pos.y, 0)) => vec3 pos_ndc;
+    fun int offscreen(vec2 pos, float bounding_radius_ndc) {
+        this._scene.camera().worldPosToNDC(@(pos.x, pos.y, 0)) => vec3 pos_ndc;
         return (Math.fabs(pos_ndc.x) > bounding_radius_ndc || Math.fabs(pos_ndc.y) > bounding_radius_ndc);
     }
 
-    fun static int offscreen(vec2 pos) {
+    fun int offscreen(vec2 pos) {
         return offscreen(pos, 1.0);
     }
 
-	fun static vec2 world2ndc(vec2 pos) {
-        return GG.camera().worldPosToNDC(@(pos.x, pos.y, 0)) $ vec2;
+	fun vec2 world2ndc(vec2 pos) {
+        return this._scene.camera().worldPosToNDC(@(pos.x, pos.y, 0)) $ vec2;
 	}
 
 	fun void backgroundColor(vec3 color) {
-		GG.scene().backgroundColor(color);
+		this._scene.backgroundColor(color);
 	}
 
 	// get the screen dimensions in worldspace units
@@ -209,40 +230,40 @@ public class G2D extends GGen
 
 	// in NDC (normalized device coordinates) the screen boundaries go from [-1, 1] in x and y
 	fun vec2 NDCToWorldPos(float x, float y) {
-		GG.camera().NDCToWorldPos(@(x, y, 0)) => vec3 world_pos;
+		this._scene.camera().NDCToWorldPos(@(x, y, 0)) => vec3 world_pos;
 		return world_pos $ vec2;
 	}
 
 	fun vec2 NDCToWorldPos(vec2 ndc) {
-		GG.camera().NDCToWorldPos(@(ndc.x, ndc.y, 0)) => vec3 world_pos;
+		this._scene.camera().NDCToWorldPos(@(ndc.x, ndc.y, 0)) => vec3 world_pos;
 		return world_pos $ vec2;
 	}
 
 	fun vec2 ndc2world(vec2 ndc) {
-		GG.camera().NDCToWorldPos(@(ndc.x, ndc.y, 0)) => vec3 world_pos;
+		this._scene.camera().NDCToWorldPos(@(ndc.x, ndc.y, 0)) => vec3 world_pos;
 		return world_pos $ vec2;
 	}
 
 	fun vec2 n2w(vec2 ndc) {
-		GG.camera().NDCToWorldPos(@(ndc.x, ndc.y, 0)) => vec3 world_pos;
+		this._scene.camera().NDCToWorldPos(@(ndc.x, ndc.y, 0)) => vec3 world_pos;
 		return world_pos $ vec2;
 	}
 
 	fun vec2 n2w(float x, float y) {
-		GG.camera().NDCToWorldPos(@(x, y, 0)) => vec3 world_pos;
+		this._scene.camera().NDCToWorldPos(@(x, y, 0)) => vec3 world_pos;
 		return world_pos $ vec2;
 	}
 
 	fun vec2 ndc2world(float x, float y) {
-		GG.camera().NDCToWorldPos(@(x, y, 0)) => vec3 world_pos;
+		this._scene.camera().NDCToWorldPos(@(x, y, 0)) => vec3 world_pos;
 		return world_pos $ vec2;
 	}
 
 	// clamp p to the bounds of the screen (in world space)
 	fun vec2 clampScreen(vec2 p) {
-		.5 * GG.camera().viewSize() => float hh;
-		hh * GG.camera().aspect() => float hw;
-		GG.camera().posWorld() $ vec2 => vec2 c;
+		.5 * this._scene.camera().viewSize() => float hh;
+		hh * this._scene.camera().aspect() => float hw;
+		this._scene.camera().posWorld() $ vec2 => vec2 c;
 		return @(
 			Math.clampf(p.x, c.x - hw, c.x + hw),
 			Math.clampf(p.y, c.y - hh, c.y + hh)
@@ -251,23 +272,23 @@ public class G2D extends GGen
 
 	// get the bounds in world space of the screen
 	// fun vec4 screenBounds() {
-	// 	GG.camera().NDCToWorldPos(@(-1.0, -1.0, 0)) => vec3 bottom_left;
-	// 	GG.camera().NDCToWorldPos(@(1.0, 1.0, 0)) => vec3 top_right;
+	// 	this._scene.camera().NDCToWorldPos(@(-1.0, -1.0, 0)) => vec3 bottom_left;
+	// 	this._scene.camera().NDCToWorldPos(@(1.0, 1.0, 0)) => vec3 top_right;
 	// 	return (Math.fabs(pos_ndc.x) > threshold || Math.fabs(pos_ndc.y) > threshold);
 	// }
 
 	// ----------- input --------------
 	// returns world-coordinates of mouse pos
 	fun vec2 mousePos() {
-		GG.camera().screenCoordToWorldPos(GWindow.mousePos(), 1.0) => vec3 world_pos;
+		this._scene.camera().screenCoordToWorldPos(GWindow.mousePos(), 1.0) => vec3 world_pos;
 		return @(world_pos.x, world_pos.y);
 	}
 
 	fun vec2 mouseDeltaWorld() { 
 		GWindow.mouseDeltaPos() => vec2 delta;
 
-		GG.camera().viewSize() => float height_world;
-		height_world * GG.camera().aspect() => float width_world;
+		this._scene.camera().viewSize() => float height_world;
+		height_world * this._scene.camera().aspect() => float width_world;
 
 		GWindow.windowSize() => vec2 w;
 		(delta.x / w.x) * width_world => delta.x; 
@@ -323,7 +344,7 @@ public class G2D extends GGen
 	}
 
 	fun void score(string s, vec2 pos, dur d, float dy, float size) { add(new ScoreEffect(s, pos, d/second, dy, size )); }
-	fun void screenFlash(dur d) { add(new ScreenFlashEffect(d/second)); }
+	fun void screenFlash(dur d) { add(new ScreenFlashEffect(d/second, this._scene.camera())); }
 
 	fun void hitFlash(dur d, float size, vec2 pos, vec3 color) { add(new HitFlashEffect(d/second, size, pos, color)); }
 
@@ -405,7 +426,7 @@ public class G2D extends GGen
 		lines.segment(p1, p2, color_stack[-1]);
 	}
 
-	// assumes arr is circular buff and we draw from start_idx --> start_idx - 1 with wraparound
+	// assumes arr is circular buff and we draw from start_idx -> start_idx - 1 with wraparound
 	fun void line(vec2 arr[], int start_idx, int count) {
 		while (start_idx < 0) arr.size() +=> start_idx;
 		arr.size() => int size;
@@ -839,10 +860,7 @@ public class G2D extends GGen
 		texts.update();
 
 		{ // update state params 
-			n2w(-1, -1) => screen_min; // bottom left 
-			n2w(1, 1)   => screen_max; // top right
-			screen_max.x - screen_min.x => screen_w;
-			screen_max.y - screen_min.y => screen_h;
+			_updateScreenBounds();
 		}
 
 		{ // clear state stacks (prevents accidental leak)
@@ -1449,7 +1467,7 @@ public class G2D_TriangleStrip
 // ==============================
 public class Effect {
 	float uptime; // time in seconds since this effect was initialized
-	GG.camera().posZ() - 1 => float layer; // default renders on top of everything
+	GG.camera().clipFar() - 2 => float layer; // default renders on top of everything layer;
 
 	0 => static int END;
 	1 => static int STILL_GOING;
@@ -1597,9 +1615,11 @@ class HitFlashEffect extends Effect {
 
 class ScreenFlashEffect extends Effect {
 	float max_dur;
+	GCamera@ cam;
 	
-	fun @construct(float max_dur) {
+	fun @construct(float max_dur, GCamera@ cam) {
 		max_dur => this.max_dur;
+		cam @=> this.cam;
 	}
 
 	fun int update(G2D g, float dt) {
@@ -1607,11 +1627,11 @@ class ScreenFlashEffect extends Effect {
 		uptime / max_dur => float t;
 
 		g.pushBlend(g.BLEND_ADD);
-		g.pushLayer(GG.camera().posZ() - 1);
+		g.pushLayer(this.cam.posZ() - 1);
 		g.squareFilled(
-			GG.camera().pos() $ vec2,
+			this.cam.pos() $ vec2,
 			0, 
-			GG.camera().viewSize() * 1,
+			this.cam.viewSize() * 1,
 			Color.WHITE * expImpulse(t, 9)
 		);
 		g.popBlend();
