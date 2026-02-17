@@ -9,6 +9,7 @@
 - Bug fixes
   - fixed bug of FlatMaterial.emissive not being properly set
   - fixed crash caused by using a Material with no Shader
+  - fixed bug where main camera (`GG.camera()`) was being incorrectly replaced upon instantiating a new `GScene` 
 
 ## 0.2.9 (alpha)
 - Bug fixes
