@@ -711,6 +711,20 @@ CK_DLL_MFUN(renderpass_set_color_target_clear_on_load)
     SG_Pass* pass                    = GET_PASS(SELF);
     pass->color_target_clear_on_load = GET_NEXT_INT(ARGS);
     CQ_PushCommand_PassUpdate(pass);
+
+    // warn if skybox is enabled, as currently there is no way to share
+    // depth buffers and the skybox will overrite everything, making it
+    // seem like `clear` is always false, i.e. colorAttachment LoadOp
+    // is always WGPULoadOp_Clear instead of _Load
+    if (!pass->color_target_clear_on_load && pass->pass_type == SG_PassType_Scene) {
+        SG_Scene* scene = SG_GetScene(pass->scene_id);
+        if (scene && scene->desc.skybox_material_id) {
+            log_warn(
+              "setting ScenePass.clear(false) on a GScene with a skybox material. this "
+              "may result in undesired behavior, as the skybox will overwrite any "
+              "texture data you may have intended to load");
+        }
+    }
 }
 
 CK_DLL_MFUN(renderpass_get_color_target_clear_on_load)

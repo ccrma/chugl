@@ -1971,7 +1971,15 @@ static void _R_HandleCommand(App* app, SG_Command* command)
                 case SG_COMPONENT_MESH: break;
                 case SG_COMPONENT_CAMERA: break;
                 case SG_COMPONENT_PASS: {
+                    ASSERT(component->type == SG_COMPONENT_PASS);
+                    R_Pass* pass = (R_Pass*)component;
                     // TODO
+                    // update frame uniform buffer name
+                    char label[64];
+                    snprintf(label, sizeof(label), "Pass %s[%d] Frame Uniform Buffer",
+                             new_name, pass->id);
+                    // wgpuBufferSetLabel still not impl...
+                    // wgpuBufferSetLabel(pass->frame_uniform_buffer, label);
                 } break;
                 case SG_COMPONENT_BUFFER: {
                     // TODO
