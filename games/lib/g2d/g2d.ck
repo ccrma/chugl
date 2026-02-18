@@ -135,6 +135,7 @@ public class G2D extends GGen
 	[0.0] @=> float polygon_radius_stack[]; // rounded corners
 	[1.0] @=> float alpha_stack[];
 	[Material.BLEND_MODE_ALPHA] @=> int blend_stack[];
+	[0.0] @=> float angle_stack[];
 
 	fun void pushFont(string s) { font_stack << s; }
 	fun void popFont() { font_stack.popBack(); }
@@ -165,6 +166,8 @@ public class G2D extends GGen
 	fun void popAlpha() { alpha_stack.popBack(); }
 	fun void pushBlend(int b) { blend_stack << b; }
 	fun void popBlend() { blend_stack.popBack(); }
+	fun void pushRot(float a) { angle_stack << a; }
+	fun void popRot() { angle_stack.popBack(); }
 
 	// ----------- look & feel (aka antialias and resolution) ----------
 	fun void antialias(int bool) {
@@ -349,22 +352,23 @@ public class G2D extends GGen
 	fun void hitFlash(dur d, float size, vec2 pos, vec3 color) { add(new HitFlashEffect(d/second, size, pos, color)); }
 
     // ----------- ellipse ----------
+
+	// a: width, b: height (major and minor axis)
 	fun void ellipseFilled(vec2 c, vec2 ab, vec4 color) {
-		ellipses[blend_stack[-1]].ellipse(c, ab, Math.max(ab.x, ab.y), layer_stack[-1], color);
+		ellipses[blend_stack[-1]].ellipse(c, ab, Math.max(ab.x, ab.y), layer_stack[-1], color, angle_stack[-1]);
 	}
 
 	fun void ellipseFilled(vec2 c, vec2 ab, vec3 color) {
 		ellipses[blend_stack[-1]].ellipse(c, ab, Math.max(ab.x, ab.y), layer_stack[-1], 
-			@(color.r, color.g, color.b, alpha_stack[-1])
-		);
+			@(color.r, color.g, color.b, alpha_stack[-1]), angle_stack[-1]);
 	}
 
 	fun void ellipse(vec2 c, vec2 ab, vec4 color) {
-		ellipses[blend_stack[-1]].ellipse(c, ab, 0, layer_stack[-1], color);
+		ellipses[blend_stack[-1]].ellipse(c, ab, 0, layer_stack[-1], color, angle_stack[-1]);
 	}
 
 	fun void ellipse(vec2 c, vec2 ab, float thickness, vec4 color) {
-		ellipses[blend_stack[-1]].ellipse(c, ab, thickness, layer_stack[-1], color);
+		ellipses[blend_stack[-1]].ellipse(c, ab, thickness, layer_stack[-1], color, angle_stack[-1]);
 	}
 
     // ----------- circle ----------
@@ -888,6 +892,7 @@ public class G2D extends GGen
 
 			alpha_stack.erase(1, alpha_stack.size());
 			blend_stack.erase(1, blend_stack.size());
+			angle_stack.erase(1, angle_stack.size());
 		}
     }
 }
@@ -1053,23 +1058,24 @@ public class G2D_Ellipse
 		material.uniformInt(1, value);
 	}
 
-	// [ vec2 center, vec2 ab, f32 thickness, f32 layer, vec4 color]
-	fun void ellipse(vec2 c, vec2 ab, float thickness, float layer, vec4 color) {
-		u_data << c.x << c.y << ab.x << ab.y << thickness << layer << color.r << color.g << color.b << color.a;
+	// [ vec2 center, vec2 ab, f32 thickness, f32 layer, vec4 color, float angle_radians]
+	fun void ellipse(vec2 c, vec2 ab, float thickness, float layer, vec4 color, float angle_radians) {
+		u_data << c.x << c.y << ab.x << ab.y << thickness << layer << color.r << color.g << color.b << color.a << angle_radians;
 	}
 
+	11 => static int ELEM_PER_INSTANCE;
 	fun void update() {
 		if (u_data.size() == 0) {
 			initStorageBuffers(); // needed because empty storage buffers cause WGPU to crash on bindgroup creation
 			return;
 		}
 
-		if (u_data.size() % 10 != 0) 
+		if (u_data.size() % ELEM_PER_INSTANCE != 0) 
 			<<< "u_data not properly filled" >>>;
 
 		// update GPU vertex buffers
 		material.storageBuffer(0, u_data);
-		geo.vertexCount(6 * u_data.size()/10);
+		geo.vertexCount(6 * u_data.size()/ELEM_PER_INSTANCE);
 
 		// reset
 		u_data.clear();

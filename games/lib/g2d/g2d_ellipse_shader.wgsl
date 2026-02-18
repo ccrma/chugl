@@ -20,7 +20,8 @@ struct VertexOutput {
 };
 
 // each ellipse contains the following:
-// [ vec2 center, vec2 ab, f32 thickness, f32 layer, vec4 color]
+// [ vec2 center, vec2 ab, f32 thickness, f32 layer, vec4 color, float rot]
+const ELEM_PER_INSTANCE = 11u;
 // 10 floats per ellipse
 @group(1) @binding(0) var<storage> u_data : array<f32>;
 // @group(1) @binding(0) var<storage> u_center_radius_thickness : array<vec4f>; // .xy is center, .z is radius, .w is thickness
@@ -40,22 +41,28 @@ fn vs_main(
     let quad_vertex : vec2f = QUAD_VERTICES[vertex_idx % 6u]; 
 
     // let center_radius_thickness = u_center_radius_thickness[circle_idx];
-    let center = vec2f(u_data[10*shape_idx + 0], u_data[10*shape_idx + 1]);
-    let ab = vec2f(u_data[10*shape_idx + 2], u_data[10*shape_idx + 3]);
-    let thickness = u_data[10*shape_idx + 4];
-    let layer = u_data[10*shape_idx + 5];
+    let center = vec2f(u_data[ELEM_PER_INSTANCE*shape_idx + 0], u_data[ELEM_PER_INSTANCE*shape_idx + 1]);
+    let ab = vec2f(u_data[ELEM_PER_INSTANCE*shape_idx + 2], u_data[ELEM_PER_INSTANCE*shape_idx + 3]);
+    let thickness = u_data[ELEM_PER_INSTANCE*shape_idx + 4];
+    let layer = u_data[ELEM_PER_INSTANCE*shape_idx + 5];
     let color = vec4f(
-        u_data[10*shape_idx + 6],
-        u_data[10*shape_idx + 7],
-        u_data[10*shape_idx + 8],
-        u_data[10*shape_idx + 9]
+        u_data[ELEM_PER_INSTANCE*shape_idx + 6],
+        u_data[ELEM_PER_INSTANCE*shape_idx + 7],
+        u_data[ELEM_PER_INSTANCE*shape_idx + 8],
+        u_data[ELEM_PER_INSTANCE*shape_idx + 9]
     );
+    let angle_rad = u_data[ELEM_PER_INSTANCE*shape_idx + 10];
 
-    let p = ab * quad_vertex + center; // transform quad to world space
+    var local_pos = ab * quad_vertex; // transform quad to world space
+    // rotate
+    let c = cos(angle_rad);
+    let s = sin(angle_rad);
+    var local_pos_post_rotate = vec2f((c * local_pos.x - s * local_pos.y), (s * local_pos.x + c * local_pos.y));
+
     var u_Draw : DrawUniforms = u_draw_instances[instance_idx];
-    out.position = (u_frame.projection * u_frame.view) * u_Draw.model * vec4f(p, layer, 1.0f);
+    out.position = (u_frame.projection * u_frame.view) * u_Draw.model * vec4f(local_pos_post_rotate + center, layer, 1.0f);
 
-    out.v_local_pos = ab * quad_vertex;
+    out.v_local_pos = local_pos;
     out.v_ab = ab;
     out.v_thickness = thickness;
     out.v_color = color;
@@ -102,12 +109,13 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4f {
     let sdf = sdEllipse(in.v_local_pos, in.v_ab);
 
     var alpha = 1.0;
-    let aaf = fwidth(sdf); // anti alias field
     if (bool(u_antialias)) {
+        let aaf = fwidth(sdf); // anti alias field
         alpha = smoothstep(-in.v_thickness - aaf, -in.v_thickness, sdf) - 
                     smoothstep(0.0, aaf, sdf);
     } else {
-        alpha = step(-in.v_thickness - aaf, sdf) - step(0.0, sdf);
+        alpha = step(-in.v_thickness, sdf) - step(0.0, sdf);
+        // alpha = step(sdf, 0.0);
     }
     
     if (alpha < .01) { discard; }
