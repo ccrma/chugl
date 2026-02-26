@@ -115,14 +115,20 @@ public class G2D extends GGen
 	// ------------------- params (updated every frame) --------------------------
 	vec2 screen_min; // bottom left 
 	vec2 screen_max; // top right
+	vec2 screen_top_left;
+	vec2 screen_top_right;
+	vec2 screen_bot_right;
 	float screen_w;
 	float screen_h;
 
 	fun void _updateScreenBounds() {
-		n2w(-1, -1) => vec2 screen_min;
-		n2w(1, 1)   => vec2 screen_max;
+		n2w(-1, -1) => screen_min;
+		n2w(1, 1)   => screen_max;
 		screen_max.x - screen_min.x => screen_w;
 		screen_max.y - screen_min.y => screen_h;
+		@(screen_min.x, screen_max.y) => screen_top_left;
+		@(screen_max.x, screen_max.y) => screen_top_right;
+
 	}
 	// ------------------- state stacks --------------------------
 	// note: these config stacks are cleared at the end of every frame to prevent accidental leaks
@@ -346,7 +352,11 @@ public class G2D extends GGen
 		add(new ExplodeEffect(pos, d/second, radius, color, angle, width, type)); 
 	}
 
-	fun void score(string s, vec2 pos, dur d, float dy, float size) { add(new ScoreEffect(s, pos, d/second, dy, size )); }
+	fun void score(string s, vec2 pos, dur d, float dy, float size) { 
+		ScoreEffect score_effect(s, pos, d/second, dy, size );
+		color_stack[-1] => score_effect.color;
+		add(score_effect); 
+	}
 	fun void screenFlash(dur d) { add(new ScreenFlashEffect(d/second, this._scene.camera())); }
 
 	fun void hitFlash(dur d, float size, vec2 pos, vec3 color) { add(new HitFlashEffect(d/second, size, pos, color)); }
@@ -541,6 +551,10 @@ public class G2D extends GGen
 		polygon(pos, rot_radians, square_vertices, @(size, size), color);
 	}
 
+	fun void square(vec2 pos, float size, vec3 color) {
+		polygon(pos, 0, square_vertices, @(size, size), color);
+	}
+
 	32 => int circle_segments;
 	vec2 circle_vertices[circle_segments];
 	for (int i; i < circle_segments; i++) {
@@ -667,6 +681,13 @@ public class G2D extends GGen
 			l, l, color
 		);
 	}
+
+	fun void squareFilled(
+		vec2 position,
+		float l,
+		vec3 color
+	) { boxFilled(position, @(1, 0), l, l, color); }
+
 
 	fun void capsuleFilled(
 		vec2 pos, 
@@ -1566,6 +1587,7 @@ class ScoreEffect extends Effect {
 	float max_dur;
 	float dy;
 	float size;
+	Color.WHITE => vec3 color;
 
 	// internal
 
@@ -1587,7 +1609,9 @@ class ScoreEffect extends Effect {
 		// quadratic ease
 		1 - (1 - t) * (1 - t) => t;
 		g.pushLayer(layer);
+		g.pushColor(color);
 		g.text(s, pos + @(0, t * dy), size);
+		g.popColor();
 		g.popLayer();
 
 		// g.popAlpha();

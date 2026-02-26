@@ -14,6 +14,7 @@ public class M {
         );
     }
 
+    // 2d rotation
     fun static vec2 rotate(vec2 v, float cos, float sin) {
         return @(
             cos * v.x - sin * v.y,
