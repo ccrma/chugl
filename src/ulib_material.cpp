@@ -2404,7 +2404,10 @@ CK_DLL_MFUN(flat_material_set_color)
     SG_Material* material = GET_MATERIAL(SELF);
     t_CKVEC3 color        = GET_NEXT_VEC3(ARGS);
 
-    SG_Material::uniformVec4f(material, 0, glm::vec4(color.x, color.y, color.z, 1));
+    SG_Material::uniformVec4f(
+      material, 0,
+      glm::vec4(color.x, color.y, color.z, material->uniforms[0].as.vec4f.a));
+
     CQ_PushCommand_MaterialSetUniform(material, 0);
 }
 

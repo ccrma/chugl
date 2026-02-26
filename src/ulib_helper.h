@@ -491,7 +491,8 @@ struct PhongParams {
 
     static void diffuse(SG_Material* mat, glm::vec3 color)
     {
-        SG_Material::uniformVec4f(mat, 1, glm::vec4(color, 1.0));
+        SG_Material::uniformVec4f(mat, 1,
+                                  glm::vec4(color, mat->uniforms[1].as.vec4f.a));
         CQ_PushCommand_MaterialSetUniform(mat, 1);
     }
 
