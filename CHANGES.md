@@ -4,6 +4,7 @@
 - add `TextureLoadDesc.srgb` for loading image data into srgb textures
 - Add YCrCb video decoding mode to `Video`
 - Updated cmake to build on linux. (thanks Lejun)
+- add new operator overloads `GGen[] --> GGen` and `GGen[] --< GGen` for grucking / ungrucking arrays of GGens all at once. (thanks Brendan)
 - Examples
   - `deep/video-ycrcb.ck`: demonstrating the YCrCb decoding mode on `Video` UGen
 - Bug fixes
@@ -11,9 +12,11 @@
   - fixed crash caused by using a Material with no Shader
   - fixed bug where main camera (`GG.camera()`) was being incorrectly replaced upon instantiating a new `GScene` 
   - fixed segfault caused by setting a null texture to `Material.texture(int, Texture)`
+  - `GGen.detach()` and `GGen.detachChildren()` now correctly set the `.parent()` pointers of all detached children to null.
 - General improvements:
   - add warning when setting RenderPass.clear(false) on a GScene that has a skybox
   - the default scene rendertexture does *not* generate mips, reducing GPU memory overhead
+  - setting `FlatMaterial.color()` and `PhongMaterial.color()` no longer override the alpha value to be 1
 
 ## 0.2.9 (alpha)
 - Bug fixes

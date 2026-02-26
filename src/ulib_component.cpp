@@ -223,6 +223,8 @@ CK_DLL_MFUN(ggen_get_num_children);
 CK_DLL_MFUN(ggen_get_scene);
 CK_DLL_GFUN(ggen_op_gruck);   // add child
 CK_DLL_GFUN(ggen_op_ungruck); // remove child
+CK_DLL_GFUN(ggen_op_gruck_array);
+CK_DLL_GFUN(ggen_op_ungruck_array);
 CK_DLL_MFUN(ggen_detach_parent);
 CK_DLL_MFUN(ggen_detach_children);
 CK_DLL_MFUN(ggen_detach_all);
@@ -560,6 +562,14 @@ static void ulib_ggen_query(Chuck_DL_Query* QUERY)
         // overload GGen --< GGen
         QUERY->add_op_overload_binary(QUERY, ggen_op_ungruck, "GGen", "--<", "GGen",
                                       "lhs", "GGen", "rhs");
+
+        // overload GGen[] --> GGen
+        QUERY->add_op_overload_binary(QUERY, ggen_op_gruck_array, "GGen", "-->",
+                                      "GGen[]", "lhs", "GGen", "rhs");
+
+        // overload GGen[] --< GGen
+        QUERY->add_op_overload_binary(QUERY, ggen_op_ungruck_array, "GGen", "--<",
+                                      "GGen[]", "lhs", "GGen", "rhs");
 
         MFUN(ggen_detach_parent, "void", "detachParent");
         DOC_FUNC(
@@ -1108,32 +1118,57 @@ CK_DLL_MFUN(ggen_local_pos_to_world_pos)
 
 // Scenegraph Relationship Impl
 // ===============================================================
-CK_DLL_GFUN(ggen_op_gruck)
+
+static void ggen_op_gruck_impl(Chuck_VM_Shred* shred, Chuck_Object* lhs,
+                               Chuck_Object* rhs)
 {
-    // get the arguments
-    Chuck_Object* lhs = GET_NEXT_OBJECT(ARGS);
-    Chuck_Object* rhs = GET_NEXT_OBJECT(ARGS);
+    CK_DL_API API = g_chuglAPI;
 
     if (!lhs || !rhs) {
         std::string errMsg = std::string("in gruck operator: ")
                              + (lhs ? "LHS" : "[null]") + " --> "
                              + (rhs ? "RHS" : "[null]");
         // nullptr exception
-        API->vm->throw_exception("NullPointerException", errMsg.c_str(), SHRED);
+        API->vm->throw_exception("NullPointerException", errMsg.c_str(), shred);
         return;
     }
 
     // get internal representation
-    SG_Transform* lhs_xform
-      = SG_GetTransform(OBJ_MEMBER_UINT(lhs, component_offset_id));
     SG_Transform* rhs_xform
       = SG_GetTransform(OBJ_MEMBER_UINT(rhs, component_offset_id));
 
     // command
+    SG_Transform* lhs_xform
+      = SG_GetTransform(OBJ_MEMBER_UINT(lhs, component_offset_id));
     CQ_PushCommand_AddChild(rhs_xform, lhs_xform);
+}
+
+CK_DLL_GFUN(ggen_op_gruck)
+{
+    // get the arguments
+    Chuck_Object* lhs = GET_NEXT_OBJECT(ARGS);
+    Chuck_Object* rhs = GET_NEXT_OBJECT(ARGS);
+
+    ggen_op_gruck_impl(SHRED, lhs, rhs);
 
     // return RHS
     RETURN->v_object = rhs;
+}
+
+CK_DLL_GFUN(ggen_op_gruck_array)
+{
+    // get the arguments
+    Chuck_ArrayInt* lhs = GET_NEXT_OBJECT_ARRAY(ARGS);
+    Chuck_Object* rhs   = GET_NEXT_OBJECT(ARGS);
+
+    RETURN->v_object = rhs;
+    if (lhs == NULL) return;
+
+    int size = API->object->array_int_size(lhs);
+    for (int i = 0; i < size; ++i) {
+        ggen_op_gruck_impl(SHRED, (Chuck_Object*)API->object->array_int_get_idx(lhs, i),
+                           rhs);
+    }
 }
 
 CK_DLL_GFUN(ggen_op_ungruck)
@@ -1155,6 +1190,31 @@ CK_DLL_GFUN(ggen_op_ungruck)
     RETURN->v_object = rhs;
 }
 
+CK_DLL_GFUN(ggen_op_ungruck_array)
+{
+    // get the arguments
+    Chuck_ArrayInt* lhs = GET_NEXT_OBJECT_ARRAY(ARGS);
+    Chuck_Object* rhs   = GET_NEXT_OBJECT(ARGS);
+
+    // return RHS
+    RETURN->v_object = rhs;
+    if (lhs == NULL || rhs == NULL) return;
+
+    // get internal
+    SG_Transform* rhs_xform
+      = SG_GetTransform(OBJ_MEMBER_UINT(rhs, component_offset_id));
+
+    int size = API->object->array_int_size(lhs);
+    for (int i = 0; i < size; ++i) {
+        Chuck_Object* ckobj = (Chuck_Object*)API->object->array_int_get_idx(lhs, i);
+        if (ckobj == NULL) continue;
+        SG_Transform* lhs_xform
+          = SG_GetTransform(OBJ_MEMBER_UINT(ckobj, component_offset_id));
+        // command
+        CQ_PushCommand_RemoveChild(rhs_xform, lhs_xform);
+    }
+}
+
 CK_DLL_MFUN(ggen_detach_parent)
 {
     SG_Transform* child  = SG_GetTransform(OBJ_MEMBER_UINT(SELF, component_offset_id));
@@ -1167,8 +1227,6 @@ CK_DLL_MFUN(ggen_detach_parent)
 CK_DLL_MFUN(ggen_detach_children)
 {
     SG_Transform* parent = SG_GetTransform(OBJ_MEMBER_UINT(SELF, component_offset_id));
-    SG_Transform::removeAllChildren(parent);
-
     CQ_PushCommand_RemoveAllChildren(parent);
 }
 

@@ -370,6 +370,7 @@ void SG_Transform::removeChild(SG_Transform* parent, SG_Transform* child)
             // release ref count on our (parent's) chuck object; one less
             // reference to it from child
             SG_DecrementRef(parent->id);
+
             break;
         }
     }
@@ -393,6 +394,7 @@ void SG_Transform::removeAllChildren(SG_Transform* parent)
 
         // remove child from parent
         SG_Transform* child = SG_GetTransform(children[i]);
+        child->parentID     = 0;
         SG_Transform_removeChildSubgraph(parent, child);
     }
     Arena::clear(&parent->childrenIDs);

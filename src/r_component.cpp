@@ -263,8 +263,12 @@ void R_Transform::removeAllChildren(R_Transform* parent)
     size_t numChildren = ARENA_LENGTH(&parent->children, SG_ID);
     SG_ID* children    = (SG_ID*)parent->children.base;
 
-    for (size_t i = 0; i < numChildren; ++i)
-        R_Scene::removeSubgraphFromRenderState(scene, Component_GetXform(children[i]));
+    for (size_t i = 0; i < numChildren; ++i) {
+        R_Transform* child = Component_GetXform(children[i]);
+        // remove child's parent reference
+        child->parentID = 0;
+        R_Scene::removeSubgraphFromRenderState(scene, child);
+    }
 
     Arena::clear(&parent->children);
 }

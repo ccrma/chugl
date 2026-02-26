@@ -412,6 +412,8 @@ void CQ_PushCommand_RemoveChild(SG_Transform* parent, SG_Transform* child)
 
 void CQ_PushCommand_RemoveAllChildren(SG_Transform* parent)
 {
+    SG_Transform::removeAllChildren(parent);
+
     BEGIN_COMMAND(SG_Command_RemoveAllChildren, SG_COMMAND_REMOVE_ALL_CHILDREN);
     command->parent = parent->id;
     END_COMMAND();

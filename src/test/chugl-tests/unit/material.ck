@@ -155,3 +155,16 @@ T.assert(
 // FlatMaterial default scale and offset
 T.assert( T.veq(flat_material.offset(), @(0, 0)), "flat_material offset default");
 T.assert( T.veq(flat_material.scale(), @(1, 1)), "flat_material scale default");
+
+T.assert( T.feq(flat_material.alpha(), 1), "flat material default alpha");
+flat_material.alpha(.2);
+T.assert( T.feq(flat_material.alpha(), .2), "flat material set alpha: " + flat_material.alpha());
+flat_material.color(Color.WHITE);
+T.assert( T.feq(flat_material.alpha(), .2), "flat material setting color doesn't override alpha");
+
+PhongMaterial phong_mat;
+T.assert( T.feq(phong_mat.alpha(), 1), "phong material default alpha");
+phong_mat.alpha(.2);
+T.assert( T.feq(phong_mat.alpha(), .2), "phong material set alpha: " + phong_mat.alpha());
+phong_mat.color(Color.WHITE);
+T.assert( T.feq(phong_mat.alpha(), .2), "phong material setting color doesn't override alpha");

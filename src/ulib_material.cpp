@@ -1047,7 +1047,7 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
 
         MFUN(flat_material_set_color, "void", "color");
         ARG("vec3", "color");
-        DOC_FUNC("Set material color uniform as an rgb. Alpha set to 1.0.");
+        DOC_FUNC("Set material color uniform as an rgb.");
 
         MFUN(flat_material_set_color_rgba, "void", "color");
         ARG("vec4", "color");
@@ -2193,6 +2193,7 @@ static void ulib_material_init_uniforms_and_pso(SG_Material* material)
 
             // init uniforms
             {
+                PhongParams::alpha(material, 1.0f);
                 PhongParams::specular(material, glm::vec3(.2f));
                 PhongParams::diffuse(material, glm::vec3(1.0f));
                 PhongParams::shininess(material, 64.0f);

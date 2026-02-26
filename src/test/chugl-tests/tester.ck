@@ -15,9 +15,6 @@ string keys[0];
 tests.getKeys(keys);
 
 for (auto test : keys) {
-    if (test == "all.ck") continue; // ignore test runner
-    if (test == "tester.ck") continue; // ignore self
-    if (test == "T.ck") continue; // ignore test harness
     // run test
     T.println("Running test: " + test + " --------------------");
     Machine.add(me.dir() + "./unit/" + test);
