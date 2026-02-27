@@ -800,7 +800,7 @@ void ulib_texture_createDefaults(CK_DL_API API)
         render_texture_desc.resize_mode  = SG_TextureResizeMode_Ratio;
         render_texture_desc.width_ratio  = 1.0f;
         render_texture_desc.height_ratio = 1.0f;
-        render_texture_desc.gen_mips     = 0;
+        render_texture_desc.gen_mips     = 1;
 
         // set global
         SG_Texture* render_tex = SG_CreateTexture(&render_texture_desc, NULL, NULL,

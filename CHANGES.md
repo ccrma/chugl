@@ -15,7 +15,6 @@
   - `GGen.detach()` and `GGen.detachChildren()` now correctly set the `.parent()` pointers of all detached children to null.
 - General improvements:
   - add warning when setting RenderPass.clear(false) on a GScene that has a skybox
-  - the default scene rendertexture does *not* generate mips, reducing GPU memory overhead
   - setting `FlatMaterial.color()` and `PhongMaterial.color()` no longer override the alpha value to be 1
 
 ## 0.2.9 (alpha)

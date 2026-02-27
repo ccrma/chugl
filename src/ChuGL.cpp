@@ -488,23 +488,27 @@ CK_DLL_SFUN(chugl_get_scene)
     RETURN->v_object = SG_GetScene(gg_config.mainScene)->ckobj;
 }
 
-// TODO: should this update the main renderpass too?
-CK_DLL_SFUN(chugl_set_scene)
+static void chugl_set_scene_impl(SG_Scene* sg_scene)
 {
     SG_ID prev_scene_id = gg_config.mainScene;
-
-    // get new scene
-    Chuck_Object* newScene = GET_NEXT_OBJECT(ARGS);
-    SG_Scene* sg_scene = SG_GetScene(OBJ_MEMBER_UINT(newScene, component_offset_id));
-
     // bump refcount on new scene
     SG_AddRef(sg_scene);
-
     // assign new scene
     gg_config.mainScene = sg_scene ? sg_scene->id : 0;
-
     // decrement refcount on old scene
     SG_DecrementRef(prev_scene_id);
+
+    // update main camera
+    gg_config.mainCamera = sg_scene ? sg_scene->desc.main_camera_id : 0;
+}
+
+CK_DLL_SFUN(chugl_set_scene)
+{
+    // get new scene
+    Chuck_Object* new_scene = GET_NEXT_OBJECT(ARGS);
+    SG_Scene* sg_scene
+      = new_scene ? SG_GetScene(OBJ_MEMBER_UINT(new_scene, component_offset_id)) : NULL;
+    chugl_set_scene_impl(sg_scene);
 }
 
 CK_DLL_SFUN(chugl_set_fps)
@@ -836,6 +840,68 @@ CK_DLL_SFUN(chugl_check_vtable_offset)
       = API->type->get_vtable_offset(VM, API->object->get_type(ckobj), field_name);
 }
 
+// after init components have been created (default camera, scene etc)
+// call this function to make the necessary scenegraph/rendergraph connections.
+// useful for resetting state e.g. between examples
+static void chugl_init_default_setup_impl()
+{
+    // TODO set camera defaults here
+    SG_Pass* root_pass   = SG_GetPass(gg_config.root_pass_id);
+    SG_Pass* render_pass = SG_GetPass(gg_config.default_scene_pass_id);
+    SG_Pass* output_pass = SG_GetPass(gg_config.default_output_pass_id);
+    SG_Pass* bloom_pass  = SG_GetPass(gg_config.default_bloom_pass_id);
+
+    // scene
+    Chuck_Object* scene_ckobj
+      = chugin_createCkObj(SG_CKNames[SG_COMPONENT_SCENE], false);
+    SG_Scene* scene = ulib_scene_create(scene_ckobj, true, false);
+    chugl_set_scene_impl(scene);
+
+    ulib_component_set_name(root_pass, "ChuGL RootPass");
+
+    SG_Pass::scene(render_pass, scene);
+    ulib_component_set_name(render_pass, "ChuGL Default ScenePass");
+
+    // enable MSAA by default
+    render_pass->scene_pass_msaa = 1;
+
+    // connect root to renderPass
+    SG_Pass::connect(root_pass, render_pass);
+
+    // set default render texture as output of render pass
+    SG_Texture* render_texture
+      = SG_GetTexture(g_builtin_textures.default_render_texture_id);
+    SG_Pass::colorTarget(render_pass, render_texture);
+
+    ulib_component_set_name(output_pass, "ChuGL Default OutputPass");
+
+    // connect renderPass to outputPass
+    SG_Pass::connect(render_pass, output_pass);
+
+    ulib_component_set_name(bloom_pass, "ChuGL Default BloomPass");
+
+    // set render texture as input to output pass
+    SG_Material* material = SG_GetMaterial(output_pass->screen_material_id);
+    SG_Material::setTexture(material, 0, render_texture);
+    CQ_PushCommand_MaterialSetUniform(material, 0);
+
+    // update all passes over cq
+    CQ_PushCommand_PassUpdate(root_pass);
+    CQ_PushCommand_PassUpdate(render_pass);
+    CQ_PushCommand_PassUpdate(output_pass);
+    CQ_PushCommand_PassUpdate(bloom_pass);
+
+    // default to 60fps
+    gg_config.fixed_timestep_fps = 60;
+    CQ_PushCommand_SetFixedTimestep(gg_config.fixed_timestep_fps);
+    gg_config.auto_update_scenegraph = true;
+}
+
+CK_DLL_SFUN(chugl_reset_to_default)
+{
+    chugl_init_default_setup_impl();
+}
+
 // ============================================================================
 // Chugin entry point
 // ============================================================================
@@ -940,6 +1006,10 @@ CK_DLL_QUERY(ChuGL)
           = chugin_createCkString(shader_table["STANDARD_VERTEX_OUTPUT"].c_str(), true);
         g_builtin_ckobjs.STANDARD_VERTEX_SHADER
           = chugin_createCkString(shader_table["STANDARD_VERTEX_SHADER"].c_str(), true);
+
+        // default empty string array for dropped files
+        g_dropped_files
+          = (Chuck_ArrayInt*)chugin_createCkObj(g_chuck_types.string_array, true);
     }
 
     ulib_color_query(QUERY);
@@ -1026,8 +1096,10 @@ CK_DLL_QUERY(ChuGL)
 
         QUERY->add_sfun(QUERY, chugl_get_scene, SG_CKNames[SG_COMPONENT_SCENE],
                         "scene");
+
         QUERY->add_sfun(QUERY, chugl_set_scene, SG_CKNames[SG_COMPONENT_SCENE],
                         "scene");
+
         QUERY->add_arg(QUERY, SG_CKNames[SG_COMPONENT_SCENE], "scene");
 
         // QUERY->add_sfun(QUERY, chugl_gc, "void", "gc");
@@ -1208,6 +1280,9 @@ CK_DLL_QUERY(ChuGL)
         ARG("string", "field");
         DOC_FUNC("(hidden)");
 
+        SFUN(chugl_reset_to_default, "void", "reset");
+        DOC_FUNC("(hidden)");
+
         END_CLASS();
     } // GG
 
@@ -1218,74 +1293,30 @@ CK_DLL_QUERY(ChuGL)
                                        ckvm_shreds_watch_REMOVE, NULL);
     }
 
-    { // Default components
-        // scene (TODO should all GScenes come with these default components?)
-        // currently if the user instantiates a GScene it will have nothing
-        Chuck_Object* scene_ckobj
-          = chugin_createCkObj(SG_CKNames[SG_COMPONENT_SCENE], true);
-        SG_Scene* scene = ulib_scene_create(scene_ckobj, true, false);
-
-        // update gg_config
-        gg_config.mainScene  = scene->id;
-        gg_config.mainCamera = scene->desc.main_camera_id;
-
+    { // Default rendergraph
         // passRoot()
         SG_Pass* root_pass     = ulib_pass_create(SG_PassType_Root, NULL, true, NULL);
         gg_config.root_pass_id = root_pass->id;
-        ulib_component_set_name(root_pass, "ChuGL RootPass");
 
         // renderPass for main scene
         SG_Pass* render_pass = ulib_pass_create(SG_PassType_Scene, NULL, false, NULL);
         gg_config.default_scene_pass_id = render_pass->id;
-        SG_Pass::scene(render_pass, scene);
-        ulib_component_set_name(render_pass, "ChuGL Default ScenePass");
-
-        // enable MSAA by default
-        render_pass->scene_pass_msaa = 1;
-
-        // connect root to renderPass
-        SG_Pass::connect(root_pass, render_pass);
-
-        // set default render texture as output of render pass
-        SG_Texture* render_texture
-          = SG_GetTexture(g_builtin_textures.default_render_texture_id);
-        SG_Pass::colorTarget(render_pass, render_texture);
 
         // output pass
         Chuck_Object* output_pass_ckobj = chugin_createCkObj("OutputPass", false);
         SG_Pass* output_pass
           = ulib_pass_create_output_pass(NULL, output_pass_ckobj, false, NULL);
         gg_config.default_output_pass_id = output_pass->id;
-        ulib_component_set_name(output_pass, "ChuGL Default OutputPass");
-
-        // connect renderPass to outputPass
-        SG_Pass::connect(render_pass, output_pass);
 
         SG_Pass* bloom_pass = ulib_pass_create(SG_PassType_Bloom, NULL, true, NULL);
         gg_config.default_bloom_pass_id = bloom_pass->id;
-        ulib_component_set_name(bloom_pass, "ChuGL Default BloomPass");
-
-        // set render texture as input to output pass
-        SG_Material* material = SG_GetMaterial(output_pass->screen_material_id);
-        SG_Material::setTexture(material, 0, render_texture);
-        CQ_PushCommand_MaterialSetUniform(material, 0);
-
-        // update all passes over cq
-        CQ_PushCommand_PassUpdate(root_pass);
-        CQ_PushCommand_PassUpdate(render_pass);
-        CQ_PushCommand_PassUpdate(output_pass);
-        CQ_PushCommand_PassUpdate(bloom_pass);
     }
 
     { // default config
-        // default to 60fps
-        CQ_PushCommand_SetFixedTimestep(gg_config.fixed_timestep_fps);
         CQ_PushCommand_SetChuckVMInfo(g_chuglAPI->vm->srate(g_chuglVM));
-
-        // default empty string array for dropped files
-        g_dropped_files
-          = (Chuck_ArrayInt*)chugin_createCkObj(g_chuck_types.string_array, true);
     }
+
+    chugl_init_default_setup_impl();
 
     // wasn't that a breeze?
     return true;
