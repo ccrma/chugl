@@ -1752,7 +1752,6 @@ const char* skybox_shader_string = R"glsl(
     #include FRAME_UNIFORMS
     #include ENVIRONMENT_MAP_UNIFORMS
 
-    // need at least 1 binding so getBindGroupLayout doesn't crash...
     @group(1) @binding(0) var u_envmap_sampler: sampler;
 
     struct VSOutput {
