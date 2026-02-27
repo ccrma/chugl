@@ -64,15 +64,13 @@ var<private> r : array<vec2f, 3> = array(
 fn vs_main(@builtin(vertex_index) vertexIndex: u32) -> VSOutput {
     var output : VSOutput;
     output.position = vec4f(r[vertexIndex], 1, 1);
-    output.r = output.position;
-
+    output.r = u_frame.projection_view_inverse_no_translation * output.position;
     return output;
 }
 
 @fragment
 fn fs_main(vsOut: VSOutput) -> @location(0) vec4f {
-    let t = u_frame.projection_view_inverse_no_translation * vsOut.r;
-    var r = (t.xyz / t.w) * vec3f(1, 1, -1); // skybox dir
+    var r = (vsOut.r.xyz / vsOut.r.w) * vec3f(1, 1, -1); // skybox ray dir
 
     var reflected: bool = false;
     if (r.y < 0) { 

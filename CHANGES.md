@@ -7,6 +7,7 @@
 - add new operator overloads `GGen[] --> GGen` and `GGen[] --< GGen` for grucking / ungrucking arrays of GGens all at once. (thanks Brendan)
 - Examples
   - `deep/video-ycrcb.ck`: demonstrating the YCrCb decoding mode on `Video` UGen
+  - `deep/skybox-shader.ck`: procedural sky rendering via custom skybox shader
 - Bug fixes
   - fixed bug of FlatMaterial.emissive not being properly set
   - fixed crash caused by using a Material with no Shader
@@ -16,6 +17,7 @@
 - General improvements:
   - add warning when setting RenderPass.clear(false) on a GScene that has a skybox
   - setting `FlatMaterial.color()` and `PhongMaterial.color()` no longer override the alpha value to be 1
+  - improved performance of default skybox material shader
 
 ## 0.2.9 (alpha)
 - Bug fixes

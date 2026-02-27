@@ -445,6 +445,7 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
     ARG("ShaderDesc", "shader_desc");
     DOC_FUNC("Create a Shader component. Immutable.");
     ADD_EX("deep/audio-donut.ck");
+    ADD_EX("deep/skybox-shader.ck");
 
     MFUN(shader_get_vertex_string, "string", "vertexCode");
     DOC_FUNC("Get the vertex shader string passed in the ShaderDesc at creation.");
@@ -1338,6 +1339,7 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
                     SG_CKNames[SG_COMPONENT_MATERIAL]);
 
         CTOR(skybox_material_ctor);
+        ADD_EX("deep/skybox-shader.ck");
 
         END_CLASS();
     }
