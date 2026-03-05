@@ -16,3 +16,6 @@ Color.hsv2rgb(rand_hsv) => vec3 rand_hsv2rgb;
 
 T.assert(T.veq(rand_rgb, rand_hsv2rgb), "rand_rgb == rand_hsv2rgb");
 
+@(.2, .5, .7) => vec3 linear_color;
+Color.srgb(linear_color) => vec3 srgb_color;
+T.assert(T.veq(linear_color, Color.linear(srgb_color)), "Color.linear() and Color.srgb() are inverses");

@@ -36,6 +36,8 @@ CK_DLL_SFUN(chugl_color_rgb_to_hsv);
 CK_DLL_SFUN(chugl_color_grayscale_accurate);
 CK_DLL_SFUN(chugl_color_random_rgb);
 CK_DLL_SFUN(chugl_color_from_hex);
+CK_DLL_SFUN(chugl_color_srgb_to_linear);
+CK_DLL_SFUN(chugl_color_linear_to_srgb);
 
 static glm::vec3 ulib_color_hsv2rgb(const glm::vec3& hsv);
 static glm::vec3 ulib_color_rgb2hsv(const glm::vec3& rgb);
@@ -179,7 +181,57 @@ static void ulib_color_query(Chuck_DL_Query* QUERY)
     ARG("int", "hex");
     DOC_FUNC("convert a hex color e.g. 0xff4500 to a vec3 rgb");
 
+    SFUN(chugl_color_srgb_to_linear, "vec3", "linear");
+    ARG("vec3", "srgb_space_color");
+    DOC_FUNC(
+      "convert a color in srgb space to linear space. Input color values should be in "
+      "range [0,1]");
+
+    SFUN(chugl_color_linear_to_srgb, "vec3", "srgb");
+    ARG("vec3", "linear_space_color");
+    DOC_FUNC(
+      "convert a color in linear space to srgb space. Input color values should be in "
+      "range [0,1]");
+
+    // fun static vec3 srgbToLinear(vec3 c) {
+
     QUERY->end_class(QUERY);
+}
+
+static float ulib_color_linearToSrgb(float x)
+{
+    if (x <= 0.0031308)
+        return 12.92 * x;
+    else
+        return 1.055 * powf(x, (1.0 / 2.4)) - 0.055;
+}
+
+static float ulib_color_sRGBToLinear(float x)
+{
+    if (x < .04045)
+        return x / 12.92;
+    else
+        return powf((x + 0.055) / 1.055, (2.4));
+}
+
+CK_DLL_SFUN(chugl_color_srgb_to_linear)
+{
+    t_CKVEC3 srgb  = GET_NEXT_VEC3(ARGS);
+    RETURN->v_vec3 = {
+        ulib_color_sRGBToLinear(srgb.x),
+        ulib_color_sRGBToLinear(srgb.y),
+        ulib_color_sRGBToLinear(srgb.z),
+    };
+}
+
+CK_DLL_SFUN(chugl_color_linear_to_srgb)
+{
+    t_CKVEC3 linear = GET_NEXT_VEC3(ARGS);
+    RETURN->v_vec3  = {
+        ulib_color_linearToSrgb(linear.x),
+        ulib_color_linearToSrgb(linear.y),
+        ulib_color_linearToSrgb(linear.z),
+    };
 }
 
 CK_DLL_SFUN(chugl_color_rgb_to_hsv)
