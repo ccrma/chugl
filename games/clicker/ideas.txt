@@ -3,6 +3,7 @@ Daoist Clicker Game
 == Research ==
 - watch https://www.youtube.com/watch?v=TM1LH9BtM9I and related videos
 
+- WIDE aspect ratio. like 3:1 or maybe even more. Make it look like a Chinese scroll painting
 
 
 Core idea: modern society views technology as a panacea. There is an implicit belief that one's quality 

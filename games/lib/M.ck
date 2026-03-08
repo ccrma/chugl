@@ -4,15 +4,7 @@ public class M {
     1.4142135624 => static float ROOT2;
     .7071067812 => static float INV_ROOT2;
 
-    // TODO: add to ulib_color
-    fun static vec3 srgbToLinear(vec3 c) {
-        2.2 => float g;
-        return @(
-            Math.pow(c.r, g),
-            Math.pow(c.g, g),
-            Math.pow(c.b, g)
-        );
-    }
+    fun static vec3 srgbToLinear(vec3 c) { return Color.linear(c); }
 
     // 2d rotation
     fun static vec2 rotate(vec2 v, float cos, float sin) {
@@ -103,6 +95,34 @@ public class M {
 
     fun static float fract(float x) {
         return x - (x $ int);
+    }
+
+    // =====================================================================
+    // matrix math (eventually should move this into chuck core)
+    // =====================================================================
+
+    // constructs 2x2 mat from column vectors
+    // [ c0 c1 ]
+    // [ c0 c1 ]
+    fun static vec4 mat(vec2 c0, vec2 c1) {
+        return @(
+            c0.x, c1.x,
+            c0.y, c1.y
+        );
+    }
+
+    fun static vec2 mult(vec4 mat, vec2 v) {
+        return @(
+            mat.x * v.x + mat.y * v.y,
+            mat.z * v.x + mat.w * v.y
+        );
+    }
+
+    fun static vec4 inv(vec4 m) {
+        return (1.0 / (m.x * m.w - m.z * m.y)) * @(
+            m.w, -m.y,
+            -m.z, m.x
+        );
     }
 
     // =====================================================================
@@ -323,6 +343,10 @@ public class M {
             &&
             p.y >= bottom_left.y && p.y <= top_right.y
         );
+    }
+
+    fun static int inside( vec2 p, vec2 center, float hw, float hh) {
+        return inside(p, aabb(center, hw, hh));
     }
 
 

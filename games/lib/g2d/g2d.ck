@@ -118,6 +118,7 @@ public class G2D extends GGen
 	vec2 screen_top_left;
 	vec2 screen_top_right;
 	vec2 screen_bot_right;
+	vec2 screen_center;
 	float screen_w;
 	float screen_h;
 
@@ -145,6 +146,7 @@ public class G2D extends GGen
 
 	fun void pushFont(string s) { font_stack << s; }
 	fun void popFont() { font_stack.popBack(); }
+
 	fun void pushFontSize(float s) { font_size_stack << s; }
 	fun void popFontSize() { font_size_stack.popBack(); }
 	fun void pushColor(vec3 c) { color_stack << c; }
@@ -651,6 +653,14 @@ public class G2D extends GGen
 		);
 	}
 
+	fun void boxFilled(
+		vec2 position,
+		float width,
+		float height
+	) {
+		boxFilled(position, width, height, color_stack[-1]);
+	}
+
 	fun void boxDotted(vec2 pos, float w, float h, float segment_length) {
 		.5 * w => float hw;
 		.5 * h => float hh;
@@ -687,6 +697,11 @@ public class G2D extends GGen
 		float l,
 		vec3 color
 	) { boxFilled(position, @(1, 0), l, l, color); }
+
+	fun void squareFilled(
+		vec2 position,
+		float l
+	) { boxFilled(position, @(1, 0), l, l, color_stack[-1]); }
 
 
 	fun void capsuleFilled(
@@ -727,6 +742,10 @@ public class G2D extends GGen
     // ---------- sprites ----------
 	fun void sprite(Texture tex, vec2 pos) {
 		sprites[blend_stack[-1]].sprite(tex, @(pos.x, pos.y, layer_stack[-1]), @(1,1), 0, color_stack[-1], emission_stack[-1], alpha_stack[-1]);
+	}
+
+	fun void sprite(Texture tex, vec2 pos, float sca) {
+		sprites[blend_stack[-1]].sprite(tex, @(pos.x, pos.y, layer_stack[-1]), @(sca,sca), 0, color_stack[-1], emission_stack[-1], alpha_stack[-1]);
 	}
 
 	fun void sprite(Texture tex, vec2 pos, float sca, float rot) {
