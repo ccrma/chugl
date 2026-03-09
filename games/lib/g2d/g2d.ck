@@ -122,6 +122,9 @@ public class G2D extends GGen
 	float screen_w;
 	float screen_h;
 
+	int mouse_left_down;
+	int mouse_right_down;
+
 	fun void _updateScreenBounds() {
 		n2w(-1, -1) => screen_min;
 		n2w(1, 1)   => screen_max;
@@ -129,7 +132,11 @@ public class G2D extends GGen
 		screen_max.y - screen_min.y => screen_h;
 		@(screen_min.x, screen_max.y) => screen_top_left;
 		@(screen_max.x, screen_max.y) => screen_top_right;
+		@(screen_max.x, screen_min.y) => screen_bot_right;
 
+		// update mouse stuff
+		GWindow.mouseLeftDown() => mouse_left_down;
+		GWindow.mouseRightDown() => mouse_right_down;
 	}
 	// ------------------- state stacks --------------------------
 	// note: these config stacks are cleared at the end of every frame to prevent accidental leaks
@@ -182,7 +189,10 @@ public class G2D extends GGen
 		for (auto c : circles) c.antialias(bool);
 		for (auto e : ellipses) e.antialias(bool);
 		for (auto p : polygons) p.antialias(bool);
-		bool => texts.antialias;
+
+		// text looks terrible without antialiasing
+		// bool => texts.antialias;
+
 		capsules.antialias(bool);
 		this._scene_pass.msaa(bool);
 		GG.outputPass().sampler(bool ? TextureSampler.linear() : TextureSampler.nearest());
@@ -555,6 +565,10 @@ public class G2D extends GGen
 
 	fun void square(vec2 pos, float size, vec3 color) {
 		polygon(pos, 0, square_vertices, @(size, size), color);
+	}
+
+	fun void square(vec2 pos, float size) {
+		polygon(pos, 0, square_vertices, @(size, size), color_stack[-1]);
 	}
 
 	32 => int circle_segments;

@@ -349,7 +349,6 @@ public class M {
         return inside(p, aabb(center, hw, hh));
     }
 
-
     fun static int inside( vec2 p, vec4 aabb ) {
         return (
             p.x >= aabb.x && p.x <= aabb.z

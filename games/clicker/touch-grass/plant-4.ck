@@ -47,7 +47,6 @@ Juice
 TODO
 - fix the tile collision to be in gridspace, not worldspace
 - cooking interaction kinda sucks. update based on art
-- should you be able to add "more" tiles for each activity?
 - within a tile, some upgrades are unlocked after unlocking other tiles.
     - e.g. on grass tile, after unlocking "friend", there is "touch grass w/ friend" upgrade that automates the touching
 - within a tile, upgrades to generate other resources
@@ -67,6 +66,11 @@ TODO
 
 - idea: should there be a friend-generating tile type??
 
+
+UI/UX
+- when hovering over empty tiles, show lock icon and tile border
+    - audrey art for lock and tile wireframe
+
 */
 @import "../../lib/g2d/ChuGL.chug"
 @import "../../lib/g2d/g2d.ck"
@@ -76,14 +80,13 @@ TODO
 
 // constants
 class C {
-    static UI_Float GUI_PAD(.25);
+    static UI_Float GUI_PAD(.1);
     static UI_Float GUI_FONT_SIZE(.3);
     static UI_Float GUI_BUTTON_PAD(.06);
 
-
-    static UI_Float GUI_MARGIN(.2);
+    static UI_Float GUI_MARGIN(.5);
     static UI_Float GUI_LINE_VSPACE(.36);
-    static UI_Float LOCAL_GUI_W(4);
+    static UI_Float LOCAL_GUI_W(2.5);
 
     static UI_Float LOCAL_GUI_H_RATIO(.33); // determined every frame
 
@@ -93,6 +96,7 @@ class C {
 G2D g;
 GG.outputPass().gamma(true);
 g.antialias(true);
+TextureSampler.nearest() @=> G2D_Sprite.sprite_sampler;
 GText.defaultFont("chugl:proggy-tiny");
 
 // TODO don't mip
@@ -108,6 +112,7 @@ Texture.load(me.dir() + "./assets/friend-icon.png", load_desc) @=> Texture frien
 Texture.load(me.dir() + "./assets/grass-icon.png", load_desc) @=> Texture grass_icon_tex;
 Texture.load(me.dir() + "./assets/hike-icon.png", load_desc) @=> Texture hike_icon_tex;
 Texture.load(me.dir() + "./assets/meditation-icon.png", load_desc) @=> Texture meditation_icon_tex;
+Texture.load(me.dir() + "./assets/helper-icon.png", load_desc) @=> Texture helper_icon_tex;
 
 
 fun void progressBar(
@@ -195,17 +200,31 @@ class IsoGrid {
     fun vec2 cell2world(vec2 cell) {
         return M.mult(grid_to_world_mat, cell);
     }
+
+    fun vec2 grid2world(vec2 grid) {
+        return M.mult(grid_to_world_mat, grid);
+    }
 }
 
 fun gridlines(vec2 min, vec2 max, vec3 color) {
     g.pushColor(color);
-    g.line(min.x * grid.i_hat + max.y * grid.j_hat, max.x * grid.i_hat + max.y * grid.j_hat);
-    g.line(min.x * grid.i_hat + min.y * grid.j_hat, max.x * grid.i_hat + min.y * grid.j_hat);
 
-    g.line(min.x * grid.i_hat + min.y * grid.j_hat, min.x * grid.i_hat + max.y * grid.j_hat);
-    g.line(max.x * grid.i_hat + min.y * grid.j_hat, max.x * grid.i_hat + max.y * grid.j_hat);
+    // j_hat gridlines
+    for (min.x => float i; i <= max.x; 1 +=> i) {
+        g.line(i * grid.i_hat + min.y * grid.j_hat, i * grid.i_hat + max.y * grid.j_hat);
+    }
+
+    // i_hat gridlines
+    for (min.y => float j; j <= max.y; 1 +=> j) {
+        g.line(min.x * grid.i_hat + j * grid.j_hat, max.x * grid.i_hat + j * grid.j_hat);
+    }
+
     g.popColor();
 }
+
+// Layer enum
+2 => int Layer_Helper;
+10 => int Layer_GUI;
 
 // Tile Type enum
 0 => int TileType_None;
@@ -232,13 +251,22 @@ Color.WHITE => vec3 MEDITATION_COLOR;
 ] @=> vec3 tile_colors[];
 
 [
-    null,
+    helper_icon_tex,
     grass_icon_tex,
     friend_icon_tex,
     hike_icon_tex,
     cooking_icon_tex,
     meditation_icon_tex,
 ] @=> Texture resource_textures[];
+
+[
+    [0], // none
+    [0], // grass
+    [0, 20, 0, 0, 0, 0], // friend
+    [0, 20, 20, 0, 0, 0], // hike
+    [0, 20, 20, 20, 0, 0], // cook
+    [0, 20, 20, 20, 20, 0], // meditate
+] @=> int region_unlock_costs[][];
 
 // grass Upgrades
 false => int grass_and_friend_auto;
@@ -258,9 +286,6 @@ int hike_additional_tiles;
 // cook_upgrades
 int cook_friend;
 
-// forest helper upgrades
-int helpers_per_resource[TileType_Count]; // how many were bought by each resource
-
 
 class CD {
     float curr;
@@ -277,6 +302,37 @@ class CD {
     }
 }
 
+0 => int HelperState_Helping;
+1 => int HelperState_Held;
+
+class Helper {
+    int state;
+    Tile@ tile; // tile they are working
+
+    vec2 pos; // world pos
+}
+
+// forest helper upgrades
+int helpers_per_resource[TileType_Count]; // how many were bought by each resource
+Helper helpers[0];
+
+fun void addHelper(Tile@ tile) {
+    Helper h;
+    tile @=> h.tile;
+    helpers << h;
+
+    // spawn them onto random position within tile
+    .25 * Math.random2f(-1, 1) + tile.cell.x => float grid_x;
+    .25 * Math.random2f(-1, 1) + tile.cell.y => float grid_y;
+    grid.grid2world(@(grid_x, grid_y)) => h.pos;
+
+    // track
+    ++helpers_per_resource[tile.type];
+
+    // let tile know too
+    tile.num_helpers++;
+}
+
 class Tile {
     int type;
     int unlocked;
@@ -284,6 +340,7 @@ class Tile {
     float H;
     float W;
     vec2 pos;
+    vec2 cell;
 
     CD tile_touch(2.0);
 
@@ -520,6 +577,7 @@ fun Tile addTile(Texture tex, vec2 cell_pos, int type) {
     // tile.H * aspect => tile.W;
     2 => tile.H;
     2 => tile.W;
+    cell_pos => tile.cell;
     grid.cell2world(cell_pos) => tile.pos;
     type => tile.type;
 
@@ -548,6 +606,17 @@ Tile@ gui_tile;
 vec2 gui_tile_cell;
 int display_tile_gui;
 
+// Global GUI Type enum
+0 => int GlobalGUI_Helper;
+1 => int GlobalGUI_Grass;
+2 => int GlobalGUI_Friend;
+3 => int GlobalGUI_Hike;
+4 => int GlobalGUI_Cook;
+5 => int GlobalGUI_Meditate;
+6 => int GlobalGUI_Count;
+
+int global_gui_selection; // from 0 -> GlobalGUI_Count. -1 means deselect.
+
 int resources[TileType_Count];
 [
     "none resource",
@@ -558,8 +627,6 @@ int resources[TileType_Count];
     "peace",
 ] @=> string resource_names[];
 
-int free_forest_helpers;
-
 
 addTile(grass_tex, @(0, 0), TileType_Grass) @=> Tile grass_tile;
 addTile(grass_tex, @(3, 0), TileType_Friend) @=> Tile friend_tile;
@@ -568,6 +635,15 @@ addTile(grass_tex, @(0, -3), TileType_Cook) @=> Tile cook_tile;
 addTile(grass_tex, @(0, 3), TileType_Meditate) @=> Tile meditate_tile;
 true => grass_tile.unlocked;
 100 => resources[TileType_Grass];
+
+[
+    null,
+    grass_tile,
+    friend_tile,
+    hike_tile,
+    cook_tile,
+    meditate_tile
+] @=> Tile@ starter_tiles[];
 
 // addTile(grass_tex, @(1, 0), TileType_Grass) @=> Tile _tile;
 // true => _tile.unlocked;
@@ -628,15 +704,29 @@ class GUI {
 
     // assumes using monospace font
     // TODO can update sizing dynamically after I add those stats to chugl core
-    .38 => float FONT_SIZE_CHAR_WIDTH; // single character w (worldspace)
-    .7 => float FONT_SIZE_CHAR_HEIGHT; // single character h (worldspace)
+    // .38 => float FONT_SIZE_CHAR_WIDTH; // single character w (worldspace)
+    // .7 => float FONT_SIZE_CHAR_HEIGHT; // single character h (worldspace)
+
+    .0625 => float FONT_PIXEL_SZ; // worldspace size of 1 pixel of font
+    10 => int GLYPH_H_PIXELS; // height in font-space pixels of 1 glyph
+    5 => int GLYPH_W_PIXELS;  // width  "
+    1 => int FONT_INNER_SPACING_PIXELS;  // number of pixels between each glyph of a word
+
+    FONT_PIXEL_SZ * GLYPH_W_PIXELS => float _GLYPH_W;
+    FONT_PIXEL_SZ * GLYPH_H_PIXELS => float _GLYPH_H;
+    FONT_PIXEL_SZ * FONT_INNER_SPACING_PIXELS => float _GLYPH_SPACING_W;
 
     // button that auto-resizes based on font size and text length
     fun int button(string text, vec2 pos, vec2 cp) {
         g.font_size_stack[-1] => float font_size;
-        (text.length()) * font_size * FONT_SIZE_CHAR_WIDTH => float text_w;
+
+        text.length() => int len;
+        font_size * (
+            (len * _GLYPH_W) + (len - 1) * _GLYPH_SPACING_W
+        ) => float text_w;
+
         .5 * text_w + C.GUI_BUTTON_PAD.val() => float hw;
-        .5 * font_size * FONT_SIZE_CHAR_HEIGHT => float text_hh;
+        .5 * font_size * _GLYPH_H => float text_hh;
         text_hh + C.GUI_BUTTON_PAD.val() => float hh;
 
         // based on control points, update post to be true center
@@ -669,67 +759,97 @@ class GUI {
     // this game specific methods vvvvvvvv
     // ======================================
 
-    // eventually will have to impl compact price representations...
-    fun string _costToStr(int cost) {
-        return cost + "";
+    fun int costButton(int cost, int type, vec2 pos) {
+        int costs[TileType_Count];
+        cost => costs[type];
+        return costButton(costs, pos, @(.5, .5), null);
     }
 
-    // cost button with inline sprites
-    fun int button(int cost[], vec2 pos, vec2 cp) {
+    fun int costButton(int cost[], vec2 pos, vec2 cp, UI_Float4 bbox) {
+        vec2 bb;
         g.font_size_stack[-1] => float font_size;
-        2 => int CHARS_PER_ICON;
+        font_size * _GLYPH_W => float glyph_w;
+        font_size * _GLYPH_SPACING_W => float glyph_spacing_w;
+        font_size * _GLYPH_H => float glyph_h;
 
-        int cost_str_length;
-        for (auto c : cost) {
-            if (c > 0) (CHARS_PER_ICON + _costToStr(c).length()) +=> cost_str_length;
+        glyph_h => bb.y;
+        bb.y => float sprite_sz; // icon fills vspace 
+
+        int num_resource_types;
+        int disabled;
+        for (int i; i < TileType_Count; i++) {
+            cost[i] => int c;
+            if (c <= 0) continue;
+
+            resources[i] < c => disabled;
+            (c + "").length() => int N;
+            ((N * glyph_w) + (N - 1) * glyph_spacing_w) +=> bb.x;
+            glyph_spacing_w + 2 * glyph_w +=> bb.x;
+            ++num_resource_types;
         }
+        
+        // add padding between each resource type
+        Math.max(0, (num_resource_types - 1)) * glyph_w +=> bb.x;
 
-        cost_str_length * font_size * FONT_SIZE_CHAR_WIDTH => float text_w;
-        .5 * text_w + C.GUI_BUTTON_PAD.val() => float hw;
-        .5 * font_size * FONT_SIZE_CHAR_HEIGHT => float text_hh;
-        text_hh + C.GUI_BUTTON_PAD.val() => float hh;
+        .5 * bb.x => float hw;
+        .5 * bb.y => float hh;
 
-        // based on control points, update post to be true center
-        // (height aligned by inner text, NOT button)
-        // (width aligned by button boundaries)
-        (2 * cp.x - 1) * hw -=> pos.x;
-        (2 * cp.y - 1) * text_hh -=> pos.y;
+        // adjust hw and hh by button padding
+        C.GUI_BUTTON_PAD.val() +=> hw;
+        C.GUI_BUTTON_PAD.val() +=> hh;
+
+        // adjust pos for cp
+        // pos is the *center* position of the entire display string
+        (2 * cp.x - 1) * hw -=> pos.x; 
+        (2 * cp.y - 1) * hh -=> pos.y; 
+
 
         M.inside(mouse_curr, pos, hw, hh) => int inside;
 
-        .02 => float polygon_radius;
+        // send bbox to caller
+        if (bbox != null) @(pos.x, pos.y, hw, hh) => bbox.val;
 
+        // draw background button
+        .02 => float polygon_radius;
         2 * (hw - polygon_radius) => float button_w;
         2 * (hh - polygon_radius) => float button_h;
         .5 * (inside ? Color.GRAY : Color.DARKGRAY) => vec3 button_color;
-        if (disabled_stack[-1]) .25 * Color.DARKGRAY => button_color;
+        if (disabled) .1 * Color.DARKGRAY => button_color;
 
         g.pushPolygonRadius(polygon_radius); {
             g.boxFilled(pos, button_w, button_h, button_color);
         } g.popPolygonRadius();
 
+        // draw starting from left edge
         @(
-            pos.x - hw + C.GUI_BUTTON_PAD.val(),
+            pos.x - .5 * bb.x,
             pos.y
-        ) => pos;
-        g.pushLayer(g.layer() + .01); g.pushColor(disabled_stack[-1] ? Color.GRAY : Color.WHITE); 
+        ) => vec2 cursor;
+
         g.pushTextControlPoint(0, .5);
-        {
-            for (int type; type < TileType_Count; ++type) {
-                cost[type] => int c;
-                if (c) {
-                    _costToStr(c) => string cost_str;
-                    g.text(cost_str, pos);  // number
-                    (cost_str.length() + 1.2) * font_size * FONT_SIZE_CHAR_WIDTH +=> pos.x;
-                    <<< cost_str.length(), FONT_SIZE_CHAR_WIDTH >>>;
-                    g.sprite(resource_textures[type], pos, C.RESOURCE_SPRITE_SCA.val());
-                    C.RESOURCE_SPRITE_SCA.val() +=> pos.x;
-                }
-            }
-        } g.popTextControlPoint(); g.popColor(); g.popLayer();
+        g.pushLayer(g.layer() + .01);
+        g.pushColor(disabled ? .1 * Color.WHITE : Color.WHITE);
+        for (int i; i < cost.size(); ++i) {
+            cost[i] => int c;
+            if (c <= 0) continue;
+            c + "" => string cost_str;
+            cost_str.length() => int N;
+            g.text(cost_str, cursor);
+
+            ((N * glyph_w) + (N - 1) * glyph_spacing_w) +=> cursor.x;
+            glyph_spacing_w + glyph_w +=> cursor.x;
+            g.sprite(resource_textures[i], cursor, sprite_sz);
+            glyph_w +=> cursor.x;
+
+            // add spacing between icons
+            glyph_w +=> cursor.x;
+        }
+        g.popColor();
+        g.popLayer();
+        g.popTextControlPoint();
 
         // TODO put the purchasing logic here too
-        return !disabled_stack[-1] && inside && g.mouseLeftDown();
+        return !disabled && inside && g.mouseLeftDown();
     }
 
     fun int upgradeButton(
@@ -747,21 +867,20 @@ class GUI {
     fun int tileUpgradeButton(string text, int cost, int type) {
         int ret;
         int costs[TileType_Count];
+        UI_Float4 button_bbox;
         cost => costs[type];
 
-        // text
-        g.pushTextControlPoint(0, 1);
-        g.text(text, cursor);
-        g.popTextControlPoint();
+        // cost button
+        if (costButton(costs, @(tile_upgrade_button_right_border, cursor.y), @(1, 1), button_bbox)) {
+            cost -=> resources[type];
+            true => ret;
+        }
 
-        // button
-        pushDisabled(resources[type] < cost); {
-            if (button(costs, @(tile_upgrade_button_right_border, cursor.y), @(1, 1))) {
-                T.assert(!disabled_stack[-1], "disabled button should never return true");
-                cost -=> resources[type];
-                true => ret;
-            }
-        } popDisabled();
+        // text name
+        @(cursor.x, button_bbox.val().y) => vec2 text_pos;
+        g.pushTextControlPoint(0, .5);
+        g.text(text, text_pos);
+        g.popTextControlPoint();
 
         C.GUI_LINE_VSPACE.val() -=> cursor.y;
 
@@ -771,6 +890,8 @@ class GUI {
 } GUI gui;
 
 fun void tileUpgradeGui(Tile@ tile, vec2 cell, vec2 top_left, vec2 bot_right) {
+    int cost[TileType_Count];
+
     g.pushLayer(10);
     g.pushFontSize(C.GUI_FONT_SIZE.val());
     // upgrade gui for empty tile spot
@@ -781,46 +902,56 @@ fun void tileUpgradeGui(Tile@ tile, vec2 cell, vec2 top_left, vec2 bot_right) {
             tile_regions[type * 2 + 1] => vec2 region_max;
             if (M.inside(cell, region_min, region_max)) {
                 20 * tiles_by_type[type].size() * tiles_by_type[type].size() => int cost;
-                if (gui.upgradeButton(cost + " " + resource_names[type], world_pos, cost, type)) {
+
+                if (gui.costButton(cost, type, world_pos)) {
                     unlockTile(tile_tex, cell, type);
                     // clear the null tile gui
                     false => display_tile_gui;
                 }
+
+                // if (gui.upgradeButton(cost + " " + resource_names[type], world_pos, cost, type)) {
+                //     unlockTile(tile_tex, cell, type);
+                //     // clear the null tile gui
+                //     false => display_tile_gui;
+                // }
                 break;
             }
         }
-    } else {
+    } 
+    else if (!tile.unlocked) {
+        grid.cell2world(cell) => vec2 world_pos;
+        if (gui.costButton(region_unlock_costs[tile.type], world_pos, @(.5, .5), null)) {
+            true => tile.unlocked;
+        }
+    }
+    else {
         tile.type => int type;
-        int cost[TileType_Count];
 
-        g.boxFilled(top_left, bot_right, .1*Color.GRAY);
+        // g.boxFilled(top_left, bot_right, .1*Color.GRAY);
 
         // assign/unassign helper
         top_left + C.GUI_PAD.val() * @(1, -1) => vec2 cursor;
         bot_right.x - C.GUI_PAD.val() => float right_border_x;
-        .5 * (top_left.x + bot_right.x) => float center_x;
 
-        g.pushTextControlPoint(0, 1);
-        g.text("Forest Helper", cursor);
-        g.popTextControlPoint();
+        // g.pushTextControlPoint(0, 1);
+        // g.text("Forest Helper", cursor);
+        // g.popTextControlPoint();
 
-        @(right_border_x, cursor.y) => vec2 button_pos;
+        // @(right_border_x, cursor.y) => vec2 button_pos;
 
-        if (tile.num_helpers) {
-            if (gui.button("remove", button_pos, @(1, 1))) {
-                ++free_forest_helpers;
-                --tile.num_helpers;
-            }
-        } else {
-            gui.pushDisabled(free_forest_helpers < 1);
-            if (gui.button("add", button_pos, @(1, 1))) {
-                --free_forest_helpers;
-                ++tile.num_helpers;
-            }
-            gui.popDisabled();
-        }
+        // if (tile.num_helpers) {
+        //     if (gui.button("remove", button_pos, @(1, 1))) {
+        //         --tile.num_helpers;
+        //     }
+        // } else {
+        //     gui.pushDisabled(free_forest_helpers < 1);
+        //     if (gui.button("add", button_pos, @(1, 1))) {
+        //         ++tile.num_helpers;
+        //     }
+        //     gui.popDisabled();
+        // }
 
-        C.GUI_LINE_VSPACE.val() -=> cursor.y;
+        // C.GUI_LINE_VSPACE.val() -=> cursor.y;
 
         if (type == TileType_Grass) {
             // init cursor stuff
@@ -833,7 +964,7 @@ fun void tileUpgradeGui(Tile@ tile, vec2 cell, vec2 top_left, vec2 bot_right) {
                 ++tile.green_thumb;
             }
 
-            // grass rate (maybe rename to fertilizer?)
+            // grass rate
             tile.grass_tick_level * tile.grass_tick_level * 5 => int grass_tick_cost;
             if (gui.tileUpgradeButton("Fertilizer " + tile.grass_tick_level, grass_tick_cost, TileType_Grass)) {
                 ++tile.grass_tick_level;
@@ -872,6 +1003,112 @@ while (1) {
     grid.grid2cell(mouse_grid) => mouse_cell; 
     grid.cell2world(mouse_cell) => mouse_cell_world_pos; 
 
+    // update and draw helpers
+    g.pushLayer(Layer_Helper);
+    (1.0 / GG.camera().viewSize()) => float inv_viewsize;
+    for (auto h : helpers) {
+        // draw
+
+        // TODO add this is a push/pop flag to g2d
+        inv_viewsize * (h.pos.y - g.screen_max.y) => float y_sort;
+        g.pushLayer(g.layer() - y_sort);
+        g.sprite(helper_icon_tex, h.pos, 0.5);
+        g.popLayer();
+    }
+    g.popLayer();
+
+    // update tiles
+    for (auto tile : tile_list) tile.update(dt);
+
+    g.pushLayer(10);
+    g.popLayer();
+
+    vec2 global_upgrade_gui_top_left;
+    { // resource UI
+        g.pushLayer(10);
+        g.pushFontSize(C.GUI_FONT_SIZE.val());
+        g.screen_top_left + C.GUI_MARGIN.val() * @(1, -1) => vec2 text_pos;
+        g.pushTextControlPoint(0, .5);
+
+        for (1 => int i; i < resource_names.size(); ++i) {
+            g.sprite(resource_textures[i], text_pos, C.RESOURCE_SPRITE_SCA.val());
+
+            "???" => string resource_str;
+            if (starter_tiles[i].unlocked) resources[i] + " " + resource_names[i] => resource_str;
+            g.text(resource_str, text_pos + @(.2, 0));
+            .3 -=> text_pos.y;
+        }
+
+        g.sprite(helper_icon_tex, text_pos, C.RESOURCE_SPRITE_SCA.val());
+        g.text(helpers.size() + " forest helpers ", text_pos + @(.2, 0));
+
+        g.popTextControlPoint();
+        g.popFontSize();
+        g.popLayer();
+
+        2 * .3 -=> text_pos.y;
+        text_pos => global_upgrade_gui_top_left;
+    }
+
+    // global gui
+    g.pushLayer(Layer_GUI);
+    g.pushFontSize(C.GUI_FONT_SIZE.val());
+    { 
+        
+        global_upgrade_gui_top_left => vec2 cursor;
+
+        // upper tab bar
+        1.25 * C.RESOURCE_SPRITE_SCA.val() => float tab_sz;
+        for (int i; i < GlobalGUI_Count; ++i) {
+            cursor + i * 1.25 * @(C.RESOURCE_SPRITE_SCA.val(), 0) => vec2 pos;
+            g.sprite(resource_textures[i], cursor + i * 1.25 * @(C.RESOURCE_SPRITE_SCA.val(), 0), C.RESOURCE_SPRITE_SCA.val());
+
+            if (M.inside(mouse_curr, pos, .5 * tab_sz, .5 * tab_sz)) {
+                g.square(pos, tab_sz);
+                if (g.mouse_left_down) {
+                    if (i == global_gui_selection) -1 => global_gui_selection;
+                    else                            i => global_gui_selection;
+                }
+            }
+
+            if (i == global_gui_selection) g.square(pos, tab_sz);
+        }
+
+        .3 -=> cursor.y;
+        
+        // reset gui cursor stuff
+        cursor - .5 * @(tab_sz, 0) => gui.cursor;
+        gui.cursor.x + C.LOCAL_GUI_W.val() => gui.tile_upgrade_button_right_border;
+
+        @(gui.tile_upgrade_button_right_border, cursor.y) => vec2 global_gui_top_right;
+
+        // body
+        if (global_gui_selection == GlobalGUI_Helper) {
+            for (1 => int type; type < TileType_Count; ++type) {
+                helpers_per_resource[type] => int helper_count;
+                (Math.pow(2, helper_count) * 10) $ int => int cost;
+
+                // idea: helpers are specific to the tile resoure they are bought with
+                // e.g. grass helper, hike helper...
+
+                // idea: the resouce of a helper is randomized every time you buy one
+                // e.g. first costs sanity, then costs belonging, then sanity again... ?
+                // of course only draws from ones that have been unlocked
+
+                if (gui.tileUpgradeButton("forest helper", cost, type)) {
+                    // register in helpers list
+                    addHelper(starter_tiles[type]);
+                }
+            }
+        }
+        else if (global_gui_selection == GlobalGUI_Grass) {
+
+        }
+
+        // g.box(gui.cursor, global_gui_top_right);
+
+    } g.popFontSize(); g.popLayer();
+
     { // tile upgrade gui
         if (GWindow.mouseRightDown() || GWindow.keyDown(GWindow.Key_Space)) {
             tileFromCell(mouse_cell) @=> gui_tile;
@@ -880,45 +1117,23 @@ while (1) {
         }
 
         // determine gui bounds
-        C.LOCAL_GUI_H_RATIO.val() * g.screen_h - C.GUI_MARGIN.val() => float local_gui_h;
-        @(g.screen_min.x + C.GUI_MARGIN.val(), g.screen_center.y - (.5 - C.LOCAL_GUI_H_RATIO.val()) * g.screen_h) => vec2 top_left;
-        top_left + @(C.LOCAL_GUI_W.val(), -local_gui_h) => vec2 bot_right;
+        @(gui.cursor.x, g.screen_center.y - (.5 - C.LOCAL_GUI_H_RATIO.val()) * g.screen_h) => vec2 top_left;
+        @(top_left.x + C.LOCAL_GUI_W.val(), g.screen_min.y + C.GUI_MARGIN.val()) => vec2 bot_right;
         .5 * (top_left + bot_right) => vec2 local_gui_pos;
+        top_left.y - bot_right.y => float local_gui_h;
+
+        g.box(top_left, bot_right);
 
         // logic for closing tile gui
-        // TODO align with actual bbox of gui window
         if (display_tile_gui && (GWindow.mouseLeftDown() || GWindow.keyDown(GWindow.Key_Space))) {
             // detect clicking outside of null tile
-            if (gui_tile == null) M.dist2(mouse_cell, gui_tile_cell) < .1 => display_tile_gui;
+            if (gui_tile == null || !gui_tile.unlocked) M.dist2(mouse_cell, gui_tile_cell) < .1 => display_tile_gui;
             // detect clicking outside of local gui window
+            // TODO align with actual bbox of gui window
             else M.inside(mouse_curr, local_gui_pos, .5 * C.LOCAL_GUI_W.val(), .5 * local_gui_h) => display_tile_gui;
         }
 
         if (display_tile_gui) tileUpgradeGui(gui_tile, gui_tile_cell, top_left, bot_right);
-    }
-
-    // update tiles
-    for (auto tile : tile_list) tile.update(dt);
-
-    g.pushLayer(10);
-    // g.circleFilled(mouse_curr, .1, Color.WHITE);
-    g.popLayer();
-
-    { // resource UI
-        g.pushLayer(10);
-        g.screen_top_left + @(.5, -.5) => vec2 text_pos;
-        g.pushTextControlPoint(0, .5);
-
-        for (1 => int i; i < resource_names.size(); ++i) {
-            g.sprite(resource_textures[i], text_pos, C.RESOURCE_SPRITE_SCA.val());
-            g.text(resources[i] + " " + resource_names[i], text_pos + @(.2, 0), .3);
-            .3 -=> text_pos.y;
-        }
-
-        g.text(free_forest_helpers + " forest helpers ", text_pos + @(.2, 0), .3);
-
-        g.popTextControlPoint();
-        g.popLayer();
     }
 
     { // draw grid
@@ -954,23 +1169,6 @@ while (1) {
         // if (upgrade(animal_friend_cost, "animal friends " + animal_friends, TileType_Grass)) {
         //     animal_friends++;
         // }
-
-        // TODO should automation upgrades cost other resource AND base resource?
-        // e.g. sanity AND belonging?
-        {
-            10 => int cost;
-            TileType_Friend => int cost_type;
-            "belonging tile + automation" => string name;
-
-            UI.beginDisabled(grass_and_friend_auto || !friend_tile.unlocked);
-            if (upgrade(cost, name, TileType_Friend)) {
-                // unlock!
-                addTile(grass_tex, @(1, 0), TileType_Grass) @=> Tile tile;
-                true => tile.unlocked;
-                true => grass_and_friend_auto;
-            }
-            UI.endDisabled();
-        }
 
         // unlock friendship!
         UI.separatorText("Friend Upgrades");
@@ -1063,21 +1261,6 @@ while (1) {
             }
             UI.endDisabled();
         }
-
-
-        UI.separatorText("Forest Helper Upgrades");
-        {
-            for (1 => int type; type < TileType_Count; ++type) {
-                helpers_per_resource[type] => int helper_count;
-                (Math.pow(2, helper_count) * 10) $ int => int cost;
-                if (upgrade(cost, "forest helper", type)) {
-                    ++helpers_per_resource[type];
-                    ++free_forest_helpers;
-                }
-            }
-        }
-
-
 
         UI.end();
     }
