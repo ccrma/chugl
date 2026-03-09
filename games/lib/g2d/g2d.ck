@@ -123,6 +123,7 @@ public class G2D extends GGen
 	float screen_h;
 
 	int mouse_left_down;
+	int mouse_left_up;
 	int mouse_right_down;
 
 	fun void _updateScreenBounds() {
@@ -137,6 +138,7 @@ public class G2D extends GGen
 		// update mouse stuff
 		GWindow.mouseLeftDown() => mouse_left_down;
 		GWindow.mouseRightDown() => mouse_right_down;
+		GWindow.mouseLeftUp() => mouse_left_up;
 	}
 	// ------------------- state stacks --------------------------
 	// note: these config stacks are cleared at the end of every frame to prevent accidental leaks

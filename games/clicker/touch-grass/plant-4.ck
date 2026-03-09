@@ -91,6 +91,8 @@ class C {
     static UI_Float LOCAL_GUI_H_RATIO(.33); // determined every frame
 
     static UI_Float RESOURCE_SPRITE_SCA(.28);
+
+    static UI_Float HELPER_SZ(.5);
 }
 
 G2D g;
@@ -308,7 +310,6 @@ class CD {
 class Helper {
     int state;
     Tile@ tile; // tile they are working
-
     vec2 pos; // world pos
 }
 
@@ -547,6 +548,22 @@ Tile tile_list[0];
     @(-1.5, 1.5), @(1.5, 3.5),      // MEDITATION
 ] @=> vec2 tile_regions[];
 
+// given cell coord, return the TileType
+fun int cellRegion(vec2 cell) {
+    for (1 => int type; type < TileType_Count; ++type) {
+        tile_regions[type * 2 + 0] => vec2 region_min;
+        tile_regions[type * 2 + 1] => vec2 region_max;
+        if (M.inside(cell, region_min, region_max)) return type;
+    }
+    return TileType_None;
+}
+
+fun int worldPosRegion(vec2 pos) { return cellRegion(grid.world2cell(pos)); }
+
+
+
+
+
 IsoGrid grid;
 grid.init(26.5 * M.DEG2RAD, 1.5);
 
@@ -600,6 +617,11 @@ float mouse_dist;
 vec2 mouse_grid;
 vec2 mouse_cell;
 vec2 mouse_cell_world_pos; // centered cell position in worldspace
+
+
+// Helper state
+Helper@ held_helper;
+vec2 held_helper_offset;
 
 // tile gui params
 Tile@ gui_tile;
@@ -891,31 +913,20 @@ class GUI {
 
 fun void tileUpgradeGui(Tile@ tile, vec2 cell, vec2 top_left, vec2 bot_right) {
     int cost[TileType_Count];
+    cellRegion(cell) => int type;
+    if (type == TileType_None) return;
 
     g.pushLayer(10);
     g.pushFontSize(C.GUI_FONT_SIZE.val());
     // upgrade gui for empty tile spot
     if (tile == null) {
         grid.cell2world(cell) => vec2 world_pos;
-        for (1 => int type; type < TileType_Count; ++type) {
-            tile_regions[type * 2 + 0] => vec2 region_min;
-            tile_regions[type * 2 + 1] => vec2 region_max;
-            if (M.inside(cell, region_min, region_max)) {
-                20 * tiles_by_type[type].size() * tiles_by_type[type].size() => int cost;
+        20 * tiles_by_type[type].size() * tiles_by_type[type].size() => int cost;
 
-                if (gui.costButton(cost, type, world_pos)) {
-                    unlockTile(tile_tex, cell, type);
-                    // clear the null tile gui
-                    false => display_tile_gui;
-                }
-
-                // if (gui.upgradeButton(cost + " " + resource_names[type], world_pos, cost, type)) {
-                //     unlockTile(tile_tex, cell, type);
-                //     // clear the null tile gui
-                //     false => display_tile_gui;
-                // }
-                break;
-            }
+        if (gui.costButton(cost, type, world_pos)) {
+            unlockTile(tile_tex, cell, type);
+            // clear the null tile gui
+            false => display_tile_gui;
         }
     } 
     else if (!tile.unlocked) {
@@ -1003,16 +1014,54 @@ while (1) {
     grid.grid2cell(mouse_grid) => mouse_cell; 
     grid.cell2world(mouse_cell) => mouse_cell_world_pos; 
 
+    // detect helper release
+    if (g.mouse_left_up && held_helper != null) {
+        tileFromCell(mouse_cell) @=> Tile@ tile;
+        if (tile != null && tile.unlocked) {
+            mouse_curr + held_helper_offset => held_helper.pos;
+            tile @=> held_helper.tile;
+        } else {
+            // invalid region, return to original position
+        }
+
+        HelperState_Helping => held_helper.state;
+        ++held_helper.tile.num_helpers;
+        null @=> held_helper;
+    }
+
     // update and draw helpers
     g.pushLayer(Layer_Helper);
     (1.0 / GG.camera().viewSize()) => float inv_viewsize;
+    C.HELPER_SZ.val() * .5 * @(.82, .5) => vec2 helper_bb;
     for (auto h : helpers) {
+        // update
+        if (held_helper == null && g.mouse_left_down && M.inside(mouse_curr, h.pos, helper_bb.x, helper_bb.y)) {
+            T.assert(held_helper == null, "held_helper must be null");
+            HelperState_Held => h.state;
+            h @=> held_helper;
+            h.pos - mouse_curr => held_helper_offset;
+
+            // decrement helper count from tile
+            --h.tile.num_helpers;
+        }
+
+        vec2 pos;
+        float layer;
+        if (h.state == HelperState_Helping) {
+            h.pos => pos;
+            inv_viewsize * (h.pos.y - g.screen_min.y) => float y_sort;
+            g.layer() - y_sort => layer;
+        } else {
+            mouse_curr + held_helper_offset => pos;
+            Layer_GUI => layer;
+        }
+
         // draw
+        g.box(pos, 2 * helper_bb.x, 2 * helper_bb.y);
 
         // TODO add this is a push/pop flag to g2d
-        inv_viewsize * (h.pos.y - g.screen_max.y) => float y_sort;
-        g.pushLayer(g.layer() - y_sort);
-        g.sprite(helper_icon_tex, h.pos, 0.5);
+        g.pushLayer(layer);
+        g.sprite(helper_icon_tex, pos, C.HELPER_SZ.val());
         g.popLayer();
     }
     g.popLayer();
