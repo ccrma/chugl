@@ -114,7 +114,7 @@ Texture.load(me.dir() + "./assets/friend-icon.png", load_desc) @=> Texture frien
 Texture.load(me.dir() + "./assets/grass-icon.png", load_desc) @=> Texture grass_icon_tex;
 Texture.load(me.dir() + "./assets/hike-icon.png", load_desc) @=> Texture hike_icon_tex;
 Texture.load(me.dir() + "./assets/meditation-icon.png", load_desc) @=> Texture meditation_icon_tex;
-Texture.load(me.dir() + "./assets/helper-icon.png", load_desc) @=> Texture helper_icon_tex;
+// Texture.load(me.dir() + "./assets/helper-icon.png", load_desc) @=> Texture helper_icon_tex;
 
 
 fun void progressBar(
@@ -253,7 +253,8 @@ Color.WHITE => vec3 MEDITATION_COLOR;
 ] @=> vec3 tile_colors[];
 
 [
-    helper_icon_tex,
+    // helper_icon_tex,
+    null,
     grass_icon_tex,
     friend_icon_tex,
     hike_icon_tex,
@@ -314,25 +315,25 @@ class Helper {
 }
 
 // forest helper upgrades
-int helpers_per_resource[TileType_Count]; // how many were bought by each resource
-Helper helpers[0];
+// int helpers_per_resource[TileType_Count]; // how many were bought by each resource
+// Helper helpers[0];
 
-fun void addHelper(Tile@ tile) {
-    Helper h;
-    tile @=> h.tile;
-    helpers << h;
+// fun void addHelper(Tile@ tile) {
+//     Helper h;
+//     tile @=> h.tile;
+//     helpers << h;
 
-    // spawn them onto random position within tile
-    .25 * Math.random2f(-1, 1) + tile.cell.x => float grid_x;
-    .25 * Math.random2f(-1, 1) + tile.cell.y => float grid_y;
-    grid.grid2world(@(grid_x, grid_y)) => h.pos;
+//     // spawn them onto random position within tile
+//     .25 * Math.random2f(-1, 1) + tile.cell.x => float grid_x;
+//     .25 * Math.random2f(-1, 1) + tile.cell.y => float grid_y;
+//     grid.grid2world(@(grid_x, grid_y)) => h.pos;
 
-    // track
-    ++helpers_per_resource[tile.type];
+//     // track
+//     ++helpers_per_resource[tile.type];
 
-    // let tile know too
-    tile.num_helpers++;
-}
+//     // let tile know too
+//     tile.num_helpers++;
+// }
 
 class Tile {
     int type;
@@ -345,11 +346,12 @@ class Tile {
 
     CD tile_touch(2.0);
 
-    int num_helpers;
+    // int num_helpers;
 
     // friend tile params
     vec2 chat_bubble_list[0]; // @(who, width)
-    CD chat_cd(2.0);
+    2.0 => static float CHAT_BASE_CD;
+    CD chat_cd(CHAT_BASE_CD);
         // chat params
         2 => static float chat_w; // width of entire chat window
         .1 => static float chat_bubble_hh;
@@ -359,6 +361,9 @@ class Tile {
     1 => int grass_tick_level; // increases contribution per mouse_delta by X% per level
     // 0 => int animal_friends; // auto touch that grass
 
+    // friend tile upgrades
+    0 => int chattiness; // how often your friend texts you
+    1 => int eloquence; // points per message
 
     fun void addResource(int amt) {
         amt +=> resources[type];
@@ -367,7 +372,7 @@ class Tile {
 
     fun void _text(int receiving) {
         chat_bubble_list << @(receiving, Math.random2(1, 7) * .1 * chat_w);
-        addResource(1);
+        addResource(eloquence);
     }
 
     fun void update(float dt) {
@@ -379,7 +384,7 @@ class Tile {
                 float grass_progress;
 
                 Math.pow(1.25, grass_tick_level - 1) => float tick_rate;
-                .5 * dt * num_helpers * tick_rate +=> grass_progress;
+                .5 * dt * tick_rate +=> grass_progress;
 
                 if (inside) 
                     5 * dt * mouse_dist * tick_rate +=> grass_progress;
@@ -401,7 +406,10 @@ class Tile {
                 // current mechanic: hold left click and *vertical* movement
                 // animation: chopping veg
                 //            stiring wok
-                if (g.mouseLeft() && tile_touch.update(mouse_delta.dot(@(0, 1) * dt * 5))) {
+                .15 * dt => float progress;
+                if (g.mouseLeft()) Math.fabs(mouse_delta.dot(@(0, 1) * dt * 5)) +=> progress;
+
+                if (g.mouseLeft() && tile_touch.update(progress)) {
                     addResource(1);
                 }
             }
@@ -410,11 +418,8 @@ class Tile {
                 // TODO: would be cool to make the chat in emojis
 
                 // receive text
-                if (chat_cd.update(dt)) {
+                if (chattiness && chat_cd.update(dt)) {
                     _text(true);
-                    // TODO update chat cd based on level
-                    // M.poisson(2.0) => chat_cd.cap;
-                    // <<< chat_cd.cap >>>;
                 }
 
                 // send text!
@@ -422,50 +427,47 @@ class Tile {
                     _text(false);
                 }
 
-                if (chat_bubble_list.size() > 10) chat_bubble_list.popFront();
+                .15 * dt * num_helpers => float progress;
+                if (tile_touch.update(progress)) {
+                    _text(false);
+                }
 
+                if (chat_bubble_list.size() > 10) chat_bubble_list.popFront();
             }
             else if (type == TileType_Hike) {
-                Math.fabs(GWindow.scrollY()) * hike_rate => float scroll;
-                if (inside && tile_touch.update(scroll * .002)) {
+                .002 * Math.fabs(GWindow.scrollY()) * hike_rate => float progress;
+                .15 * dt * num_helpers +=> progress;
+
+                if (inside && tile_touch.update(progress)) {
                     addResource(hike_upgrades[hike_points]);
                 }
-                // ++resource;
-                // g.score("+1", pos, .5::second, .5, .5);
             }
-            else if (type == TileType_Meditate && inside) {
-                if (mouse_dist == 0 
+            else if (type == TileType_Meditate) {
+                .05 * dt * num_helpers => float progress;
+                if (
+                    inside && mouse_dist == 0 
                     && GWindow.scrollX() == 0
                     && GWindow.scrollY() == 0
-                    && !g.anyInput()
-                    && tile_touch.update(dt)) {
+                    && !g.anyInput()) {
+                        dt +=> progress;
+                }
+                if (tile_touch.update(progress)) {
                     addResource(1);
                 }
             }
         }
 
         // draw
+        drawTile(pos, unlocked ? tile_colors[type] : Color.DARKGRAY);
 
-        if (num_helpers) { // draw helper info
-            g.pushLayer(1);
-            g.text("helpers x " + num_helpers, pos - @(0, .3), .2);
-            g.popLayer();
-        }
+        // progress bar
+        g.pushLayer(1);
+        // g.text("Hike", pos, .5);
+        progressBar(tile_touch.percentage(), pos + @(0, .5), W*.8, .1, Color.WHITE, Color.GREEN);
+        g.popLayer();
 
-        if (type == TileType_Grass) {
-            drawTile(pos, GRASS_COLOR);
-
-            g.pushLayer(1);
-            progressBar(tile_touch.percentage(), pos, W*.8, .1, Color.WHITE, Color.GREEN);
-            g.popLayer();
-        }
-        else if (type == TileType_Friend) {
-            drawTile(pos, unlocked ? FRIEND_COLOR : Color.DARKGRAY);
-
-            g.pushLayer(1);
-            g.text("Friend", pos, .5);
-            g.popLayer();
-
+        // chat bubble
+        if (type == TileType_Friend) {
             // chat params
             pos.y + 1 => float chat_bubble_pos_y;
             pos.x - .5 * chat_w => float chat_left_x;
@@ -506,32 +508,6 @@ class Tile {
             g.popLayer();
             g.popPolygonRadius();
         }
-        else if (type == TileType_Hike) {
-            drawTile(pos, unlocked ? HIKE_COLOR : Color.DARKGRAY);
-
-            g.pushLayer(1);
-            g.text("Hike", pos, .5);
-            progressBar(tile_touch.percentage(), pos + @(0, .5), W*.8, .1, Color.WHITE, Color.GREEN);
-            g.popLayer();
-        }
-        else if (type == TileType_Cook) {
-            drawTile(pos, unlocked ? COOK_COLOR : Color.DARKGRAY);
-
-            g.pushLayer(1);
-            g.text("Cook", pos, .5);
-            progressBar(tile_touch.percentage(), pos + @(0, .5), W*.8, .1, Color.WHITE, Color.GREEN);
-            g.popLayer();
-        }
-        else if (type == TileType_Meditate) {
-            drawTile(pos, unlocked ? MEDITATION_COLOR : Color.DARKGRAY);
-
-            g.pushLayer(1);
-            g.text("Meditate", pos, .5);
-            progressBar(tile_touch.percentage(), pos + @(0, .5), W*.8, .1, Color.WHITE, Color.GREEN);
-            g.popLayer();
-        }
-
-        if (!unlocked) g.text("LOCKED", pos - @(0, .5), .5);
     }
 }
 
@@ -656,7 +632,7 @@ addTile(grass_tex, @(-3, 0), TileType_Hike) @=> Tile hike_tile;
 addTile(grass_tex, @(0, -3), TileType_Cook) @=> Tile cook_tile;
 addTile(grass_tex, @(0, 3), TileType_Meditate) @=> Tile meditate_tile;
 true => grass_tile.unlocked;
-100 => resources[TileType_Grass];
+0 => resources[TileType_Grass];
 
 [
     null,
@@ -964,11 +940,11 @@ fun void tileUpgradeGui(Tile@ tile, vec2 cell, vec2 top_left, vec2 bot_right) {
 
         // C.GUI_LINE_VSPACE.val() -=> cursor.y;
 
-        if (type == TileType_Grass) {
-            // init cursor stuff
-            cursor => gui.cursor;
-            right_border_x => gui.tile_upgrade_button_right_border;
+        // init cursor stuff
+        cursor => gui.cursor;
+        right_border_x => gui.tile_upgrade_button_right_border;
 
+        if (type == TileType_Grass) {
             // green thumb
             (Math.pow(2, tile.green_thumb - 1) * 5) $ int => int green_thumb_cost;
             if (gui.tileUpgradeButton("Green Thumb " + tile.green_thumb, green_thumb_cost, TileType_Grass)) {
@@ -982,7 +958,19 @@ fun void tileUpgradeGui(Tile@ tile, vec2 cell, vec2 top_left, vec2 bot_right) {
             }
         }
         else if (type == TileType_Friend) {
+            // chattiness (quadratic)
+            (Math.pow(tile.chattiness + 1, 2) * 10) $ int => int chattiness_cost;
+            if (gui.tileUpgradeButton("Chattiness " + (tile.chattiness + 1), chattiness_cost, TileType_Friend)) {
+                ++tile.chattiness;
+                // recalculate chat cd (reduces by 80% every time)
+                Tile.CHAT_BASE_CD * Math.pow(.8, tile.chattiness) => tile.chat_cd.cap;
+            }
 
+            // eloquence (points per pop)
+            (Math.pow(2, tile.eloquence - 1) * 20) $ int => int eloquence_cost;
+            if (gui.tileUpgradeButton("Eloquence " + tile.eloquence, eloquence_cost, TileType_Friend)) {
+                ++tile.eloquence;
+            }
         }
         else if (type == TileType_Hike) {
 
@@ -1030,47 +1018,45 @@ while (1) {
     }
 
     // update and draw helpers
-    g.pushLayer(Layer_Helper);
-    (1.0 / GG.camera().viewSize()) => float inv_viewsize;
-    C.HELPER_SZ.val() * .5 * @(.82, .5) => vec2 helper_bb;
-    for (auto h : helpers) {
-        // update
-        if (held_helper == null && g.mouse_left_down && M.inside(mouse_curr, h.pos, helper_bb.x, helper_bb.y)) {
-            T.assert(held_helper == null, "held_helper must be null");
-            HelperState_Held => h.state;
-            h @=> held_helper;
-            h.pos - mouse_curr => held_helper_offset;
+    // g.pushLayer(Layer_Helper);
+    // (1.0 / GG.camera().viewSize()) => float inv_viewsize;
+    // C.HELPER_SZ.val() * .5 * @(.82, .5) => vec2 helper_bb;
+    // for (auto h : helpers) {
+    //     // update
+    //     if (held_helper == null && g.mouse_left_down && M.inside(mouse_curr, h.pos, helper_bb.x, helper_bb.y)) {
+    //         T.assert(held_helper == null, "held_helper must be null");
+    //         HelperState_Held => h.state;
+    //         h @=> held_helper;
+    //         h.pos - mouse_curr => held_helper_offset;
 
-            // decrement helper count from tile
-            --h.tile.num_helpers;
-        }
+    //         // decrement helper count from tile
+    //         --h.tile.num_helpers;
+    //     }
 
-        vec2 pos;
-        float layer;
-        if (h.state == HelperState_Helping) {
-            h.pos => pos;
-            inv_viewsize * (h.pos.y - g.screen_min.y) => float y_sort;
-            g.layer() - y_sort => layer;
-        } else {
-            mouse_curr + held_helper_offset => pos;
-            Layer_GUI => layer;
-        }
+    //     vec2 pos;
+    //     float layer;
+    //     if (h.state == HelperState_Helping) {
+    //         h.pos => pos;
+    //         inv_viewsize * (h.pos.y - g.screen_min.y) => float y_sort;
+    //         g.layer() - y_sort => layer;
+    //     } else {
+    //         mouse_curr + held_helper_offset => pos;
+    //         Layer_GUI => layer;
+    //     }
 
-        // draw
-        g.box(pos, 2 * helper_bb.x, 2 * helper_bb.y);
+    //     // draw
+    //     g.box(pos, 2 * helper_bb.x, 2 * helper_bb.y);
 
-        // TODO add this is a push/pop flag to g2d
-        g.pushLayer(layer);
-        g.sprite(helper_icon_tex, pos, C.HELPER_SZ.val());
-        g.popLayer();
-    }
-    g.popLayer();
+    //     // TODO add this is a push/pop flag to g2d
+    //     g.pushLayer(layer);
+    //     g.sprite(helper_icon_tex, pos, C.HELPER_SZ.val());
+    //     g.popLayer();
+    // }
+    // g.popLayer();
 
     // update tiles
     for (auto tile : tile_list) tile.update(dt);
 
-    g.pushLayer(10);
-    g.popLayer();
 
     vec2 global_upgrade_gui_top_left;
     { // resource UI
@@ -1088,8 +1074,8 @@ while (1) {
             .3 -=> text_pos.y;
         }
 
-        g.sprite(helper_icon_tex, text_pos, C.RESOURCE_SPRITE_SCA.val());
-        g.text(helpers.size() + " forest helpers ", text_pos + @(.2, 0));
+        // g.sprite(helper_icon_tex, text_pos, C.RESOURCE_SPRITE_SCA.val());
+        // g.text(helpers.size() + " forest helpers ", text_pos + @(.2, 0));
 
         g.popTextControlPoint();
         g.popFontSize();
@@ -1102,15 +1088,14 @@ while (1) {
     // global gui
     g.pushLayer(Layer_GUI);
     g.pushFontSize(C.GUI_FONT_SIZE.val());
-    { 
-        
+    {     
         global_upgrade_gui_top_left => vec2 cursor;
 
         // upper tab bar
         1.25 * C.RESOURCE_SPRITE_SCA.val() => float tab_sz;
-        for (int i; i < GlobalGUI_Count; ++i) {
-            cursor + i * 1.25 * @(C.RESOURCE_SPRITE_SCA.val(), 0) => vec2 pos;
-            g.sprite(resource_textures[i], cursor + i * 1.25 * @(C.RESOURCE_SPRITE_SCA.val(), 0), C.RESOURCE_SPRITE_SCA.val());
+        for (1 => int i; i < GlobalGUI_Count; ++i) {
+            cursor + (i-1) * 1.25 * @(C.RESOURCE_SPRITE_SCA.val(), 0) => vec2 pos;
+            g.sprite(resource_textures[i], pos, C.RESOURCE_SPRITE_SCA.val());
 
             if (M.inside(mouse_curr, pos, .5 * tab_sz, .5 * tab_sz)) {
                 g.square(pos, tab_sz);
@@ -1132,25 +1117,25 @@ while (1) {
         @(gui.tile_upgrade_button_right_border, cursor.y) => vec2 global_gui_top_right;
 
         // body
-        if (global_gui_selection == GlobalGUI_Helper) {
-            for (1 => int type; type < TileType_Count; ++type) {
-                helpers_per_resource[type] => int helper_count;
-                (Math.pow(2, helper_count) * 10) $ int => int cost;
+        // if (global_gui_selection == GlobalGUI_Helper) {
+        //     for (1 => int type; type < TileType_Count; ++type) {
+        //         helpers_per_resource[type] => int helper_count;
+        //         (Math.pow(2, helper_count) * 10) $ int => int cost;
 
-                // idea: helpers are specific to the tile resoure they are bought with
-                // e.g. grass helper, hike helper...
+        //         // idea: helpers are specific to the tile resoure they are bought with
+        //         // e.g. grass helper, hike helper...
 
-                // idea: the resouce of a helper is randomized every time you buy one
-                // e.g. first costs sanity, then costs belonging, then sanity again... ?
-                // of course only draws from ones that have been unlocked
+        //         // idea: the resouce of a helper is randomized every time you buy one
+        //         // e.g. first costs sanity, then costs belonging, then sanity again... ?
+        //         // of course only draws from ones that have been unlocked
 
-                if (gui.tileUpgradeButton("forest helper", cost, type)) {
-                    // register in helpers list
-                    addHelper(starter_tiles[type]);
-                }
-            }
-        }
-        else if (global_gui_selection == GlobalGUI_Grass) {
+        //         if (gui.tileUpgradeButton("forest helper", cost, type)) {
+        //             // register in helpers list
+        //             addHelper(starter_tiles[type]);
+        //         }
+        //     }
+        // }
+        if (global_gui_selection == GlobalGUI_Grass) {
 
         }
 
@@ -1159,7 +1144,7 @@ while (1) {
     } g.popFontSize(); g.popLayer();
 
     { // tile upgrade gui
-        if (GWindow.mouseRightDown() || GWindow.keyDown(GWindow.Key_Space)) {
+        if (g.mouse_right_down) {
             tileFromCell(mouse_cell) @=> gui_tile;
             mouse_cell => gui_tile_cell;
             true => display_tile_gui;
@@ -1174,7 +1159,7 @@ while (1) {
         g.box(top_left, bot_right);
 
         // logic for closing tile gui
-        if (display_tile_gui && (GWindow.mouseLeftDown() || GWindow.keyDown(GWindow.Key_Space))) {
+        if (display_tile_gui && g.mouse_left_down && gui_tile != tileFromCell(mouse_cell)) {
             // detect clicking outside of null tile
             if (gui_tile == null || !gui_tile.unlocked) M.dist2(mouse_cell, gui_tile_cell) < .1 => display_tile_gui;
             // detect clicking outside of local gui window
@@ -1201,8 +1186,9 @@ while (1) {
         // draw tile regions
         g.pushLayer(2);
         1 => float margin;
-        for (int i; i < TileType_Count; ++i) {
-            gridlines(margin * tile_regions[2*i + 0], margin * tile_regions[2*i + 1], 2 * tile_colors[i]);
+        for (1 => int i; i < TileType_Count; ++i) {
+            if (starter_tiles[i].unlocked)
+                gridlines(margin * tile_regions[2*i + 0], margin * tile_regions[2*i + 1], 2 * tile_colors[i]);
         }
         g.popLayer();
     }
