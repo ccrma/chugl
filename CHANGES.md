@@ -4,7 +4,8 @@
 - add `TextureLoadDesc.srgb` for loading image data into srgb textures
 - Add YCrCb video decoding mode to `Video`
 - Updated cmake to build on linux. (thanks Lejun)
-- add new operator overloads `GGen[] --> GGen` and `GGen[] --< GGen` for grucking / ungrucking arrays of GGens all at once. (thanks Brendan)
+- add new operator overloads `GGen[] --> GGen` and `GGen[] --< GGen` for grucking / ungrucking arrays of GGens all at once (thanks Brendan)
+- add `Color.srgb(vec3)` and `Color.linear(vec3)` for converting between linear and srgb color spaces
 - Examples
   - `deep/video-ycrcb.ck`: demonstrating the YCrCb decoding mode on `Video` UGen
   - `deep/skybox-shader.ck`: procedural sky rendering via custom skybox shader
@@ -18,6 +19,7 @@
   - add warning when setting RenderPass.clear(false) on a GScene that has a skybox
   - setting `FlatMaterial.color()` and `PhongMaterial.color()` no longer override the alpha value to be 1
   - improved performance of default skybox material shader
+  - Material uniform updates are now batch-written to the GPU, improving renderer performance
 
 ## 0.2.9 (alpha)
 - Bug fixes

@@ -850,6 +850,14 @@ void MaterialTextureView::init(MaterialTextureView* view)
 void R_Material::createBindGroupEntries(R_Material* mat, int group, G_Graph* graph,
                                         G_DrawCall* drawcall, GraphicsContext* gctx)
 {
+    // update gpu uniform buffer if stale
+    if (mat->_uniform_buffer_stale) {
+        mat->_uniform_buffer_stale = false;
+        wgpuQueueWriteBuffer(gctx->queue, mat->_uniform_buffer, 0,
+                             mat->_cpu_uniform_buffer_MALLOC,
+                             wgpuBufferGetSize(mat->_uniform_buffer));
+    }
+
     // create bindgroups for all bindings
 
     // super jank rn, if drawcall is NULL we assume we are adding bindings to a compute
@@ -864,10 +872,10 @@ void R_Material::createBindGroupEntries(R_Material* mat, int group, G_Graph* gra
                 const int UNIFORM_OFFSET
                   = MAX(gctx->limits.minUniformBufferOffsetAlignment,
                         sizeof(SG_MaterialUniformData));
-                drawcall ? graph->bindBuffer(drawcall, group, i, mat->uniform_buffer,
+                drawcall ? graph->bindBuffer(drawcall, group, i, mat->_uniform_buffer,
                                              UNIFORM_OFFSET * i,
                                              sizeof(SG_MaterialUniformData)) :
-                           graph->computePassBindBuffer(i, mat->uniform_buffer,
+                           graph->computePassBindBuffer(i, mat->_uniform_buffer,
                                                         UNIFORM_OFFSET * i,
                                                         sizeof(SG_MaterialUniformData));
             } break;
@@ -970,9 +978,9 @@ void R_Material::setBinding(GraphicsContext* gctx, R_Material* mat, u32 location
             size_t offset = MAX(gctx->limits.minUniformBufferOffsetAlignment,
                                 sizeof(SG_MaterialUniformData))
                             * location;
-            // ==optimize== set uniform buffer stale flag, flush the whole buffer at
-            // once before traversing the rendergraph
-            wgpuQueueWriteBuffer(gctx->queue, mat->uniform_buffer, offset, data, bytes);
+
+            mat->_uniform_buffer_stale = true;
+            memcpy(((char*)mat->_cpu_uniform_buffer_MALLOC) + offset, data, bytes);
         } break;
         case R_BIND_TEXTURE: {
             ASSERT(bytes == sizeof(R_TextureBinding));
@@ -2106,6 +2114,10 @@ R_Material* Component_CreateMaterial(GraphicsContext* gctx,
         const int UNIFORM_OFFSET = MAX(gctx->limits.minUniformBufferOffsetAlignment,
                                        sizeof(SG_MaterialUniformData));
 
+        // init CPU-side batch uniform buffer
+        mat->_cpu_uniform_buffer_MALLOC
+          = calloc(UNIFORM_OFFSET, ARRAY_LENGTH(mat->bindings));
+
         // init uniform buffer
         char label[128] = {};
         snprintf(label, sizeof(label), "UniformBuffer for Material[%d:%s]", mat->id,
@@ -2114,7 +2126,7 @@ R_Material* Component_CreateMaterial(GraphicsContext* gctx,
         WGPUBufferDescriptor desc = {};
         desc.size                 = UNIFORM_OFFSET * ARRAY_LENGTH(mat->bindings);
         desc.usage                = WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst;
-        mat->uniform_buffer       = wgpuDeviceCreateBuffer(gctx->device, &desc);
+        mat->_uniform_buffer      = wgpuDeviceCreateBuffer(gctx->device, &desc);
 
         mat->pso = cmd->pso;
     }

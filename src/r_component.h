@@ -490,9 +490,13 @@ struct R_Material : public R_Component {
     SG_MaterialPipelineState pso;
     // bindgroup state (uniforms, storage buffers, textures, samplers)
     R_Binding bindings[CHUGL_MATERIAL_MAX_BINDINGS];
-    WGPUBuffer uniform_buffer;
+
+    void* _cpu_uniform_buffer_MALLOC; // used for batch writing
+    WGPUBuffer _uniform_buffer;
+    bool _uniform_buffer_stale; // used to batch write all uniform data in
+                                // R_Material::createBindGroupEntries
     // ==optimize== after implementing wgsl reflection layout generator, can cache
-    // bindgroup on material?
+    // bindgroup on material? can then get rid of cpu-side uniform buffer per material
 
     // bind group fns --------------------------------------------
 
