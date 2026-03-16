@@ -554,17 +554,21 @@ class Stack {
         cards << c;
     }
 
-    fun int legalToAdd(Card c) {
-        (
-            cards.size() == 0
-            || 
-            (
-                Card.oppositeColors(c.suit, cards[-1].suit)
-                &&
-                cards[-1].val - 1 == c.val
-            )
-        ) => int ret;
-        return ret;
+    fun int legalToAdd(Card c[]) {
+        T.assert(c.size() > 0, "cannot add empty stack");
+        if (is_ace_stack) {
+            return c.size() == 1 && empty() && c[0].suit == this.suit;
+        } else {
+            return (
+                cards.size() == 0
+                || 
+                (
+                    Card.oppositeColors(c[0].suit, cards[-1].suit)
+                    &&
+                    cards[-1].val - 1 == c[0].val
+                )
+            );
+        }
     }
 
     // does NOT change the card's assigned stack and idx to handle if the player drops in invalid position,
@@ -688,7 +692,7 @@ Card aces[0];
 
 Card@ hovered_card;
 Stack@ hovered_stack; // which stack the mouse is over
-Stack@ hovered_ace_stack; // which ace stack the mouse is over
+// Stack@ hovered_ace_stack; // which ace stack the mouse is over
 Card@ selected_ace; // card selected from ace area. can also be a non-ace the player is trying to put back
 
 Card@ held_cards[0];
@@ -1004,7 +1008,6 @@ fun void deal() {
     // reset held card state
     null @=> hovered_card;
     null @=> hovered_stack;
-    null @=> hovered_ace_stack;
     null @=> selected_ace;
 
     held_cards.clear();
@@ -1291,6 +1294,7 @@ while (1) {
                     ) {
                         true => card.hovered;
                         card @=> hovered_card;
+                        s @=> hovered_stack;
                     } else {
                         false => card.hovered;
                     }
@@ -1310,6 +1314,7 @@ while (1) {
                     if (M.aabbIsect(held_card_pos, @(CARD_HW, CARD_HH), s.cards[-1].pos(), @(CARD_HW, CARD_HH))) {
                         true => s.cards[-1].hovered;
                         s.cards[-1] @=> hovered_card;
+                        s @=> hovered_stack;
                         break;
                     } 
                 }
@@ -1319,11 +1324,10 @@ while (1) {
             if (hovered_card == null) {
                 for (auto s : ace_stack) {
                     s.hovered(mouse_pos) => int hovered;
+                    if (hovered) s @=> hovered_stack;
                     if (s.cards.size()) {
                         hovered => s.cards[-1].hovered;
                         if (hovered) s.cards[-1] @=> hovered_card;
-                    } else {
-                        if (hovered) s @=> hovered_ace_stack;
                     }
                 }
             }
@@ -1397,15 +1401,12 @@ while (1) {
         // drop cards
         if (g.mouseLeftUp() && held_cards.size()) {
             held_cards[0].stack @=> Stack original_stack;
-            Stack @stack;
+            original_stack @=> Stack@ stack;
 
             // no stack hovered OR illegal move, put back in original
-            if (hovered_card != null && hovered_card.stack.legalToAdd(held_cards[0])) hovered_card.stack @=> stack;
-            else if (hovered_stack != null && hovered_stack.legalToAdd(held_cards[0])) hovered_stack @=> stack;
-            else if (held_cards.size() == 1 && hovered_ace_stack != null && hovered_ace_stack.empty() && held_cards[0].suit == hovered_ace_stack.suit) {
-                hovered_ace_stack @=> stack;
+            if (hovered_stack != null && hovered_stack.legalToAdd(held_cards)) {
+                 hovered_stack @=> stack;
             }
-            else held_cards[0].stack @=> stack;
 
             if (stack == original_stack) {
                 // sfx.swoosh();
@@ -1487,9 +1488,7 @@ while (1) {
 
             // draw
             Color.WHITE => vec3 color;
-            if (hovered_ace_stack == stack) {
-                Color.ORANGE => color;
-            }
+            if (hovered_stack == stack) Color.ORANGE => color;
             stack.draw(color, mouse_pos);
         }
     }
@@ -1529,6 +1528,5 @@ while (1) {
     { // cleanup
         null @=> hovered_card;
         null @=> hovered_stack;
-        null @=> hovered_ace_stack;
     }
 }
