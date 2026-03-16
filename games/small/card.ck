@@ -195,6 +195,12 @@ GText.defaultFont(me.dir() + "./card_assets/ritegaki.otf");
 3 => int Suit_Spade;
 4 => int Suit_Count;
 
+FlatMaterial suit_materials[Suit_Count];
+for (int suit; suit < Suit_Count; suit++) {
+    suit_materials[suit].colorMap(suit2sprite(suit));
+}
+
+
 0 => int VictoryAnim_Left;
 1 => int VictoryAnim_Right;
 2 => int VictoryAnim_Up;
@@ -386,9 +392,40 @@ class Card {
     float anim_layer;
     vec2 deal_curr_pos;
 
+    GGen art;
+    static PlaneGeometry card_geo;
 
     fun Card(int val, int suit) {
         val => this.val; suit => this.suit;
+
+        // initialize symbols and text
+        CARD_HH * g.UP + CARD_HW * g.RIGHT => vec2 top_right;
+        CARD_HH * g.UP + CARD_HW * g.LEFT => vec2 top_left;
+        .5 * CARD_HW => float suit_size;
+
+        GText card_number --> art;
+        card_number.controlPoints(@(0, 1));
+        card_number.color(Color.BLACK);
+        card_number.pos(top_left + CARD_INNER_PAD.val() * @(1, -1));
+        card_number.size(suit_size);
+        card_number.text(val == 1 ? "A" : ("" + val));
+
+        GMesh suit_sprite(card_geo, suit_materials[suit]) --> art; 
+        top_right - (.5 * suit_size + CARD_INNER_PAD.val() + SUIT_SYMBOL_OFFSET.val()) * @(1, 1) => vec2 suit_pos;
+        suit_sprite.pos(suit_pos);
+        suit_sprite.sca(suit_size * 1.2);
+
+        // body sprite pattern
+        if (val == 1) {
+            GMesh body_sprite(card_geo, suit_materials[suit]) --> art; 
+            body_sprite.sca(CARD_HH * ACE_SYMBOL_SIZE.val());
+        } else {
+            for (auto delta : symbol_positions[val]) {
+                GMesh body_sprite(card_geo, suit_materials[suit]) --> art; 
+                body_sprite.pos(delta - @(0, .16));
+                body_sprite.sca(suit_size * 1.12);
+            }
+        }
     }
 
     fun void reset() {
@@ -421,6 +458,8 @@ class Card {
     }
 
     fun static void draw(Card c, vec2 pos, float layer) {
+        if (c.art.parent() == null) c.art --> GG.scene();
+
         // if being dealt, zeno interp towards pos
         if (room == Room_Deal || c.was_swapped) {
             // update visual position
@@ -473,38 +512,8 @@ class Card {
             }
         } g.popPolygonRadius(); g.popLayer();
 
-        // TODO fix layer/depth sorting
-        g.pushLayer(layer + .01); 
-        {
-            pos + CARD_HH * g.UP + CARD_HW * g.RIGHT => vec2 top_right;
-            pos + CARD_HH * g.UP + CARD_HW * g.LEFT => vec2 top_left;
-            .5 * CARD_HW => float suit_size;
-
-            top_left + CARD_INNER_PAD.val() * @(1, -1) => vec2 number_pos;
-            g.pushColor(Color.BLACK);
-            g.pushTextControlPoint(0, 1);
-            if (c.val == 1) g.text("A", number_pos, 1*suit_size);
-            else g.text("" + c.val, number_pos, 1*suit_size);
-            g.popTextControlPoint();
-            g.popColor();
-
-            top_right - (.5 * suit_size + CARD_INNER_PAD.val() + SUIT_SYMBOL_OFFSET.val()) * @(1, 1) => vec2 suit_pos;
-
-            // audge's art
-            g.pushColor(Color.WHITE);
-            g.sprite(suit2sprite(c.suit), suit_pos, suit_size * 1.2, 0);
-
-            if (c.val == 1) g.sprite(suit2sprite(c.suit), pos, CARD_HH * ACE_SYMBOL_SIZE.val(), 0);
-            else {
-                for (auto delta : symbol_positions[c.val]) {
-                    g.sprite(suit2sprite(c.suit), pos + delta - @(0, .16), suit_size * 1.12, 0);
-                }
-            }
-
-            g.popColor();
-
-        } 
-        g.popLayer();
+        // draw card symbols and text
+        c.art.pos(@(pos.x, pos.y, layer + .01));
     }
 
     fun int legalToPickup() {
