@@ -801,8 +801,8 @@ enum SG_Text_AlignmentType : u32 {
 };
 
 struct SG_Text : public SG_Mesh {
-    std::string font_path   = "";
-    std::string text        = "";
+    std::string text;
+    std::string font_path;
     t_CKVEC2 control_points = { 0.5f, 0.5f };
     float vertical_spacing  = 1.0f;
     float width;

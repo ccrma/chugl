@@ -1022,6 +1022,7 @@ SG_Text* SG_CreateText(Chuck_Object* ckobj)
     size_t offset = arena->curr;
     SG_Text* text = ARENA_PUSH_ZERO_TYPE(arena, SG_Text);
     *text         = {};
+    ASSERT(text->text.length() == 0)
     SG_Transform::_init(text, ckobj);
 
     // init SG_Component base class
