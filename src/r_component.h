@@ -791,8 +791,8 @@ struct BoundingBox {
 };
 
 struct R_Text : public R_Transform {
-    std::string text;
-    std::string font_path;
+    chugl_string text;
+    chugl_string font_path;
     glm::vec2 control_points;
     float vertical_spacing;
 
@@ -802,7 +802,7 @@ struct R_Text : public R_Transform {
 };
 
 struct R_Font {
-    std::string font_path;
+    chugl_string font_path;
     FT_Face face; // TODO multiplex faces across R_Font. multiple R_Font with same
                   // font but different text can share the same face
 

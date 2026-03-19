@@ -229,7 +229,7 @@ CK_DLL_CTOR(gtext_ctor)
 
     OBJ_MEMBER_UINT(SELF, component_offset_id) = text->id;
 
-    text->text = "hello ChuGL";
+    text->text.set("hello ChuGL");
 
     // create gtext material
     Chuck_Object* material_ckobj
@@ -307,7 +307,7 @@ CK_DLL_MFUN(gtext_set_color_rgb)
 CK_DLL_MFUN(gtext_set_text)
 {
     SG_Text* text = GET_TEXT(SELF);
-    text->text    = API->object->str(GET_NEXT_STRING(ARGS));
+    text->text.set(API->object->str(GET_NEXT_STRING(ARGS)));
 
     CQ_PushCommand_TextRebuild(text);
 }
@@ -317,7 +317,7 @@ CK_DLL_MFUN(gtext_get_text)
     SG_Text* text = GET_TEXT(SELF);
     // return new string (no ref count needed; chuck VM function call mechanism will
     // take it from here)
-    RETURN->v_string = chugin_createCkString(text->text.c_str(), false);
+    RETURN->v_string = chugin_createCkString(text->text.str, false);
 }
 
 CK_DLL_MFUN(gtext_set_font)
@@ -329,7 +329,7 @@ CK_DLL_MFUN(gtext_set_font)
         return;
     }
 
-    text->font_path = API->object->str(ck_string);
+    text->font_path.set(API->object->str(ck_string));
 
     CQ_PushCommand_TextRebuild(text);
 }
@@ -339,7 +339,7 @@ CK_DLL_MFUN(gtext_get_font)
     SG_Text* text = GET_TEXT(SELF);
     // return new string (no ref count needed; chuck VM function call mechanism will
     // take it from here)
-    RETURN->v_string = chugin_createCkString(text->font_path.c_str(), false);
+    RETURN->v_string = chugin_createCkString(text->font_path.str, false);
 }
 
 CK_DLL_MFUN(gtext_set_vertical_spacing)

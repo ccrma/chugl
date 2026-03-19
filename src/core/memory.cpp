@@ -154,3 +154,13 @@ bool Arena::containsItem(Arena* a, void* ptr, size_t size)
     }
     return false;
 }
+
+void chugl_string::set(const char* s)
+{
+    len = strlen(s);
+    if (len + 1 > cap) {
+        cap = MAX(len + 1, 2 * cap);
+        str = (char*)realloc(str, cap);
+    }
+    memcpy(str, s, len + 1);
+}

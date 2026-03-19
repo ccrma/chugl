@@ -85,3 +85,12 @@ struct Arena {
 
 #define ARENA_CONTAINS(a, item) Arena::containsItem(a, &item, sizeof(item))
 #define ARENA_FIND(a, item) Arena::findItem(a, &item, sizeof(item))
+
+// string view
+struct chugl_string {
+    size_t len;
+    size_t cap;
+    char* str; // null terminated
+
+    void set(const char* s);
+};

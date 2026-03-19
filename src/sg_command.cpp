@@ -908,7 +908,8 @@ void CQ_PushCommand_CameraSetParams(SG_Camera* cam)
 
 void CQ_PushCommand_TextRebuild(SG_Text* text)
 {
-    size_t additional_bytes = text->text.length() + 1 + text->font_path.length() + 1;
+    // add 1 byte to each string for null termination
+    size_t additional_bytes = (text->text.len + 1) + (text->font_path.len + 1);
     ASSERT(text->_mat_id != 0);
 
     BEGIN_COMMAND_ADDITIONAL_MEMORY_ZERO(SG_Command_TextRebuild,
@@ -921,11 +922,11 @@ void CQ_PushCommand_TextRebuild(SG_Text* text)
     command->alignment        = text->alignment;
     command->size             = text->size;
     char* text_copy           = (char*)memory;
-    char* font_path           = text_copy + text->text.length() + 1;
+    char* font_path           = text_copy + text->text.len + 1;
 
     // copy strings
-    strncpy(text_copy, text->text.c_str(), text->text.length());
-    strncpy(font_path, text->font_path.c_str(), text->font_path.length());
+    memcpy(text_copy, text->text.str, text->text.len);
+    memcpy(font_path, text->font_path.str, text->font_path.len);
 
     command->text_str_offset      = Arena::offsetOf(cq.write_q, text_copy);
     command->font_path_str_offset = Arena::offsetOf(cq.write_q, font_path);
