@@ -15,6 +15,8 @@
   - fixed bug where main camera (`GG.camera()`) was being incorrectly replaced upon instantiating a new `GScene` 
   - fixed segfault caused by setting a null texture to `Material.texture(int, Texture)`
   - `GGen.detach()` and `GGen.detachChildren()` now correctly set the `.parent()` pointers of all detached children to null.
+  - `GVideo.rate()` now properly returns a float
+  - fix segfault caused by GText on Linux
 - General improvements:
   - add warning when setting RenderPass.clear(false) on a GScene that has a skybox
   - setting `FlatMaterial.color()` and `PhongMaterial.color()` no longer override the alpha value to be 1

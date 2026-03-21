@@ -233,7 +233,7 @@ void ulib_video_query(Chuck_DL_Query* QUERY)
           "playback "
           "is NOT supported. Negative rates will be clamped to 0");
 
-        MFUN(video_get_rate, "void", "rate");
+        MFUN(video_get_rate, "float", "rate");
         DOC_FUNC(
           "Get the playback rate of the video. 1.0 is normal speed. Negative rates are "
           "not "
