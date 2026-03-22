@@ -360,6 +360,18 @@ public class G2D extends GGen
 	}
 
 	// note: to stop an effect call effect.stop();
+	fun void animate(
+		vec2 pos, Texture@ t, int n_frames, int start, float secs_per_frame, float size
+	) { 
+		add(new AnimationEffect(
+			t,
+			n_frames,
+			start,
+			secs_per_frame,
+			size, pos, Color.WHITE
+		)); 
+	}
+
 	fun void explode(vec2 pos) { add(new ExplodeEffect(pos, 1, 1, Color.WHITE, 0, Math.two_pi, ExplodeEffect.Shape_Lines)); }
 	fun void explode(vec2 pos, float radius, dur d) { add(new ExplodeEffect(pos, d/second, radius, Color.WHITE, 0, Math.two_pi, ExplodeEffect.Shape_Lines)); }
 	fun void explode(vec2 pos, float radius, dur d, vec3 color, float angle, float width, int type) { 
@@ -787,6 +799,14 @@ public class G2D extends GGen
 		sprites[blend_stack[-1]].sprite(
 			tex, @(n_frames, 1), @(frame$float / n_frames, 0), 
 			@(pos.x, pos.y, layer_stack[-1]), sca, rot, color, emission_stack[-1], alpha_stack[-1]
+		);
+	}
+
+	// for 1d horizontal sprite sheets
+	fun void sprite(Texture tex, int n_frames, int frame, vec2 pos, float sca) {
+		sprites[blend_stack[-1]].sprite(
+			tex, @(n_frames, 1), @(frame$float / n_frames, 0), 
+			@(pos.x, pos.y, layer_stack[-1]), sca * @(1,1), 0, color_stack[-1], emission_stack[-1], alpha_stack[-1]
 		);
 	}
 
@@ -1700,6 +1720,55 @@ class ScreenFlashEffect extends Effect {
 			Color.WHITE * expImpulse(t, 9)
 		);
 		g.popBlend();
+
+		return STILL_GOING;
+	}
+}
+
+// plays an animation through
+public class AnimationEffect extends Effect {
+	int n_frames;
+	float time_per_frame_secs;
+	vec2 pos;
+	float size;
+	vec3 color;
+	Texture@ sprite;
+
+	// private
+	int _frame;
+	float cd;
+	vec2 _frame_sca; // for non-square sprites
+	
+	fun @construct(
+		Texture@ sprite,
+		int n_frames,
+		int start,
+		float time_per_frame_secs,
+		float size, vec2 pos, vec3 color) {
+			sprite @=> this.sprite;
+		n_frames => this.n_frames;
+		time_per_frame_secs => this.time_per_frame_secs;
+		size => this.size;
+		pos => this.pos;
+		color => this.color;
+		time_per_frame_secs => cd;
+		start => _frame;
+
+		sprite.width() $ float / n_frames => float frame_w;
+		@(frame_w / sprite.height(), 1) => _frame_sca;
+
+	}
+
+	fun int update(G2D g, float dt) {
+		if (_frame >= n_frames) return END;
+
+		dt -=> cd;
+		if (cd <= 0) {
+			time_per_frame_secs => cd;
+			_frame++;
+		}
+
+		g.sprite(sprite, @(n_frames, 1), @(_frame$float / n_frames, 0), pos, size * _frame_sca, 0, color);
 
 		return STILL_GOING;
 	}
