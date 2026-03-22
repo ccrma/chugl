@@ -50,11 +50,15 @@ class Pimples {
     .5 => static float PILLBUG_SCA_MOD;
 
     // clown
-    true => load_desc.flip_y;
     Texture.load("./assets/pimple/clown.png", load_desc) @=> static Texture clown_tex;
     Texture.load("./assets/pimple/balloon.png", load_desc) @=> static Texture balloon_tex;
     balloon_tex.width() / 4.0 / balloon_tex.height() => static float BALLOON_ASPECT;
     4.2 => float BALLOON_VISUAL_SCA;
+    
+    // monster
+    Texture.load("./assets/pimple/monster.png", load_desc) @=> static Texture monster_tex;
+    Texture.load("./assets/pimple/eyeblink-no-pupil.png", load_desc) @=> static Texture eyeblink_tex;
+    1.4 => float MONSTER_SPAWN_RADIUS;
 
     // size
     .5 => static float r;
@@ -154,6 +158,23 @@ class Pimples {
                 ) => rand[i];
             }
         }
+        else if (level == Level_Monster) {
+            count => num_pimples;
+            positions.size(count);
+            active.size(count);
+            rand.size(count);
+
+            for (int i; i < count; i++) {
+                true => active[i];
+                M.randomPointInCircle(@(0, 0), .5, MONSTER_SPAWN_RADIUS) => positions[i];
+                @(
+                    Math.randomf(),
+                    Math.randomf(),
+                    Math.randomf(),
+                    Math.random2f(.5, 1)
+                ) => rand[i];
+            }
+        }
     }
 
     fun void pop(int idx) {
@@ -214,6 +235,9 @@ class Pimples {
                 .95 * r => mod_r;
                 g.square(p + .5 * g.UP, 2 * mod_r);
             }
+            else if (level == Level_Monster) {
+                .9 * r => mod_r;
+            }
 
             if (!popped && pimples.active[i]) {
                 int collision;
@@ -243,6 +267,17 @@ class Pimples {
                             -1 *=> e._frame_sca.y;
                             g.add(e);
                         }
+                        else if (level == Level_Monster) {
+                            AnimationEffect e(
+                                eyeblink_tex,
+                                3,
+                                0,
+                                .1,
+                                r, p, Color.WHITE
+                            ); 
+                            -1 *=> e._frame_sca.y;
+                            g.add(e);
+                        }
                     }
                 }
             }
@@ -266,11 +301,6 @@ class Pimples {
                 g.boxFilled(@(0, 0), g.screen_w, g.screen_h, Color.BEIGE);
                 g.popLayer();
 
-                // g.pushLayer(0);
-                // g.sprite(skin_tex, @(0,0), g.screen_h);
-                // g.popLayer();
-
-
                 rand[i] $ vec2 => vec2 target;
                 M.angle(p, target) + Math.pi/2 => float angle;
 
@@ -287,6 +317,27 @@ class Pimples {
                 if (active) 
                     g.sprite(balloon_tex, @(4, 1), @(0, 0), p, BALLOON_VISUAL_SCA * r * @(BALLOON_ASPECT, -1), 0, Color.WHITE);
             }
+            else if (level == Level_Monster) {
+                g.pushLayer(0);
+                g.sprite(monster_tex, @(0,0), @(g.screen_w, -g.screen_h), 0);
+                g.popLayer();
+
+                if (active) {
+                    g.sprite(eyeblink_tex, 3, 0, p, 2 * r * @(1, -1), 0, Color.WHITE);
+
+                    p + .1 * g.UP => vec2 eye_p;
+
+                    M.dir(eye_p, mouse_pos) => vec2 dir;
+                    .05 * dir +=> eye_p;
+
+                    g.pushLayer(2);
+                    g.circleFilled(eye_p, .04, Color.YELLOW);
+                    g.popLayer();
+                } else {
+                    g.sprite(eyeblink_tex, 3, 2, p, 2 * r * @(1, -1), 0, Color.WHITE);
+                }
+                // g.circleFilled(@(0,0), MONSTER_SPAWN_RADIUS);
+            }
         }
         g.popLayer();
     }
@@ -294,6 +345,7 @@ class Pimples {
 
 Pimples pimples;
 Pimples.Level_Clown => int level;
+Pimples.Level_Monster => level;
 // 1 => level;
 
 while (1) {
@@ -306,5 +358,4 @@ while (1) {
 
     pimples.update(dt);
 
-    <<< g.screen_w >>>;
 }

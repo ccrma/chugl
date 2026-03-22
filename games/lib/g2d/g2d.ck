@@ -1734,6 +1734,8 @@ public class AnimationEffect extends Effect {
 	vec3 color;
 	Texture@ sprite;
 
+	int reverse;
+
 	// private
 	int _frame;
 	float cd;
@@ -1760,13 +1762,14 @@ public class AnimationEffect extends Effect {
 	}
 
 	fun int update(G2D g, float dt) {
-		if (_frame >= n_frames) return END;
-
 		dt -=> cd;
 		if (cd <= 0) {
 			time_per_frame_secs => cd;
-			_frame++;
+			if (reverse) _frame--;
+			else _frame++;
 		}
+
+		if (_frame >= n_frames || _frame < 0) return END;
 
 		g.sprite(sprite, @(n_frames, 1), @(_frame$float / n_frames, 0), pos, size * _frame_sca, 0, color);
 
