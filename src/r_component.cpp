@@ -3322,6 +3322,7 @@ void R_Font::updateText(GraphicsContext* gctx, R_Font* font, R_Text* text)
     }
 
     int line_offset_count = ARENA_LENGTH(&line_offsets, float);
+    UNUSED_VAR(line_offset_count);
     int line_offset_idx   = 0;
 
     // compute new bounding box

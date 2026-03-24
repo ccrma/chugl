@@ -28,7 +28,8 @@
         }                                                                              \
     }
 #else
-#define ASSERT(expression) NULL;
+// #define ASSERT(expression) NULL;
+#define ASSERT(expression) ((void)(expression));
 #endif
 
 #define UNREACHABLE ASSERT(false);

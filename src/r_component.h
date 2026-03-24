@@ -1300,6 +1300,7 @@ struct G_Cache {
                   } };
 
             const void* replaced = hashmap_set(compute_pipeline_map, &item);
+            UNUSED_VAR(replaced);
             ASSERT(!replaced);
 
             result = (G_CacheComputePipeline*)hashmap_get(compute_pipeline_map, &item);
@@ -1377,6 +1378,7 @@ struct G_Cache {
 
             bool is_render_pipeline = (shader->vertex_shader_module != NULL);
             // bool is_compute_pipeline = (shader->compute_shader_module != NULL);
+            UNUSED_VAR(is_render_pipeline);
             ASSERT(is_render_pipeline);
 
             // build pipeline desc
