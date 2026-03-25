@@ -507,19 +507,16 @@ CK_DLL_CTOR(video_ctor_with_path)
     int frame_h = plm_get_height(plm);
 
     // create the rgb video texture
-    SG_TextureDesc desc = {};
-    desc.width          = frame_w;
-    desc.height         = frame_h;
-    desc.dimension      = WGPUTextureDimension_2D;
-    desc.format         = WGPUTextureFormat_RGBA8Unorm;
-    desc.usage          = WGPUTextureUsage_All;
-    desc.gen_mips       = false;
-
-    video_texture_rgba = SG_CreateTexture(&desc, NULL, SHRED, true);
+    SG_TextureDesc desc          = {};
+    desc.width                   = frame_w;
+    desc.height                  = frame_h;
+    desc.dimension               = WGPUTextureDimension_2D;
+    desc.format                  = WGPUTextureFormat_RGBA8Unorm;
+    desc.usage                   = WGPUTextureUsage_All;
+    desc.gen_mips                = false;
+    video->video_texture_rgba_id = SG_CreateTexture(&desc, NULL, SHRED, true)->id;
 
     // create the YCbCr video textures
-    desc.width     = NEXT_MULT16(frame_w); // Plane size rounded up to nearest 16 px
-    desc.height    = NEXT_MULT16(frame_h);
     desc.dimension = WGPUTextureDimension_2D;
     desc.format    = WGPUTextureFormat_R8Unorm;
     // TextureUsages(STORAGE_BINDING) are not allowed on a texture of type R8Unorm
@@ -534,9 +531,8 @@ CK_DLL_CTOR(video_ctor_with_path)
     video->video_texture_cb_id = SG_CreateTexture(&desc, NULL, SHRED, true)->id;
 
     // init remaining video fields
-    video->plm                   = plm;
-    video->path_OWNED            = path;
-    video->video_texture_rgba_id = video_texture_rgba->id;
+    video->plm        = plm;
+    video->path_OWNED = path;
 
     CQ_PushCommand_VideoUpdate(video);
 }

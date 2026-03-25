@@ -162,10 +162,17 @@ static void autoUpdateScenegraph(Arena* arena, SG_Scene* scene, Chuck_VM* VM,
         API->vm->invoke_mfun_immediate_mode(ggen, _ggen_update_vt_offset, VM,
                                             origin_shred, &theArg, 1);
 
+        // get the xform from id again because invoking GGen.update() may
+        // have created enough GGens to cause an array reallocation, invalidating
+        // the xform pointer
+        xform = SG_GetTransform(sg_id);
+
         // add children to stack
-        size_t numChildren  = SG_Transform::numChildren(xform);
-        SG_ID* children_ptr = ARENA_PUSH_COUNT(arena, SG_ID, numChildren);
-        memcpy(children_ptr, xform->childrenIDs.base, sizeof(SG_ID) * numChildren);
+        if (xform) {
+            size_t numChildren  = SG_Transform::numChildren(xform);
+            SG_ID* children_ptr = ARENA_PUSH_COUNT(arena, SG_ID, numChildren);
+            memcpy(children_ptr, xform->childrenIDs.base, sizeof(SG_ID) * numChildren);
+        }
     }
 }
 

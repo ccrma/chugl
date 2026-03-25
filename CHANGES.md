@@ -18,6 +18,7 @@
   - `GVideo.rate()` now properly returns a float
   - fix segfault caused by GText on Linux
   - fix rare race condition on startup caused by the graphics thread broadcasting WindowResizeEvent
+  - fix segfault caused by walking scenegraph and calling `update(float dt)` during GG.autoUpdate()
 - General improvements:
   - add warning when setting RenderPass.clear(false) on a GScene that has a skybox
   - setting `FlatMaterial.color()` and `PhongMaterial.color()` no longer override the alpha value to be 1
