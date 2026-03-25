@@ -260,8 +260,7 @@ static void FlushGraphicsToAudioCQ()
             case SG_COMMAND_G2A_TEXTURE_SAVE: {
                 SG_Command_G2A_TextureSave* cmd = (SG_Command_G2A_TextureSave*)command;
                 OBJ_MEMBER_INT((Chuck_Object*)cmd->texture_save_event,
-                               texture_save_event_status_offset)
-                  = cmd->status;
+                               texture_save_event_status_offset) = cmd->status;
                 Event_Broadcast(cmd->texture_save_event);
                 API->object->release((Chuck_Object*)cmd->texture_save_event);
             } break;
@@ -1317,6 +1316,9 @@ CK_DLL_QUERY(ChuGL)
     }
 
     chugl_init_default_setup_impl();
+
+    // init chuck events (nextFrame, windowResize etc)
+    Event_Init(g_chuglAPI, g_chuglVM);
 
     // wasn't that a breeze?
     return true;

@@ -531,17 +531,18 @@ static Chuck_Event* events[CHUGL_EVENT_TYPE_COUNT] = {};
 
 static void Event_Init(CK_DL_API api, Chuck_VM* vm)
 {
-    if (chuckEventQueue == NULL) chuckEventQueue = api->vm->create_event_buffer(vm);
+    // Event_Init should only ever be called once
+    ASSERT(chuckEventQueue == NULL);
+    chuckEventQueue = api->vm->create_event_buffer(vm);
 
     for (u32 i = 0; i < CHUGL_EVENT_TYPE_COUNT; i++) {
-        if (events[i] != NULL) continue;
+        ASSERT(events[i] == NULL);
         events[i] = (Chuck_Event*)chugin_createCkObj(CHUGL_EventTypeNames[i], true);
     }
 }
 
 void Event_Broadcast(CHUGL_EventType type, CK_DL_API api, Chuck_VM* vm)
 {
-    if (events[type] == NULL) Event_Init(api, vm);
     switch (type) {
         case CHUGL_EventType::NEXT_FRAME: {
             spinlock::lock(&waitingShredsLock);
@@ -564,7 +565,7 @@ void Event_Broadcast(Chuck_Event* ck_event)
 
 Chuck_Event* Event_Get(CHUGL_EventType type, CK_DL_API api, Chuck_VM* vm)
 {
-    if (events[type] == NULL) Event_Init(api, vm);
+    ASSERT(events[type] && "Event_Init should have been called");
     return events[type];
 }
 

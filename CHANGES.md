@@ -17,6 +17,7 @@
   - `GGen.detach()` and `GGen.detachChildren()` now correctly set the `.parent()` pointers of all detached children to null.
   - `GVideo.rate()` now properly returns a float
   - fix segfault caused by GText on Linux
+  - fix rare race condition on startup caused by the graphics thread broadcasting WindowResizeEvent
 - General improvements:
   - add warning when setting RenderPass.clear(false) on a GScene that has a skybox
   - setting `FlatMaterial.color()` and `PhongMaterial.color()` no longer override the alpha value to be 1
