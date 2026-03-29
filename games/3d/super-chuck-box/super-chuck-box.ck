@@ -58,10 +58,13 @@ Weapons
 - grenade launcher (like Overwatch junkrat. fun, can bounce and hit around corners)
     - maybe this only makes sense if 
 - flame thrower
+- what if apply Tom Francis stats file format to weapon impl??
+    - don't need to define weapon properties in code, can do it in file and go crazy with permutations
 */
 
 @import "../../lib/g2d/ChuGL-debug.chug"
 @import "../../lib/M.ck"
+@import "../../lib/T.ck"
 
 // == load assets ========================================
 Texture.load(me.dir() + "./assets/floor.png") @=> Texture floor_tex;
@@ -71,6 +74,9 @@ Texture.load(me.dir() + "./assets/floor.png") @=> Texture floor_tex;
 
 GWindow.mouseMode(GWindow.MOUSE_DISABLED);
 int debug_console;
+
+// global game stuff
+float gametime;
 
 GPlane ground --> GG.scene();
 ground.rotX(M.PI/2);
@@ -86,7 +92,11 @@ cube.posZ(-2);
 cube.colorMap(floor_tex);
 cube.color(5 * Color.YELLOW);
 
-GMesh crosshair(new CircleGeometry, FlatMaterial crosshair_mat) --> GG.camera();
+// player cam
+GCamera player_camera; 
+player_camera => GG.scene().camera;
+player_camera.fov(90 * M.DEG2RAD); // 90 deg fov
+GMesh crosshair(new CircleGeometry, FlatMaterial crosshair_mat) --> player_camera;
 crosshair.sca(.001);
 crosshair.posZ(-.11);
 
@@ -104,10 +114,57 @@ vec2 mouse_deltas[2];
 int mouse_deltas_idx;
 vec2 mouse_deltas_avg;
 
+// entity stuff
+class Entity {
+    static CubeGeometry geo;
+    static PhongMaterial mat;
+
+    int _idx; // for pool bookkeeping
+    GMesh@ mesh;
+    vec3 vel;
+    vec3 bbox; // axis aligned bounding box, half-width, height, etc
+
+    fun Entity(GMesh mesh) { mesh @=> this.mesh; }
+}
+
+class EntityPool {
+    Entity items[0];
+    int len;
+}
+
+EntityPool pool;
+fun Entity spawn(vec3 pos) {
+    if (pool.len == pool.items.size()) {
+        pool.items << new Entity(new GMesh(Entity.geo, Entity.mat));
+        pool.len => pool.items[-1]._idx;
+    }
+    pool.items[pool.len++] @=> Entity e;
+    e.mesh.pos(pos);
+    e.mesh --> GG.scene();
+
+    return e;
+}
+
+fun void die(Entity@ e) {
+    // disconnect from scenegraph
+    e.mesh.detachParent();
+
+
+    // swap with end
+    e._idx => pool.items[pool.len - 1]._idx;
+    pool.items[pool.len - 1] @=> pool.items[e._idx];
+    e @=> pool.items[pool.len - 1];
+    pool.len - 1 => e._idx;
+
+    --pool.len;
+}
 
 while (1) {
     GG.nextFrame() => now;
     GG.dt() => float dt;
+    dt +=> gametime;
+
+    <<< player_camera.fov() * M.RAD2DEG >>>;
 
 // == input ===============================
     GWindow.mousePos() => vec2 mouse_pos;
@@ -149,6 +206,8 @@ while (1) {
         UI.slider("friction", friction, 0, 100);
         UI.slider("mouse sens", mouse_sens, 0, .01);
         UI.checkbox("avg mouse", use_mouse_avg);
+
+        UI.text("Entities: " + pool.len);
     }
 
 // == update ==================================
@@ -156,20 +215,22 @@ while (1) {
     if (!debug_console) { // player controls
 
         if (use_mouse_avg.val()) {
-            GG.camera().rotateOnLocalAxis(@(1, 0, 0), -mouse_deltas_avg.y * mouse_sens.val()); 
-            GG.camera().rotateOnWorldAxis(@(0, 1, 0), -mouse_deltas_avg.x * mouse_sens.val()); 
+            player_camera.rotateOnLocalAxis(@(1, 0, 0), -mouse_deltas_avg.y * mouse_sens.val()); 
+            player_camera.rotateOnWorldAxis(@(0, 1, 0), -mouse_deltas_avg.x * mouse_sens.val()); 
         } else {
-            GG.camera().rotateOnLocalAxis(@(1, 0, 0), -mouse_delta.y * mouse_sens.val()); 
-            GG.camera().rotateOnWorldAxis(@(0, 1, 0), -mouse_delta.x * mouse_sens.val()); 
+            player_camera.rotateOnLocalAxis(@(1, 0, 0), -mouse_delta.y * mouse_sens.val()); 
+            player_camera.rotateOnWorldAxis(@(0, 1, 0), -mouse_delta.x * mouse_sens.val()); 
         }
 
-        GG.camera().forward() => vec3 forward; 0 => forward.y; forward.normalize();
-        GG.camera().right() => vec3 right; 0 => right.y; right.normalize();
+        player_camera.forward() => vec3 forward => vec3 forward_no_y;
+        0 => forward_no_y.y; forward_no_y.normalize();
+        player_camera.right() => vec3 right => vec3 right_no_y;
+        0 => right_no_y.y; right_no_y.normalize();
 
         // movement
         true => int on_ground;
         speed.val() * (on_ground ? 1.0 : 0.3) * (
-            (key_r - key_l) * right + (key_u - key_d) * forward
+            (key_r - key_l) * right_no_y + (key_u - key_d) * forward_no_y
 		) => vec3 acceleration;
 
 		// Integrate acceleration & friction into velocity
@@ -181,9 +242,6 @@ while (1) {
         delta_v +=> velocity;
 
         velocity * dt +=> player_pos;
-
-        <<< mouse_delta, mouse_deltas_avg >>>;
-
 		// Divide the physics integration into 16 unit steps; otherwise fast
 		// projectiles may just move through walls.
 		// let 
@@ -192,10 +250,53 @@ while (1) {
 		// 	steps = Math.ceil(vec3_length(move_dist) / 16),
 		// 	move_step = vec3_mulf(move_dist, 1/steps);
 
-        GG.camera().pos(player_pos);
+        player_camera.pos(player_pos);
+
+        // fire shoot weapon
+        player_camera @=> GGen@ player_xform; // TODO actually use a separate player ggen
+        if (GWindow.mouseLeftDown()) {
+            <<< "shoot" >>>;
+
+            spawn(player_pos + .3 * forward) @=> Entity bullet;
+
+
+            .1 => float s;
+            bullet.mesh.sca(s);
+            bullet.mesh.lookAt(player_pos + forward);
+            2 * forward => bullet.vel;
+            .5 * s * @(1, 1, 1) => bullet.bbox;
+        }
     }
 
+    // update entities (currently only bullets)
+    for (pool.len - 1 => int i; i >= 0; --i) {
+        pool.items[i] @=> Entity e;
+        T.assert(pool.items[e._idx] == e, "entity _idx " + e._idx + " != " + i);
 
+        // TODO check die_at
 
+        // step velocity
+        e.vel * dt + e.mesh.pos() => vec3 pos;
+        pos => e.mesh.pos;
 
+        // collision (hardcoded for now)
+        // TODO to prevent tunneling, break into steps
+        // TODO need to break up into horizontal /vertical/etc to allow moving along edge
+            // actually if there are no walls we don't need to do this
+        cube.pos() => vec3 other_pos;
+        .5 * @(1,1,1) => vec3 other_bbox;
+        other_pos - pos => vec3 dist;
+
+        other_bbox + e.bbox => vec3 bbox;
+
+        if ( 
+            pos.y < 0 
+            ||
+            ( Math.fabs(dist.x) < bbox.x && Math.fabs(dist.y) < bbox.y && Math.fabs(dist.z) < bbox.z)
+         ) {
+            // collision!
+            @(0, 0, 0) => e.vel; // stop
+            die(e);
+         }
+    }
 }
