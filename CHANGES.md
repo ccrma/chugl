@@ -6,6 +6,7 @@
 - Updated cmake to build on linux. (thanks Lejun)
 - add new operator overloads `GGen[] --> GGen` and `GGen[] --< GGen` for grucking / ungrucking arrays of GGens all at once (thanks Brendan)
 - add `Color.srgb(vec3)` and `Color.linear(vec3)` for converting between linear and srgb color spaces
+- add `PhongMaterial.uvOffset()` and `PhongMaterial.uvScale()` for repeating/scrolling textures
 - Examples
   - `deep/video-ycrcb.ck`: demonstrating the YCrCb decoding mode on `Video` UGen
   - `deep/skybox-shader.ck`: procedural sky rendering via custom skybox shader

@@ -555,6 +555,7 @@ static const char* phong_shader_string = R"glsl(
     @group(1) @binding(10) var u_emissive_map: texture_2d<f32>;
     @group(1) @binding(11) var u_normal_map: texture_2d<f32>;
 
+
     // envmap params
     const ENVMAP_METHOD_NONE = 0;
     const ENVMAP_METHOD_REFLECTION = 1;
@@ -567,7 +568,11 @@ static const char* phong_shader_string = R"glsl(
 
     @group(1) @binding(12) var<uniform> u_envmap_method : i32;
     @group(1) @binding(13) var<uniform> u_envmap_ratio : f32; // refraction ratio
-    // @group(1) @binding(14) var u_envmap_sampler : sampler;
+
+    // WTF NEED TO DECLARE BINDINGS IN ORDER...WGSL PARSER IS SHIT
+    @group(1) @binding(14) var<uniform> u_texture_offset : vec2f;
+    @group(1) @binding(15) var<uniform> u_texture_scale : vec2f;
+
     @group(1) @binding(16) var<uniform> u_envmap_blend : i32;
     @group(1) @binding(17) var<uniform> u_envmap_intensity : f32;
 
@@ -664,13 +669,15 @@ static const char* phong_shader_string = R"glsl(
         let viewVector = u_frame.camera_pos - in.v_worldpos;
         let viewDir = normalize(viewVector);  // direction from camera to this frag
 
-        var normal = perturbNormal(in.v_normal, viewVector, in.v_uv, u_normal_factor, is_front);
+        var uv = in.v_uv * u_texture_scale + u_texture_offset;
+
+        var normal = perturbNormal(in.v_normal, viewVector, uv, u_normal_factor, is_front);
 
         // material color properties (ignore alpha channel for now)
-        let diffuseTex = textureSample(u_diffuse_map, texture_sampler, in.v_uv);
-        let specularTex = textureSample(u_specular_map, texture_sampler, in.v_uv);
-        let aoTex = textureSample(u_ao_map, texture_sampler, in.v_uv);
-        let emissiveTex = textureSample(u_emissive_map, texture_sampler, in.v_uv);
+        let diffuseTex = textureSample(u_diffuse_map, texture_sampler, uv);
+        let specularTex = textureSample(u_specular_map, texture_sampler, uv);
+        let aoTex = textureSample(u_ao_map, texture_sampler, uv);
+        let emissiveTex = textureSample(u_emissive_map, texture_sampler, uv);
         // factor ao into diffuse
         var diffuse_color = u_diffuse_color.rgb * srgbToLinear(diffuseTex.rgb);
         diffuse_color = mix(diffuse_color, diffuse_color * aoTex.r, u_ao_factor);

@@ -210,6 +210,11 @@ CK_DLL_MFUN(phong_material_set_normal_factor);
 CK_DLL_MFUN(phong_material_get_ao_factor);
 CK_DLL_MFUN(phong_material_set_ao_factor);
 
+CK_DLL_MFUN(phong_material_get_uv_offset);
+CK_DLL_MFUN(phong_material_set_uv_offset);
+CK_DLL_MFUN(phong_material_get_uv_scale);
+CK_DLL_MFUN(phong_material_set_uv_scale);
+
 CK_DLL_MFUN(phong_material_get_albedo_tex);
 CK_DLL_MFUN(phong_material_set_albedo_tex);
 
@@ -2202,6 +2207,8 @@ static void ulib_material_init_uniforms_and_pso(SG_Material* material)
                 PhongParams::emission(material, glm::vec3(1.0f));
                 PhongParams::normalFactor(material, 1.0f);
                 PhongParams::aoFactor(material, 1.0f);
+                PhongParams::uvOffset(material, glm::vec2(0.0f, 0.0f));
+                PhongParams::uvScale(material, glm::vec2(1.0f, 1.0f));
 
                 // textures
                 PhongParams::sampler(material, SG_SAMPLER_DEFAULT);
@@ -2449,9 +2456,9 @@ CK_DLL_MFUN(flat_material_set_color_map)
 {
     SG_Material* material = GET_MATERIAL(SELF);
     Chuck_Object* ckobj   = GET_NEXT_OBJECT(ARGS);
-    SG_Texture* tex       = ckobj ?
-                              SG_GetTexture(OBJ_MEMBER_UINT(ckobj, component_offset_id)) :
-                              SG_GetTexture(g_builtin_textures.white_pixel_id);
+    SG_Texture* tex = ckobj ?
+                        SG_GetTexture(OBJ_MEMBER_UINT(ckobj, component_offset_id)) :
+                        SG_GetTexture(g_builtin_textures.white_pixel_id);
 
     SG_Material::setTexture(material, 2, tex);
     CQ_PushCommand_MaterialSetUniform(material, 2);
@@ -2688,6 +2695,31 @@ CK_DLL_MFUN(phong_material_set_ao_factor)
     PhongParams::aoFactor(GET_MATERIAL(SELF), GET_NEXT_FLOAT(ARGS));
 }
 
+CK_DLL_MFUN(phong_material_get_uv_offset)
+{
+    glm::vec2 offset = *PhongParams::uvOffset(GET_MATERIAL(SELF));
+    RETURN->v_vec2   = { offset.x, offset.y };
+}
+
+CK_DLL_MFUN(phong_material_set_uv_offset)
+{
+    t_CKVEC2 offset = GET_NEXT_VEC2(ARGS);
+    PhongParams::uvOffset(GET_MATERIAL(SELF), glm::vec2(offset.x, offset.y));
+}
+
+CK_DLL_MFUN(phong_material_get_uv_scale)
+{
+    glm::vec2 scale = *PhongParams::uvScale(GET_MATERIAL(SELF));
+    RETURN->v_vec2  = { scale.x, scale.y };
+}
+
+CK_DLL_MFUN(phong_material_set_uv_scale)
+{
+
+    t_CKVEC2 scale = GET_NEXT_VEC2(ARGS);
+    PhongParams::uvScale(GET_MATERIAL(SELF), glm::vec2(scale.x, scale.y));
+}
+
 CK_DLL_MFUN(phong_material_get_albedo_tex)
 {
     SG_Texture* tex  = PhongParams::albedoTex(GET_MATERIAL(SELF));
@@ -2915,9 +2947,9 @@ CK_DLL_MFUN(pbr_material_set_albedo_tex)
 {
     SG_Material* material = GET_MATERIAL(SELF);
     Chuck_Object* ckobj   = GET_NEXT_OBJECT(ARGS);
-    SG_Texture* tex       = ckobj ?
-                              SG_GetTexture(OBJ_MEMBER_INT(ckobj, component_offset_id)) :
-                              SG_GetTexture(g_builtin_textures.white_pixel_id);
+    SG_Texture* tex = ckobj ?
+                        SG_GetTexture(OBJ_MEMBER_INT(ckobj, component_offset_id)) :
+                        SG_GetTexture(g_builtin_textures.white_pixel_id);
 
     SG_Material::setTexture(material, 1, tex);
     CQ_PushCommand_MaterialSetUniform(material, 1);
@@ -2934,9 +2966,9 @@ CK_DLL_MFUN(pbr_material_set_normal_tex)
 {
     SG_Material* material = GET_MATERIAL(SELF);
     Chuck_Object* ckobj   = GET_NEXT_OBJECT(ARGS);
-    SG_Texture* tex       = ckobj ?
-                              SG_GetTexture(OBJ_MEMBER_INT(ckobj, component_offset_id)) :
-                              SG_GetTexture(g_builtin_textures.normal_pixel_id);
+    SG_Texture* tex = ckobj ?
+                        SG_GetTexture(OBJ_MEMBER_INT(ckobj, component_offset_id)) :
+                        SG_GetTexture(g_builtin_textures.normal_pixel_id);
 
     SG_Material::setTexture(material, 2, tex);
     CQ_PushCommand_MaterialSetUniform(material, 2);
@@ -2953,9 +2985,9 @@ CK_DLL_MFUN(pbr_material_set_ao_tex)
 {
     SG_Material* material = GET_MATERIAL(SELF);
     Chuck_Object* ckobj   = GET_NEXT_OBJECT(ARGS);
-    SG_Texture* tex       = ckobj ?
-                              SG_GetTexture(OBJ_MEMBER_INT(ckobj, component_offset_id)) :
-                              SG_GetTexture(g_builtin_textures.white_pixel_id);
+    SG_Texture* tex = ckobj ?
+                        SG_GetTexture(OBJ_MEMBER_INT(ckobj, component_offset_id)) :
+                        SG_GetTexture(g_builtin_textures.white_pixel_id);
 
     SG_Material::setTexture(material, 3, tex);
     CQ_PushCommand_MaterialSetUniform(material, 3);
@@ -2972,9 +3004,9 @@ CK_DLL_MFUN(pbr_material_set_mr_tex)
 {
     SG_Material* material = GET_MATERIAL(SELF);
     Chuck_Object* ckobj   = GET_NEXT_OBJECT(ARGS);
-    SG_Texture* tex       = ckobj ?
-                              SG_GetTexture(OBJ_MEMBER_INT(ckobj, component_offset_id)) :
-                              SG_GetTexture(g_builtin_textures.white_pixel_id);
+    SG_Texture* tex = ckobj ?
+                        SG_GetTexture(OBJ_MEMBER_INT(ckobj, component_offset_id)) :
+                        SG_GetTexture(g_builtin_textures.white_pixel_id);
 
     SG_Material::setTexture(material, 4, tex);
     CQ_PushCommand_MaterialSetUniform(material, 4);
@@ -2991,9 +3023,9 @@ CK_DLL_MFUN(pbr_material_set_emissive_tex)
 {
     SG_Material* material = GET_MATERIAL(SELF);
     Chuck_Object* ckobj   = GET_NEXT_OBJECT(ARGS);
-    SG_Texture* tex       = ckobj ?
-                              SG_GetTexture(OBJ_MEMBER_INT(ckobj, component_offset_id)) :
-                              SG_GetTexture(g_builtin_textures.black_pixel_id);
+    SG_Texture* tex = ckobj ?
+                        SG_GetTexture(OBJ_MEMBER_INT(ckobj, component_offset_id)) :
+                        SG_GetTexture(g_builtin_textures.black_pixel_id);
 
     SG_Material::setTexture(material, 5, tex);
     CQ_PushCommand_MaterialSetUniform(material, 5);

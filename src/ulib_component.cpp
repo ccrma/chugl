@@ -867,8 +867,8 @@ CK_DLL_MFUN(ggen_set_rot_y)
     // https://gamedev.stackexchange.com/questions/200292/applying-incremental-rotation-with-quaternions-flickering-or-hesitating
     // For continuous rotation, wrap rad to be in range [-PI/2, PI/2]
     // i.e. after exceeding PI/2, rad = rad - PI
-    rad = glm::mod(rad + glm::half_pi<double>(), glm::pi<double>())
-          - glm::half_pi<double>();
+    rad              = glm::mod(rad + glm::half_pi<double>(), glm::pi<double>())
+                       - glm::half_pi<double>();
     glm::vec3 eulers = SG_Transform::eulerRotationRadians(xform);
     eulers.y         = rad;
     xform->rot       = glm::quat(eulers);
@@ -1368,6 +1368,10 @@ CK_DLL_MFUN(gshape_phong_material_get_normal_factor);
 CK_DLL_MFUN(gshape_phong_material_set_normal_factor);
 CK_DLL_MFUN(gshape_phong_material_get_ao_factor);
 CK_DLL_MFUN(gshape_phong_material_set_ao_factor);
+CK_DLL_MFUN(gshape_phong_material_get_uv_offset);
+CK_DLL_MFUN(gshape_phong_material_set_uv_offset);
+CK_DLL_MFUN(gshape_phong_material_get_uv_scale);
+CK_DLL_MFUN(gshape_phong_material_set_uv_scale);
 CK_DLL_MFUN(gshape_phong_material_get_albedo_tex);
 CK_DLL_MFUN(gshape_phong_material_set_albedo_tex);
 CK_DLL_MFUN(gshape_phong_material_get_specular_tex);
@@ -2099,9 +2103,9 @@ CK_DLL_MFUN(gpoints_mat_set_texture)
 {
     SG_Material* material = GET_MESH_MATERIAL(SELF);
     Chuck_Object* ckobj   = GET_NEXT_OBJECT(ARGS);
-    SG_Texture* tex       = ckobj ?
-                              SG_GetTexture(OBJ_MEMBER_UINT(ckobj, component_offset_id)) :
-                              SG_GetTexture(g_builtin_textures.white_pixel_id);
+    SG_Texture* tex = ckobj ?
+                        SG_GetTexture(OBJ_MEMBER_UINT(ckobj, component_offset_id)) :
+                        SG_GetTexture(g_builtin_textures.white_pixel_id);
     SG_Material::setTexture(material, 3, tex);
     CQ_PushCommand_MaterialSetUniform(material, 3);
 }
@@ -2325,6 +2329,34 @@ CK_DLL_MFUN(gshape_phong_material_set_normal_factor)
 CK_DLL_MFUN(gshape_phong_material_get_ao_factor)
 {
     RETURN->v_float = *PhongParams::aoFactor(GET_MESH_MATERIAL(SELF));
+}
+
+CK_DLL_MFUN(gshape_phong_material_get_uv_offset)
+{
+    glm::vec2 offset = *PhongParams::uvOffset(GET_MESH_MATERIAL(SELF));
+    RETURN->v_vec2   = { offset.x, offset.y };
+}
+
+CK_DLL_MFUN(gshape_phong_material_set_uv_offset)
+{
+    if (!ulib_component_gshape_verify_material_is_phong(GET_MESH_MATERIAL(SELF)->ckobj))
+        return;
+    t_CKVEC2 offset = GET_NEXT_VEC2(ARGS);
+    PhongParams::uvOffset(GET_MESH_MATERIAL(SELF), glm::vec2(offset.x, offset.y));
+}
+
+CK_DLL_MFUN(gshape_phong_material_get_uv_scale)
+{
+    glm::vec2 scale = *PhongParams::uvScale(GET_MESH_MATERIAL(SELF));
+    RETURN->v_vec2  = { scale.x, scale.y };
+}
+
+CK_DLL_MFUN(gshape_phong_material_set_uv_scale)
+{
+    if (!ulib_component_gshape_verify_material_is_phong(GET_MESH_MATERIAL(SELF)->ckobj))
+        return;
+    t_CKVEC2 scale = GET_NEXT_VEC2(ARGS);
+    PhongParams::uvScale(GET_MESH_MATERIAL(SELF), glm::vec2(scale.x, scale.y));
 }
 
 CK_DLL_MFUN(gshape_phong_material_set_ao_factor)

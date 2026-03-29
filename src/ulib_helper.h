@@ -550,6 +550,28 @@ struct PhongParams {
         return &mat->uniforms[5].as.f;
     }
 
+    static void uvOffset(SG_Material* mat, glm::vec2 offset)
+    {
+        SG_Material::uniformVec2f(mat, 14, offset);
+        CQ_PushCommand_MaterialSetUniform(mat, 14);
+    }
+
+    static glm::vec2* uvOffset(SG_Material* mat)
+    {
+        return &mat->uniforms[14].as.vec2f;
+    }
+
+    static void uvScale(SG_Material* mat, glm::vec2 scale)
+    {
+        SG_Material::uniformVec2f(mat, 15, scale);
+        CQ_PushCommand_MaterialSetUniform(mat, 15);
+    }
+
+    static glm::vec2* uvScale(SG_Material* mat)
+    {
+        return &mat->uniforms[15].as.vec2f;
+    }
+
     static void sampler(SG_Material* mat, SG_Sampler sampler)
     {
         SG_Material::setSampler(mat, 6, sampler);
@@ -739,6 +761,27 @@ struct PhongParams {
         DOC_FUNC(                                                                      \
           "Set the ambient occlusion factor of the material. Default 1.0. 0 disables " \
           "AO. Set between 0 and 1.");                                                 \
+                                                                                       \
+        MFUN(prefix##_material_get_uv_offset, "vec2", "uvOffset");                     \
+        DOC_FUNC("Get the texture sampler offset of the material. Default @(0,0)");    \
+                                                                                       \
+        MFUN(prefix##_material_set_uv_offset, "void", "uvOffset");                     \
+        ARG("vec2", "offset");                                                         \
+        DOC_FUNC(                                                                      \
+          "Set the texture sampler offset of the material. Default (0, 0). Useful "    \
+          "for scrolling textures or sampling a subregion of a texture atlas. E.g. "   \
+          "An offset of (0.5, 0.5) will begin sampling from the center of the "        \
+          "texture. ");                                                                \
+                                                                                       \
+        MFUN(prefix##_material_get_uv_scale, "vec2", "uvScale");                       \
+        DOC_FUNC("Get the texture sampler scale of the material. Default @(1,1)");     \
+                                                                                       \
+        MFUN(prefix##_material_set_uv_scale, "void", "uvScale");                       \
+        ARG("vec2", "scale");                                                          \
+        DOC_FUNC(                                                                      \
+          "Set the texture sampler scale of the material. Default (1, 1). Useful for " \
+          "scaling textures or sampling a subregion of a texture atlas. E.g. A scale " \
+          "of (0.5, 0.5) will sample 1/4 of the texture.");                            \
                                                                                        \
         MFUN(prefix##_material_get_albedo_tex, SG_CKNames[SG_COMPONENT_TEXTURE],       \
              "colorMap");                                                              \

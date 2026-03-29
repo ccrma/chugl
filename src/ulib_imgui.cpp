@@ -167,6 +167,18 @@ static void ui_scenegraph_draw_impl(SG_Transform* node)
                                                   *PhongParams::aoFactor(material));
                         }
 
+                        if (ImGui::DragFloat2(
+                              "UV Offset", &PhongParams::uvOffset(material)->x, 0.1f)) {
+                            PhongParams::uvOffset(material,
+                                                  *PhongParams::uvOffset(material));
+                        }
+
+                        if (ImGui::DragFloat2(
+                              "UV Scale", &PhongParams::uvScale(material)->x, 0.1f)) {
+                            PhongParams::uvScale(material,
+                                                 *PhongParams::uvScale(material));
+                        }
+
                         // phong envmap params
                         // PhongParams::envmapMethod(material,
                         // SG_ENVMAP_SAMPLE_REFLECT);
@@ -6493,12 +6505,12 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
           "UI_SliderFlags");
         
         // not working for some reason
-        // SFUN(ui_SliderFloat2, "int", "slider");
-        // ARG("string", "label");
-        // ARG("UI_Float2", "v");
-        // ARG("float", "v_min");
-        // ARG("float", "v_max");
-        // DOC_FUNC("Implied format = \"%.3f\", flags = 0");
+        SFUN(ui_SliderFloat2, "int", "slider");
+        ARG("string", "label");
+        ARG("UI_Float2", "v");
+        ARG("float", "v_min");
+        ARG("float", "v_max");
+        DOC_FUNC("Implied format = \"%.3f\", flags = 0");
 
         SFUN(ui_SliderAngle, "int", "sliderAngle");
         ARG("string", "label");
@@ -11289,7 +11301,7 @@ CK_DLL_SFUN(ui_SliderFloat2)
     const char* label = API->object->str(GET_NEXT_STRING(ARGS));
 
     Chuck_Object* obj = GET_NEXT_OBJECT(ARGS);
-    float* v          = (float*)OBJ_MEMBER_UINT(obj, ui_float_ptr_offset);
+    float* v          = (float*)OBJ_MEMBER_UINT(obj, ui_float2_ptr_offset);
 
     float v_min = GET_NEXT_FLOAT(ARGS);
     float v_max = GET_NEXT_FLOAT(ARGS);
