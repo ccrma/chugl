@@ -7911,7 +7911,7 @@ CK_DLL_MFUN(ui_bool_set_value)
 
 CK_DLL_CTOR(ui_string_ctor)
 {
-    char* s                                     = new char[UI_STRING_DEFAULT_SIZE];
+    char* s                                     = (char*)malloc(UI_STRING_DEFAULT_SIZE);
     s[0]                                        = '\0';
     OBJ_MEMBER_UINT(SELF, ui_string_ptr_offset) = (t_CKUINT)s;
     OBJ_MEMBER_UINT(SELF, ui_string_cap_offset) = UI_STRING_DEFAULT_SIZE;
@@ -7923,7 +7923,7 @@ CK_DLL_CTOR(ui_string_ctor_str)
     size_t ck_str_len  = strlen(ck_str);
     size_t str_cap     = MAX(UI_STRING_DEFAULT_SIZE, ck_str_len + 1);
 
-    char* s = new char[str_cap];
+    char* s = (char*) malloc(str_cap);
     strncpy(s, ck_str, ck_str_len);
     s[ck_str_len] = '\0';
 
@@ -7934,7 +7934,7 @@ CK_DLL_CTOR(ui_string_ctor_str)
 CK_DLL_DTOR(ui_string_dtor)
 {
     char* s = (char*)OBJ_MEMBER_UINT(SELF, ui_string_ptr_offset);
-    delete[] s;
+    free(s);
     OBJ_MEMBER_UINT(SELF, ui_string_ptr_offset) = 0;
     OBJ_MEMBER_UINT(SELF, ui_string_cap_offset) = 0;
 }
