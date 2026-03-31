@@ -24,6 +24,10 @@ if(LINUX OR EMSCRIPTEN OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
     #set( CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined" )
 endif()
 
+# uncomment to enable ASAN
+# add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+# add_link_options(-fsanitize=address)
+
 
 set(
     CORE 

@@ -34,6 +34,6 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin") # aka macOS
         MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/Info.plist
     )
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    # On Linux, this should link against pthread
-    target_link_libraries(sr_webcam PRIVATE pthread)
+    # On Linux, this should link against pthread and v4l2
+    target_link_libraries(sr_webcam PRIVATE pthread v4l2)
 endif()
