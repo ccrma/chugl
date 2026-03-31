@@ -64,22 +64,23 @@ void* _sr_webcam_callback_loop(void* arg)
     fd_set fds;
     struct timeval tv;
     struct v4l2_buffer buf;
-    int r, fd = -1;
+    int r;
     while (1) {
-        do {
-            FD_ZERO(&fds);
-            FD_SET(fd, &fds);
+        FD_ZERO(&fds);
+        FD_SET(stream->fid, &fds);
 
-            /* Timeout. */
-            tv.tv_sec = 2;
-            tv.tv_usec = 0;
+        /* Timeout. */
+        tv.tv_sec = 0;
+        tv.tv_usec = 100000;
 
-            r = select(fd + 1, &fds, NULL, NULL, &tv);
-        } while ((r == -1 && (errno = EINTR)));
+        r = select(stream->fid + 1, &fds, NULL, NULL, &tv);
         if (r == -1) {
+            if (errno == EINTR) continue;
             perror("select");
             return NULL;
         }
+        if (r == 0) continue; // timeout → loop again
+        
 
         memset(&buf, 0, sizeof(buf));
         buf.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -91,8 +92,6 @@ void* _sr_webcam_callback_loop(void* arg)
         }
 
         unsigned int dstSize = stream->width * stream->height * 4;
-        // unsigned char* data  = (unsigned char*)malloc(dstSize);
-        unsigned char* srcData  = (unsigned char*)(stream->buffers[buf.index].start);
 
         // flip buffers
         write_buffer = (write_buffer == &dst_buffer_a) ? &dst_buffer_b : &dst_buffer_a;
@@ -104,22 +103,19 @@ void* _sr_webcam_callback_loop(void* arg)
             *write_buffer = realloc(*write_buffer, dstSize);
         }
 
-        // segfaults at 1843200 x: 0, y: 360
-        // exactly halfway through the texture
+        unsigned char* src = (unsigned char*)(stream->buffers[buf.index].start);
+        unsigned char* dst = (*write_buffer) + *write_buffer_size - 4;
+        int num_pixels = stream->width * stream->height;
+        for (int i = 0; i < num_pixels; ++i) {
+            dst[0] = src[0];
+            dst[1] = src[1];
+            dst[2] = src[2];
+            dst[3] = 255;
 
-        int baseShift = 0;
-        // printf("=== STARTING COPY (%i bytes %ix%i) bytesUsed:%i ===\n", dstSize, stream->width, stream->height, buf.bytesused);
-        for (int y = 0; y < stream->height; ++y) {
-            // printf("y: %i baseshift bytes: %i\n", y, baseShift * 4);
-            for (int x = 0; x < stream->width; ++x) {
-                baseShift = (y * stream->width + x);
-                int write_offset = 4 * (stream->width * (stream->height - 1 - y) + (stream->width - 1 - x));
-                (*write_buffer)[write_offset + 0] = srcData[3 * baseShift + 0];
-                (*write_buffer)[write_offset + 1] = srcData[3 * baseShift + 1];
-                (*write_buffer)[write_offset + 2] = srcData[3 * baseShift + 2];
-                (*write_buffer)[4 * baseShift + 3] = 255;
-            }
+            src += 3;
+            dst -= 4;
         }
+
         _sr_webcam_wait_ioctl(stream->fid, VIDIOC_QBUF, &buf);
         stream->parent->callback(stream->parent, *write_buffer);
     }
@@ -256,6 +252,7 @@ int sr_webcam_open(sr_webcam_device* device)
     _sr_webcam_wait_ioctl(fid, VIDIOC_S_PARM, &fpsParams);
     _sr_webcam_wait_ioctl(fid, VIDIOC_G_PARM, &fpsParams);
     stream->framerate = (int)fpsParams.parm.capture.timeperframe.denominator;
+    // printf("framerate: %d\n", stream->framerate);
 
     // Update the device infos.
     device->stream    = stream;
