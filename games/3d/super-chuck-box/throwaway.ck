@@ -41,6 +41,7 @@ Enemy types
 - charger
 - splitter
 - bouncer (charges in straight line and bounces off map edges, like DVD logo)
+- enemy with a "weak spot" (like Devil Daggers) so the player has to move/rotate around enemy to dmg it
 - look at following games for inspo:
     - devil daggers
     - scb
@@ -160,7 +161,8 @@ class Entity {
 
     1 => static int Type_Player;
     2 => static int Type_Bullet;
-    3 => static int Type_Enemy;
+    3 => static int Type_Particle;
+    4 => static int Type_Enemy;
 
     // alive?
     int dead;
@@ -185,6 +187,9 @@ class Entity {
     fun void zero() {
         false => dead;
 
+        @(0, 0, 0) => mesh.rot;
+        @(1, 1, 1) => mesh.sca;
+
         0 => spawn_time => lifetime;
 
         0 => type;
@@ -193,6 +198,7 @@ class Entity {
         0 => gravity => friction;
         false => check_against_enemies;
     }
+
 
     fun void init(int type) {
         type => this.type;
@@ -203,10 +209,27 @@ class Entity {
             aabb.y * .5 => pos.y;
         }
 
+        else if (type == Type_Enemy) {
+            @(1, 1, 1) => aabb;
+            aabb.y * .5 => pos.y;
+
+            // enemy mesh
+            mesh.mesh(cube_geo, phong_mat);
+        }
+
+        // hitbox visualize
+        if (type != Type_Player) {
+            aabb * 2.01 => hitbox.sca;
+            hitbox --> GG.scene();
+        }
     }
 
     fun collideWith(Entity@ e) {
-
+        if (type == Type_Bullet) {
+            true => dead;
+            // spawnParticles(@(0, 4, 0), 2);
+            spawnParticles(pos, 10);
+        }
     }
 
     fun int collides(vec3 p) {
@@ -235,7 +258,7 @@ class Entity {
 
     fun void updatePhysics(float dt) {
 		// Apply Gravity
-		-100 * gravity => acc.y;
+		-20 * gravity => acc.y;
 
 		// Integrate acceleration & friction into velocity
 		Math.min(friction * dt, 1) => float friction_force;
@@ -257,28 +280,38 @@ class Entity {
         Heuristic: #substeps =  ceil(move_dist / min_aabb_axis)
         */
         Math.min(Math.min(aabb.x, aabb.y), aabb.z) => float min_aabb_axis;
-        Math.max(min_aabb_axis, .05) => min_aabb_axis; // force nonzero
+        Math.max(min_aabb_axis, .01) => min_aabb_axis; // force nonzero
         vel * dt => vec3 delta_pos;
 
+        1 => int steps;
+        // only substep where it matters -- for enemy hit detection
         if (check_against_enemies) {
-            Math.min(16, Math.ceil(delta_pos.magnitude() / min_aabb_axis)) $ int => int steps; // clamped 0-16
-            // <<< steps, "num steps" >>>;
-            delta_pos / steps => vec3 move_step;
-
-            for (int s; s < steps; s++) {
-                if (collides(move_step + pos)) { break; }
-                // Integrate velocity into position
-                move_step +=> pos;
-            }
-        } else {
-            delta_pos +=> pos;
+            Math.min(16, Math.ceil(delta_pos.magnitude() / min_aabb_axis)) $ int => int steps; // clamped 1-16
+            <<< steps, "num steps", "min_aabb_axis", min_aabb_axis >>>;
         }
+        delta_pos / steps => vec3 move_step;
 
-        // ground collision
-        if (pos.y - aabb.y < 0) {
-            aabb.y => pos.y;
-            0 => vel.y;
-            collideWith(null); // null signifies environment collision
+        for (int s; s < steps; s++) {
+            if (check_against_enemies) {
+                if (collides(move_step + pos)) { break; }
+            }
+
+            // ground collision
+            if ((move_step + pos).y - aabb.y < 0) {
+                if (type == Type_Player) aabb.y => pos.y;
+
+                if (type == Type_Particle) {
+                    // for particles, don't zero the y value so they can come up out of the ground
+                } else {
+                    0 => vel.y;
+                }
+
+                collideWith(null); // null signifies environment collision
+                break;
+            }
+
+            // no collision, move forward
+            move_step +=> pos;
         }
 
         pos => hitbox.posWorld;
@@ -321,7 +354,7 @@ class Entity {
                 Entity.Type_Bullet => bullet.type;
 
                 // init bullet lifetime
-                10 => bullet.lifetime;
+                5 => bullet.lifetime;
 
                 // init bullet model
                 bullet.mesh.mesh(cube_geo, phong_mat);
@@ -330,23 +363,35 @@ class Entity {
                 bullet.mesh --> GG.scene();
                 .1 => float s;
                 s => bullet.mesh.sca;
-                // bullet.mesh.lookAt(pos + forward); // TODO why is this broken
                 bullet.mesh.rot(player_camera.rot());
+
+                // bullet.mesh.lookAt(pos + forward); // TODO why is this broken
+                // to debug: try putting a cube at position = pos + forward and make sure it stays in same place rel to camera
 
                 // bullet physics
                 .5 * s * @(1, 1, 1) => bullet.aabb;
-                bullet.aabb * 2 => bullet.hitbox.sca;
-                bullet.hitbox --> GG.scene();
-
                 0 => bullet.gravity => bullet.friction;
                 true => bullet.check_against_enemies;
-                2 * forward => bullet.vel;
+                c.bullet_speed.val() * forward => bullet.vel;
                 pos + .5 * forward => bullet.pos;
             }
         }
-        if (type == Type_Bullet) {
+
+        else if (type == Type_Bullet) {
             updatePhysics(dt);
             pos => mesh.pos;
+        }
+
+        else if (type == Type_Particle) {
+            updatePhysics(dt);
+            // TODO add random spin
+            // this._yaw += this.v.y * 0.001;
+            // this._pitch += this.v.x * 0.001;
+            pos => mesh.pos;
+        }
+
+        else {
+            T.err("update not impl for entity type " + type);
         }
     }
 }
@@ -381,6 +426,42 @@ class EntityPool {
     }
 }
 
+fun void spawnParticles(vec3 pos, int amount) {
+    c.particle_speed.val() => float speed;
+    .5 => float lifetime;
+
+    for (int i; i < amount; i++) {
+        gs.entity_pool.spawn() @=> Entity@ p;
+
+        Math.random2f(.5, 2) * lifetime => p.lifetime;
+
+        // init particle model
+        p.mesh.mesh(Entity.cube_geo, Entity.phong_mat);
+
+        // particle xform
+        p.mesh --> GG.scene();
+        .03 => float s;
+        s => p.mesh.sca;
+
+        // physics
+        c.particle_gravity.val() => p.gravity;
+        c.particle_friction.val() => p.friction; // TODO try different friction values
+        pos => p.pos;
+        .5 * s * p.mesh.sca() => p.aabb;
+
+        @(
+            Math.random2f(-1, 1) * speed,
+            Math.random2f(.2, .8) * speed, // improvement: make blast radius normal to plane of contact
+            Math.random2f(-1, 1) * speed
+        ) => p.vel;
+
+        // init and gruck hitbox visualizer
+        p.init(Entity.Type_Particle);
+    }
+}
+
+
+
 // init
 gs.player.init(Entity.Type_Player);
 
@@ -402,6 +483,14 @@ while (1) {
         UI.slider("friction", c.player_friction, 0, 100);
         UI.slider("mouse sens", mouse_sens, 0, .01);
         UI.checkbox("avg mouse", use_mouse_avg);
+
+        UI.slider("particle speed", c.particle_speed, 0, 100);
+        UI.slider("particle friction", c.particle_friction, 0, 100);
+        UI.slider("particle gravity", c.particle_gravity, 0, 100);
+
+
+        UI.slider("bullet speed", c.bullet_speed, 0, 100);
+
 
         UI.text("Entities: " + gs.entity_pool.len);
     }
