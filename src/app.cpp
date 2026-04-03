@@ -440,6 +440,7 @@ struct App {
             glfwSetWindowCloseCallback(app->window, _closeCallback);
             glfwSetWindowContentScaleCallback(app->window, _contentScaleCallback);
             glfwSetDropCallback(app->window, _dropCallback);
+            glfwSetWindowIconifyCallback(app->window, _iconifyCallback);
             // set initial content scale
             float content_scale_x, content_scale_y;
             glfwGetWindowContentScale(app->window, &content_scale_x, &content_scale_y);
@@ -1318,6 +1319,11 @@ struct App {
     static void _dropCallback(GLFWwindow* window, int count, const char** paths)
     {
         CQ_PushCommand_G2A_FilesDropped(count, paths);
+    }
+
+    static void _iconifyCallback(GLFWwindow* window, int iconified)
+    {
+        CHUGL_Window_Iconified(iconified);
     }
 
     // this is deliberately NOT made a glfw callback because glfwPollEvents()

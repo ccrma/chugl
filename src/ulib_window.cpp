@@ -85,6 +85,7 @@ CK_DLL_SFUN(gwindow_set_title);
 // iconify
 CK_DLL_SFUN(gwindow_inconify);
 CK_DLL_SFUN(gwindow_restore);
+CK_DLL_SFUN(gwindow_get_minimized);
 
 // attributes
 CK_DLL_SFUN(gwindow_set_attrib_resizable);
@@ -810,6 +811,9 @@ void ulib_window_query(Chuck_DL_Query* QUERY)
     SFUN(gwindow_restore, "void", "restore");
     DOC_FUNC("Restore the window from iconified state");
 
+    SFUN(gwindow_get_minimized, "int", "minimized");
+    DOC_FUNC("Get whether the window is currently minimized/iconified");
+
     // attributes -----------------------------------------------------
     SFUN(gwindow_set_attrib_resizable, "void", "resizable");
     ARG("int", "resizable");
@@ -1299,6 +1303,11 @@ CK_DLL_SFUN(gwindow_inconify)
 CK_DLL_SFUN(gwindow_restore)
 {
     CQ_PushCommand_WindowIconify(false);
+}
+
+CK_DLL_SFUN(gwindow_get_minimized)
+{
+    RETURN->v_int = CHUGL_Window_Iconified();
 }
 
 // ============================================================================

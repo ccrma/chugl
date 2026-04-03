@@ -78,6 +78,9 @@ struct CHUGL_Window {
     // window frame size
     int window_frame_left, window_frame_top, window_frame_right, window_frame_bottom;
 
+    // window iconified / minimized
+    b32 iconified;
+
     float window_opacity;
 
     f64 fps; // updated every second by the graphics thread
@@ -89,6 +92,21 @@ CHUGL_Window chugl_window;
 
 static f64 window_dt_sec = 0;
 static spinlock window_dt_lock;
+
+void CHUGL_Window_Iconified(b32 iconified)
+{
+    spinlock::lock(&window_dt_lock);
+    chugl_window.iconified = iconified;
+    spinlock::unlock(&window_dt_lock);
+}
+
+b32 CHUGL_Window_Iconified()
+{
+    spinlock::lock(&window_dt_lock);
+    b32 iconified = chugl_window.iconified;
+    spinlock::unlock(&window_dt_lock);
+    return iconified;
+}
 
 void CHUGL_Window_dt(f64 dt)
 {

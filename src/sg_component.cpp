@@ -216,7 +216,10 @@ void SG_Transform::lookAt(SG_Transform* t, glm::vec3 pos, glm::vec3 up = VEC_UP)
     glm::vec3 forward = glm::normalize(pos - eye);
     up                = glm::normalize(up);
     b32 collinear     = (glm::length2(glm::cross(up, forward)) < .00001);
+
     if (collinear) {
+        // printf("up: %f %f %f, forward: %f %f %f\n", up.x, up.y, up.z, forward.x,
+        //        forward.y, forward.z);
         log_warn(
           "GGen.lookAt(@(%f, %f, %f), @(%f, %f, %f)) failed because the forward and up "
           "vectors are collinear. try GGen.lookAt(vec3 pos, vec3 up) with a different "
