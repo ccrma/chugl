@@ -39,6 +39,7 @@ Enemy types
 - enemy types that incentivize you to NOT go straight for the box
     - egg
     - spawner
+    - splitter (big guy that dies and spawns N smaller guys)
 - charger
 - splitter
 - bouncer (charges in straight line and bounces off map edges, like DVD logo)
@@ -124,6 +125,7 @@ class GS {
     int key_d;
     int key_r;
     int key_l;
+    int key_jump;
 
     vec2 mouse_delta;
     vec2 mouse_deltas[2];
@@ -228,6 +230,10 @@ class Entity {
     float gravity, friction;
     int check_against_enemies;
 
+    // orientation rotation
+    float pitch;
+    float yaw;
+    
     // for now enforce each entity only has 1 mesh
     PhongMaterial phong_mat;
     GMesh mesh; 
@@ -263,9 +269,10 @@ class Entity {
         }
         else if (type == Type_Player) {
             // player params
+            c.player_gravity.val() => gravity;
             c.player_friction.val() => friction;
             @(.1, 1, .1) => aabb;
-            aabb.y * .5 => pos.y;
+            aabb.y => pos.y;
         }
 
         else if (type == Type_Enemy) {
@@ -299,12 +306,13 @@ class Entity {
     }
 
     fun collideWith(Entity@ e, vec3 collision_pos) {
+        T.assert(e != null, "cannot collide with null entity");
         if (type == Type_Bullet) {
             true => dead;
             // <<< "bullet collided with", T.str(e.mesh) >>>;
             // TODO floor and stuff can be static entities, remove null check here
-            if (e != null && e.type == Type_Enemy) e.damage(0);
-            else {
+            if (e.type == Type_Enemy) e.damage(0);
+            else if (e.type == Type_Map) {
                 // collided with floor
                 // trace ray back to y=0 for accurate hit location
                 T.assert(collision_pos.y - aabb.y < 0, "floor collision should have y < 0");
@@ -415,30 +423,35 @@ class Entity {
         1 => int steps;
         // only substep where it matters -- for enemy hit detection
         if (check_against_enemies) {
-            Math.min(32, Math.ceil(delta_pos.magnitude() / min_aabb_axis)) $ int => int steps; // clamped 1-16
+            Math.min(16, Math.ceil(delta_pos.magnitude() / min_aabb_axis)) $ int => int steps; // clamped 1-16
             // <<< steps, "num steps", "min_aabb_axis", min_aabb_axis >>>;
         }
         delta_pos / steps => vec3 move_step;
 
         for (int s; s < steps; s++) {
+            move_step => vec3 delta_pos;
+
             if (check_against_enemies) {
-                if (collides(move_step + pos)) { break; }
+                if (collides(move_step + pos)) { 
+                    steps => s; // stop for loop
+                }
             }
 
-
-            // ground collision
+            // ground collision (checks along y axis only)
             if ((move_step + pos).y - aabb.y < 0) {
                 if (type == Type_Player) {
                     aabb.y => pos.y;
-                    0 => vel.y; // 0 so player doesn't fall through floor
                 }
 
-                collideWith(null, move_step + pos); // null signifies environment collision
-                break;
+                if (vel.y < 0) 0 => vel.y; // 0 so player doesn't fall through floor
+                0 => delta_pos.y;
+
+                collideWith(gs.ground, move_step + pos); // null signifies environment collision
+                steps => s; // stop for loop
             }
 
             // no collision, move forward
-            move_step +=> pos;
+            delta_pos +=> pos;
         }
 
         pos => hitbox.posWorld;
@@ -451,12 +464,13 @@ class Entity {
 
         if (type == Type_Player) {
             if (use_mouse_avg.val()) {
-                player_camera.rotateOnLocalAxis(@(1, 0, 0), -gs.mouse_deltas_avg.y * mouse_sens.val()); 
-                player_camera.rotateOnWorldAxis(@(0, 1, 0), -gs.mouse_deltas_avg.x * mouse_sens.val()); 
+                Math.clampf(pitch - gs.mouse_deltas_avg.y * mouse_sens.val(), -1.5, 1.5) => pitch;
+                yaw - gs.mouse_deltas_avg.x * mouse_sens.val() => yaw;
             } else {
-                player_camera.rotateOnLocalAxis(@(1, 0, 0), -gs.mouse_delta.y * mouse_sens.val()); 
-                player_camera.rotateOnWorldAxis(@(0, 1, 0), -gs.mouse_delta.x * mouse_sens.val()); 
+                Math.clampf(pitch - gs.mouse_delta.y * mouse_sens.val(), -1.5, 1.5) => pitch;
+                yaw - gs.mouse_delta.x * mouse_sens.val() => yaw;
             }
+            player_camera.rot(@(pitch, yaw, 0));
 
             player_camera.forward() => vec3 forward => vec3 forward_no_y;
             0 => forward_no_y.y; forward_no_y.normalize();
@@ -464,10 +478,17 @@ class Entity {
             0 => right_no_y.y; right_no_y.normalize();
 
             // movement
-            true => int on_ground;
-            c.player_speed.val() * (on_ground ? 1.0 : 0.3) * (
+            (vel.y <= 0 && (pos.y - aabb.y <= 1e-4)) => int on_ground;
+            c.player_speed.val() * (on_ground ? 1.0 : c.player_air_vel_ratio.val()) * (
                 (gs.key_r - gs.key_l) * right_no_y + (gs.key_u - gs.key_d) * forward_no_y
             ) => acc;
+
+
+            if (gs.key_jump && on_ground) {
+                // jumpings sets velocity directly instead of acc, bc vertical acceleration is always gravity
+                c.player_jump_vel.val() => vel.y;
+                false => on_ground;
+            }
 
             // physics and collision
             updatePhysics(dt);
@@ -542,9 +563,10 @@ class Entity {
 
         else if (type == Type_Particle) {
             updatePhysics(dt);
-            // TODO add random spin
-            // this._yaw += this.v.y * 0.001;
-            // this._pitch += this.v.x * 0.001;
+            // random spin
+            mesh.rotateY(20*dt * vel.y);
+            mesh.rotateX(20*dt * vel.x);
+            mesh.rotateZ(20*dt * vel.z);
             pos => mesh.pos;
         }
 
@@ -552,7 +574,7 @@ class Entity {
             updatePhysics(dt);
 
             Math.max(0, enemy_hit_cd - dt) => enemy_hit_cd;
-            M.lerp(enemy_hit_cd * enemy_hit_cd, Color.WHITE, Color.RED) => vec3 color;
+            M.lerp(enemy_hit_cd * enemy_hit_cd, Color.WHITE, 5*Color.RED) => vec3 color;
             color => phong_mat.color;
 
             pos => mesh.pos;
@@ -616,8 +638,16 @@ fun void spawnParticles(vec3 pos, int amount) {
 
         // particle xform
         p.mesh --> GG.scene();
-        .03 => float s;
+        Math.random2f(.6, 1.4) * .03 => float s;
         s => p.mesh.sca;
+
+        // give the particle a random rotation
+        Math.two_pi * @(
+            Math.random2f(-1, 1),
+            Math.random2f(-1, 1),
+            Math.random2f(-1, 1)
+        ) => p.mesh.rot;
+
 
         // physics
         c.particle_gravity.val() => p.gravity;
@@ -642,6 +672,7 @@ fun void spawnParticles(vec3 pos, int amount) {
 gs.player.init(Entity.Type_Player);
 gs.ground.init(Entity.Type_Map);
 spawnEnemy(@(0,0,0));
+spawnEnemy(@(2,0,0));
 
 while (1) {
     GG.nextFrame() => now;
@@ -657,11 +688,17 @@ while (1) {
     }
 
     if (debug_console) {
+
+        UI.separatorText("player params");
         UI.slider("speed", c.player_speed, 0, 100);
         UI.slider("friction", c.player_friction, 0, 100);
+        if (UI.slider("player gravity", c.player_gravity, 0, 10)) c.player_gravity.val() => gs.player.gravity;
+        UI.slider("player jump vel", c.player_jump_vel, 0, 100);
+        UI.slider("player air speed", c.player_air_vel_ratio, 0, 1);
         UI.slider("mouse sens", mouse_sens, 0, .01);
         UI.checkbox("avg mouse", use_mouse_avg);
 
+        UI.separatorText("particle params");
         UI.slider("particle speed", c.particle_speed, 0, 100);
         UI.slider("particle friction", c.particle_friction, 0, 100);
         UI.slider("particle gravity", c.particle_gravity, 0, 100);
@@ -696,6 +733,7 @@ while (1) {
         GWindow.key(GWindow.KEY_S) => gs.key_d;
         GWindow.key(GWindow.KEY_D) => gs.key_r;
         GWindow.key(GWindow.KEY_A) => gs.key_l;
+        GWindow.key(GWindow.KEY_SPACE) => gs.key_jump;
     }
 
 // == prep GS ==================================
