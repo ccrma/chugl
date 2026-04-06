@@ -1,0 +1,30 @@
+Mechanic: super-crate-box survival + max score
+- figure out a level layout that is the 2D equivalent of the top-down enemy flow in super-crate-box
+
+Level Design
+- literally just have a text string in code, and different characters mean different objects/heights etc
+- for now, just keep it all cubes
+
+Physics
+- collision via 2D raycasting on grid (see Lode's tutorial)
+
+Rendering
+- group all static level geometry into separate static GGen
+
+Ideas
+- combination of super crate box, underrun, (mewgenics?) and Tom Francis stat video
+- for now just implement 1 enemy type, crates, 1 weapon type, and go bottom up
+- if adding more weapons:
+    - each weapon can be different instrument / change soundtrack instrumentation?
+    - weapon fire can be quantized to music
+- 
+
+Inspirations:
+- QUOD https://www.youtube.com/watch?v=qht68vFaa1M&t=1s
+- PhobosLab's Underrun
+- PhobosLab's Quake Demake
+- Xilbaba https://phoboslab.org/xibalba/
+
+To try:
+- https://js13kgames.com/games/wander
+- and other js13k games!!

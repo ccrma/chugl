@@ -1,0 +1,41 @@
+Protypes:
+
+side view. fence is small. can only allow 1 sheep to jump at a time. rest are in queue
+- allow for upgrading multiple lanes, like a highway, of sheep.
+- more discrete. Each animal has a position in line, which advances discretely when the head animal jumps
+- can scroll camera up-down to add more lanes to highway (but should set some max)
+
+
+45deg angle, like horse race game. sheep spawn randomly along the Y axis (need to sort along Y dimension because they can stack)
+- or actually, there can also be lanes, and sheep spawn in a random lane. 
+like NL's horse racing game sheep jump whenever they reach the fence
+
+Launcher, like angry birds. Click to launch, click faster to launch more.
+- no walk animation
+
+Upgrades
+- path of massing sheep
+    - like Barribob's castle game, the various unlocks are ways to increase the # of sheep
+    - e.g. sheep cannon, which launches several sheep at once
+    - herder, which gathers sheep and takes them all over
+    - ???
+- animal zoo
+    - unlock different animals, each which can provide different resources or amounts
+- sheep diversity
+    - instead of different animals, just have different colors of sheep, different colors have different effects
+- Fence upgrades
+    - more fences
+    - higher fences = more points? 
+
+
+Interactions
+- click to launch
+- click/hover to spawn
+- on other side of fence is a farm, plant certain crops to attract specific animals?
+- no direct interaction (like magic arrow) just buy upgrades to accelerate the rate of improvement?
+
+
+Win condition: make the player go to sleep. equivalent to destroying the wall in Slamwall
+- the sheep generate a separate resource for spending?
+    - or, like shrimp game and magic tower, it's all 1 resource and you use that to buy everything, including 
+    accumulating for the win condition

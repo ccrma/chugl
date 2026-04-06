@@ -95,6 +95,19 @@ Boxes / Upgrades
 - upchuck box for new movement type??? 
 
 
+Audio Mapping
+- rez-style sync to beat
+- beat is heartbeat, and changes dynamically, speeding up or slowing down according to gamestate
+    - in high-intensity moments, heartbeat spikes, resulting in faster and more frenetic gameplay
+    - likewise for low-intensity periods
+
+Music
+- Prim / Ilan / Nathan 256
+- juan atkins techno
+- the map is a music box; what if one could plug and play any style?
+    - the game only needs to know rhythm/timing
+    - music only needs to know bpm
+
 */
 
 // @import "../../lib/g2d/ChuGL-debug.chug"
