@@ -8,6 +8,7 @@
 - add `Color.srgb(vec3)` and `Color.linear(vec3)` for converting between linear and srgb color spaces
 - add `PhongMaterial.uvOffset()` and `PhongMaterial.uvScale()` for repeating/scrolling textures
 - `Webcam` now has linux support! 
+- add `int GWindow.minimized()` to detect if the window is currently minimized (thanks to Nick for the misunderstanding)
 - Examples
   - `deep/video-ycrcb.ck`: demonstrating the YCrCb decoding mode on `Video` UGen
   - `deep/skybox-shader.ck`: procedural sky rendering via custom skybox shader

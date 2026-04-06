@@ -158,6 +158,9 @@ while (true)
     GWindow.title(title + " | Frame: " + GG.fc());
     Math.sin(elapsed_time) => text.posX;
 
+    // detect if window if minimized
+    if (GWindow.minimized()) <<< "window is minimized" >>>;
+
     // update window mode 
     if (GWindow.keyDown(GWindow.KEY_SPACE)) {
         !wait_on_input => wait_on_input;
