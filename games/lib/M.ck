@@ -3,6 +3,7 @@ public class M {
     57.295779513082320 => static float RAD2DEG;
     1.4142135624 => static float ROOT2;
     .7071067812 => static float INV_ROOT2;
+    Math.pi => static float PI;
 
     fun static vec3 srgbToLinear(vec3 c) { return Color.linear(c); }
 
@@ -18,6 +19,7 @@ public class M {
         return @( Math.cos(radians), Math.sin(radians) );
     }
 
+    // ret [-pi, pi]
     fun static float angle(vec2 a, vec2 b) {
         b - a => vec2 n;
         return Math.atan2(n.y, n.x);
@@ -32,6 +34,13 @@ public class M {
         n.normalize();
         return n;
     }
+
+    fun static vec3 dir(vec3 a, vec3 b) {
+        b - a => vec3 n;
+        n.normalize();
+        return n;
+    }
+
 
     fun static vec2 normalize(vec2 n) {
         // note: can also call n.normalize() to normalize in-place
@@ -79,6 +88,8 @@ public class M {
         return Math.min(Math.max(a, b), c);
     }
 
+    fun static float clamp01(float a) { return Math.clampf(a, 0, 1); }
+
     fun static vec2 clamp(vec2 a, vec2 b, vec2 c) {
         return @(
             Math.clampf(a.x, b.x, c.x),
@@ -95,6 +106,41 @@ public class M {
 
     fun static float fract(float x) {
         return x - (x $ int);
+    }
+
+
+    // =====================================================================
+    // 3d math (eventually should move this into chuck core)
+    // =====================================================================
+
+    fun static vec3 rotateX(vec3 v, float theta) {
+        Math.cos(theta) => float c;
+        Math.sin(theta) => float s;
+        return @(
+            v.x,
+            v.y * c - v.z * s,
+            v.y * s + v.z * c
+        );
+    }
+
+    fun static vec3 rotateY(vec3 v, float theta) {
+        Math.cos(theta) => float c;
+        Math.sin(theta) => float s;
+        return @(
+            v.x * c + v.z * s,
+            v.y,
+            v.z * c - v.x * s
+        );
+    }
+
+    fun static vec3 rotateZ(vec3 v, float theta) {
+        Math.cos(theta) => float c;
+        Math.sin(theta) => float s;
+        return @(
+            v.x * c - v.y * s,
+            v.x * s + v.y * c,
+            v.z
+        );
     }
 
     // =====================================================================
@@ -390,5 +436,69 @@ public class M {
         return (a0 <= b0 && b0 <= a1) || (a0 <= b1 && b1 <= a1)
                ||
                (b0 <= a0 && a0 <= b1) || (b0 <= a1 && a1 <= b1);
+    }
+
+// == 3D Intersection ============================
+    // p0: point on plane
+    // n: normal vec of plane
+    // returns -1 if no isection
+    // else returns t s.t. ray_o + r*ray_d lies on the plane
+    // ASSUMES ray_d and n are normalized
+    fun static float rayPlaneIsect(vec3 ray_o, vec3 ray_d, vec3 p0, vec3 n)
+    {
+        n.dot(ray_d) => float denom;
+        if (Math.fabs(denom) > 1e-6) {
+            return ((p0 - ray_o).dot(n)) / denom;
+        }
+
+        return -1;
+    }
+
+    // adapted from: https://gpfault.net/posts/aabb-tricks.html
+    // returns true if the ray `r` intersects the aabb `box` AND the t-value
+    // for the intersection point is within the [t_min; t_max] range.
+    // returns (t_enter, t_exit) 
+    // (t_enter <= t_exit) => int did_isect
+    fun static vec2 rayAABBIsect(vec3 aabb_min, vec3 aabb_max, vec3 ray_o, vec3 ray_d) {
+        // TODO: add float / vec3 operator to chuck core
+        @(
+            1.0 / ray_d.x,
+            1.0 / ray_d.y,
+            1.0 / ray_d.z
+        ) => vec3 reciprocal_ray_dir; // assumes div by 0 will result in inf.
+
+        @(
+            (aabb_min.x - ray_o.x) * reciprocal_ray_dir.x,
+            (aabb_min.y - ray_o.y) * reciprocal_ray_dir.y,
+            (aabb_min.z - ray_o.z) * reciprocal_ray_dir.z
+        )=> vec3 t_minwalls;
+        @(
+            (aabb_max.x - ray_o.x) * reciprocal_ray_dir.x,
+            (aabb_max.y - ray_o.y) * reciprocal_ray_dir.y,
+            (aabb_max.z - ray_o.z) * reciprocal_ray_dir.z
+        )=> vec3 t_maxwalls;
+
+        // we have the t-values for intersection points with every slab wall.
+        // now determine which of these are the start points of the t-ranges,
+        // and which are the end points.
+        t_minwalls => vec3 t_ranges_starts;
+        t_maxwalls => vec3 t_ranges_ends;
+        if (t_minwalls.x > t_maxwalls.x) {
+            t_minwalls.x => t_ranges_ends.x;
+            t_maxwalls.x => t_ranges_starts.x;
+        }
+        if (t_minwalls.y > t_maxwalls.y) {
+            t_minwalls.y => t_ranges_ends.y;
+            t_maxwalls.y => t_ranges_starts.y;
+        }
+        if (t_minwalls.z > t_maxwalls.z) {
+            t_minwalls.z => t_ranges_ends.z;
+            t_maxwalls.z => t_ranges_starts.z;
+        }
+
+        Math.max(Math.max(t_ranges_starts.x, t_ranges_starts.y), t_ranges_starts.z) => float largest_start;
+        Math.min(Math.min(t_ranges_ends.x, t_ranges_ends.y), t_ranges_ends.z) => float smallest_end;
+
+        return @(largest_start, smallest_end);
     }
 }

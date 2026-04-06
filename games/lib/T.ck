@@ -265,4 +265,33 @@ public class T {
         }
         return 1;
     }
+
+    fun static string str(vec3 v) {
+        return "( " + v.x + ", " + v.y + ", " + v.z + " )";
+    }
+
+    fun static string str(GGen@ g) {
+        return "[GGen name: "
+        + g.name()
+        + " pos: " 
+        + str(g.pos())
+        + " rot: "
+        + str(g.rot())
+        + " sca: "
+        + str(g.sca()) 
+        + " ]";
+    }
+
+    fun static print(GGen@ g) {
+        chout <= str(g) <= IO.nl();
+        // chout <= "[GGen name: ";
+        // chout <=  g.name();
+        // chout <=  " pos: ";
+        // chout <=  g.pos();
+        // chout <=  " rot: ";
+        // chout <=  g.rot();
+        // chout <=  " sca: ";
+        // chout <=  g.sca();
+        // chout <= "]" <= IO.nl();
+    }
 }

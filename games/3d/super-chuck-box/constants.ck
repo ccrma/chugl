@@ -12,4 +12,12 @@ public class Constants {
     UI_Float particle_speed(6);
     UI_Float particle_friction(8);
     UI_Float particle_gravity(1.5);
+
+    UI_Float weapon_z_off(-.3);
+    UI_Float weapon_y_off(-.5);
+    UI_Float weapon_bob_mag(.025);
+    UI_Float weapon_bob_freq(.00125);
+
+    UI_Float enemy_speed(3);
+
 }

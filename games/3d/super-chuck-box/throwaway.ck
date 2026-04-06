@@ -54,6 +54,15 @@ Enemy types
     - brotato
         -   and other survival bullet heaven
 
+Spawn mechanisms:
+- emerge from/around the chuck box itself (really nice risk/reward setup here)
+- fall from overhead
+- emerge from underground
+
+Optimizations:
+- custom shader (phongmat is expensive)
+- render to fixed-size, lower res rendertarget. NN sampler
+- backface culling on all geo!!!
 
 Weapons
 - rocket (aoe explode, self-dmg)
@@ -81,6 +90,11 @@ Code references:
 - dungeon of quake (odin + raylib)
 
 
+Boxes / Upgrades
+- chuck box for new weapon
+- upchuck box for new movement type??? 
+
+
 */
 
 // @import "../../lib/g2d/ChuGL-debug.chug"
@@ -89,6 +103,7 @@ Code references:
 @import "../../lib/T.ck"
 @import "./constants.ck"
 @import "./lines3d.ck"
+@import "./util.ck"
 
 // == chugl config ========================================
 GWindow.mouseMode(GWindow.MOUSE_DISABLED);
@@ -101,6 +116,10 @@ Constants c;
 // == load assets ========================================
 Texture.load(me.dir() + "./assets/floor.png") @=> Texture floor_tex;
 Texture.load(me.dir() + "./assets/shotgun.png") @=> Texture shotgun_tex;
+Texture.load(me.dir() + "./assets/chuck_logo_web2.jpg") @=> Texture chuck_tex;
+Texture.load(me.dir() + "./assets/chuck-logo2023w.png") @=> Texture chuck_tex_transparent;
+(new FlatMaterial).colorMap() @=> Texture white_pixel;
+// Texture.load(me.dir() + "./assets/chuck-logo2023w.png") @=> Texture chuck_tex;
 
 class Sound {
 
@@ -132,12 +151,15 @@ class GS {
     int mouse_deltas_idx;
     vec2 mouse_deltas_avg;
 
-
     // entities
     Entity ground;
     Entity player;
     EntityPool entity_pool;
     Entity@ enemy_entities[0]; // reset every frame
+
+    // misc
+    vec4 trails[0]; // .w is time until expiration
+
 } GS gs;
 
 int debug_console;
@@ -153,14 +175,18 @@ ground.uvScale(@(100, 100));
 ground.specular(Color.BLACK);
 // ground.scale(10);
 
-GCube cube --> GG.scene();
-cube.posY(.5);
-cube.posZ(-2);
-cube.colorMap(floor_tex);
-cube.color(5 * Color.YELLOW);
+GCube chuckbox --> GG.scene();
+chuckbox.posY(.5);
+chuckbox.posZ(-2);
+chuckbox.colorMap(chuck_tex);
+chuckbox.material().cullMode(Material.Cull_Back);
+chuckbox.emission(Color.WHITE);
+// chuckbox.emissiveMap((chuckbox.material() $ PhongMaterial).normalMap());
+// chuckbox.emissiveMap(white_pixel);
+chuckbox.emissiveMap(chuck_tex);
 
 // player cam
-GCamera player_camera; 
+GCamera player_camera --> GG.scene();
 player_camera => GG.scene().camera;
 player_camera.fov(90 * M.DEG2RAD); // 90 deg fov
 GMesh crosshair(new CircleGeometry, FlatMaterial crosshair_mat) --> player_camera;
@@ -183,13 +209,10 @@ CylinderGeometry cylinder_geo(
 FlatMaterial weapon_mat;  weapon_mat.colorMap(shotgun_tex);
 GMesh tmp(cylinder_geo, weapon_mat) --> GGen tmp_container --> player_camera;
 tmp.rotX(-Math.pi/2);
-tmp_container.posZ(-.5);
-tmp_container.posY(-.5);
+tmp_container.posZ(c.weapon_z_off.val());
+tmp_container.posY(c.weapon_y_off.val());
 // tmp.sca(.2);
 // tmp.scaZ(.8);
-
-GCube debug --> GG.scene();
-debug.sca(.2);
 
 class Collision {
     Entity@ e;
@@ -213,9 +236,12 @@ class Entity {
     2 => static int Type_Bullet;
     3 => static int Type_Particle;
     4 => static int Type_Enemy;
+    5 => static int Type_Debug;
+
 
     // alive?
     int dead;
+    float hp;
 
     // spawn stats
     float spawn_time;
@@ -223,6 +249,7 @@ class Entity {
 
     // type tags
     int type;
+    int debug_type;
 
     // physics
     vec3 acc, vel, pos;
@@ -242,23 +269,33 @@ class Entity {
     // weapon stuff
     float weapon_rotZ_predelay; // in secs
     float weapon_rotZ; // applied over time
+    float weapon_bob;
 
     // enemy stuff
     float enemy_hit_cd; 
 
     fun void zero() {
         false => dead;
+        0 => hp;
 
         @(0, 0, 0) => mesh.rot;
         @(1, 1, 1) => mesh.sca;
 
         0 => spawn_time => lifetime;
 
-        0 => type;
+        0 => type => debug_type;
 
         @(0, 0, 0) => acc => vel => pos => aabb;
         0 => gravity => friction;
         false => check_against_enemies;
+
+        0 => pitch => yaw;
+
+        // disconnect from scenegraph
+        mesh.detachParent();
+        hitbox.detachParent();
+
+        0 => weapon_rotZ_predelay => weapon_rotZ => weapon_bob;
     }
 
 
@@ -276,9 +313,13 @@ class Entity {
         }
 
         else if (type == Type_Enemy) {
+            // stats
+            10 => hp;
+
             // physics
             .5 * @(1, 2, 1) => aabb;
             aabb.y => pos.y;
+            true => check_against_enemies;
 
             // enemy mesh
             mesh.mesh(cube_geo, phong_mat);
@@ -302,7 +343,14 @@ class Entity {
     fun damage(float amt) {
         if (dead) return;
 
-        if (type == Type_Enemy) .5 => enemy_hit_cd;
+        if (type == Type_Enemy) {
+            .5 => enemy_hit_cd;
+            amt -=> hp;
+            if (hp <= 0) {
+                true => dead;
+                spawnParticles(pos, 10, .15, 2);
+            }
+        }
     }
 
     fun collideWith(Entity@ e, vec3 collision_pos) {
@@ -321,15 +369,18 @@ class Entity {
                 collision_pos => pos;
             }
 
-            spawnParticles(pos, 8);
+            spawnParticles(pos, 8, .03, 1);
         } 
     }
 
+    // currently only checks against *enemy* collisions
     fun int collides(vec3 p) {
         p - aabb => vec3 min;
         p + aabb => vec3 max;
 
         for (Entity@ e : gs.enemy_entities) {
+            if (e == this) continue;
+
             e.pos - e.aabb => vec3 e_min;
             e.pos + e.aabb => vec3 e_max;
 
@@ -432,7 +483,22 @@ class Entity {
             move_step => vec3 delta_pos;
 
             if (check_against_enemies) {
-                if (collides(move_step + pos)) { 
+
+                // YZ plane collision
+                if (collides(pos + @(move_step.x, 0, 0))) { 
+                    0 => delta_pos.x;
+                    steps => s; // stop for loop
+                }
+
+                // XZ plane collision
+                if (collides(pos + @(0, move_step.y, 0))) { 
+                    0 => delta_pos.y;
+                    steps => s; // stop for loop
+                }
+
+                // XY plane collision
+                if (collides(pos + @(0, 0, move_step.z))) { 
+                    0 => delta_pos.z;
                     steps => s; // stop for loop
                 }
             }
@@ -446,7 +512,7 @@ class Entity {
                 if (vel.y < 0) 0 => vel.y; // 0 so player doesn't fall through floor
                 0 => delta_pos.y;
 
-                collideWith(gs.ground, move_step + pos); // null signifies environment collision
+                collideWith(gs.ground, move_step + pos);
                 steps => s; // stop for loop
             }
 
@@ -493,8 +559,8 @@ class Entity {
             // physics and collision
             updatePhysics(dt);
 
-            // update camera
-            pos => player_camera.pos;
+            // update camera 
+            pos + @(0, aabb.y, 0) => player_camera.pos;
 
             // update weapon xform
             if (weapon_rotZ_predelay > 0) {
@@ -507,6 +573,13 @@ class Entity {
                 }
             }
 
+            @(acc.x, 0, acc.z).magnitude() * c.weapon_bob_freq.val() +=> weapon_bob; // TODO wrap between [0, 2pi]
+            c.weapon_y_off.val() + c.weapon_bob_mag.val() * Math.sin(weapon_bob) => tmp_container.posY;
+
+            // 12 + clamp(scale(shoot_wait, 0, weapon._reload, 5, 0), 0, 5),
+
+            // 12 + clamp(scale(shoot_wait, 0, weapon._reload, 5, 0), 0, 5),
+
             // fire shoot weapon
             if (GWindow.mouseLeftDown()) {
                 // sound effect!
@@ -517,11 +590,39 @@ class Entity {
                 .25 => weapon_rotZ_predelay;
 
                 // hitscan
-                hitscan(pos, forward) @=> Collision collision;
-                if (collision != null) {
-                    // this could prob be moved into a Weapon.hit() fn
-                    collision.e.damage(0);
-                    spawnParticles(collision.p, 8);
+                6 => int NUM_BULLETS;
+                repeat (NUM_BULLETS) {
+                    // fire from camera
+                    player_camera.posWorld() => vec3 bullet_pos;
+                    // OR fire from gun
+                    // pos => vec3 bullet_pos;
+
+                    .15 => float recoil_jitter; // angle displacement on shotgun blast
+
+                    @(0, 0, -1) => vec3 dir;
+                    M.rotateX(dir, pitch + recoil_jitter * Math.random2f(-1, 1)) => dir;
+                    M.rotateY(dir, yaw + recoil_jitter * Math.random2f(-1, 1)) => dir;
+
+                    // hitscan(bullet_pos, forward) @=> Collision collision;
+                    hitscan(bullet_pos, dir) @=> Collision collision;
+
+                    // trail renderer
+                    if (collision != null) {
+                        // this could prob be moved into a Weapon.hit() fn
+                        collision.e.damage(2);
+                        spawnParticles(collision.p, 8, .03, 1);
+
+
+                        // @lang would be nice to have these vec constructors
+                        gs.trails
+                            << @(bullet_pos.x, bullet_pos.y, bullet_pos.z, 1.0)
+                            << @(
+                                collision.p.x,
+                                collision.p.y,
+                                collision.p.z,
+                                1.0
+                            );
+                    }
                 }
 
                 // spawn non-hitscan projectile
@@ -571,15 +672,23 @@ class Entity {
         }
 
         else if (type == Type_Enemy) {
+            // just move towards player
+            M.dir(pos, gs.player.pos) => vec3 dir;
+            0 => dir.y; // cannot go upwards
+            dir * c.enemy_speed.val() => vel;
+
             updatePhysics(dt);
 
+            
+            // hit color
             Math.max(0, enemy_hit_cd - dt) => enemy_hit_cd;
             M.lerp(enemy_hit_cd * enemy_hit_cd, Color.WHITE, 5*Color.RED) => vec3 color;
             color => phong_mat.color;
 
             pos => mesh.pos;
         }
-
+        else if (type == Type_Map) {
+        }
         else {
             T.err("update not impl for entity type " + type);
         }
@@ -593,7 +702,6 @@ class EntityPool {
     fun Entity spawn() {
         if (len == items.size()) items << new Entity;
         items[len++] @=> Entity e;
-        e.zero();
         gs.gametime => e.spawn_time;
         return e;
     }
@@ -603,9 +711,7 @@ class EntityPool {
         for (len - 1 => int i; i >= 0; i--) {
             items[i] @=> Entity@ e;
             if (e.dead) {
-                // disconnect from scenegraph
-                e.mesh.detachParent();
-                e.hitbox.detachParent();
+                e.zero();
 
                 // swap with end
                 items[len - 1] @=> items[i];
@@ -624,8 +730,8 @@ fun void spawnEnemy(vec3 pos) {
     pos.z => e.pos.z;
 }
 
-fun void spawnParticles(vec3 pos, int amount) {
-    c.particle_speed.val() => float speed;
+fun void spawnParticles(vec3 pos, int amount, float sca, float spd) {
+    spd * c.particle_speed.val() => float speed;
     .5 => float lifetime;
 
     for (int i; i < amount; i++) {
@@ -638,7 +744,7 @@ fun void spawnParticles(vec3 pos, int amount) {
 
         // particle xform
         p.mesh --> GG.scene();
-        Math.random2f(.6, 1.4) * .03 => float s;
+        Math.random2f(.6, 1.4) * sca => float s;
         s => p.mesh.sca;
 
         // give the particle a random rotation
@@ -671,12 +777,14 @@ fun void spawnParticles(vec3 pos, int amount) {
 // init
 gs.player.init(Entity.Type_Player);
 gs.ground.init(Entity.Type_Map);
-spawnEnemy(@(0,0,0));
-spawnEnemy(@(2,0,0));
+spawnEnemy(@(0,0,-4));
+spawnEnemy(@(2,0,-4));
+
+CD enemy_spawn_cd(2.0);
 
 while (1) {
     GG.nextFrame() => now;
-    GG.dt() => float dt;
+    Math.min(.033, GG.dt()) => float dt;
     dt +=> gs.gametime;
 
 
@@ -704,7 +812,11 @@ while (1) {
         UI.slider("particle gravity", c.particle_gravity, 0, 100);
 
 
-        UI.slider("bullet speed", c.bullet_speed, 0, 100);
+        UI.separatorText("weapon params");
+        if (UI.slider("weapon_z_off", c.weapon_z_off, -1, 1)) c.weapon_z_off.val() => tmp_container.posZ;
+        UI.slider("weapon_y_off", c.weapon_y_off, -1, 1);
+        UI.slider("weapon_bob_mag", c.weapon_bob_mag, 0, 1);
+        UI.slider("weapon_bob_freq", c.weapon_bob_freq, 0, .01);
 
 
         UI.text("Entities: " + gs.entity_pool.len);
@@ -751,9 +863,35 @@ while (1) {
     // update player
     gs.player.update(dt);
 
+    { // update spawner
+        if (enemy_spawn_cd.update(dt)) spawnEnemy(@(0, 0, 0));
+    }
+
     // update entities (currently only bullets)
     for (auto e : gs.entity_pool.items) {
         e.update(dt);
+    }
+
+    { // chuckbox animation
+        1.5 + .5 * Math.sin(2 * gs.gametime) => chuckbox.posY;
+        1 + .2 * Math.cos(1.7 * gs.gametime) => chuckbox.sca;
+        chuckbox.rotateX(dt);
+        chuckbox.rotateY(1.2 * dt);
+        chuckbox.rotateZ(.7 * dt);
+
+        .8 * BezierColor.getPalette(.1 * gs.gametime, @(0.2, 0.5, .7), @(.9, 0.4, 0.1), @(1., 1.2, .5), @(1., -0.4, -.0)) => chuckbox.emission;
+    }
+
+    // trail renderers
+    <<< "outside", gs.trails.size() >>>;
+    for (gs.trails.size() - 2 => int i; i >= 0; 2 -=> i) {
+        <<< "inside", i, gs.trails.size() >>>;
+        dt -=> gs.trails[i].w;
+        l3d.line(gs.trails[i] $ vec3, gs.trails[i+1] $ vec3, gs.trails[i].w * Color.WHITE);
+
+        if (gs.trails[i].w < 0) {
+            gs.trails.erase(i, i+2);
+        }
     }
 
     // update widget drawers
