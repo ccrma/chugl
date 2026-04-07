@@ -552,7 +552,11 @@ struct PhongParams {
 
     static void uvOffset(SG_Material* mat, glm::vec2 offset)
     {
-        SG_Material::uniformVec2f(mat, 14, offset);
+        glm::vec4 uv_offset_scale = mat->uniforms[14].as.vec4f;
+        uv_offset_scale.x         = offset.x;
+        uv_offset_scale.y         = offset.y;
+
+        SG_Material::uniformVec4f(mat, 14, uv_offset_scale);
         CQ_PushCommand_MaterialSetUniform(mat, 14);
     }
 
@@ -563,13 +567,17 @@ struct PhongParams {
 
     static void uvScale(SG_Material* mat, glm::vec2 scale)
     {
-        SG_Material::uniformVec2f(mat, 15, scale);
-        CQ_PushCommand_MaterialSetUniform(mat, 15);
+        glm::vec4 uv_offset_scale = mat->uniforms[14].as.vec4f;
+        uv_offset_scale.z         = scale.x;
+        uv_offset_scale.w         = scale.y;
+
+        SG_Material::uniformVec4f(mat, 14, uv_offset_scale);
+        CQ_PushCommand_MaterialSetUniform(mat, 14);
     }
 
     static glm::vec2* uvScale(SG_Material* mat)
     {
-        return &mat->uniforms[15].as.vec2f;
+        return (glm::vec2*)&mat->uniforms[14].as.vec4f.z;
     }
 
     static void sampler(SG_Material* mat, SG_Sampler sampler)
@@ -677,24 +685,24 @@ struct PhongParams {
 
     static void envmapBlendMode(SG_Material* mat, SG_EnvmapBlendMode mode)
     {
-        SG_Material::uniformInt(mat, 16, mode);
-        CQ_PushCommand_MaterialSetUniform(mat, 16);
+        SG_Material::uniformInt(mat, 15, mode);
+        CQ_PushCommand_MaterialSetUniform(mat, 15);
     }
 
     static SG_EnvmapBlendMode* envmapBlendMode(SG_Material* mat)
     {
-        return (SG_EnvmapBlendMode*)&mat->uniforms[16].as.i;
+        return (SG_EnvmapBlendMode*)&mat->uniforms[15].as.i;
     }
 
     static void envmapIntensity(SG_Material* mat, float intensity)
     {
-        SG_Material::uniformFloat(mat, 17, intensity);
-        CQ_PushCommand_MaterialSetUniform(mat, 17);
+        SG_Material::uniformFloat(mat, 16, intensity);
+        CQ_PushCommand_MaterialSetUniform(mat, 16);
     }
 
     static float* envmapIntensity(SG_Material* mat)
     {
-        return &mat->uniforms[17].as.f;
+        return &mat->uniforms[16].as.f;
     }
 };
 

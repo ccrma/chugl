@@ -570,11 +570,11 @@ static const char* phong_shader_string = R"glsl(
     @group(1) @binding(13) var<uniform> u_envmap_ratio : f32; // refraction ratio
 
     // WTF NEED TO DECLARE BINDINGS IN ORDER...WGSL PARSER IS SHIT
-    @group(1) @binding(14) var<uniform> u_texture_offset : vec2f;
-    @group(1) @binding(15) var<uniform> u_texture_scale : vec2f;
+    @group(1) @binding(14) var<uniform> u_texture_offset_scale : vec4f;
+    // @group(1) @binding(15) var<uniform> u_texture_scale : vec2f;
 
-    @group(1) @binding(16) var<uniform> u_envmap_blend : i32;
-    @group(1) @binding(17) var<uniform> u_envmap_intensity : f32;
+    @group(1) @binding(15) var<uniform> u_envmap_blend : i32;
+    @group(1) @binding(16) var<uniform> u_envmap_intensity : f32;
 
     fn srgbToLinear(srgb_in : vec3f) -> vec3f {
         return pow(srgb_in.rgb,vec3f(2.2));
@@ -669,7 +669,7 @@ static const char* phong_shader_string = R"glsl(
         let viewVector = u_frame.camera_pos - in.v_worldpos;
         let viewDir = normalize(viewVector);  // direction from camera to this frag
 
-        var uv = in.v_uv * u_texture_scale + u_texture_offset;
+        var uv = in.v_uv * u_texture_offset_scale.zw + u_texture_offset_scale.xy;
 
         var normal = perturbNormal(in.v_normal, viewVector, uv, u_normal_factor, is_front);
 
