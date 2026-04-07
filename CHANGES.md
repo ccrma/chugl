@@ -1,6 +1,6 @@
 # Changes
 
-## 0.2.10 (alpha)
+## 0.3.0 (alpha)
 - add `TextureLoadDesc.srgb` for loading image data into srgb textures
 - Add YCrCb video decoding mode to `Video`
 - Updated cmake to build on linux. (thanks Lejun)
