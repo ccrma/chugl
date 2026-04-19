@@ -175,7 +175,7 @@ endif()
 if (MSVC)
     target_compile_options(chugl_shared_properties INTERFACE /W4)
 else()
-    target_compile_options(chugl_shared_properties INTERFACE -Wall -Wextra -pedantic)
+    target_compile_options(chugl_shared_properties INTERFACE -Wall -Wextra)
 
     # disable warnings
     target_compile_options(chugl_shared_properties INTERFACE 
@@ -204,7 +204,6 @@ else()
             -Wno-implicit-fallthrough
             -Wno-format-truncation
             -Wno-stringop-overflow
-            -Wno-format
             -Wno-class-memaccess
             -Wno-strict-aliasing
         )

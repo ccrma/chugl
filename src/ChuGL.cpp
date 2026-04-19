@@ -1287,7 +1287,7 @@ CK_DLL_QUERY(ChuGL)
         DOC_FUNC("(hidden)");
 
         SFUN(chugl_reset_to_default, "void", "reset");
-        DOC_FUNC("(hidden)");
+        DOC_FUNC("reset the scenegraph to the default startup state.");
 
         END_CLASS();
     } // GG

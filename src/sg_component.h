@@ -986,6 +986,13 @@ struct SG_Video : public SG_Component {
     {
         return (int)(video->duration_secs * video->samplerate);
     }
+
+    static void destroy(SG_Video* video)
+    {
+        ASSERT(video->type == SG_COMPONENT_VIDEO);
+        FREE(video->path_OWNED);
+        if (video->plm) plm_destroy(video->plm);
+    }
 };
 
 // ============================================================================

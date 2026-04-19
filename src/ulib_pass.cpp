@@ -578,9 +578,9 @@ SG_Pass* ulib_pass_create(SG_PassType pass_type, Chuck_Object* pass_ckobj, bool 
             // create default output render texture, which is always resized to match
             // input texture
             SG_TextureDesc output_render_texture_desc = {};
-            output_render_texture_desc.usage = WGPUTextureUsage_RenderAttachment
-                                               | WGPUTextureUsage_TextureBinding
-                                               | WGPUTextureUsage_StorageBinding;
+            output_render_texture_desc.usage        = WGPUTextureUsage_RenderAttachment
+                                                      | WGPUTextureUsage_TextureBinding
+                                                      | WGPUTextureUsage_StorageBinding;
             output_render_texture_desc.format       = WGPUTextureFormat_RGBA16Float;
             output_render_texture_desc.resize_mode  = SG_TextureResizeMode_Ratio;
             output_render_texture_desc.width_ratio  = 1.0f;
@@ -984,9 +984,8 @@ SG_Pass* ulib_pass_create_output_pass(SG_Pass* pass, Chuck_Object* ckobj, bool a
 
 CK_DLL_CTOR(outputpass_ctor)
 {
-    SG_Pass* pass = GET_PASS(SELF);
+    SG_Pass* pass = ulib_pass_create_output_pass(GET_PASS(SELF), SELF, false, SHRED);
     ASSERT(pass && pass->pass_type == SG_PassType_Screen);
-    ulib_pass_create_output_pass(pass, SELF, false, SHRED);
 }
 
 CK_DLL_MFUN(outputpass_set_input_texture)

@@ -745,6 +745,7 @@ static Arena* _gc_queue_read  = &_gc_queue_a;
 static Arena* _gc_queue_write = &_gc_queue_b;
 
 // storage arenas
+// static da_declare(SG_Transform, SG_XformArena);
 static Arena SG_XformArena;
 static Arena SG_SceneArena;
 static Arena SG_GeoArena;
@@ -1518,11 +1519,16 @@ void SG_ComponentFree(SG_Component* comp)
         case SG_COMPONENT_SHADER: {
             // push free command
             CQ_PushCommand_ComponentFree(comp);
-
             log_trace("freeing shader %d", comp->id);
             // free shader strings
             SG_Shader::free((SG_Shader*)comp);
             _SG_ComponentManagerFree(comp->id, sizeof(SG_Shader));
+        } break;
+        case SG_COMPONENT_VIDEO: {
+            CQ_PushCommand_ComponentFree(comp);
+            log_trace("freeing video %d", comp->id);
+            SG_Video::destroy((SG_Video*)comp);
+            _SG_ComponentManagerFree(comp->id, sizeof(SG_Video));
         } break;
         default: break; // TODO impl other types
     }

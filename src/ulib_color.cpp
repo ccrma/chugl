@@ -161,10 +161,12 @@ static void ulib_color_query(Chuck_DL_Query* QUERY)
     QUERY->add_arg(QUERY, "vec3", "rgb");
     QUERY->doc_func(
       QUERY,
-      "convert from rgb colorspace to hsv"
-      "hsv stands for hue, saturation, value, and is a more human-friendly color format"
-      "hue takes on a value between 0 and 360, and represents the color itself"
-      "saturation takes on a value between 0 and 1, and represents the amount of color"
+      "convert from rgb colorspace to hsv. "
+      "hsv stands for hue, saturation, value, and is a more human-friendly color "
+      "format. "
+      "hue takes on a value between 0 and 360, and represents the color itself. "
+      "saturation takes on a value between 0 and 1, and represents the amount of "
+      "color. "
       "value takes on a value between 0 and 1, and represents the brightness of the "
       "color");
 

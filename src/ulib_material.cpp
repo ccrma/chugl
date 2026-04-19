@@ -489,6 +489,7 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
         ADD_EX("deep/lines3d.ck");
         ADD_EX("deep/custom-material.ck");
         ADD_EX("deep/particles.ck");
+        ADD_EX("deep/meshlines.ck");
 
         CTOR(material_ctor);
 

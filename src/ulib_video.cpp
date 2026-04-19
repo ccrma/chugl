@@ -51,6 +51,7 @@ static t_CKUINT video_component_offset_id = 0;
 CK_DLL_CTOR(video_ctor);
 CK_DLL_CTOR(video_ctor_with_path);
 CK_DLL_TICKF(video_tick_multichannel);
+CK_DLL_DTOR(video_dtor);
 
 // video decompression mode
 CK_DLL_MFUN(video_get_texture_mode);
@@ -159,6 +160,8 @@ void ulib_video_query(Chuck_DL_Query* QUERY)
           "opened, "
           "the "
           "video object will default to a static magenta video texture.");
+
+        DTOR(video_dtor);
 
         MFUN(video_get_texture_mode, "int", "mode");
         DOC_FUNC("Get the texture conversion mode for this video.");
@@ -535,6 +538,11 @@ CK_DLL_CTOR(video_ctor_with_path)
     video->path_OWNED = path;
 
     CQ_PushCommand_VideoUpdate(video);
+}
+
+CK_DLL_DTOR(video_dtor)
+{
+    SG_ComponentFree(SG_GetComponent(OBJ_MEMBER_UINT(SELF, component_offset_id)));
 }
 
 CK_DLL_MFUN(video_get_texture_mode)
