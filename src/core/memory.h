@@ -106,7 +106,12 @@ struct chugl_string {
         int cap;                                                                       \
     } arr
 
-#define da_append(arr, x)                                                              \
+#define da_free(arr)                                                                   \
+    do {                                                                               \
+        free(arr.items);                                                               \
+    } while (0)
+
+#define da_push(arr)                                                                   \
     do {                                                                               \
         if (arr.size >= arr.cap) {                                                     \
             if (arr.cap == 0)                                                          \
@@ -115,5 +120,5 @@ struct chugl_string {
                 arr.cap *= 2;                                                          \
             arr.items = realloc(arr.items, arr.cap * sizeof(*arr.items));              \
         }                                                                              \
-        arr.items[arr.size++] = x;                                                     \
+        arr.items[arr.size++] = {};                                                    \
     } while (0)

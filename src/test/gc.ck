@@ -1,5 +1,6 @@
-Video video;
+Video video(me.dir() + "../../examples/basic/bjork.mpg");
 
-while(ms=>now) {
-    new Video @=> video;
+while(1) {
+    repeat(1) GG.nextFrame() => now;
+    new Video(me.dir() + "../../examples/basic/bjork.mpg") @=> video;
 }

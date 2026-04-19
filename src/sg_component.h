@@ -225,6 +225,7 @@ struct SG_Texture : SG_Component {
     Chuck_Event* texture_read_event;
 
     static void updateTextureData(SG_Texture* texture, void* data, int data_size_bytes);
+    static void destroy(SG_Texture* texture);
 };
 
 // ============================================================================
@@ -987,12 +988,7 @@ struct SG_Video : public SG_Component {
         return (int)(video->duration_secs * video->samplerate);
     }
 
-    static void destroy(SG_Video* video)
-    {
-        ASSERT(video->type == SG_COMPONENT_VIDEO);
-        FREE(video->path_OWNED);
-        if (video->plm) plm_destroy(video->plm);
-    }
+    static void destroy(SG_Video* video);
 };
 
 // ============================================================================

@@ -746,6 +746,11 @@ int R_Texture::sizeBytes(R_Texture* texture)
            * G_bytesPerTexel(wgpuTextureGetFormat(texture->gpu_texture));
 }
 
+void R_Texture::destroy(R_Texture* texture)
+{
+    WGPU_RELEASE_RESOURCE(Texture, texture->gpu_texture);
+}
+
 void R_Texture::load(GraphicsContext* gctx, R_Texture* texture, const char* filepath,
                      bool flip_vertically, bool gen_mips)
 {
@@ -1448,8 +1453,8 @@ void R_Scene::rebuildLightInfoBuffer(GraphicsContext* gctx, R_Scene* scene,
 
         // resize the per-draw storage buffer
         size_t shadow_renderlist_count = hashmap_count(light->shadow_render_id_set);
-        int draw_uniform_size          = NEXT_MULT(sizeof(DrawUniforms),
-                                                   gctx->limits.minStorageBufferOffsetAlignment);
+        int draw_uniform_size = NEXT_MULT(sizeof(DrawUniforms),
+                                          gctx->limits.minStorageBufferOffsetAlignment);
         if (light->draw_storage_buffer == NULL
             || wgpuBufferGetSize(light->draw_storage_buffer)
                  < shadow_renderlist_count * draw_uniform_size) {
@@ -1872,8 +1877,19 @@ void Component_FreeComponent(SG_ID id)
             R_Shader::free((R_Shader*)comp);
             _Component_FreeComponent(id, sizeof(R_Shader));
         } break;
+        case SG_COMPONENT_VIDEO: {
+            log_trace("graphics thread freeing video %d", comp->id);
+            R_Video::destroy((R_Video*)comp);
+            _Component_FreeComponent(id, sizeof(R_Video));
+        } break;
+        case SG_COMPONENT_TEXTURE: {
+            log_trace("graphics thread freeing texture %d", comp->id);
+            R_Texture::destroy((R_Texture*)comp);
+            _Component_FreeComponent(id, sizeof(R_Texture));
+        } break;
         default: {
             // other types not yet supported
+            ASSERT(false);
         }
     }
 }
@@ -3323,7 +3339,7 @@ void R_Font::updateText(GraphicsContext* gctx, R_Font* font, R_Text* text)
 
     int line_offset_count = ARENA_LENGTH(&line_offsets, float);
     UNUSED_VAR(line_offset_count);
-    int line_offset_idx   = 0;
+    int line_offset_idx = 0;
 
     // compute new bounding box
     BoundingBox bb = {};
@@ -3540,4 +3556,11 @@ void R_Light::shadowAddMesh(SG_ID* mesh_list, int mesh_count, bool add)
         for (int i = 0; i < mesh_count; ++i)
             hashmap_delete(shadow_render_id_set, mesh_list + i);
     }
+}
+
+void R_Video::destroy(R_Video* video)
+{
+    if (!video) return;
+    if (video->plm) plm_destroy(video->plm);
+    free(video->rgba_data_OWNED);
 }

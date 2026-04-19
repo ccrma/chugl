@@ -1515,21 +1515,25 @@ static void _SG_ComponentManagerFree(SG_ID id, int component_size)
 void SG_ComponentFree(SG_Component* comp)
 {
     // chugl v0.2.3 10/30/24 azaday: only implementing gc for shader class
+    CQ_PushCommand_ComponentFree(comp);
     switch (comp->type) {
+        // push free command
         case SG_COMPONENT_SHADER: {
-            // push free command
-            CQ_PushCommand_ComponentFree(comp);
             log_trace("freeing shader %d", comp->id);
             // free shader strings
             SG_Shader::free((SG_Shader*)comp);
             _SG_ComponentManagerFree(comp->id, sizeof(SG_Shader));
         } break;
         case SG_COMPONENT_VIDEO: {
-            CQ_PushCommand_ComponentFree(comp);
             log_trace("freeing video %d", comp->id);
             SG_Video::destroy((SG_Video*)comp);
             _SG_ComponentManagerFree(comp->id, sizeof(SG_Video));
         } break;
+        case SG_COMPONENT_TEXTURE: {
+            log_trace("freeing texture %d", comp->id);
+            SG_Texture::destroy((SG_Texture*)comp);
+            _SG_ComponentManagerFree(comp->id, sizeof(SG_Texture));
+        }
         default: break; // TODO impl other types
     }
 }
@@ -1807,4 +1811,28 @@ void SG_Texture::updateTextureData(SG_Texture* texture, void* data, int data_siz
 
     // broadcast TextureReadEvent
     Event_Broadcast(texture->texture_read_event);
+}
+
+void SG_Texture::destroy(SG_Texture* texture)
+{
+    ASSERT(texture);
+    ASSERT(texture->type == SG_COMPONENT_TEXTURE);
+    // release chuck resources
+    g_chuglAPI->object->release((Chuck_Object*)texture->texture_data);
+    g_chuglAPI->object->release((Chuck_Object*)texture->texture_read_event);
+}
+
+void SG_Video::destroy(SG_Video* video)
+{
+    ASSERT(video);
+    ASSERT(video->type == SG_COMPONENT_VIDEO);
+
+    FREE(video->path_OWNED);
+    if (video->plm) plm_destroy(video->plm);
+
+    // decrement refcount on textures
+    SG_DecrementRef(video->video_texture_rgba_id);
+    SG_DecrementRef(video->video_texture_cb_id);
+    SG_DecrementRef(video->video_texture_cr_id);
+    SG_DecrementRef(video->video_texture_y_id);
 }

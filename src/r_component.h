@@ -231,6 +231,8 @@ struct R_Texture : public R_Component {
 
     static int sizeBytes(R_Texture* texture);
 
+    static void destroy(R_Texture* texture);
+
     // validates that the WGPUTexture matches the sg_texturedesc
     static void validate(R_Texture* t)
     {
@@ -864,6 +866,8 @@ struct R_Video : public R_Component {
     int rgba_data_size;
     float rate = 1.0f;
     SG_Video_TextureMode texture_mode;
+
+    static void destroy(R_Video* video);
 };
 
 // =============================================================================
@@ -2422,9 +2426,9 @@ struct G_Graph {
                                          wgpuTextureGetFormat(
                                            pass->rp.color_target_view_desc.texture);
 
-                        ca.view       = pass->rp.color_target_is_external_view ?
-                                          pass->rp.color_target.texture_view :
-                                          cache.textureView(pass->rp.color_target_view_desc);
+                        ca.view = pass->rp.color_target_is_external_view ?
+                                    pass->rp.color_target.texture_view :
+                                    cache.textureView(pass->rp.color_target_view_desc);
                         ca.loadOp     = pass->rp.color_load_op;
                         ca.storeOp    = pass->rp.color_store_op;
                         ca.clearValue = pass->rp.clear_color;
@@ -2508,7 +2512,7 @@ struct G_Graph {
                     WGPUBindGroup bg                        = cache.bindGroup(
                       device,
                       ARENA_GET_TYPE(bind_group_entry_list, G_CacheBindGroupEntry,
-                                                            pass->cp.bg_start),
+                                     pass->cp.bg_start),
                       pass->cp.bg_count, cp.val.bind_group_layout,
                       compute_pass_binding_location, pass->name);
                     wgpuComputePassEncoderSetBindGroup(

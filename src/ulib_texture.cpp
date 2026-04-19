@@ -492,7 +492,6 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
         // mfun ------------------------------------------------------------------
 
         CTOR(texture_ctor);
-        // TODO: add destructor; also within dtor remember to release texture_read_event
 
         CTOR(texture_ctor_with_desc);
         ARG("TextureDesc", "texture_desc");
@@ -792,9 +791,9 @@ void ulib_texture_createDefaults(CK_DL_API API)
     {
         SG_TextureDesc render_texture_desc = {};
         render_texture_desc.usage          = WGPUTextureUsage_RenderAttachment
-                                    | WGPUTextureUsage_TextureBinding
-                                    | WGPUTextureUsage_StorageBinding;
-        render_texture_desc.format = WGPUTextureFormat_RGBA16Float;
+                                             | WGPUTextureUsage_TextureBinding
+                                             | WGPUTextureUsage_StorageBinding;
+        render_texture_desc.format         = WGPUTextureFormat_RGBA16Float;
 
         // make scale with window dimensions
         render_texture_desc.resize_mode  = SG_TextureResizeMode_Ratio;
