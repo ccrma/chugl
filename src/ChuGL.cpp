@@ -47,10 +47,7 @@
 #include "ulib_light.cpp"
 
 #include "ulib_video.cpp"
-
-#ifndef CHUGL_FAST_COMPILE
 #include "ulib_assloader.cpp"
-#endif
 
 
 // vendor
@@ -1037,10 +1034,7 @@ CK_DLL_QUERY(ChuGL)
     ulib_text_query(QUERY);
 
     ulib_video_query(QUERY);
-
-#ifndef CHUGL_FAST_COMPILE
     ulib_assloader_query(QUERY);
-#endif
 
     { // File Dialog
         BEGIN_CLASS("OpenFileEvent", "Event");
