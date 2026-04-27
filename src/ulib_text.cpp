@@ -389,7 +389,7 @@ CK_DLL_MFUN(gtext_get_texture)
 {
     SG_Text* text         = GET_TEXT(SELF);
     SG_Material* material = SG_GetMaterial(text->_mat_id);
-    SG_Texture* texture   = SG_GetTexture(material->uniforms[6].as.texture_id);
+    SG_Texture* texture   = SG_GetTexture(material->uniforms[6].as.sg_id);
     RETURN->v_object      = texture->ckobj;
 }
 

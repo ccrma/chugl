@@ -818,16 +818,17 @@ void ulib_material_query(Chuck_DL_Query* QUERY)
           "identically");
 
         // uniforms
-
-        // TODO
-        // MFUN(material_uniform_remove, "void", "removeUniform");
-        // ARG("int", "location");
+        MFUN(material_uniform_remove, "void", "removeUniform");
+        ARG("int", "location");
+        DOC_FUNC(
+          "Removes the current uniform/texture/sampler/storageBuffer set at `int "
+          "location` on the material. Useful for reusing the same material with a new "
+          "shader that has a different bindgroup layout");
 
         MFUN(material_uniform_active_locations, "int[]", "activeUniformLocations");
         DOC_FUNC(
           "Get list of active uniform locations, i.e. uniform locations that have been "
-          "set "
-          "(bind group entry locations)");
+          "set (bind group entry locations)");
 
         MFUN(material_set_uniform_float, "void", "uniformFloat");
         ARG("int", "location");
@@ -1755,8 +1756,7 @@ CK_DLL_MFUN(material_uniform_remove)
     t_CKINT location      = GET_NEXT_INT(ARGS);
 
     SG_Material::removeUniform(material, location);
-
-    // TODO push to command queue
+    CQ_PushCommand_MaterialSetUniform(material, location);
 }
 
 CK_DLL_MFUN(material_set_uniform_float)
@@ -2094,7 +2094,7 @@ CK_DLL_MFUN(material_get_texture)
                  SHRED);
     }
 
-    SG_Texture* tex  = SG_GetTexture(material->uniforms[location].as.texture_id);
+    SG_Texture* tex  = SG_GetTexture(material->uniforms[location].as.sg_id);
     RETURN->v_object = tex ? tex->ckobj : NULL;
 }
 
@@ -2449,8 +2449,7 @@ CK_DLL_MFUN(flat_material_set_sampler)
 
 CK_DLL_MFUN(flat_material_get_color_map)
 {
-    RETURN->v_object
-      = SG_GetTexture(GET_MATERIAL(SELF)->uniforms[2].as.texture_id)->ckobj;
+    RETURN->v_object = SG_GetTexture(GET_MATERIAL(SELF)->uniforms[2].as.sg_id)->ckobj;
 }
 
 CK_DLL_MFUN(flat_material_set_color_map)
@@ -2940,7 +2939,7 @@ CK_DLL_MFUN(pbr_material_set_ao_factor)
 CK_DLL_MFUN(pbr_material_get_albedo_tex)
 {
     SG_Material* material = GET_MATERIAL(SELF);
-    SG_Texture* tex       = SG_GetTexture(material->uniforms[1].as.texture_id);
+    SG_Texture* tex       = SG_GetTexture(material->uniforms[1].as.sg_id);
     RETURN->v_object      = tex ? tex->ckobj : NULL;
 }
 
@@ -2959,7 +2958,7 @@ CK_DLL_MFUN(pbr_material_set_albedo_tex)
 CK_DLL_MFUN(pbr_material_get_normal_tex)
 {
     SG_Material* material = GET_MATERIAL(SELF);
-    SG_Texture* tex       = SG_GetTexture(material->uniforms[2].as.texture_id);
+    SG_Texture* tex       = SG_GetTexture(material->uniforms[2].as.sg_id);
     RETURN->v_object      = tex ? tex->ckobj : NULL;
 }
 
@@ -2978,7 +2977,7 @@ CK_DLL_MFUN(pbr_material_set_normal_tex)
 CK_DLL_MFUN(pbr_material_get_ao_tex)
 {
     SG_Material* material = GET_MATERIAL(SELF);
-    SG_Texture* tex       = SG_GetTexture(material->uniforms[3].as.texture_id);
+    SG_Texture* tex       = SG_GetTexture(material->uniforms[3].as.sg_id);
     RETURN->v_object      = tex ? tex->ckobj : NULL;
 }
 
@@ -2997,7 +2996,7 @@ CK_DLL_MFUN(pbr_material_set_ao_tex)
 CK_DLL_MFUN(pbr_material_get_mr_tex)
 {
     SG_Material* material = GET_MATERIAL(SELF);
-    SG_Texture* tex       = SG_GetTexture(material->uniforms[4].as.texture_id);
+    SG_Texture* tex       = SG_GetTexture(material->uniforms[4].as.sg_id);
     RETURN->v_object      = tex ? tex->ckobj : NULL;
 }
 
@@ -3016,7 +3015,7 @@ CK_DLL_MFUN(pbr_material_set_mr_tex)
 CK_DLL_MFUN(pbr_material_get_emissive_tex)
 {
     SG_Material* material = GET_MATERIAL(SELF);
-    SG_Texture* tex       = SG_GetTexture(material->uniforms[5].as.texture_id);
+    SG_Texture* tex       = SG_GetTexture(material->uniforms[5].as.sg_id);
     RETURN->v_object      = tex ? tex->ckobj : NULL;
 }
 

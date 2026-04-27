@@ -2065,8 +2065,7 @@ static void _R_HandleCommand(App* app, SG_Command* command)
                 // assumes garbage collection refcounting is tracked on
                 // chuck/audio-thread side
                 case SG_MATERIAL_UNIFORM_NONE: {
-                    material->bindings[cmd->location].type = R_BIND_EMPTY;
-                    material->bindings[cmd->location].size = 0;
+                    R_Material::removeBinding(material, cmd->location);
                 } break;
                 // basic uniform
                 case SG_MATERIAL_UNIFORM_FLOAT:
@@ -2085,8 +2084,7 @@ static void _R_HandleCommand(App* app, SG_Command* command)
                 } break;
                 case SG_MATERIAL_UNIFORM_TEXTURE: {
                     // defaults to entire mip chain
-                    R_Texture* texture
-                      = Component_GetTexture(cmd->uniform.as.texture_id);
+                    R_Texture* texture = Component_GetTexture(cmd->uniform.as.sg_id);
                     R_Material::bindTexture(
                       &app->gctx, material, cmd->location,
                       { texture->id, 0,
@@ -2101,15 +2099,13 @@ static void _R_HandleCommand(App* app, SG_Command* command)
                                                   cmd->uniform.as.sampler);
                 } break;
                 case SG_MATERIAL_UNIFORM_STORAGE_BUFFER_EXTERNAL: {
-                    R_Buffer* buffer
-                      = Component_GetBuffer(cmd->uniform.as.storage_buffer_id);
-                    R_Material::setExternalStorageBinding(
-                      &app->gctx, material, cmd->location, &buffer->gpu_buffer);
+                    R_Material::setStorageBinding(&app->gctx, material, cmd->location,
+                                                  cmd->uniform.as.sg_id);
                 } break;
                 case SG_MATERIAL_STORAGE_TEXTURE: {
                     // currently only support mip level 0
                     R_Material::bindTexture(&app->gctx, material, cmd->location,
-                                            { cmd->uniform.as.texture_id, 0, 1 });
+                                            { cmd->uniform.as.sg_id, 0, 1 });
                 } break;
                 default: ASSERT(false);
             } // end uniform type switch
@@ -2119,8 +2115,8 @@ static void _R_HandleCommand(App* app, SG_Command* command)
               = (SG_Command_MaterialSetStorageBuffer*)command;
             R_Material* material = Component_GetMaterial(cmd->sg_id);
             void* data           = CQ_ReadCommandGetOffset(cmd->data_offset);
-            R_Material::setBinding(&app->gctx, material, cmd->location, R_BIND_STORAGE,
-                                   data, cmd->data_size_bytes);
+            R_Material::setBinding(&app->gctx, material, cmd->location,
+                                   R_BIND_STORAGE_INTERNAL, data, cmd->data_size_bytes);
         } break;
         // mesh -------------------------
         case SG_COMMAND_MESH_UPDATE: {

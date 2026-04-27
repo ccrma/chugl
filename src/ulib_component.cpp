@@ -2129,7 +2129,7 @@ CK_DLL_MFUN(gpoints_mat_get_sampler)
 
 CK_DLL_MFUN(gpoints_mat_get_texture)
 {
-    SG_Texture* tex = SG_GetTexture(GET_MESH_MATERIAL(SELF)->uniforms[3].as.texture_id);
+    SG_Texture* tex  = SG_GetTexture(GET_MESH_MATERIAL(SELF)->uniforms[3].as.sg_id);
     RETURN->v_object = tex ? tex->ckobj : NULL;
 }
 

@@ -126,6 +126,38 @@ void processAsyncFileDialogResults(); // forward decl
 
 static t_CKUINT chugl_next_frame_event_data_offset = 0;
 
+// ChuGL_Stats fields
+static t_CKUINT chugl_stats_xform_count_offset    = 0;
+static t_CKUINT chugl_stats_scenes_count_offset   = 0;
+static t_CKUINT chugl_stats_geo_count_offset      = 0;
+static t_CKUINT chugl_stats_shader_count_offset   = 0;
+static t_CKUINT chugl_stats_material_count_offset = 0;
+static t_CKUINT chugl_stats_texture_count_offset  = 0;
+static t_CKUINT chugl_stats_mesh_count_offset     = 0;
+static t_CKUINT chugl_stats_camera_count_offset   = 0;
+static t_CKUINT chugl_stats_pass_count_offset     = 0;
+static t_CKUINT chugl_stats_buffer_count_offset   = 0;
+static t_CKUINT chugl_stats_light_count_offset    = 0;
+// no separate model field because its stored in SG_XformArena
+// static t_CKUINT chugl_stats_model_count_offset    = 0;
+static t_CKUINT chugl_stats_video_count_offset  = 0;
+static t_CKUINT chugl_stats_webcam_count_offset = 0;
+
+static t_CKUINT chugl_stats_xform_free_count_offset    = 0;
+static t_CKUINT chugl_stats_scenes_free_count_offset   = 0;
+static t_CKUINT chugl_stats_geo_free_count_offset      = 0;
+static t_CKUINT chugl_stats_shader_free_count_offset   = 0;
+static t_CKUINT chugl_stats_material_free_count_offset = 0;
+static t_CKUINT chugl_stats_texture_free_count_offset  = 0;
+static t_CKUINT chugl_stats_mesh_free_count_offset     = 0;
+static t_CKUINT chugl_stats_camera_free_count_offset   = 0;
+static t_CKUINT chugl_stats_pass_free_count_offset     = 0;
+static t_CKUINT chugl_stats_buffer_free_count_offset   = 0;
+static t_CKUINT chugl_stats_light_free_count_offset    = 0;
+static t_CKUINT chugl_stats_model_free_count_offset    = 0;
+static t_CKUINT chugl_stats_video_free_count_offset    = 0;
+static t_CKUINT chugl_stats_webcam_free_count_offset   = 0;
+
 static void autoUpdateScenegraph(Arena* arena, SG_Scene* scene, Chuck_VM* VM,
                                  CK_DL_API API, t_CKINT _ggen_update_vt_offset)
 {
@@ -905,6 +937,70 @@ CK_DLL_SFUN(chugl_reset_to_default)
     chugl_init_default_setup_impl();
 }
 
+CK_DLL_SFUN(chugl_stats)
+{
+    Chuck_Object* stats_obj = chugin_createCkObj("ChuGL_Stats", false, SHRED);
+
+    OBJ_MEMBER_INT(stats_obj, chugl_stats_xform_count_offset)
+      = ARENA_LENGTH(&SG_XformArena, SG_Transform); // includes base GGen AND GModel
+    OBJ_MEMBER_INT(stats_obj, chugl_stats_scenes_count_offset)
+      = ARENA_LENGTH(&SG_SceneArena, SG_Scene);
+    OBJ_MEMBER_INT(stats_obj, chugl_stats_geo_count_offset)
+      = ARENA_LENGTH(&SG_GeoArena, SG_Geometry);
+    OBJ_MEMBER_INT(stats_obj, chugl_stats_shader_count_offset)
+      = ARENA_LENGTH(&SG_ShaderArena, SG_Shader);
+    OBJ_MEMBER_INT(stats_obj, chugl_stats_material_count_offset)
+      = ARENA_LENGTH(&SG_MaterialArena, SG_Material);
+    OBJ_MEMBER_INT(stats_obj, chugl_stats_texture_count_offset)
+      = ARENA_LENGTH(&SG_TextureArena, SG_Texture);
+    // awkward that text and mesh are grouped together...
+    OBJ_MEMBER_INT(stats_obj, chugl_stats_mesh_count_offset)
+      = ARENA_LENGTH(&SG_MeshArena, SG_Mesh) + ARENA_LENGTH(&SG_TextArena, SG_Text);
+    OBJ_MEMBER_INT(stats_obj, chugl_stats_camera_count_offset)
+      = ARENA_LENGTH(&SG_CameraArena, SG_Camera);
+    OBJ_MEMBER_INT(stats_obj, chugl_stats_pass_count_offset)
+      = ARENA_LENGTH(&SG_PassArena, SG_Pass);
+    OBJ_MEMBER_INT(stats_obj, chugl_stats_buffer_count_offset)
+      = ARENA_LENGTH(&SG_BufferArena, SG_Buffer);
+    OBJ_MEMBER_INT(stats_obj, chugl_stats_light_count_offset)
+      = ARENA_LENGTH(&SG_LightArena, SG_Light);
+    OBJ_MEMBER_INT(stats_obj, chugl_stats_video_count_offset)
+      = ARENA_LENGTH(&SG_VideoArena, SG_Video);
+    OBJ_MEMBER_INT(stats_obj, chugl_stats_webcam_count_offset)
+      = ARENA_LENGTH(&SG_WebcamArena, SG_Webcam);
+
+    OBJ_MEMBER_INT(stats_obj, chugl_stats_xform_free_count_offset)
+      = SG_ComponentFreeCounts[SG_COMPONENT_TRANSFORM];
+    OBJ_MEMBER_INT(stats_obj, chugl_stats_scenes_free_count_offset)
+      = SG_ComponentFreeCounts[SG_COMPONENT_SCENE];
+    OBJ_MEMBER_INT(stats_obj, chugl_stats_geo_free_count_offset)
+      = SG_ComponentFreeCounts[SG_COMPONENT_GEOMETRY];
+    OBJ_MEMBER_INT(stats_obj, chugl_stats_shader_free_count_offset)
+      = SG_ComponentFreeCounts[SG_COMPONENT_SHADER];
+    OBJ_MEMBER_INT(stats_obj, chugl_stats_material_free_count_offset)
+      = SG_ComponentFreeCounts[SG_COMPONENT_MATERIAL];
+    OBJ_MEMBER_INT(stats_obj, chugl_stats_texture_free_count_offset)
+      = SG_ComponentFreeCounts[SG_COMPONENT_TEXTURE];
+    OBJ_MEMBER_INT(stats_obj, chugl_stats_mesh_free_count_offset)
+      = SG_ComponentFreeCounts[SG_COMPONENT_MESH];
+    OBJ_MEMBER_INT(stats_obj, chugl_stats_camera_free_count_offset)
+      = SG_ComponentFreeCounts[SG_COMPONENT_CAMERA];
+    OBJ_MEMBER_INT(stats_obj, chugl_stats_pass_free_count_offset)
+      = SG_ComponentFreeCounts[SG_COMPONENT_PASS];
+    OBJ_MEMBER_INT(stats_obj, chugl_stats_buffer_free_count_offset)
+      = SG_ComponentFreeCounts[SG_COMPONENT_BUFFER];
+    OBJ_MEMBER_INT(stats_obj, chugl_stats_light_free_count_offset)
+      = SG_ComponentFreeCounts[SG_COMPONENT_LIGHT];
+    OBJ_MEMBER_INT(stats_obj, chugl_stats_model_free_count_offset)
+      = SG_ComponentFreeCounts[SG_COMPONENT_MODEL];
+    OBJ_MEMBER_INT(stats_obj, chugl_stats_video_free_count_offset)
+      = SG_ComponentFreeCounts[SG_COMPONENT_VIDEO];
+    OBJ_MEMBER_INT(stats_obj, chugl_stats_webcam_free_count_offset)
+      = SG_ComponentFreeCounts[SG_COMPONENT_WEBCAM];
+
+    RETURN->v_object = stats_obj;
+}
+
 // ============================================================================
 // Chugin entry point
 // ============================================================================
@@ -957,6 +1053,47 @@ CK_DLL_QUERY(ChuGL)
 
         QUERY->add_mfun(QUERY, event_next_frame_waiting_on, "void", "waiting_on");
         QUERY->end_class(QUERY);
+    }
+
+    { // chugl stats
+        BEGIN_CLASS("ChuGL_Stats", "Object");
+        DOC_CLASS(
+          "Returned by GG.stats(). Contains stats about the memory usage and other "
+          "under-the-hood metrics of ChuGL since startup");
+
+        chugl_stats_xform_count_offset    = MVAR("int", "ggen_count", false);
+        chugl_stats_scenes_count_offset   = MVAR("int", "gscene_count", false);
+        chugl_stats_geo_count_offset      = MVAR("int", "geometry_count", false);
+        chugl_stats_shader_count_offset   = MVAR("int", "shader_count", false);
+        chugl_stats_material_count_offset = MVAR("int", "material_count", false);
+        chugl_stats_texture_count_offset  = MVAR("int", "texture_count", false);
+        chugl_stats_mesh_count_offset     = MVAR("int", "mesh_count", false);
+        chugl_stats_camera_count_offset   = MVAR("int", "gcamera_count", false);
+        chugl_stats_pass_count_offset     = MVAR("int", "gpass_count", false);
+        chugl_stats_buffer_count_offset   = MVAR("int", "buffer_count", false);
+        chugl_stats_light_count_offset    = MVAR("int", "glight_count", false);
+        // chugl_stats_model_count_offset    = MVAR("int", "gmodel_count", false);
+        chugl_stats_video_count_offset  = MVAR("int", "video_count", false);
+        chugl_stats_webcam_count_offset = MVAR("int", "webcam_count", false);
+
+        chugl_stats_xform_free_count_offset  = MVAR("int", "ggen_free_count", false);
+        chugl_stats_scenes_free_count_offset = MVAR("int", "gscene_free_count", false);
+        chugl_stats_geo_free_count_offset = MVAR("int", "geometry_free_count", false);
+        chugl_stats_shader_free_count_offset = MVAR("int", "shader_free_count", false);
+        chugl_stats_material_free_count_offset
+          = MVAR("int", "material_free_count", false);
+        chugl_stats_texture_free_count_offset
+          = MVAR("int", "texture_free_count", false);
+        chugl_stats_mesh_free_count_offset   = MVAR("int", "mesh_free_count", false);
+        chugl_stats_camera_free_count_offset = MVAR("int", "gcamera_free_count", false);
+        chugl_stats_pass_free_count_offset   = MVAR("int", "gpass_free_count", false);
+        chugl_stats_buffer_free_count_offset = MVAR("int", "buffer_free_count", false);
+        chugl_stats_light_free_count_offset  = MVAR("int", "glight_free_count", false);
+        chugl_stats_model_free_count_offset  = MVAR("int", "gmodel_free_count", false);
+        chugl_stats_video_free_count_offset  = MVAR("int", "video_free_count", false);
+        chugl_stats_webcam_free_count_offset = MVAR("int", "webcam_free_count", false);
+
+        END_CLASS();
     }
 
     { // create default ckobjs
@@ -1283,6 +1420,9 @@ CK_DLL_QUERY(ChuGL)
         SFUN(chugl_reset_to_default, "void", "reset");
         DOC_FUNC("reset the scenegraph to the default startup state.");
 
+        SFUN(chugl_stats, "ChuGL_Stats", "stats");
+        DOC_FUNC("get stats on memory usage / etc about chugl since startup.");
+
         END_CLASS();
     } // GG
 
@@ -1299,13 +1439,13 @@ CK_DLL_QUERY(ChuGL)
         gg_config.root_pass_id = root_pass->id;
 
         // renderPass for main scene
-        SG_Pass* render_pass = ulib_pass_create(SG_PassType_Scene, NULL, false, NULL);
+        SG_Pass* render_pass = ulib_pass_create(SG_PassType_Scene, NULL, true, NULL);
         gg_config.default_scene_pass_id = render_pass->id;
 
         // output pass
-        Chuck_Object* output_pass_ckobj = chugin_createCkObj("OutputPass", false);
+        Chuck_Object* output_pass_ckobj = chugin_createCkObj("OutputPass", true);
         SG_Pass* output_pass
-          = ulib_pass_create_output_pass(NULL, output_pass_ckobj, false, NULL);
+          = ulib_pass_create_output_pass(NULL, output_pass_ckobj, true, NULL);
         gg_config.default_output_pass_id = output_pass->id;
 
         SG_Pass* bloom_pass = ulib_pass_create(SG_PassType_Bloom, NULL, true, NULL);

@@ -1512,10 +1512,13 @@ static void _SG_ComponentManagerFree(SG_ID id, int component_size)
     UNUSED_VAR(delete_result);
 }
 
+static int SG_ComponentFreeCounts[SG_COMPONENT_COUNT];
+
 void SG_ComponentFree(SG_Component* comp)
 {
     // chugl v0.2.3 10/30/24 azaday: only implementing gc for shader class
     CQ_PushCommand_ComponentFree(comp);
+    ++SG_ComponentFreeCounts[comp->type];
     switch (comp->type) {
         // push free command
         case SG_COMPONENT_SHADER: {
@@ -1533,8 +1536,24 @@ void SG_ComponentFree(SG_Component* comp)
             log_trace("freeing texture %d", comp->id);
             SG_Texture::destroy((SG_Texture*)comp);
             _SG_ComponentManagerFree(comp->id, sizeof(SG_Texture));
+        } break;
+        case SG_COMPONENT_MATERIAL: {
+            log_trace("freeing material %d", comp->id);
+            SG_Material* mat = (SG_Material*)comp;
+            SG_Material::destroy(mat);
+            _SG_ComponentManagerFree(mat->id, sizeof(*mat));
+        } break;
+        case SG_COMPONENT_PASS: {
+            log_trace("freeing pass %d %s", comp->id, comp->name);
+            SG_Pass::destroy((SG_Pass*)comp);
+            _SG_ComponentManagerFree(comp->id, sizeof(SG_Pass));
+        } break;
+        default: {
+            log_trace("free for component type [%s:%s] not impl",
+                      SG_CKNames[comp->type], comp->name);
+            ASSERT(false);
+            break; // TODO impl other types
         }
-        default: break; // TODO impl other types
     }
 }
 
@@ -1544,14 +1563,23 @@ void SG_ComponentFree(SG_Component* comp)
 
 void SG_Material::removeUniform(SG_Material* mat, int location)
 {
-    mat->uniforms[location].type = SG_MATERIAL_UNIFORM_NONE;
-    // zero out
-    memset(&mat->uniforms[location].as, 0, sizeof(mat->uniforms[location].as));
+    switch (mat->uniforms[location].type) {
+        case SG_MATERIAL_UNIFORM_TEXTURE:
+        case SG_MATERIAL_STORAGE_TEXTURE:
+        case SG_MATERIAL_UNIFORM_STORAGE_BUFFER: {
+            SG_DecrementRef(mat->uniforms[location].as.sg_id);
+        } break;
+        default: break;
+    }
+
+    // zero
+    mat->uniforms[location] = {};
 }
 
 void SG_Material::setUniform(SG_Material* mat, int location, void* uniform,
                              SG_MaterialUniformType type)
 {
+    SG_Material::removeUniform(mat, location);
     mat->uniforms[location].type = type;
     switch (type) {
         case SG_MATERIAL_UNIFORM_FLOAT:
@@ -1584,36 +1612,35 @@ void SG_Material::setUniform(SG_Material* mat, int location, void* uniform,
 
 void SG_Material::setTexture(SG_Material* mat, int location, SG_Texture* tex)
 {
+    SG_Material::removeUniform(mat, location);
+
     // refcount incoming texture
     SG_AddRef(tex);
-    // decrement refcount of previous texture
-    SG_DecrementRef(mat->uniforms[location].as.texture_id);
 
     if (tex == NULL) {
-        mat->uniforms[location].type          = SG_MATERIAL_UNIFORM_NONE;
-        mat->uniforms[location].as.texture_id = 0;
+        mat->uniforms[location].type     = SG_MATERIAL_UNIFORM_NONE;
+        mat->uniforms[location].as.sg_id = 0;
     } else {
         if (mat->uniforms[location].type == SG_MATERIAL_UNIFORM_TEXTURE
-            && mat->uniforms[location].as.texture_id == tex->id) {
+            && mat->uniforms[location].as.sg_id == tex->id) {
             return; // no change
         }
 
-        mat->uniforms[location].type          = SG_MATERIAL_UNIFORM_TEXTURE;
-        mat->uniforms[location].as.texture_id = tex->id;
+        mat->uniforms[location].type     = SG_MATERIAL_UNIFORM_TEXTURE;
+        mat->uniforms[location].as.sg_id = tex->id;
     }
 }
 
 void SG_Material::setStorageTexture(SG_Material* mat, int location, SG_Texture* tex)
 {
+    SG_Material::removeUniform(mat, location);
+
     mat->uniforms[location].type = SG_MATERIAL_STORAGE_TEXTURE;
 
     // refcount incoming texture
     SG_AddRef(tex);
 
-    // decrement refcount of previous texture
-    SG_DecrementRef(mat->uniforms[location].as.texture_id);
-
-    mat->uniforms[location].as.texture_id = tex->id;
+    mat->uniforms[location].as.sg_id = tex->id;
 }
 
 void SG_Material::shader(SG_Material* mat, SG_Shader* shader)
@@ -1626,6 +1653,14 @@ void SG_Material::shader(SG_Material* mat, SG_Shader* shader)
 
     // set new shader
     mat->pso.sg_shader_id = shader ? shader->id : 0;
+}
+
+void SG_Material::destroy(SG_Material* mat)
+{
+    SG_DecrementRef(mat->pso.sg_shader_id);
+    for (int i = 0; i < ARRAY_LENGTH(mat->uniforms); ++i) {
+        removeUniform(mat, i);
+    }
 }
 
 bool SG_Pass::isConnected(SG_Pass* pass_a, SG_Pass* pass_b)
@@ -1693,6 +1728,20 @@ void SG_Pass::bloomOutputRenderTexture(SG_Pass* pass, SG_Texture* tex)
     SG_AddRef(tex);
     SG_DecrementRef(pass->bloom_output_render_texture_id);
     pass->bloom_output_render_texture_id = tex ? tex->id : 0;
+}
+
+void SG_Pass::destroy(SG_Pass* pass)
+{
+    SG_DecrementRef(pass->next_pass_id);
+    SG_DecrementRef(pass->color_target_id);
+    SG_DecrementRef(pass->scene_id);
+    SG_DecrementRef(pass->camera_id);
+    SG_DecrementRef(pass->screen_material_id);
+    SG_DecrementRef(pass->compute_material_id);
+    SG_DecrementRef(pass->bloom_downsample_material_id);
+    SG_DecrementRef(pass->bloom_upsample_material_id);
+    SG_DecrementRef(pass->bloom_input_render_texture_id);
+    SG_DecrementRef(pass->bloom_output_render_texture_id);
 }
 
 void SG_Pass::bloomInputRenderTexture(SG_Pass* pass, SG_Texture* tex)

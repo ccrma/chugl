@@ -27,7 +27,8 @@ doc.addGroup(
         "SG_Component",
         "Color",
         "AssLoader",
-        "ModelLoadDesc"
+        "ModelLoadDesc",
+        "ChuGL_Stats"
     ],
     // group name
     "Basic Classes",

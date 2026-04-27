@@ -1,5 +1,10 @@
 # Changes
 
+## 0.3.1 (alpha)
+- add `Material.removeUniform(int location)`
+- add `ChuGL_Stats` and `GG.stats()`
+- major garbage collection improvements for (TODO list all components impl in `SG_ComponentFree()`)
+
 ## 0.3.0 (alpha)
 - add `TextureLoadDesc.srgb` for loading image data into srgb textures
 - Add YCrCb video decoding mode to `Video`

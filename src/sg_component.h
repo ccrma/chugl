@@ -518,7 +518,8 @@ enum SG_MaterialUniformType : u8 {
     SG_MATERIAL_UNIFORM_IVEC4,
     SG_MATERIAL_UNIFORM_TEXTURE,
     SG_MATERIAL_UNIFORM_SAMPLER,
-    SG_MATERIAL_UNIFORM_STORAGE_BUFFER,
+    SG_MATERIAL_UNIFORM_STORAGE_BUFFER, // copies data from ck array, data only sent to
+                                        // render thread
     SG_MATERIAL_UNIFORM_STORAGE_BUFFER_EXTERNAL,
     SG_MATERIAL_STORAGE_TEXTURE,
 };
@@ -533,8 +534,7 @@ union SG_MaterialUniformData {
     glm::ivec3 ivec3;
     glm::ivec4 ivec4;
     SG_Sampler sampler;
-    SG_ID texture_id;
-    SG_ID storage_buffer_id;
+    SG_ID sg_id;
     // TODO arena for storage buffer
 };
 
@@ -619,47 +619,55 @@ struct SG_Material : SG_Component {
 
     static void uniformInt(SG_Material* mat, int location, int value)
     {
+        removeUniform(mat, location);
         mat->uniforms[location].type = SG_MATERIAL_UNIFORM_INT;
         mat->uniforms[location].as.i = value;
     }
 
     static void uniformFloat(SG_Material* mat, int location, f32 value)
     {
+        removeUniform(mat, location);
         mat->uniforms[location].type = SG_MATERIAL_UNIFORM_FLOAT;
         mat->uniforms[location].as.f = value;
     }
 
     static void uniformVec2f(SG_Material* mat, int location, glm::vec2 value)
     {
+        removeUniform(mat, location);
         mat->uniforms[location].type     = SG_MATERIAL_UNIFORM_VEC2F;
         mat->uniforms[location].as.vec2f = value;
     }
 
     static void uniformVec3f(SG_Material* mat, int location, glm::vec3 value)
     {
+        removeUniform(mat, location);
         mat->uniforms[location].type     = SG_MATERIAL_UNIFORM_VEC3F;
         mat->uniforms[location].as.vec3f = value;
     }
 
     static void uniformVec4f(SG_Material* mat, int location, glm::vec4 value)
     {
+        removeUniform(mat, location);
         mat->uniforms[location].type     = SG_MATERIAL_UNIFORM_VEC4F;
         mat->uniforms[location].as.vec4f = value;
     }
 
     static void setStorageBuffer(SG_Material* mat, int location)
     {
+        removeUniform(mat, location);
         mat->uniforms[location].type = SG_MATERIAL_UNIFORM_STORAGE_BUFFER;
     }
 
     static void storageBuffer(SG_Material* mat, int location, SG_Buffer* buffer)
     {
-        mat->uniforms[location].type = SG_MATERIAL_UNIFORM_STORAGE_BUFFER_EXTERNAL;
-        mat->uniforms[location].as.storage_buffer_id = buffer->id;
+        removeUniform(mat, location);
+        mat->uniforms[location].type     = SG_MATERIAL_UNIFORM_STORAGE_BUFFER_EXTERNAL;
+        mat->uniforms[location].as.sg_id = buffer->id;
     }
 
     static void setSampler(SG_Material* mat, int location, SG_Sampler sampler)
     {
+        removeUniform(mat, location);
         mat->uniforms[location].type       = SG_MATERIAL_UNIFORM_SAMPLER;
         mat->uniforms[location].as.sampler = sampler;
     }
@@ -669,6 +677,7 @@ struct SG_Material : SG_Component {
     static void setStorageTexture(SG_Material* mat, int location, SG_Texture* tex);
 
     static void shader(SG_Material* mat, SG_Shader* shader);
+    static void destroy(SG_Material* mat);
 };
 
 // ============================================================================
@@ -890,6 +899,8 @@ struct SG_Pass : public SG_Component {
     // bloom pass methods
     static void bloomInputRenderTexture(SG_Pass* pass, SG_Texture* tex);
     static void bloomOutputRenderTexture(SG_Pass* pass, SG_Texture* tex);
+
+    static void destroy(SG_Pass* pass);
 };
 
 // ============================================================================

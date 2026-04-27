@@ -171,7 +171,7 @@ struct G_DynamicGPUBuffer { // for use with dynamic bg offsets
 // grows buffer to new size, copying old data
 struct GPU_Buffer {
     WGPUBuffer buf;
-    u64 size; // current size in bytes
+    u64 size; // current size in bytes (<= to wgpuBufferGetSize(buf))
 
     static u64 capacity(GPU_Buffer gpu_buffer)
     {
@@ -261,7 +261,9 @@ struct GPU_Buffer {
 
     static void destroy(GPU_Buffer* buffer)
     {
-        WGPU_RELEASE_RESOURCE(Buffer, buffer->buf);
+        if (buffer) {
+            WGPU_RELEASE_RESOURCE(Buffer, buffer->buf);
+        }
     }
 };
 
