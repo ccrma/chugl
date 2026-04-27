@@ -128,6 +128,12 @@ CK_DLL_SFUN(texture_load_cubemap);
 CK_DLL_SFUN(texture_copy_texture_to_texture);
 CK_DLL_SFUN(texture_copy_texture_to_texture_with_desc);
 
+// builtin textures
+CK_DLL_SFUN(texture_builtin_white_pixel);
+CK_DLL_SFUN(texture_builtin_black_pixel);
+CK_DLL_SFUN(texture_builtin_normal_pixel);
+CK_DLL_SFUN(texture_builtin_magenta_pixel);
+
 // saving to drive
 CK_DLL_MFUN(texture_save);
 
@@ -488,6 +494,25 @@ static void ulib_texture_query(Chuck_DL_Query* QUERY)
           "Copy a region of the src texture to a location in the dst texture. The size "
           "parameter is floored to integers and specifies the 3D dimensions of the "
           "region to copy");
+
+        SFUN(texture_builtin_white_pixel, "Texture", "whitePixel");
+        DOC_FUNC(
+          "Get the builtin 1x1 white-pixel texture. Useful as a defaults for e.g. "
+          "FlatMaterial and PhongMaterial colormaps");
+
+        SFUN(texture_builtin_black_pixel, "Texture", "blackPixel");
+        DOC_FUNC(
+          "Get the builtin 1x1 black-pixel texture. Useful as a defaults for e.g. "
+          "PhongMaterial emissiveMap");
+
+        SFUN(texture_builtin_normal_pixel, "Texture", "normalPixel");
+        DOC_FUNC(
+          "Get the builtin 1x1 normal-pixel texture, which represents 0 perturbation "
+          "in tangent space. Used as the default normalmap for "
+          "builtin lit materials. Has value @(.5, .5, 1, 1)");
+
+        SFUN(texture_builtin_magenta_pixel, "Texture", "magentaPixel");
+        DOC_FUNC("Get the builtin 1x1 magenta-pixel texture. Has value @(1, 0, 1, 1)");
 
         // mfun ------------------------------------------------------------------
 
@@ -1403,4 +1428,24 @@ CK_DLL_SFUN(texture_copy_texture_to_texture_with_desc)
 
     ulib_texture_copyTextureToTexture(dst_texture, src_texture, dst_loc, src_loc,
                                       copy_size_x, copy_size_y, copy_size_z);
+}
+
+CK_DLL_SFUN(texture_builtin_white_pixel)
+{
+    RETURN->v_object = SG_GetTexture(g_builtin_textures.white_pixel_id)->ckobj;
+}
+
+CK_DLL_SFUN(texture_builtin_black_pixel)
+{
+    RETURN->v_object = SG_GetTexture(g_builtin_textures.black_pixel_id)->ckobj;
+}
+
+CK_DLL_SFUN(texture_builtin_normal_pixel)
+{
+    RETURN->v_object = SG_GetTexture(g_builtin_textures.normal_pixel_id)->ckobj;
+}
+
+CK_DLL_SFUN(texture_builtin_magenta_pixel)
+{
+    RETURN->v_object = SG_GetTexture(g_builtin_textures.magenta_pixel_id)->ckobj;
 }
