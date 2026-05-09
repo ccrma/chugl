@@ -4,6 +4,12 @@
 - add `Material.removeUniform(int location)`
 - add `ChuGL_Stats` and `GG.stats()`
 - major garbage collection improvements for (TODO list all components impl in `SG_ComponentFree()`)
+- add builtin textures (useful for material defaults)
+  - `Texture.whitePixel()`
+  - `Texture.blackPixel()`
+  - `Texture.magentaPixel()`
+  - `Texture.normalPixel()`
+- add `UI.getStyle().scaleAllSizes(float scale)` to increase imgui window scale
 
 ## 0.3.0 (alpha)
 - add `TextureLoadDesc.srgb` for loading image data into srgb textures

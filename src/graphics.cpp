@@ -788,11 +788,9 @@ int G_componentsPerTexel(WGPUTextureFormat format)
 int G_bytesPerTexel(WGPUTextureFormat format)
 {
     switch (format) {
-        case WGPUTextureFormat_R8Unorm:
-            return 1;
+        case WGPUTextureFormat_R8Unorm: return 1;
         case WGPUTextureFormat_RGBA8Unorm:
-        case WGPUTextureFormat_RGBA8UnormSrgb:
-            return 4;
+        case WGPUTextureFormat_RGBA8UnormSrgb: return 4;
         case WGPUTextureFormat_RGBA16Float: return 8;
         case WGPUTextureFormat_RGBA32Float: return 16;
         case WGPUTextureFormat_R32Float: return 4;
@@ -972,11 +970,11 @@ void MipMapGenerator_generate(GraphicsContext* ctx, WGPUTexture texture,
         mip_texture_desc.size                  = mip_level_size;
         mip_texture_desc.format                = format;
         mip_texture_desc.usage                 = WGPUTextureUsage_CopySrc
-                                 | WGPUTextureUsage_TextureBinding
-                                 | WGPUTextureUsage_RenderAttachment;
-        mip_texture_desc.dimension     = WGPUTextureDimension_2D;
-        mip_texture_desc.mipLevelCount = mip_level_count - 1;
-        mip_texture_desc.sampleCount   = 1;
+                                                 | WGPUTextureUsage_TextureBinding
+                                                 | WGPUTextureUsage_RenderAttachment;
+        mip_texture_desc.dimension             = WGPUTextureDimension_2D;
+        mip_texture_desc.mipLevelCount         = mip_level_count - 1;
+        mip_texture_desc.sampleCount           = 1;
 
         mip_texture = wgpuDeviceCreateTexture(ctx->device, &mip_texture_desc);
         ASSERT(mip_texture != NULL);
@@ -1247,13 +1245,14 @@ void G_Util::printBindGroupEntry(WGPUBindGroupEntry* entry)
       "WGPUBindGroupEntry {\n"
       "   binding: %d, \n"
       "   buffer : %p, \n"
-      "   offset : %lu, \n"
-      "   size   : %lu, \n"
+      "   offset : %llu, \n"
+      "   size   : %llu, \n"
       "   sampler: %p, \n"
       "   texture: %p,  \n"
       "}\n",
-      entry->binding, (void*)entry->buffer, entry->offset, entry->size,
-      (void*)entry->sampler, (void*)entry->textureView);
+      entry->binding, (void*)entry->buffer, (unsigned long long)entry->offset,
+      (unsigned long long)entry->size, (void*)entry->sampler,
+      (void*)entry->textureView);
 }
 
 void G_Util::printBindGroupEntryList(WGPUBindGroupEntry* entry, int count)

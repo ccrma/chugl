@@ -1548,6 +1548,7 @@ CK_DLL_MFUN(ui_style_set_hover_delay_short);
 CK_DLL_MFUN(ui_style_set_hover_delay_normal);
 CK_DLL_MFUN(ui_style_set_hover_flags_for_tooltip_mouse);
 CK_DLL_MFUN(ui_style_set_hover_flags_for_tooltip_nav);
+CK_DLL_MFUN(ui_style_scale_all_sizes);
 
 // UI_DrawList
 // always defaulting to imgui.igGetWindowDrawList() for now
@@ -2287,6 +2288,10 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
 
     MFUN(ui_style_set_hover_flags_for_tooltip_nav, "void", "hoverFlagsForTooltipNav");
     ARG("int", "hoverFlagsForTooltipNav");
+
+    MFUN(ui_style_scale_all_sizes, "void", "scaleAllSizes");
+    ARG("float", "scale_factor");
+    DOC_FUNC("Scales styling metrics to the desired scale factor");
 
     END_CLASS(); // UI_Style
 
@@ -9161,6 +9166,13 @@ CK_DLL_MFUN(ui_style_set_hover_flags_for_tooltip_nav)
     cimgui::ImGuiStyle* style
       = (cimgui::ImGuiStyle*)OBJ_MEMBER_UINT(SELF, ui_style_ptr_offset);
     style->HoverFlagsForTooltipNav = GET_NEXT_INT(ARGS);
+}
+
+CK_DLL_MFUN(ui_style_scale_all_sizes)
+{
+    cimgui::ImGuiStyle* style
+      = (cimgui::ImGuiStyle*)OBJ_MEMBER_UINT(SELF, ui_style_ptr_offset);
+    ImGuiStyle_ScaleAllSizes(style, GET_NEXT_FLOAT(ARGS));
 }
 
 // ============================================================================
