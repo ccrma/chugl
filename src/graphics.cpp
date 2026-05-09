@@ -1247,8 +1247,8 @@ void G_Util::printBindGroupEntry(WGPUBindGroupEntry* entry)
       "WGPUBindGroupEntry {\n"
       "   binding: %d, \n"
       "   buffer : %p, \n"
-      "   offset : %llu, \n"
-      "   size   : %llu, \n"
+      "   offset : %lu, \n"
+      "   size   : %lu, \n"
       "   sampler: %p, \n"
       "   texture: %p,  \n"
       "}\n",
