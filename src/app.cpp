@@ -407,6 +407,7 @@ struct App {
             ImGui::CreateContext();
             ImGuiIO& io = ImGui::GetIO();
             (void)io;
+            io.IniFilename = NULL;
             io.ConfigFlags
               |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
             io.ConfigFlags
