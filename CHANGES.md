@@ -10,6 +10,7 @@
   - `Texture.magentaPixel()`
   - `Texture.normalPixel()`
 - add `UI.getStyle().scaleAllSizes(float scale)` to increase imgui window scale
+- add `UI_IO` imgui class
 
 ## 0.3.0 (alpha)
 - add `TextureLoadDesc.srgb` for loading image data into srgb textures

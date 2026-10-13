@@ -226,6 +226,12 @@ doc.addGroup(
         "UI_ComboCallback",
         "UI_DrawList",
         "UI_DrawFlags",
+        "UI_KnobFlags",
+        "UI_KnobVariant",
+        "UI_ConfigFlags",
+        "UI_BackendFlags",
+        "UI_DrawListFlags",
+        "UI_IO",
         "UI",
     ],
     // group name

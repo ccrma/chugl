@@ -4214,7 +4214,7 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
         BEGIN_CLASS("UI_KnobFlags", "Object");
         DOC_CLASS(
           "Knob behavior flags. See "
-          "https://github.com/altschuler/imgui-knobs/for more info");
+          "https://github.com/altschuler/imgui-knobs/ for more info");
 
         SVAR("int", "NoTitle", &UI_KnobFlags_NoTitle);
         DOC_VAR("Hide the top title.");
@@ -4249,7 +4249,7 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
         BEGIN_CLASS("UI_KnobVariant", "Object");
         DOC_CLASS(
           "These flags determine the visual look of the knob. See "
-          "https://github.com/altschuler/imgui-knobs/for more info");
+          "https://github.com/altschuler/imgui-knobs/ for more info");
 
         SVAR("int", "Tick", &UI_KnobVariant_Tick);
         SVAR("int", "Dot", &UI_KnobVariant_Dot);
@@ -5179,93 +5179,102 @@ void ulib_imgui_query(Chuck_DL_Query* QUERY)
     QUERY->doc_var(QUERY, "Disable undocking this node.");
     QUERY->end_class(QUERY);
 
-    QUERY->begin_class(QUERY, "UI_DrawListFlags", "Object");
-    QUERY->doc_class(
-      QUERY,
-      "Flags for ImDrawList instance. Those are set automatically by ImGui:: "
-      "functions from ImGuiIO settings, and generally not manipulated "
-      "directly..\nIt is however possible to temporarily alter flags between "
-      "calls to ImDrawList:: functions..\n");
-    static t_CKINT ImDrawListFlags_None = 0;
-    QUERY->add_svar(QUERY, "int", "None", true, &ImDrawListFlags_None);
-    static t_CKINT ImDrawListFlags_AntiAliasedLines = 1;
-    QUERY->add_svar(QUERY, "int", "AntiAliasedLines", true,
-                    &ImDrawListFlags_AntiAliasedLines);
-    QUERY->doc_var(
-      QUERY,
-      "Enable anti-aliased lines/borders (*2 the number of triangles for 1.0f "
-      "wide line or lines thin enough to be drawn using textures, otherwise *3 "
-      "the number of triangles)");
-    static t_CKINT ImDrawListFlags_AntiAliasedLinesUseTex = 2;
-    QUERY->add_svar(QUERY, "int", "AntiAliasedLinesUseTex", true,
-                    &ImDrawListFlags_AntiAliasedLinesUseTex);
-    QUERY->doc_var(QUERY,
-                   "Enable anti-aliased lines/borders using textures when "
-                   "possible. Require backend to render with bilinear "
-                   "filtering (NOT point/nearest filtering).");
-    static t_CKINT ImDrawListFlags_AntiAliasedFill = 4;
-    QUERY->add_svar(QUERY, "int", "AntiAliasedFill", true,
-                    &ImDrawListFlags_AntiAliasedFill);
-    QUERY->doc_var(QUERY,
-                   "Enable anti-aliased edge around filled shapes (rounded "
-                   "rectangles, circles).");
-    static t_CKINT ImDrawListFlags_AllowVtxOffset = 8;
-    QUERY->add_svar(QUERY, "int", "AllowVtxOffset", true,
-                    &ImDrawListFlags_AllowVtxOffset);
-    QUERY->doc_var(QUERY,
-                   "Can emit 'VtxOffset > 0' to allow large meshes. Set when "
-                   "'ImGuiBackendFlags_RendererHasVtxOffset' is enabled.");
-    QUERY->end_class(QUERY);
-
+    { // UI_DrawListFlags
+      QUERY->begin_class(QUERY, "UI_DrawListFlags", "Object");
+      QUERY->doc_class(
+        QUERY,
+        "Flags for ImDrawList instance. Those are set automatically by ImGui:: "
+        "functions from ImGuiIO settings, and generally not manipulated "
+        "directly..\nIt is however possible to temporarily alter flags between "
+        "calls to ImDrawList:: functions..\n");
+      static t_CKINT ImDrawListFlags_None = 0;
+      QUERY->add_svar(QUERY, "int", "None", true, &ImDrawListFlags_None);
+      static t_CKINT ImDrawListFlags_AntiAliasedLines = 1;
+      QUERY->add_svar(QUERY, "int", "AntiAliasedLines", true,
+                      &ImDrawListFlags_AntiAliasedLines);
+      QUERY->doc_var(
+        QUERY,
+        "Enable anti-aliased lines/borders (*2 the number of triangles for 1.0f "
+        "wide line or lines thin enough to be drawn using textures, otherwise *3 "
+        "the number of triangles)");
+      static t_CKINT ImDrawListFlags_AntiAliasedLinesUseTex = 2;
+      QUERY->add_svar(QUERY, "int", "AntiAliasedLinesUseTex", true,
+                      &ImDrawListFlags_AntiAliasedLinesUseTex);
+      QUERY->doc_var(QUERY,
+                    "Enable anti-aliased lines/borders using textures when "
+                    "possible. Require backend to render with bilinear "
+                    "filtering (NOT point/nearest filtering).");
+      static t_CKINT ImDrawListFlags_AntiAliasedFill = 4;
+      QUERY->add_svar(QUERY, "int", "AntiAliasedFill", true,
+                      &ImDrawListFlags_AntiAliasedFill);
+      QUERY->doc_var(QUERY,
+                    "Enable anti-aliased edge around filled shapes (rounded "
+                    "rectangles, circles).");
+      static t_CKINT ImDrawListFlags_AllowVtxOffset = 8;
+      QUERY->add_svar(QUERY, "int", "AllowVtxOffset", true,
+                      &ImDrawListFlags_AllowVtxOffset);
+      QUERY->doc_var(QUERY,
+                    "Can emit 'VtxOffset > 0' to allow large meshes. Set when "
+                    "'ImGuiBackendFlags_RendererHasVtxOffset' is enabled.");
+      QUERY->end_class(QUERY);
+    } // UI_DrawListFlags
     // Callbacks ----------------------------------------------------------
 
-    BEGIN_CLASS("UI_Callback", "Object");
-    DOC_CLASS(
-      "Base class for ImGui callback functions. Don't use this class "
-      "directly.");
-    CTOR(ui_callback_ctor);
-    DTOR(ui_callback_dtor);
-    END_CLASS();
+    { // UI_Callback
+      BEGIN_CLASS("UI_Callback", "Object");
+      DOC_CLASS(
+        "Base class for ImGui callback functions. Don't use this class "
+        "directly.");
+      CTOR(ui_callback_ctor);
+      DTOR(ui_callback_dtor);
+      END_CLASS();
+    } // UI_Callback
 
-    QUERY->begin_class(QUERY, "UI_SizeCallbackData", "Object");
-    ui_size_callback_data_ptr_offset
-      = QUERY->add_mvar(QUERY, "int", "@ui_size_callback_data_ptr", false);
-    // QUERY->add_mvar(QUERY, "int", "user_data", false);  // IGNORE user data
-    // (chuck provides other ways to access external data)
-    QUERY->add_mfun(QUERY, ui_size_callback_data_get_pos, "vec2", "getPos");
-    QUERY->doc_func(QUERY, "Read-only window position, for reference.");
-    QUERY->add_mfun(QUERY, ui_size_callback_data_get_current_size, "vec2",
-                    "currentSize");
-    QUERY->doc_func(QUERY, "Read-only current window size.");
-    QUERY->add_mfun(QUERY, ui_size_callback_data_get_desired_size, "vec2",
-                    "desiredSize");
-    QUERY->doc_func(QUERY,
-                    "Read-write desired size, based on user's mouse "
-                    "position. Write to this field to restrain resizing.");
-    QUERY->add_mfun(QUERY, ui_size_callback_data_set_desired_size, "vec2",
-                    "desiredSize");
-    QUERY->add_arg(QUERY, "vec2", "desired_size");
-    QUERY->doc_func(QUERY,
-                    "Write desired size, based on user's mouse "
-                    "position. Write to this field to restrain resizing.");
-    QUERY->end_class(QUERY);
+    { // UI_SizeCallbackData
+      QUERY->begin_class(QUERY, "UI_SizeCallbackData", "Object");
+      ui_size_callback_data_ptr_offset
+        = QUERY->add_mvar(QUERY, "int", "@ui_size_callback_data_ptr", false);
+      // QUERY->add_mvar(QUERY, "int", "user_data", false);  // IGNORE user data
+      // (chuck provides other ways to access external data)
+      QUERY->add_mfun(QUERY, ui_size_callback_data_get_pos, "vec2", "getPos");
+      QUERY->doc_func(QUERY, "Read-only window position, for reference.");
+      QUERY->add_mfun(QUERY, ui_size_callback_data_get_current_size, "vec2",
+                      "currentSize");
+      QUERY->doc_func(QUERY, "Read-only current window size.");
+      QUERY->add_mfun(QUERY, ui_size_callback_data_get_desired_size, "vec2",
+                      "desiredSize");
+      QUERY->doc_func(QUERY,
+                      "Read-write desired size, based on user's mouse "
+                      "position. Write to this field to restrain resizing.");
+      QUERY->add_mfun(QUERY, ui_size_callback_data_set_desired_size, "vec2",
+                      "desiredSize");
+      QUERY->add_arg(QUERY, "vec2", "desired_size");
+      QUERY->doc_func(QUERY,
+                      "Write desired size, based on user's mouse "
+                      "position. Write to this field to restrain resizing.");
+      QUERY->end_class(QUERY);
+    } // UI_SizeCallbackData
 
-    QUERY->begin_class(QUERY, "UI_SizeCallback", "UI_Callback");
-    QUERY->add_mfun(QUERY, ui_size_callback, "void", "handler");
-    QUERY->add_arg(QUERY, "UI_SizeCallbackData", "data");
-    QUERY->doc_func(QUERY,
-                    "Callback function for ImGui::SetNextWindowSizeConstraints()");
-    QUERY->end_class(QUERY);
+    { // UI_SizeCallback
+      QUERY->begin_class(QUERY, "UI_SizeCallback", "UI_Callback");
+      QUERY->add_mfun(QUERY, ui_size_callback, "void", "handler");
+      QUERY->add_arg(QUERY, "UI_SizeCallbackData", "data");
+      QUERY->doc_func(QUERY,
+                      "Callback function for ImGui::SetNextWindowSizeConstraints()");
+      QUERY->end_class(QUERY);
 
-    // update() vt offset
-    ui_size_callback_vt_offset = chugin_getVTableOffset("UI_SizeCallback", "handler");
+      // update() vt offset
+      ui_size_callback_vt_offset = chugin_getVTableOffset("UI_SizeCallback", "handler");
+    } // UI_SizeCallback
 
-    BEGIN_CLASS("UI_ComboCallback", "UI_Callback");
-    MFUN(ui_combo_callback, "void", "handler");
-    ARG("int", "idx");
-    END_CLASS();
+    { // UI_ComboCallback
+      BEGIN_CLASS("UI_ComboCallback", "UI_Callback");
+      MFUN(ui_combo_callback, "void", "handler");
+      ARG("int", "idx");
+      END_CLASS();
 
-    ui_combo_callback_vt_offset = chugin_getVTableOffset("UI_ComboCallback", "handler");
+      ui_combo_callback_vt_offset = chugin_getVTableOffset("UI_ComboCallback", "handler");
+    } // UI_ComboCallback
 
     // complex, not yet implemented
     // BEGIN_CLASS("UI_InputTextCallback", "UI_Callback");

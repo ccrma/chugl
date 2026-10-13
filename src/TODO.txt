@@ -1,6 +1,16 @@
 TODO
 
 BUG: GText.characters doesn't account for spaces
+BUG: `new GMesh(plane_geo, null);` segfaults
+
+Ideas from Pico8
+- webchugl: use indexed DB for persistent browser storage
+  - https://www.lexaloffle.com/bbs/?tid=49833
+- simple leaderboard API
+  - pico8 demi daggers uses Newgrounds leaderboard 
+  - see also
+    - https://silentwolf.com/leaderboard
+    - https://simpleboards.dev/getting-started
 
 https://jrouwe.github.io/JoltPhysics/index.html
 - multithreaded 3D physics
@@ -120,7 +130,6 @@ Benefits of having wgsl shader reflection and pipeline layout
 - *NOTE* keep checking the webgpu discussion, they might add this themselves
   - https://github.com/gpuweb/gpuweb/issues/624
   - https://github.com/gfx-rs/wgpu/blob/trunk/CHANGELOG.md
-  
 - don't need to use auto-layout, can share pipeline layouts and add bindgroupLayouts
 to the renderer cache
 - enables dynamicBindGroup offsets, don't need to recreate bindgroups 
@@ -132,6 +141,13 @@ every frame with all uniforms (noclips gfxr does this)
   - vec3 padding to vec4!!!
   - allows you to not use variable in a shader and it won't be optimized out
   - possibly allows setting struct uniforms??
+- can be used by Elton's EffectComposer for combining multiple shaders
+- struct parsing allows defining struct uniform types (rather than only primitives vec2/3/4 etc)
+
+Basic WGSL parsing resources 
+- https://nullprogram.com/blog/2025/03/02/
+- https://www.frogtoss.com/labs/a-convention-for-fragment-parsers-in-c.html
+- also see old lox compiler from crafting compilers book
 
 ### Long-Term
 - C-port of webgpu-utils shader pipeline layout generator
