@@ -1,6 +1,15 @@
-/*
-Single-file tetris example
 
+//-----------------------------------------------------------------------------
+// name: tetris.ck
+// desc: single-file tetris example
+//       gives one possible approach to organizing code for making a game in 
+//       chuck/chugl and 
+// 
+// author: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
+//   date: Fall 2026
+//-----------------------------------------------------------------------------
+
+/*
 Resources:
 - https://tetris.wiki/Tetris_Guideline
     The playfield (known as the Matrix in the guideline) is 10x20
@@ -20,7 +29,6 @@ Resources:
     The current standard is left-handed: 3 empty columns on left side, 4 empty columns on right side
 
     I and O pieces can be centered in a 10 columns-wide matrix
-
 */
 
 
