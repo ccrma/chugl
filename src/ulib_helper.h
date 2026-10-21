@@ -59,6 +59,7 @@
 #define GET_NEXT_VEC3_ARRAY(ptr) (*((Chuck_ArrayVec3**&)ptr)++)
 #define GET_NEXT_VEC4_ARRAY(ptr) (*((Chuck_ArrayVec4**&)ptr)++)
 #define GET_NEXT_OBJECT_ARRAY(ptr) (*((Chuck_ArrayInt**&)ptr)++)
+#define GET_NEXT_TYPE(ptr) (*((Chuck_Type**&)ptr)++)
 
 #define GET_XFORM(ckobj) SG_GetTransform(OBJ_MEMBER_UINT(ckobj, component_offset_id));
 #define GET_MESH(ckobj) SG_GetMesh(OBJ_MEMBER_UINT(ckobj, component_offset_id))

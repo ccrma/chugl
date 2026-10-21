@@ -3,7 +3,7 @@
 // name: tetris.ck
 // desc: single-file tetris example
 //       gives one possible approach to organizing code for making a game in 
-//       chuck/chugl and 
+//       chuck/chugl
 // 
 // author: Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
 //   date: Fall 2026

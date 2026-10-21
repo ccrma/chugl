@@ -1,10 +1,14 @@
 # Changes
 
 ## 0.3.1 (alpha)
-- add `Material.removeUniform(int location)`
-- add `ChuGL_Stats` and `GG.stats()`
 - major garbage collection improvements for many components including GMesh, Geometry, Material, etc.
   - thanks Alex Han for reporting the memory leak
+- add component finding methods to `GGen` (thanks Niccolo!)
+  - `GGen@ findParent(Type type);`
+  - `GGen[] findParents(Type type);`
+  - `GGen@ findChild(Type type, int recurse);`
+  - `GGen[] findChildren(Type type, int recurse);`
+  - `int isa(Type type);`
 - add builtin textures (useful for material defaults)
   - `Texture.whitePixel()`
   - `Texture.blackPixel()`
@@ -12,6 +16,10 @@
   - `Texture.normalPixel()`
 - add `UI.getStyle().scaleAllSizes(float scale)` to increase imgui window scale
 - add `UI_IO` imgui class
+- add `Material.removeUniform(int location)`
+- add `ChuGL_Stats` and `GG.stats()`
+- bugfixes:
+  - potential segfault in `PolygonGeometry`
 - new example: `deep/tetris.ck`
 
 ## 0.3.0 (alpha)

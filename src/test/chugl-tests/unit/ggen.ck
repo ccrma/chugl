@@ -121,3 +121,49 @@ T.assert( C.parent() == null && B.parent() == null, "after gruck array, detachin
 
 // what.detachParent();
 // <<< Machine.refcount(what) >>>;
+
+// component type matching
+class GGenChild extends GGen {}
+GGenChild child;
+
+T.assert(A.isa(GGen), "GGen.isa(GGen)");
+T.assert(!A.isa(SinOsc), "!GGen.isa(SinOsc)");
+T.assert(child.isa(GGen), "child.isa(GGen)");
+T.assert(child.isa(GGenChild), "child.isa(GGenChild)");
+T.assert(!A.isa(GGenChild), "!A.isa(GGenChild)");
+
+child --> GGen _tmp0 --> GMesh mesh --> GGen _tmp1 --> GMesh mesh2;
+T.assert(child.findParent(GGen) == _tmp0, "child.findParent(GGen) == _tmp0");
+T.assert(child.findParent(GMesh)$GMesh == mesh, "child.findParent(GMesh) == mesh");
+
+child.findParents(GMesh) @=> GGen parent_meshes[];
+T.assert(parent_meshes.size() == 2, "parent_meshes.size() == 2");
+T.assert(parent_meshes[0] == mesh && parent_meshes[1] == mesh2, "parent_meshes[0] == mesh && parent_meshes[1] == mesh2");
+
+child.findParents(GGen) @=> GGen parent_ggens[];
+T.assert(parent_ggens.size() == 4, "parent_ggens.size() == 4");
+
+T.assert(child.findParents(SinOsc).size() == 0, "child.findParents(SinOsc).size() == 0");
+// can we cast a GGen[] to GMesh[] ???
+// answer: chuck v1.5.5.8 cannot
+
+GMesh mesh3 --> _tmp0;
+T.assert(mesh2.findChild(GGen, false) == _tmp1, "mesh2.findChild(GGen, false) == _tmp1");
+T.assert(mesh2.findChild(GGen, true) == _tmp1, "mesh2.findChild(GGen, true) == _tmp1");
+T.assert(mesh2.findChild(GMesh, false) == null, "mesh2.findChild(GMesh, false) == null");
+T.assert(mesh2.findChild(GMesh, true) == mesh, "mesh2.findChild(GMesh, true) == mesh");
+T.assert(mesh2.findChild(GGenChild, true) == child, "mesh2.findChild(GGenChild, true) == child");
+T.assert(mesh2.findChild(GGenChild, false) == null, "mesh2.findChild(GGenChild, false) == null");
+T.assert(mesh2.findChild(SinOsc, true) == null, "mesh2.findChild(SinOsc, true) == null");
+T.assert(mesh2.findChild(SinOsc, false) == null, "mesh2.findChild(SinOsc, false) == null");
+
+mesh2.findChildren(GMesh, true) @=> GGen child_meshes[];
+T.assert(mesh2.findChildren(GMesh, false).size() == 0, "mesh2.findChildren(GMesh, false).size() == 0");
+T.assert(child_meshes.size() == 2, "mesh2.findChildren(GMesh, false).size() == 0");
+T.assert(child_meshes[-1] == mesh3, "mesh2.findChildren(GMesh, false).size() == 0");
+T.assert(mesh2.findChildren(GGen, false).size() == 1, "mesh2.findChildren(GMesh, false).size() == 0");
+T.assert(mesh2.findChildren(GGen, true).size() == 5, "mesh2.findChildren(GMesh, false).size() == 0");
+T.assert(mesh2.findChildren(GGenChild, true).size() == 1, "mesh2.findChildren(GMesh, false).size() == 0");
+T.assert(mesh2.findChildren(GGenChild, false).size() == 0, "mesh2.findChildren(GMesh, false).size() == 0");
+T.assert(mesh2.findChildren(SinOsc, true).size() == 0, "mesh2.findChildren(GMesh, false).size() == 0");
+T.assert(mesh2.findChildren(SinOsc, false).size() == 0, "mesh2.findChildren(GMesh, false).size() == 0");
