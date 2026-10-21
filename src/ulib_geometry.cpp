@@ -1949,23 +1949,25 @@ CK_DLL_MFUN(polygon_geo_build_with_holes)
 
     f32* main_polygon_data
       = (f32*)ARENA_PUSH_COUNT(&audio_frame_arena, f32, main_polygon_len * 2);
-
     chugin_copyCkVec2Array(main_polygon, main_polygon_data);
+    u64 main_polygon_offset = Arena::offsetOf(&audio_frame_arena, main_polygon_data);
 
     int holes_len   = API->object->array_vec2_size(holes);
     f32* holes_data = (f32*)ARENA_PUSH_COUNT(&audio_frame_arena, f32, holes_len * 2);
     chugin_copyCkVec2Array(holes, holes_data);
+    u64 holes_offset = Arena::offsetOf(&audio_frame_arena, holes_data);
 
     int num_holes          = API->object->array_int_size(hole_lengths);
     int* hole_lengths_data = (int*)ARENA_PUSH_COUNT(&audio_frame_arena, int, num_holes);
     chugin_copyCkIntArray(hole_lengths, hole_lengths_data, num_holes);
+    u64 hole_lens_offset = Arena::offsetOf(&audio_frame_arena, hole_lengths_data);
 
     PolygonParams params       = {};
-    params.main_polygon        = main_polygon_data;
+    params.main_polygon        = (f32*) Arena::get(&audio_frame_arena, main_polygon_offset);
     params.main_polygon_length = main_polygon_len;
-    params.holes               = holes_data;
+    params.holes               = (f32*) Arena::get(&audio_frame_arena, holes_offset);
     params.holes_length        = holes_len;
-    params.hole_run_lengths    = hole_lengths_data;
+    params.hole_run_lengths    = (int*) Arena::get(&audio_frame_arena, hole_lens_offset);
     params.num_holes           = num_holes;
 
     ulib_geometry_build(geo, SG_GEOMETRY_POLYGON, &params);
