@@ -164,3 +164,8 @@ void chugl_string::set(const char* s)
     }
     memcpy(str, s, len + 1);
 }
+
+void chugl_string::destroy()
+{
+    free(str);
+}

@@ -194,6 +194,7 @@ void ulib_assloader_query(Chuck_DL_Query* QUERY)
           "Initializes an model from an asset file with the given model loading "
           "options. Currently supports .obj files");
 
+
         END_CLASS();
     }
 

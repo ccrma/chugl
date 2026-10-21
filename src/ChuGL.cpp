@@ -154,7 +154,6 @@ static t_CKUINT chugl_stats_camera_free_count_offset   = 0;
 static t_CKUINT chugl_stats_pass_free_count_offset     = 0;
 static t_CKUINT chugl_stats_buffer_free_count_offset   = 0;
 static t_CKUINT chugl_stats_light_free_count_offset    = 0;
-static t_CKUINT chugl_stats_model_free_count_offset    = 0;
 static t_CKUINT chugl_stats_video_free_count_offset    = 0;
 static t_CKUINT chugl_stats_webcam_free_count_offset   = 0;
 
@@ -991,8 +990,6 @@ CK_DLL_SFUN(chugl_stats)
       = SG_ComponentFreeCounts[SG_COMPONENT_BUFFER];
     OBJ_MEMBER_INT(stats_obj, chugl_stats_light_free_count_offset)
       = SG_ComponentFreeCounts[SG_COMPONENT_LIGHT];
-    OBJ_MEMBER_INT(stats_obj, chugl_stats_model_free_count_offset)
-      = SG_ComponentFreeCounts[SG_COMPONENT_MODEL];
     OBJ_MEMBER_INT(stats_obj, chugl_stats_video_free_count_offset)
       = SG_ComponentFreeCounts[SG_COMPONENT_VIDEO];
     OBJ_MEMBER_INT(stats_obj, chugl_stats_webcam_free_count_offset)
@@ -1089,7 +1086,6 @@ CK_DLL_QUERY(ChuGL)
         chugl_stats_pass_free_count_offset   = MVAR("int", "gpass_free_count", false);
         chugl_stats_buffer_free_count_offset = MVAR("int", "buffer_free_count", false);
         chugl_stats_light_free_count_offset  = MVAR("int", "glight_free_count", false);
-        chugl_stats_model_free_count_offset  = MVAR("int", "gmodel_free_count", false);
         chugl_stats_video_free_count_offset  = MVAR("int", "video_free_count", false);
         chugl_stats_webcam_free_count_offset = MVAR("int", "webcam_free_count", false);
 

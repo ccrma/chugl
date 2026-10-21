@@ -93,4 +93,5 @@ struct chugl_string {
     char* str; // null terminated
 
     void set(const char* s);
+    void destroy();
 };

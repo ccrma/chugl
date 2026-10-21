@@ -869,7 +869,7 @@ CK_DLL_MFUN(scenepass_set_scene_and_camera)
     SG_ID scene_id    = sg_scene ? sg_scene->id : 0;
     SG_Camera* sg_cam = camera ? GET_CAMERA(camera) : NULL;
 
-    if (sg_cam && sg_cam->scene_id != scene_id) {
+    if (sg_cam && sg_cam->_scene_id != scene_id) {
         log_warn(
           "ScenePass.scene(GScene, GCamera) failed: camera does not belong to scene. "
           "suggestion: connect with `camera --> scene;`");

@@ -120,6 +120,8 @@ struct R_Transform : public R_Component {
 
     SG_ID scene_id; // the scene this transform belongs to
 
+    b32 is_text;
+
     static void init(R_Transform* transform);
     static void initFromSG(R_Transform* r_xform, SG_Command_CreateXform* cmd);
 
@@ -178,6 +180,9 @@ struct R_Transform : public R_Component {
     // util -------------------------------------------------------------------
     static void print(R_Transform* xform, u32 depth);
     static void print(R_Transform* xform);
+
+
+    static void destroy(R_Transform* xform);
 };
 
 #define R_GEOMETRY_MAX_VERTEX_ATTRIBUTES 8
@@ -219,6 +224,8 @@ struct R_Geometry : public R_Component {
 
     static u32 wireframeIndicesCount(R_Geometry* geo);
     static void rebuildWireframe(R_Geometry* geo, GraphicsContext* gctx);
+
+    static void destroy(R_Geometry* geo);
 };
 
 // =============================================================================
@@ -610,6 +617,8 @@ struct R_Light : public R_Transform {
         }
         return glm::mat4(1.0);
     }
+
+    static void destroy(R_Light* light);
 };
 
 // =============================================================================
@@ -830,6 +839,8 @@ struct R_Text : public R_Transform {
     float width; // max width in worldspace units, used for alignment
     SG_Text_AlignmentType alignment;
     float size = 1.0f;
+
+    static void destroy(R_Text* text);
 };
 
 struct R_Font {

@@ -3,7 +3,8 @@
 ## 0.3.1 (alpha)
 - add `Material.removeUniform(int location)`
 - add `ChuGL_Stats` and `GG.stats()`
-- major garbage collection improvements for (TODO list all components impl in `SG_ComponentFree()`)
+- major garbage collection improvements for many components including GMesh, Geometry, Material, etc.
+  - thanks Alex Han for reporting the memory leak
 - add builtin textures (useful for material defaults)
   - `Texture.whitePixel()`
   - `Texture.blackPixel()`

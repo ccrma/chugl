@@ -228,6 +228,7 @@ CK_DLL_GFUN(ggen_op_ungruck_array);
 CK_DLL_MFUN(ggen_detach_parent);
 CK_DLL_MFUN(ggen_detach_children);
 CK_DLL_MFUN(ggen_detach_all);
+CK_DLL_MFUN(ggen_detach_subgraph);
 
 // shadow API
 CK_DLL_MFUN(gmesh_get_shadowed);
@@ -584,6 +585,12 @@ static void ulib_ggen_query(Chuck_DL_Query* QUERY)
         DOC_FUNC(
           "Detach this GGen from its parent and all children. children are NOT "
           "reparented");
+
+        MFUN(ggen_detach_subgraph, "void", "detachSubgraph");
+        DOC_FUNC(
+          "Detach the entire subgraph beginning at this GGen. All ggens will be disconnected "
+          "from each other. Neccessary for freeing / garbage collecting an entire group of GGens."
+        );
 
         MFUN(ggen_set_shadowed_all_children, "void", "shadowed");
         ARG("int", "receive_shadows");
@@ -1239,6 +1246,11 @@ CK_DLL_MFUN(ggen_detach_all)
     CQ_PushCommand_RemoveAllChildren(child);
 }
 
+CK_DLL_MFUN(ggen_detach_subgraph)
+{
+    SG_Transform::removeSubgraph(SG_GetTransform(OBJ_MEMBER_UINT(SELF, component_offset_id)));
+}
+
 CK_DLL_MFUN(ggen_get_parent)
 {
     SG_Transform* xform = SG_GetTransform(OBJ_MEMBER_UINT(SELF, component_offset_id));
@@ -1274,7 +1286,7 @@ CK_DLL_MFUN(ggen_get_num_children)
 CK_DLL_MFUN(ggen_get_scene)
 {
     SG_Transform* xform = SG_GetTransform(OBJ_MEMBER_UINT(SELF, component_offset_id));
-    SG_Scene* scene     = SG_GetScene(xform->scene_id);
+    SG_Scene* scene     = SG_GetScene(xform->_scene_id);
     RETURN->v_object    = scene ? scene->ckobj : NULL;
 }
 

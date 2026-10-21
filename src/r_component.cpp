@@ -491,6 +491,13 @@ void R_Transform::print(R_Transform* xform)
     R_Transform::print(xform, 0);
 }
 
+void R_Transform::destroy(R_Transform* xform)
+{
+    // ASSERT(xform->parentID == 0);
+    // free child list
+    Arena::free(&xform->children);
+}
+
 void R_Transform::print(R_Transform* xform, u32 depth)
 {
     for (u32 i = 0; i < depth; ++i) {
@@ -643,6 +650,25 @@ void R_Geometry::rebuildWireframe(R_Geometry* geo, GraphicsContext* gctx)
     GPU_Buffer::write(gctx, &geo->gpu_wireframe_index_buffer,
                       (WGPUBufferUsage_Index | WGPUBufferUsage_CopyDst),
                       wireframe_indices, size_bytes);
+}
+
+void R_Geometry::destroy(R_Geometry* geo)
+{
+    // destroy gpu vertex buffers
+    for (int i = 0; i < ARRAY_LENGTH(geo->gpu_vertex_buffers); ++i) {
+        GPU_Buffer::destroy(&geo->gpu_vertex_buffers[i]);
+    }
+
+    // destroy gpu indices buffer
+    GPU_Buffer::destroy(&geo->gpu_index_buffer);
+
+    // destroy gpu storage buffers
+    for (int i = 0; i < ARRAY_LENGTH(geo->pull_buffers); ++i) {
+        GPU_Buffer::destroy(&geo->pull_buffers[i]);
+    }
+
+    GPU_Buffer::destroy(&geo->gpu_wireframe_index_buffer);
+    free(geo->index_buffer_MALLOC);
 }
 
 // ============================================================================
@@ -1937,6 +1963,28 @@ void Component_FreeComponent(SG_ID id)
             R_Pass::destroy((R_Pass*)comp);
             _Component_FreeComponent(id, sizeof(R_Pass));
         } break;
+        case SG_COMPONENT_TRANSFORM:
+        case SG_COMPONENT_MESH: {
+            if (((R_Transform*)comp)->is_text) {
+                log_trace("graphics thread freeing text %d", comp->id);
+                R_Text::destroy((R_Text*)comp);
+                _Component_FreeComponent(id, sizeof(R_Text));
+            } else {
+                log_trace("graphics thread freeing mesh %d", comp->id);
+                R_Transform::destroy((R_Transform*)comp);
+                _Component_FreeComponent(id, sizeof(R_Transform));
+            }
+        } break;
+        case SG_COMPONENT_GEOMETRY: {
+            log_trace("graphics thread freeing geometry %d", comp->id);
+            R_Geometry::destroy((R_Geometry*)comp);
+            _Component_FreeComponent(id, sizeof(R_Geometry));
+        } break;
+        case SG_COMPONENT_LIGHT: {
+            log_trace("graphics thread freeing light %d", comp->id);
+            R_Light::destroy((R_Light*)comp);
+            _Component_FreeComponent(id, sizeof(R_Light));
+        } break;
         default: {
             // other types not yet supported
             log_trace("graphics thread free for component type [%s] not impl",
@@ -2047,6 +2095,7 @@ R_Text* Component_CreateText(GraphicsContext* gctx, FT_Library ft,
             // init mesh
             text->_geoID = geo->id;
             text->_matID = mat->id;
+            text->is_text = 1;
 
             // store offset
             R_Location loc
@@ -3610,9 +3659,25 @@ void R_Light::shadowAddMesh(SG_ID* mesh_list, int mesh_count, bool add)
     }
 }
 
+void R_Light::destroy(R_Light* light)
+{
+    hashmap_free(light->shadow_render_id_set);
+    WGPU_RELEASE_RESOURCE(Buffer, light->draw_storage_buffer);
+    WGPU_RELEASE_RESOURCE(Buffer, light->frame_uniform_buffer);
+    R_Transform::destroy(light);
+}
+
 void R_Video::destroy(R_Video* video)
 {
     if (!video) return;
     if (video->plm) plm_destroy(video->plm);
     free(video->rgba_data_OWNED);
+}
+
+void R_Text::destroy(R_Text* text)
+{
+    ASSERT(text->is_text);
+    text->text.destroy();
+    text->font_path.destroy();
+    R_Transform::destroy(text);
 }

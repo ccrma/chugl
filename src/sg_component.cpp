@@ -53,6 +53,15 @@ void SG_Transform::_init(SG_Transform* t, Chuck_Object* ckobj)
     Arena::init(&t->childrenIDs, sizeof(SG_ID) * 8);
 }
 
+void SG_Transform::destroy(SG_Transform* t)
+{
+    ASSERT(t->parentID == 0);
+    ASSERT(t->_scene_id == 0);
+    SG_Transform::removeAllChildren(t);
+    Arena::free(&t->childrenIDs);
+
+}
+
 void SG_Transform::translate(SG_Transform* t, glm::vec3 delta)
 {
     t->pos += delta;
@@ -294,15 +303,17 @@ void SG_Transform::addChild(SG_Transform* parent, SG_Transform* child)
     static Arena sg_id_arena{};
     ASSERT(sg_id_arena.curr == 0);
     defer(Arena::clear(&sg_id_arena));
-    if (parent->scene_id != 0) {
-        SG_Scene* scene                       = SG_GetScene(parent->scene_id);
+    if (parent->_scene_id != 0) {
+        SG_Scene* scene                       = SG_GetScene(parent->_scene_id);
         *ARENA_PUSH_TYPE(&sg_id_arena, SG_ID) = child->id;
         while (ARENA_LENGTH(&sg_id_arena, SG_ID) > 0) {
             SG_ID* sg_id = ARENA_GET_LAST_TYPE(&sg_id_arena, SG_ID);
             ARENA_POP_TYPE(&sg_id_arena, SG_ID);
             SG_Transform* sg = SG_GetTransform(*sg_id);
 
-            sg->scene_id = parent->scene_id;
+            sg->_scene_id = parent->_scene_id;
+            SG_AddRef(scene);
+
             if (sg->type == SG_COMPONENT_LIGHT) {
                 SG_Scene::addLight(scene, sg->id);
             }
@@ -319,34 +330,72 @@ void SG_Transform::addChild(SG_Transform* parent, SG_Transform* child)
 
 static void SG_Transform_removeChildSubgraph(SG_Transform* parent, SG_Transform* child)
 {
+    // bool disconnected_subgraph = true;
+
     static Arena sg_id_arena{};
     ASSERT(sg_id_arena.curr == 0);
     defer(Arena::clear(&sg_id_arena));
-    if (parent->scene_id != 0) {
-        SG_Scene* scene                       = SG_GetScene(parent->scene_id);
+    if (parent->_scene_id != 0) {
+        SG_Scene* scene                       = SG_GetScene(parent->_scene_id);
         *ARENA_PUSH_TYPE(&sg_id_arena, SG_ID) = child->id;
         while (sg_id_arena.curr > 0) {
             SG_ID* sg_id = ARENA_GET_LAST_TYPE(&sg_id_arena, SG_ID);
             ARENA_POP_TYPE(&sg_id_arena, SG_ID);
             SG_Transform* sg = SG_GetTransform(*sg_id);
+            size_t num_children = SG_Transform::numChildren(sg);
+            // int refcount = SG_Refcount(sg);
+            // int connected_ggens = num_children + 1; // +1 for parent-->child ref
 
             // unset scene id
-            ASSERT(sg->scene_id == parent->scene_id);
-            sg->scene_id = 0;
+            ASSERT(sg->_scene_id == parent->_scene_id);
+            SG_DecrementRef(sg->_scene_id);
+            sg->_scene_id = 0;
 
             // remove from light list
             if (sg->type == SG_COMPONENT_LIGHT) {
                 SG_Scene::removeLight(scene, sg->id);
+                // connected_ggens++; // the deref from removeLight() hasn't happened yet, must account for it here
             }
 
+            // check if refcount == #connected_ggens
+            // disconnected_subgraph = (disconnected_subgraph && (connected_ggens >= refcount));
+
             // add children to queue
-            size_t num_children = SG_Transform::numChildren(sg);
             for (size_t i = 0; i < num_children; ++i) {
                 *ARENA_PUSH_TYPE(&sg_id_arena, SG_ID)
                   = *ARENA_GET_TYPE(&sg->childrenIDs, SG_ID, i);
             }
         }
     }
+
+    // @azaday 10/20/2026 ChuGL 0.3.1
+    // heuristic for freeing ggen subtrees that are purely self-referential
+    // ie should be GC'd but because of reciprocal parent-child pointers form
+    // a cycle and are not caught by refcounting alone
+    // when destroying, check if remaining refcount for every node in subgraph
+    // is equal to #children + #parents
+    // note: this does NOT catch cases where the user adds extra cyclic 
+    // references by extending GGen clases and creating new class fields
+    // that form reference loops. Resolving that would require a proper
+    // graph-traversal loop detection garbage collector which is slow and
+    // complex and no one wants to impl that right now
+
+    // NVM This doesn't work because
+    /*
+    GGen a --> GGen b --> GGen c --> GG.scene();
+    c.removeAllChildren(); // here, GGen's a and b should be freed
+    
+    but they aren't because scoped variables `a` and `b` still hold references. dang
+    */
+
+    // if (disconnected_subgraph) {
+    //     // need to ck_release instead of just SG_Transform::destroy so that
+    //     // it gets properly freed in the ChucK VM too
+    //     int refcount = SG_Refcount(child);
+    //     for (int i = 0; i < refcount; ++i) {
+    //         SG_DecrementRef(child->id);
+    //     }
+    // }
 }
 
 void SG_Transform::removeChild(SG_Transform* parent, SG_Transform* child)
@@ -401,6 +450,37 @@ void SG_Transform::removeAllChildren(SG_Transform* parent)
         SG_Transform_removeChildSubgraph(parent, child);
     }
     Arena::clear(&parent->childrenIDs);
+}
+
+void SG_Transform::removeSubgraph(SG_Transform* root)
+{
+    static Arena bottom_up_subgraph{};
+    int queue_idx = 0;
+    ASSERT(bottom_up_subgraph.curr == 0);
+    defer(Arena::clear(&bottom_up_subgraph));
+
+    // build a bottom-up queue of subgraph
+    *ARENA_PUSH_TYPE(&bottom_up_subgraph, SG_ID) = root->id;
+    while (queue_idx < ARENA_LENGTH(&bottom_up_subgraph, SG_ID)) {
+        SG_ID* sg_id = ARENA_GET_TYPE(&bottom_up_subgraph, SG_ID, queue_idx);
+        ++queue_idx;
+
+        SG_Transform* sg = SG_GetTransform(*sg_id);
+        size_t num_children = SG_Transform::numChildren(sg);
+
+        // add children to queue
+        SG_ID* cpy_dst = ARENA_PUSH_COUNT(&bottom_up_subgraph, SG_ID, num_children);
+        memcpy(cpy_dst, sg->childrenIDs.base, sizeof(*cpy_dst) * num_children);
+    }
+
+    // remove all going bottom up in O(N) time
+    int subgraph_size = ARENA_LENGTH(&bottom_up_subgraph, SG_ID);
+    for (int i = subgraph_size - 1; i >= 0; --i) {
+        CQ_PushCommand_RemoveAllChildren(SG_GetTransform(*ARENA_GET_TYPE(&bottom_up_subgraph, SG_ID, i)));
+    }
+
+    // remove parent of root
+    CQ_PushCommand_RemoveChild(SG_GetTransform(root->parentID), root);
 }
 
 bool SG_Transform::isAncestor(SG_Transform* ancestor, SG_Transform* descendent)
@@ -550,6 +630,22 @@ void SG_Geometry::buildPolyhedron(SG_Geometry* g, PolyhedronType* p)
     GeometryArenaBuilder gab;
     SG_Geometry::initGABandNumComponents(&gab, g);
     Geometry_buildPolyhedron(&gab, *p);
+}
+
+void SG_Geometry::destroy(SG_Geometry* g)
+{
+    // free vertex attribute arenas
+    for (int i = 0; i < ARRAY_LENGTH(g->vertex_attribute_data); ++i) {
+        Arena::free(&g->vertex_attribute_data[i]);
+    }
+
+    // free indices
+    Arena::free(&g->indices);
+
+    // free pull buffers
+    for (int i = 0; i < ARRAY_LENGTH(g->vertex_pull_buffers); ++i) {
+        Arena::free(&g->vertex_pull_buffers[i]);
+    }
 }
 
 void SG_Geometry::buildBox(SG_Geometry* g, BoxParams* p)
@@ -731,6 +827,13 @@ void SG_Mesh::setMaterial(SG_Mesh* mesh, SG_Material* mat)
     SG_DecrementRef(oldMatID);
 }
 
+void SG_Mesh::destroy(SG_Mesh* mesh)
+{
+    SG_DecrementRef(mesh->_geo_id);
+    SG_DecrementRef(mesh->_mat_id);
+    SG_Transform::destroy(mesh);
+}
+
 // ============================================================================
 // SG Component Manager Definitions
 // ============================================================================
@@ -833,17 +936,17 @@ void SG_Init(const Chuck_DL_Api* api)
                           _SG_CompareLocation, NULL, NULL);
 
     Arena::init(&SG_XformArena, sizeof(SG_Transform) * 64);
-    Arena::init(&SG_SceneArena, sizeof(SG_Scene) * 64);
+    Arena::init(&SG_SceneArena, sizeof(SG_Scene) * 4);
     Arena::init(&SG_GeoArena, sizeof(SG_Geometry) * 32);
     Arena::init(&SG_MaterialArena, sizeof(SG_Material) * 32);
     Arena::init(&SG_MeshArena, sizeof(SG_Mesh) * 64);
     Arena::init(&SG_TextureArena, sizeof(SG_Texture) * 32);
     Arena::init(&SG_CameraArena, sizeof(SG_Camera) * 4);
     Arena::init(&SG_TextArena, sizeof(SG_Text) * 32);
-    Arena::init(&SG_PassArena, sizeof(SG_Pass) * 32);
-    Arena::init(&SG_BufferArena, sizeof(SG_Pass) * 64);
-    Arena::init(&SG_LightArena, sizeof(SG_Light) * 32);
-    Arena::init(&SG_VideoArena, sizeof(SG_Video) * 16);
+    Arena::init(&SG_PassArena, sizeof(SG_Pass) * 8);
+    Arena::init(&SG_BufferArena, sizeof(SG_Buffer) * 8);
+    Arena::init(&SG_LightArena, sizeof(SG_Light) * 8);
+    Arena::init(&SG_VideoArena, sizeof(SG_Video) * 4);
     Arena::init(&SG_WebcamArena, sizeof(SG_Webcam) * 8);
 
     // init gc state
@@ -903,7 +1006,7 @@ SG_Scene* SG_CreateScene(Chuck_Object* ckobj)
     // sg_component init
     scene->id       = SG_GetNewComponentID();
     scene->type     = SG_COMPONENT_SCENE;
-    scene->scene_id = scene->id; // a scene always belongs to itself
+    scene->_scene_id = scene->id; // a scene always belongs to itself
 
     // scene init
     Arena::init(&scene->light_ids, sizeof(SG_ID) * 8);
@@ -1032,6 +1135,7 @@ SG_Text* SG_CreateText(Chuck_Object* ckobj)
     text->id    = SG_GetNewComponentID();
     text->type  = SG_COMPONENT_MESH;
     text->ckobj = ckobj;
+    text->is_text = 1;
 
     // store in map
     SG_Location loc = { text->id, offset, arena };
@@ -1456,6 +1560,13 @@ void SG_AddRef(SG_Component* comp)
     _ck_api->object->add_ref(comp->ckobj);
 }
 
+int SG_Refcount(SG_Component* comp)
+{
+    if (comp == NULL) return 0;
+    ASSERT(comp->ckobj);
+    return _ck_api->object->refcount(comp->ckobj);
+}
+
 void SG_GC()
 {
     // swap queues
@@ -1547,6 +1658,32 @@ void SG_ComponentFree(SG_Component* comp)
             log_trace("freeing pass %d %s", comp->id, comp->name);
             SG_Pass::destroy((SG_Pass*)comp);
             _SG_ComponentManagerFree(comp->id, sizeof(SG_Pass));
+        } break;
+        case SG_COMPONENT_MESH: {
+            if (((SG_Mesh*)comp)->is_text) {
+                log_trace("freeing text %d %s", comp->id, comp->name);
+                SG_Text::destroy((SG_Text*)comp);
+                _SG_ComponentManagerFree(comp->id, sizeof(SG_Text));
+            } else {
+                log_trace("freeing mesh %d %s", comp->id, comp->name);
+                SG_Mesh::destroy((SG_Mesh*)comp);
+                _SG_ComponentManagerFree(comp->id, sizeof(SG_Mesh));
+            }
+        } break;
+        case SG_COMPONENT_GEOMETRY: {
+            log_trace("freeing geometry %d %s", comp->id, comp->name);
+            SG_Geometry::destroy((SG_Geometry*)comp);
+            _SG_ComponentManagerFree(comp->id, sizeof(SG_Geometry));
+        } break;
+        case SG_COMPONENT_TRANSFORM: {
+            log_trace("freeing ggen %d %s", comp->id, comp->name);
+            SG_Transform::destroy((SG_Transform*)comp);
+            _SG_ComponentManagerFree(comp->id, sizeof(SG_Transform));
+        } break;
+        case SG_COMPONENT_LIGHT: {
+            log_trace("freeing glight %d %s", comp->id, comp->name);
+            SG_Transform::destroy((SG_Transform*)comp);
+            _SG_ComponentManagerFree(comp->id, sizeof(SG_Light));
         } break;
         default: {
             log_trace("free for component type [%s:%s] not impl",
@@ -1767,12 +1904,15 @@ void SG_Scene::addLight(SG_Scene* scene, SG_ID light_id)
 {
     ASSERT(!ARENA_CONTAINS(&scene->light_ids, light_id));
     *ARENA_PUSH_TYPE(&scene->light_ids, SG_ID) = light_id;
+    SG_AddRef(SG_GetComponent(light_id));
 }
 
 void SG_Scene::removeLight(SG_Scene* scene, SG_ID light_id)
 {
     size_t numLights = ARENA_LENGTH(&scene->light_ids, SG_ID);
     SG_ID* lights    = (SG_ID*)scene->light_ids.base;
+
+    SG_DecrementRef(light_id);
 
     for (size_t i = 0; i < numLights; ++i) {
         if (lights[i] == light_id) {
@@ -1884,4 +2024,12 @@ void SG_Video::destroy(SG_Video* video)
     SG_DecrementRef(video->video_texture_cb_id);
     SG_DecrementRef(video->video_texture_cr_id);
     SG_DecrementRef(video->video_texture_y_id);
+}
+
+void SG_Text::destroy(SG_Text* text)
+{
+    ASSERT(text->is_text);
+    text->text.destroy();
+    text->font_path.destroy();
+    SG_Mesh::destroy(text);
 }
