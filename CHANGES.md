@@ -3,6 +3,7 @@
 ## 0.3.1 (alpha)
 - major garbage collection improvements for many components including GMesh, Geometry, Material, Shaders, etc.
   - thanks Alex Han for reporting the memory leak
+  - `GGen.detachSubgraph()` disconnects the entire subgraph under the given GGen. Helpful for freeing / GCing an entire subgraph of scene components.
 - add component finding methods to `GGen` (thanks Niccolo!)
   - `GGen@ findParent(Type type);`
   - `GGen[] findParents(Type type);`
@@ -14,12 +15,14 @@
   - `Texture.blackPixel()`
   - `Texture.magentaPixel()`
   - `Texture.normalPixel()`
+- Screen shaders are now now automatically given the correct vertex layout when applied to a `ScreenPass`
 - add `UI.getStyle().scaleAllSizes(float scale)` to increase imgui window scale
 - add `UI_IO` imgui class
 - add `Material.removeUniform(int location)`
 - add `ChuGL_Stats` and `GG.stats()`
 - bugfixes:
   - potential segfault in `PolygonGeometry`
+  - segfault in `GMesh(Geometry, Material)` constructor
 - new example: `deep/tetris.ck`
 
 ## 0.3.0 (alpha)
