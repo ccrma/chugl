@@ -52,6 +52,9 @@ imgui.ini
 # chugins
 *.chug
 
+# chudata
+*.chud
+
 # audio files
 *.wav
 
