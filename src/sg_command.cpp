@@ -791,6 +791,14 @@ void CQ_PushCommand_ShaderCreate(SG_Shader* shader)
     END_COMMAND();
 }
 
+void CQ_PushCommand_ShaderClearVertexLayout(SG_Shader* shader)
+{
+    ASSERT(shader->vertex_layout[0] == 0);
+    BEGIN_COMMAND(SG_Command_ShaderClearVertexLayout, SG_COMMAND_SHADER_CLEAR_VERTEX_LAYOUT)
+    command->sg_id = shader->id;
+    END_COMMAND();
+}
+
 void CQ_PushCommand_MaterialCreate(SG_Material* material)
 {
     BEGIN_COMMAND(SG_Command_MaterialCreate, SG_COMMAND_MATERIAL_CREATE);

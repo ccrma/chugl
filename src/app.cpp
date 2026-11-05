@@ -2048,6 +2048,13 @@ static void _R_HandleCommand(App* app, SG_Command* command)
             SG_Command_ShaderCreate* cmd = (SG_Command_ShaderCreate*)command;
             Component_CreateShader(&app->gctx, cmd);
         } break;
+        case SG_COMMAND_SHADER_CLEAR_VERTEX_LAYOUT: {
+            SG_Command_ShaderClearVertexLayout* cmd = (SG_Command_ShaderClearVertexLayout*)command;
+            R_Shader* shader = Component_GetShader(cmd->sg_id);
+            if (shader) {
+                ZERO_ARRAY(shader->vertex_layout);
+            }
+        } break;
         case SG_COMMAND_MATERIAL_CREATE: {
             SG_Command_MaterialCreate* cmd = (SG_Command_MaterialCreate*)command;
             Component_CreateMaterial(&app->gctx, cmd);

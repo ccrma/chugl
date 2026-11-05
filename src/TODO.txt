@@ -1,8 +1,6 @@
 TODO
 
 for 0.3.1 (by Thurs)
-- screeshader.shader(...) should auto-set vertexlayout to null
-  - warn if not already null
 - fix segfault in 256a lecture shaders.ck example when changing
 uniform binding location 1 from texture to storage buffer
   // render loop

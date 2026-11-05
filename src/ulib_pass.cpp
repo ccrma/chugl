@@ -350,7 +350,8 @@ void ulib_pass_query(Chuck_DL_Query* QUERY)
         DOC_FUNC(
           "Set the screen shader to apply to the screen. In your screen shader be sure "
           "to #include SCREEN_PASS_VERTEX_SHADER which supplies your fragment shader "
-          "with a full-screen quad");
+          "with a full-screen quad. Will automatically set the shader's vertex layout to "
+          "null, as a ScreenPass does not operate on geometry vertex buffers");
 
         END_CLASS();
     }
@@ -912,6 +913,18 @@ CK_DLL_MFUN(scenepass_set_msaa)
 // ScreenPass
 // ============================================================================
 
+static void screenpass_clear_shader_vertex_layout(SG_Shader* shader, SG_Pass* pass) {
+    if (shader) {
+        if (shader->vertex_layout[0] != 0) {
+            log_warn("Setting Shader[%d:%s] vertex layout to null on ScenePass[%d:%s].",
+                shader->id, shader->name, pass->id, pass->name
+            );
+            ZERO_ARRAY(shader->vertex_layout);
+            CQ_PushCommand_ShaderClearVertexLayout(shader);
+        }
+    }
+}
+
 CK_DLL_CTOR(screenpass_ctor_with_shader)
 {
     // get the arguments
@@ -923,6 +936,9 @@ CK_DLL_CTOR(screenpass_ctor_with_shader)
     ASSERT(shader);
     SG_Pass* pass = GET_PASS(SELF);
     ASSERT(pass && pass->pass_type == SG_PassType_Screen);
+
+    // set vertex layout to null
+    screenpass_clear_shader_vertex_layout(shader, pass);
 
     SG_Material* screen_material = SG_GetMaterial(pass->screen_material_id);
     ASSERT(screen_material);
@@ -944,6 +960,9 @@ CK_DLL_MFUN(screenpass_set_shader)
     SG_Shader* shader
       = shader_obj ? SG_GetShader(OBJ_MEMBER_UINT(shader_obj, component_offset_id)) :
                      NULL;
+
+    // set vertex layout to null
+    screenpass_clear_shader_vertex_layout(shader, pass);
 
     SG_Material* mat = SG_GetMaterial(pass->screen_material_id);
     ASSERT(mat);

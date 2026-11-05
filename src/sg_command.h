@@ -115,6 +115,7 @@ enum SG_CommandType : u32 {
 
     // shader
     SG_COMMAND_SHADER_CREATE,
+    SG_COMMAND_SHADER_CLEAR_VERTEX_LAYOUT,
 
     // material
     SG_COMMAND_MATERIAL_CREATE,
@@ -459,6 +460,10 @@ struct SG_Command_ShaderCreate : public SG_Command {
     SG_ShaderIncludes includes;
 };
 
+struct SG_Command_ShaderClearVertexLayout : public SG_Command {
+    SG_ID sg_id;
+};
+
 struct SG_Command_MaterialCreate : public SG_Command {
     SG_ID sg_id;
     // SG_MaterialParams params;
@@ -763,6 +768,7 @@ void CQ_PushCommand_SaveTexture(SG_Texture* texture, const char* fp,
 
 // shader
 void CQ_PushCommand_ShaderCreate(SG_Shader* shader);
+void CQ_PushCommand_ShaderClearVertexLayout(SG_Shader* shader);
 
 // material
 void CQ_PushCommand_MaterialCreate(SG_Material* material);
