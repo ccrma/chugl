@@ -1934,14 +1934,8 @@ void Component_FreeComponent(SG_ID id)
             log_trace("graphics thread freeing shader %d", comp->id);
             R_Shader::free((R_Shader*)comp);
             _Component_FreeComponent(id, sizeof(R_Shader));
-            // TODO:
-            // if shader is computeShader, we can at this point free the corresponding
-            // G_CacheComputePipeline. Doing the same for renderPipelines is more
-            // complex because a vertex/frag shaderModule can map to multiple
-            // renderpipelines... would need a data structure that can be a
-            // map< Pair<vertexModule, fragModule> : renderPipeline >
-            // actually, when in doubt: brute force. just loop over all
-            // render pipelines and remove any whose R_Shader sg_id returns NULL
+            // corresponding GPU pipelines / BG Layouts based on this shader
+            // are freed in G_Cache::update()
         } break;
         case SG_COMPONENT_VIDEO: {
             log_trace("graphics thread freeing video %d", comp->id);

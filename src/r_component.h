@@ -1029,14 +1029,18 @@ struct G_DrawCallPipelineDesc {
     WGPUBlendState blend_state;
 };
 
+struct G_CacheComputePipelineKey {
+    WGPUShaderModule module;
+    SG_ID shader_id;
+};
+
 struct G_CacheComputePipeline {
-    WGPUShaderModule key; // TODO refcount
+    // GPU resources freed in G_Cache::update()
+    G_CacheComputePipelineKey key;
     struct {
         WGPUComputePipeline pipeline;
         WGPUBindGroupLayout bind_group_layout; // currently compute pipelines are only
                                                // allowed to use @group(0)
-                                               // TODO remember to release the BGLayout
-                                               // too
     } val;
 
     static u64 hash(const void* item, uint64_t seed0, uint64_t seed1)
@@ -1049,7 +1053,6 @@ struct G_CacheComputePipeline {
     {
         G_CacheComputePipeline* ga = (G_CacheComputePipeline*)a;
         G_CacheComputePipeline* gb = (G_CacheComputePipeline*)b;
-        ASSERT(sizeof(ga->key) == sizeof(WGPUShaderModule));
         return memcmp(&ga->key, &gb->key, sizeof(ga->key));
     }
 };
@@ -1082,9 +1085,9 @@ struct G_CacheRenderPipelineKey {
 };
 
 struct G_CacheRenderPipelineVal {
+    // pipeline and bg layouts freed in G_Cache::update()
     WGPURenderPipeline pipeline;
-    WGPUBindGroupLayout bind_group_layout_list[CHUGL_MAX_BINDGROUPS]; // TODO free on
-                                                                      // delete
+    WGPUBindGroupLayout bind_group_layout_list[CHUGL_MAX_BINDGROUPS]; 
 
     // lazy evaluate bindGroups because getting bindGroupLayout of
     // a group that doesn't exist throws a WGPU validation error
@@ -1320,25 +1323,34 @@ struct G_Cache {
                                G_CacheTextureView::compare);
     }
 
-    G_CacheComputePipeline computePipeline(WGPUShaderModule module, WGPUDevice device,
+    G_CacheComputePipeline computePipeline(SG_ID shader_id, WGPUShaderModule module, WGPUDevice device,
                                            const char* label)
     {
+        // need to explicitly zero struct
+        G_CacheComputePipelineKey key = {};
+        key.module = module;
+        key.shader_id = shader_id;
+
         G_CacheComputePipeline* result
-          = (G_CacheComputePipeline*)hashmap_get(compute_pipeline_map, &module);
+          = (G_CacheComputePipeline*)hashmap_get(compute_pipeline_map, &key);
 
         if (result == NULL) { // create new pipeline
             ++frame_stats.compute_pipeline_misses;
-            log_trace("Cache miss [ComputePipeline], creating new from %p", module);
+            log_trace("Cache miss [ComputePipeline], creating new from %p and shader %d", module, shader_id);
 
             WGPUComputePipelineDescriptor desc = {};
             desc.label                         = label;
             desc.compute.module                = module;
             desc.compute.entryPoint            = CHUGL_COMPUTE_ENTRY_POINT;
 
+            // refcount compute shader module
+            WGPU_REFERENCE_RESOURCE(ShaderModule, module);
+
             WGPUComputePipeline pipeline
               = wgpuDeviceCreateComputePipeline(device, &desc);
+
             G_CacheComputePipeline item
-              = { module,
+              = { key,
                   {
                     pipeline, wgpuComputePipelineGetBindGroupLayout(
                                 pipeline,
@@ -1702,13 +1714,6 @@ struct G_Cache {
 
     void update()
     {
-        // TODO: loop over all pipelines, and if associated R_Shader is
-        // destroyed, free the pipeline and WGPU_RELEASE the cached
-        // bindgroup layouts
-
-        // Actually, for compute pipelines, the graphics thread GC can
-        // explicitly tell the rendergraph to release the compute
-        // pipeline and bind group layout!
 
         // loop over bindgroups. delete expired.
         // intentionally NOT refcounting non-texture-view WGPU resources
@@ -1805,6 +1810,81 @@ struct G_Cache {
                 WGPU_RELEASE_RESOURCE(Texture, deleted->key.texture);
             }
         }
+
+
+        // loop over all render pipelines, and if associated R_Shader is
+        // destroyed, free the pipeline and WGPU_RELEASE the cached
+        // bindgroup layouts
+        {
+            Arena::clearZero(&deletion_queue);
+
+            size_t idx_DONT_USE = 0;
+            G_CacheRenderPipeline* cache_rp        = NULL;
+            while (hashmap_iter(render_pipeline_map, &idx_DONT_USE, (void**)&cache_rp)) {
+                if (Component_GetShader(
+                    cache_rp->key.drawcall_pipeline_desc.sg_shader_id
+                ) == NULL) {
+                    *ARENA_PUSH_TYPE(&deletion_queue, G_CacheRenderPipeline) = *cache_rp;
+                }
+            }
+            int num_to_delete = ARENA_LENGTH(&deletion_queue, G_CacheRenderPipeline);
+            for (int i = 0; i < num_to_delete; i++) {
+                G_CacheRenderPipeline* rp
+                  = ARENA_GET_TYPE(&deletion_queue, G_CacheRenderPipeline, i);
+
+                // remove from hashmap
+                const void* deleted = hashmap_delete(render_pipeline_map, rp);
+                ASSERT(deleted);
+
+                // deref render pipeline gpu resources 
+                log_trace("deleting render pipeline %p of shader %d", 
+                    (void*)rp->val.pipeline, rp->key.drawcall_pipeline_desc.sg_shader_id);
+                WGPU_RELEASE_RESOURCE(RenderPipeline, rp->val.pipeline);
+                for (
+                    int bg_layout_idx = 0; 
+                    bg_layout_idx < ARRAY_LENGTH(rp->val.bind_group_layout_list); 
+                    ++bg_layout_idx) {
+                    WGPU_RELEASE_RESOURCE(BindGroupLayout, rp->val.bind_group_layout_list[bg_layout_idx]);
+                }
+
+            }
+        }
+
+
+        // loop over all compute pipelines, and if associated R_Shader is
+        // destroyed, free the pipeline and WGPU_RELEASE the cached
+        // bindgroup layouts
+        {
+            Arena::clearZero(&deletion_queue);
+
+            size_t idx_DONT_USE = 0;
+            G_CacheComputePipeline* cache_cp        = NULL;
+            while (hashmap_iter(compute_pipeline_map, &idx_DONT_USE, (void**)&cache_cp)) {
+                if (Component_GetShader(cache_cp->key.shader_id) == NULL) {
+                    *ARENA_PUSH_TYPE(&deletion_queue, G_CacheComputePipeline) = *cache_cp;
+                }
+            }
+            int num_to_delete = ARENA_LENGTH(&deletion_queue, G_CacheComputePipeline);
+            for (int i = 0; i < num_to_delete; i++) {
+                G_CacheComputePipeline* cp
+                  = ARENA_GET_TYPE(&deletion_queue, G_CacheComputePipeline, i);
+
+                // remove from hashmap
+                const void* deleted = hashmap_delete(compute_pipeline_map, cp);
+                ASSERT(deleted);
+
+                // deref render pipeline gpu resources 
+                log_trace("deleting compute pipeline %p of shader %d", 
+                    (void*)cp->val.pipeline, cp->key.shader_id);
+                WGPU_RELEASE_RESOURCE(ShaderModule, cp->key.module);
+                WGPU_RELEASE_RESOURCE(BindGroupLayout, cp->val.bind_group_layout);
+                WGPU_RELEASE_RESOURCE(ComputePipeline, cp->val.pipeline);
+            }
+        }
+
+        // Actually, for compute pipelines, the graphics thread GC can
+        // explicitly tell the rendergraph to release the compute
+        // pipeline and bind group layout!
 
         // update stats
         // improve: track resource deletions too
@@ -2151,6 +2231,7 @@ struct G_RenderPassParams {
 };
 
 struct G_ComputePassParams {
+    SG_ID shader_id;
     WGPUShaderModule module;
     u32 x, y, z;            // workgroup size
     u32 bg_start, bg_count; // bindgroup entries
@@ -2444,7 +2525,7 @@ struct G_Graph {
         ++pass_list[pass_count - 1].cp.bg_count;
     }
 
-    void addComputePass(const char* name, WGPUShaderModule module, u32 x, u32 y, u32 z)
+    void addComputePass(const char* name, SG_ID shader_id, WGPUShaderModule module, u32 x, u32 y, u32 z)
     {
         if (pass_count == CHUGL_RENDERGRAPH_MAX_PASSES) {
             log_error("Reached max pass count %d", pass_count);
@@ -2454,7 +2535,8 @@ struct G_Graph {
         COPY_STRING(compute_pass->name, name);
         compute_pass->type = G_PassType_Compute;
         compute_pass->cp
-          = { module,
+          = { shader_id,
+              module,
               x,
               y,
               z,
@@ -2571,7 +2653,7 @@ struct G_Graph {
                 } break;
                 case G_PassType_Compute: {
                     G_CacheComputePipeline cp
-                      = cache.computePipeline(pass->cp.module, device, NULL);
+                      = cache.computePipeline(pass->cp.shader_id, pass->cp.module, device, NULL);
                     WGPUComputePassDescriptor cp_desc = {};
                     cp_desc.label                     = pass->name;
                     WGPUComputePassEncoder compute_pass

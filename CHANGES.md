@@ -1,7 +1,7 @@
 # Changes
 
 ## 0.3.1 (alpha)
-- major garbage collection improvements for many components including GMesh, Geometry, Material, etc.
+- major garbage collection improvements for many components including GMesh, Geometry, Material, Shaders, etc.
   - thanks Alex Han for reporting the memory leak
 - add component finding methods to `GGen` (thanks Niccolo!)
   - `GGen@ findParent(Type type);`

@@ -1019,7 +1019,8 @@ struct App {
                     if (!valid_compute_pass) break;
 
                     app->rendergraph.addComputePass(
-                      pass->name, compute_shader->compute_shader_module,
+                      pass->name, compute_shader->id, 
+                      compute_shader->compute_shader_module,
                       pass->sg_pass.compute_workgroup.x,
                       pass->sg_pass.compute_workgroup.y,
                       pass->sg_pass.compute_workgroup.z);
