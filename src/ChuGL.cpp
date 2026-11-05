@@ -999,6 +999,161 @@ CK_DLL_SFUN(chugl_stats)
 }
 
 // ============================================================================
+// Chudata Impl
+// ============================================================================
+
+enum ChudataType : u8 {
+    Chudata_Error,
+    Chudata_Int,
+    Chudata_Str,
+};
+
+struct ChudataVal {
+    ChudataType type;
+    union {
+      t_CKINT i;
+      char* str_OWNED;
+    } as;
+};
+
+struct Chudata {
+    char path[256];
+    ChudataVal data[256];
+
+    static void save(Chudata* c) {
+        FILE* fp = fopen(c->path, "w");
+
+        for (int i = 0; i < ARRAY_LENGTH(c->data); ++i) {
+			ChudataVal val = c->data[i];
+			// write tag byte
+			fwrite(&val.type, 1, 1, fp);
+			// write value
+			switch (val.type) {
+				case Chudata_Int: {
+					fwrite(&val.as.i, sizeof(val.as.i), 1, fp);
+				} break;
+				case Chudata_Str: {
+					ASSERT(false);
+					// fwrite(&val.len, sizeof(val.len), 1, w->fp); // write length
+					// fwrite(val.s, 1, val.len, w->fp);            // write string
+					// uint8_t null = 0;
+					// fwrite(&null, 1, 1, w->fp);                  // write null-terminator
+				} break;
+				default: break;
+			}
+        }
+
+        fclose(fp);
+    }
+
+    static void destroy(Chudata* c) {
+        // free all strings
+        for (int i = 0; i < ARRAY_LENGTH(c->data); ++i) {
+            if (c->data[i].type == Chudata_Str) {
+                free(c->data[i].as.str_OWNED);
+            }
+			c->data[i] = {};
+        }
+    }
+
+    static void load(Chudata* c) {
+        if (c->path[0] == 0) return;
+		FILE* file = fopen(c->path, "r");
+		if (file == NULL) return;
+
+		fseek(file, 0, SEEK_END);
+		size_t filesize = ftell(file);
+		fseek(file, 0, SEEK_SET);
+
+		char* data = (char*)malloc(filesize);
+
+		fread(data, 1, filesize, file);
+		fclose(file);
+
+		// TODO replace memcpy with safe_read fn
+		int cur = 0;
+		for (int i = 0; i < ARRAY_LENGTH(c->data); ++i) {
+			if (cur >= filesize) break;
+			memcpy(&c->data[i].type, data+cur, 1);
+			cur++;
+
+			switch (c->data[i].type) {
+				case Chudata_Int: {
+					memcpy(
+						&c->data[i].as.i,
+						data+cur,
+						sizeof(c->data[i].as.i)
+					);
+					cur += sizeof(c->data[i].as.i);
+				} break;
+				case Chudata_Str:
+					// ok &= safe_read(r, &res.len, sizeof(res.len));
+					// res.s = &r->data[r->cur];
+					// ok &= safe_read(r, NULL, res.len);
+					// uint8_t null;
+					// ok &= safe_read(r, &null, 1);
+					// ok &= (null == 0);
+					break;
+				default: {
+					// bad type
+					// ok &= false;
+					break;
+				}
+			}
+		}
+
+		free(data);
+    }
+};
+
+static t_CKUINT chudata_offset = 0;
+static const char* chudata_default_path = "./.chudata.chud";
+
+CK_DLL_CTOR(chudata_ctor_with_filename) { }
+CK_DLL_MFUN(chudata_set_str) { }
+
+CK_DLL_CTOR(chudata_ctor) {
+    Chudata* c = ALLOCATE_TYPE(Chudata);
+    OBJ_MEMBER_INT(SELF, chudata_offset) = (t_CKUINT)c;
+    snprintf(c->path, sizeof(c->path), "%s", chudata_default_path);
+	Chudata::load(c);
+}
+
+CK_DLL_DTOR(chudata_dtor) {
+    Chudata* c = (Chudata*) OBJ_MEMBER_UINT(SELF, chudata_offset);
+
+    // TODO write data
+	Chudata::save(c);
+	Chudata::destroy(c);
+	free(c);
+}
+
+CK_DLL_MFUN(chudata_set_int) {
+    Chudata* c = (Chudata*) OBJ_MEMBER_UINT(SELF, chudata_offset);
+	t_CKINT idx = GET_NEXT_INT(ARGS);
+	t_CKINT val = GET_NEXT_INT(ARGS);
+	// TODO clamp idx
+
+	// TODO free if prev a string
+	c->data[idx].type = Chudata_Int;
+	c->data[idx].as.i = val;
+}
+
+CK_DLL_MFUN(chudata_get_int) {
+    Chudata* c = (Chudata*) OBJ_MEMBER_UINT(SELF, chudata_offset);
+	t_CKINT idx = GET_NEXT_INT(ARGS);
+
+	// TODO assert type is int
+
+	RETURN->v_int = c->data[idx].as.i;
+}
+
+CK_DLL_MFUN(chudata_save) { 
+    Chudata* c = (Chudata*) OBJ_MEMBER_UINT(SELF, chudata_offset);
+	Chudata::save(c);
+}
+
+// ============================================================================
 // Chugin entry point
 // ============================================================================
 CK_DLL_QUERY(ChuGL)
@@ -1088,6 +1243,40 @@ CK_DLL_QUERY(ChuGL)
         chugl_stats_light_free_count_offset  = MVAR("int", "glight_free_count", false);
         chugl_stats_video_free_count_offset  = MVAR("int", "video_free_count", false);
         chugl_stats_webcam_free_count_offset = MVAR("int", "webcam_free_count", false);
+
+        END_CLASS();
+    }
+
+    { // ChuGL persistent data API
+        BEGIN_CLASS("Chudata", "Object");
+        DOC_CLASS("(hidden)");
+        // DOC_CLASS(
+        //   "Helper for persistent data storage. Can be used for e.g. saving high scores. "
+        //   "Inspired by Pico8's cartdata API. "
+        // );
+
+        chudata_offset = MVAR("int", "@chudata_offset", false);
+
+        CTOR(chudata_ctor);
+        DOC_FUNC(
+          "Creates a data storage object based on the file `.chudata.chud`. To avoid collisions "
+          "it's advisable to use Chudata(string filename) with your own unique name."
+        );
+
+        DTOR(chudata_dtor);
+
+        MFUN(chudata_set_int, "void", "set");
+        ARG("int", "index");
+        ARG("int", "val");
+        DOC_FUNC("Store val at index. Index must be 0-255");
+
+        MFUN(chudata_get_int, "int", "geti");
+        ARG("int", "index");
+        DOC_FUNC("Get the int stored at index. Index must be 0-255");
+
+        MFUN(chudata_save, "void", "save");
+        DOC_FUNC("Flushes and saves data to a file named: ./.<filename> (note the leading . will make the file hidden by default)");
+
 
         END_CLASS();
     }

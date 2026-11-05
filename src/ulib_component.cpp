@@ -1974,8 +1974,8 @@ CK_DLL_CTOR(gmesh_ctor_params)
     Chuck_Object* ck_geo = GET_NEXT_OBJECT(ARGS);
     Chuck_Object* ck_mat = GET_NEXT_OBJECT(ARGS);
 
-    SG_Geometry* sg_geo = SG_GetGeometry(OBJ_MEMBER_UINT(ck_geo, component_offset_id));
-    SG_Material* sg_mat = SG_GetMaterial(OBJ_MEMBER_UINT(ck_mat, component_offset_id));
+    SG_Geometry* sg_geo = ck_geo ? SG_GetGeometry(OBJ_MEMBER_UINT(ck_geo, component_offset_id)) : NULL;
+    SG_Material* sg_mat = ck_mat ? SG_GetMaterial(OBJ_MEMBER_UINT(ck_mat, component_offset_id)) : NULL;
 
     ulib_mesh_create(SELF, sg_geo, sg_mat, SHRED);
 }

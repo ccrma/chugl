@@ -1,23 +1,16 @@
 TODO
 
 for 0.3.1 (by Thurs)
-- fix segfault in 256a lecture shaders.ck example when changing
-uniform binding location 1 from texture to storage buffer
-  // render loop
-  while (true)
-      // azaday bug: setting location 1 here segfaults
-      material.storageBuffer(3, aud.samples);
 - pico8 persisitent save/read API (will use for tunnel game)
   - then Ben can add equiv to webchugl API, using the same 
   persistent storage that pico8 uses
     - https://www.lexaloffle.com/bbs/?tid=49833
     - for web prob want to use indexedDB 
     - https://emscripten.org/docs/api_reference/Filesystem-API.html#filesystem-api-idbfs 
-- try adding operator overloading for +, +=> etc to UI_ types
 - GOrbitCamera expose phi/theta/radius getters and setters
-- BUG: `new GMesh(plane_geo, null);` segfaults
 
 BUG: GText.characters doesn't account for spaces
+- try adding operator overloading for +, +=> etc to UI_ types
 
 Ideas from Pico8
 - webchugl: use indexed DB for persistent browser storage

@@ -43,6 +43,11 @@ T.assert(!shadow_mesh_a.shadowed() && !shadow_mesh_b.shadowed(), "GGen.shadowed(
 //     GG.nextFrame() => now;
 // }
 
+
+new GMesh(new PlaneGeometry, new FlatMaterial);
+new GMesh(new PlaneGeometry, null);
+new GMesh(null, new FlatMaterial);
+
 // =========================================
 // GModel
 // =========================================
