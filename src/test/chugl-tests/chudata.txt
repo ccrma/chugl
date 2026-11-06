@@ -1,0 +1,6 @@
+[ChuGL]: [33mWARN [0mChudata invalid idx: -10. Must be within [0,255]
+[ChuGL]: [33mWARN [0mChudata invalid idx: 256. Must be within [0,255]
+[ChuGL]: [33mWARN [0mChudata invalid idx: -10. Must be within [0,255]
+[ChuGL]: [33mWARN [0mChudata invalid idx: 256. Must be within [0,255]
+[ChuGL]: [33mWARN [0mChudata.get(100) expected type string but found int. Returning zero value.
+[ChuGL]: [33mWARN [0mChudata.get(2) expected type int but found string. Returning zero value.
