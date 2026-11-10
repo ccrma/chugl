@@ -1,7 +1,8 @@
 //--------------------------------------------------------------------
 // name: hud.ck
 // desc: boilerplate for creating an in-game UI / hud by chaining
-//       renderpasses. 
+//       renderpasses. The hud will always be drawn on top of the 
+//       underlying 3D scene, regardless of camera position.
 // requires: ChuGL 0.3.0 (alpha) + chuck-1.5.5.6 or higher
 // 
 // author: Andrew Zhu Aday
@@ -41,7 +42,6 @@ while (1) {
 
     // move 3D scene camera (does *NOT* affect hud camera)
     GG.scene().camera().posZ(3 + 3*Math.cos(t));
-
 
     // swap text colors periodically
     t - (t)$int => float second_fract;
