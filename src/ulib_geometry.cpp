@@ -1479,7 +1479,7 @@ void ulib_geo_lines2d_set_lines_points(SG_Geometry* geo, Chuck_Object* ck_arr, i
     f32* local_data = ARENA_PUSH_COUNT(pull_buffer, f32, (len + 2) * 2);
 
     // copy ck array positions
-    chugin_copyCkVec2Array((Chuck_ArrayVec2*)ck_arr, &local_data[2]);
+    chugin_copyCkVec2Array((Chuck_ArrayVec2*)ck_arr, &local_data[2], len);
 
     glm::vec2 start      = glm::vec2(local_data[2], local_data[3]);
     glm::vec2 start_next = glm::vec2(local_data[4], local_data[5]);

@@ -1,5 +1,10 @@
 # Changes
 
+## 0.3.2 (alpha)
+- bugfixes:
+  - fixed segfault in GLines.positions(vec2[], int). Thanks Ben for reporting
+
+
 ## 0.3.1 (alpha)
 - major garbage collection improvements for many components including GMesh, Geometry, Material, Shaders, etc.
   - thanks Alex Han for reporting the memory leak

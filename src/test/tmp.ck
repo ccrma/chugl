@@ -1,12 +1,9 @@
-GWindow.sizeLimits(
-    0, 0, 0, 0,
-    @(3, 1)
-);
-// GWindow.resizable(false);
+vec2 pts[1000];
+@(-1, -1) => pts[0];
+@(1, 0) => pts[1];
+@(1, 1) => pts[2];
 
-// GWindow.windowed(1920, 1080);
+GLines test --> GG.scene();
+test.positions(pts, 3);
 
-GSuzanne suz --> GG.scene();
-
-
-while (1) GG.nextFrame() => now;
+GG.nextFrame() => now;
