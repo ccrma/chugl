@@ -3,7 +3,10 @@
 ## 0.3.2 (alpha)
 - bugfixes:
   - fixed segfault in GLines.positions(vec2[], int). Thanks Ben for reporting
-
+- Chudata: persistent storage (e.g. for game saves)
+- new examples
+  - rendergraph/hud.ck
+  - rendergraph/rendertexture.ck
 
 ## 0.3.1 (alpha)
 - major garbage collection improvements for many components including GMesh, Geometry, Material, Shaders, etc.
