@@ -1203,7 +1203,28 @@ static bool chudata_validate_type(t_CKINT idx, ChudataType type) {
 
 CK_DLL_SFUN(chudata_load) {
     const char* filepath = API->object->str(GET_NEXT_STRING(ARGS));
+
+#ifdef __EMSCRIPTEN__
+	char idbfs_filepath[256] = {};
+	static const char* IDBFS_MOUNT = "/persist/chudata";
+
+	// check path size bounds
+	if (strlen(filepath) >= sizeof(idbfs_filepath) - strlen(IDBFS_MOUNT)) {
+		log_warn("Chudata.load(string path) has a length limit of 240 characters, but the provided path has length %i. Aborting.", 
+			(int) strlen(filepath));
+        return;
+	}
+
+	if (filepath[0] == '/') {
+		snprintf(idbfs_filepath, "%s%s", IDBFS_MOUNT, filepath);
+	} else {
+		snprintf(idbfs_filepath, "%s/%s", IDBFS_MOUNT, filepath);
+	}
+	Chudata::load(&chudata, idbfs_filepath);
+#else
 	Chudata::load(&chudata, filepath);
+#endif
+
 }
 
 CK_DLL_SFUN(chudata_set_int) {
