@@ -1006,12 +1006,14 @@ enum ChudataType : u8 {
     Chudata_Error,
     Chudata_Int,
     Chudata_Str,
+    Chudata_Float,
 };
 
 const char* chudata_typenames[] = {
 	"empty",
 	"int",
 	"string",
+  "float",
 };
 
 struct ChudataVal {
@@ -1019,6 +1021,7 @@ struct ChudataVal {
     union {
       t_CKINT i;
       char* str_OWNED;
+      t_CKFLOAT f;
     } as;
 };
 
@@ -1032,9 +1035,9 @@ struct Chudata {
 			return;
 		}
 
-        FILE* fp = fopen(c->path_OWNED, "w");
+		FILE* fp = fopen(c->path_OWNED, "w");
 
-        for (int i = 0; i < ARRAY_LENGTH(c->data); ++i) {
+		for (int i = 0; i < ARRAY_LENGTH(c->data); ++i) {
 			ChudataVal val = c->data[i];
 			if (val.type == Chudata_Error) continue;
 			
@@ -1056,9 +1059,12 @@ struct Chudata {
 					fwrite(&null, 1, 1, fp);                  // write null-terminator
 					// fwrite(&val.len, sizeof(val.len), 1, w->fp); // write length
 				} break;
+				case Chudata_Float: {
+					fwrite(&val.as.f, sizeof(val.as.f), 1, fp);
+				} break;
 				default: break;
 			}
-        }
+		}
 
         fclose(fp);
     }
@@ -1127,12 +1133,16 @@ struct Chudata {
 					}
 					cur += len + 1;
 				} break;
+				case Chudata_Float: {
+					t_CKFLOAT* dst = &c->data[i].as.f;
+					memcpy(dst, data+cur, sizeof(*dst));
+					cur += sizeof(*dst);
+				} break;
 				default: {
 					// bad type
 					// ok &= false;
 					ASSERT(false);
-					break;
-				}
+				} break;
 			}
 		}
 
@@ -1167,12 +1177,16 @@ struct Chudata {
 			case Chudata_Str: {
 				c->data[idx].as.str_OWNED = strdup((char*)val);
 			} break;
+			case Chudata_Float: {
+				c->data[idx].as.f = *(t_CKFLOAT*)val;
+			} break;
 			default: ASSERT(false);
 		}
 	}
 
 	static void seti(Chudata* c, int idx, t_CKINT val) { set(c, idx, &val, Chudata_Int); }
 	static void sets(Chudata* c, int idx, const char* str) { set(c, idx, (void*) str, Chudata_Str); }
+	static void setf(Chudata* c, int idx, t_CKFLOAT val) { set(c, idx, &val, Chudata_Float); }
 };
 
 static Chudata chudata;
@@ -1224,6 +1238,20 @@ CK_DLL_SFUN(chudata_set_str) {
 	t_CKINT idx = GET_NEXT_INT(ARGS);
     const char* val = API->object->str(GET_NEXT_STRING(ARGS));
 	Chudata::sets(&chudata, idx, val);
+}
+
+
+CK_DLL_SFUN(chudata_set_float) {
+	t_CKINT idx = GET_NEXT_INT(ARGS);
+	t_CKFLOAT val = GET_NEXT_FLOAT(ARGS);
+	Chudata::setf(&chudata, idx, val);
+}
+
+CK_DLL_SFUN(chudata_get_float) {
+	t_CKINT idx = GET_NEXT_INT(ARGS);
+	if (!chudata_validate_type(idx, Chudata_Float)) return;
+
+	RETURN->v_float = chudata.data[idx].as.f;
 }
 
 CK_DLL_SFUN(chudata_save) { 
@@ -1359,6 +1387,15 @@ CK_DLL_QUERY(ChuGL)
         SFUN(chudata_get_str, "string", "gets");
         ARG("int", "index");
         DOC_FUNC("Get the string stored at index. Index must be 0-255. Must call Chudata.load(string) first. ");
+
+        SFUN(chudata_set_float, "void", "set");
+        ARG("int", "index");
+        ARG("float", "val");
+        DOC_FUNC("Store val at index. Index must be 0-255. Must call Chudata.load(string) first. ");
+
+        SFUN(chudata_get_float, "float", "getf");
+        ARG("int", "index");
+        DOC_FUNC("Get the float stored at index. Index must be 0-255. Must call Chudata.load(string) first. ");
 
         SFUN(chudata_clear, "void", "clear");
         DOC_FUNC("Clears all loaded data. Call Chudata.save() to commit these changes");

@@ -1,6 +1,7 @@
 TODO
 
-for 0.3.1 (by Thurs)
+for 0.3.2 
+- update GG.scene() docs
 - pico8 persisitent save/read API (will use for tunnel game)
   - then Ben can add equiv to webchugl API, using the same 
   persistent storage that pico8 uses
