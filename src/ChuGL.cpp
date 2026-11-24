@@ -1039,7 +1039,6 @@ struct Chudata {
 
 		for (int i = 0; i < ARRAY_LENGTH(c->data); ++i) {
 			ChudataVal val = c->data[i];
-			if (val.type == Chudata_Error) continue;
 			
 			// write idx byte
 			ASSERT(i < 256);
@@ -1049,6 +1048,10 @@ struct Chudata {
 			fwrite(&val.type, 1, 1, fp);
 			// write value
 			switch (val.type) {
+				case Chudata_Error: {
+					// write nothing.
+					// needed because emscripten idbfs doesn't properly clear data
+				} break;
 				case Chudata_Int: {
 					fwrite(&val.as.i, sizeof(val.as.i), 1, fp);
 				} break;
@@ -1115,8 +1118,8 @@ struct Chudata {
 
 			switch (c->data[i].type) {
 				case Chudata_Error: {
-					// TODO
-					ASSERT(false);
+					// empty, do nothing
+					// needed because emscripten idbfs won't properly clear files on fopen("w")...
 				} break;
 				case Chudata_Int: {
 					memcpy(
